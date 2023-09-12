@@ -14,7 +14,7 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
     🔽🔽🔽 CohortUser not found
     """
 
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.certificate.actions.generate_certificate', MagicMock())
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
@@ -24,14 +24,14 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
         generate_one_certificate(1, 1, layout)
 
         self.assertEqual(actions.generate_certificate.call_args_list, [])
-        self.assertEqual(logging.Logger.debug.call_args_list, [call('starting-generating-certificate')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call('starting-generating-certificate')])
         self.assertEqual(logging.Logger.error.call_args_list, [call('cohort-user-not-found')])
 
     """
     🔽🔽🔽 Call generate_certificate successful
     """
 
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.certificate.actions.generate_certificate', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
@@ -41,6 +41,7 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
         cohort_user = {'role': 'STUDENT'}
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
             model = self.generate_models(cohort_user=cohort_user)
+            logging.Logger.info.call_args_list = []
 
         layout = 'vanilla'
         generate_one_certificate(1, 1, layout)
@@ -48,7 +49,7 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
             call(model.user, model.cohort, 'vanilla'),
         ])
 
-        self.assertEqual(logging.Logger.debug.call_args_list, [
+        self.assertEqual(logging.Logger.info.call_args_list, [
             call('starting-generating-certificate'),
             call('generating-certificate'),
         ])
@@ -59,7 +60,7 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
     🔽🔽🔽 Call generate_certificate raise a exception
     """
 
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.certificate.actions.generate_certificate', MagicMock(side_effect=Exception()))
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
@@ -69,6 +70,7 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
         cohort_user = {'role': 'STUDENT'}
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
             model = self.generate_models(cohort_user=cohort_user)
+            logging.Logger.info.call_args_list = []
 
         layout = 'vanilla'
         generate_one_certificate(1, 1, layout)
@@ -76,7 +78,7 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
             call(model.user, model.cohort, 'vanilla'),
         ])
 
-        self.assertEqual(logging.Logger.debug.call_args_list, [
+        self.assertEqual(logging.Logger.info.call_args_list, [
             call('starting-generating-certificate'),
             call('generating-certificate'),
         ])

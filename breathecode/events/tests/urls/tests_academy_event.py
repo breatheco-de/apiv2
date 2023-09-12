@@ -1,4 +1,6 @@
-from unittest.mock import MagicMock, call, patch
+import os
+from unittest.mock import MagicMock, PropertyMock, call, patch
+from uuid import UUID
 from breathecode.events.caches import EventCache
 from django.urls.base import reverse_lazy
 
@@ -6,6 +8,9 @@ from breathecode.utils.api_view_extensions.api_view_extension_handlers import AP
 from ..mixins.new_events_tests_case import EventTestCase
 from breathecode.services import datetime_to_iso_format
 from django.utils import timezone
+
+seed = os.urandom(16)
+uuid = UUID(bytes=seed, version=4)
 
 
 def post_serializer(data={}):
@@ -602,6 +607,8 @@ class AcademyEventTestSuite(EventTestCase):
     """
 
     @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('uuid.uuid4', PropertyMock(MagicMock=uuid))
+    @patch('os.urandom', MagicMock(return_value=seed))
     def test_all_academy_events__post__bad_slug(self):
         self.headers(academy=1)
 
@@ -645,6 +652,8 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_sync_status': 'PENDING',
             'tags': ','.join([x.slug for x in model.tag]),
             'currency': 'USD',
+            'free_for_bootcamps': True,
+            'uuid': str(uuid),
         })
 
         self.assertEqual(json, expected)
@@ -666,6 +675,8 @@ class AcademyEventTestSuite(EventTestCase):
                     'url': 'https://www.google.com/',
                     'sync_with_eventbrite': False,
                     'currency': 'USD',
+                    'free_for_bootcamps': True,
+                    'uuid': uuid,
                 }),
         ])
 
@@ -704,20 +715,27 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(self.all_event_dict(), [])
 
     @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    # @patch('uuid.uuid4', PropertyMock(MagicMock=uuid))
+    # @patch('os.urandom', MagicMock(return_value=seed))
     def test_all_academy_events__post__event_exist_with_the_same_eventbrite_id_as_null(self):
         self.headers(academy=1)
 
         event = {'eventbrite_id': None}
-        model = self.generate_models(authenticate=True,
-                                     organization=True,
-                                     profile_academy=True,
-                                     event=event,
-                                     capability='crud_event',
-                                     tag=(2, {
-                                         'tag_type': 'DISCOVERY'
-                                     }),
-                                     active_campaign_academy=True,
-                                     role='potato')
+        seed = os.urandom(16)
+        seed2 = os.urandom(16)
+        uuid = UUID(bytes=seed2, version=4)
+
+        with patch('os.urandom', MagicMock(return_value=seed)):
+            model = self.generate_models(authenticate=True,
+                                         organization=True,
+                                         profile_academy=True,
+                                         event=event,
+                                         capability='crud_event',
+                                         tag=(2, {
+                                             'tag_type': 'DISCOVERY'
+                                         }),
+                                         active_campaign_academy=True,
+                                         role='potato')
 
         url = reverse_lazy('events:academy_event')
         current_date = self.datetime_now()
@@ -732,7 +750,8 @@ class AcademyEventTestSuite(EventTestCase):
             'ending_at': self.datetime_to_iso(current_date),
         }
 
-        response = self.client.post(url, data, format='json')
+        with patch('os.urandom', MagicMock(return_value=seed2)):
+            response = self.client.post(url, data, format='json')
         json = response.json()
 
         self.assertDatetime(json['created_at'])
@@ -750,6 +769,9 @@ class AcademyEventTestSuite(EventTestCase):
             'tags': ','.join([x.slug for x in model.tag]),
             'eventbrite_sync_status': 'PENDING',
             'currency': 'USD',
+            'free_for_bootcamps': True,
+            'sync_with_eventbrite': False,
+            'uuid': str(uuid),
         })
 
         self.assertEqual(json, expected)
@@ -776,9 +798,13 @@ class AcademyEventTestSuite(EventTestCase):
                     'sync_with_eventbrite': False,
                     'currency': 'USD',
                     'tags': ','.join([x.slug for x in model.tag]),
+                    'free_for_bootcamps': True,
+                    'uuid': uuid,
                 }),
         ])
 
+    @patch('uuid.uuid4', PropertyMock(MagicMock=uuid))
+    @patch('os.urandom', MagicMock(return_value=seed))
     def test_all_academy_events__post__tags_is_blank__slug_in_uppercase(self):
         self.headers(academy=1)
 
@@ -822,6 +848,8 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_sync_status': 'PENDING',
             'currency': 'USD',
             'tags': ','.join([x.slug for x in model.tag]),
+            'free_for_bootcamps': True,
+            'uuid': str(uuid),
         })
 
         self.assertEqual(json, expected)
@@ -844,6 +872,8 @@ class AcademyEventTestSuite(EventTestCase):
                     'sync_with_eventbrite': False,
                     'currency': 'USD',
                     'tags': ','.join([x.slug for x in model.tag]),
+                    'free_for_bootcamps': True,
+                    'uuid': uuid,
                 }),
         ])
 
@@ -880,6 +910,8 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(self.all_event_dict(), [])
 
+    @patch('uuid.uuid4', PropertyMock(MagicMock=uuid))
+    @patch('os.urandom', MagicMock(return_value=seed))
     def test_all_academy_events__post__with_tags(self):
         self.headers(academy=1)
 
@@ -919,6 +951,8 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_sync_status': 'PENDING',
             'currency': 'USD',
             'tags': ','.join([x.slug for x in model.tag]),
+            'free_for_bootcamps': True,
+            'uuid': str(uuid),
         })
 
         self.assertEqual(json, expected)
@@ -940,6 +974,8 @@ class AcademyEventTestSuite(EventTestCase):
                     'sync_with_eventbrite': False,
                     'currency': 'USD',
                     'tags': ','.join([x.slug for x in model.tag]),
+                    'free_for_bootcamps': True,
+                    'uuid': uuid,
                 }),
         ])
 
@@ -947,6 +983,8 @@ class AcademyEventTestSuite(EventTestCase):
     🔽🔽🔽 Put with duplicate tags
     """
 
+    @patch('uuid.uuid4', PropertyMock(MagicMock=uuid))
+    @patch('os.urandom', MagicMock(return_value=seed))
     def test_all_academy_events__post__with_duplicate_tags(self):
         self.headers(academy=1)
 
@@ -997,6 +1035,8 @@ class AcademyEventTestSuite(EventTestCase):
             'organization': 1,
             'eventbrite_sync_status': 'PENDING',
             'currency': 'USD',
+            'free_for_bootcamps': True,
+            'uuid': str(uuid),
         })
 
         self.assertEqual(json, expected)
@@ -1018,6 +1058,8 @@ class AcademyEventTestSuite(EventTestCase):
                     'sync_with_eventbrite': False,
                     'currency': 'USD',
                     'tags': data['tags'],
+                    'free_for_bootcamps': True,
+                    'uuid': uuid,
                 }),
         ])
 
@@ -1026,6 +1068,8 @@ class AcademyEventTestSuite(EventTestCase):
     """
 
     @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('uuid.uuid4', PropertyMock(MagicMock=uuid))
+    @patch('os.urandom', MagicMock(return_value=seed))
     def test_all_academy_events__post__bad_slug____(self):
         self.headers(academy=1)
 
@@ -1079,6 +1123,8 @@ class AcademyEventTestSuite(EventTestCase):
             'lang': model.event_type.lang,
             'tags': ','.join([x.slug for x in model.tag]),
             'currency': 'USD',
+            'free_for_bootcamps': True,
+            'uuid': str(uuid),
         })
 
         self.assertEqual(json, expected)
@@ -1102,6 +1148,8 @@ class AcademyEventTestSuite(EventTestCase):
                     'sync_with_eventbrite': False,
                     'lang': model.event_type.lang,
                     'currency': 'USD',
+                    'free_for_bootcamps': True,
+                    'uuid': uuid,
                 }),
         ])
 

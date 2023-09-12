@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (AcademyActivateView, AcademyView, CohortMeView, CohortUserView, AcademyCohortView,
                     MeCohortUserHistoryView, SyllabusVersionView, SyllabusView, get_timezones, UserView,
                     UserMeView, AcademyCohortUserView, get_schedule, AcademySyllabusScheduleView,
-                    SyllabusScheduleView, get_all_academies, get_cohorts, AcademyCohortTimeSlotView,
+                    SyllabusScheduleView, get_all_academies, PublicCohortView, AcademyCohortTimeSlotView,
                     handle_test_syllabus, AcademySyllabusScheduleTimeSlotView, AcademySyncCohortTimeSlotView,
                     AcademyReportView, get_public_syllabus, SyllabusAssetView, PublicCohortUserView,
                     AcademyCohortHistoryView, AcademyTeacherView, get_single_academy)
@@ -13,7 +13,7 @@ urlpatterns = [
     path('academy/cohort/me', CohortMeView.as_view(), name='academy_cohort_me'),
     path('public/syllabus', get_public_syllabus),
     # deprecated methods, soon to be deleted
-    path('cohort/all', get_cohorts, name='cohort_all'),
+    path('cohort/all', PublicCohortView.as_view(), name='cohort_all'),
     path('cohort/user', CohortUserView.as_view(), name='cohort_user'),
     path('cohort/<int:cohort_id>/user/<int:user_id>', CohortUserView.as_view(), name='cohort_id_user_id'),
     path('cohort/<int:cohort_id>/user', CohortUserView.as_view(), name='cohort_id_user'),

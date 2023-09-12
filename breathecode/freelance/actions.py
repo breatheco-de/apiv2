@@ -82,7 +82,7 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
     if 'node_id' in issue:
         node_id = issue['node_id']
     else:
-        logger.debug(
+        logger.info(
             f'Impossible to identify issue because it does not have a node_id (number:{issue_number}), ignoring synch: '
             + str(issue))
         return None
@@ -109,7 +109,6 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
     _issue.url = issue['html_url']
 
     result = re.search(r'github\.com\/([\w\-_]+)\/([\w\-_]+)\/.+', _issue.url)
-    print(result, _issue.url)
     if result is not None:
         _issue.repository_url = f'https://github.com/{result.group(1)}/{result.group(2)}'
 
@@ -130,7 +129,7 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
     _issue.freelancer = freelancer
     hours = get_hours(_issue.body)
     if hours is not None and _issue.duration_in_hours != hours:
-        logger.debug(
+        logger.info(
             f'Updating issue {node_id} ({issue_number}) hrs with {hours}, found <hrs> tag on updated body')
         _issue.duration_in_minutes = hours * 60
         _issue.duration_in_hours = hours
@@ -139,21 +138,21 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
     if comment is not None:
         hours = get_hours(comment['body'])
         if hours is not None and _issue.duration_in_hours != hours:
-            logger.debug(
+            logger.info(
                 f'Updating issue {node_id} ({issue_number}) hrs with {hours}, found <hrs> tag on new comment')
             _issue.duration_in_minutes = hours * 60
             _issue.duration_in_hours = hours
 
         status = get_status(comment['body'])
         if status is not None and status_is_valid(status):
-            logger.debug(
+            logger.info(
                 f'Updating issue {node_id} ({issue_number}) status to {status} found <status> tag on new comment'
             )
             _issue.status = status
 
         elif status is not None:
             error = f'The status {status} is not valid'
-            logger.debug(error)
+            logger.info(error)
             _issue.status_message = error
     _issue.save()
 

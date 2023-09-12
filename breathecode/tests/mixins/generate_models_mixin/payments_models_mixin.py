@@ -221,6 +221,9 @@ class PaymentsModelsMixin(ModelsMixin):
             if 'cohort' in models:
                 kargs['available_cohorts'] = get_list(models['cohort'])
 
+            if 'user_invite' in models:
+                kargs['invites'] = get_list(models['user_invite'])
+
             models['plan'] = create_models(plan, 'payments.Plan', **kargs)
 
         if not 'plan_translation' in models and is_valid(plan_translation):

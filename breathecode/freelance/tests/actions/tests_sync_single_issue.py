@@ -34,19 +34,19 @@ def issue_item(data={}):
 
 class GetOrCreateSessionTestSuite(FreelanceTestCase):
 
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     def test_IssueWithNoId(self):
 
         result = sync_single_issue({})
         self.assertEqual(result, None)
         self.assertEqual(self.bc.database.list_of('freelance.Issue'), [])
-        self.assertEqual(Logger.debug.call_args_list, [
+        self.assertEqual(Logger.info.call_args_list, [
             call(
                 'Impossible to identify issue because it does not have a node_id (number:None), ignoring synch: {}'
             )
         ])
 
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     def test_IssueWithFakeSlug(self):
 
         with self.assertRaisesMessage(Exception, 'There was no freelancer associated with this issue'):
@@ -60,12 +60,13 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
 
         self.assertEqual(self.bc.database.list_of('freelance.Issue'), [])
 
-        self.assertEqual(Logger.debug.call_args_list, [])
+        self.assertEqual(Logger.info.call_args_list, [])
 
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     def test_IssueWith_freelancer(self):
 
         models1 = self.bc.database.create(freelancer=1)
+        Logger.info.call_args_list = []
 
         title = self.bc.fake.slug()
         body = self.bc.fake.slug()
@@ -88,12 +89,13 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
             }),
         ])
 
-        self.assertEqual(Logger.debug.call_args_list, [])
+        self.assertEqual(Logger.info.call_args_list, [])
 
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     def test_IssueWith_number(self):
 
         models1 = self.bc.database.create(freelancer=1)
+        Logger.info.call_args_list = []
 
         title = self.bc.fake.slug()
         body = self.bc.fake.slug()
@@ -120,12 +122,13 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
             }),
         ])
 
-        self.assertEqual(Logger.debug.call_args_list, [])
+        self.assertEqual(Logger.info.call_args_list, [])
 
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     def test_resultSearch_isNotNone(self):
 
         models1 = self.bc.database.create(freelancer=1)
+        Logger.info.call_args_list = []
 
         title = self.bc.fake.slug()
         body = self.bc.fake.slug()
@@ -153,12 +156,13 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
             }),
         ])
 
-        self.assertEqual(Logger.debug.call_args_list, [])
+        self.assertEqual(Logger.info.call_args_list, [])
 
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     def testing_hours(self):
 
         models1 = self.bc.database.create(freelancer=1)
+        Logger.info.call_args_list = []
 
         title = self.bc.fake.slug()
         hours = random.random() * 50
@@ -185,13 +189,14 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
             }),
         ])
 
-        self.assertEqual(Logger.debug.call_args_list,
+        self.assertEqual(Logger.info.call_args_list,
                          [call(f'Updating issue 1 (None) hrs with {hours}, found <hrs> tag on updated body')])
 
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     def testing_different_hours(self):
 
         models1 = self.bc.database.create(freelancer=1)
+        Logger.info.call_args_list = []
 
         title = self.bc.fake.slug()
         hours = random.random() * 50
@@ -222,16 +227,17 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
             }),
         ])
 
-        self.assertEqual(Logger.debug.call_args_list, [
+        self.assertEqual(Logger.info.call_args_list, [
             call(f'Updating issue 1 (None) hrs with {another}, found <hrs> tag on updated body'),
             call(f'Updating issue 1 (None) hrs with {hours}, found <hrs> tag on new comment'),
             call('The status COMMENT is not valid')
         ])
 
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     def testing_correct_status_with_hours(self):
 
         models1 = self.bc.database.create(freelancer=1)
+        Logger.info.call_args_list = []
 
         status = random.choice(['IGNORED', 'DRAFT', 'TODO', 'DOING', 'DONE'])
         title = self.bc.fake.slug()
@@ -263,17 +269,18 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
             }),
         ])
 
-        self.assertEqual(Logger.debug.call_args_list, [
+        self.assertEqual(Logger.info.call_args_list, [
             call(f'Updating issue 1 (None) hrs with {another}, found <hrs> tag on updated body'),
             call(f'Updating issue 1 (None) hrs with {hours}, found <hrs> tag on new comment'),
             call(f'Updating issue 1 (None) status to {status} found <status> tag on new comment')
         ])
 
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     def testing_Assignee_FreelancerIsNone(self):
 
         with self.assertRaisesMessage(Exception, 'There was no freelancer associated with this issue'):
             models1 = self.bc.database.create(freelancer=None)
+            Logger.info.call_args_list = []
 
             status = random.choice(['IGNORED', 'DRAFT', 'TODO', 'DOING', 'DONE'])
             title = self.bc.fake.slug()
@@ -304,12 +311,13 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
                 'status': status,
             })
 
-            self.assertEqual(Logger.debug.call_args_list, [])
+            self.assertEqual(Logger.info.call_args_list, [])
 
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     def testing_AssigneeID_FreelancerIsNone(self):
 
         models1 = self.bc.database.create(freelancer=None)
+        Logger.info.call_args_list = []
 
         assignment_id = 3
         status = random.choice(['IGNORED', 'DRAFT', 'TODO', 'DOING', 'DONE'])
@@ -350,4 +358,4 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
                 'status': status,
             })
 
-            self.assertEqual(Logger.debug.call_args_list, [])
+            self.assertEqual(Logger.info.call_args_list, [])

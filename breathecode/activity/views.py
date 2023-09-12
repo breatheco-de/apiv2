@@ -4,10 +4,15 @@ from google.cloud.ndb.query import OR
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from google.cloud import bigquery
 
-from breathecode.activity.models import Activity
+from breathecode.activity.models import StudentActivity
+from breathecode.activity.serializers import ActivitySerializer
 from breathecode.admissions.models import Cohort, CohortUser
+from breathecode.authenticate.actions import get_user_language
+from breathecode.services.google_cloud.big_query import BigQuery
 from breathecode.utils import (HeaderLimitOffsetPagination, ValidationException, capable_of, getLogger)
+from breathecode.utils.i18n import translation
 
 from .utils import (generate_created_at, validate_activity_fields, validate_activity_have_correct_data_field,
                     validate_if_activity_need_field_cohort, validate_if_activity_need_field_data,
@@ -58,19 +63,19 @@ class ActivityViewMixin(APIView):
                 raise ValidationException(f'Activity type {slug} not found', slug='activity-not-found')
 
         if len(slugs) > 1:
-            self.queryargs.append(OR(*[Activity.slug == slug for slug in slugs]))
+            self.queryargs.append(OR(*[StudentActivity.slug == slug for slug in slugs]))
         elif len(slugs) == 1:
-            self.queryargs.append(Activity.slug == slugs[0])
+            self.queryargs.append(StudentActivity.slug == slugs[0])
 
     def filter_by_cohort(self, academy_id, cohort_id_or_slug):
         if Cohort.objects.filter(academy__id=academy_id, slug=cohort_id_or_slug).exists():
-            self.queryargs.append(Activity.cohort == cohort_id_or_slug)
+            self.queryargs.append(StudentActivity.cohort == cohort_id_or_slug)
             return
 
         try:
             # this parse prevent a call to the db if the cohort slug doesn't exist
             cohort_id = int(cohort_id_or_slug)
-        except:
+        except Exception:
             raise ValidationException('Cohort not found', slug='cohort-not-found')
 
         slug = Cohort.objects.filter(academy__id=academy_id, pk=cohort_id).values_list('slug',
@@ -78,7 +83,7 @@ class ActivityViewMixin(APIView):
         if not slug:
             raise ValidationException('Cohort not found', slug='cohort-not-found')
 
-        self.queryargs.append(Activity.cohort == slug)
+        self.queryargs.append(StudentActivity.cohort == slug)
 
     def filter_by_cohorts(self, academy_id):
         cohorts = self.request.GET.get('cohort', [])
@@ -98,15 +103,15 @@ class ActivityViewMixin(APIView):
 
                     slugs.append(c.slug)
 
-                except:
+                except Exception:
                     raise ValidationException('Cohort not found', slug='cohort-not-found')
 
             slugs.append(cohort)
 
         if len(slugs) > 1:
-            self.queryargs.append(OR(*[Activity.cohort == cohort for cohort in slugs]))
+            self.queryargs.append(OR(*[StudentActivity.cohort == cohort for cohort in slugs]))
         elif len(slugs) == 1:
-            self.queryargs.append(Activity.cohort == slugs[0])
+            self.queryargs.append(StudentActivity.cohort == slugs[0])
 
     def filter_by_user_ids(self):
         user_ids = self.request.GET.get('user_id', [])
@@ -124,9 +129,9 @@ class ActivityViewMixin(APIView):
                 raise ValidationException('User not exists', slug='user-not-exists')
 
         if len(user_ids) > 1:
-            self.queryargs.append(OR(*[Activity.user_id == int(user_id) for user_id in user_ids]))
+            self.queryargs.append(OR(*[StudentActivity.user_id == int(user_id) for user_id in user_ids]))
         elif len(user_ids) == 1:
-            self.queryargs.append(Activity.user_id == int(user_ids[0]))
+            self.queryargs.append(StudentActivity.user_id == int(user_ids[0]))
 
     def filter_by_emails(self):
         emails = self.request.GET.get('email', [])
@@ -138,9 +143,9 @@ class ActivityViewMixin(APIView):
                 raise ValidationException('User not exists', slug='user-not-exists')
 
         if len(emails) > 1:
-            self.queryargs.append(OR(*[Activity.email == email for email in emails]))
+            self.queryargs.append(OR(*[StudentActivity.email == email for email in emails]))
         elif len(emails) == 1:
-            self.queryargs.append(Activity.email == emails[0])
+            self.queryargs.append(StudentActivity.email == emails[0])
 
     def get_limit_from_query(self):
         limit = self.request.GET.get('limit')
@@ -190,7 +195,7 @@ class ActivityCohortView(ActivityViewMixin, HeaderLimitOffsetPagination):
         limit = self.get_limit_from_query()
         offset = self.get_offset_from_query()
 
-        client = NDB(Activity)
+        client = NDB(StudentActivity)
         data = client.fetch(self.queryargs, limit=limit, offset=offset)
         page = self.paginate_queryset(data, request)
 
@@ -239,14 +244,6 @@ class ActivityMeView(APIView):
             raise ValidationException('User not exists', slug='user-not-exists')
 
         datastore = Datastore()
-
-        # limit = request.GET.get('limit')
-        # if limit:
-        #     kwargs['limit'] = int(limit)
-
-        # offset = request.GET.get('offset')
-        # if offset:
-        #     kwargs['offset'] = int(offset)
 
         academy_iter = datastore.fetch(**kwargs, academy_id=int(academy_id))
         public_iter = datastore.fetch(**kwargs, academy_id=0)
@@ -429,7 +426,7 @@ class StudentActivityView(APIView, HeaderLimitOffsetPagination):
                                                 cohort__academy__id=academy_id).first()
         if cohort_user is None:
             raise ValidationException(
-                f'There is not student with that ID that belongs to any cohort within your academy',
+                'There is not student with that ID that belongs to any cohort within your academy',
                 slug='student-no-cohort')
 
         kwargs = {'kind': 'student_activity'}
@@ -515,3 +512,141 @@ class StudentActivityView(APIView, HeaderLimitOffsetPagination):
             new_activities.append(add_student_activity(cohort_user.user, activity, academy_id))
 
         return Response(new_activities, status=status.HTTP_201_CREATED)
+
+
+class V2MeActivityView(APIView):
+
+    def get(self, request, activity_id=None):
+        lang = get_user_language(request)
+        client, project_id, dataset = BigQuery.client()
+
+        if activity_id:
+            # Define a query
+            query = f"""
+                SELECT *
+                FROM `{project_id}.{dataset}.activity`
+                WHERE id = @activity_id
+                    AND user_id = @user_id
+                ORDER BY id DESC
+                LIMIT 1
+            """
+
+            job_config = bigquery.QueryJobConfig(query_parameters=[
+                bigquery.ScalarQueryParameter('activity_id', 'STRING', activity_id),
+                bigquery.ScalarQueryParameter('user_id', 'INT64', request.user.id),
+            ])
+
+            # Run the query
+            query_job = client.query(query, job_config=job_config)
+            results = query_job.result()
+
+            result = next(results)
+            if not result:
+                raise ValidationException(translation(lang,
+                                                      en='activity not found',
+                                                      es='actividad no encontrada',
+                                                      slug='activity-not-found'),
+                                          code=404)
+
+            serializer = ActivitySerializer(result, many=False)
+            return Response(serializer.data)
+
+        limit = int(request.GET.get('limit', 100))
+        offset = (int(request.GET.get('page', 1)) - 1) * limit
+        kind = request.GET.get('kind', None)
+
+        query = f"""
+            SELECT *
+            FROM `{project_id}.{dataset}.activity`
+            WHERE user_id = @user_id
+                {'AND meta.kind = @kind' if kind else ''}
+            ORDER BY id DESC
+            LIMIT @limit
+            OFFSET @offset
+        """
+
+        job_config = bigquery.QueryJobConfig(query_parameters=[
+            bigquery.ScalarQueryParameter('user_id', 'INT64', request.user.id),
+            bigquery.ScalarQueryParameter('limit', 'INT64', limit),
+            bigquery.ScalarQueryParameter('offset', 'INT64', offset),
+        ])
+
+        # Run the query
+        query_job = client.query(query, job_config=job_config)
+        results = query_job.result()
+
+        serializer = ActivitySerializer(results, many=True)
+        return Response(serializer.data)
+
+
+class V2AcademyActivityView(APIView):
+
+    @capable_of('read_activity')
+    def get(self, request, activity_id=None, academy_id=None):
+        lang = get_user_language(request)
+        client, project_id, dataset = BigQuery.client()
+
+        if activity_id:
+            # Define a query
+            query = f"""
+                SELECT *
+                FROM `{project_id}.{dataset}.activity`
+                WHERE id = @activity_id
+                    AND user_id = @user_id
+                    AND meta.academy = @academy_id
+                ORDER BY id DESC
+                LIMIT 1
+            """
+
+            job_config = bigquery.QueryJobConfig(query_parameters=[
+                bigquery.ScalarQueryParameter('activity_id', 'STRING', activity_id),
+                bigquery.ScalarQueryParameter('academy_id', 'INT64', academy_id),
+                bigquery.ScalarQueryParameter('user_id', 'INT64', request.user.id),
+            ])
+
+            # Run the query
+            query_job = client.query(query, job_config=job_config)
+            results = query_job.result()
+
+            result = next(results)
+            if not result:
+                raise ValidationException(translation(lang,
+                                                      en='activity not found',
+                                                      es='actividad no encontrada',
+                                                      slug='activity-not-found'),
+                                          code=404)
+
+            serializer = ActivitySerializer(result, many=False)
+            return Response(serializer.data)
+
+        limit = int(request.GET.get('limit', 100))
+        offset = (int(request.GET.get('page', 1)) - 1) * limit
+        kind = request.GET.get('kind', None)
+
+        query = f"""
+            SELECT *
+            FROM `{project_id}.{dataset}.activity`
+            WHERE user_id = @user_id
+                AND meta.academy = @academy_id
+                {'AND meta.kind = @kind' if kind else ''}
+            ORDER BY id DESC
+            LIMIT @limit
+            OFFSET @offset
+        """
+
+        job_config = bigquery.QueryJobConfig(query_parameters=[
+            bigquery.ScalarQueryParameter('academy_id', 'INT64', academy_id),
+            bigquery.ScalarQueryParameter('user_id', 'INT64', request.user.id),
+            bigquery.ScalarQueryParameter('limit', 'INT64', limit),
+            bigquery.ScalarQueryParameter('offset', 'INT64', offset),
+        ])
+
+        if kind:
+            job_config.query_parameters.append(bigquery.ScalarQueryParameter('kind', 'STRING', kind))
+
+        # Run the query
+        query_job = client.query(query, job_config=job_config)
+        results = query_job.result()
+
+        serializer = ActivitySerializer(results, many=True)
+        return Response(serializer.data)

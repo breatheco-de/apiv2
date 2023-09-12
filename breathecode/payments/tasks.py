@@ -637,7 +637,7 @@ def build_subscription(self, bag_id: int, invoice_id: int, start_date: Optional[
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
-def build_plan_financing(self, bag_id: int, invoice_id: int):
+def build_plan_financing(self, bag_id: int, invoice_id: int, is_free: bool = False):
     logger.info(f'Starting build_plan_financing for bag {bag_id}')
 
     if not (bag := Bag.objects.filter(id=bag_id, status='PAID', was_delivered=False).first()):
@@ -648,7 +648,7 @@ def build_plan_financing(self, bag_id: int, invoice_id: int):
         logger.error(f'Invoice with id {invoice_id} not found')
         return
 
-    if not invoice.amount:
+    if not is_free and not invoice.amount:
         logger.error(f'An invoice without amount is prohibited (id: {invoice_id})')
         return
 
