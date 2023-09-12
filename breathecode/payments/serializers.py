@@ -74,7 +74,7 @@ class GetServiceSmallSerializer(serpy.Serializer):
         return GetGroupSerializer(obj.groups.all(), many=True).data
 
 
-class GetServiceSerializer(custom_serpy.Serializer):
+class GetServiceSerializer(serpy.Serializer):
     title = serpy.Field()
     slug = serpy.Field()
     # description = serpy.Field()
