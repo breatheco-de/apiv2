@@ -23,7 +23,7 @@ def format_user_setting(data={}):
 
 def format_consumable_item(data={}):
     return {
-        'cohort_id': None,
+        'cohort_set_id': None,
         'event_type_set_id': None,
         'how_many': -1,
         'id': 1,
@@ -354,7 +354,7 @@ class SignalTestSuite(PaymentsTestCase):
     # Then: return 400
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__service_is_cohort(self):
-        service = {'type': 'COHORT'}
+        service = {'type': 'COHORT_SET'}
         kwargs = {}
 
         if random.randint(0, 1) == 0:

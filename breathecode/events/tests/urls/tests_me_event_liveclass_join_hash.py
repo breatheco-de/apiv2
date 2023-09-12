@@ -14,16 +14,16 @@ from breathecode.payments import tasks
 UTC_NOW = timezone.now()
 
 
-def consumption_session(live_class, cohort, user, consumable, data={}):
+def consumption_session(live_class, cohort_set, user, consumable, data={}):
     return {
         'consumable_id': consumable.id,
         'duration': timedelta(),
         'eta': ...,
         'how_many': 1.0,
         'id': 0,
-        'path': 'admissions.Cohort',
-        'related_id': cohort.id,
-        'related_slug': cohort.slug,
+        'path': 'payments.CohortSet',
+        'related_id': cohort_set.id,
+        'related_slug': cohort_set.slug,
         'request': {
             'args': [],
             'headers': {
@@ -481,6 +481,7 @@ class AcademyEventTestSuite(EventTestCase):
                                         live_class=live_class,
                                         cohort_user=1,
                                         cohort=cohort,
+                                        cohort_set=1,
                                         consumable=1,
                                         token=1)
         querystring = self.bc.format.to_querystring({'token': model.token.key})
@@ -514,7 +515,7 @@ class AcademyEventTestSuite(EventTestCase):
 
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             consumption_session(model.live_class,
-                                model.cohort,
+                                model.cohort_set,
                                 model.user,
                                 model.consumable,
                                 data={
@@ -550,6 +551,7 @@ class AcademyEventTestSuite(EventTestCase):
                                         live_class=live_class,
                                         cohort_user=1,
                                         cohort=cohort,
+                                        cohort_set=1,
                                         consumable=1,
                                         token=1)
         querystring = self.bc.format.to_querystring({'token': model.token.key})
@@ -582,7 +584,7 @@ class AcademyEventTestSuite(EventTestCase):
 
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             consumption_session(model.live_class,
-                                model.cohort,
+                                model.cohort_set,
                                 model.user,
                                 model.consumable,
                                 data={

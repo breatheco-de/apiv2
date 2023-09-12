@@ -236,18 +236,18 @@ class PublicCohortView(APIView):
 
         plan = request.GET.get('plan', '')
         if plan == 'true':
-            items = items.filter(academy__main_currency__isnull=False, plan__id__gte=1).distinct()
+            items = items.filter(academy__main_currency__isnull=False, cohortset__isnull=False).distinct()
 
         elif plan == 'false':
-            items = items.filter().exclude(plan__id__gte=1).distinct()
+            items = items.filter().exclude(cohortset__isnull=True).distinct()
 
         elif plan:
             kwargs = {}
 
             if isinstance(plan, int) or plan.isnumeric():
-                kwargs['plan__id'] = plan
+                kwargs['cohortset__plan__id'] = plan
             else:
-                kwargs['plan__slug'] = plan
+                kwargs['cohortset__plan__slug'] = plan
 
             items = items.filter(**kwargs).distinct()
 

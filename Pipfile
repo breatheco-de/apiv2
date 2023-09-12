@@ -119,3 +119,4 @@ google-cloud-firestore = "*"
 gevent = "*"
 django-storages = {extras = ["google"], version = "*"}
 newrelic = "*"
+graphene-django = "*"

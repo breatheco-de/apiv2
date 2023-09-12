@@ -98,7 +98,7 @@ def plan_serializer(self, plan, service, groups=[], permissions=[], service_item
         'trial_duration_unit':
         plan.trial_duration_unit,
         'has_available_cohorts':
-        plan.available_cohorts.exists(),
+        bool(plan.cohort_set),
     }
 
 
@@ -157,11 +157,28 @@ def get_event_type_set_serializer(event_type_set, academy, event_types=[]):
     }
 
 
+def get_academy_serializer(academy):
+    return {
+        'id': academy.id,
+        'slug': academy.slug,
+        'name': academy.name,
+    }
+
+
 def get_cohort_serializer(cohort):
     return {
         'id': cohort.id,
         'slug': cohort.slug,
         'name': cohort.name,
+    }
+
+
+def get_cohort_set_serializer(cohort_set, academy, cohorts=[]):
+    return {
+        'academy': get_academy_serializer(academy),
+        'cohorts': [get_cohort_serializer(cohort) for cohort in cohorts],
+        'id': cohort_set.id,
+        'slug': cohort_set.slug,
     }
 
 
@@ -173,7 +190,7 @@ def get_plan_financing_serializer(self,
                                   service,
                                   mentorship_service_set=None,
                                   event_type_set=None,
-                                  cohort=None,
+                                  cohort_set=None,
                                   invoices=[],
                                   financing_options=[],
                                   plans=[],
@@ -181,10 +198,11 @@ def get_plan_financing_serializer(self,
                                   permissions=[],
                                   service_items=[],
                                   mentorship_services=[],
-                                  event_types=[]):
+                                  event_types=[],
+                                  cohorts=[]):
 
-    if cohort:
-        cohort = get_cohort_serializer(cohort)
+    if cohort_set:
+        cohort_set = get_cohort_set_serializer(cohort_set, academy, cohorts=cohorts)
 
     if mentorship_service_set:
         mentorship_service_set = get_mentorship_service_set_serializer(
@@ -203,7 +221,7 @@ def get_plan_financing_serializer(self,
         'plans': [plan_serializer(self, plan, service, groups, permissions, service_items) for plan in plans],
         'selected_mentorship_service_set': mentorship_service_set,
         'selected_event_type_set': event_type_set,
-        'selected_cohort': cohort,
+        'selected_cohort_set': cohort_set,
         'status': plan_financing.status,
         'monthly_price': plan_financing.monthly_price,
         'status_message': plan_financing.status_message,
@@ -219,7 +237,7 @@ def get_subscription_serializer(self,
                                 service,
                                 mentorship_service_set=None,
                                 event_type_set=None,
-                                cohort=None,
+                                cohort_set=None,
                                 invoices=[],
                                 financing_options=[],
                                 plans=[],
@@ -227,12 +245,13 @@ def get_subscription_serializer(self,
                                 permissions=[],
                                 service_items=[],
                                 mentorship_services=[],
-                                event_types=[]):
+                                event_types=[],
+                                cohorts=[]):
     valid_until = self.bc.datetime.to_iso_string(
         subscription.valid_until) if subscription.valid_until else None
 
-    if cohort:
-        cohort = get_cohort_serializer(cohort)
+    if cohort_set:
+        cohort_set = get_cohort_set_serializer(cohort_set, academy, cohorts=cohorts)
 
     if mentorship_service_set:
         mentorship_service_set = get_mentorship_service_set_serializer(
@@ -268,8 +287,8 @@ def get_subscription_serializer(self,
         mentorship_service_set,
         'selected_event_type_set':
         event_type_set,
-        'selected_cohort':
-        cohort,
+        'selected_cohort_set':
+        cohort_set,
         'user':
         user_serializer(user),
         'service_items': [
@@ -1133,13 +1152,13 @@ class SignalTestSuite(PaymentsTestCase):
     def test__with_many_items__filter_by_wrong_cohort(self):
         subscriptions = [{
             'valid_until': x,
-            'selected_cohort_id': None,
+            'selected_cohort_set_id': None,
         } for x in [None, UTC_NOW + timedelta(days=1)]]
         plan_financings = [{
             'valid_until': UTC_NOW + timedelta(days=1),
             'plan_expires_at': UTC_NOW + timedelta(days=1),
             'monthly_price': random.random() * 99.99 + 0.01,
-            'selected_cohort_id': None,
+            'selected_cohort_set_id': None,
         } for _ in range(1, 3)]
         plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
@@ -1153,11 +1172,12 @@ class SignalTestSuite(PaymentsTestCase):
                                         invoice=2,
                                         plan=(2, plan),
                                         service_item=2,
-                                        cohort=2)
+                                        cohort_set=2)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('payments:me_subscription') + (f'?cohort-selected={random.choice([1, "slug1"])},'
-                                                          f'{random.choice([2, "slug2"])}')
+        url = reverse_lazy('payments:me_subscription') + (
+            f'?cohort-set-selected={random.choice([1, "slug1"])},'
+            f'{random.choice([2, "slug2"])}')
         response = self.client.get(url)
         self.bc.request.authenticate(model.user)
 
@@ -1179,13 +1199,13 @@ class SignalTestSuite(PaymentsTestCase):
     def test__with_many_items__filter_by_good_cohort(self):
         subscriptions = [{
             'valid_until': x,
-            'selected_cohort_id': y,
+            'selected_cohort_set_id': y,
         } for x, y in [(None, 1), (UTC_NOW + timedelta(days=1), 2)]]
         plan_financings = [{
             'valid_until': UTC_NOW + timedelta(days=1),
             'plan_expires_at': UTC_NOW + timedelta(days=1),
             'monthly_price': random.random() * 99.99 + 0.01,
-            'selected_cohort_id': x,
+            'selected_cohort_set_id': x,
         } for x in range(1, 3)]
         plan_service_items = [{'service_item_id': x, 'plan_id': 1} for x in range(1, 3)]
         plan_service_items += [{'service_item_id': x, 'plan_id': 2} for x in range(1, 3)]
@@ -1199,12 +1219,12 @@ class SignalTestSuite(PaymentsTestCase):
                                         invoice=2,
                                         plan=(2, plan),
                                         service_item=2,
-                                        cohort=2)
+                                        cohort_set=2)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription') + (
-            f'?cohort-selected={random.choice([model.cohort[0].id, model.cohort[0].slug])},'
-            f'{random.choice([model.cohort[1].id, model.cohort[1].slug])}')
+            f'?cohort-set-selected={random.choice([model.cohort_set[0].id, model.cohort_set[0].slug])},'
+            f'{random.choice([model.cohort_set[1].id, model.cohort_set[1].slug])}')
         response = self.client.get(url)
         self.bc.request.authenticate(model.user)
 
@@ -1217,10 +1237,11 @@ class SignalTestSuite(PaymentsTestCase):
                                               model.currency,
                                               model.user,
                                               model.service,
-                                              cohort=model.cohort[1],
+                                              cohort_set=model.cohort_set[1],
                                               invoices=[model.invoice[0], model.invoice[1]],
                                               financing_options=[],
                                               plans=[model.plan[0], model.plan[1]],
+                                              cohorts=[model.cohort],
                                               service_items=[model.service_item[0], model.service_item[1]]),
                 get_plan_financing_serializer(self,
                                               model.plan_financing[0],
@@ -1228,10 +1249,11 @@ class SignalTestSuite(PaymentsTestCase):
                                               model.currency,
                                               model.user,
                                               model.service,
-                                              cohort=model.cohort[0],
+                                              cohort_set=model.cohort_set[0],
                                               invoices=[model.invoice[0], model.invoice[1]],
                                               financing_options=[],
                                               plans=[model.plan[0], model.plan[1]],
+                                              cohorts=[model.cohort],
                                               service_items=[model.service_item[0], model.service_item[1]]),
             ],
             'subscriptions': [
@@ -1241,10 +1263,11 @@ class SignalTestSuite(PaymentsTestCase):
                                             model.currency,
                                             model.user,
                                             model.service,
-                                            cohort=model.cohort[1],
+                                            cohort_set=model.cohort_set[1],
                                             invoices=[model.invoice[0], model.invoice[1]],
                                             financing_options=[],
                                             plans=[model.plan[0], model.plan[1]],
+                                            cohorts=[model.cohort],
                                             service_items=[model.service_item[0], model.service_item[1]]),
                 get_subscription_serializer(self,
                                             model.subscription[0],
@@ -1252,10 +1275,11 @@ class SignalTestSuite(PaymentsTestCase):
                                             model.currency,
                                             model.user,
                                             model.service,
-                                            cohort=model.cohort[0],
+                                            cohort_set=model.cohort_set[0],
                                             invoices=[model.invoice[0], model.invoice[1]],
                                             financing_options=[],
                                             plans=[model.plan[0], model.plan[1]],
+                                            cohorts=[model.cohort],
                                             service_items=[model.service_item[0], model.service_item[1]]),
             ],
         }
@@ -1264,10 +1288,6 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
 
-    ###########33
-    ##############3
-    ################3
-    ###################
     """
     🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by wrong MentorshipServiceSet
     """
@@ -1296,11 +1316,12 @@ class SignalTestSuite(PaymentsTestCase):
                                         invoice=2,
                                         plan=(2, plan),
                                         service_item=2,
-                                        cohort=2)
+                                        cohort_set=2)
         self.bc.request.authenticate(model.user)
 
-        url = reverse_lazy('payments:me_subscription') + (f'?cohort-selected={random.choice([3, "slug1"])},'
-                                                          f'{random.choice([4, "slug2"])}')
+        url = reverse_lazy('payments:me_subscription') + (
+            f'?cohort-set-selected={random.choice([3, "slug1"])},'
+            f'{random.choice([4, "slug2"])}')
         response = self.client.get(url)
         self.bc.request.authenticate(model.user)
 
@@ -1438,7 +1459,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         invoice=2,
                                         plan=(2, plan),
                                         service_item=2,
-                                        cohort=2)
+                                        cohort_set=2)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription') + (

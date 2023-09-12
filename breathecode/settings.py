@@ -18,6 +18,7 @@ import json
 import logging
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
+
 # TODO: decouple file storage from django
 # from django.utils.http import http_date
 
@@ -81,7 +82,10 @@ INSTALLED_APPS += [
     'breathecode.payments',
     'breathecode.provisioning',
     'explorer',
+    'graphene_django',
 ]
+
+GRAPHENE = {'SCHEMA': 'breathecode.schema.schema'}
 
 if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or ENVIRONMENT == 'test':
     INSTALLED_APPS.append('breathecode.cypress')
@@ -402,7 +406,7 @@ SITE_ID = 1
 # Change 'default' database configuration with $DATABASE_URL.
 # https://github.com/jacobian/dj-database-url#url-schema
 DATABASES = {
-    'default': dj_database_url.config(default=DATABASE_URL, ssl_require=False),
+    'default': dj_database_url.config(default=DATABASE_URL, conn_max_age=600, ssl_require=False),
 }
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
