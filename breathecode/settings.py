@@ -262,14 +262,14 @@ logging.config.dictConfig({
     }
 })
 
-# ROLLBAR = {
-#     'access_token': os.getenv('ROLLBAR_ACCESS_TOKEN', ''),
-#     'environment': 'development' if DEBUG else 'production',
-#     'branch': 'master',
-#     'root': BASE_DIR,
-#     # parsed POST variables placed in your output for exception handling
-#     'EXCEPTION_HANDLER': 'rollbar.contrib.django_rest_framework.post_exception_handler',
-# }
+ROLLBAR = {
+    'access_token': os.getenv('ROLLBAR_ACCESS_TOKEN', ''),
+    'environment': 'development' if DEBUG else 'production',
+    'branch': 'master',
+    'root': BASE_DIR,
+    # parsed POST variables placed in your output for exception handling
+    'EXCEPTION_HANDLER': 'rollbar.contrib.django_rest_framework.post_exception_handler',
+}
 
 MESSAGE_TAGS = {
     messages.DEBUG: 'alert-info',
