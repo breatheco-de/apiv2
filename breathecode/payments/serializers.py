@@ -3,7 +3,7 @@ from breathecode.admissions.models import Cohort
 from breathecode.payments.models import AcademyService, Plan, PlanOfferTranslation, Service, ServiceItem, ServiceItemFeature
 from django.db.models.query_utils import Q
 from rest_framework.exceptions import ValidationError
-from breathecode.utils import serializers, serpy, custom_serpy
+from breathecode.utils import serializers, serpy
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -74,7 +74,7 @@ class GetServiceSmallSerializer(serpy.Serializer):
         return GetGroupSerializer(obj.groups.all(), many=True).data
 
 
-class GetServiceSerializer(custom_serpy.Serializer):
+class GetServiceSerializer(serpy.Serializer):
     title = serpy.Field()
     slug = serpy.Field()
     # description = serpy.Field()
