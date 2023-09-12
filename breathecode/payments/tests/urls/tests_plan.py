@@ -303,6 +303,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=plan_service_items,
                                         financing_option=2,
                                         cohort=1,
+                                        cohort_set=1,
                                         syllabus_version=1)
 
         url = reverse_lazy('payments:plan') + '?cohort=1'
@@ -453,6 +454,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=plan_service_items,
                                         financing_option=2,
                                         cohort=1,
+                                        cohort_set=1,
                                         syllabus_version=1)
 
         url = reverse_lazy('payments:plan') + '?syllabus=1'

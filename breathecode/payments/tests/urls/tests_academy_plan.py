@@ -372,6 +372,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=plan_service_items,
                                         financing_option=2,
                                         cohort=1,
+                                        cohort_set=1,
                                         syllabus_version=1)
 
         self.bc.request.authenticate(model.user)
@@ -551,6 +552,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=plan_service_items,
                                         financing_option=2,
                                         cohort=1,
+                                        cohort_set=1,
                                         syllabus_version=1)
 
         self.bc.request.authenticate(model.user)

@@ -25,7 +25,7 @@ def subscription_item(data={}):
         'paid_at': UTC_NOW,
         'pay_every': 1,
         'pay_every_unit': 'MONTH',
-        'selected_cohort_id': None,
+        'selected_cohort_set_id': None,
         'selected_event_type_set_id': None,
         'selected_mentorship_service_set_id': None,
         'status': 'ACTIVE',
@@ -276,7 +276,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             'trial_duration_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
         } for _ in range(2)]
 
-        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plans, cohort=1)
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plans, cohort=1, cohort_set=1)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -313,7 +313,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 subscription_item({
                     'id':
                     plan.id,
-                    'selected_cohort_id':
+                    'selected_cohort_set_id':
                     1,
                     'status':
                     'FREE_TRIAL',

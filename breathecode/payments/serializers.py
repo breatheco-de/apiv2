@@ -188,7 +188,7 @@ class GetPlanSmallSerializer(serpy.Serializer):
     has_available_cohorts = serpy.MethodField()
 
     def get_has_available_cohorts(self, obj):
-        return obj.available_cohorts.exists()
+        return bool(obj.cohort_set)
 
     def get_service_items(self, obj):
         return GetServiceItemSerializer(obj.service_items.all(), many=True).data
@@ -337,6 +337,16 @@ class GetMentorshipServiceSetSerializer(GetMentorshipServiceSetSmallSerializer):
         return GetAcademyServiceSmallSerializer(items, many=True).data
 
 
+class GetCohortSetSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    academy = GetAcademySmallSerializer(many=False)
+    cohorts = serpy.MethodField()
+
+    def get_cohorts(self, obj):
+        return GetCohortSerializer(obj.cohorts.filter(), many=True).data
+
+
 class GetEventTypeSerializer(serpy.Serializer):
 
     id = serpy.Field()
@@ -376,7 +386,7 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
     user = GetUserSmallSerializer(many=False)
     academy = GetAcademySmallSerializer(many=False)
 
-    selected_cohort = GetCohortSerializer(many=False, required=False)
+    selected_cohort_set = GetCohortSetSerializer(many=False, required=False)
     selected_mentorship_service_set = GetMentorshipServiceSetSerializer(many=False, required=False)
     selected_event_type_set = GetEventTypeSetSerializer(many=False, required=False)
 

@@ -22,6 +22,8 @@ from django.urls import include, path
 from django.views.generic import TemplateView
 from django.conf.urls.static import static
 from django.conf import settings
+from graphene_django.views import GraphQLView
+from django.views.decorators.csrf import csrf_exempt
 
 ENVIRONMENT = os.environ.get('ENV')
 
@@ -80,7 +82,7 @@ urlpatterns_docs = [
 urlpatterns_django = [
     path('admin/', admin.site.urls),
     path('explorer/', include('explorer.urls')),
-    #
+    path('graphql', csrf_exempt(GraphQLView.as_view(graphiql=True))),
 ]
 
 urlpatterns_static = static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
