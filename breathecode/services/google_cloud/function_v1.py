@@ -9,13 +9,14 @@ __all__ = ['Function', 'FunctionV1']
 
 
 class FunctionV1:
-    """Google Cloud Function handler"""
+    """Google Cloud Function handler."""
 
     service_url: str
     method: str
 
     def __init__(self, region, project_id, name, method='POST'):
-        """Google Cloud Function constructor
+        """Google Cloud Function constructor.
+
             Args:
                 region (str): Google Cloud Function region
                 project_id (str): Google Cloud Function project id
@@ -27,7 +28,8 @@ class FunctionV1:
         self.method = method
 
     def call(self, data=None, params={}, timeout=2) -> requests.models.Response:
-        """Call a Google Cloud Function
+        """Call a Google Cloud Function.
+
             Args:
                 data (dict): Arguments of Google Cloud Function.
 

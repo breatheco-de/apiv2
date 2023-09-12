@@ -677,7 +677,6 @@
         "SHUTDOWN",
         "OUT",
         "REGR_SYY",
-        "FALSE",
         "DELIMITERS",
         "DEFERRABLE",
         "PREPARE",

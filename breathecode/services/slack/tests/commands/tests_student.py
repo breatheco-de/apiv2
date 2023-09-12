@@ -138,7 +138,7 @@ class SlackTestSuite(SlackTestCase):
                     'mrkdwn',
                     'text':
                     f'\n*Student Name:* {model.user[1].first_name} {model.user[1].last_name}\n*Github*: not set\n*Phone*: not set\n*Email:* '\
-                        f'{model.user[1].email}\n*Cohorts:*\n```\n- {model.cohort.name}: 🎓Not set and 💰Not set\n```\n'
+                        f'{model.user[1].email}\n*Cohorts:*\n```\n- {model.cohort.name}: 🎓ACTIVE and 💰Not set\n```\n'
                 },
                 'accessory': {
                     'type': 'image',

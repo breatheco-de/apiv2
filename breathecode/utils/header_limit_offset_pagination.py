@@ -12,10 +12,25 @@ class HeaderLimitOffsetPagination(LimitOffsetPagination):
         self.use_envelope = True
         if str(request.GET.get('envelope')).lower() in ['false', '0']:
             self.use_envelope = False
-        result = super().paginate_queryset(queryset, request, view)
+        result = self._paginate_queryset(queryset, request, view)
         if hasattr(queryset, 'filter'):
             return result
         return queryset
+
+    def _paginate_queryset(self, queryset, request, view=None):
+        self.limit = self.get_limit(request)
+        if self.limit is None:
+            return None
+
+        self.count = self.get_count(queryset)
+        self.offset = self.get_offset(request)
+        self.request = request
+        if self.count > self.limit and self.template is not None:
+            self.display_page_controls = True
+
+        # if self.count == 0 or self.offset > self.count:
+        #     return []
+        return queryset[self.offset:self.offset + self.limit]
 
     def __parse_comma__(self, string: str):
         if not string:
