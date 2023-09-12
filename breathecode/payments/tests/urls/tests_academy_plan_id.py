@@ -82,9 +82,6 @@ def get_serializer(event,
 
 
 class SignalTestSuite(PaymentsTestCase):
-    """
-    🔽🔽🔽 auth
-    """
 
     # Given: 0 Plan
     # When: get with no auth
@@ -211,4 +208,52 @@ class SignalTestSuite(PaymentsTestCase):
 
         self.bc.check.calls(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
             call(sort='-id', paginate=True),
+        ])
+
+    # Given: 2 Plan, 4 PlanServiceItem, 2 ServiceItem and 1 Service
+    # When: get with no auth and plan is renewable
+    # Then: return 200 with 2 Plan with no financial options
+    def test__put__two_items__plan_is_renewable(self):
+        plan = {'time_of_life': None, 'time_of_life_unit': None, 'is_renewable': True}
+        plan_service_items = [{'service_item_id': n, 'plan_id': 1} for n in range(1, 3)]
+        model = self.bc.database.create(plan=plan,
+                                        user=1,
+                                        capability='crud_plan',
+                                        role=1,
+                                        profile_academy=1,
+                                        skip_cohort=True,
+                                        service_item=2,
+                                        plan_service_item=plan_service_items,
+                                        financing_option=2)
+
+        self.bc.request.authenticate(model.user)
+        self.bc.request.set_headers(academy=1)
+
+        data = {
+            'slug': self.bc.fake.slug(),
+            'is_renewable': random.choice([True, False]),
+            'status': random.choice(['DRAFT', 'ACTIVE', 'UNLISTED', 'DELETED', 'DISCONTINUED']),
+            'time_of_life': random.randint(1, 100),
+            'time_of_life_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
+            'trial_duration': random.randint(1, 100),
+            'trial_duration_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
+            'is_onboarding': random.choice([True, False]),
+            'has_waiting_list': random.choice([True, False]),
+        }
+
+        url = reverse_lazy('payments:academy_plan_id', kwargs={'plan_id': 1})
+        response = self.client.put(url, data, format='json')
+
+        json = response.json()
+        expected = get_serializer(model.plan,
+                                  model.currency,
+                                  model.service,
+                                  academy=model.academy,
+                                  service_items=model.service_item,
+                                  financing_options=[])
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('payments.Plan'), [
+            self.bc.format.to_dict(model.plan),
         ])

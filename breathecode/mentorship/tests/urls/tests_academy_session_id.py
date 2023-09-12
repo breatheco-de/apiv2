@@ -356,6 +356,8 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         mentor_profile=1,
                                         profile_academy=1)
 
+        signals.mentorship_session_status.send.call_args_list = []
+
         self.bc.request.set_headers(academy=1)
         self.bc.request.authenticate(model.user)
 
@@ -421,15 +423,9 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipBill'), [
             self.bc.format.to_dict(model.mentorship_bill),
         ])
-        self.assertEqual(
-            signals.mentorship_session_status.send.call_args_list,
-            ([
-                # mixer
-                call(instance=model.mentorship_session, sender=model.mentorship_session.__class__),
-            ] if current_status != 'PENDING' else []) + [
-                # endpoint
-                call(instance=model.mentorship_session, sender=model.mentorship_session.__class__),
-            ])
+        self.assertEqual(signals.mentorship_session_status.send.call_args_list, [
+            call(instance=model.mentorship_session, sender=model.mentorship_session.__class__),
+        ])
 
     """
     🔽🔽🔽 PUT with all required fields, is_online is False, MentorshipBill finished
@@ -451,6 +447,8 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         mentorship_bill=mentorship_bill,
                                         mentor_profile=1,
                                         profile_academy=1)
+
+        signals.mentorship_session_status.send.call_args_list = []
 
         self.bc.request.set_headers(academy=1)
         self.bc.request.authenticate(model.user)
@@ -497,11 +495,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipBill'), [
             self.bc.format.to_dict(model.mentorship_bill),
         ])
-        self.assertEqual(
-            str(signals.mentorship_session_status.send.call_args_list),
-            str([
-                call(instance=model.mentorship_session, sender=model.mentorship_session.__class__),
-            ] if current_status != 'PENDING' else []))
+        self.assertEqual(str(signals.mentorship_session_status.send.call_args_list), str([]))
 
     """
     🔽🔽🔽 PUT with all required fields, is_online is True, trying to edit readonly fields
@@ -519,6 +513,8 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         mentorship_bill=1,
                                         mentor_profile=1,
                                         profile_academy=1)
+
+        signals.mentorship_session_status.send.call_args_list = []
 
         self.bc.request.set_headers(academy=1)
         self.bc.request.authenticate(model.user)
@@ -601,6 +597,8 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         mentor_profile=1,
                                         profile_academy=1)
 
+        signals.mentorship_session_status.send.call_args_list = []
+
         self.bc.request.set_headers(academy=1)
         self.bc.request.authenticate(model.user)
 
@@ -658,15 +656,9 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.bc.format.to_dict(model.mentorship_bill),
         ])
 
-        self.assertEqual(
-            signals.mentorship_session_status.send.call_args_list,
-            ([
-                # mixer
-                call(instance=model.mentorship_session, sender=model.mentorship_session.__class__),
-            ] if current_status != 'PENDING' else []) + [
-                # endpoint
-                call(instance=model.mentorship_session, sender=model.mentorship_session.__class__),
-            ])
+        self.assertEqual(signals.mentorship_session_status.send.call_args_list, [
+            call(instance=model.mentorship_session, sender=model.mentorship_session.__class__),
+        ])
 
     """
     🔽🔽🔽 PUT with all required fields, is_online is True, MentorshipBill finished
@@ -685,6 +677,8 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         mentorship_bill=mentorship_bill,
                                         mentor_profile=1,
                                         profile_academy=1)
+
+        signals.mentorship_session_status.send.call_args_list = []
 
         self.bc.request.set_headers(academy=1)
         self.bc.request.authenticate(model.user)
@@ -738,6 +732,8 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
 
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    # @patch('breathecode.mentorship.signals.mentorship_session_status.send',
+    #        MagicMock(side_effect=[None, None, Exception('error')]))
     def test__put__found__passing_a_bill_with_some_session_without_service(self):
         mentorship_bill = {'status': 'DUE'}
         statuses = ['PENDING', 'STARTED', 'COMPLETED', 'FAILED', 'IGNORED']
@@ -761,6 +757,8 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         mentorship_bill=mentorship_bill,
                                         mentor_profile=1,
                                         profile_academy=1)
+
+        signals.mentorship_session_status.send.call_args_list = []
 
         self.bc.request.set_headers(academy=1)
         self.bc.request.authenticate(model.user)
@@ -828,13 +826,8 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                 'status': 'RECALCULATE',
             },
         ])
-        self.assertEqual(
-            signals.mentorship_session_status.send.call_args_list,
-            ([
-                # mixer
-                call(instance=model.mentorship_session[0], sender=model.mentorship_session[0].__class__),
-                call(instance=model.mentorship_session[1], sender=model.mentorship_session[1].__class__),
-            ] if current_status != 'PENDING' else []) + [
-                # endpoint
-                call(instance=model.mentorship_session[0], sender=model.mentorship_session[0].__class__),
-            ])
+
+        print(signals.mentorship_session_status.send.call_args_list)
+        self.assertEqual(signals.mentorship_session_status.send.call_args_list, [
+            call(instance=model.mentorship_session[0], sender=model.mentorship_session[0].__class__),
+        ])

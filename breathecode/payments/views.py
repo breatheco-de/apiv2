@@ -22,8 +22,9 @@ from breathecode.payments.serializers import (
     GetBagSerializer, GetEventTypeSetSerializer, GetEventTypeSetSmallSerializer, GetInvoiceSerializer,
     GetInvoiceSmallSerializer, GetMentorshipServiceSetSerializer, GetMentorshipServiceSetSmallSerializer,
     GetPlanFinancingSerializer, GetPlanOfferSerializer, GetPlanSerializer,
-    GetServiceItemWithFeaturesSerializer, GetServiceSerializer, GetSubscriptionSerializer, ServiceSerializer,
-    GetAcademyServiceSmallSerializer, POSTAcademyServiceSerializer, PUTAcademyServiceSerializer)
+    GetServiceItemWithFeaturesSerializer, GetServiceSerializer, GetSubscriptionSerializer, PlanSerializer,
+    ServiceSerializer, GetAcademyServiceSmallSerializer, POSTAcademyServiceSerializer,
+    PUTAcademyServiceSerializer)
 from breathecode.payments.services.stripe import Stripe
 from breathecode.utils import APIViewExtensions
 from breathecode.utils.decorators.capable_of import capable_of
@@ -164,7 +165,7 @@ class AcademyPlanView(APIView):
         if not 'owner' in data or data['owner'] is not None:
             data['owner'] = academy_id
 
-        serializer = ServiceSerializer(data=data)
+        serializer = PlanSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
@@ -188,7 +189,7 @@ class AcademyPlanView(APIView):
         if not 'owner' in data or data['owner'] is not None:
             data['owner'] = academy_id
 
-        serializer = ServiceSerializer(data=data)
+        serializer = PlanSerializer(plan, data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
