@@ -813,8 +813,8 @@ def end_the_consumption_session(self, consumption_session_id: int, how_many: flo
 
 # TODO: this task is not being used, if you will use this task, you need to take in consideration
 # you need fix the logic about the consumable valid until, maybe this must be removed
-@shared_task(bind=False, base=BaseTaskWithRetry)
-def build_consumables_from_bag(bag_id: int):
+@task(bind=True, base=BaseTaskWithRetry, transaction=True)
+def build_consumables_from_bag(bag_id: int, **_: Any):
     logger.info(f'Starting build_consumables_from_bag for bag {bag_id}')
 
     if not (bag := Bag.objects.filter(id=bag_id, status='PAID', was_delivered=False).first()):
