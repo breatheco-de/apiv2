@@ -31,7 +31,7 @@ class BaseTaskWithRetry(Task):
 def get_app_url():
     return os.getenv('APP_URL', '')
 
-@task(bind=True, base=BaseTaskWithRetry, transaction=True)
+@task(bind=True, base=BaseTaskWithRetry)
 def renew_consumables(self, scheduler_id: int, **_: Any):
     """Renew consumables."""
 
@@ -173,7 +173,7 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     logger.info(f'The scheduler {scheduler.id} was renewed')
 
 
-@task(bind=True, base=BaseTaskWithRetry, transaction=True)
+@task(bind=True, base=BaseTaskWithRetry)
 def renew_subscription_consumables(self, subscription_id: int, **_: Any):
     """Renew consumables belongs to a subscription."""
 
@@ -199,7 +199,7 @@ def renew_subscription_consumables(self, subscription_id: int, **_: Any):
         renew_consumables.delay(scheduler.id)
 
 
-@task(bind=True, base=BaseTaskWithRetry, transaction=True)
+@task(bind=True, base=BaseTaskWithRetry)
 def renew_plan_financing_consumables(self, plan_financing_id: int, **_: Any):
     """Renew consumables belongs to a plan financing."""
 
@@ -813,7 +813,7 @@ def end_the_consumption_session(self, consumption_session_id: int, how_many: flo
 
 # TODO: this task is not being used, if you will use this task, you need to take in consideration
 # you need fix the logic about the consumable valid until, maybe this must be removed
-@task(bind=True, base=BaseTaskWithRetry, transaction=True)
+@task(bind=True, base=BaseTaskWithRetry)
 def build_consumables_from_bag(bag_id: int, **_: Any):
     logger.info(f'Starting build_consumables_from_bag for bag {bag_id}')
 
