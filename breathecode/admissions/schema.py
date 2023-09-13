@@ -10,6 +10,12 @@ from django.db.models import FloatField, Q, Value
 from django.utils import timezone
 
 
+def field_is_requested(info, field_name):
+    """Check if a field is being requested in the current query."""
+    return any(selection.name.value == field_name
+               for selection in info.field_nodes[0].selection_set.selections)
+
+
 class CohortTimeSlot(DjangoObjectType):
 
     class Meta:
@@ -104,8 +110,11 @@ class Admissions(graphene.ObjectType):
         start = (page - 1) * limit
         end = start + limit
 
-        items = items.annotate(longitude=Value(None, output_field=FloatField()),
-                               latitude=Value(None, output_field=FloatField()))
+        has_distance = field_is_requested(info, 'distance')
+
+        if has_distance:
+            items = items.annotate(longitude=Value(None, output_field=FloatField()),
+                                   latitude=Value(None, output_field=FloatField()))
 
         upcoming = kwargs.get('upcoming', None)
         if upcoming == 'true':
@@ -138,7 +147,7 @@ class Admissions(graphene.ObjectType):
         else:
             items = items.exclude(stage='DELETED')
 
-        if coordinates := kwargs.get('coordinates', ''):
+        if has_distance and (coordinates := kwargs.get('coordinates', '')):
             try:
                 latitude, longitude = coordinates.split(',')
                 latitude = float(latitude)
