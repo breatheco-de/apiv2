@@ -31,9 +31,8 @@ class BaseTaskWithRetry(Task):
 def get_app_url():
     return os.getenv('APP_URL', '')
 
-
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def renew_consumables(self, scheduler_id: int):
+@task(bind=True, base=BaseTaskWithRetry, transaction=True)
+def renew_consumables(self, scheduler_id: int, **_: Any):
     """Renew consumables."""
 
     def get_resource_lookup(i_owe_you: AbstractIOweYou, service: Service):
@@ -174,8 +173,8 @@ def renew_consumables(self, scheduler_id: int):
     logger.info(f'The scheduler {scheduler.id} was renewed')
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def renew_subscription_consumables(self, subscription_id: int):
+@task(bind=True, base=BaseTaskWithRetry, transaction=True)
+def renew_subscription_consumables(self, subscription_id: int, **_: Any):
     """Renew consumables belongs to a subscription."""
 
     logger.info(f'Starting renew_subscription_consumables for id {subscription_id}')
@@ -200,8 +199,8 @@ def renew_subscription_consumables(self, subscription_id: int):
         renew_consumables.delay(scheduler.id)
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def renew_plan_financing_consumables(self, plan_financing_id: int):
+@task(bind=True, base=BaseTaskWithRetry, transaction=True)
+def renew_plan_financing_consumables(self, plan_financing_id: int, **_: Any):
     """Renew consumables belongs to a plan financing."""
 
     logger.info(f'Starting renew_plan_financing_consumables for id {plan_financing_id}')
