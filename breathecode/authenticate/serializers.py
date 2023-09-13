@@ -1089,6 +1089,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         model = Profile
         exclude = ()
 
+import breathecode.activity.tasks as tasks_activity
 
 class UserInviteWaitingListSerializer(serializers.ModelSerializer):
     access_token = serializers.SerializerMethodField()
@@ -1278,6 +1279,8 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         if self.course:
             self.course.invites.add(instance)
 
+        tasks_activity.add_activity.delay(self.user.id, 'invite_created', related_type='auth.User', related_id=self.user.id)
+      
         return instance
 
     def update(self, *args, **kwargs):
