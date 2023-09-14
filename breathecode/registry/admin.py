@@ -483,14 +483,39 @@ class ParentFilter(admin.SimpleListFilter):
             return queryset.filter(parent__isnull=False)
 
 
+class IsDeprecatedFilter(admin.SimpleListFilter):
+
+    title = 'Is Deprecated'
+
+    parameter_name = 'is_deprecated'
+
+    def lookups(self, request, model_admin):
+
+        return (('true', 'True'), ('false', 'False'))
+
+    def queryset(self, request, queryset):
+        if self.value() == 'true':
+            return queryset.filter(is_deprecated=True)
+
+        if self.value() == 'false':
+            return queryset.filter(is_deprecated=False)
+
+
+def mark_technologies_as_deprecated(modeladmin, request, queryset):
+    technologies = queryset.all()
+    for technology in technologies:
+        if technology.parent is not None:
+            AssetTechnology.objects.filter(slug=technology.slug).update(is_deprecated=True)
+
+
 @admin.register(AssetTechnology)
 class AssetTechnologyAdmin(admin.ModelAdmin):
     search_fields = ['title', 'slug']
-    list_display = ('id', 'get_slug', 'title', 'parent', 'featured_asset', 'description')
-    list_filter = (ParentFilter, )
+    list_display = ('id', 'get_slug', 'title', 'parent', 'featured_asset', 'description', 'is_deprecated')
+    list_filter = (ParentFilter, IsDeprecatedFilter)
     raw_id_fields = ['parent', 'featured_asset']
 
-    actions = (merge_technologies, slug_to_lower_case)
+    actions = (merge_technologies, slug_to_lower_case, mark_technologies_as_deprecated)
 
     def get_slug(self, obj):
         parent = ''
