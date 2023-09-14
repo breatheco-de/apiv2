@@ -69,6 +69,7 @@ class Academy(models.Model):
                                 help_text='It has to be a square',
                                 default='/static/icons/picture.png')
     website_url = models.CharField(max_length=255, blank=True, null=True, default=None)
+    white_label_url = models.CharField(max_length=255, blank=True, null=True, default=None)
 
     street_address = models.CharField(max_length=250)
 

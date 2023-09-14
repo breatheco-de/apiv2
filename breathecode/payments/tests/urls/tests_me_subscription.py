@@ -66,6 +66,7 @@ def service_serializer(service, groups=[], permissions=[]):
     return {
         'private': service.private,
         'slug': service.slug,
+        'title': service.title,
         'groups': [group_serializer(group, permissions) for group in groups],
     }
 

@@ -62,6 +62,7 @@ def service_serializer(service, cohorts=[], data={}):
         'groups': [],
         'private': service.private,
         'slug': service.slug,
+        'title': service.title,
         **data,
     }
 
