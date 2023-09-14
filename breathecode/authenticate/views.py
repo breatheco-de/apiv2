@@ -66,6 +66,7 @@ from .serializers import (AppUserSerializer, AuthSerializer, GetGitpodUserSerial
                           POSTGithubUserSerializer)
 
 import breathecode.payments.tasks as payment_tasks
+import breathecode.activity.tasks as tasks_activity
 
 logger = logging.getLogger(__name__)
 APP_URL = os.getenv('APP_URL', '')
@@ -401,6 +402,11 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                                                      last_name=item.last_name)
                     profile_academy.save()
 
+                tasks_activity.add_activity.delay(request.user.id,
+                                                  'invite_status_updated',
+                                                  related_type='auth.UserInvite',
+                                                  related_id=item.id)
+
             serializer = UserInviteSerializer(items, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -713,9 +719,6 @@ class StudentView(APIView, GenerateLookupsMixin):
         raise ValidationException('This functionality is under maintenance and it\'s not working',
                                   code=403,
                                   slug='delete-is-forbidden')
-
-
-import breathecode.activity.tasks as tasks_activity
 
 
 class LoginView(ObtainAuthToken):

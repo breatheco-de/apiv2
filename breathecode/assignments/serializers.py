@@ -6,6 +6,7 @@ from breathecode.utils import ValidationException
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import ProfileAcademy, Token
 from django.contrib.auth.models import User
+import breathecode.activity.tasks as tasks_activity
 
 logger = logging.getLogger(__name__)
 
@@ -210,6 +211,24 @@ class PUTTaskSerializer(serializers.ModelSerializer):
                     'Only staff members or teachers from the same academy as this student can update the '
                     'review status',
                     slug='editing-revision-status-but-is-not-teacher-or-assistant')
+
+        if 'opened_at' in data and data['opened_at'] > self.instance.opened_at:
+            tasks_activity.add_activity.delay(self.context['request'].user.id,
+                                              'read_assignment',
+                                              related_type='assignments.Task',
+                                              related_id=self.id)
+
+        if 'revision_status' in data and data['revision_status'] != self.instance.revision_status:
+            tasks_activity.add_activity.delay(self.context['request'].user.id,
+                                              'assignment_review_status_updated',
+                                              related_type='assignments.Task',
+                                              related_id=self.id)
+
+        if 'task_status' in data and data['task_status'] != self.instance.task_status:
+            tasks_activity.add_activity.delay(self.context['request'].user.id,
+                                              'assignment_status_updated',
+                                              related_type='assignments.Task',
+                                              related_id=self.id)
 
         return data
 

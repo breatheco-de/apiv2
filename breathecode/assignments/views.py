@@ -30,6 +30,7 @@ from .actions import sync_cohort_tasks
 import breathecode.assignments.tasks as tasks
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils.i18n import translation
+import breathecode.activity.tasks as tasks_activity
 
 logger = logging.getLogger(__name__)
 
@@ -636,6 +637,10 @@ class TaskMeView(APIView):
         if serializer.is_valid():
             serializer.save()
             # tasks.teacher_task_notification.delay(serializer.data['id'])
+            tasks_activity.add_activity.delay(request.user.id,
+                                              'open_syllabus_module',
+                                              related_type='assignments.Task',
+                                              related_id=serializer.id)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
