@@ -1386,13 +1386,13 @@ class PayView(APIView):
 
                 current_reputation = reputation.get_reputation()
                 if current_reputation == 'FRAUD' or current_reputation == 'BAD':
-                    raise PaymentException(
-                        translation(
-                            lang,
-                            en=
-                            'The payment could not be completed because you have a bad reputation on this platform',
-                            es='No se pudo completar el pago porque tienes mala reputación en esta plataforma',
-                            slug='fraud-or-bad-reputation'))
+                    raise PaymentException(translation(
+                        lang,
+                        en=
+                        'The payment could not be completed because you have a bad reputation on this platform',
+                        es='No se pudo completar el pago porque tienes mala reputación en esta plataforma'),
+                                           slug='fraud-or-bad-reputation',
+                                           silent=True)
 
                 # do no show the bags of type preview they are build
                 # type = request.data.get('type', 'BAG').upper()
