@@ -390,17 +390,11 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
     selected_mentorship_service_set = GetMentorshipServiceSetSerializer(many=False, required=False)
     selected_event_type_set = GetEventTypeSetSerializer(many=False, required=False)
 
-    plans = serpy.MethodField()
-    invoices = serpy.MethodField()
+    plans = serpy.ManyToManyField(GetPlanSmallSerializer(attr='plans', many=True))
+    invoices = serpy.ManyToManyField(GetInvoiceSerializer(attr='invoices', many=True))
 
     next_payment_at = serpy.Field()
     valid_until = serpy.Field()
-
-    def get_plans(self, obj):
-        return GetPlanSmallSerializer(obj.plans.filter(), many=True).data
-
-    def get_invoices(self, obj):
-        return GetInvoiceSerializer(obj.invoices.filter(), many=True).data
 
 
 class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):

@@ -15,7 +15,7 @@ from breathecode.admissions import tasks as admissions_tasks
 from breathecode.payments import actions
 from breathecode.payments.actions import (PlanFinder, add_items_to_bag, filter_consumables, get_amount,
                                           get_amount_by_chosen_period, get_balance_by_resource)
-from breathecode.payments.models import (AcademyService, Bag, CohortSet, Consumable, EventTypeSet,
+from breathecode.payments.models import (AcademyService, Bag, CohortSet, Consumable, Currency, EventTypeSet,
                                          FinancialReputation, Invoice, MentorshipServiceSet, Plan,
                                          PlanFinancing, PlanOffer, Service, ServiceItem, Subscription)
 from breathecode.payments.serializers import (
@@ -161,9 +161,30 @@ class AcademyPlanView(APIView):
 
     @capable_of('crud_plan')
     def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+
+        data = {}
+
+        for key in request.data:
+            if key in ['owner', 'owner_id', 'currency']:
+                continue
+
+            data[key] = request.data[key]
+
         data = request.data
         if not 'owner' in data or data['owner'] is not None:
             data['owner'] = academy_id
+
+        currency = data.get('currency', '')
+        if currency and (currency := Currency.objects.filter(code=currency).first()):
+            data['currency'] = currency.id
+
+        else:
+            raise ValidationException(translation(lang,
+                                                  en='Currency not found',
+                                                  es='Divisa no encontrada',
+                                                  slug='currency-not-found'),
+                                      code=400)
 
         serializer = PlanSerializer(data=data)
         serializer.is_valid(raise_exception=True)
@@ -185,15 +206,23 @@ class AcademyPlanView(APIView):
                                                   slug='not-found'),
                                       code=404)
 
-        data = request.data
-        if not 'owner' in data or data['owner'] is not None:
-            data['owner'] = academy_id
+        data = {}
+
+        if plan.currency:
+            data['currency'] = plan.currency.id
+
+        for key in request.data:
+            if key in ['owner', 'owner_id']:
+                continue
+
+            data[key] = request.data[key]
 
         serializer = PlanSerializer(plan, data=data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
 
-        return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_plan')
     def delete(self, request, plan_id=None, plan_slug=None, academy_id=None):
@@ -1559,14 +1588,17 @@ class PayView(APIView):
                         if plan.owner:
                             admissions_tasks.build_profile_academy.delay(plan.owner.id, bag.user.id)
 
-                        if not plan.cohort_set:
+                        if not plan.cohort_set or not (cohort := request.GET.get('selected_cohort')):
                             continue
 
-                        for cohort in plan.cohort_set.cohorts.all():
-                            admissions_tasks.build_cohort_user.delay(cohort.id, bag.user.id)
+                        cohort = plan.cohort_set.cohorts.filter(slug=cohort).first()
+                        if not cohort:
+                            continue
 
-                            if plan.owner != cohort.academy:
-                                admissions_tasks.build_profile_academy.delay(cohort.academy.id, bag.user.id)
+                        admissions_tasks.build_cohort_user.delay(cohort.id, bag.user.id)
+
+                        if plan.owner != cohort.academy:
+                            admissions_tasks.build_profile_academy.delay(cohort.academy.id, bag.user.id)
 
                 serializer = GetInvoiceSerializer(invoice, many=False)
                 return Response(serializer.data, status=201)
