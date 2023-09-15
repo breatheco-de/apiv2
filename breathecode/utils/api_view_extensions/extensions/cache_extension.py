@@ -34,6 +34,12 @@ class CacheExtension(ExtensionBase):
         return {**self._request.GET.dict(), **self._request.parser_context['kwargs'], **extends}
 
     def get(self) -> dict:
+
+        # allow requests to disable cache with querystring "cache" variable
+        _cache_is_active = self._request.GET.get('cache', 'true').lower() in ['true', '1', 'yes']
+        if not _cache_is_active:
+            return None
+            
         params = self._get_params()
         return self._cache.get(**params)
 
