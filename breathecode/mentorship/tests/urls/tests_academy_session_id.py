@@ -827,7 +827,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             },
         ])
 
-        print(signals.mentorship_session_status.send.call_args_list)
         self.assertEqual(signals.mentorship_session_status.send.call_args_list, [
             call(instance=model.mentorship_session[0], sender=model.mentorship_session[0].__class__),
         ])

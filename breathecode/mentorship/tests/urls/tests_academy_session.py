@@ -1589,7 +1589,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipBill'), [
             self.bc.format.to_dict(model.mentorship_bill),
         ])
-        print(signals.mentorship_session_status.send.call_args_list)
         self.assertEqual(signals.mentorship_session_status.send.call_args_list, [
             call(instance=model.mentorship_session, sender=model.mentorship_session.__class__),
         ])
@@ -1660,7 +1659,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                 **self.bc.format.to_dict(model.mentorship_session),
             },
         ])
-        print(signals.mentorship_session_status.send.call_args_list)
         self.assertEqual(signals.mentorship_session_status.send.call_args_list, [])
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipBill'), [
             self.bc.format.to_dict(model.mentorship_bill),
@@ -1764,7 +1762,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                 'status': 'RECALCULATE',
             },
         ])
-        print(signals.mentorship_session_status.send.call_args_list)
         self.assertEqual(signals.mentorship_session_status.send.call_args_list, [
             call(instance=model.mentorship_session[0], sender=model.mentorship_session[0].__class__),
         ])
