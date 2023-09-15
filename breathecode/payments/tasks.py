@@ -31,9 +31,8 @@ class BaseTaskWithRetry(Task):
 def get_app_url():
     return os.getenv('APP_URL', '')
 
-
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def renew_consumables(self, scheduler_id: int):
+@task(bind=True, base=BaseTaskWithRetry)
+def renew_consumables(self, scheduler_id: int, **_: Any):
     """Renew consumables."""
 
     def get_resource_lookup(i_owe_you: AbstractIOweYou, service: Service):
@@ -174,8 +173,8 @@ def renew_consumables(self, scheduler_id: int):
     logger.info(f'The scheduler {scheduler.id} was renewed')
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def renew_subscription_consumables(self, subscription_id: int):
+@task(bind=True, base=BaseTaskWithRetry)
+def renew_subscription_consumables(self, subscription_id: int, **_: Any):
     """Renew consumables belongs to a subscription."""
 
     logger.info(f'Starting renew_subscription_consumables for id {subscription_id}')
@@ -200,8 +199,8 @@ def renew_subscription_consumables(self, subscription_id: int):
         renew_consumables.delay(scheduler.id)
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def renew_plan_financing_consumables(self, plan_financing_id: int):
+@task(bind=True, base=BaseTaskWithRetry)
+def renew_plan_financing_consumables(self, plan_financing_id: int, **_: Any):
     """Renew consumables belongs to a plan financing."""
 
     logger.info(f'Starting renew_plan_financing_consumables for id {plan_financing_id}')
@@ -814,8 +813,8 @@ def end_the_consumption_session(self, consumption_session_id: int, how_many: flo
 
 # TODO: this task is not being used, if you will use this task, you need to take in consideration
 # you need fix the logic about the consumable valid until, maybe this must be removed
-@shared_task(bind=False, base=BaseTaskWithRetry)
-def build_consumables_from_bag(bag_id: int):
+@task(bind=True, base=BaseTaskWithRetry)
+def build_consumables_from_bag(bag_id: int, **_: Any):
     logger.info(f'Starting build_consumables_from_bag for bag {bag_id}')
 
     if not (bag := Bag.objects.filter(id=bag_id, status='PAID', was_delivered=False).first()):
