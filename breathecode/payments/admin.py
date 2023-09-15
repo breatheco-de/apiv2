@@ -2,11 +2,11 @@ from django.contrib import admin
 from breathecode.payments import signals, tasks
 
 from breathecode.payments.models import (
-    Bag, Consumable, ConsumptionSession, Currency, EventTypeSet, EventTypeSetTranslation, FinancialReputation,
-    FinancingOption, Invoice, MentorshipServiceSet, MentorshipServiceSetTranslation, PaymentContact, Plan,
-    PlanFinancing, PlanOffer, PlanOfferTranslation, PlanServiceItem, PlanServiceItemHandler, PlanTranslation,
-    Service, ServiceItem, ServiceItemFeature, ServiceStockScheduler, ServiceTranslation, Subscription,
-    SubscriptionServiceItem, AcademyService)
+    Bag, CohortSet, CohortSetTranslation, Consumable, ConsumptionSession, Currency, EventTypeSet,
+    EventTypeSetTranslation, FinancialReputation, FinancingOption, Invoice, MentorshipServiceSet,
+    MentorshipServiceSetTranslation, PaymentContact, Plan, PlanFinancing, PlanOffer, PlanOfferTranslation,
+    PlanServiceItem, PlanServiceItemHandler, PlanTranslation, Service, ServiceItem, ServiceItemFeature,
+    ServiceStockScheduler, ServiceTranslation, Subscription, SubscriptionServiceItem, AcademyService)
 
 # Register your models here.
 
@@ -133,6 +133,20 @@ class PlanFinancingAdmin(admin.ModelAdmin):
         'user', 'academy', 'selected_cohort_set', 'selected_mentorship_service_set', 'selected_event_type_set'
     ]
     actions = [renew_plan_financing_consumables]
+
+
+@admin.register(CohortSet)
+class MentorshipServiceSetAdmin(admin.ModelAdmin):
+    list_display = ('id', 'slug', 'academy')
+    list_filter = ['academy__slug']
+    search_fields = ['slug', 'academy__slug', 'academy__name']
+
+
+@admin.register(CohortSetTranslation)
+class MentorshipServiceSetTranslationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'cohort_set', 'lang', 'title', 'description', 'short_description')
+    list_filter = ['lang']
+    search_fields = ['slug', 'academy__slug', 'academy__name']
 
 
 @admin.register(MentorshipServiceSet)
