@@ -390,17 +390,11 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
     selected_mentorship_service_set = GetMentorshipServiceSetSerializer(many=False, required=False)
     selected_event_type_set = GetEventTypeSetSerializer(many=False, required=False)
 
-    plans = serpy.MethodField()
-    invoices = serpy.MethodField()
+    plans = serpy.ManyToManyField(GetPlanSmallSerializer(attr='plans', many=True))
+    invoices = serpy.ManyToManyField(GetInvoiceSerializer(attr='invoices', many=True))
 
     next_payment_at = serpy.Field()
     valid_until = serpy.Field()
-
-    def get_plans(self, obj):
-        return GetPlanSmallSerializer(obj.plans.filter(), many=True).data
-
-    def get_invoices(self, obj):
-        return GetInvoiceSerializer(obj.invoices.filter(), many=True).data
 
 
 class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
@@ -463,7 +457,7 @@ class ServiceItemSerializer(serializers.Serializer):
         return attrs
 
 
-class PlanSerializer(serializers.Serializer):
+class PlanSerializer(serializers.ModelSerializer):
     status_fields = ['status', 'renew_every_unit', 'trial_duration_unit', 'time_of_life_unit']
 
     class Meta:
@@ -472,3 +466,34 @@ class PlanSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         return attrs
+
+    def create(self, validated_data):
+        return Plan.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        for key in validated_data:
+            setattr(instance, key, validated_data[key])
+
+        instance.save()
+        return instance
+
+
+class PutPlanSerializer(PlanSerializer):
+    status_fields = ['status', 'renew_every_unit', 'trial_duration_unit', 'time_of_life_unit']
+
+    class Meta:
+        model = Plan
+        fields = '__all__'
+
+    def validate(self, attrs):
+        return attrs
+
+    def create(self, validated_data):
+        return Plan.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        for key in validated_data:
+            setattr(instance, key, validated_data[key])
+
+        instance.save()
+        return instance

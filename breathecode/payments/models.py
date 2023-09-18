@@ -42,6 +42,7 @@ class Currency(models.Model):
 
     code = models.CharField(max_length=3,
                             unique=True,
+                            db_index=True,
                             help_text='ISO 4217 currency code (e.g. USD, EUR, MXN)')
     name = models.CharField(max_length=20,
                             unique=True,
@@ -138,6 +139,7 @@ class AbstractAsset(models.Model):
     slug = models.CharField(
         max_length=60,
         unique=True,
+        db_index=True,
         help_text='A human-readable identifier, it must be unique and it can only contain letters, '
         'numbers and hyphens')
 
@@ -149,7 +151,7 @@ class AbstractAsset(models.Model):
                               null=True,
                               help_text='Academy owner')
     #TODO: visibility and the capacities of disable a asset
-    private = models.BooleanField(default=True, help_text='If the asset is private or not')
+    private = models.BooleanField(default=True, help_text='If the asset is private or not', db_index=True)
 
     trial_duration = models.IntegerField(default=1, help_text='Trial duration (e.g. 1, 2, 3, ...)')
     trial_duration_unit = models.CharField(max_length=10,
@@ -224,6 +226,7 @@ class AbstractServiceItem(models.Model):
     unit_type = models.CharField(max_length=10,
                                  choices=SERVICE_UNITS,
                                  default=UNIT,
+                                 db_index=True,
                                  help_text='Unit type (e.g. UNIT))')
     how_many = models.IntegerField(default=-1, help_text='How many units of this service can be used')
 
@@ -323,6 +326,7 @@ class CohortSet(models.Model):
     slug = models.SlugField(
         max_length=100,
         unique=True,
+        db_index=True,
         help_text='A human-readable identifier, it must be unique and it can only contain letters, '
         'numbers and hyphens')
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
@@ -347,6 +351,7 @@ class MentorshipServiceSet(models.Model):
     slug = models.SlugField(
         max_length=100,
         unique=True,
+        db_index=True,
         help_text='A human-readable identifier, it must be unique and it can only contain letters, '
         'numbers and hyphens')
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
@@ -374,6 +379,7 @@ class EventTypeSet(models.Model):
     slug = models.SlugField(
         max_length=100,
         unique=True,
+        db_index=True,
         help_text='A human-readable identifier, it must be unique and it can only contain letters, '
         'numbers and hyphens')
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text='Academy owner')
@@ -490,6 +496,7 @@ class Plan(AbstractPriceByTime):
     slug = models.CharField(
         max_length=60,
         unique=True,
+        db_index=True,
         help_text='A human-readable identifier, it must be unique and it can only contain letters, '
         'numbers and hyphens')
     financing_options = models.ManyToManyField(FinancingOption,
@@ -529,7 +536,7 @@ class Plan(AbstractPriceByTime):
                               blank=True,
                               null=True,
                               help_text='Academy owner')
-    is_onboarding = models.BooleanField(default=False, help_text='Is onboarding plan?')
+    is_onboarding = models.BooleanField(default=False, help_text='Is onboarding plan?', db_index=True)
     has_waiting_list = models.BooleanField(default=False, help_text='Has waiting list?')
 
     cohort_set = models.ForeignKey(CohortSet,
@@ -693,7 +700,11 @@ class Bag(AbstractAmountByTime):
     Represents a credit that can be used by a user to use a service.
     """
 
-    status = models.CharField(max_length=8, choices=BAG_STATUS, default=CHECKING, help_text='Bag status')
+    status = models.CharField(max_length=8,
+                              choices=BAG_STATUS,
+                              default=CHECKING,
+                              help_text='Bag status',
+                              db_index=True)
     type = models.CharField(max_length=7, choices=BAG_TYPE, default=BAG, help_text='Bag type')
     chosen_period = models.CharField(
         max_length=7,
@@ -765,6 +776,7 @@ class Invoice(models.Model):
     status = models.CharField(max_length=17,
                               choices=INVOICE_STATUS,
                               default=PENDING,
+                              db_index=True,
                               help_text='Invoice status')
 
     bag = models.ForeignKey('Bag', on_delete=models.CASCADE, help_text='Bag')
@@ -819,7 +831,11 @@ class AbstractIOweYou(models.Model):
     Common fields for all I owe you.
     """
 
-    status = models.CharField(max_length=13, choices=SUBSCRIPTION_STATUS, default=ACTIVE, help_text='Status')
+    status = models.CharField(max_length=13,
+                              choices=SUBSCRIPTION_STATUS,
+                              default=ACTIVE,
+                              help_text='Status',
+                              db_index=True)
     status_message = models.CharField(max_length=250,
                                       null=True,
                                       blank=True,
@@ -836,7 +852,8 @@ class AbstractIOweYou(models.Model):
                                             null=True,
                                             blank=True,
                                             default=None,
-                                            help_text='Cohort which the plans and services is for')
+                                            help_text='Cohort set which the plans and services is for')
+    joined_cohorts = models.ManyToManyField(Cohort, blank=True, help_text='Cohorts those that he/she joined')
     selected_mentorship_service_set = models.ForeignKey(
         MentorshipServiceSet,
         on_delete=models.CASCADE,
@@ -930,6 +947,7 @@ class Subscription(AbstractIOweYou):
         default=None,
         null=True,
         blank=True,
+        db_index=True,
         help_text='Valid until, after this date the subscription will be destroyed')
 
     # this reminds the service items to change the stock scheduler on change

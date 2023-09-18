@@ -12,9 +12,12 @@ from rest_framework.exceptions import ParseError, PermissionDenied, ValidationEr
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from breathecode.admissions import tasks
 
 from breathecode.admissions.caches import (CohortCache, CohortUserCache, TeacherCache)
+from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
+from breathecode.utils.i18n import translation
 from .permissions.consumers import cohort_by_url_param
 from breathecode.utils import (APIViewExtensions, DatetimeInteger, GenerateLookupsMixin,
                                HeaderLimitOffsetPagination, ValidationException, capable_of, localize_query)
@@ -1840,3 +1843,75 @@ class MeCohortUserHistoryView(APIView):
         } for cohort_user in items]
 
         return Response(data)
+
+
+class CohortJoinView(APIView):
+    extensions = APIViewExtensions(cache=CohortUserCache, paginate=True)
+
+    def post(self, request, cohort_id=None):
+        from breathecode.payments.models import Subscription, PlanFinancing
+        from breathecode.payments.serializers import GetAbstractIOweYouSerializer
+
+        lang = get_user_language(request)
+
+        cohort = Cohort.objects.filter(Q(ending_date=None, never_ends=True)
+                                       | Q(ending_date__gte=timezone.now(), never_ends=False),
+                                       id=cohort_id).first()
+
+        if not cohort:
+            raise ValidationException(translation(lang,
+                                                  en='Cohort not found',
+                                                  es='Cohorte no encontrada',
+                                                  slug='not-found'),
+                                      code=404)
+
+        if CohortUser.objects.filter(cohort__id=cohort_id, user__id=request.user.id).count():
+            raise ValidationException(translation(lang,
+                                                  en='You are already part of this cohort',
+                                                  es='Ya eres parte de esta cohorte',
+                                                  slug='already-joined-to-cohort'),
+                                      code=400)
+
+        resource_available_now = Q(valid_until=None) | Q(valid_until__gte=timezone.now())
+        resource_belongs_to_user = Q(user__id=request.user.id, selected_cohort_set__cohorts=cohort)
+        excludes = Q(status='ERROR') | Q(status='CANCELED') | Q(status='PAYMENT_ISSUE') | Q(status='EXPIRED')
+
+        # it inherits from the an AbstractIOweYou, so you can apply polymorphism
+        resource = Subscription.objects.filter(resource_available_now,
+                                               resource_belongs_to_user).exclude(excludes).first()
+
+        if not resource:
+            resource = PlanFinancing.objects.filter(resource_available_now,
+                                                    resource_belongs_to_user).exclude(excludes).first()
+
+        if not resource:
+            raise ValidationException(translation(
+                lang,
+                en='You can\'t join to this cohort due to you didn\'t subscribe to it',
+                es='No puedes unirte a esta cohorte porque no te has suscrito a ella',
+                slug='not-subscribed'),
+                                      code=400)
+
+        if resource.joined_cohorts.filter(id=cohort.id).count():
+            raise ValidationException(translation(lang,
+                                                  en='You have already joined to this cohort',
+                                                  es='Ya te has unido a esta cohorte',
+                                                  slug='already-joined'),
+                                      code=400)
+
+        if cohort.never_ends == False and resource.joined_cohorts.filter(never_ends=False).count() > 0:
+            raise ValidationException(translation(
+                lang,
+                en='You can\'t join to this cohort because you are already subscribed to another cohort',
+                es='No puedes unirte a esta cohorte porque ya estás suscrito a otra cohorte',
+                slug='already-joined-to-another-cohort'),
+                                      code=400)
+
+        resource.joined_cohorts.add(cohort)
+
+        tasks.build_cohort_user.delay(cohort_id, request.user.id, 'STUDENT')
+        tasks.build_profile_academy.delay(cohort.academy.id, request.user.id, 'student')
+
+        serializer = GetAbstractIOweYouSerializer(resource, many=False)
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
