@@ -322,6 +322,9 @@ class PaymentsModelsMixin(ModelsMixin):
             if 'cohort_set' in models:
                 kargs['selected_cohort_set'] = just_one(models['cohort_set'])
 
+            if 'cohort' in models:
+                kargs['joined_cohorts'] = get_list(models['cohort'])
+
             if 'mentorship_service_set' in models:
                 kargs['selected_mentorship_service_set'] = just_one(models['mentorship_service_set'])
 
@@ -347,6 +350,9 @@ class PaymentsModelsMixin(ModelsMixin):
 
             if 'cohort_set' in models:
                 kargs['selected_cohort_set'] = just_one(models['cohort_set'])
+
+            if 'cohort' in models:
+                kargs['joined_cohorts'] = get_list(models['cohort'])
 
             if 'mentorship_service_set' in models:
                 kargs['selected_mentorship_service_set'] = just_one(models['mentorship_service_set'])

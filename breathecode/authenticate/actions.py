@@ -604,7 +604,9 @@ def sync_organization_members(academy_id, only_status=[]):
 
 def accept_invite(accepting_ids=None, user=None):
     if accepting_ids is not None:
-        invites = UserInvite.objects.filter(id__in=accepting_ids.split(','), email=user.email, status='PENDING')
+        invites = UserInvite.objects.filter(id__in=accepting_ids.split(','),
+                                            email=user.email,
+                                            status='PENDING')
     else:
         invites = UserInvite.objects.filter(email=user.email, status='PENDING')
 
@@ -638,8 +640,11 @@ def accept_invite(accepting_ids=None, user=None):
                 role = invite.role.slug.upper()
 
             cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
-            if cu is None:
+            if cu is None and (role := role.upper()) in ['TEACHER', 'ASSISTANT', 'REVIEWER', 'STUDENT']:
                 cu = CohortUser(user=user, cohort=invite.cohort, role=role, educational_status='ACTIVE')
+                cu.save()
+            elif cu is None:
+                cu = CohortUser(user=user, cohort=invite.cohort, role='STUDENT', educational_status='ACTIVE')
                 cu.save()
 
         if user is not None and invite.user is None:
