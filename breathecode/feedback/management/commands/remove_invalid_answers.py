@@ -15,6 +15,7 @@ class Command(BaseCommand):
             user_ids = {x.user.id for x in pending_answers}
             for user_id in user_ids:
                 # if the student is not active or graduate, remove all the answers related to this cohort
+
                 if CohortUser.objects.filter(user__id=user_id, cohort=survey.cohort).exclude(
                         educational_status__in=['ACTIVE', 'GRADUATED']).exists():
                     pending_answers.filter(user__id=user_id).delete()

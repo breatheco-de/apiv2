@@ -32,8 +32,8 @@ def get_app_url():
     return os.getenv('APP_URL', '')
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def renew_consumables(self, scheduler_id: int):
+@task(bind=True, base=BaseTaskWithRetry)
+def renew_consumables(self, scheduler_id: int, **_: Any):
     """Renew consumables."""
 
     def get_resource_lookup(i_owe_you: AbstractIOweYou, service: Service):
@@ -174,8 +174,8 @@ def renew_consumables(self, scheduler_id: int):
     logger.info(f'The scheduler {scheduler.id} was renewed')
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def renew_subscription_consumables(self, subscription_id: int):
+@task(bind=True, base=BaseTaskWithRetry)
+def renew_subscription_consumables(self, subscription_id: int, **_: Any):
     """Renew consumables belongs to a subscription."""
 
     logger.info(f'Starting renew_subscription_consumables for id {subscription_id}')
@@ -200,8 +200,8 @@ def renew_subscription_consumables(self, subscription_id: int):
         renew_consumables.delay(scheduler.id)
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def renew_plan_financing_consumables(self, plan_financing_id: int):
+@task(bind=True, base=BaseTaskWithRetry)
+def renew_plan_financing_consumables(self, plan_financing_id: int, **_: Any):
     """Renew consumables belongs to a plan financing."""
 
     logger.info(f'Starting renew_plan_financing_consumables for id {plan_financing_id}')
@@ -599,22 +599,23 @@ def build_subscription(self, bag_id: int, invoice_id: int, start_date: Optional[
     elif bag.chosen_period == 'YEAR':
         months = 12
 
-    cohort = bag.selected_cohorts.first()
     plan = bag.plans.first()
 
-    event_type_set = bag.selected_event_type_sets.first()
-    if plan and not event_type_set:
+    if plan:
+        cohort_set = plan.cohort_set
         event_type_set = plan.event_type_set
-
-    mentorship_service_set = bag.selected_mentorship_service_sets.first()
-    if plan and not mentorship_service_set:
         mentorship_service_set = plan.mentorship_service_set
+
+    else:
+        cohort_set = None
+        event_type_set = None
+        mentorship_service_set = None
 
     subscription_start_at = start_date or invoice.paid_at
     subscription = Subscription.objects.create(user=bag.user,
                                                paid_at=invoice.paid_at,
                                                academy=bag.academy,
-                                               selected_cohort=cohort,
+                                               selected_cohort_set=cohort_set,
                                                selected_event_type_set=event_type_set,
                                                selected_mentorship_service_set=mentorship_service_set,
                                                valid_until=None,
@@ -668,21 +669,22 @@ def build_plan_financing(self, bag_id: int, invoice_id: int, is_free: bool = Fal
         if utc_now + new_delta > utc_now + delta:
             delta = new_delta
 
-    cohort = bag.selected_cohorts.first()
     plan = bag.plans.first()
 
-    event_type_set = bag.selected_event_type_sets.first()
-    if plan and not event_type_set:
+    if plan:
+        cohort_set = plan.cohort_set
         event_type_set = plan.event_type_set
-
-    mentorship_service_set = bag.selected_mentorship_service_sets.first()
-    if plan and not mentorship_service_set:
         mentorship_service_set = plan.mentorship_service_set
+
+    else:
+        cohort_set = None
+        event_type_set = None
+        mentorship_service_set = None
 
     financing = PlanFinancing.objects.create(user=bag.user,
                                              next_payment_at=invoice.paid_at + relativedelta(months=1),
                                              academy=bag.academy,
-                                             selected_cohort=cohort,
+                                             selected_cohort_set=cohort_set,
                                              selected_event_type_set=event_type_set,
                                              selected_mentorship_service_set=mentorship_service_set,
                                              valid_until=invoice.paid_at + relativedelta(months=months),
@@ -739,15 +741,15 @@ def build_free_subscription(self, bag_id: int, invoice_id: int):
 
         until = invoice.paid_at + delta
 
-        cohort = bag.selected_cohorts.first()
-
-        event_type_set = bag.selected_event_type_sets.first()
-        if not event_type_set:
+        if plan:
+            cohort_set = plan.cohort_set
             event_type_set = plan.event_type_set
-
-        mentorship_service_set = bag.selected_mentorship_service_sets.first()
-        if not mentorship_service_set:
             mentorship_service_set = plan.mentorship_service_set
+
+        else:
+            cohort_set = None
+            event_type_set = None
+            mentorship_service_set = None
 
         if is_free_trial:
             extra = {
@@ -770,7 +772,7 @@ def build_free_subscription(self, bag_id: int, invoice_id: int):
         subscription = Subscription.objects.create(user=bag.user,
                                                    paid_at=invoice.paid_at,
                                                    academy=bag.academy,
-                                                   selected_cohort=cohort,
+                                                   selected_cohort_set=cohort_set,
                                                    selected_event_type_set=event_type_set,
                                                    selected_mentorship_service_set=mentorship_service_set,
                                                    next_payment_at=until,
@@ -812,8 +814,8 @@ def end_the_consumption_session(self, consumption_session_id: int, how_many: flo
 
 # TODO: this task is not being used, if you will use this task, you need to take in consideration
 # you need fix the logic about the consumable valid until, maybe this must be removed
-@shared_task(bind=False, base=BaseTaskWithRetry)
-def build_consumables_from_bag(bag_id: int):
+@task(bind=True, base=BaseTaskWithRetry)
+def build_consumables_from_bag(bag_id: int, **_: Any):
     logger.info(f'Starting build_consumables_from_bag for bag {bag_id}')
 
     if not (bag := Bag.objects.filter(id=bag_id, status='PAID', was_delivered=False).first()):

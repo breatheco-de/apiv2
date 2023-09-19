@@ -66,6 +66,7 @@ class AdmissionsModelsMixin(ModelsMixin):
                                    provisioning_bill=False,
                                    github_academy_user=False,
                                    github_academy_user_log=False,
+                                   cohort_set=False,
                                    country_kwargs={},
                                    city_kwargs={},
                                    cohort_time_slot_kwargs={},
@@ -107,9 +108,9 @@ class AdmissionsModelsMixin(ModelsMixin):
                 or is_valid(event_type_visibility_setting) or is_valid(mentorship_service_set)
                 or is_valid(course) or is_valid(course_translation) or is_valid(event_type_set)
                 or is_valid(event_type_set_translation) or is_valid(mentorship_service_set)
-                or is_valid(mentorship_service_set_translation) or is_valid(provisioning_profile)
-                or is_valid(provisioning_academy) or is_valid(provisioning_bill)
-                or is_valid(github_academy_user) or is_valid(github_academy_user_log)):
+                or is_valid(mentorship_service_set_translation) or is_valid(provisioning_profile) or
+                is_valid(provisioning_academy) or is_valid(provisioning_bill) or is_valid(github_academy_user)
+                or is_valid(github_academy_user_log) or is_valid(cohort_set)):
             kargs = {}
 
             if 'country' in models:
@@ -159,7 +160,7 @@ class AdmissionsModelsMixin(ModelsMixin):
             })
 
         if not 'cohort' in models and not skip_cohort and (is_valid(cohort) or is_valid(profile_academy)
-                                                           or is_valid(cohort_user)):
+                                                           or is_valid(cohort_user) or is_valid(cohort_set)):
             kargs = {}
 
             if profile_academy or 'academy' in models:

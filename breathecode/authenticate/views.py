@@ -1675,7 +1675,7 @@ def render_invite(request, token, member_id=None):
                 cu = CohortUser(user=user, cohort=invite.cohort, role=role.upper())
                 cu.save()
 
-            plan = Plan.objects.filter(available_cohorts=invite.cohort, invites=invite).first()
+            plan = Plan.objects.filter(cohort_set__cohorts=invite.cohort, invites=invite).first()
 
             if plan and invite.user and invite.cohort.academy.main_currency and (
                     invite.cohort.available_as_saas == True or

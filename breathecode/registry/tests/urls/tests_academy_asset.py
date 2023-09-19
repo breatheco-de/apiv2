@@ -116,9 +116,7 @@ def post_serializer(academy, category, data={}):
         'technologies': [],
         'test_status': None,
         'title': 'model_title',
-        'translations': {
-            'us': 'model_slug'
-        },
+        'translations': {},
         'url': None,
         'visibility': 'PUBLIC',
         'with_solutions': False,
@@ -172,9 +170,7 @@ def put_serializer(academy, category, asset, data={}):
         'technologies': [],
         'test_status': None,
         'title': asset.title,
-        'translations': {
-            'es': asset.slug,
-        },
+        'translations': {},
         'url': None,
         'visibility': 'PUBLIC',
         **data,

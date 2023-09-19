@@ -20,6 +20,8 @@ from breathecode.utils.validators import validate_language_code
 from .signals import invite_status_updated, academy_invite_accepted
 from breathecode.admissions.models import Academy, Cohort
 
+from breathecode.authenticate import signals
+
 __all__ = [
     'User', 'Group', 'ContentType', 'Permission', 'UserProxy', 'Profile', 'Capability', 'Role', 'UserInvite',
     'ProfileAcademy', 'CredentialsGithub', 'CredentialsSlack', 'CredentialsFacebook', 'CredentialsQuickBooks',
@@ -488,7 +490,7 @@ class UserInvite(models.Model):
         self._email = self.email
 
         if status_updated:
-            invite_status_updated.send(instance=self, sender=UserInvite)
+            signals.invite_status_updated.send(instance=self, sender=UserInvite)
             self._old_status = self.status
 
 

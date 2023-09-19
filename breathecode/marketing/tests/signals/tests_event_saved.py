@@ -1,15 +1,16 @@
 from unittest.mock import MagicMock, call, patch
-from rest_framework import status
-from ..mixins import MarketingTestCase
+
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
 
 
-class LeadTestSuite(MarketingTestCase):
+class TestLead(LegacyAPITestCase):
     """
     🔽🔽🔽 Create without slug
     """
 
     @patch('breathecode.marketing.tasks.add_event_slug_as_acp_tag.delay', MagicMock())
-    def test_event_saved__create__without_slug(self):
+    def test_event_saved__create__without_slug(self, enable_signals):
+        enable_signals()
         """Test /cohort/:id/user without auth"""
         from breathecode.marketing.tasks import add_event_slug_as_acp_tag
 
@@ -23,7 +24,8 @@ class LeadTestSuite(MarketingTestCase):
     """
 
     @patch('breathecode.marketing.tasks.add_event_slug_as_acp_tag.delay', MagicMock())
-    def test_event_saved__create__with_slug__without_academy(self):
+    def test_event_saved__create__with_slug__without_academy(self, enable_signals):
+        enable_signals()
         """Test /cohort/:id/user without auth"""
         from breathecode.marketing.tasks import add_event_slug_as_acp_tag
 
@@ -38,7 +40,8 @@ class LeadTestSuite(MarketingTestCase):
     """
 
     @patch('breathecode.marketing.tasks.add_event_slug_as_acp_tag.delay', MagicMock())
-    def test_event_saved__create__without_slug__with_academy(self):
+    def test_event_saved__create__without_slug__with_academy(self, enable_signals):
+        enable_signals()
         """Test /cohort/:id/user without auth"""
         from breathecode.marketing.tasks import add_event_slug_as_acp_tag
 
@@ -52,7 +55,8 @@ class LeadTestSuite(MarketingTestCase):
     """
 
     @patch('breathecode.marketing.tasks.add_event_slug_as_acp_tag.delay', MagicMock())
-    def test_event_saved__create__with_slug__with_academy(self):
+    def test_event_saved__create__with_slug__with_academy(self, enable_signals):
+        enable_signals()
         """Test /cohort/:id/user without auth"""
         from breathecode.marketing.tasks import add_event_slug_as_acp_tag
 

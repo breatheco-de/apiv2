@@ -33,17 +33,3 @@ app.conf.update(BROKER_URL=REDIS_URL, CELERY_RESULT_BACKEND=REDIS_URL, namespace
 
 # Load task modules from all registered Django app configs.
 app.autodiscover_tasks()
-
-if bool(os.environ.get('CELERY_WORKER_RUNNING', False)) and REDIS_URL:
-    from django.conf import settings
-    import rollbar
-    rollbar.init(**settings.ROLLBAR)
-
-    def celery_base_data_hook(request, data):
-        data['framework'] = 'celery'
-
-    rollbar.BASE_DATA_HOOK = celery_base_data_hook
-
-    @task_failure.connect
-    def handle_task_failure(**kw):
-        rollbar.report_exc_info(extra_data=kw)

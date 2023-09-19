@@ -6,6 +6,7 @@ import numpy as np
 from PIL import Image
 from faker import Faker
 from urllib3.connectionpool import HTTPConnectionPool
+from django.db.models.signals import ModelSignal
 
 # set ENV as test before run django
 os.environ['ENV'] = 'test'
@@ -13,6 +14,66 @@ os.environ['ENV'] = 'test'
 FAKE = Faker()
 pytest_plugins = ('celery.contrib.pytest', )
 urlopen = HTTPConnectionPool.urlopen
+
+from breathecode.tests.mixins.breathecode_mixin import Breathecode
+
+
+# it does not work yet
+@pytest.fixture
+def bc(request):
+    return Breathecode(request.instance)
+
+
+from breathecode.notify.utils.hook_manager import HookManagerClass
+
+
+@pytest.fixture(autouse=True)
+def enable_hook_manager(monkeypatch):
+    """
+    Disable the HookManagerClass.process_model_event by default. You can re-enable it within a test by calling the provided wrapper.
+    """
+
+    original_process_model_event = HookManagerClass.process_model_event
+
+    monkeypatch.setattr(HookManagerClass, 'process_model_event', lambda *args, **kwargs: None)
+
+    def enable():
+        monkeypatch.setattr(HookManagerClass, 'process_model_event', original_process_model_event)
+
+    yield enable
+
+
+from django.dispatch.dispatcher import Signal
+
+
+@pytest.fixture(autouse=True)
+def enable_signals(monkeypatch):
+    """
+    Disable all signals by default. You can re-enable them within a test by calling the provided wrapper.
+    """
+    original_signal_send = Signal.send
+    original_signal_send_robust = Signal.send_robust
+
+    original_model_signal_send = ModelSignal.send
+    original_model_signal_send_robust = ModelSignal.send_robust
+
+    # Mock the functions to disable signals
+    monkeypatch.setattr(Signal, 'send', lambda *args, **kwargs: None)
+    monkeypatch.setattr(Signal, 'send_robust', lambda *args, **kwargs: None)
+
+    # Mock the functions to disable signals
+    monkeypatch.setattr(ModelSignal, 'send', lambda *args, **kwargs: None)
+    monkeypatch.setattr(ModelSignal, 'send_robust', lambda *args, **kwargs: None)
+
+    #TODO: get a list of signals that will be enabled
+    def enable():
+        monkeypatch.setattr(Signal, 'send', original_signal_send)
+        monkeypatch.setattr(Signal, 'send_robust', original_signal_send_robust)
+
+        monkeypatch.setattr(ModelSignal, 'send', original_model_signal_send)
+        monkeypatch.setattr(ModelSignal, 'send_robust', original_model_signal_send_robust)
+
+    yield enable
 
 
 @pytest.fixture(autouse=True)

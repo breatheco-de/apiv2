@@ -277,6 +277,7 @@ class AuthenticateTestSuite(AuthTestCase):
                          [{
                              **self.bc.format.to_dict(user_invite),
                              'status': 'ACCEPTED',
+                             'user_id': 1,
                          } for user_invite in model.user_invite])
 
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])

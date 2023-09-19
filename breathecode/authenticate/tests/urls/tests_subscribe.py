@@ -37,9 +37,9 @@ def user_db_item(data={}):
 def plan_db_item(plan, data={}):
     return {
         'id': plan.id,
-        'cohort_pattern': plan.cohort_pattern,
         'event_type_set_id': plan.event_type_set.id if plan.event_type_set else None,
         'mentorship_service_set_id': plan.mentorship_service_set.id if plan.mentorship_service_set else None,
+        'cohort_set_id': plan.cohort_set.id if plan.cohort_set else None,
         'currency_id': plan.currency.id,
         'slug': plan.slug,
         'status': plan.status,
@@ -86,7 +86,7 @@ def plan_serializer(plan):
     return {
         'financing_options': [],
         'service_items': [],
-        'has_available_cohorts': plan.available_cohorts.exists(),
+        'has_available_cohorts': bool(plan.cohort_set),
         'slug': plan.slug,
         'status': plan.status,
         'time_of_life': plan.time_of_life,

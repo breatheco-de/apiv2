@@ -83,6 +83,65 @@ def get_serializer(event,
     }
 
 
+def post_serializer(currency,
+                    service=None,
+                    academy=None,
+                    service_items=[],
+                    financing_options=[],
+                    cohorts=[],
+                    data={}):
+
+    return {
+        'id': 0,
+        'slug': '',
+        'currency': currency.id,
+        'financing_options': [x.id for x in financing_options],
+        'is_renewable': False,
+        'owner': academy.id,
+        'price_per_half': None,
+        'price_per_month': None,
+        'price_per_quarter': None,
+        'price_per_year': None,
+        'has_waiting_list': False,
+        'service_items': [x.id for x in service_items],
+        'status': 'DRAFT',
+        'time_of_life': 0,
+        'time_of_life_unit': 'MONTH',
+        'trial_duration': 0,
+        'trial_duration_unit': 'MONTH',
+        'mentorship_service_set': None,
+        'cohort_set': None,
+        'event_type_set': None,
+        'invites': [],
+        **data,
+    }
+
+
+def row(currency, academy=None, data={}):
+
+    return {
+        'id': 0,
+        'slug': '',
+        'currency_id': currency.id,
+        'is_renewable': False,
+        'owner_id': academy.id,
+        'price_per_half': None,
+        'price_per_month': None,
+        'price_per_quarter': None,
+        'price_per_year': None,
+        'has_waiting_list': False,
+        'status': 'DRAFT',
+        'time_of_life': 0,
+        'time_of_life_unit': 'MONTH',
+        'trial_duration': 0,
+        'trial_duration_unit': 'MONTH',
+        'mentorship_service_set_id': None,
+        'cohort_set_id': None,
+        'event_type_set_id': None,
+        **data,
+    }
+
+
 class SignalTestSuite(PaymentsTestCase):
     """
     🔽🔽🔽 auth
@@ -372,6 +431,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=plan_service_items,
                                         financing_option=2,
                                         cohort=1,
+                                        cohort_set=1,
                                         syllabus_version=1)
 
         self.bc.request.authenticate(model.user)
@@ -551,6 +611,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=plan_service_items,
                                         financing_option=2,
                                         cohort=1,
+                                        cohort_set=1,
                                         syllabus_version=1)
 
         self.bc.request.authenticate(model.user)
@@ -701,4 +762,131 @@ class SignalTestSuite(PaymentsTestCase):
 
         self.bc.check.calls(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
             call(sort='-id', paginate=True),
+        ])
+
+    # Given: 2 Plan, 4 PlanServiceItem, 2 ServiceItem and 1 Service
+    # When: get with no auth and plan is renewable
+    # Then: return 400 because required fields are missing
+    def test__post__required_fields(self):
+        plan = {'time_of_life': None, 'time_of_life_unit': None, 'is_renewable': True}
+        plan_service_items = [{'service_item_id': n, 'plan_id': 1} for n in range(1, 3)]
+        model = self.bc.database.create(plan=plan,
+                                        user=1,
+                                        capability='crud_plan',
+                                        role=1,
+                                        profile_academy=1,
+                                        skip_cohort=True,
+                                        service_item=2,
+                                        plan_service_item=plan_service_items,
+                                        financing_option=2)
+
+        self.bc.request.authenticate(model.user)
+        self.bc.request.set_headers(academy=1)
+
+        data = {
+            'slug': self.bc.fake.slug(),
+            'is_renewable': random.choice([True, False]),
+            'status': random.choice(['DRAFT', 'ACTIVE', 'UNLISTED', 'DELETED', 'DISCONTINUED']),
+            'is_onboarding': random.choice([True, False]),
+        }
+
+        if random.choice([True, False]):
+            data['time_of_life'] = random.randint(1, 100)
+            data['time_of_life_unit'] = random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR'])
+            data['is_renewable'] = False
+
+        else:
+            data['time_of_life'] = None
+            data['time_of_life_unit'] = None
+            data['is_renewable'] = True
+
+        if random.choice([True, False]):
+            data['trial_duration'] = random.randint(1, 100)
+            data['trial_duration_unit'] = random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR'])
+
+        else:
+            data['trial_duration'] = random.randint(1, 100)
+            data['trial_duration_unit'] = random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR'])
+
+        url = reverse_lazy('payments:academy_plan')
+        response = self.client.post(url, data, format='json')
+
+        json = response.json()
+        expected = {'detail': 'currency-not-found', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('payments.Plan'), [{
+            **self.bc.format.to_dict(model.plan),
+        }])
+
+    # Given: 2 Plan, 4 PlanServiceItem, 2 ServiceItem and 1 Service
+    # When: get with no auth and plan is renewable
+    # Then: return 200 and change all fields
+    def test__post__all_fields(self):
+        model = self.bc.database.create(user=1,
+                                        capability='crud_plan',
+                                        role=1,
+                                        profile_academy=1,
+                                        skip_cohort=True,
+                                        service_item=2,
+                                        financing_option=2)
+
+        self.bc.request.authenticate(model.user)
+        self.bc.request.set_headers(academy=1)
+
+        data = {
+            'slug': self.bc.fake.slug(),
+            'currency': model.currency.code,
+            'is_renewable': random.choice([True, False]),
+            'has_waiting_list': random.choice([True, False]),
+            'status': random.choice(['DRAFT', 'ACTIVE', 'UNLISTED', 'DELETED', 'DISCONTINUED']),
+            'is_onboarding': random.choice([True, False]),
+            'price_per_half': random.randint(1, 100),
+            'price_per_month': random.randint(1, 100),
+            'price_per_quarter': random.randint(1, 100),
+            'price_per_year': random.randint(1, 100),
+        }
+
+        if random.choice([True, False]):
+            data['time_of_life'] = random.randint(1, 100)
+            data['time_of_life_unit'] = random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR'])
+            data['is_renewable'] = False
+
+        else:
+            data['time_of_life'] = None
+            data['time_of_life_unit'] = None
+            data['is_renewable'] = True
+
+        if random.choice([True, False]):
+            data['trial_duration'] = random.randint(1, 100)
+            data['trial_duration_unit'] = random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR'])
+
+        else:
+            data['trial_duration'] = random.randint(1, 100)
+            data['trial_duration_unit'] = random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR'])
+
+        url = reverse_lazy('payments:academy_plan')
+        response = self.client.post(url, data, format='json')
+
+        data = {
+            **data,
+            'id': 1,
+            'currency': 1,
+        }
+
+        json = response.json()
+        expected = post_serializer(model.currency,
+                                   model.service,
+                                   academy=model.academy,
+                                   service_items=[],
+                                   financing_options=[],
+                                   data=data)
+
+        data['currency_id'] = data.pop('currency')
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.bc.database.list_of('payments.Plan'), [
+            row(model.currency, academy=model.academy, data=data),
         ])

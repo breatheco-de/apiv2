@@ -19,7 +19,7 @@ UTC_NOW = timezone.now()
 def subscription_item(data={}):
     return {
         'id': 1,
-        'selected_cohort_id': None,
+        'selected_cohort_set_id': None,
         'selected_event_type_set_id': None,
         'selected_mentorship_service_set_id': None,
         'academy_id': 1,
@@ -169,7 +169,11 @@ class PaymentsTestSuite(PaymentsTestCase):
         elif bag['chosen_period'] == 'YEAR':
             months = 12
 
-        model = self.bc.database.create(bag=bag, invoice=invoice, cohort=1)
+        plan = {
+            'time_of_life': None,
+            'time_of_life_unit': None,
+        }
+        model = self.bc.database.create(bag=bag, invoice=invoice, cohort_set=1, plan=plan)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -200,7 +204,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             subscription_item({
                 'paid_at': model.invoice.paid_at,
                 'valid_until': None,
-                'selected_cohort_id': 1,
+                'selected_cohort_set_id': 1,
                 'next_payment_at': model.invoice.paid_at + relativedelta(months=months),
             }),
         ])
@@ -235,7 +239,11 @@ class PaymentsTestSuite(PaymentsTestCase):
         elif bag['chosen_period'] == 'YEAR':
             months = 12
 
-        model = self.bc.database.create(bag=bag, invoice=invoice, event_type_set=1)
+        plan = {
+            'time_of_life': None,
+            'time_of_life_unit': None,
+        }
+        model = self.bc.database.create(bag=bag, invoice=invoice, event_type_set=1, plan=plan)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -299,7 +307,11 @@ class PaymentsTestSuite(PaymentsTestCase):
         elif bag['chosen_period'] == 'YEAR':
             months = 12
 
-        model = self.bc.database.create(bag=bag, invoice=invoice, mentorship_service_set=1)
+        plan = {
+            'time_of_life': None,
+            'time_of_life_unit': None,
+        }
+        model = self.bc.database.create(bag=bag, invoice=invoice, mentorship_service_set=1, plan=plan)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []

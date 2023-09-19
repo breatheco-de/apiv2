@@ -765,6 +765,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
         plan = {'time_of_life': None, 'time_of_life_unit': None}
         model = self.generate_models(authenticate=True,
                                      cohort=1,
+                                     cohort_set=1,
                                      profile_academy=1,
                                      syllabus_version=1,
                                      currency=1,
@@ -791,7 +792,11 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
     def test_plan_false__without_scheduler(self):
         """Test /cohort/all without auth"""
-        model = self.generate_models(authenticate=True, cohort=1, profile_academy=1, syllabus_version=1)
+        model = self.generate_models(authenticate=True,
+                                     cohort=1,
+                                     cohort_set=1,
+                                     profile_academy=1,
+                                     syllabus_version=1)
 
         base_url = reverse_lazy('admissions:cohort_all')
         url = f'{base_url}?plan=false'
@@ -858,6 +863,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
         model = self.generate_models(authenticate=True,
                                      cohort=1,
+                                     cohort_set=1,
                                      profile_academy=1,
                                      syllabus_version=1,
                                      currency=1,
