@@ -97,14 +97,16 @@ def async_slack_command(post_data):
 
 @shared_task
 def async_deliver_hook(target, payload, hook_id=None, **kwargs):
-    logger.debug('Starting async_deliver_hook')
-    from .utils.hook_manager import HookManager
     """
     target:     the url to receive the payload.
     payload:    a python primitive data structure
     instance:   a possibly null "trigger" instance
     hook:       the defining Hook object (useful for removing)
     """
+
+    from .utils.hook_manager import HookManager
+
+    logger.debug('Starting async_deliver_hook')
     encoded_payload = json.dumps(payload, cls=DjangoJSONEncoder)
     response = requests.post(url=target,
                              data=encoded_payload,
