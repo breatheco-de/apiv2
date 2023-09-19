@@ -9,13 +9,11 @@ class NotifyModelsMixin(ModelsMixin):
 
     def generate_notify_models(self,
                                device=False,
-                               user=False,
                                slack_team=False,
-                               academy=False,
                                slack_user=False,
                                slack_user_team=False,
                                slack_channel=False,
-                               cohort=False,
+                               hook=False,
                                device_kwargs={},
                                slack_team_kwargs={},
                                slack_user_kwargs={},
@@ -86,5 +84,10 @@ class NotifyModelsMixin(ModelsMixin):
                 **kargs,
                 **slack_channel_kwargs
             })
+
+        if not 'hook' in models and is_valid(hook):
+            kargs = {}
+
+            models['hook'] = create_models(hook, 'notify.Hook', **kargs)
 
         return models

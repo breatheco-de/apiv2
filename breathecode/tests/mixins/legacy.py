@@ -25,12 +25,12 @@ class LegacyAPITestCase(BreathecodeMixin, GenerateModelsMixin, CacheMixin):
         self.clear_cache()
         # teardown logic
 
-    def assertEqual(self, n1, n2, msg=None):
+    def assertEqual(self, arg1, arg2, msg=None):
         if msg:
-            assert n1 == n2, msg
+            assert arg1 == arg2, msg
 
         else:
-            assert n1 == n2
+            assert arg1 == arg2
 
     @contextmanager
     def assertRaisesMessage(self, expected_exception, expected_message):
