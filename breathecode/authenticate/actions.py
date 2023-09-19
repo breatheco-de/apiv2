@@ -26,7 +26,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat, PublicFormat
 
 from .models import (App, CredentialsGithub, DeviceId, GitpodUser, ProfileAcademy, Role, Token, UserSetting,
-                     AcademyAuthSettings, GithubAcademyUser)
+                     AcademyAuthSettings, GithubAcademyUser, UserInvite)
 
 logger = logging.getLogger(__name__)
 
@@ -600,6 +600,53 @@ def sync_organization_members(academy_id, only_status=[]):
         unknown_user.save()
 
     return True
+
+
+def accept_invite(accepting_ids=None, user=None):
+    if accepting_ids is not None:
+        invites = UserInvite.objects.filter(id__in=accepting_ids.split(','), email=user.email, status='PENDING')
+    else:
+        invites = UserInvite.objects.filter(email=user.email, status='PENDING')
+
+    for invite in invites:
+        if invite.academy is not None:
+            profile = ProfileAcademy.objects.filter(email=invite.email, academy=invite.academy).first()
+
+            if profile is None:
+                role = invite.role
+                if not role:
+                    role = Role.objects.filter(slug='student').first()
+
+                # is better generate a role without capability that have a exception in this case
+                if not role:
+                    role = Role(slug='student', name='Student')
+                    role.save()
+
+                profile = ProfileAcademy(email=invite.email,
+                                         academy=invite.academy,
+                                         role=role,
+                                         first_name=user.first_name,
+                                         last_name=user.last_name)
+
+            profile.user = user
+            profile.status = 'ACTIVE'
+            profile.save()
+
+        if invite.cohort is not None:
+            role = 'student'
+            if invite.role is not None and invite.role.slug != 'student':
+                role = invite.role.slug.upper()
+
+            cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
+            if cu is None:
+                cu = CohortUser(user=user, cohort=invite.cohort, role=role, educational_status='ACTIVE')
+                cu.save()
+
+        if user is not None and invite.user is None:
+            invite.user = user
+
+        invite.status = 'ACCEPTED'
+        invite.save()
 
 
 # def schedule_org_members_to_delete():

@@ -41,7 +41,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
     🔽🔽🔽 With 0 Survey
     """
 
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores', MagicMock(return_value=get_scores()))
@@ -50,7 +50,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
     def test_with_zero_surveys(self):
         recalculate_survey_scores.delay(1)
 
-        self.assertEqual(logging.Logger.debug.call_args_list, [call('Starting recalculate_survey_score')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call('Starting recalculate_survey_score')])
         self.assertEqual(logging.Logger.error.call_args_list, [call('Survey not found')])
         self.assertEqual(actions.calculate_survey_scores.call_args_list, [])
         self.assertEqual(actions.calculate_survey_response_rate.call_args_list, [])
@@ -60,7 +60,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
     🔽🔽🔽 With 1 Survey
     """
 
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores', MagicMock(return_value=get_scores()))
@@ -70,11 +70,11 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
             model = self.bc.database.create(survey=1)
 
-        logging.Logger.debug.call_args_list = []
+        logging.Logger.info.call_args_list = []
 
         recalculate_survey_scores.delay(1)
 
-        self.assertEqual(logging.Logger.debug.call_args_list, [call('Starting recalculate_survey_score')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call('Starting recalculate_survey_score')])
         self.assertEqual(logging.Logger.error.call_args_list, [])
         self.assertEqual(actions.calculate_survey_scores.call_args_list, [call(1)])
         self.assertEqual(actions.calculate_survey_response_rate.call_args_list, [call(1)])

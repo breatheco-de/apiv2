@@ -671,10 +671,10 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
     🔽🔽🔽 Pagination True
     """
 
-    def test_pagination__get__activate__105_cohorts_just_get_100(self):
+    def test_pagination__get__activate__25_cohorts_just_get_20(self):
         cache.clear()
 
-        model = self.bc.database.create(cohort=105)
+        model = self.bc.database.create(cohort=25)
 
         request = APIRequestFactory()
         request = request.get('/the-beans-should-not-have-sugar')
@@ -682,7 +682,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         view = TestView.as_view()
 
         response = view(request).render()
-        expected = GetCohortSerializer(sorted(model.cohort, key=lambda x: x.name)[:100], many=True).data
+        expected = GetCohortSerializer(sorted(model.cohort, key=lambda x: x.name)[:20], many=True).data
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

@@ -555,6 +555,10 @@ class AssetView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('technologies')
             lookup['technologies__slug__in'] = [p.lower() for p in param.split(',')]
 
+        if 'difficulty' in self.request.GET:
+            param = self.request.GET.get('difficulty')
+            lookup['difficulty__in'] = [p.upper() for p in param.split(',')]
+
         if 'keywords' in self.request.GET:
             param = self.request.GET.get('keywords')
             items = items.filter(seo_keywords__slug__in=param.split(','))

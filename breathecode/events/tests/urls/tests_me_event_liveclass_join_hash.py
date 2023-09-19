@@ -221,7 +221,7 @@ class AcademyEventTestSuite(EventTestCase):
 
     # Given: no Consumable, with LiveClass, CohortUser, User have Group and Permission
     # When: Feature flag set to False, right hash and cohort.live_class_join set
-    # Then: return 301 to cohort.online_meeting_url
+    # Then: return 302 to cohort.online_meeting_url
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes',
            MagicMock(return_value=False))
@@ -260,7 +260,7 @@ class AcademyEventTestSuite(EventTestCase):
                 f.write(expected)
 
         self.assertEqual(content, expected)
-        self.assertEqual(response.status_code, 301)
+        self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, online_meeting_url)
 
         self.assertEqual(self.bc.database.list_of('events.LiveClass'), [
@@ -502,7 +502,7 @@ class AcademyEventTestSuite(EventTestCase):
                 f.write(expected)
 
         self.assertEqual(content, expected)
-        self.assertEqual(response.status_code, 301)
+        self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, online_meeting_url)
 
         self.assertEqual(self.bc.database.list_of('events.LiveClass'), [

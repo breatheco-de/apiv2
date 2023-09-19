@@ -159,10 +159,9 @@ class Task(object):
 
 
 def task(*args, **kwargs):
-    """Task wrapper that allows to use transactions, fallback and reverse functions.
+    r"""Task wrapper that allows to use transactions, fallback and reverse functions.
 
-    Example:
-
+    `Examples`
     ```py
     def my_reverse(*args, **kwargs):
         \"\"\"This is executed when someone reverse this task.\"\"\"

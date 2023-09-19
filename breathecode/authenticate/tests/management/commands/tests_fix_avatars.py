@@ -22,22 +22,24 @@ class AcademyCohortTestSuite(AuthTestCase):
     🔽🔽🔽 With zero Profile
     """
 
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     def test_with_zero_profiles(self):
         command = Command()
         result = command.handle()
 
         self.assertEqual(result, None)
         self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [])
-        self.assertEqual(logging.Logger.debug.call_args_list, [call('Fixing 0 avatars')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call('Fixing 0 avatars')])
 
     """
     🔽🔽🔽 With two Profile, avatar_url is null
     """
 
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     def test_with_two_profiles__avatar_url_is_null(self):
         model = self.bc.database.create(profile=2)
+        logging.Logger.info.call_args_list = []
+
         command = Command()
         result = command.handle()
 
@@ -46,16 +48,18 @@ class AcademyCohortTestSuite(AuthTestCase):
             self.bc.database.list_of('authenticate.Profile'),
             self.bc.format.to_dict(model.profile),
         )
-        self.assertEqual(logging.Logger.debug.call_args_list, [call('Fixing 0 avatars')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call('Fixing 0 avatars')])
 
     """
     🔽🔽🔽 With two Profile, avatar_url is set, does'nt match with API_URL
     """
 
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     def test_with_two_profiles__avatar_url_is_set__does_not_match_with_api_url(self):
         profiles = [{'avatar_url': self.bc.fake.url()[0:-1]} for _ in range(0, 2)]
         model = self.bc.database.create(profile=profiles)
+        logging.Logger.info.call_args_list = []
+
         command = Command()
         result = command.handle()
 
@@ -64,18 +68,20 @@ class AcademyCohortTestSuite(AuthTestCase):
             self.bc.database.list_of('authenticate.Profile'),
             self.bc.format.to_dict(model.profile),
         )
-        self.assertEqual(logging.Logger.debug.call_args_list, [call('Fixing 0 avatars')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call('Fixing 0 avatars')])
 
     """
     🔽🔽🔽 With two Profile, avatar_url is set, match with API_URL
     """
 
-    @patch('logging.Logger.debug', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     def test_with_two_profiles__avatar_url_is_set__match_with_api_url(self):
         api_url = self.bc.fake.url()[0:-1]
         latest_avatar_url = api_url + '/static/img/avatar.png'
         profiles = [{'avatar_url': latest_avatar_url} for _ in range(0, 2)]
         model = self.bc.database.create(profile=profiles)
+
+        logging.Logger.info.call_args_list = []
 
         random_numbers = [random.randint(1, 21) for _ in range(0, 2)]
         with patch('random.randint') as randint_mock:
@@ -107,4 +113,4 @@ class AcademyCohortTestSuite(AuthTestCase):
                 },
             ],
         )
-        self.assertEqual(logging.Logger.debug.call_args_list, [call('Fixing 2 avatars')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call('Fixing 2 avatars')])

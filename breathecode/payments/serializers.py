@@ -1,10 +1,9 @@
 import logging
-import serpy
-from breathecode.admissions.models import Cohort, Academy
-from breathecode.payments.models import AcademyService, Plan, PlanOfferTranslation, Service, ServiceItem, ServiceItemFeature, Subscription
+from breathecode.admissions.models import Cohort
+from breathecode.payments.models import AcademyService, Plan, PlanOfferTranslation, Service, ServiceItem, ServiceItemFeature
 from django.db.models.query_utils import Q
 from rest_framework.exceptions import ValidationError
-from breathecode.utils import serializers, custom_serpy
+from breathecode.utils import serializers, serpy
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -64,7 +63,7 @@ class GetGroupSerializer(serpy.Serializer):
 
 
 class GetServiceSmallSerializer(serpy.Serializer):
-    # title = serpy.Field()
+    title = serpy.Field()
     slug = serpy.Field()
     # description = serpy.Field()
     # owner = GetAcademySmallSerializer(many=False)
@@ -75,8 +74,8 @@ class GetServiceSmallSerializer(serpy.Serializer):
         return GetGroupSerializer(obj.groups.all(), many=True).data
 
 
-class GetServiceSerializer(custom_serpy.Serializer):
-    # title = serpy.Field()
+class GetServiceSerializer(serpy.Serializer):
+    title = serpy.Field()
     slug = serpy.Field()
     # description = serpy.Field()
     currency = GetCurrencySmallSerializer(many=False)
@@ -86,7 +85,7 @@ class GetServiceSerializer(custom_serpy.Serializer):
     groups = serpy.MethodField()
     cohorts = serpy.MethodField()
     mentorship_services = serpy.MethodField()
-    cohorts = custom_serpy.MethodField()
+    cohorts = serpy.MethodField()
 
     def get_groups(self, obj):
         return GetGroupSerializer(obj.groups.all(), many=True).data
@@ -175,7 +174,7 @@ class GetFinancingOptionSerializer(serpy.Serializer):
     currency = GetCurrencySmallSerializer()
 
 
-class GetPlanSmallSerializer(custom_serpy.Serializer):
+class GetPlanSmallSerializer(serpy.Serializer):
     # title = serpy.Field()
     slug = serpy.Field()
     # description = serpy.Field()
@@ -212,14 +211,14 @@ class GetPlanSerializer(GetPlanSmallSerializer):
     owner = GetAcademySmallSerializer(required=False, many=False)
 
 
-class GetPlanOfferTranslationSerializer(custom_serpy.Serializer):
+class GetPlanOfferTranslationSerializer(serpy.Serializer):
     lang = serpy.Field()
     title = serpy.Field()
     description = serpy.Field()
     short_description = serpy.Field()
 
 
-class GetPlanOfferSerializer(custom_serpy.Serializer):
+class GetPlanOfferSerializer(serpy.Serializer):
     original_plan = GetPlanSerializer(required=False, many=False)
     suggested_plan = GetPlanSerializer(required=False, many=False)
     details = serpy.MethodField()

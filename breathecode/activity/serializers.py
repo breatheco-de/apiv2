@@ -1,14 +1,19 @@
-from rest_framework import serializers
 import serpy
 
 
 class ActivitySerializer(serpy.Serializer):
     id = serpy.Field()
-    # comment = serpy.Field()
-    # score = serpy.Field()
-    # user_id = serpy.Field()
+    user_id = serpy.Field()
+    kind = serpy.Field()
+    related = serpy.Field()
+    meta = serpy.MethodField()
+    timestamp = serpy.Field()
 
-    # certificate_slug = serpy.Field(required=False)
-    # academy_slug = serpy.Field(required=False)
-    # cohort_slug = serpy.Field(required=False)
-    # mentor_id = serpy.Field(required=False)
+    def get_meta(self, obj):
+        res = {}
+
+        for key in obj.meta:
+            if obj.meta[key] is not None:
+                res[key] = obj.meta[key]
+
+        return res
