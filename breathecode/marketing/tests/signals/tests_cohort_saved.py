@@ -1,15 +1,16 @@
 from unittest.mock import MagicMock, call, patch
-from rest_framework import status
-from ..mixins import MarketingTestCase
+
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
 
 
-class LeadTestSuite(MarketingTestCase):
+class TestLead(LegacyAPITestCase):
     """
     🔽🔽🔽 Create without ActiveCampaignAcademy
     """
 
     @patch('breathecode.marketing.tasks.add_cohort_slug_as_acp_tag.delay', MagicMock())
-    def test_cohort_saved__create__without_active_campaign_academy(self):
+    def test_cohort_saved__create__without_active_campaign_academy(self, enable_signals):
+        enable_signals()
         """Test /cohort/:id/user without auth"""
         from breathecode.marketing.tasks import add_cohort_slug_as_acp_tag
 
@@ -23,7 +24,8 @@ class LeadTestSuite(MarketingTestCase):
     """
 
     @patch('breathecode.marketing.tasks.add_cohort_slug_as_acp_tag.delay', MagicMock())
-    def test_cohort_saved__create__with_active_campaign_academy(self):
+    def test_cohort_saved__create__with_active_campaign_academy(self, enable_signals):
+        enable_signals()
         """Test /cohort/:id/user without auth"""
         from breathecode.marketing.tasks import add_cohort_slug_as_acp_tag
 
@@ -38,7 +40,8 @@ class LeadTestSuite(MarketingTestCase):
     """
 
     @patch('breathecode.marketing.tasks.add_cohort_slug_as_acp_tag.delay', MagicMock())
-    def test_cohort_saved__update__with_active_campaign_academy(self):
+    def test_cohort_saved__update__with_active_campaign_academy(self, enable_signals):
+        enable_signals()
         """Test /cohort/:id/user without auth"""
         from breathecode.marketing.tasks import add_cohort_slug_as_acp_tag
 

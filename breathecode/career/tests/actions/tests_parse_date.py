@@ -33,7 +33,6 @@ class ActionRunSpiderTestCase(CareerTestCase):
             self.assertEqual(str(e), ('data-job-none'))
             self.assertEqual(Logger.error.call_args_list, [
                 call('First you must specify a job (get_was_published_date_from_string)'),
-                call('Status 400 - data-job-none')
             ])
 
     def test_get_was_published_date_from_string__whith_x_days_ago(self):

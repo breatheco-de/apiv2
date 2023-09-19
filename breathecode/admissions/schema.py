@@ -1,3 +1,5 @@
+import logging
+import re
 import graphene
 from graphql import GraphQLError
 from graphql.type.definition import GraphQLResolveInfo
@@ -9,11 +11,47 @@ from breathecode.admissions.actions import haversine
 from django.db.models import FloatField, Q, Value
 from django.utils import timezone
 
+logger = logging.getLogger(__name__)
+
 
 def field_is_requested(info, field_name):
     """Check if a field is being requested in the current query."""
     return any(selection.name.value == field_name
                for selection in info.field_nodes[0].selection_set.selections)
+
+
+def fields_requested(info):
+    """Check if a field is being requested in the current query."""
+    return [selection.name.value for selection in info.field_nodes[0].selection_set.selections]
+
+
+def to_snake_case(name):
+    return re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
+
+
+def optimize_queryset(queryset, to_one=[], to_many=[], custom=[], fields=None, info=None):
+    selected_related = []
+    prefetch_related = []
+    only = []
+
+    if not fields:
+        fields = fields_requested(info)
+
+    for field in fields:
+        field = to_snake_case(field)
+
+        if field in to_many:
+            prefetch_related.append(field)
+
+        elif field in to_one:
+            selected_related.append(field)
+
+        # it does not works
+        # elif field not in custom and field not in selected_related and field not in prefetch_related:
+        #     only.append(field)
+
+    queryset = queryset.select_related(*selected_related).prefetch_related(*prefetch_related).only(*only)
+    return queryset
 
 
 class CohortTimeSlot(DjangoObjectType):
@@ -91,6 +129,9 @@ class Cohort(DjangoObjectType):
         return gql_optimizer.query(self.cohorttimeslot_set.all()[0:first], info)
 
     def resolve_distance(self, info):
+        if not hasattr(self, 'latitude') or not hasattr(self, 'longitude'):
+            return None
+
         if not self.latitude or not self.longitude or not self.academy.latitude or not self.academy.longitude:
             return None
 
@@ -110,7 +151,15 @@ class Admissions(graphene.ObjectType):
         start = (page - 1) * limit
         end = start + limit
 
-        has_distance = field_is_requested(info, 'distance')
+        fields = fields_requested(info)
+
+        items = optimize_queryset(items,
+                                  to_one=['academy', 'schedule', 'syllabusVersion'],
+                                  to_many=[],
+                                  custom=['distance'],
+                                  fields=fields)
+
+        has_distance = 'distance' in fields
 
         if has_distance:
             items = items.annotate(longitude=Value(None, output_field=FloatField()),
@@ -193,4 +242,4 @@ class Admissions(graphene.ObjectType):
 
             items = items.filter(**kwargs).distinct()
 
-        return gql_optimizer.query(items[start:end], info)
+        return items[start:end]

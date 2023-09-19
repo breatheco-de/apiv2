@@ -24,7 +24,7 @@ class AcademyEventTestSuite(EventTestCase):
                          [call('Starting async_export_event_to_eventbrite')])
         self.assertEqual(logging.Logger.error.call_args_list, [call('Event 1 not fount')])
         self.assertEqual(event_saved.send.call_args_list, [])
-        self.assertEqual(self.all_event_dict(), [])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [])
 
     """
     🔽🔽🔽 Without organization
@@ -54,7 +54,7 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(event_saved.send.call_args_list,
                          [call(instance=model.event, created=True, sender=model.event.__class__)])
 
-        self.assertEqual(self.all_event_dict(), [event_db])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [event_db])
 
     """
     🔽🔽🔽 Call async_export_event_to_eventbrite
@@ -84,4 +84,4 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(event_saved.send.call_args_list,
                          [call(instance=model.event, created=True, sender=model.event.__class__)])
 
-        self.assertEqual(self.all_event_dict(), [event_db])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [event_db])

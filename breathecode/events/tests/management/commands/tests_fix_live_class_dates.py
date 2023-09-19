@@ -2,7 +2,8 @@ from datetime import timedelta
 import random
 import sys
 from unittest.mock import MagicMock, call, patch
-from ...mixins import EventTestCase
+
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
 import breathecode.events.tasks as tasks
 from breathecode.events.management.commands.fix_live_class_dates import Command
 from django.utils import timezone
@@ -12,7 +13,7 @@ UTC_NOW = timezone.now()
 DELTA = timedelta(seconds=60 * random.randint(0, 61), minutes=random.randint(31, 61))
 
 
-class SyncOrgVenuesTestSuite(EventTestCase):
+class TestSyncOrgVenues(LegacyAPITestCase):
     # When: no LiveClass and no Cohort exists
     # Then: nothing should happen
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -20,7 +21,9 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
     @patch.object(sys.stdout, 'write', MagicMock())
     @patch.object(sys.stderr, 'write', MagicMock())
-    def test_0_live_classes(self):
+    def test_0_live_classes(self, enable_signals):
+        enable_signals()
+
         command = Command()
         command.handle()
 
@@ -39,7 +42,9 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
     @patch.object(sys.stdout, 'write', MagicMock())
     @patch.object(sys.stderr, 'write', MagicMock())
-    def test_2_cohorts__in_the_past(self):
+    def test_2_cohorts__in_the_past(self, enable_signals):
+        enable_signals()
+
         cohorts = [{'never_ends': False, 'ending_date': UTC_NOW - DELTA} for _ in range(2)]
         model = self.bc.database.create(cohort=cohorts)
         command = Command()
@@ -64,7 +69,9 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
     @patch.object(sys.stdout, 'write', MagicMock())
     @patch.object(sys.stderr, 'write', MagicMock())
-    def test_2_cohorts__in_the_future(self):
+    def test_2_cohorts__in_the_future(self, enable_signals):
+        enable_signals()
+
         cohorts = [{'never_ends': False, 'ending_date': UTC_NOW + DELTA} for _ in range(2)]
         model = self.bc.database.create(cohort=cohorts)
         command = Command()
@@ -89,7 +96,9 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
     @patch.object(sys.stdout, 'write', MagicMock())
     @patch.object(sys.stderr, 'write', MagicMock())
-    def test_2_live_classes(self):
+    def test_2_live_classes(self, enable_signals):
+        enable_signals()
+
         live_classes = [{
             'cohort_time_slot_id': n,
             'starting_at': UTC_NOW + DELTA,
@@ -100,6 +109,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         model = self.bc.database.create(live_class=live_classes,
                                         cohort=cohorts,
                                         cohort_time_slot=cohort_time_slots)
+
         command = Command()
         command.handle()
 

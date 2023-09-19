@@ -31,6 +31,7 @@ class BaseTaskWithRetry(Task):
 def get_app_url():
     return os.getenv('APP_URL', '')
 
+
 @task(bind=True, base=BaseTaskWithRetry)
 def renew_consumables(self, scheduler_id: int, **_: Any):
     """Renew consumables."""

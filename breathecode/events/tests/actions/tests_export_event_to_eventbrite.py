@@ -66,7 +66,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(actions.export_event_description_to_eventbrite.call_args_list, [])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.all_event_dict(), [])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [])
 
     """
     🔽🔽🔽 With academy and event with title
@@ -101,7 +101,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(actions.export_event_description_to_eventbrite.call_args_list, [call(model.event)])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.all_event_dict(),
+        self.assertEqual(self.bc.database.list_of('events.Event'),
                          [{
                              **self.model_to_dict(model, 'event'),
                              'eventbrite_sync_status': 'SYNCHED',
@@ -162,7 +162,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             ])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.all_event_dict(),
+        self.assertEqual(self.bc.database.list_of('events.Event'),
                          [{
                              **self.model_to_dict(model, 'event'),
                              'eventbrite_sync_status': 'SYNCHED',
@@ -223,7 +223,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             ])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.all_event_dict(),
+        self.assertEqual(self.bc.database.list_of('events.Event'),
                          [{
                              **self.model_to_dict(model, 'event'),
                              'eventbrite_sync_status': 'SYNCHED',
@@ -286,7 +286,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             ])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.all_event_dict(),
+        self.assertEqual(self.bc.database.list_of('events.Event'),
                          [{
                              **self.model_to_dict(model, 'event'),
                              'eventbrite_sync_status': 'SYNCHED',
