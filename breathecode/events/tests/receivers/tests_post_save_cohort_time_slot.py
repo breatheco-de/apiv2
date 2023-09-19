@@ -1,21 +1,24 @@
 from datetime import timedelta
 import random
 from unittest.mock import MagicMock, call, patch
-from ..mixins import EventTestCase
+
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
 import breathecode.events.tasks as tasks
 from django.utils import timezone
 
 UTC_NOW = timezone.now()
 
 
-class SyncOrgVenuesTestSuite(EventTestCase):
+class TestSyncOrgVenues(LegacyAPITestCase):
     """
     🔽🔽🔽 With zero CohortTimeSlot
     """
 
     @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test_without_timeslots(self):
+    def test_without_timeslots(self, enable_signals):
+        enable_signals()
+
         self.assertEqual(self.bc.database.list_of('events.LiveClass'), [])
         self.assertEqual(tasks.build_live_classes_from_timeslot.delay.call_args_list, [])
 
@@ -25,7 +28,9 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
     @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test_with_invalid_cohort(self):
+    def test_with_invalid_cohort(self, enable_signals):
+        enable_signals()
+
         cases = [
             (UTC_NOW - timedelta(seconds=random.randint(1, 1000)), False),
             (None, True),
@@ -45,7 +50,9 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
     @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test_with_right_cohort(self):
+    def test_with_right_cohort(self, enable_signals):
+        enable_signals()
+
         ending_date = UTC_NOW + timedelta(seconds=random.randint(1, 1000))
         never_ends = False
 

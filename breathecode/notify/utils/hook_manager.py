@@ -1,5 +1,7 @@
 import logging
 from django.conf import settings
+
+from breathecode.notify.models import Hook
 from ..tasks import async_deliver_hook
 from django.apps import apps as django_apps
 from django.core.exceptions import ImproperlyConfigured
@@ -45,10 +47,7 @@ class HookManagerClass(object):
         retriever.
             slugify = get_module('django.template.defaultfilters.slugify')
         """
-        try:
-            from importlib import import_module
-        except ImportError as e:
-            from django.utils.importlib import import_module
+        from importlib import import_module
 
         try:
             mod_name, func_name = path.rsplit('.', 1)
@@ -82,7 +81,7 @@ class HookManagerClass(object):
                     "HOOK_CUSTOM_MODEL refers to model '%s' that has not been installed" % model_label)
         else:
             if model_label in (None, 'notify.Hook'):
-                from rest_hooks.models import Hook
+                # from rest_hooks.models import Hook
                 HookModel = Hook
             else:
                 try:

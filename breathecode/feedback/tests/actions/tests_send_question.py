@@ -1,6 +1,7 @@
 """
 Test /answer
 """
+import random
 from unittest.mock import patch, MagicMock
 from breathecode.tests.mocks import (
     MAILGUN_PATH,
@@ -37,7 +38,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         except Exception as e:
             self.assertEqual(str(e), 'without-cohort-or-cannot-determine-cohort')
 
-        self.assertEqual(self.all_answer_dict(), [])
+        self.assertEqual(self.bc.database.list_of('feedback.Answer'), [])
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
 
@@ -59,19 +60,21 @@ class SendSurveyTestSuite(FeedbackTestCase):
         mock_slack = SLACK_INSTANCES['request']
         mock_slack.call_args_list = []
 
-        model1 = self.bc.database.create(cohort_user=True)
+        cohort_user = {'educational_status': random.choice(['POSTPONED', 'SUSPENDED', 'DROPPED'])}
+
+        model1 = self.bc.database.create(cohort_user=cohort_user)
 
         base = model1.copy()
         del base['cohort_user']
 
-        self.bc.database.create(cohort_user=True, models=base)
+        self.bc.database.create(cohort_user=cohort_user, models=base)
 
         try:
             send_question(model1['user'])
         except Exception as e:
             self.assertEqual(str(e), 'without-cohort-or-cannot-determine-cohort')
 
-        self.assertEqual(self.all_answer_dict(), [])
+        self.assertEqual(self.bc.database.list_of('feedback.Answer'), [])
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
 
@@ -190,7 +193,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
                 'opened_at': None,
             }]
 
-            self.assertEqual(self.all_answer_dict(), expected)
+            self.assertEqual(self.bc.database.list_of('feedback.Answer'), expected)
             self.assertEqual(mock_mailgun.call_args_list, [])
             self.assertEqual(mock_slack.call_args_list, [])
 
@@ -250,7 +253,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
                 'user_id': n + 1,
             }]
 
-            dicts = self.all_answer_dict()
+            dicts = self.bc.database.list_of('feedback.Answer')
             self.assertEqual(dicts, expected)
             self.assertEqual(self.count_token(), 1)
             self.check_email_contain_a_correct_token('en', dicts, mock_mailgun, model)
@@ -313,7 +316,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
                 'user_id': n + 1,
             }]
 
-            dicts = self.all_answer_dict()
+            dicts = self.bc.database.list_of('feedback.Answer')
             self.assertEqual(dicts, expected)
             self.assertEqual(self.count_token(), 1)
             self.check_email_contain_a_correct_token('en', dicts, mock_mailgun, model)
@@ -382,7 +385,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
                 'opened_at': None,
             }]
 
-            dicts = [answer for answer in self.all_answer_dict()]
+            dicts = [answer for answer in self.bc.database.list_of('feedback.Answer')]
             self.assertEqual(dicts, expected)
 
             self.check_email_contain_a_correct_token('en', dicts, mock_mailgun, model)
@@ -452,7 +455,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
                 'opened_at': None,
             }]
 
-            dicts = self.all_answer_dict()
+            dicts = self.bc.database.list_of('feedback.Answer')
             self.assertEqual(dicts, expected)
 
             self.check_email_contain_a_correct_token('en', dicts, mock_mailgun, model)
@@ -522,7 +525,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
                 'user_id': n + 1,
             }]
 
-            dicts = self.all_answer_dict()
+            dicts = self.bc.database.list_of('feedback.Answer')
             self.assertEqual(dicts, expected)
             self.assertEqual(self.count_token(), 1)
 

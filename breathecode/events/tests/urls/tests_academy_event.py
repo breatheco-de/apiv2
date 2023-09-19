@@ -392,7 +392,7 @@ class AcademyEventTestSuite(EventTestCase):
         expected = {'detail': 'organization-not-exist', 'status_code': 400}
 
         self.assertEqual(json, expected)
-        self.assertEqual(self.all_event_dict(), [])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [])
 
     """
     🔽🔽🔽 Post - bad tags
@@ -425,7 +425,7 @@ class AcademyEventTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [])
 
     def test_all_academy_events__post__bad_tags__with_spaces(self):
         self.headers(academy=1)
@@ -454,7 +454,7 @@ class AcademyEventTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [])
 
     def test_all_academy_events__post__bad_tags__starts_with_comma(self):
         self.headers(academy=1)
@@ -483,7 +483,7 @@ class AcademyEventTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [])
 
     def test_all_academy_events__post__bad_tags__ends_with_comma(self):
         self.headers(academy=1)
@@ -512,7 +512,7 @@ class AcademyEventTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [])
 
     def test_all_academy_events__post__bad_tags__one_tag_not_exists(self):
         self.headers(academy=1)
@@ -541,7 +541,7 @@ class AcademyEventTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [])
 
     def test_all_academy_events__post__bad_tags__two_tags_not_exists(self):
         self.headers(academy=1)
@@ -570,7 +570,7 @@ class AcademyEventTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [])
 
     def test_all_academy_events__post__bad_tags__one_of_two_tags_not_exists(self):
         self.headers(academy=1)
@@ -600,7 +600,7 @@ class AcademyEventTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [])
 
     """
     🔽🔽🔽 Post bad slug
@@ -712,7 +712,7 @@ class AcademyEventTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [])
 
     @patch('breathecode.events.signals.event_saved.send', MagicMock())
     # @patch('uuid.uuid4', PropertyMock(MagicMock=uuid))
@@ -908,7 +908,7 @@ class AcademyEventTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [])
 
     @patch('uuid.uuid4', PropertyMock(MagicMock=uuid))
     @patch('os.urandom', MagicMock(return_value=seed))
