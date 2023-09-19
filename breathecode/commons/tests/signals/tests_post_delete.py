@@ -3,7 +3,7 @@ import json
 from django.core.cache import cache
 from breathecode.admissions.caches import CohortCache
 from breathecode.events.caches import EventCache
-from ..mixins import CommonsTestCase
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
 
 cohort_cache = CohortCache()
 event_cache = EventCache()
@@ -15,9 +15,10 @@ def to_snake_case(name):
     return re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
 
 
-class LeadTestSuite(CommonsTestCase):
+class TestLead(LegacyAPITestCase):
 
-    def test_post_save__cohort(self):
+    def test_post_save__cohort(self, enable_signals):
+        enable_signals()
         cache.clear()
 
         models = ['Cohort', 'Event']

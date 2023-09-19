@@ -9,8 +9,7 @@ import logging
 from unittest.mock import patch, MagicMock, call
 from breathecode.payments.services.stripe import Stripe
 from breathecode.monitoring import signals as monitoring_signals
-
-from ..mixins import ProvisioningTestCase
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
 
 UTC_NOW = timezone.now()
 STRIPE_ID = f'price_{random.randint(1000, 9999)}'
@@ -24,7 +23,7 @@ def apply_get_env(configuration={}):
     return get_env
 
 
-class MakeBillsTestSuite(ProvisioningTestCase):
+class TestMakeBills(LegacyAPITestCase):
     # Given: 1 StripeEvent
     # When: with no bills and event type isn't checkout.session.completed
     # Then: nothing happens
@@ -33,7 +32,9 @@ class MakeBillsTestSuite(ProvisioningTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    def test_nothing(self):
+    def test_nothing(self, enable_signals):
+        enable_signals()
+
         model = self.bc.database.create(stripe_event=1)
         db = self.bc.format.to_dict(model.stripe_event)
         monitoring_signals.stripe_webhook.send(instance=model.stripe_event,
@@ -55,7 +56,9 @@ class MakeBillsTestSuite(ProvisioningTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    def test_bad_context(self):
+    def test_bad_context(self, enable_signals):
+        enable_signals()
+
         stripe_event = {'type': 'checkout.session.completed'}
         model = self.bc.database.create(stripe_event=stripe_event)
         db = self.bc.format.to_dict(model.stripe_event)
@@ -81,7 +84,9 @@ class MakeBillsTestSuite(ProvisioningTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    def test_no_bills(self):
+    def test_no_bills(self, enable_signals):
+        enable_signals()
+
         stripe_event = {
             'type': 'checkout.session.completed',
             'data': {
@@ -110,7 +115,9 @@ class MakeBillsTestSuite(ProvisioningTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    def test_not_related_bills(self):
+    def test_not_related_bills(self, enable_signals):
+        enable_signals()
+
         stripe_event = {
             'type': 'checkout.session.completed',
             'data': {
@@ -142,7 +149,9 @@ class MakeBillsTestSuite(ProvisioningTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    def test_a_related_bill(self):
+    def test_a_related_bill(self, enable_signals):
+        enable_signals()
+
         stripe_event = {
             'type': 'checkout.session.completed',
             'data': {

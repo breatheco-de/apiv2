@@ -3075,7 +3075,15 @@
             "markers": "python_version >= '3.7'",
             "version": "==1.9.2"
         },
-        "zope-interface": {
+        "zope.event": {
+            "hashes": [
+                "sha256:2832e95014f4db26c47a13fdaef84cef2f4df37e66b59d8f1f4a8f319a632c26",
+                "sha256:bac440d8d9891b4068e2b5a2c5e2c9765a9df762944bda6955f96bb9b91e67cd"
+            ],
+            "markers": "python_version >= '3.7'",
+            "version": "==5.0"
+        },
+        "zope.interface": {
             "hashes": [
                 "sha256:042f2381118b093714081fd82c98e3b189b68db38ee7d35b63c327c470ef8373",
                 "sha256:0ec9653825f837fbddc4e4b603d90269b501486c11800d7c761eee7ce46d1bbb",
@@ -3110,14 +3118,6 @@
             ],
             "markers": "python_version >= '3.7'",
             "version": "==6.0"
-        },
-        "zope.event": {
-            "hashes": [
-                "sha256:2832e95014f4db26c47a13fdaef84cef2f4df37e66b59d8f1f4a8f319a632c26",
-                "sha256:bac440d8d9891b4068e2b5a2c5e2c9765a9df762944bda6955f96bb9b91e67cd"
-            ],
-            "markers": "python_version >= '3.7'",
-            "version": "==5.0"
         }
     },
     "develop": {
@@ -3634,12 +3634,12 @@
         },
         "mkdocs": {
             "hashes": [
-                "sha256:60a62538519c2e96fe8426654a67ee177350451616118a41596ae7c876bb7eac",
-                "sha256:70d0da09c26cff288852471be03c23f0f521fc15cf16ac89c7a3bfb9ae8d24f9"
+                "sha256:3b3a78e736b31158d64dbb2f8ba29bd46a379d0c6e324c2246c3bc3d2189cfc1",
+                "sha256:eb7c99214dcb945313ba30426c2451b735992c73c2e10838f76d09e39ff4d0e2"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.7'",
-            "version": "==1.5.2"
+            "version": "==1.5.3"
         },
         "mkdocs-autorefs": {
             "hashes": [

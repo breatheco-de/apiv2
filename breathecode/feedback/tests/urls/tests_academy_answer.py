@@ -130,7 +130,7 @@ class AnswerTestSuite(FeedbackTestCase):
         }])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(self.bc.database.list_of('feedback.Answer'), [db])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -191,7 +191,7 @@ class AnswerTestSuite(FeedbackTestCase):
         }])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(self.bc.database.list_of('feedback.Answer'), [db])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -214,7 +214,7 @@ class AnswerTestSuite(FeedbackTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(self.bc.database.list_of('feedback.Answer'), [db])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -275,7 +275,7 @@ class AnswerTestSuite(FeedbackTestCase):
         }])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(self.bc.database.list_of('feedback.Answer'), [db])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -301,7 +301,7 @@ class AnswerTestSuite(FeedbackTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(self.bc.database.list_of('feedback.Answer'), [db])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -363,7 +363,7 @@ class AnswerTestSuite(FeedbackTestCase):
         }])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(self.bc.database.list_of('feedback.Answer'), [db])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -426,7 +426,7 @@ class AnswerTestSuite(FeedbackTestCase):
         }])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(self.bc.database.list_of('feedback.Answer'), [db])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -453,7 +453,7 @@ class AnswerTestSuite(FeedbackTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(self.bc.database.list_of('feedback.Answer'), [db])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -516,7 +516,7 @@ class AnswerTestSuite(FeedbackTestCase):
         }])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(self.bc.database.list_of('feedback.Answer'), [db])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -544,7 +544,7 @@ class AnswerTestSuite(FeedbackTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(self.bc.database.list_of('feedback.Answer'), [db])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -614,7 +614,7 @@ class AnswerTestSuite(FeedbackTestCase):
         }])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(self.bc.database.list_of('feedback.Answer'), [db])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -649,7 +649,7 @@ class AnswerTestSuite(FeedbackTestCase):
 
             db['score'] = score
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(self.all_answer_dict(), [db])
+            self.assertEqual(self.bc.database.list_of('feedback.Answer'), [db])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -726,7 +726,7 @@ class AnswerTestSuite(FeedbackTestCase):
             db['score'] = score
 
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(self.all_answer_dict(), [db])
+            self.assertEqual(self.bc.database.list_of('feedback.Answer'), [db])
 
     """
     🔽🔽🔽 With full like querystring

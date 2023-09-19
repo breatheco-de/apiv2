@@ -1,17 +1,17 @@
 import random
-from unittest.mock import MagicMock, call, patch
 
 from breathecode.payments import signals
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
 
-from ..mixins import PaymentsTestCase
 
-
-class SignalTestSuite(PaymentsTestCase):
+class TestSignal(LegacyAPITestCase):
     """
     🔽🔽🔽 With one Consumable and User
     """
 
-    def test__with_consumable(self):
+    def test__with_consumable(self, enable_signals):
+        enable_signals()
+
         how_many = -1
         consumable = {'how_many': how_many}
         model = self.bc.database.create(consumable=consumable)
@@ -33,7 +33,9 @@ class SignalTestSuite(PaymentsTestCase):
     🔽🔽🔽 With one Consumable, User and Group
     """
 
-    def test__with_consumable__with_group(self):
+    def test__with_consumable__with_group(self, enable_signals):
+        enable_signals()
+
         how_many = -1
         consumable = {'how_many': how_many}
         model = self.bc.database.create(consumable=consumable, group=1)
@@ -55,7 +57,9 @@ class SignalTestSuite(PaymentsTestCase):
     🔽🔽🔽 With two Consumable(how_many=-1), User and Group
     """
 
-    def test__with_two_consumables__with_group__how_many_minus_1(self):
+    def test__with_two_consumables__with_group__how_many_minus_1(self, enable_signals):
+        enable_signals()
+
         how_many = -1
         consumable = {'how_many': how_many}
         model = self.bc.database.create(consumable=(2, consumable), group=1)
@@ -73,7 +77,9 @@ class SignalTestSuite(PaymentsTestCase):
     🔽🔽🔽 With two Consumable(how_many__gte=1), User and Group
     """
 
-    def test__with_two_consumables__with_group__how_many_gte_1(self):
+    def test__with_two_consumables__with_group__how_many_gte_1(self, enable_signals):
+        enable_signals()
+
         how_many = random.randint(1, 100)
         consumable = {'how_many': how_many}
         model = self.bc.database.create(consumable=(2, consumable), group=1)
@@ -91,7 +97,9 @@ class SignalTestSuite(PaymentsTestCase):
     🔽🔽🔽 With two Consumable(how_many=0), User and Group
     """
 
-    def test__with_two_consumables__with_group__how_many_0(self):
+    def test__with_two_consumables__with_group__how_many_0(self, enable_signals):
+        enable_signals()
+
         how_many = 0
         consumable = {'how_many': how_many}
         model = self.bc.database.create(consumable=(2, consumable), group=1)
@@ -109,7 +117,10 @@ class SignalTestSuite(PaymentsTestCase):
     🔽🔽🔽 With two Consumable[(how_many=0), (how_many__gte=1)], User and Group
     """
 
-    def test__with_two_consumables__with_group__first_with_how_many_0__second_with_how_many_gte_1(self):
+    def test__with_two_consumables__with_group__first_with_how_many_0__second_with_how_many_gte_1(
+            self, enable_signals):
+        enable_signals()
+
         first_how_many = 0
         second_how_many = random.randint(1, 100)
         consumables = [{'how_many': n} for n in [first_how_many, second_how_many]]
@@ -128,7 +139,10 @@ class SignalTestSuite(PaymentsTestCase):
     🔽🔽🔽 With two Consumable[(how_many=0), ...(how_many__gte=1)], User and Group
     """
 
-    def test__with_two_consumables__with_group__first_with_how_many_0__rest_with_how_many_gte_1(self):
+    def test__with_two_consumables__with_group__first_with_how_many_0__rest_with_how_many_gte_1(
+            self, enable_signals):
+        enable_signals()
+
         length = random.randint(2, 5)
         consumables = [{'how_many': 0 if n == 0 else random.randint(1, 100)} for n in range(length)]
         model = self.bc.database.create(consumable=consumables, group=1)
@@ -146,7 +160,10 @@ class SignalTestSuite(PaymentsTestCase):
     🔽🔽🔽 With two Consumable[(how_many=0), (how_many=-1)], User and Group
     """
 
-    def test__with_two_consumables__with_group__first_with_how_many_0__second_with_how_many_minus_1(self):
+    def test__with_two_consumables__with_group__first_with_how_many_0__second_with_how_many_minus_1(
+            self, enable_signals):
+        enable_signals()
+
         first_how_many = 0
         second_how_many = -1
         consumables = [{'how_many': n} for n in [first_how_many, second_how_many]]
@@ -165,7 +182,10 @@ class SignalTestSuite(PaymentsTestCase):
     🔽🔽🔽 With two Consumable[(how_many=0), ...(how_many=-1)], User and Group
     """
 
-    def test__with_two_consumables__with_group__first_with_how_many_0__rest_with_how_many_minus_1(self):
+    def test__with_two_consumables__with_group__first_with_how_many_0__rest_with_how_many_minus_1(
+            self, enable_signals):
+        enable_signals()
+
         length = random.randint(2, 5)
         consumables = [{'how_many': 0 if n == 0 else -1} for n in range(length)]
         model = self.bc.database.create(consumable=consumables, group=1)
@@ -183,7 +203,10 @@ class SignalTestSuite(PaymentsTestCase):
     🔽🔽🔽 With two Consumable[(how_many=0), (how_many=-1)], User and Group
     """
 
-    def test__with_two_consumables__with_group__first_with_how_many_0__second_with_how_many_0(self):
+    def test__with_two_consumables__with_group__first_with_how_many_0__second_with_how_many_0(
+            self, enable_signals):
+        enable_signals()
+
         first_how_many = 0
         second_how_many = 0
         consumables = [{'how_many': n} for n in [first_how_many, second_how_many]]
@@ -202,7 +225,10 @@ class SignalTestSuite(PaymentsTestCase):
     🔽🔽🔽 With two Consumable[(how_many=0), ...(how_many=-1)], User and Group
     """
 
-    def test__with_two_consumables__with_group__first_with_how_many_0__rest_with_how_many_0(self):
+    def test__with_two_consumables__with_group__first_with_how_many_0__rest_with_how_many_0(
+            self, enable_signals):
+        enable_signals()
+
         length = random.randint(2, 5)
         consumables = [{'how_many': 0 if n == 0 else 0} for n in range(length)]
         model = self.bc.database.create(consumable=consumables, group=1)
@@ -221,7 +247,10 @@ class SignalTestSuite(PaymentsTestCase):
     Group and Service[(groups=[1]), (groups=[2])]
     """
 
-    def test__with_two_consumables__with_two_group__first_with_how_many_0__rest_with_how_many_0(self):
+    def test__with_two_consumables__with_two_group__first_with_how_many_0__rest_with_how_many_0(
+            self, enable_signals):
+        enable_signals()
+
         length = random.randint(2, 5)
         consumables = [{
             'how_many': 0 if n == 0 else 0,
@@ -250,7 +279,10 @@ class SignalTestSuite(PaymentsTestCase):
     Group and Service[(groups=[1]), (groups=[2])]
     """
 
-    def test__with_two_consumables__with_two_group__first_with_how_many_0__rest_with_how_many_minus_1(self):
+    def test__with_two_consumables__with_two_group__first_with_how_many_0__rest_with_how_many_minus_1(
+            self, enable_signals):
+        enable_signals()
+
         length = random.randint(2, 5)
         consumables = [{
             'how_many': 0 if n == 0 else -1,
@@ -279,7 +311,10 @@ class SignalTestSuite(PaymentsTestCase):
     Group and Service[(groups=[1]), (groups=[2])]
     """
 
-    def test__with_two_consumables__with_two_group__first_with_how_many_0__rest_with_how_many_gte_1(self):
+    def test__with_two_consumables__with_two_group__first_with_how_many_0__rest_with_how_many_gte_1(
+            self, enable_signals):
+        enable_signals()
+
         length = random.randint(2, 5)
         consumables = [{
             'how_many': 0 if n == 0 else random.randint(1, 100),

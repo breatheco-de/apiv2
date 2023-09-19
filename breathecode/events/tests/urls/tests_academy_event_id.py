@@ -182,7 +182,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [{
+        self.assertEqual(self.bc.database.list_of('events.Event'), [{
             **self.model_to_dict(model, 'event'),
         }])
 
@@ -216,7 +216,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [{
+        self.assertEqual(self.bc.database.list_of('events.Event'), [{
             **self.model_to_dict(model, 'event'),
         }])
 
@@ -255,7 +255,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [self.model_to_dict(model, 'event')])
 
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__with_spaces(self):
@@ -288,7 +288,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [self.model_to_dict(model, 'event')])
 
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__starts_with_comma(self):
@@ -321,7 +321,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [self.model_to_dict(model, 'event')])
 
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__ends_with_comma(self):
@@ -354,7 +354,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [self.model_to_dict(model, 'event')])
 
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__one_tag_not_exists(self):
@@ -387,7 +387,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [self.model_to_dict(model, 'event')])
 
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__two_tags_not_exists(self):
@@ -420,7 +420,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [self.model_to_dict(model, 'event')])
 
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__one_of_two_tags_not_exists(self):
@@ -454,7 +454,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [self.model_to_dict(model, 'event')])
 
     """
     🔽🔽🔽 Put
@@ -533,7 +533,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(self.all_event_dict(), [{
+        self.assertEqual(self.bc.database.list_of('events.Event'), [{
             **self.model_to_dict(model, 'event'),
             **data,
             'organization_id': 1,
@@ -579,7 +579,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [{
+        self.assertEqual(self.bc.database.list_of('events.Event'), [{
             **self.model_to_dict(model, 'event'),
         }])
 
@@ -623,7 +623,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [{
+        self.assertEqual(self.bc.database.list_of('events.Event'), [{
             **self.model_to_dict(model, 'event'),
         }])
 
@@ -662,7 +662,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [{
+        self.assertEqual(self.bc.database.list_of('events.Event'), [{
             **self.model_to_dict(model, 'event'),
         }])
 
@@ -737,7 +737,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(self.all_event_dict(), [{
+        self.assertEqual(self.bc.database.list_of('events.Event'), [{
             **self.model_to_dict(model, 'event'),
             **data,
             'organization_id': 1,
@@ -832,7 +832,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(self.all_event_dict(), [{
+        self.assertEqual(self.bc.database.list_of('events.Event'), [{
             **self.model_to_dict(model, 'event'),
             **data,
             'organization_id': 1,
