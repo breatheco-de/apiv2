@@ -80,7 +80,7 @@ urlpatterns = [
     path('syllabus/test', handle_test_syllabus),
     path('syllabus/<int:syllabus_id>', SyllabusView.as_view(), name='syllabus_id'),
     path('syllabus/<int:syllabus_id>/version', SyllabusVersionView.as_view(), name='syllabus_id_version'),
-    path('syllabus/version', AllSyllabusVersionsView.as_view(), name='all_syllabus_version'),
+    path('syllabus/version', AllSyllabusVersionsView.as_view(), name='syllabus_version'),
     path('syllabus/<int:syllabus_id>/version/<int:version>',
          SyllabusVersionView.as_view(),
          name='syllabus_id_version_version'),

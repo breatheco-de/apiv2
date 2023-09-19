@@ -42,49 +42,12 @@ def get_serializer(syllabus_version, syllabus):
 class SyllabusVersionTestSuite(AdmissionsTestCase):
     """Test /certificate"""
 
-    def test_syllabus_version_version_without_auth(self):
-        """Test /certificate without auth"""
-        self.headers(academy=1)
-        url = reverse_lazy('admissions:all_syllabus_version')
-        response = self.client.get(url)
-        json = response.json()
-
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED
-            })
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-    def test_syllabus_version_version_without_capability(self):
-        """Test /certificate without auth"""
-        self.headers(academy=1)
-        url = reverse_lazy('admissions:all_syllabus_version')
-        self.generate_models(authenticate=True)
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'status_code': 403,
-            'detail': 'You (user: 1) don\'t have this capability: read_syllabus '
-            'for academy 1'
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_syllabus_slug_version(self):
         """Test /certificate without auth"""
-        self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='read_syllabus',
-                                     role='potato',
-                                     syllabus=True,
-                                     syllabus_version=True,
-                                     syllabus_kwargs=syllabus_kwargs)
-        url = reverse_lazy('admissions:all_syllabus_version')
+        model = self.generate_models(syllabus=True, syllabus_version=True, syllabus_kwargs=syllabus_kwargs)
+        url = reverse_lazy('admissions:syllabus_version')
         response = self.client.get(url)
         json = response.json()
         expected = [get_serializer(model['syllabus_version'], model['syllabus'])]
@@ -100,16 +63,9 @@ class SyllabusVersionTestSuite(AdmissionsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_syllabus_slug_version_with_filters(self):
         """Test /certificate without auth"""
-        self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny', 'is_documentation': True}
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='read_syllabus',
-                                     role='potato',
-                                     syllabus=True,
-                                     syllabus_version=True,
-                                     syllabus_kwargs=syllabus_kwargs)
-        base_url = reverse_lazy('admissions:all_syllabus_version')
+        model = self.generate_models(syllabus=True, syllabus_version=True, syllabus_kwargs=syllabus_kwargs)
+        base_url = reverse_lazy('admissions:syllabus_version')
         url = f'{base_url}?is_documentation=True'
         response = self.client.get(url)
         json = response.json()
