@@ -187,6 +187,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             'duration_in_hours': None,
             'github_url': None,
             'id': 1,
+            'is_documentation': False,
             'logo': None,
             'private': False,
             'week_hours': None,
