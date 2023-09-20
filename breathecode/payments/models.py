@@ -320,7 +320,7 @@ class FinancingOption(models.Model):
 
 class CohortSet(models.Model):
     """
-    M2M between plan and ServiceItem
+    Cohort set.
     """
 
     slug = models.SlugField(
@@ -330,7 +330,36 @@ class CohortSet(models.Model):
         help_text='A human-readable identifier, it must be unique and it can only contain letters, '
         'numbers and hyphens')
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
-    cohorts = models.ManyToManyField(Cohort, blank=True)
+    cohorts = models.ManyToManyField(Cohort,
+                                     blank=True,
+                                     through='CohortSetCohort',
+                                     through_fields=('cohort_set', 'cohort'))
+
+
+class CohortSetCohort(models.Model):
+    """
+    M2M between CohortSet and Cohort.
+    """
+
+    _lang = 'en'
+
+    cohort_set = models.ForeignKey(CohortSet, on_delete=models.CASCADE, help_text='Cohort set')
+    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, help_text='Cohort')
+
+    def clean(self) -> None:
+        if self.cohort.available_as_saas is False or (self.cohort.available_as_saas == None
+                                                      and self.cohort.academy.available_as_saas is False):
+            raise forms.ValidationError(
+                translation(self._lang,
+                            en='Cohort is not available as SaaS',
+                            es='El cohort no está disponible como SaaS',
+                            slug='cohort-not-available-as-saas'))
+
+        return super().clean()
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 
 class CohortSetTranslation(models.Model):

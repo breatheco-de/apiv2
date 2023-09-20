@@ -747,7 +747,8 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
     def test_plan_true__without_scheduler(self):
         """Test /cohort/all without auth"""
-        model = self.generate_models(authenticate=True, cohort=1, profile_academy=1)
+        cohort = {'available_as_saas': True}
+        model = self.generate_models(authenticate=True, cohort=cohort, profile_academy=1)
 
         base_url = reverse_lazy('admissions:cohort_all')
         url = f'{base_url}?plan=true'
@@ -763,9 +764,11 @@ class CohortAllTestSuite(AdmissionsTestCase):
     def test_plan_true__with_scheduler(self):
         """Test /cohort/all without auth"""
         plan = {'time_of_life': None, 'time_of_life_unit': None}
+        cohort = {'available_as_saas': True}
         model = self.generate_models(authenticate=True,
-                                     cohort=1,
+                                     cohort=cohort,
                                      cohort_set=1,
+                                     cohort_set_cohort=1,
                                      profile_academy=1,
                                      syllabus_version=1,
                                      currency=1,
@@ -792,9 +795,11 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
     def test_plan_false__without_scheduler(self):
         """Test /cohort/all without auth"""
+        cohort = {'available_as_saas': True}
         model = self.generate_models(authenticate=True,
-                                     cohort=1,
+                                     cohort=cohort,
                                      cohort_set=1,
+                                     cohort_set_cohort=1,
                                      profile_academy=1,
                                      syllabus_version=1)
 
@@ -813,8 +818,9 @@ class CohortAllTestSuite(AdmissionsTestCase):
     def test_plan_false__with_scheduler(self):
         """Test /cohort/all without auth"""
         plan = {'time_of_life': None, 'time_of_life_unit': None}
+        cohort = {'available_as_saas': True}
         model = self.generate_models(authenticate=True,
-                                     cohort=1,
+                                     cohort=cohort,
                                      profile_academy=1,
                                      syllabus_version=1,
                                      currency=1,
@@ -842,7 +848,8 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
     def test_plan_is_slug__without_scheduler(self):
         """Test /cohort/all without auth"""
-        model = self.generate_models(authenticate=True, cohort=1, profile_academy=1)
+        cohort = {'available_as_saas': True}
+        model = self.generate_models(authenticate=True, cohort=cohort, profile_academy=1)
         slug = self.bc.fake.slug()
 
         url = reverse_lazy('admissions:cohort_all') + f'?plan={slug}'
@@ -860,10 +867,12 @@ class CohortAllTestSuite(AdmissionsTestCase):
         """Test /cohort/all without auth"""
         slug = self.bc.fake.slug()
         plan = {'slug': slug, 'time_of_life': None, 'time_of_life_unit': None}
+        cohort = {'available_as_saas': True}
 
         model = self.generate_models(authenticate=True,
-                                     cohort=1,
+                                     cohort=cohort,
                                      cohort_set=1,
+                                     cohort_set_cohort=1,
                                      profile_academy=1,
                                      syllabus_version=1,
                                      currency=1,

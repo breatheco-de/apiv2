@@ -1213,6 +1213,8 @@ class SignalTestSuite(PaymentsTestCase):
         subscription_service_items = [{'service_item_id': x, 'subscription_id': 1} for x in range(1, 3)]
         subscription_service_items += [{'service_item_id': x, 'subscription_id': 2} for x in range(1, 3)]
         plan = {'is_renewable': False}
+        cohort_set_cohorts = [{'cohort_id': 1, 'cohort_set_id': x} for x in range(1, 3)]
+        cohort = {'available_as_saas': True}
         model = self.bc.database.create(subscription=subscriptions,
                                         plan_financing=plan_financings,
                                         plan_service_item=plan_service_items,
@@ -1220,7 +1222,9 @@ class SignalTestSuite(PaymentsTestCase):
                                         invoice=2,
                                         plan=(2, plan),
                                         service_item=2,
-                                        cohort_set=2)
+                                        cohort=cohort,
+                                        cohort_set=2,
+                                        cohort_set_cohort=cohort_set_cohorts)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription') + (

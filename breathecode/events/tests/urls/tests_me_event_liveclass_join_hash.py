@@ -482,6 +482,7 @@ class AcademyEventTestSuite(EventTestCase):
                                         cohort_user=1,
                                         cohort=cohort,
                                         cohort_set=1,
+                                        cohort_set_cohort=1,
                                         consumable=1,
                                         token=1)
         querystring = self.bc.format.to_querystring({'token': model.token.key})
@@ -552,6 +553,7 @@ class AcademyEventTestSuite(EventTestCase):
                                         cohort_user=1,
                                         cohort=cohort,
                                         cohort_set=1,
+                                        cohort_set_cohort=1,
                                         consumable=1,
                                         token=1)
         querystring = self.bc.format.to_querystring({'token': model.token.key})
