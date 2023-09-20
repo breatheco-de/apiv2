@@ -82,7 +82,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(actions.update_event_description_from_eventbrite.call_args_list, [])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.all_event_dict(), [])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [])
 
     """
     🔽🔽🔽 Without academy
@@ -111,7 +111,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(actions.update_event_description_from_eventbrite.call_args_list, [])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.all_event_dict(), [])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [])
 
     """
     🔽🔽🔽 With academy
@@ -187,7 +187,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'uuid': uuid,
         }
 
-        self.assertEqual(self.all_event_dict(), [kwargs])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [kwargs])
 
     """
     🔽🔽🔽 With academy and event
@@ -268,4 +268,4 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'uuid': uuid,
         }
 
-        self.assertEqual(self.all_event_dict(), [kwargs])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [kwargs])

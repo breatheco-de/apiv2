@@ -53,7 +53,7 @@ class AnswerIdTrackerTestSuite(FeedbackTestCase):
 
         self.assertEqual(response['content-type'], 'image/png')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [self.model_to_dict(model, 'answer')])
+        self.assertEqual(self.bc.database.list_of('feedback.Answer'), [self.model_to_dict(model, 'answer')])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -68,7 +68,7 @@ class AnswerIdTrackerTestSuite(FeedbackTestCase):
         self.assertEqual(response['content-type'], 'image/png')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        answers = self.all_answer_dict()
+        answers = self.bc.database.list_of('feedback.Answer')
         self.assertDatetime(answers[0]['opened_at'])
         answers[0]['opened_at'] = None
 

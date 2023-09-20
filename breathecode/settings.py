@@ -139,8 +139,6 @@ if ENVIRONMENT != 'production':
     ]
 
 MIDDLEWARE += [
-    # 'rollbar.contrib.django.middleware.RollbarNotifierMiddlewareOnly404',
-    # ⬆ This Rollbar should always be first please!
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -155,9 +153,6 @@ MIDDLEWARE += [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     #'breathecode.utils.admin_timezone.TimezoneMiddleware',
-
-    # ⬇ Rollbar is always last please!
-    # 'rollbar.contrib.django.middleware.RollbarNotifierMiddlewareExcluding404',
 ]
 
 AUTHENTICATION_BACKENDS = ('django.contrib.auth.backends.ModelBackend', )
@@ -265,15 +260,6 @@ logging.config.dictConfig({
         'django.server': DEFAULT_LOGGING['loggers']['django.server'],
     }
 })
-
-ROLLBAR = {
-    'access_token': os.getenv('ROLLBAR_ACCESS_TOKEN', ''),
-    'environment': 'development' if DEBUG else 'production',
-    'branch': 'master',
-    'root': BASE_DIR,
-    # parsed POST variables placed in your output for exception handling
-    'EXCEPTION_HANDLER': 'rollbar.contrib.django_rest_framework.post_exception_handler',
-}
 
 MESSAGE_TAGS = {
     messages.DEBUG: 'alert-info',

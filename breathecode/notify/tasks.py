@@ -97,14 +97,16 @@ def async_slack_command(post_data):
 
 @shared_task
 def async_deliver_hook(target, payload, hook_id=None, **kwargs):
-    logger.debug('Starting async_deliver_hook')
-    from .utils.hook_manager import HookManager
     """
     target:     the url to receive the payload.
     payload:    a python primitive data structure
     instance:   a possibly null "trigger" instance
     hook:       the defining Hook object (useful for removing)
     """
+
+    from .utils.hook_manager import HookManager
+
+    logger.debug('Starting async_deliver_hook')
     encoded_payload = json.dumps(payload, cls=DjangoJSONEncoder)
     response = requests.post(url=target,
                              data=encoded_payload,
@@ -118,20 +120,26 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
             hook.delete()
 
         else:
-            data = hook.sample_data
-            if not isinstance(data, list):
-                data = []
 
-            if 'data' in payload and isinstance(payload['data'], dict):
-                data.append(payload['data'])
-            elif isinstance(payload, dict):
-                data.append(payload)
+            try:
+                data = hook.sample_data
+                if not isinstance(data, list):
+                    data = []
 
-            if len(data) > 10:
-                data = data[1:10]
+                if 'data' in payload and isinstance(payload['data'], dict):
+                    data.append(payload['data'])
+                elif isinstance(payload, dict):
+                    data.append(json.loads(encoded_payload))
 
-            hook.last_response_code = response.status_code
-            hook.last_call_at = timezone.now()
-            hook.sample_data = data
-            hook.total_calls = hook.total_calls + 1
-            hook.save()
+                if len(data) > 10:
+                    data = data[1:10]
+
+                hook.last_response_code = response.status_code
+                hook.last_call_at = timezone.now()
+                hook.sample_data = data
+                hook.total_calls = hook.total_calls + 1
+                hook.save()
+            except Exception as e:
+                logger.error(
+                    f'Error while trying to save hook call with status code {response.status_code}. {str(e)}')
+                logger.debug(data)

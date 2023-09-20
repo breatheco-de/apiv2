@@ -793,6 +793,7 @@ class Course(models.Model):
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     syllabus = models.ManyToManyField(Syllabus, blank=True)
+    cohort = models.ForeignKey(Cohort, null=True, blank=True, default=None, on_delete=models.CASCADE)
 
     status = models.CharField(max_length=15, choices=COURSE_STATUS, default=ACTIVE)
     status_message = models.CharField(max_length=250,
@@ -816,6 +817,19 @@ class Course(models.Model):
 
     def __str__(self):
         return f'{self.slug}'
+
+    def clean(self) -> None:
+        if self.cohort and self.cohort.never_ends == False:
+            raise Exception('Cohort must be a never ending cohort')
+
+        if self.cohort and (self.cohort.available_as_saas == False or
+                            (self.cohort.available_as_saas == None
+                             and self.cohort.academy.available_as_saas == False)):
+
+            raise Exception('Cohort must be available as saas')
+
+        if self.cohort and self.academy != self.cohort.academy:
+            raise Exception('Cohort must belong to the same academy')
 
     def save(self, *args, **kwargs):
         self.full_clean()

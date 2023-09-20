@@ -1,15 +1,13 @@
 """
 Test async_download_single_readme_image
 """
-from random import randint
 import base64
-from unittest.mock import MagicMock, call, patch, PropertyMock
+from unittest.mock import MagicMock, patch, PropertyMock
 
 from breathecode.registry.tasks import async_download_single_readme_image
-from logging import Logger
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
 from breathecode.tests.mocks import apply_requests_get_mock
 from django.utils import timezone
-from ..mixins import RegistryTestCase
 
 UTC_NOW = timezone.now()
 
@@ -25,7 +23,7 @@ def apply_get_env(configuration={}):
 original_url = 'https://www.google.com'
 
 
-class RegistryTestSuite(RegistryTestCase):
+class TestRegistry(LegacyAPITestCase):
     """
     🔽🔽🔽 GET with status not ok
     """

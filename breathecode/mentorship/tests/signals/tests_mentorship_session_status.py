@@ -1,20 +1,21 @@
 from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
-from rest_framework import status
 from django.utils import timezone
 
 from breathecode.payments.tasks import refund_mentoring_session
-from ..mixins import MentorshipTestCase
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
 
 
-class LeadTestSuite(MentorshipTestCase):
+class TestLead(LegacyAPITestCase):
     """
     🔽🔽🔽 With status PENDING
     """
 
     @patch('breathecode.feedback.tasks.send_mentorship_session_survey.delay', MagicMock())
     @patch('breathecode.payments.tasks.refund_mentoring_session.delay', MagicMock())
-    def test_mentorship_session_status__with_status_pending(self):
+    def test_mentorship_session_status__with_status_pending(self, enable_signals):
+        enable_signals()
+
         from breathecode.feedback.tasks import send_mentorship_session_survey
 
         mentorship_session = {'status': 'PENDING'}
@@ -33,7 +34,9 @@ class LeadTestSuite(MentorshipTestCase):
 
     @patch('breathecode.feedback.tasks.send_mentorship_session_survey.delay', MagicMock())
     @patch('breathecode.payments.tasks.refund_mentoring_session.delay', MagicMock())
-    def test_mentorship_session_status__with_status_started(self):
+    def test_mentorship_session_status__with_status_started(self, enable_signals):
+        enable_signals()
+
         from breathecode.feedback.tasks import send_mentorship_session_survey
 
         mentorship_session = {'status': 'STARTED'}
@@ -52,7 +55,9 @@ class LeadTestSuite(MentorshipTestCase):
 
     @patch('breathecode.feedback.tasks.send_mentorship_session_survey.delay', MagicMock())
     @patch('breathecode.payments.tasks.refund_mentoring_session.delay', MagicMock())
-    def test_mentorship_session_status__with_status_failed(self):
+    def test_mentorship_session_status__with_status_failed(self, enable_signals):
+        enable_signals()
+
         from breathecode.feedback.tasks import send_mentorship_session_survey
 
         mentorship_session = {'status': 'FAILED'}
@@ -67,7 +72,9 @@ class LeadTestSuite(MentorshipTestCase):
 
     @patch('breathecode.feedback.tasks.send_mentorship_session_survey.delay', MagicMock())
     @patch('breathecode.payments.tasks.refund_mentoring_session.delay', MagicMock())
-    def test_mentorship_session_status__with_status_failed__with_mentor_and_mentee(self):
+    def test_mentorship_session_status__with_status_failed__with_mentor_and_mentee(self, enable_signals):
+        enable_signals()
+
         from breathecode.feedback.tasks import send_mentorship_session_survey
 
         mentorship_session = {'status': 'FAILED'}
@@ -89,7 +96,9 @@ class LeadTestSuite(MentorshipTestCase):
 
     @patch('breathecode.feedback.tasks.send_mentorship_session_survey.delay', MagicMock())
     @patch('breathecode.payments.tasks.refund_mentoring_session.delay', MagicMock())
-    def test_mentorship_session_status__with_status_ignored(self):
+    def test_mentorship_session_status__with_status_ignored(self, enable_signals):
+        enable_signals()
+
         from breathecode.feedback.tasks import send_mentorship_session_survey
 
         mentorship_session = {'status': 'IGNORED'}
@@ -104,7 +113,9 @@ class LeadTestSuite(MentorshipTestCase):
 
     @patch('breathecode.feedback.tasks.send_mentorship_session_survey.delay', MagicMock())
     @patch('breathecode.payments.tasks.refund_mentoring_session.delay', MagicMock())
-    def test_mentorship_session_status__with_status_ignored__with_mentor_and_mentee(self):
+    def test_mentorship_session_status__with_status_ignored__with_mentor_and_mentee(self, enable_signals):
+        enable_signals()
+
         from breathecode.feedback.tasks import send_mentorship_session_survey
 
         mentorship_session = {'status': 'IGNORED'}
@@ -126,7 +137,9 @@ class LeadTestSuite(MentorshipTestCase):
 
     @patch('breathecode.feedback.tasks.send_mentorship_session_survey.delay', MagicMock())
     @patch('breathecode.payments.tasks.refund_mentoring_session.delay', MagicMock())
-    def test_mentorship_session_status__with_status_completed__duration_equal_to_zero(self):
+    def test_mentorship_session_status__with_status_completed__duration_equal_to_zero(self, enable_signals):
+        enable_signals()
+
         from breathecode.feedback.tasks import send_mentorship_session_survey
 
         mentorship_session = {'status': 'COMPLETED'}
@@ -145,7 +158,10 @@ class LeadTestSuite(MentorshipTestCase):
 
     @patch('breathecode.feedback.tasks.send_mentorship_session_survey.delay', MagicMock())
     @patch('breathecode.payments.tasks.refund_mentoring_session.delay', MagicMock())
-    def test_mentorship_session_status__with_status_completed__duration_equal_to_five_minutes(self):
+    def test_mentorship_session_status__with_status_completed__duration_equal_to_five_minutes(
+            self, enable_signals):
+        enable_signals()
+
         from breathecode.feedback.tasks import send_mentorship_session_survey
 
         utc_now = timezone.now()
@@ -169,7 +185,10 @@ class LeadTestSuite(MentorshipTestCase):
 
     @patch('breathecode.feedback.tasks.send_mentorship_session_survey.delay', MagicMock())
     @patch('breathecode.payments.tasks.refund_mentoring_session.delay', MagicMock())
-    def test_mentorship_session_status__with_status_completed__duration_greater_than_five_minutes(self):
+    def test_mentorship_session_status__with_status_completed__duration_greater_than_five_minutes(
+            self, enable_signals):
+        enable_signals()
+
         from breathecode.feedback.tasks import send_mentorship_session_survey
 
         utc_now = timezone.now()
@@ -193,7 +212,9 @@ class LeadTestSuite(MentorshipTestCase):
 
     @patch('breathecode.feedback.tasks.send_mentorship_session_survey.delay', MagicMock())
     @patch('breathecode.payments.tasks.refund_mentoring_session.delay', MagicMock())
-    def test_mentorship_session_status__with_status_completed__with_mentee__with_mentor(self):
+    def test_mentorship_session_status__with_status_completed__with_mentee__with_mentor(self, enable_signals):
+        enable_signals()
+
         from breathecode.feedback.tasks import send_mentorship_session_survey
 
         utc_now = timezone.now()
@@ -211,13 +232,15 @@ class LeadTestSuite(MentorshipTestCase):
         self.assertEqual(send_mentorship_session_survey.delay.call_args_list, [call(1)])
         self.assertEqual(refund_mentoring_session.delay.call_args_list, [])
 
-    # """
-    # 🔽🔽🔽 With status COMPLETED, duration greater than 0:05:00, with mentee and with mentor, with service
-    # """
+        # """
+        # 🔽🔽🔽 With status COMPLETED, duration greater than 0:05:00, with mentee and with mentor, with service
+        # """
 
-    # @patch('breathecode.feedback.tasks.send_mentorship_session_survey.delay', MagicMock())
-    # @patch('breathecode.payments.tasks.refund_mentoring_session.delay', MagicMock())
-    # def test_mentorship_session_status__with_status_completed__with_mentee__with_mentor_and_service(self):
+        # @patch('breathecode.feedback.tasks.send_mentorship_session_survey.delay', MagicMock())
+        # @patch('breathecode.payments.tasks.refund_mentoring_session.delay', MagicMock())
+        # def test_mentorship_session_status__with_status_completed__with_mentee__with_mentor_and_service(self, enable_signals):
+        enable_signals()
+
     #     from breathecode.feedback.tasks import send_mentorship_session_survey
 
     #     utc_now = timezone.now()

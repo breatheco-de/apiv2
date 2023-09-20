@@ -1,4 +1,3 @@
-import logging
 import os
 from typing import Optional
 from django.db.models import QuerySet
@@ -7,8 +6,6 @@ from rest_framework.exceptions import APIException
 from .shorteners import C
 
 __all__ = ['PaymentException']
-
-logger = logging.getLogger(__name__)
 
 
 def is_test_env():
@@ -36,8 +33,5 @@ class PaymentException(APIException):
         elif slug and is_test_env():
             self.detail = slug
 
-        if isinstance(self.detail, str):
-            logger.error(f'Status {str(self.status_code)} - {self.detail}')
-
     def _get_details(self):
-        return [ValidationException(x.args[0], **{**x.kwargs, 'code': self.status_code}) for x in self.detail]
+        return [PaymentException(x.args[0], **{**x.kwargs, 'code': self.status_code}) for x in self.detail]
