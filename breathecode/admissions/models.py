@@ -189,6 +189,7 @@ class Syllabus(models.Model):
 
     # by default a syllabus can be re-used by any other academy
     private = models.BooleanField(default=False)
+    is_documentation = models.BooleanField(default=False)
 
     # a syllabus can be shared with other academy, but only the academy owner can update or delete it
     academy_owner = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
