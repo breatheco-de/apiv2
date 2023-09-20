@@ -138,6 +138,7 @@ class GetServiceItemSerializer(serpy.Serializer):
 
 
 class GetServiceItemFeatureShortSerializer(serpy.Serializer):
+    title = serpy.Field()
     description = serpy.Field()
     one_line_desc = serpy.Field()
 
