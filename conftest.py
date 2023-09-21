@@ -20,7 +20,7 @@ from breathecode.tests.mixins.breathecode_mixin import Breathecode
 
 
 # it does not work yet
-@pytest.fixture
+@pytest.fixture(scope='session')
 def bc(request):
     return Breathecode(request.instance)
 
@@ -74,7 +74,7 @@ def enable_signals(monkeypatch):
     yield enable
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(scope='session', autouse=True)
 def no_http_requests(monkeypatch):
 
     def urlopen_mock(self, method, url, *args, **kwargs):
@@ -119,6 +119,6 @@ def random_image(fake):
     os.remove(filename)
 
 
-@pytest.fixture()
+@pytest.fixture(scope='session')
 def fake():
     return FAKE
