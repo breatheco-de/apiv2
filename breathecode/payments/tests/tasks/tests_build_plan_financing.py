@@ -222,8 +222,14 @@ class PaymentsTestSuite(PaymentsTestCase):
         }
         invoice = {'status': 'FULFILLED', 'amount': amount}
         plan = {'is_renewable': False}
+        academy = {'available_as_saas': True}
 
-        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plan, cohort=1, cohort_set=1)
+        model = self.bc.database.create(bag=bag,
+                                        invoice=invoice,
+                                        plan=plan,
+                                        cohort=1,
+                                        cohort_set=1,
+                                        academy=academy)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []

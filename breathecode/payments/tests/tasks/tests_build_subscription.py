@@ -173,7 +173,8 @@ class PaymentsTestSuite(PaymentsTestCase):
             'time_of_life': None,
             'time_of_life_unit': None,
         }
-        model = self.bc.database.create(bag=bag, invoice=invoice, cohort_set=1, plan=plan)
+        academy = {'available_as_saas': True}
+        model = self.bc.database.create(bag=bag, invoice=invoice, cohort_set=1, plan=plan, academy=academy)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []

@@ -175,6 +175,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         service_item = {'how_many': -1}
         if random.randint(0, 1) == 1:
             service_item['how_many'] = random.randint(1, 100)
+        academy = {'available_as_saas': True}
 
         model = self.bc.database.create(service_stock_scheduler=1,
                                         plan=plan,
@@ -182,7 +183,8 @@ class PaymentsTestSuite(PaymentsTestCase):
                                         plan_financing=plan_financing,
                                         plan_service_item_handler=1,
                                         cohort=2,
-                                        cohort_set=2)
+                                        cohort_set=2,
+                                        academy=academy)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -460,6 +462,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         service_item = {'how_many': -1}
         if random.randint(0, 1) == 1:
             service_item['how_many'] = random.randint(1, 100)
+        academy = {'available_as_saas': True}
 
         model = self.bc.database.create(service_stock_scheduler=1,
                                         plan=plan,
@@ -467,7 +470,8 @@ class PaymentsTestSuite(PaymentsTestCase):
                                         subscription=subscription,
                                         plan_service_item_handler=1,
                                         cohort=2,
-                                        cohort_set=2)
+                                        cohort_set=2,
+                                        academy=academy)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -703,13 +707,15 @@ class PaymentsTestSuite(PaymentsTestCase):
         service_item = {'how_many': -1}
         if random.randint(0, 1) == 1:
             service_item['how_many'] = random.randint(1, 100)
+        academy = {'available_as_saas': True}
 
         model = self.bc.database.create(service_stock_scheduler=1,
                                         service_item=service_item,
                                         subscription=subscription,
                                         subscription_service_item=1,
                                         cohort=2,
-                                        cohort_set=2)
+                                        cohort_set=2,
+                                        academy=academy)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []

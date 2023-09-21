@@ -1685,6 +1685,37 @@ class SyllabusVersionView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class AllSyllabusVersionsView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+
+        items = SyllabusVersion.objects.all()
+        lookup = {}
+
+        if 'version' in self.request.GET:
+            param = self.request.GET.get('version')
+            lookup['version'] = param
+
+        if 'academy' in self.request.GET:
+            param = self.request.GET.get('academy')
+            lookup['syllabus__academy_owner__id__in'] = [p for p in param.split(',')]
+
+        if 'is_documentation' in self.request.GET:
+            param = self.request.GET.get('is_documentation')
+            if param == 'True':
+                lookup['syllabus__is_documentation'] = True
+
+        items = items.filter(syllabus__private=False, **lookup).order_by('version')
+
+        serializer = GetSyllabusVersionSerializer(items, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class PublicCohortUserView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.

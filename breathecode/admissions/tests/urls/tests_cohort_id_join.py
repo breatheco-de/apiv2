@@ -133,12 +133,14 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             cohort = {
                 'never_ends': True,
                 'ending_date': None,
+                'available_as_saas': True,
             }
 
         else:
             cohort = {
                 'never_ends': False,
                 'ending_date': timezone.now() + timedelta(days=1),
+                'available_as_saas': True,
             }
 
         model = self.bc.database.create(user=1, cohort=cohort)
@@ -172,12 +174,14 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             cohort = {
                 'never_ends': True,
                 'ending_date': None,
+                'available_as_saas': True,
             }
 
         else:
             cohort = {
                 'never_ends': False,
                 'ending_date': timezone.now() + timedelta(days=1),
+                'available_as_saas': True,
             }
 
         if is_a_subscription := random.randint(0, 1):
@@ -197,8 +201,14 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                     'monthly_price': random.randint(1, 100),
                 },
             }
+        academy = {'available_as_saas': True}
 
-        model = self.bc.database.create(user=1, cohort=cohort, cohort_set=1, **extra)
+        model = self.bc.database.create(user=1,
+                                        cohort=cohort,
+                                        cohort_set=1,
+                                        cohort_set_cohort=1,
+                                        academy=academy,
+                                        **extra)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('admissions:cohort_id_join', kwargs={'cohort_id': 1})
@@ -245,12 +255,14 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             cohort = {
                 'never_ends': True,
                 'ending_date': None,
+                'available_as_saas': True,
             }
 
         else:
             cohort = {
                 'never_ends': False,
                 'ending_date': timezone.now() + timedelta(days=1),
+                'available_as_saas': True,
             }
 
         if is_a_subscription := random.randint(0, 1):
@@ -270,7 +282,14 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                     'monthly_price': random.randint(1, 100),
                 },
             }
-        model = self.bc.database.create(user=1, cohort=cohort, cohort_set=1, cohort_user=1, **extra)
+        academy = {'available_as_saas': True}
+        model = self.bc.database.create(user=1,
+                                        cohort=cohort,
+                                        cohort_set=1,
+                                        cohort_set_cohort=1,
+                                        cohort_user=1,
+                                        academy=academy,
+                                        **extra)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('admissions:cohort_id_join', kwargs={'cohort_id': 1})
@@ -313,12 +332,14 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             cohort = {
                 'never_ends': True,
                 'ending_date': None,
+                'available_as_saas': True,
             }
 
         else:
             cohort = {
                 'never_ends': False,
                 'ending_date': timezone.now() + timedelta(days=1),
+                'available_as_saas': True,
             }
 
         if is_a_subscription := random.randint(0, 1):
@@ -338,7 +359,13 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                     'monthly_price': random.randint(1, 100),
                 },
             }
-        model = self.bc.database.create(user=1, cohort=cohort, cohort_set=1, **extra)
+        academy = {'available_as_saas': True}
+        model = self.bc.database.create(user=1,
+                                        cohort=cohort,
+                                        cohort_set=1,
+                                        cohort_set_cohort=1,
+                                        academy=academy,
+                                        **extra)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('admissions:cohort_id_join', kwargs={'cohort_id': 1})
@@ -378,6 +405,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         cohort = {
             'never_ends': False,
             'ending_date': timezone.now() + timedelta(days=1),
+            'available_as_saas': True,
         }
 
         if is_a_subscription := random.randint(0, 1):
@@ -397,7 +425,13 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                     'monthly_price': random.randint(1, 100),
                 },
             }
-        model = self.bc.database.create(user=1, cohort=(2, cohort), cohort_set=1, **extra)
+        academy = {'available_as_saas': True}
+        model = self.bc.database.create(user=1,
+                                        cohort=(2, cohort),
+                                        cohort_set=1,
+                                        cohort_set_cohort=1,
+                                        academy=academy,
+                                        **extra)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('admissions:cohort_id_join', kwargs={'cohort_id': 1})
@@ -437,10 +471,12 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         endable = {
             'never_ends': False,
             'ending_date': timezone.now() + timedelta(days=1),
+            'available_as_saas': True,
         }
         no_endable = {
             'never_ends': True,
             'ending_date': None,
+            'available_as_saas': True,
         }
 
         cohorts = [
@@ -469,7 +505,15 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                     },
                 }
 
-            model = self.bc.database.create(user=1, cohort=[cohort1, cohort2], cohort_set=1, **extra)
+            cohort_set_cohorts = [{'cohort_id': x} for x in [id + 1, id + 2]]
+            academy = {'available_as_saas': True}
+
+            model = self.bc.database.create(user=1,
+                                            cohort=[cohort1, cohort2],
+                                            cohort_set=1,
+                                            cohort_set_cohort=cohort_set_cohorts,
+                                            academy=academy,
+                                            **extra)
             self.bc.request.authenticate(model.user)
 
             url = reverse_lazy('admissions:cohort_id_join', kwargs={'cohort_id': id + 1})

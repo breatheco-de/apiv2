@@ -2,10 +2,11 @@ from django.urls import path
 from .views import (AcademyActivateView, AcademyView, CohortJoinView, CohortMeView, CohortUserView,
                     AcademyCohortView, MeCohortUserHistoryView, SyllabusVersionView, SyllabusView,
                     get_timezones, UserView, UserMeView, AcademyCohortUserView, get_schedule,
-                    AcademySyllabusScheduleView, SyllabusScheduleView, get_all_academies, PublicCohortView,
-                    AcademyCohortTimeSlotView, handle_test_syllabus, AcademySyllabusScheduleTimeSlotView,
-                    AcademySyncCohortTimeSlotView, AcademyReportView, get_public_syllabus, SyllabusAssetView,
-                    PublicCohortUserView, AcademyCohortHistoryView, AcademyTeacherView, get_single_academy)
+                    AllSyllabusVersionsView, AcademySyllabusScheduleView, SyllabusScheduleView,
+                    get_all_academies, PublicCohortView, AcademyCohortTimeSlotView, handle_test_syllabus,
+                    AcademySyllabusScheduleTimeSlotView, AcademySyncCohortTimeSlotView, AcademyReportView,
+                    get_public_syllabus, SyllabusAssetView, PublicCohortUserView, AcademyCohortHistoryView,
+                    AcademyTeacherView, get_single_academy)
 
 app_name = 'admissions'
 urlpatterns = [
@@ -79,6 +80,7 @@ urlpatterns = [
     path('syllabus/test', handle_test_syllabus),
     path('syllabus/<int:syllabus_id>', SyllabusView.as_view(), name='syllabus_id'),
     path('syllabus/<int:syllabus_id>/version', SyllabusVersionView.as_view(), name='syllabus_id_version'),
+    path('syllabus/version', AllSyllabusVersionsView.as_view(), name='syllabus_version'),
     path('syllabus/<int:syllabus_id>/version/<int:version>',
          SyllabusVersionView.as_view(),
          name='syllabus_id_version_version'),
