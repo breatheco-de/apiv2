@@ -280,6 +280,7 @@ class ServiceItemFeature(models.Model):
     lang = models.CharField(max_length=5,
                             validators=[validate_language_code],
                             help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US')
+    title = models.CharField(max_length=30, help_text='Title of the service item', default=None, null=True)
     description = models.CharField(max_length=255, help_text='Description of the service item')
     one_line_desc = models.CharField(max_length=30, help_text='One line description of the service item')
 

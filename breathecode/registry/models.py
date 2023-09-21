@@ -46,6 +46,7 @@ class AssetTechnology(models.Model):
                             null=True,
                             help_text='Leave blank if will be shown in all languages')
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, default=None, blank=True, null=True)
+    is_deprecated = models.BooleanField(default=False)
     featured_asset = models.ForeignKey('Asset',
                                        on_delete=models.SET_NULL,
                                        default=None,
@@ -77,6 +78,14 @@ class AssetTechnology(models.Model):
             technology = technology.parent
 
         return technology
+
+    def validate(self):
+        if self.is_deprecated and self.parent is None:
+            raise Exception(
+                f'You cannot mark a technology as deprecated if it doesn\'t have a parent technology')
+
+    def clean(self):
+        self.validate()
 
 
 class AssetCategory(models.Model):
