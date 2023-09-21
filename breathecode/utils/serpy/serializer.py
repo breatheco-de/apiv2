@@ -95,7 +95,7 @@ class Serializer(serpy.Serializer):
                     self.__class__._prefetch_related.add(key)
 
                 else:
-                    self.__class__._select_related.add(key)
+                    self.__class__._prefetch_related.add(key)
 
                 if self._field_map[key].__class__ == ManyToManyField:
                     serializer = self._field_map[key].serializer

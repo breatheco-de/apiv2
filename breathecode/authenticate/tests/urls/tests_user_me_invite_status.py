@@ -21,6 +21,7 @@ class MemberSetOfDuckTestSuite(AuthTestCase):
     """
 
     @patch('breathecode.authenticate.views.MeInviteView.get', MagicMock(side_effect=view_method_mock))
+    @patch('breathecode.authenticate.signals.invite_status_updated.send', MagicMock())
     def test_duck_test__get__with_auth___mock_view(self):
         model = self.bc.database.create(user=3)
 
@@ -41,6 +42,7 @@ class MemberSetOfDuckTestSuite(AuthTestCase):
     """
 
     @patch('breathecode.authenticate.views.MeInviteView.put', MagicMock(side_effect=view_method_mock))
+    @patch('breathecode.authenticate.signals.invite_status_updated.send', MagicMock())
     def test_duck_test__put__with_auth___mock_view(self):
         model = self.bc.database.create(user=3)
 
@@ -62,6 +64,7 @@ class AuthenticateTestSuite(AuthTestCase):
     🔽🔽🔽 Auth
     """
 
+    @patch('breathecode.authenticate.signals.invite_status_updated.send', MagicMock())
     def test_user_me_invite_status__without_auth(self):
         """Test /academy/user/invite without auth"""
         url = reverse_lazy('authenticate:user_me_invite_status', kwargs={'new_status': 'pending'})
@@ -76,6 +79,7 @@ class AuthenticateTestSuite(AuthTestCase):
             })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    @patch('breathecode.authenticate.signals.invite_status_updated.send', MagicMock())
     def test_user_me_invite_status__wrong_academy(self):
         self.bc.request.set_headers(academy=1)
         url = reverse_lazy('authenticate:user_me_invite_status', kwargs={'new_status': 'pending'})
@@ -86,6 +90,7 @@ class AuthenticateTestSuite(AuthTestCase):
     🔽🔽🔽 PUT passing status is not allowed or invalid through of the url
     """
 
+    @patch('breathecode.authenticate.signals.invite_status_updated.send', MagicMock())
     def test_user_me_invite_status__passing_invalid_status(self):
         """Test academy/user/me/invite"""
         self.bc.request.set_headers(academy=1)
@@ -115,6 +120,7 @@ class AuthenticateTestSuite(AuthTestCase):
     🔽🔽🔽 PUT passing valid statuses through of the url
     """
 
+    @patch('breathecode.authenticate.signals.invite_status_updated.send', MagicMock())
     def test_user_me_invite_status__passing_valid_status__without_bulk_mode(self):
         """Test academy/user/me/invite"""
         self.bc.request.set_headers(academy=1)
@@ -144,6 +150,7 @@ class AuthenticateTestSuite(AuthTestCase):
     🔽🔽🔽 PUT bulk mode
     """
 
+    @patch('breathecode.authenticate.signals.invite_status_updated.send', MagicMock())
     def test_user_me_invite_status__to_accepted_in_bulk_with_ids(self):
         """Test academy/user/me/invite"""
         self.bc.request.set_headers(academy=1)
@@ -178,59 +185,10 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.put(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            response.json(), [{
-                'created_at': self.datetime_to_iso(model1['user_invite'].created_at),
-                'email': 'a@a.com',
-                'first_name': None,
-                'id': 1,
-                'invite_url': f"http://localhost:8000/v1/auth/member/invite/{model1['user_invite'].token}",
-                'last_name': None,
-                'sent_at': None,
-                'status': 'ACCEPTED',
-                'token': model1['user_invite'].token,
-                'academy': {
-                    'id': model1['user_invite'].academy.id,
-                    'name': model1['user_invite'].academy.name,
-                    'slug': model1['user_invite'].academy.slug,
-                },
-                'cohort': {
-                    'name': model1['user_invite'].cohort.name,
-                    'slug': model1['user_invite'].cohort.slug,
-                },
-                'role': {
-                    'id': model1['user_invite'].role.slug,
-                    'name': model1['user_invite'].role.name,
-                    'slug': model1['user_invite'].role.slug,
-                }
-            }, {
-                'created_at': self.datetime_to_iso(model2['user_invite'].created_at),
-                'email': 'a@a.com',
-                'first_name': None,
-                'id': 2,
-                'invite_url': f"http://localhost:8000/v1/auth/member/invite/{model2['user_invite'].token}",
-                'last_name': None,
-                'sent_at': None,
-                'status': 'ACCEPTED',
-                'token': model2['user_invite'].token,
-                'academy': {
-                    'id': model2['user_invite'].academy.id,
-                    'name': model2['user_invite'].academy.name,
-                    'slug': model2['user_invite'].academy.slug,
-                },
-                'cohort': {
-                    'name': model2['user_invite'].cohort.name,
-                    'slug': model2['user_invite'].cohort.slug,
-                },
-                'role': {
-                    'id': model2['user_invite'].role.slug,
-                    'name': model2['user_invite'].role.name,
-                    'slug': model2['user_invite'].role.slug,
-                }
-            }])
+        self.assertEqual(response.json(), [])
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
                          [{
-                             'user_id': None,
+                             'user_id': 1,
                              'academy_id': 1,
                              'author_id': 1,
                              'cohort_id': 1,
@@ -248,7 +206,7 @@ class AuthenticateTestSuite(AuthTestCase):
                              'process_status': 'PENDING',
                              'syllabus_id': None,
                          }, {
-                             'user_id': None,
+                             'user_id': 1,
                              'academy_id': 1,
                              'author_id': 1,
                              'cohort_id': 2,
@@ -267,6 +225,7 @@ class AuthenticateTestSuite(AuthTestCase):
                              'syllabus_id': None,
                          }])
 
+    @patch('breathecode.authenticate.signals.invite_status_updated.send', MagicMock())
     def test_user_me_invite_status__to_accepted_invitations_not_matched(self):
         """Test academy/user/me/invite"""
         self.bc.request.set_headers(academy=1)

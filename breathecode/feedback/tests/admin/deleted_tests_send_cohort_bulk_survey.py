@@ -67,7 +67,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         } for c, key in _cohorts]
 
         dicts = [
-            answer for answer in self.all_answer_dict()
+            answer for answer in self.bc.database.list_of('feedback.Answer')
             if isinstance(answer['created_at'], datetime) and answer.pop('created_at')
         ]
         self.assertEqual(dicts, expected)
@@ -112,7 +112,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         } for cohort, key in _cohorts]
 
         dicts = [
-            answer for answer in self.all_answer_dict()
+            answer for answer in self.bc.database.list_of('feedback.Answer')
             if isinstance(answer['created_at'], datetime) and answer.pop('created_at')
         ]
         self.assertEqual(dicts, expected)
@@ -139,7 +139,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         expected = []
 
         dicts = [
-            answer for answer in self.all_answer_dict()
+            answer for answer in self.bc.database.list_of('feedback.Answer')
             if isinstance(answer['created_at'], datetime) and answer.pop('created_at')
         ]
         self.assertEqual(dicts, expected)
@@ -166,7 +166,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         expected = []
 
         dicts = [
-            answer for answer in self.all_answer_dict()
+            answer for answer in self.bc.database.list_of('feedback.Answer')
             if isinstance(answer['created_at'], datetime) and answer.pop('created_at')
         ]
         self.assertEqual(dicts, expected)
@@ -193,7 +193,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         expected = []
 
         dicts = [
-            answer for answer in self.all_answer_dict()
+            answer for answer in self.bc.database.list_of('feedback.Answer')
             if isinstance(answer['created_at'], datetime) and answer.pop('created_at')
         ]
         self.assertEqual(dicts, expected)

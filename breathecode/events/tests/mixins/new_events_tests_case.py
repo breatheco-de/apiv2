@@ -63,7 +63,7 @@ class EventTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQuerie
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
 
-        self.assertEqual(self.all_event_dict(), [{
+        self.assertEqual(self.bc.database.list_of('events.Event'), [{
             **self.model_to_dict(model, 'event'),
         } for model in models])
         return models

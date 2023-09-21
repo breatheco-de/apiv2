@@ -1,12 +1,17 @@
 from django.contrib import admin
 from breathecode.payments import signals, tasks
+from django.db.models import Q
+from django.utils import timezone
+from django import forms
 
-from breathecode.payments.models import (
-    Bag, Consumable, ConsumptionSession, Currency, EventTypeSet, EventTypeSetTranslation, FinancialReputation,
-    FinancingOption, Invoice, MentorshipServiceSet, MentorshipServiceSetTranslation, PaymentContact, Plan,
-    PlanFinancing, PlanOffer, PlanOfferTranslation, PlanServiceItem, PlanServiceItemHandler, PlanTranslation,
-    Service, ServiceItem, ServiceItemFeature, ServiceStockScheduler, ServiceTranslation, Subscription,
-    SubscriptionServiceItem, AcademyService)
+from breathecode.payments.models import (Bag, CohortSet, CohortSetCohort, CohortSetTranslation, Consumable,
+                                         ConsumptionSession, Currency, EventTypeSet, EventTypeSetTranslation,
+                                         FinancialReputation, FinancingOption, Invoice, MentorshipServiceSet,
+                                         MentorshipServiceSetTranslation, PaymentContact, Plan, PlanFinancing,
+                                         PlanOffer, PlanOfferTranslation, PlanServiceItem,
+                                         PlanServiceItemHandler, PlanTranslation, Service, ServiceItem,
+                                         ServiceItemFeature, ServiceStockScheduler, ServiceTranslation,
+                                         Subscription, SubscriptionServiceItem, AcademyService)
 
 # Register your models here.
 
@@ -63,7 +68,7 @@ class PlanAdmin(admin.ModelAdmin):
     list_filter = ['trial_duration_unit', 'owner']
     search_fields = ['lang', 'title']
     raw_id_fields = ['owner']
-    filter_horizontal = ('available_cohorts', 'invites')
+    filter_horizontal = ('invites', )
 
 
 @admin.register(PlanTranslation)
@@ -83,7 +88,7 @@ class ConsumableAdmin(admin.ModelAdmin):
     list_display = ('id', 'unit_type', 'how_many', 'service_item', 'user', 'valid_until')
     list_filter = ['unit_type']
     search_fields = ['service_item__service__slug']
-    raw_id_fields = ['user', 'service_item', 'cohort', 'event_type_set', 'mentorship_service_set']
+    raw_id_fields = ['user', 'service_item', 'cohort_set', 'event_type_set', 'mentorship_service_set']
     actions = [grant_service_permissions]
 
 
@@ -106,7 +111,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
     list_filter = ['status', 'is_refundable', 'pay_every_unit']
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
     raw_id_fields = [
-        'user', 'academy', 'selected_cohort', 'selected_mentorship_service_set', 'selected_event_type_set'
+        'user', 'academy', 'selected_cohort_set', 'selected_mentorship_service_set', 'selected_event_type_set'
     ]
     actions = [renew_subscription_consumables]
 
@@ -130,9 +135,41 @@ class PlanFinancingAdmin(admin.ModelAdmin):
     list_filter = ['status']
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
     raw_id_fields = [
-        'user', 'academy', 'selected_cohort', 'selected_mentorship_service_set', 'selected_event_type_set'
+        'user', 'academy', 'selected_cohort_set', 'selected_mentorship_service_set', 'selected_event_type_set'
     ]
     actions = [renew_plan_financing_consumables]
+
+
+def add_cohort_set_to_the_subscriptions(modeladmin, request, queryset):
+    if queryset.count() > 1:
+        raise forms.ValidationError('You just can select one subscription at a time')
+
+    cohort_set_id = queryset.values_list('id', flat=True).first()
+    if not cohort_set_id:
+        return
+
+    subscriptions = Subscription.objects.filter(
+        Q(valid_until__isnull=True)
+        | Q(valid_until__gt=timezone.now()),
+        selected_cohort_set=None).exclude(status__in=['CANCELLED', 'DEPRECATED'])
+
+    for item in subscriptions:
+        tasks.add_cohort_set_to_subscription.delay(item.id, cohort_set_id)
+
+
+@admin.register(CohortSet)
+class CohortSetAdmin(admin.ModelAdmin):
+    list_display = ('id', 'slug', 'academy')
+    list_filter = ['academy__slug']
+    search_fields = ['slug', 'academy__slug', 'academy__name']
+    actions = [add_cohort_set_to_the_subscriptions]
+
+
+@admin.register(CohortSetTranslation)
+class CohortSetTranslationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'cohort_set', 'lang', 'title', 'description', 'short_description')
+    list_filter = ['lang']
+    search_fields = ['slug', 'academy__slug', 'academy__name']
 
 
 @admin.register(MentorshipServiceSet)
@@ -140,6 +177,13 @@ class MentorshipServiceSetAdmin(admin.ModelAdmin):
     list_display = ('id', 'slug', 'academy')
     list_filter = ['academy__slug']
     search_fields = ['slug', 'academy__slug', 'academy__name']
+
+
+@admin.register(CohortSetCohort)
+class CohortSetCohortAdmin(admin.ModelAdmin):
+    list_display = ('id', 'cohort_set', 'cohort')
+    list_filter = ['cohort_set__academy__slug']
+    search_fields = ['cohort_set__slug', 'cohort_set__name', 'cohort__slug', 'cohort__name']
 
 
 @admin.register(MentorshipServiceSetTranslation)

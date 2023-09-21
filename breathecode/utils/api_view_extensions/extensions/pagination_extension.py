@@ -55,7 +55,7 @@ class PaginationExtension(ExtensionBase):
 
     def _apply_queryset_mutation(self, queryset: QuerySet[Any]):
         if not self._is_paginate():
-            return queryset
+            return queryset[0:DEFAULT_LIMIT]
 
         self._use_envelope = True
         if str(self._request.GET.get('envelope')).lower() in ['false', '0']:

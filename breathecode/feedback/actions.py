@@ -82,6 +82,7 @@ def send_question(user, cohort=None):
     if cohort:
         cu_kwargs['cohort'] = cohort
 
+    ###1
     cu = CohortUser.objects.filter(**cu_kwargs).order_by('-cohort__kickoff_date').first()
     if not cu:
         raise ValidationException(
@@ -99,6 +100,7 @@ def send_question(user, cohort=None):
             f'User not have email and slack, this survey cannot be send: {str(user.id)}',
             slug='without-email-or-slack-user')
 
+    ###2
     if not answer.cohort.syllabus_version:
         raise ValidationException('Cohort not have one SyllabusVersion',
                                   slug='cohort-without-syllabus-version')

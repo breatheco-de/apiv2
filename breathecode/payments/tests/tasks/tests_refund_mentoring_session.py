@@ -7,13 +7,14 @@ from unittest.mock import MagicMock, call, patch
 
 from django.utils import timezone
 
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
+
 from ...tasks import refund_mentoring_session
-from ..mixins import PaymentsTestCase
 
 UTC_NOW = timezone.now()
 
 
-class PaymentsTestSuite(PaymentsTestCase):
+class TestPayments(LegacyAPITestCase):
     # When: no mentoring session
     # Then: do nothing
     @patch('logging.Logger.info', MagicMock())
@@ -21,7 +22,9 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
     @patch('breathecode.payments.signals.grant_service_permissions.send', MagicMock())
-    def test_0_items(self):
+    def test_0_items(self, enable_signals):
+        enable_signals()
+
         refund_mentoring_session.delay(1)
 
         self.bc.check.calls(logging.Logger.info.call_args_list, [
@@ -43,7 +46,9 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
     @patch('breathecode.payments.signals.grant_service_permissions.send', MagicMock())
-    def test_1_mentoring_session__nothing_provide(self):
+    def test_1_mentoring_session__nothing_provide(self, enable_signals):
+        enable_signals()
+
         model = self.bc.database.create(mentorship_session=1)
 
         # remove prints from mixer
@@ -73,7 +78,8 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
     @patch('breathecode.payments.signals.grant_service_permissions.send', MagicMock())
-    def test_1_mentoring_session__just_with_mentee(self):
+    def test_1_mentoring_session__just_with_mentee(self, enable_signals):
+        enable_signals()
 
         user = {'groups': []}
         model = self.bc.database.create(mentorship_session=1, user=user, group=1, permission=1)
@@ -107,7 +113,9 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
     @patch('breathecode.payments.signals.grant_service_permissions.send', MagicMock())
-    def test_1_mentoring_session__just_with_service(self):
+    def test_1_mentoring_session__just_with_service(self, enable_signals):
+        enable_signals()
+
         model = self.bc.database.create(mentorship_session=1, mentorship_service=1)
 
         # remove prints from mixer
@@ -137,7 +145,9 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
     @patch('breathecode.payments.signals.grant_service_permissions.send', MagicMock())
-    def test_1_mentoring_session__just_with_right_status(self):
+    def test_1_mentoring_session__just_with_right_status(self, enable_signals):
+        enable_signals()
+
         mentorship_session = {'status': random.choice(['PENDING', 'STARTED', 'COMPLETED'])}
         model = self.bc.database.create(mentorship_session=mentorship_session)
 
@@ -168,7 +178,9 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
     @patch('breathecode.payments.signals.grant_service_permissions.send', MagicMock())
-    def test_1_mentoring_session__all_elements_given(self):
+    def test_1_mentoring_session__all_elements_given(self, enable_signals):
+        enable_signals()
+
         mentorship_session = {'status': random.choice(['FAILED', 'IGNORED'])}
 
         user = {'groups': []}
@@ -207,7 +219,9 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
     @patch('breathecode.payments.signals.grant_service_permissions.send', MagicMock())
-    def test_consumption_session_is_pending(self):
+    def test_consumption_session_is_pending(self, enable_signals):
+        enable_signals()
+
         mentorship_session = {'status': random.choice(['FAILED', 'IGNORED'])}
         how_many_consumables = random.randint(1, 10)
         how_mawy_will_consume = random.randint(1, how_many_consumables)
@@ -260,7 +274,9 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
     @patch('breathecode.payments.signals.grant_service_permissions.send', MagicMock())
-    def test_consumption_session_is_done(self):
+    def test_consumption_session_is_done(self, enable_signals):
+        enable_signals()
+
         mentorship_session = {'status': random.choice(['FAILED', 'IGNORED'])}
         how_many_consumables = random.randint(1, 10)
         how_mawy_will_consume = random.randint(1, 10)
@@ -316,7 +332,9 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
     @patch('breathecode.payments.signals.grant_service_permissions.send', MagicMock())
-    def test_consumption_session_is_cancelled(self):
+    def test_consumption_session_is_cancelled(self, enable_signals):
+        enable_signals()
+
         mentorship_session = {'status': random.choice(['FAILED', 'IGNORED'])}
         how_many_consumables = random.randint(1, 10)
         how_mawy_will_consume = random.randint(1, 10)
@@ -367,7 +385,9 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
-    def test_consumable_wasted(self):
+    def test_consumable_wasted(self, enable_signals):
+        enable_signals()
+
         mentorship_session = {'status': random.choice(['FAILED', 'IGNORED'])}
         how_many_consumables = 0
         how_mawy_will_consume = random.randint(1, 10)

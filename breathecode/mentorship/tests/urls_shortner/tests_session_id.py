@@ -1,9 +1,7 @@
 """
 Test cases for /academy/:id/member/:id
 """
-from datetime import timedelta
-from random import choice, randint
-import re
+from random import randint
 from unittest.mock import MagicMock, call, patch
 from django.http import QueryDict
 from django.template import loader
@@ -11,12 +9,11 @@ from django.urls.base import reverse_lazy
 from rest_framework import status
 from django.utils import timezone
 from django.contrib.messages.storage.fallback import FallbackStorage
-from django.contrib import messages
 
 from breathecode.mentorship.forms import CloseMentoringSessionForm
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.notify import actions
-from ..mixins import MentorshipTestCase
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
 from django.core.handlers.wsgi import WSGIRequest
 
 UTC_NOW = timezone.now()
@@ -308,13 +305,15 @@ def render_close_session(message, mentor_profile, user, token, mentorship_servic
     return string
 
 
-class AuthenticateTestSuite(MentorshipTestCase):
+class TestAuthenticate(LegacyAPITestCase):
     """Authentication test suite"""
     """
     🔽🔽🔽 Auth
     """
 
-    def test__get__without_auth(self):
+    def test__get__without_auth(self, enable_signals):
+        enable_signals()
+
         url = reverse_lazy('mentorship_shortner:session_id', kwargs={'session_id': 1})
         response = self.client.get(url)
 
@@ -334,7 +333,9 @@ class AuthenticateTestSuite(MentorshipTestCase):
     @patch('django.template.context_processors.get_token', MagicMock(return_value='predicabletoken'))
     @patch('django.contrib.messages.storage.fallback.FallbackStorage.add', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__get__without_mentorship_session(self):
+    def test__get__without_mentorship_session(self, enable_signals):
+        enable_signals()
+
         model = self.bc.database.create(user=1, token=1)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
@@ -364,7 +365,9 @@ class AuthenticateTestSuite(MentorshipTestCase):
     @patch('django.template.context_processors.get_token', MagicMock(return_value='predicabletoken'))
     @patch('django.contrib.messages.storage.fallback.FallbackStorage.add', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__get__with_mentorship_session(self):
+    def test__get__with_mentorship_session(self, enable_signals):
+        enable_signals()
+
         model = self.bc.database.create(user=1, token=1, mentorship_session=1)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
@@ -399,7 +402,9 @@ class AuthenticateTestSuite(MentorshipTestCase):
     @patch('django.template.context_processors.get_token', MagicMock(return_value='predicabletoken'))
     @patch('django.contrib.messages.storage.fallback.FallbackStorage.add', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__get__with_mentorship_session__passing_message(self):
+    def test__get__with_mentorship_session__passing_message(self, enable_signals):
+        enable_signals()
+
         model = self.bc.database.create(user=1, token=1, mentorship_session=1)
 
         message = self.bc.fake.slug()
@@ -440,7 +445,9 @@ class AuthenticateTestSuite(MentorshipTestCase):
     @patch('django.template.context_processors.get_token', MagicMock(return_value='predicabletoken'))
     @patch('django.contrib.messages.storage.fallback.FallbackStorage.add', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__get__with_mentorship_session__without_mentee(self):
+    def test__get__with_mentorship_session__without_mentee(self, enable_signals):
+        enable_signals()
+
         statuses = [
             # 'PENDING',
             # 'STARTED',
@@ -505,7 +512,9 @@ class AuthenticateTestSuite(MentorshipTestCase):
     @patch('django.contrib.messages.storage.fallback.FallbackStorage.add', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    def test__get__with_mentorship_session__without_mentee__(self):
+    def test__get__with_mentorship_session__without_mentee__(self, enable_signals):
+        enable_signals()
+
         statuses = [
             'PENDING',
             'STARTED',
@@ -583,7 +592,9 @@ class AuthenticateTestSuite(MentorshipTestCase):
 
     @patch('django.template.context_processors.get_token', MagicMock(return_value='predicabletoken'))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__post__without_mentorship_session__passing_nothing(self):
+    def test__post__without_mentorship_session__passing_nothing(self, enable_signals):
+        enable_signals()
+
         model = self.bc.database.create(user=1, token=1)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
@@ -616,7 +627,9 @@ class AuthenticateTestSuite(MentorshipTestCase):
 
     @patch('django.template.context_processors.get_token', MagicMock(return_value='predicabletoken'))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__post__without_mentorship_session__passing_token(self):
+    def test__post__without_mentorship_session__passing_token(self, enable_signals):
+        enable_signals()
+
         model = self.bc.database.create(user=1, token=1)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
@@ -649,7 +662,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
 
     @patch('django.template.context_processors.get_token', MagicMock(return_value='predicabletoken'))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__post__with_mentorship_session__passing_token__passing_session_id__without_requires_field(self):
+    def test__post__with_mentorship_session__passing_token__passing_session_id__without_requires_field(
+            self, enable_signals):
+        enable_signals()
+
         model = self.bc.database.create(user=1, token=1, mentorship_session=1)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
@@ -686,7 +702,9 @@ class AuthenticateTestSuite(MentorshipTestCase):
     @patch('django.template.context_processors.get_token', MagicMock(return_value='predicabletoken'))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__post__with_mentorship_session__passing_token__passing_session_id__with_requires_field__good_statuses(
-            self):
+            self, enable_signals):
+        enable_signals()
+
         statuses = ['COMPLETED', 'FAILED', 'IGNORED']
         for s in statuses:
             model = self.bc.database.create(user=1, token=1, mentorship_session=1, mentorship_service=1)
@@ -743,7 +761,9 @@ class AuthenticateTestSuite(MentorshipTestCase):
     @patch('django.template.context_processors.get_token', MagicMock(return_value='predicabletoken'))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__post__with_mentorship_session__passing_token__passing_session_id__with_requires_field__bad_statuses(
-            self):
+            self, enable_signals):
+        enable_signals()
+
         statuses = ['PENDING', 'STARTED']
         for s in statuses:
             model = self.bc.database.create(user=1, token=1, mentorship_session=1)

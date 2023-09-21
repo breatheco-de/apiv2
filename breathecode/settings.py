@@ -18,6 +18,7 @@ import json
 import logging
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
+
 # TODO: decouple file storage from django
 # from django.utils.http import http_date
 
@@ -81,7 +82,10 @@ INSTALLED_APPS += [
     'breathecode.payments',
     'breathecode.provisioning',
     'explorer',
+    'graphene_django',
 ]
+
+GRAPHENE = {'SCHEMA': 'breathecode.schema.schema'}
 
 if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or ENVIRONMENT == 'test':
     INSTALLED_APPS.append('breathecode.cypress')
@@ -135,8 +139,6 @@ if ENVIRONMENT != 'production':
     ]
 
 MIDDLEWARE += [
-    # 'rollbar.contrib.django.middleware.RollbarNotifierMiddlewareOnly404',
-    # ⬆ This Rollbar should always be first please!
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -151,9 +153,6 @@ MIDDLEWARE += [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     #'breathecode.utils.admin_timezone.TimezoneMiddleware',
-
-    # ⬇ Rollbar is always last please!
-    # 'rollbar.contrib.django.middleware.RollbarNotifierMiddlewareExcluding404',
 ]
 
 AUTHENTICATION_BACKENDS = ('django.contrib.auth.backends.ModelBackend', )
@@ -261,15 +260,6 @@ logging.config.dictConfig({
         'django.server': DEFAULT_LOGGING['loggers']['django.server'],
     }
 })
-
-ROLLBAR = {
-    'access_token': os.getenv('ROLLBAR_ACCESS_TOKEN', ''),
-    'environment': 'development' if DEBUG else 'production',
-    'branch': 'master',
-    'root': BASE_DIR,
-    # parsed POST variables placed in your output for exception handling
-    'EXCEPTION_HANDLER': 'rollbar.contrib.django_rest_framework.post_exception_handler',
-}
 
 MESSAGE_TAGS = {
     messages.DEBUG: 'alert-info',
@@ -402,7 +392,7 @@ SITE_ID = 1
 # Change 'default' database configuration with $DATABASE_URL.
 # https://github.com/jacobian/dj-database-url#url-schema
 DATABASES = {
-    'default': dj_database_url.config(default=DATABASE_URL, ssl_require=False),
+    'default': dj_database_url.config(default=DATABASE_URL, conn_max_age=600, ssl_require=False),
 }
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 

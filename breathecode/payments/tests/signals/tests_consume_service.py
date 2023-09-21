@@ -2,14 +2,15 @@ import random
 from unittest.mock import MagicMock, call, patch
 
 from breathecode.payments import signals
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
 
-from ..mixins import PaymentsTestCase
 
-
-class SignalTestSuite(PaymentsTestCase):
+class TestSignal(LegacyAPITestCase):
 
     @patch('breathecode.payments.signals.lose_service_permissions.send', MagicMock())
-    def test__consumable_how_many_minus_1__consume_gte_1(self):
+    def test__consumable_how_many_minus_1__consume_gte_1(self, enable_signals):
+        enable_signals()
+
         how_many_consume = random.randint(1, 100)
         how_many = -1
         consumable = {'how_many': how_many}
@@ -29,7 +30,9 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(signals.lose_service_permissions.send.call_args_list, [])
 
     @patch('breathecode.payments.signals.lose_service_permissions.send', MagicMock())
-    def test__consumable_how_many_0__consume_gte_1(self):
+    def test__consumable_how_many_0__consume_gte_1(self, enable_signals):
+        enable_signals()
+
         how_many_consume = random.randint(1, 100)
         how_many = 0
         consumable = {'how_many': how_many}
@@ -51,7 +54,9 @@ class SignalTestSuite(PaymentsTestCase):
         ])
 
     @patch('breathecode.payments.signals.lose_service_permissions.send', MagicMock())
-    def test__consumable_how_many_gte_1__consume_gte_1(self):
+    def test__consumable_how_many_gte_1__consume_gte_1(self, enable_signals):
+        enable_signals()
+
         how_many_consume = random.randint(1, 100)
         how_many = random.randint(1, 100)
         consumable = {'how_many': how_many + how_many_consume}

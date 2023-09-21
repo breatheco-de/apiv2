@@ -67,7 +67,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(self.bc.database.list_of('feedback.Answer'), [db])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -112,7 +112,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(self.bc.database.list_of('feedback.Answer'), [db])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -151,7 +151,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
 
         self.assertEqual(json, {'non_field_errors': ['Score must be between 1 and 10']})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(self.bc.database.list_of('feedback.Answer'), [db])
         self.assertEqual(survey_answered.send.call_args_list, [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -173,7 +173,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
 
         self.assertEqual(json, {'non_field_errors': ['Score must be between 1 and 10']})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(self.bc.database.list_of('feedback.Answer'), [db])
         self.assertEqual(survey_answered.send.call_args_list, [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -195,7 +195,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
 
         self.assertEqual(json, {'non_field_errors': ['Score must be between 1 and 10']})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(self.bc.database.list_of('feedback.Answer'), [db])
         self.assertEqual(survey_answered.send.call_args_list, [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -252,7 +252,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
             self.assertEqual(json, expected)
 
             dicts = [
-                answer for answer in self.all_answer_dict() if not 'updated_at' in answer
+                answer for answer in self.bc.database.list_of('feedback.Answer') if not 'updated_at' in answer
                 or isinstance(answer['updated_at'], datetime) and answer.pop('updated_at')
             ]
 
@@ -318,6 +318,6 @@ class AnswerIdTestSuite(FeedbackTestCase):
         db['status'] = 'ANSWERED'
         db['comment'] = data['comment']
 
-        self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(self.bc.database.list_of('feedback.Answer'), [db])
         self.assertEqual(survey_answered.send.call_args_list,
                          [call(instance=model.answer, sender=model.answer.__class__)])

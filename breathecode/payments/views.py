@@ -15,15 +15,16 @@ from breathecode.admissions import tasks as admissions_tasks
 from breathecode.payments import actions
 from breathecode.payments.actions import (PlanFinder, add_items_to_bag, filter_consumables, get_amount,
                                           get_amount_by_chosen_period, get_balance_by_resource)
-from breathecode.payments.models import (AcademyService, Bag, Consumable, EventTypeSet, FinancialReputation,
-                                         Invoice, MentorshipServiceSet, Plan, PlanFinancing, PlanOffer,
-                                         Service, ServiceItem, Subscription)
+from breathecode.payments.models import (AcademyService, Bag, CohortSet, Consumable, Currency, EventTypeSet,
+                                         FinancialReputation, Invoice, MentorshipServiceSet, Plan,
+                                         PlanFinancing, PlanOffer, Service, ServiceItem, Subscription)
 from breathecode.payments.serializers import (
     GetBagSerializer, GetEventTypeSetSerializer, GetEventTypeSetSmallSerializer, GetInvoiceSerializer,
     GetInvoiceSmallSerializer, GetMentorshipServiceSetSerializer, GetMentorshipServiceSetSmallSerializer,
     GetPlanFinancingSerializer, GetPlanOfferSerializer, GetPlanSerializer,
-    GetServiceItemWithFeaturesSerializer, GetServiceSerializer, GetSubscriptionSerializer, ServiceSerializer,
-    GetAcademyServiceSmallSerializer, POSTAcademyServiceSerializer, PUTAcademyServiceSerializer)
+    GetServiceItemWithFeaturesSerializer, GetServiceSerializer, GetSubscriptionSerializer, PlanSerializer,
+    ServiceSerializer, GetAcademyServiceSmallSerializer, POSTAcademyServiceSerializer,
+    PUTAcademyServiceSerializer)
 from breathecode.payments.services.stripe import Stripe
 from breathecode.utils import APIViewExtensions
 from breathecode.utils.decorators.capable_of import capable_of
@@ -160,11 +161,32 @@ class AcademyPlanView(APIView):
 
     @capable_of('crud_plan')
     def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+
+        data = {}
+
+        for key in request.data:
+            if key in ['owner', 'owner_id', 'currency']:
+                continue
+
+            data[key] = request.data[key]
+
         data = request.data
         if not 'owner' in data or data['owner'] is not None:
             data['owner'] = academy_id
 
-        serializer = ServiceSerializer(data=data)
+        currency = data.get('currency', '')
+        if currency and (currency := Currency.objects.filter(code=currency).first()):
+            data['currency'] = currency.id
+
+        else:
+            raise ValidationException(translation(lang,
+                                                  en='Currency not found',
+                                                  es='Divisa no encontrada',
+                                                  slug='currency-not-found'),
+                                      code=400)
+
+        serializer = PlanSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
@@ -184,15 +206,23 @@ class AcademyPlanView(APIView):
                                                   slug='not-found'),
                                       code=404)
 
-        data = request.data
-        if not 'owner' in data or data['owner'] is not None:
-            data['owner'] = academy_id
+        data = {}
 
-        serializer = ServiceSerializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+        if plan.currency:
+            data['currency'] = plan.currency.id
 
-        return Response(serializer.data)
+        for key in request.data:
+            if key in ['owner', 'owner_id']:
+                continue
+
+            data[key] = request.data[key]
+
+        serializer = PlanSerializer(plan, data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_plan')
     def delete(self, request, plan_id=None, plan_slug=None, academy_id=None):
@@ -502,15 +532,15 @@ class MeConsumableView(APIView):
         mentorship_services = filter_consumables(request, items, mentorship_services,
                                                  'mentorship_service_set')
 
-        cohorts = Cohort.objects.none()
-        cohorts = filter_consumables(request, items, cohorts, 'cohort')
+        cohorts = CohortSet.objects.none()
+        cohorts = filter_consumables(request, items, cohorts, 'cohort_set')
 
         event_types = EventTypeSet.objects.none()
         event_types = filter_consumables(request, items, event_types, 'event_type_set')
 
         balance = {
             'mentorship_service_sets': get_balance_by_resource(mentorship_services, 'mentorship_service_set'),
-            'cohorts': get_balance_by_resource(cohorts, 'cohort'),
+            'cohort_sets': get_balance_by_resource(cohorts, 'cohort_set'),
             'event_type_sets': get_balance_by_resource(event_types, 'event_type_set'),
         }
 
@@ -684,8 +714,9 @@ class MeSubscriptionView(APIView):
             subscriptions = subscriptions.filter(*args, **kwargs)
             plan_financings = plan_financings.filter(*args, **kwargs)
 
-        if selected_cohort := (request.GET.get('cohort-selected') or request.GET.get('selected-cohort')):
-            args, kwargs = self.get_lookup('selected_cohort', selected_cohort)
+        if selected_cohort_set := (request.GET.get('cohort-set-selected')
+                                   or request.GET.get('cohort-set-selected')):
+            args, kwargs = self.get_lookup('selected_cohort_set', selected_cohort_set)
             subscriptions = subscriptions.filter(*args, **kwargs)
             plan_financings = plan_financings.filter(*args, **kwargs)
 
@@ -1048,7 +1079,7 @@ class BagView(APIView):
         # do no show the bags of type preview they are build
         bag, _ = Bag.objects.get_or_create(user=request.user, status='CHECKING', type='BAG')
         add_items_to_bag(request, bag, lang)
-        actions.check_dependencies_in_bag(bag, lang)
+        # actions.check_dependencies_in_bag(bag, lang)
 
         serializer = GetBagSerializer(bag, many=False)
         return Response(serializer.data)
@@ -1115,11 +1146,6 @@ class CheckingView(APIView):
 
                         plan = Plan.objects.filter(owner__main_currency__isnull=False, **kwargs).first()
 
-                        # auto select cohort if just have a cohort available
-                        if plan and (x := plan.available_cohorts.filter()) and len(
-                                plan.available_cohorts.filter()) == 1:
-                            request.data['cohort'] = x[0].id
-
                         if plan:
                             academy = plan.owner
 
@@ -1138,7 +1164,7 @@ class CheckingView(APIView):
                                                              currency=academy.main_currency)
 
                     add_items_to_bag(request, bag, lang)
-                    actions.check_dependencies_in_bag(bag, lang)
+                    # actions.check_dependencies_in_bag(bag, lang)
 
                 utc_now = timezone.now()
 
@@ -1340,12 +1366,6 @@ class ConsumableCheckoutView(APIView):
                 if event_type_set:
                     event_type_set = EventTypeSet.objects.filter(id=event_type_set).first()
 
-                if mentorship_service_set:
-                    bag.selected_mentorship_service_sets.add(mentorship_service_set)
-
-                else:
-                    bag.selected_event_type_sets.add(event_type_set)
-
                 bag.service_items.add(service_item)
 
                 if mentorship_service_set:
@@ -1512,7 +1532,7 @@ class PayView(APIView):
                                                           slug='your-free-trial-was-already-took'),
                                               code=500)
 
-                actions.check_dependencies_in_bag(bag, lang)
+                # actions.check_dependencies_in_bag(bag, lang)
 
                 if amount == 0 and not available_free and available_for_free_trial and not bag.plans.filter(
                         plan_offer_from__id__gte=1).exists():
@@ -1563,13 +1583,22 @@ class PayView(APIView):
                 else:
                     tasks.build_subscription.delay(bag.id, invoice.id)
 
-                for cohort in bag.selected_cohorts.all():
-                    admissions_tasks.build_cohort_user.delay(cohort.id, bag.user.id)
-
-                if (plans := bag.plans.all()) and not bag.selected_cohorts.exists():
+                if plans := bag.plans.all():
                     for plan in plans:
                         if plan.owner:
                             admissions_tasks.build_profile_academy.delay(plan.owner.id, bag.user.id)
+
+                        if not plan.cohort_set or not (cohort := request.GET.get('selected_cohort')):
+                            continue
+
+                        cohort = plan.cohort_set.cohorts.filter(slug=cohort).first()
+                        if not cohort:
+                            continue
+
+                        admissions_tasks.build_cohort_user.delay(cohort.id, bag.user.id)
+
+                        if plan.owner != cohort.academy:
+                            admissions_tasks.build_profile_academy.delay(cohort.academy.id, bag.user.id)
 
                 serializer = GetInvoiceSerializer(invoice, many=False)
                 return Response(serializer.data, status=201)

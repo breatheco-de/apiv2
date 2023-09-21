@@ -28,7 +28,7 @@ def plan_financing_item(data={}):
         'user_id': 1,
         'valid_until': UTC_NOW,
         'next_payment_at': UTC_NOW,
-        'selected_cohort_id': None,
+        'selected_cohort_set_id': None,
         'selected_event_type_set_id': None,
         'selected_mentorship_service_set_id': None,
         **data,
@@ -222,8 +222,14 @@ class PaymentsTestSuite(PaymentsTestCase):
         }
         invoice = {'status': 'FULFILLED', 'amount': amount}
         plan = {'is_renewable': False}
+        academy = {'available_as_saas': True}
 
-        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plan, cohort=1)
+        model = self.bc.database.create(bag=bag,
+                                        invoice=invoice,
+                                        plan=plan,
+                                        cohort=1,
+                                        cohort_set=1,
+                                        academy=academy)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -261,7 +267,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             plan_financing_item({
                 'monthly_price':
                 model.invoice.amount,
-                'selected_cohort_id':
+                'selected_cohort_set_id':
                 1,
                 'valid_until':
                 model.invoice.paid_at + relativedelta(months=months),

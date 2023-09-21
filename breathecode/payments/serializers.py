@@ -188,7 +188,7 @@ class GetPlanSmallSerializer(serpy.Serializer):
     has_available_cohorts = serpy.MethodField()
 
     def get_has_available_cohorts(self, obj):
-        return obj.available_cohorts.exists()
+        return bool(obj.cohort_set)
 
     def get_service_items(self, obj):
         return GetServiceItemSerializer(obj.service_items.all(), many=True).data
@@ -337,6 +337,16 @@ class GetMentorshipServiceSetSerializer(GetMentorshipServiceSetSmallSerializer):
         return GetAcademyServiceSmallSerializer(items, many=True).data
 
 
+class GetCohortSetSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    academy = GetAcademySmallSerializer(many=False)
+    cohorts = serpy.MethodField()
+
+    def get_cohorts(self, obj):
+        return GetCohortSerializer(obj.cohorts.filter(), many=True).data
+
+
 class GetEventTypeSerializer(serpy.Serializer):
 
     id = serpy.Field()
@@ -376,21 +386,15 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
     user = GetUserSmallSerializer(many=False)
     academy = GetAcademySmallSerializer(many=False)
 
-    selected_cohort = GetCohortSerializer(many=False, required=False)
+    selected_cohort_set = GetCohortSetSerializer(many=False, required=False)
     selected_mentorship_service_set = GetMentorshipServiceSetSerializer(many=False, required=False)
     selected_event_type_set = GetEventTypeSetSerializer(many=False, required=False)
 
-    plans = serpy.MethodField()
-    invoices = serpy.MethodField()
+    plans = serpy.ManyToManyField(GetPlanSmallSerializer(attr='plans', many=True))
+    invoices = serpy.ManyToManyField(GetInvoiceSerializer(attr='invoices', many=True))
 
     next_payment_at = serpy.Field()
     valid_until = serpy.Field()
-
-    def get_plans(self, obj):
-        return GetPlanSmallSerializer(obj.plans.filter(), many=True).data
-
-    def get_invoices(self, obj):
-        return GetInvoiceSerializer(obj.invoices.filter(), many=True).data
 
 
 class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
@@ -453,7 +457,7 @@ class ServiceItemSerializer(serializers.Serializer):
         return attrs
 
 
-class PlanSerializer(serializers.Serializer):
+class PlanSerializer(serializers.ModelSerializer):
     status_fields = ['status', 'renew_every_unit', 'trial_duration_unit', 'time_of_life_unit']
 
     class Meta:
@@ -462,3 +466,34 @@ class PlanSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         return attrs
+
+    def create(self, validated_data):
+        return Plan.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        for key in validated_data:
+            setattr(instance, key, validated_data[key])
+
+        instance.save()
+        return instance
+
+
+class PutPlanSerializer(PlanSerializer):
+    status_fields = ['status', 'renew_every_unit', 'trial_duration_unit', 'time_of_life_unit']
+
+    class Meta:
+        model = Plan
+        fields = '__all__'
+
+    def validate(self, attrs):
+        return attrs
+
+    def create(self, validated_data):
+        return Plan.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        for key in validated_data:
+            setattr(instance, key, validated_data[key])
+
+        instance.save()
+        return instance

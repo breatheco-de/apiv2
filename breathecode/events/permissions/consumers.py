@@ -116,7 +116,8 @@ def live_class_by_url_param(context: PermissionContextType, args: tuple,
     if context['is_consumption_session']:
         return (context, args, kwargs)
 
-    context['consumables'] = context['consumables'].filter(cohort=live_class.cohort_time_slot.cohort)
+    context['consumables'] = context['consumables'].filter(
+        cohort_set__cohortsetcohort__cohort=live_class.cohort_time_slot.cohort)
 
     # avoid to be taken if the cohort is available as saas is not set
     cohort_available_as_saas = (live_class.cohort_time_slot.cohort.available_as_saas is not None

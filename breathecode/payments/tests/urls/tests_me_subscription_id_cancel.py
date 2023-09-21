@@ -42,7 +42,7 @@ def get_serializer(self, subscription, academy, user, data={}):
         'pay_every': subscription.pay_every,
         'pay_every_unit': subscription.pay_every_unit,
         'plans': [],
-        'selected_cohort': subscription.selected_cohort,
+        'selected_cohort_set': subscription.selected_cohort_set,
         'selected_event_type_set': subscription.selected_event_type_set,
         'selected_mentorship_service_set': subscription.selected_mentorship_service_set,
         'service_items': [],

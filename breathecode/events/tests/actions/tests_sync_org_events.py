@@ -68,7 +68,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
                          [call('The organization Nameless not have a academy assigned')])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.all_event_dict(), [])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [])
 
     """
     🔽🔽🔽 With academy, call update_or_create_event
@@ -99,7 +99,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.all_event_dict(), [])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [])
 
     """
     🔽🔽🔽 With academy, raise error
@@ -138,7 +138,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
                              'sync_desc': 'Error: Random error in creating',
                          }])
 
-        self.assertEqual(self.all_event_dict(), [])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [])
 
     """
     🔽🔽🔽 With academy, call export_event_to_eventbrite, without events
@@ -169,7 +169,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.all_event_dict(), [])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [])
 
     """
     🔽🔽🔽 With academy, call export_event_to_eventbrite, with event
@@ -207,4 +207,4 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [self.model_to_dict(model, 'event')])
