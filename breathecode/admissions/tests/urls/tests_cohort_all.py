@@ -765,6 +765,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
         """Test /cohort/all without auth"""
         plan = {'time_of_life': None, 'time_of_life_unit': None}
         cohort = {'available_as_saas': True}
+        academy = {'available_as_saas': True}
         model = self.generate_models(authenticate=True,
                                      cohort=cohort,
                                      cohort_set=1,
@@ -775,7 +776,8 @@ class CohortAllTestSuite(AdmissionsTestCase):
                                      plan_service_item=1,
                                      mentorship_service=1,
                                      mentorship_service_set=1,
-                                     plan=plan)
+                                     plan=plan,
+                                     academy=academy)
 
         base_url = reverse_lazy('admissions:cohort_all')
         url = f'{base_url}?plan=true'
@@ -796,12 +798,14 @@ class CohortAllTestSuite(AdmissionsTestCase):
     def test_plan_false__without_scheduler(self):
         """Test /cohort/all without auth"""
         cohort = {'available_as_saas': True}
+        academy = {'available_as_saas': True}
         model = self.generate_models(authenticate=True,
                                      cohort=cohort,
                                      cohort_set=1,
                                      cohort_set_cohort=1,
                                      profile_academy=1,
-                                     syllabus_version=1)
+                                     syllabus_version=1,
+                                     academy=academy)
 
         base_url = reverse_lazy('admissions:cohort_all')
         url = f'{base_url}?plan=false'
@@ -868,6 +872,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
         slug = self.bc.fake.slug()
         plan = {'slug': slug, 'time_of_life': None, 'time_of_life_unit': None}
         cohort = {'available_as_saas': True}
+        academy = {'available_as_saas': True}
 
         model = self.generate_models(authenticate=True,
                                      cohort=cohort,
@@ -879,7 +884,8 @@ class CohortAllTestSuite(AdmissionsTestCase):
                                      plan_service_item=1,
                                      mentorship_service=1,
                                      mentorship_service_set=1,
-                                     plan=plan)
+                                     plan=plan,
+                                     academy=academy)
 
         url = reverse_lazy('admissions:cohort_all') + f'?plan={slug}'
         response = self.client.get(url)

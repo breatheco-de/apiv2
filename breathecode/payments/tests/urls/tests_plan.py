@@ -300,6 +300,7 @@ class SignalTestSuite(PaymentsTestCase):
             'plan_id': 2
         } for n in range(1, 3)]
         cohort = {'available_as_saas': True}
+        academy = {'available_as_saas': True}
         model = self.bc.database.create(plan=(2, plan),
                                         service_item=2,
                                         plan_service_item=plan_service_items,
@@ -307,7 +308,8 @@ class SignalTestSuite(PaymentsTestCase):
                                         cohort=cohort,
                                         cohort_set=1,
                                         cohort_set_cohort=1,
-                                        syllabus_version=1)
+                                        syllabus_version=1,
+                                        academy=academy)
 
         url = reverse_lazy('payments:plan') + '?cohort=1'
         response = self.client.get(url)
@@ -454,6 +456,7 @@ class SignalTestSuite(PaymentsTestCase):
             'plan_id': 2
         } for n in range(1, 3)]
         cohort = {'available_as_saas': True}
+        academy = {'available_as_saas': True}
         model = self.bc.database.create(plan=(2, plan),
                                         service_item=2,
                                         plan_service_item=plan_service_items,
@@ -461,7 +464,8 @@ class SignalTestSuite(PaymentsTestCase):
                                         cohort=cohort,
                                         cohort_set=1,
                                         cohort_set_cohort=1,
-                                        syllabus_version=1)
+                                        syllabus_version=1,
+                                        academy=academy)
 
         url = reverse_lazy('payments:plan') + '?syllabus=1'
         response = self.client.get(url)

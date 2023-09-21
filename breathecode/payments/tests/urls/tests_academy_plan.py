@@ -423,6 +423,7 @@ class SignalTestSuite(PaymentsTestCase):
             'plan_id': 2
         } for n in range(1, 3)]
         cohort = {'available_as_saas': True}
+        academy = {'available_as_saas': True}
         model = self.bc.database.create(plan=(2, plan),
                                         user=1,
                                         capability='read_plan',
@@ -434,7 +435,8 @@ class SignalTestSuite(PaymentsTestCase):
                                         cohort=cohort,
                                         cohort_set=1,
                                         cohort_set_cohort=1,
-                                        syllabus_version=1)
+                                        syllabus_version=1,
+                                        academy=academy)
 
         self.bc.request.authenticate(model.user)
         self.bc.request.set_headers(academy=1)
@@ -605,6 +607,7 @@ class SignalTestSuite(PaymentsTestCase):
             'plan_id': 2
         } for n in range(1, 3)]
         cohort = {'available_as_saas': True}
+        academy = {'available_as_saas': True}
         model = self.bc.database.create(plan=(2, plan),
                                         user=1,
                                         capability='read_plan',
@@ -616,7 +619,8 @@ class SignalTestSuite(PaymentsTestCase):
                                         cohort=cohort,
                                         cohort_set=1,
                                         cohort_set_cohort=1,
-                                        syllabus_version=1)
+                                        syllabus_version=1,
+                                        academy=academy)
 
         self.bc.request.authenticate(model.user)
         self.bc.request.set_headers(academy=1)

@@ -323,6 +323,8 @@ class CohortSet(models.Model):
     Cohort set.
     """
 
+    _lang = 'en'
+
     slug = models.SlugField(
         max_length=100,
         unique=True,
@@ -334,6 +336,30 @@ class CohortSet(models.Model):
                                      blank=True,
                                      through='CohortSetCohort',
                                      through_fields=('cohort_set', 'cohort'))
+
+    def clean(self) -> None:
+        if self.academy.available_as_saas == False:
+            raise forms.ValidationError(
+                translation(self._lang,
+                            en='Academy is not available as SaaS',
+                            es='La academia no está disponible como SaaS',
+                            slug='academy-not-available-as-saas'))
+
+        return super().clean()
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+
+class CohortSetTranslation(models.Model):
+    cohort_set = models.ForeignKey(CohortSet, on_delete=models.CASCADE, help_text='Cohort set')
+    lang = models.CharField(max_length=5,
+                            validators=[validate_language_code],
+                            help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US')
+    title = models.CharField(max_length=60, help_text='Title of the cohort set')
+    description = models.CharField(max_length=255, help_text='Description of the cohort set')
+    short_description = models.CharField(max_length=255, help_text='Short description of the cohort set')
 
 
 class CohortSetCohort(models.Model):
@@ -355,21 +381,18 @@ class CohortSetCohort(models.Model):
                             es='El cohort no está disponible como SaaS',
                             slug='cohort-not-available-as-saas'))
 
+        if self.cohort_set.academy != self.cohort.academy:
+            raise forms.ValidationError(
+                translation(self._lang,
+                            en='Cohort and cohort set must be from the same academy',
+                            es='El cohort y el cohort set deben ser de la misma academia',
+                            slug='cohort-and-cohort-set-must-be-from-the-same-academy'))
+
         return super().clean()
 
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
         return super().save(*args, **kwargs)
-
-
-class CohortSetTranslation(models.Model):
-    cohort_set = models.ForeignKey(CohortSet, on_delete=models.CASCADE, help_text='Cohort set')
-    lang = models.CharField(max_length=5,
-                            validators=[validate_language_code],
-                            help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US')
-    title = models.CharField(max_length=60, help_text='Title of the cohort set')
-    description = models.CharField(max_length=255, help_text='Description of the cohort set')
-    short_description = models.CharField(max_length=255, help_text='Short description of the cohort set')
 
 
 class MentorshipServiceSet(models.Model):

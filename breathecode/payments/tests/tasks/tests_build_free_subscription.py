@@ -275,8 +275,14 @@ class PaymentsTestSuite(PaymentsTestCase):
             'trial_duration': random.randint(1, 100),
             'trial_duration_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
         } for _ in range(2)]
+        academy = {'available_as_saas': True}
 
-        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plans, cohort=1, cohort_set=1)
+        model = self.bc.database.create(bag=bag,
+                                        invoice=invoice,
+                                        plan=plans,
+                                        cohort=1,
+                                        cohort_set=1,
+                                        academy=academy)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []

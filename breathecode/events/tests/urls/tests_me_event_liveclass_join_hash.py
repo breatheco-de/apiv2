@@ -475,6 +475,7 @@ class AcademyEventTestSuite(EventTestCase):
         cohort = {'online_meeting_url': online_meeting_url, 'available_as_saas': True}
         delta = timedelta(seconds=random.randint(1, 1000))
         live_class = {'starting_at': UTC_NOW - delta, 'ending_at': UTC_NOW + delta}
+        academy = {'available_as_saas': True}
         model = self.bc.database.create(user=1,
                                         group=1,
                                         permission=permission,
@@ -484,7 +485,8 @@ class AcademyEventTestSuite(EventTestCase):
                                         cohort_set=1,
                                         cohort_set_cohort=1,
                                         consumable=1,
-                                        token=1)
+                                        token=1,
+                                        academy=academy)
         querystring = self.bc.format.to_querystring({'token': model.token.key})
 
         url = reverse_lazy('events:me_event_liveclass_join_hash', kwargs={'hash': model.live_class.hash
@@ -546,6 +548,7 @@ class AcademyEventTestSuite(EventTestCase):
         cohort = {'online_meeting_url': online_meeting_url, 'available_as_saas': True}
         delta = timedelta(seconds=random.randint(1, 1000))
         live_class = {'starting_at': UTC_NOW + delta, 'ending_at': UTC_NOW + delta}
+        academy = {'available_as_saas': True}
         model = self.bc.database.create(user=1,
                                         group=1,
                                         permission=permission,
@@ -555,7 +558,8 @@ class AcademyEventTestSuite(EventTestCase):
                                         cohort_set=1,
                                         cohort_set_cohort=1,
                                         consumable=1,
-                                        token=1)
+                                        token=1,
+                                        academy=academy)
         querystring = self.bc.format.to_querystring({'token': model.token.key})
 
         url = reverse_lazy('events:me_event_liveclass_join_hash', kwargs={'hash': model.live_class.hash
