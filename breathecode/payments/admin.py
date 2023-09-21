@@ -2,6 +2,7 @@ from django.contrib import admin
 from breathecode.payments import signals, tasks
 from django.db.models import Q
 from django.utils import timezone
+from django import forms
 
 from breathecode.payments.models import (Bag, CohortSet, CohortSetCohort, CohortSetTranslation, Consumable,
                                          ConsumptionSession, Currency, EventTypeSet, EventTypeSetTranslation,
@@ -137,9 +138,6 @@ class PlanFinancingAdmin(admin.ModelAdmin):
         'user', 'academy', 'selected_cohort_set', 'selected_mentorship_service_set', 'selected_event_type_set'
     ]
     actions = [renew_plan_financing_consumables]
-
-
-from django import forms
 
 
 def add_cohort_set_to_the_subscriptions(modeladmin, request, queryset):
