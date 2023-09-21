@@ -1701,6 +1701,10 @@ class AllSyllabusVersionsView(APIView):
             param = self.request.GET.get('version')
             lookup['version'] = param
 
+        if 'slug' in self.request.GET:
+            param = self.request.GET.get('slug')
+            lookup['syllabus__slug'] = param
+
         if 'academy' in self.request.GET:
             param = self.request.GET.get('academy')
             lookup['syllabus__academy_owner__id__in'] = [p for p in param.split(',')]
