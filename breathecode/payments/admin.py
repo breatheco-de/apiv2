@@ -1,12 +1,17 @@
 from django.contrib import admin
 from breathecode.payments import signals, tasks
+from django.db.models import Q
+from django.utils import timezone
+from django import forms
 
-from breathecode.payments.models import (
-    Bag, CohortSet, CohortSetTranslation, Consumable, ConsumptionSession, Currency, EventTypeSet,
-    EventTypeSetTranslation, FinancialReputation, FinancingOption, Invoice, MentorshipServiceSet,
-    MentorshipServiceSetTranslation, PaymentContact, Plan, PlanFinancing, PlanOffer, PlanOfferTranslation,
-    PlanServiceItem, PlanServiceItemHandler, PlanTranslation, Service, ServiceItem, ServiceItemFeature,
-    ServiceStockScheduler, ServiceTranslation, Subscription, SubscriptionServiceItem, AcademyService)
+from breathecode.payments.models import (Bag, CohortSet, CohortSetCohort, CohortSetTranslation, Consumable,
+                                         ConsumptionSession, Currency, EventTypeSet, EventTypeSetTranslation,
+                                         FinancialReputation, FinancingOption, Invoice, MentorshipServiceSet,
+                                         MentorshipServiceSetTranslation, PaymentContact, Plan, PlanFinancing,
+                                         PlanOffer, PlanOfferTranslation, PlanServiceItem,
+                                         PlanServiceItemHandler, PlanTranslation, Service, ServiceItem,
+                                         ServiceItemFeature, ServiceStockScheduler, ServiceTranslation,
+                                         Subscription, SubscriptionServiceItem, AcademyService)
 
 # Register your models here.
 
@@ -135,15 +140,33 @@ class PlanFinancingAdmin(admin.ModelAdmin):
     actions = [renew_plan_financing_consumables]
 
 
+def add_cohort_set_to_the_subscriptions(modeladmin, request, queryset):
+    if queryset.count() > 1:
+        raise forms.ValidationError('You just can select one subscription at a time')
+
+    cohort_set_id = queryset.values_list('id', flat=True).first()
+    if not cohort_set_id:
+        return
+
+    subscriptions = Subscription.objects.filter(
+        Q(valid_until__isnull=True)
+        | Q(valid_until__gt=timezone.now()),
+        selected_cohort_set=None).exclude(status__in=['CANCELLED', 'DEPRECATED'])
+
+    for item in subscriptions:
+        tasks.add_cohort_set_to_subscription.delay(item.id, cohort_set_id)
+
+
 @admin.register(CohortSet)
-class MentorshipServiceSetAdmin(admin.ModelAdmin):
+class CohortSetAdmin(admin.ModelAdmin):
     list_display = ('id', 'slug', 'academy')
     list_filter = ['academy__slug']
     search_fields = ['slug', 'academy__slug', 'academy__name']
+    actions = [add_cohort_set_to_the_subscriptions]
 
 
 @admin.register(CohortSetTranslation)
-class MentorshipServiceSetTranslationAdmin(admin.ModelAdmin):
+class CohortSetTranslationAdmin(admin.ModelAdmin):
     list_display = ('id', 'cohort_set', 'lang', 'title', 'description', 'short_description')
     list_filter = ['lang']
     search_fields = ['slug', 'academy__slug', 'academy__name']
@@ -154,6 +177,13 @@ class MentorshipServiceSetAdmin(admin.ModelAdmin):
     list_display = ('id', 'slug', 'academy')
     list_filter = ['academy__slug']
     search_fields = ['slug', 'academy__slug', 'academy__name']
+
+
+@admin.register(CohortSetCohort)
+class CohortSetCohortAdmin(admin.ModelAdmin):
+    list_display = ('id', 'cohort_set', 'cohort')
+    list_filter = ['cohort_set__academy__slug']
+    search_fields = ['cohort_set__slug', 'cohort_set__name', 'cohort__slug', 'cohort__name']
 
 
 @admin.register(MentorshipServiceSetTranslation)

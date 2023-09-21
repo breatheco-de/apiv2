@@ -7,6 +7,7 @@ from PIL import Image
 from faker import Faker
 from urllib3.connectionpool import HTTPConnectionPool
 from django.db.models.signals import ModelSignal
+from breathecode.notify.utils.hook_manager import HookManagerClass
 
 # set ENV as test before run django
 os.environ['ENV'] = 'test'
@@ -22,9 +23,6 @@ from breathecode.tests.mixins.breathecode_mixin import Breathecode
 @pytest.fixture
 def bc(request):
     return Breathecode(request.instance)
-
-
-from breathecode.notify.utils.hook_manager import HookManagerClass
 
 
 @pytest.fixture(autouse=True)
@@ -95,7 +93,7 @@ def no_http_requests(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
-def clean_environment(monkeypatch):
+def clean_environment():
     reset_environment()
     test_environment()
 

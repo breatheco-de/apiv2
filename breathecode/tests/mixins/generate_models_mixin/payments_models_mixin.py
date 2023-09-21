@@ -24,6 +24,7 @@ class PaymentsModelsMixin(ModelsMixin):
                                  academy_service=False,
                                  academy=False,
                                  bag=False,
+                                 cohort_set_cohort=False,
                                  plan_service_item_handler=False,
                                  mentorship_service_set=False,
                                  mentorship_service_set_translation=False,
@@ -128,13 +129,22 @@ class PaymentsModelsMixin(ModelsMixin):
         if not 'cohort_set' in models and (is_valid(cohort_set) or is_valid(cohort_set_translation)):
             kargs = {}
 
-            if 'cohort' in models:
-                kargs['cohorts'] = get_list(models['cohort'])
-
             if 'academy' in models:
                 kargs['academy'] = just_one(models['academy'])
 
             models['cohort_set'] = create_models(cohort_set, 'payments.CohortSet', **kargs)
+
+        if not 'cohort_set_cohort' in models and is_valid(cohort_set_cohort):
+            kargs = {}
+
+            if 'cohort_set' in models:
+                kargs['cohort_set'] = just_one(models['cohort_set'])
+
+            if 'cohort' in models:
+                kargs['cohort'] = just_one(models['cohort'])
+
+            models['cohort_set_cohort'] = create_models(cohort_set_cohort, 'payments.CohortSetCohort',
+                                                        **kargs)
 
         if not 'cohort_set_translation' in models and is_valid(cohort_set_translation):
             kargs = {}

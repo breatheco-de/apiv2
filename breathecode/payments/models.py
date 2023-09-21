@@ -320,8 +320,10 @@ class FinancingOption(models.Model):
 
 class CohortSet(models.Model):
     """
-    M2M between plan and ServiceItem
+    Cohort set.
     """
+
+    _lang = 'en'
 
     slug = models.SlugField(
         max_length=100,
@@ -330,7 +332,24 @@ class CohortSet(models.Model):
         help_text='A human-readable identifier, it must be unique and it can only contain letters, '
         'numbers and hyphens')
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
-    cohorts = models.ManyToManyField(Cohort, blank=True)
+    cohorts = models.ManyToManyField(Cohort,
+                                     blank=True,
+                                     through='CohortSetCohort',
+                                     through_fields=('cohort_set', 'cohort'))
+
+    def clean(self) -> None:
+        if self.academy.available_as_saas == False:
+            raise forms.ValidationError(
+                translation(self._lang,
+                            en='Academy is not available as SaaS',
+                            es='La academia no está disponible como SaaS',
+                            slug='academy-not-available-as-saas'))
+
+        return super().clean()
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 
 class CohortSetTranslation(models.Model):
@@ -341,6 +360,39 @@ class CohortSetTranslation(models.Model):
     title = models.CharField(max_length=60, help_text='Title of the cohort set')
     description = models.CharField(max_length=255, help_text='Description of the cohort set')
     short_description = models.CharField(max_length=255, help_text='Short description of the cohort set')
+
+
+class CohortSetCohort(models.Model):
+    """
+    M2M between CohortSet and Cohort.
+    """
+
+    _lang = 'en'
+
+    cohort_set = models.ForeignKey(CohortSet, on_delete=models.CASCADE, help_text='Cohort set')
+    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, help_text='Cohort')
+
+    def clean(self) -> None:
+        if self.cohort.available_as_saas is False or (self.cohort.available_as_saas == None
+                                                      and self.cohort.academy.available_as_saas is False):
+            raise forms.ValidationError(
+                translation(self._lang,
+                            en='Cohort is not available as SaaS',
+                            es='El cohort no está disponible como SaaS',
+                            slug='cohort-not-available-as-saas'))
+
+        if self.cohort_set.academy != self.cohort.academy:
+            raise forms.ValidationError(
+                translation(self._lang,
+                            en='Cohort and cohort set must be from the same academy',
+                            es='El cohort y el cohort set deben ser de la misma academia',
+                            slug='cohort-and-cohort-set-must-be-from-the-same-academy'))
+
+        return super().clean()
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 
 class MentorshipServiceSet(models.Model):

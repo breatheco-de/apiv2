@@ -517,10 +517,11 @@ class SignalTestSuite(PaymentsTestCase):
         how_many1 = random.randint(1, 5)
         how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
         service_item = {'how_many': how_many1}
+        academy = {'available_as_saas': True}
 
         model = self.bc.database.create(user=1,
                                         bag=bag,
-                                        academy=1,
+                                        academy=academy,
                                         cohort=1,
                                         cohort_set=1,
                                         service_item=service_item,
@@ -605,10 +606,11 @@ class SignalTestSuite(PaymentsTestCase):
         how_many1 = random.randint(1, 5)
         how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
         service_item = {'how_many': how_many1}
+        academy = {'available_as_saas': True}
 
         model = self.bc.database.create(user=1,
                                         bag=bag,
-                                        academy=1,
+                                        academy=academy,
                                         cohort=1,
                                         cohort_set=1,
                                         service_item=service_item,
@@ -717,10 +719,11 @@ class SignalTestSuite(PaymentsTestCase):
         how_many1 = random.randint(1, 5)
         how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
         service_item = {'how_many': how_many1}
+        academy = {'available_as_saas': True}
 
         model = self.bc.database.create(user=1,
                                         bag=bag,
-                                        academy=1,
+                                        academy=academy,
                                         cohort=1,
                                         cohort_set=1,
                                         service_item=service_item,
@@ -821,10 +824,11 @@ class SignalTestSuite(PaymentsTestCase):
         how_many1 = random.randint(1, 5)
         how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
         service_item = {'how_many': how_many1}
+        academy = {'available_as_saas': True}
 
         model = self.bc.database.create(user=1,
                                         bag=bag,
-                                        academy=1,
+                                        academy=academy,
                                         cohort=1,
                                         cohort_set=1,
                                         service_item=service_item,
@@ -919,10 +923,11 @@ class SignalTestSuite(PaymentsTestCase):
         how_many1 = random.randint(1, 5)
         how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
         service_item = {'how_many': how_many1}
+        academy = {'available_as_saas': True}
 
         model = self.bc.database.create(user=1,
                                         bag=bag,
-                                        academy=1,
+                                        academy=academy,
                                         cohort=1,
                                         cohort_set=1,
                                         service_item=service_item,
@@ -1027,10 +1032,11 @@ class SignalTestSuite(PaymentsTestCase):
         how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
         service_item = {'how_many': how_many1}
         subscription = {'valid_until': UTC_NOW - timedelta(seconds=1)}
+        academy = {'available_as_saas': True}
 
         model = self.bc.database.create(user=1,
                                         bag=bag,
-                                        academy=1,
+                                        academy=academy,
                                         subscription=subscription,
                                         cohort=1,
                                         cohort_set=1,
@@ -1142,10 +1148,11 @@ class SignalTestSuite(PaymentsTestCase):
         how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
         service_item = {'how_many': how_many1}
         subscription = {'valid_until': UTC_NOW - timedelta(seconds=1)}
+        academy = {'available_as_saas': True}
 
         model = self.bc.database.create(user=1,
                                         bag=bag,
-                                        academy=1,
+                                        academy=academy,
                                         subscription=subscription,
                                         cohort=1,
                                         cohort_set=1,
@@ -1230,10 +1237,11 @@ class SignalTestSuite(PaymentsTestCase):
         how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
         service_item = {'how_many': how_many1}
         subscription = {'valid_until': UTC_NOW - timedelta(seconds=1)}
+        academy = {'available_as_saas': True}
 
         model = self.bc.database.create(user=1,
                                         bag=bag,
-                                        academy=1,
+                                        academy=academy,
                                         subscription=subscription,
                                         cohort=1,
                                         cohort_set=1,
@@ -1348,10 +1356,11 @@ class SignalTestSuite(PaymentsTestCase):
             'plan_expires_at': UTC_NOW - timedelta(seconds=1),
             'monthly_price': random.randint(1, 100),
         }
+        academy = {'available_as_saas': True}
 
         model = self.bc.database.create(user=1,
                                         bag=bag,
-                                        academy=1,
+                                        academy=academy,
                                         plan_financing=plan_financing,
                                         cohort=1,
                                         cohort_set=1,
@@ -1439,10 +1448,11 @@ class SignalTestSuite(PaymentsTestCase):
             'next_payment_at': UTC_NOW + timedelta(seconds=1),
             'status': random.choice(['CANCELLED', 'DEPRECATED']),
         }
+        academy = {'available_as_saas': True}
 
         model = self.bc.database.create(user=1,
                                         bag=bag,
-                                        academy=1,
+                                        academy=academy,
                                         subscription=subscription,
                                         cohort=1,
                                         cohort_set=1,
@@ -1530,10 +1540,11 @@ class SignalTestSuite(PaymentsTestCase):
             'valid_until': UTC_NOW + timedelta(seconds=1),
             'status': random.choice(['CANCELLED', 'ACTIVE', 'DEPRECATED', 'PAYMENT_ISSUE', 'ERROR']),
         }
+        academy = {'available_as_saas': True}
 
         model = self.bc.database.create(user=1,
                                         bag=bag,
-                                        academy=1,
+                                        academy=academy,
                                         subscription=subscription,
                                         cohort=1,
                                         cohort_set=1,
@@ -1944,10 +1955,11 @@ class SignalTestSuite(PaymentsTestCase):
         how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
         service_item = {'how_many': how_many1}
         subscription = {'valid_until': UTC_NOW - timedelta(seconds=1)}
+        academy = {'available_as_saas': True}
 
         model = self.bc.database.create(user=1,
                                         bag=bag,
-                                        academy=1,
+                                        academy=academy,
                                         subscription=subscription,
                                         cohort=1,
                                         cohort_set=1,

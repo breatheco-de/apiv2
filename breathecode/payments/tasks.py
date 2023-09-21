@@ -14,8 +14,9 @@ from dateutil.relativedelta import relativedelta
 from breathecode.payments.signals import consume_service
 from breathecode.utils.decorators import task, AbortTask
 from breathecode.utils.i18n import translation
+from django.db.models import Q
 
-from .models import AbstractIOweYou, Bag, Consumable, ConsumptionSession, Invoice, PlanFinancing, PlanServiceItem, PlanServiceItemHandler, Service, ServiceStockScheduler, Subscription, SubscriptionServiceItem
+from .models import AbstractIOweYou, Bag, CohortSet, Consumable, ConsumptionSession, Invoice, PlanFinancing, PlanServiceItem, PlanServiceItemHandler, Service, ServiceStockScheduler, Subscription, SubscriptionServiceItem
 from breathecode.payments.signals import reimburse_service_units
 
 logger = logging.getLogger(__name__)
@@ -892,3 +893,29 @@ def refund_mentoring_session(session_id: int):
 
     consumption_session.status = 'CANCELLED'
     consumption_session.save()
+
+
+@shared_task(bind=False, base=BaseTaskWithRetry)
+def add_cohort_set_to_subscription(subscription_id: int, cohort_set_id: int, **_: Any):
+    logger.info(
+        f'Starting add_cohort_set_to_subscription for subscription {subscription_id} cohort_set {cohort_set_id}'
+    )
+
+    subscription = Subscription.objects.filter(id=subscription_id).exclude(
+        status__in=['CANCELLED', 'DEPRECATED']).first()
+
+    if not subscription:
+        raise AbortTask(f'Subscription with id {subscription_id} not found')
+
+    if subscription.valid_until and subscription.valid_until < timezone.now():
+        raise AbortTask(f'The subscription {subscription.id} is over')
+
+    if subscription.selected_cohort_set:
+        raise AbortTask(f'Subscription with id {subscription_id} already have a cohort set')
+
+    cohort_set = CohortSet.objects.filter(id=cohort_set_id).first()
+    if not cohort_set:
+        raise AbortTask(f'CohortSet with id {cohort_set_id} not found')
+
+    subscription.selected_cohort_set = cohort_set
+    subscription.save()

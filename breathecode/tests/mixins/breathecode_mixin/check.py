@@ -1,4 +1,6 @@
 from __future__ import annotations
+import pytest
+from contextlib2 import contextmanager
 from datetime import datetime
 from typing import Any
 from unittest.mock import call
@@ -227,3 +229,12 @@ class Check:
             result += f'Queries: {len(connections[db].queries)}\n\n'
             result += '-----------------------------------------\n\n'
             self._parent.fail(result)
+
+    @contextmanager
+    def raises(self, expected_exception, expected_message):
+        try:
+            yield
+        except expected_exception as e:
+            assert str(e) == expected_message, f"Expected '{expected_message}', but got '{str(e)}'"
+        except Exception as e:
+            pytest.fail(f'Expected {expected_exception} but it was not raised.')
