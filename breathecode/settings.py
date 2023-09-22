@@ -100,7 +100,7 @@ REST_FRAMEWORK = {
     'EXCEPTION_HANDLER':
     'breathecode.utils.breathecode_exception_handler',
     'PAGE_SIZE':
-    20,
+    100,
     'DEFAULT_VERSION':
     'v1',
     'DEFAULT_AUTHENTICATION_CLASSES': [
