@@ -125,6 +125,7 @@ def mark_task_as_pending(task_manager_id, *, attempts=0, force=False, last_run=N
     function.delay(*x.arguments['args'],
                    **x.arguments['kwargs'],
                    page=x.current_page + 1,
-                   total_pages=x.total_pages)
+                   total_pages=x.total_pages,
+                   task_manager_id=task_manager_id)
 
     logger.info(f'TaskManager {task_manager_id} is PENDING')
