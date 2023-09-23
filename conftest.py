@@ -19,8 +19,12 @@ urlopen = HTTPConnectionPool.urlopen
 from breathecode.tests.mixins.breathecode_mixin import Breathecode
 
 
+def pytest_configure():
+    os.environ['SQLALCHEMY_SILENCE_UBER_WARNING'] = '1'
+
+
 # it does not work yet
-@pytest.fixture(scope='session')
+@pytest.fixture
 def bc(request):
     return Breathecode(request.instance)
 
@@ -74,7 +78,7 @@ def enable_signals(monkeypatch):
     yield enable
 
 
-@pytest.fixture(scope='session', autouse=True)
+@pytest.fixture(autouse=True)
 def no_http_requests(monkeypatch):
 
     def urlopen_mock(self, method, url, *args, **kwargs):
