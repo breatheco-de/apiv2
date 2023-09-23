@@ -5,12 +5,8 @@
 from unittest.mock import MagicMock, patch, call
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from django.test import TestCase
-from breathecode.registry.models import Asset
-from ..mixins import RegistryTestCase
-from ...models import AssetCategory
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
 from breathecode.registry import tasks
-from datetime import timedelta
 from django.utils import timezone
 
 UTC_NOW = timezone.now()
@@ -177,7 +173,7 @@ def put_serializer(academy, category, asset, data={}):
     }
 
 
-class RegistryTestAsset(RegistryTestCase):
+class TestRegistryAsset(LegacyAPITestCase):
 
     def test__without_auth(self):
         """Test /certificate without auth"""

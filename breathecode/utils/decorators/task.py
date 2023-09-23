@@ -83,7 +83,7 @@ class Task(object):
                 x.last_run = last_run
                 x.save()
 
-            if x.status in ['CANCELLED', 'REVERSED', 'PAUSED']:
+            if x.status in ['CANCELLED', 'REVERSED', 'PAUSED', 'ABORTED']:
                 x.killed = True
                 x.save()
                 return

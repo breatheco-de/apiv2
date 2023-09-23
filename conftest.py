@@ -19,6 +19,10 @@ urlopen = HTTPConnectionPool.urlopen
 from breathecode.tests.mixins.breathecode_mixin import Breathecode
 
 
+def pytest_configure():
+    os.environ['SQLALCHEMY_SILENCE_UBER_WARNING'] = '1'
+
+
 # it does not work yet
 @pytest.fixture
 def bc(request):
@@ -119,6 +123,6 @@ def random_image(fake):
     os.remove(filename)
 
 
-@pytest.fixture()
+@pytest.fixture(scope='session')
 def fake():
     return FAKE

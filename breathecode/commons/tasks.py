@@ -20,7 +20,7 @@ def mark_task_as_cancelled(task_manager_id):
         logger.error(f'TaskManager {task_manager_id} not found')
         return
 
-    if x.status == 'DONE':
+    if x.status not in ['PENDING', 'PAUSED']:
         logger.warn(f'TaskManager {task_manager_id} was already DONE')
         return
 
@@ -77,7 +77,7 @@ def mark_task_as_paused(task_manager_id):
         return
 
     if x.status != 'PENDING':
-        logger.warn(f'TaskManager {task_manager_id} was already DONE')
+        logger.warn(f'TaskManager {task_manager_id} is not PENDING')
         return
 
     x.status = 'PAUSED'
@@ -96,7 +96,7 @@ def mark_task_as_pending(task_manager_id, *, attempts=0, force=False):
         logger.error(f'TaskManager {task_manager_id} not found')
         return
 
-    if x.status not in ['DONE', 'CANCELLED', 'REVERSED']:
+    if x.status in ['DONE', 'CANCELLED', 'REVERSED']:
         logger.warn(f'TaskManager {task_manager_id} was already DONE')
         return
 
