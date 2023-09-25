@@ -39,7 +39,7 @@ class ServiceTranslationAdmin(admin.ModelAdmin):
 @admin.register(ServiceItem)
 class ServiceItemAdmin(admin.ModelAdmin):
     list_display = ('id', 'unit_type', 'how_many', 'service')
-    list_filter = ['service__owner']
+    list_filter = ['service__']
     search_fields = [
         'service__slug', 'service__title', 'service__groups__name', 'service__cohorts__slug',
         'service__mentorship_services__slug'
@@ -49,7 +49,7 @@ class ServiceItemAdmin(admin.ModelAdmin):
 @admin.register(ServiceItemFeature)
 class ServiceItemFeatureAdmin(admin.ModelAdmin):
     list_display = ('id', 'service_item', 'lang', 'one_line_desc')
-    list_filter = ['service_item__service__owner', 'lang']
+    list_filter = ['service_item__service__', 'lang']
     search_fields = [
         'service_item__service__slug', 'service_item__service__title', 'service_item__service__groups__name', 'service_item__service__mentorship_services__slug'
     ]
@@ -63,8 +63,8 @@ class FinancingOptionAdmin(admin.ModelAdmin):
 
 @admin.register(Plan)
 class PlanAdmin(admin.ModelAdmin):
-    list_display = ('id', 'slug', 'status', 'trial_duration', 'trial_duration_unit', 'owner')
-    list_filter = ['trial_duration_unit', 'owner']
+    list_display = ('id', 'slug', 'status', 'trial_duration', 'trial_duration_unit', '')
+    list_filter = ['trial_duration_unit', '']
     search_fields = ['lang', 'title']
     raw_id_fields = ['owner']
     filter_horizontal = ('invites', )
@@ -184,6 +184,7 @@ class CohortSetCohortAdmin(admin.ModelAdmin):
     list_display = ('id', 'cohort_set', 'cohort')
     list_filter = ['cohort_set__academy__slug']
     search_fields = ['cohort_set__slug', 'cohort_set__name', 'cohort__slug', 'cohort__name']
+    raw_id_fields = ['cohort']
 
 
 @admin.register(MentorshipServiceSetTranslation)
