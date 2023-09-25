@@ -520,7 +520,7 @@ class AssetView(APIView, GenerateLookupsMixin):
 
         if 'category' in self.request.GET:
             param = self.request.GET.get('category')
-            lookup['category__slug__iexact'] = param
+            lookup['category__slug__in'] = [p for p in param.split(',')]
 
         if 'test_status' in self.request.GET:
             param = self.request.GET.get('test_status')
