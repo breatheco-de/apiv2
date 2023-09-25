@@ -47,14 +47,14 @@ def get_my_event_types(_user):
 
         def process_i_owe_you(i_owe_them: QuerySet[AbstractIOweYou]):
             for i_owe_you in i_owe_them:
-                if (i_owe_you.selected_cohort_set and i_owe_you.selected_cohort_set.first().academy
+                if (i_owe_you.selected_cohort_set and i_owe_you.selected_cohort_set.cohorts.first().academy
                         and i_owe_you.selected_cohort.academy not in academies):
                     academies.append(i_owe_you.selected_cohort.academy)
 
                 if i_owe_you.selected_cohort_set and i_owe_you.selected_cohort_set not in cohorts:
                     cohorts.append(i_owe_you.selected_cohort)
 
-                if (i_owe_you.selected_cohort_set and i_owe_you.selected_cohort_set.first().syllabus_version
+                if (i_owe_you.selected_cohort_set and i_owe_you.selected_cohort_set.cohorts.first().syllabus_version
                         and i_owe_you.selected_cohort.syllabus_version.syllabus not in syllabus):
                     syllabus.append({
                         'syllabus': i_owe_you.selected_cohort.syllabus_version.syllabus,
