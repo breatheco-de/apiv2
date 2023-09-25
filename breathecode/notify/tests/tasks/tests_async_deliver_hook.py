@@ -31,6 +31,7 @@ class TestAsyncDeliverHook(LegacyAPITestCase):
             fake.slug(): fake.slug(),
             'latitude': Decimal('25.758059600000000'),
             'longitude': Decimal('-80.377022000000000'),
+            'date': timezone.now(),
         }
 
         url = fake.url()
@@ -49,6 +50,7 @@ class TestAsyncDeliverHook(LegacyAPITestCase):
             fake.slug(): fake.slug(),
             'latitude': Decimal('25.758059600000000'),
             'longitude': Decimal('-80.377022000000000'),
+            'date': timezone.now(),
         }
 
         url = fake.url()
@@ -68,6 +70,7 @@ class TestAsyncDeliverHook(LegacyAPITestCase):
             fake.slug(): fake.slug(),
             'latitude': Decimal('25.758059600000000'),
             'longitude': Decimal('-80.377022000000000'),
+            'date': timezone.now(),
         }
 
         model = self.bc.database.create(hook=1)
@@ -105,6 +108,7 @@ class TestAsyncDeliverHook(LegacyAPITestCase):
             fake.slug(): fake.slug(),
             'latitude': Decimal('25.758059600000000'),
             'longitude': Decimal('-80.377022000000000'),
+            'date': timezone.now(),
         }
 
         model = self.bc.database.create(hook=1)
