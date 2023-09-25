@@ -162,6 +162,7 @@ class CohortSetAdmin(admin.ModelAdmin):
     list_filter = ['academy__slug']
     search_fields = ['slug', 'academy__slug', 'academy__name']
     actions = [add_cohort_set_to_the_subscriptions]
+    filter_horizontal = ('cohorts', )
 
 
 @admin.register(CohortSetTranslation)
