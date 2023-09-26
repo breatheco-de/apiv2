@@ -51,7 +51,8 @@ class ServiceItemFeatureAdmin(admin.ModelAdmin):
     list_display = ('id', 'service_item', 'lang', 'one_line_desc')
     list_filter = ['service_item__service__owner', 'lang']
     search_fields = [
-        'service_item__service__slug', 'service_item__service__title', 'service_item__service__groups__name', 'service_item__service__mentorship_services__slug'
+        'service_item__service__slug', 'service_item__service__title', 'service_item__service__groups__name',
+        'service_item__service__mentorship_services__slug'
     ]
 
 
