@@ -32,6 +32,7 @@ app.conf.update(broker_url=REDIS_URL,
                 broker_pool_limit=7,
                 result_backend=REDIS_URL,
                 result_expires=10,
+                task_acks_late=True,
                 namespace='CELERY')
 
 # Load task modules from all registered Django app configs.
