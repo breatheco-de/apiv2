@@ -6,7 +6,7 @@ from django.core.exceptions import MultipleObjectsReturned
 from django.conf import settings
 from django.db.models import Q
 from django.db import models
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 import rest_framework.authtoken.models
 from django.utils import timezone
 from django.core.validators import RegexValidator

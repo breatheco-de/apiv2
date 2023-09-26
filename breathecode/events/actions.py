@@ -51,14 +51,19 @@ def get_my_event_types(_user):
                         and i_owe_you.selected_cohort_set.cohorts.first().academy not in academies):
                     academies.append(i_owe_you.selected_cohort_set.cohorts.first().academy)
 
-                if i_owe_you.selected_cohort_set and i_owe_you.selected_cohort_set.cohorts.first() not in cohorts:
+                if i_owe_you.selected_cohort_set and i_owe_you.selected_cohort_set.cohorts.first(
+                ) not in cohorts:
                     cohorts.append(i_owe_you.selected_cohort_set.cohorts.first())
 
-                if (i_owe_you.selected_cohort_set and i_owe_you.selected_cohort_set.cohorts.first().syllabus_version
-                        and i_owe_you.selected_cohort_set.cohorts.first().syllabus_version.syllabus not in syllabus):
+                if (i_owe_you.selected_cohort_set
+                        and i_owe_you.selected_cohort_set.cohorts.first().syllabus_version
+                        and i_owe_you.selected_cohort_set.cohorts.first().syllabus_version.syllabus
+                        not in syllabus):
                     syllabus.append({
-                        'syllabus': i_owe_you.selected_cohort_set.cohorts.first().syllabus_version.syllabus,
-                        'academy': i_owe_you.selected_cohort_set.cohorts.first().academy,
+                        'syllabus':
+                        i_owe_you.selected_cohort_set.cohorts.first().syllabus_version.syllabus,
+                        'academy':
+                        i_owe_you.selected_cohort_set.cohorts.first().academy,
                     })
 
                 if (i_owe_you.selected_event_type_set
