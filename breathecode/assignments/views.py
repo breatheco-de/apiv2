@@ -557,6 +557,10 @@ class TaskMeView(APIView):
         if revision_status is not None:
             items = items.filter(revision_status__in=revision_status.split(','))
 
+        assets = request.GET.get('assets', None)
+        if assets is not None:
+            items = items.filter(associated_slug__in=assets.split(','))
+
         cohort = request.GET.get('cohort', None)
         if cohort is not None:
             if cohort == 'null':
