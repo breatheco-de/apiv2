@@ -567,6 +567,10 @@ class TaskMeView(APIView):
                 slugs = [x for x in cohorts if not x.isnumeric()]
                 items = items.filter(Q(cohort__slug__in=slugs) | Q(cohort__id__in=ids))
 
+        a_slug = request.GET.get('associated_slug', None)
+        if a_slug is not None:
+            items = items.filter(associated_slug__in=a_slug.split(','))
+
         items = handler.queryset(items)
 
         serializer = TaskGETSerializer(items, many=True)

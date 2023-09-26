@@ -51,8 +51,7 @@ class ServiceItemFeatureAdmin(admin.ModelAdmin):
     list_display = ('id', 'service_item', 'lang', 'one_line_desc')
     list_filter = ['service_item__service__owner', 'lang']
     search_fields = [
-        'service_item__service__slug', 'service_item__service__title', 'service_item__service__groups__name',
-        'service_item__service__cohorts__slug', 'service_item__service__mentorship_services__slug'
+        'service_item__service__slug', 'service_item__service__title', 'service_item__service__groups__name', 'service_item__service__mentorship_services__slug'
     ]
 
 
@@ -163,6 +162,7 @@ class CohortSetAdmin(admin.ModelAdmin):
     list_filter = ['academy__slug']
     search_fields = ['slug', 'academy__slug', 'academy__name']
     actions = [add_cohort_set_to_the_subscriptions]
+    filter_horizontal = ('cohorts', )
 
 
 @admin.register(CohortSetTranslation)
@@ -184,6 +184,7 @@ class CohortSetCohortAdmin(admin.ModelAdmin):
     list_display = ('id', 'cohort_set', 'cohort')
     list_filter = ['cohort_set__academy__slug']
     search_fields = ['cohort_set__slug', 'cohort_set__name', 'cohort__slug', 'cohort__name']
+    raw_id_fields = ['cohort']
 
 
 @admin.register(MentorshipServiceSetTranslation)
