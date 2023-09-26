@@ -164,6 +164,32 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
 
     """
+    🔽🔽🔽 Get with querystring assets
+    """
+
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    def test_user_me_task__with_query_string_assets(self):
+        model = self.bc.database.create(user=1,
+                                        task=[{
+                                            'associated_slug': 'fine'
+                                        }, {
+                                            'associated_slug': 'super'
+                                        }])
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('assignments:user_me_task') + '?associated_slug=fine,super'
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = [get_serializer(self, task, model.user) for task in model.task]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+
+    """
     🔽🔽🔽 Get with one Task but the other user
     """
 
