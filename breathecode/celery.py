@@ -29,7 +29,7 @@ if os.getenv('ENV') == 'test':
 #   should have a `CELERY_` prefix.
 app.config_from_object('django.conf:settings')
 app.conf.update(broker_url=REDIS_URL,
-                broker_pool_limit=7,
+                broker_pool_limit=11,
                 result_backend=REDIS_URL,
                 result_expires=10,
                 task_acks_late=True,
