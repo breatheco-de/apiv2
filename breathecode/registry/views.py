@@ -29,7 +29,7 @@ from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerialize
                           PostKeywordClusterSerializer, PostKeywordSerializer, PUTKeywordSerializer,
                           AssetKeywordBigSerializer, PUTCategorySerializer, POSTCategorySerializer,
                           KeywordClusterMidSerializer, SEOReportSerializer, OriginalityScanSerializer,
-                          VariableSmallSerializer)
+                          VariableSmallSerializer, AssetAndTechnologySerializer)
 from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
 from breathecode.utils.views import render_message
 from rest_framework.response import Response
@@ -614,6 +614,8 @@ class AssetView(APIView, GenerateLookupsMixin):
 
         if 'big' in self.request.GET:
             serializer = AssetMidSerializer(items, many=True)
+        elif 'with_techs' in self.request.GET:
+            serializer = AssetAndTechnologySerializer(items, many=True)
         else:
             serializer = AssetSerializer(items, many=True)
 
