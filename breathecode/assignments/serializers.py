@@ -212,25 +212,29 @@ class PUTTaskSerializer(serializers.ModelSerializer):
                     'review status',
                     slug='editing-revision-status-but-is-not-teacher-or-assistant')
 
-        if 'opened_at' in data and data['opened_at'] > self.instance.opened_at:
+        return data
+
+    def update(self, instance, validated_data):
+        if 'opened_at' in validated_data and validated_data['opened_at'] > instance.opened_at:
             tasks_activity.add_activity.delay(self.context['request'].user.id,
                                               'read_assignment',
                                               related_type='assignments.Task',
                                               related_id=self.id)
 
-        if 'revision_status' in data and data['revision_status'] != self.instance.revision_status:
+        if 'revision_status' in validated_data and validated_data[
+                'revision_status'] != instance.revision_status:
             tasks_activity.add_activity.delay(self.context['request'].user.id,
                                               'assignment_review_status_updated',
                                               related_type='assignments.Task',
                                               related_id=self.id)
 
-        if 'task_status' in data and data['task_status'] != self.instance.task_status:
+        if 'task_status' in validated_data and validated_data['task_status'] != instance.task_status:
             tasks_activity.add_activity.delay(self.context['request'].user.id,
                                               'assignment_status_updated',
                                               related_type='assignments.Task',
                                               related_id=self.id)
 
-        return data
+        return super().update(instance, validated_data)
 
 
 class FinalProjectGETSerializer(serpy.Serializer):

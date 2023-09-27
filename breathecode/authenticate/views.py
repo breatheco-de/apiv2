@@ -402,10 +402,12 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                                                      last_name=item.last_name)
                     profile_academy.save()
 
-                tasks_activity.add_activity.delay(request.user.id,
-                                                  'invite_status_updated',
-                                                  related_type='auth.UserInvite',
-                                                  related_id=item.id)
+                serializer = UserInviteSerializer(item)
+                if serializer.is_valid():
+                    tasks_activity.add_activity.delay(request.user.id,
+                                                      'invite_status_updated',
+                                                      related_type='auth.UserInvite',
+                                                      related_id=item.id)
 
             serializer = UserInviteSerializer(items, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
