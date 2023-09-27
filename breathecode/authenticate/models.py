@@ -6,7 +6,7 @@ from django.core.exceptions import MultipleObjectsReturned
 from django.conf import settings
 from django.db.models import Q
 from django.db import models
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 import rest_framework.authtoken.models
 from django.utils import timezone
 from django.core.validators import RegexValidator
@@ -19,6 +19,8 @@ from breathecode.authenticate.exceptions import (BadArguments, InvalidTokenType,
 from breathecode.utils.validators import validate_language_code
 from .signals import invite_status_updated, academy_invite_accepted
 from breathecode.admissions.models import Academy, Cohort
+
+from breathecode.authenticate import signals
 
 __all__ = [
     'User', 'Group', 'ContentType', 'Permission', 'UserProxy', 'Profile', 'Capability', 'Role', 'UserInvite',
@@ -473,7 +475,7 @@ class UserInvite(models.Model):
         self._email = self.email
 
         if status_updated:
-            invite_status_updated.send(instance=self, sender=UserInvite)
+            signals.invite_status_updated.send(instance=self, sender=UserInvite)
             self._old_status = self.status
 
 

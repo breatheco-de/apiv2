@@ -64,7 +64,7 @@ def async_eventbrite_webhook(self, eventbrite_webhook_id):
 def async_export_event_to_eventbrite(self, event_id: int):
     from .actions import export_event_to_eventbrite
 
-    logger.debug('Starting async_eventbrite_webhook')
+    logger.info('Starting async_export_event_to_eventbrite')
 
     event = Event.objects.filter(id=event_id).first()
     if not event:

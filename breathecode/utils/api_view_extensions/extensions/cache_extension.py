@@ -1,9 +1,12 @@
+import logging
 from typing import Optional
 from breathecode.utils.api_view_extensions.extension_base import ExtensionBase
 from breathecode.utils.api_view_extensions.priorities.response_order import ResponseOrder
 from breathecode.utils.cache import Cache
 
 __all__ = ['CacheExtension']
+
+logger = logging.getLogger(__name__)
 
 
 class CacheExtension(ExtensionBase):
@@ -34,8 +37,18 @@ class CacheExtension(ExtensionBase):
         return {**self._request.GET.dict(), **self._request.parser_context['kwargs'], **extends}
 
     def get(self) -> dict:
-        params = self._get_params()
-        return self._cache.get(**params)
+        try:
+            # allow requests to disable cache with querystring "cache" variable
+            _cache_is_active = self._request.GET.get('cache', 'true').lower() in ['true', '1', 'yes']
+            if not _cache_is_active:
+                logger.debug('Cache has been forced to disable')
+                return None
+
+            params = self._get_params()
+            return self._cache.get(**params)
+
+        except Exception:
+            return None
 
     def _get_order_of_response(self) -> int:
         return int(ResponseOrder.CACHE)

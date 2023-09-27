@@ -1,34 +1,43 @@
+import random
 from unittest.mock import MagicMock, call, patch
-from rest_framework import status
+
+import pytest
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
 
 from breathecode.utils.validation_exception import ValidationException
-from ..mixins import MarketingTestCase
 
 
-class LeadTestSuite(MarketingTestCase):
+class TestLead(LegacyAPITestCase):
     """
     🔽🔽🔽 CohortUser without educational_status ACTIVE
     """
 
     @patch('breathecode.marketing.tasks.add_cohort_task_to_student.delay', MagicMock())
     @patch('logging.Logger.warn', MagicMock())
-    def test_cohort_saved__create__without_educational_status_active(self):
+    def test_cohort_saved__create__without_educational_status_active(self, enable_signals):
+        enable_signals()
+
         from breathecode.marketing.tasks import add_cohort_task_to_student
         import logging
 
+        educational_status = random.choice(['POSTPONED', 'SUSPENDED', 'GRADUATED', 'DROPPED'])
+        cohort_user = {
+            'educational_status': educational_status,
+        }
+
         with self.assertRaisesMessage(ValidationException, 'user-not-found-in-org'):
-            model = self.generate_models(cohort_user=True)
+            model = self.generate_models(cohort_user=cohort_user)
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [
             {
                 'cohort_id': 1,
-                'educational_status': None,
                 'finantial_status': None,
                 'history_log': {},
                 'id': 1,
                 'role': 'STUDENT',
                 'user_id': 1,
                 'watching': False,
+                'educational_status': educational_status,
             },
         ])
         self.assertEqual(add_cohort_task_to_student.delay.call_args_list, [])
@@ -40,7 +49,9 @@ class LeadTestSuite(MarketingTestCase):
 
     @patch('breathecode.marketing.tasks.add_cohort_task_to_student.delay', MagicMock())
     @patch('logging.Logger.warn', MagicMock())
-    def test_cohort_saved__create__with_educational_status_active(self):
+    def test_cohort_saved__create__with_educational_status_active(self, enable_signals):
+        enable_signals()
+
         from breathecode.marketing.tasks import add_cohort_task_to_student
         import logging
 

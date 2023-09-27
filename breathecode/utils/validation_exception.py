@@ -8,11 +8,9 @@ from .shorteners import C
 
 __all__ = ['ValidationException', 'APIException']
 
-logger = logging.getLogger(__name__)
-
 
 def is_test_env():
-    return os.getenv('ENV') == 'test'
+    return 'ENV' in os.environ and os.environ['ENV'] == 'test'
 
 
 class ValidationException(APIException):
@@ -44,9 +42,6 @@ class ValidationException(APIException):
 
         elif slug and is_test_env():
             self.detail = slug
-
-        if isinstance(self.detail, str):
-            logger.error(f'Status {str(self.status_code)} - {self.detail}')
 
     def _get_207_details(self):
         return [ValidationException(x.args[0], **x.kwargs) for x in self.detail]

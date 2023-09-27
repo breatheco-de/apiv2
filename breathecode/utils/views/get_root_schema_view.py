@@ -16,7 +16,10 @@ class Cache:
     pass
 
 
-def get_root_schema_view(elements, extend={}):
+def get_root_schema_view(elements, extend=None):
+    if extend is None:
+        extend = {}
+
     host = os.getenv('API_URL', '')
     if host.endswith('/'):
         host = host[:-1]

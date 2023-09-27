@@ -1,11 +1,10 @@
-import base64, frontmatter, markdown, pathlib, logging, re, hashlib, json
-from urllib.parse import urlencode, urlparse, urlunparse, parse_qs
+import base64, frontmatter, markdown, pathlib, logging, re, hashlib
+from urllib.parse import urlparse
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth.models import AnonymousUser
 from django.template.loader import get_template
-from breathecode.admissions.models import Academy, Cohort, SyllabusVersion
-from breathecode.events.models import Event
+from breathecode.admissions.models import Academy, SyllabusVersion
 from django.utils import timezone
 from django.db.models import Q
 from .signals import (asset_slug_modified, asset_readme_modified, asset_title_modified, asset_status_updated)
@@ -47,6 +46,7 @@ class AssetTechnology(models.Model):
                             null=True,
                             help_text='Leave blank if will be shown in all languages')
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, default=None, blank=True, null=True)
+    is_deprecated = models.BooleanField(default=False)
     featured_asset = models.ForeignKey('Asset',
                                        on_delete=models.SET_NULL,
                                        default=None,
@@ -78,6 +78,14 @@ class AssetTechnology(models.Model):
             technology = technology.parent
 
         return technology
+
+    def validate(self):
+        if self.is_deprecated and self.parent is None:
+            raise Exception(
+                f'You cannot mark a technology as deprecated if it doesn\'t have a parent technology')
+
+    def clean(self):
+        self.validate()
 
 
 class AssetCategory(models.Model):
@@ -624,11 +632,16 @@ class Asset(models.Model):
 
     @staticmethod
     def get_by_slug(asset_slug, request=None, asset_type=None):
+        is_alias = True
         user = None
         if request is not None and not isinstance(request.user, AnonymousUser):
             user = request.user
 
         alias = AssetAlias.objects.filter(Q(slug=asset_slug) | Q(asset__slug=asset_slug)).first()
+        if not alias:
+            alias = Asset.objects.filter(slug=asset_slug).first()
+            is_alias = False
+
         if alias is None:
             AssetErrorLog(slug=AssetErrorLog.SLUG_NOT_FOUND,
                           path=asset_slug,
@@ -641,8 +654,12 @@ class Asset(models.Model):
                           asset=alias.asset,
                           asset_type=asset_type,
                           user=user).save()
-        else:
+
+        elif is_alias:
             return alias.asset
+
+        else:
+            return alias
 
 
 class AssetAlias(models.Model):

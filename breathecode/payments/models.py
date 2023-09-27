@@ -42,6 +42,7 @@ class Currency(models.Model):
 
     code = models.CharField(max_length=3,
                             unique=True,
+                            db_index=True,
                             help_text='ISO 4217 currency code (e.g. USD, EUR, MXN)')
     name = models.CharField(max_length=20,
                             unique=True,
@@ -138,8 +139,11 @@ class AbstractAsset(models.Model):
     slug = models.CharField(
         max_length=60,
         unique=True,
+        db_index=True,
         help_text='A human-readable identifier, it must be unique and it can only contain letters, '
         'numbers and hyphens')
+
+    title = models.CharField(max_length=60, default=None, null=True, blank=True)
 
     owner = models.ForeignKey(Academy,
                               on_delete=models.CASCADE,
@@ -147,7 +151,7 @@ class AbstractAsset(models.Model):
                               null=True,
                               help_text='Academy owner')
     #TODO: visibility and the capacities of disable a asset
-    private = models.BooleanField(default=True, help_text='If the asset is private or not')
+    private = models.BooleanField(default=True, help_text='If the asset is private or not', db_index=True)
 
     trial_duration = models.IntegerField(default=1, help_text='Trial duration (e.g. 1, 2, 3, ...)')
     trial_duration_unit = models.CharField(max_length=10,
@@ -162,11 +166,11 @@ class AbstractAsset(models.Model):
         abstract = True
 
 
-COHORT = 'COHORT'
+COHORT_SET = 'COHORT_SET'
 MENTORSHIP_SERVICE_SET = 'MENTORSHIP_SERVICE_SET'
 EVENT_TYPE_SET = 'EVENT_TYPE_SET'
 SERVICE_TYPES = [
-    (COHORT, 'Cohort'),
+    (COHORT_SET, 'Cohort set'),
     (MENTORSHIP_SERVICE_SET, 'Mentorship service set'),
     (EVENT_TYPE_SET, 'Event type set'),
 ]
@@ -181,7 +185,10 @@ class Service(AbstractAsset):
                                     blank=True,
                                     help_text='Groups that can access the customer that bought this service')
 
-    type = models.CharField(max_length=22, choices=SERVICE_TYPES, default=COHORT, help_text='Service type')
+    type = models.CharField(max_length=22,
+                            choices=SERVICE_TYPES,
+                            default=COHORT_SET,
+                            help_text='Service type')
 
     def __str__(self):
         return self.slug
@@ -219,6 +226,7 @@ class AbstractServiceItem(models.Model):
     unit_type = models.CharField(max_length=10,
                                  choices=SERVICE_UNITS,
                                  default=UNIT,
+                                 db_index=True,
                                  help_text='Unit type (e.g. UNIT))')
     how_many = models.IntegerField(default=-1, help_text='How many units of this service can be used')
 
@@ -272,6 +280,7 @@ class ServiceItemFeature(models.Model):
     lang = models.CharField(max_length=5,
                             validators=[validate_language_code],
                             help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US')
+    title = models.CharField(max_length=30, help_text='Title of the service item', default=None, null=True)
     description = models.CharField(max_length=255, help_text='Description of the service item')
     one_line_desc = models.CharField(max_length=30, help_text='One line description of the service item')
 
@@ -310,6 +319,83 @@ class FinancingOption(models.Model):
         return f'{self.monthly_price} {self.currency.code} per {self.how_many_months} months'
 
 
+class CohortSet(models.Model):
+    """
+    Cohort set.
+    """
+
+    _lang = 'en'
+
+    slug = models.SlugField(
+        max_length=100,
+        unique=True,
+        db_index=True,
+        help_text='A human-readable identifier, it must be unique and it can only contain letters, '
+        'numbers and hyphens')
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    cohorts = models.ManyToManyField(Cohort,
+                                     blank=True,
+                                     through='CohortSetCohort',
+                                     through_fields=('cohort_set', 'cohort'))
+
+    def clean(self) -> None:
+        if self.academy.available_as_saas == False:
+            raise forms.ValidationError(
+                translation(self._lang,
+                            en='Academy is not available as SaaS',
+                            es='La academia no está disponible como SaaS',
+                            slug='academy-not-available-as-saas'))
+
+        return super().clean()
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+
+class CohortSetTranslation(models.Model):
+    cohort_set = models.ForeignKey(CohortSet, on_delete=models.CASCADE, help_text='Cohort set')
+    lang = models.CharField(max_length=5,
+                            validators=[validate_language_code],
+                            help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US')
+    title = models.CharField(max_length=60, help_text='Title of the cohort set')
+    description = models.CharField(max_length=255, help_text='Description of the cohort set')
+    short_description = models.CharField(max_length=255, help_text='Short description of the cohort set')
+
+
+class CohortSetCohort(models.Model):
+    """
+    M2M between CohortSet and Cohort.
+    """
+
+    _lang = 'en'
+
+    cohort_set = models.ForeignKey(CohortSet, on_delete=models.CASCADE, help_text='Cohort set')
+    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, help_text='Cohort')
+
+    def clean(self) -> None:
+        if self.cohort.available_as_saas is False or (self.cohort.available_as_saas == None
+                                                      and self.cohort.academy.available_as_saas is False):
+            raise forms.ValidationError(
+                translation(self._lang,
+                            en='Cohort is not available as SaaS',
+                            es='El cohort no está disponible como SaaS',
+                            slug='cohort-not-available-as-saas'))
+
+        if self.cohort_set.academy != self.cohort.academy:
+            raise forms.ValidationError(
+                translation(self._lang,
+                            en='Cohort and cohort set must be from the same academy',
+                            es='El cohort y el cohort set deben ser de la misma academia',
+                            slug='cohort-and-cohort-set-must-be-from-the-same-academy'))
+
+        return super().clean()
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+
 class MentorshipServiceSet(models.Model):
     """
     M2M between plan and ServiceItem
@@ -318,6 +404,7 @@ class MentorshipServiceSet(models.Model):
     slug = models.SlugField(
         max_length=100,
         unique=True,
+        db_index=True,
         help_text='A human-readable identifier, it must be unique and it can only contain letters, '
         'numbers and hyphens')
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
@@ -345,6 +432,7 @@ class EventTypeSet(models.Model):
     slug = models.SlugField(
         max_length=100,
         unique=True,
+        db_index=True,
         help_text='A human-readable identifier, it must be unique and it can only contain letters, '
         'numbers and hyphens')
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text='Academy owner')
@@ -421,8 +509,8 @@ class AcademyService(models.Model):
             [self.available_mentorship_service_sets.count(),
              self.available_event_type_sets.count()] if x
         ]) > 1:
-            raise forms.ValidationError('Only one of available_cohorts, available_mentorship_service_sets or '
-                                        'available_event_type_sets can be set')
+            raise forms.ValidationError('Only one of available_mentorship_service_sets or '
+                                        'available_event_type_sets must be set')
 
         required_integer_fields = self.service.type in ['MENTORSHIP_SERVICE_SET', 'EVENT_TYPE_SET']
 
@@ -461,6 +549,7 @@ class Plan(AbstractPriceByTime):
     slug = models.CharField(
         max_length=60,
         unique=True,
+        db_index=True,
         help_text='A human-readable identifier, it must be unique and it can only contain letters, '
         'numbers and hyphens')
     financing_options = models.ManyToManyField(FinancingOption,
@@ -500,22 +589,15 @@ class Plan(AbstractPriceByTime):
                               blank=True,
                               null=True,
                               help_text='Academy owner')
-    is_onboarding = models.BooleanField(default=False, help_text='Is onboarding plan?')
+    is_onboarding = models.BooleanField(default=False, help_text='Is onboarding plan?', db_index=True)
     has_waiting_list = models.BooleanField(default=False, help_text='Has waiting list?')
 
-    # patterns
-    cohort_pattern = models.CharField(max_length=80,
-                                      default=None,
-                                      blank=True,
-                                      null=True,
-                                      help_text='Cohort pattern to find cohorts to be sold in this plan')
-
-    available_cohorts = models.ManyToManyField(
-        Cohort,
-        blank=True,
-        help_text=
-        'Minimum unit size allowed to be bought, example: bundle_size=5, then you are allowed to buy a minimum of 5 units. Related to the discount ratio'
-    )
+    cohort_set = models.ForeignKey(CohortSet,
+                                   on_delete=models.SET_NULL,
+                                   blank=True,
+                                   null=True,
+                                   default=None,
+                                   help_text='Cohort sets to be sold in this service and plan')
 
     mentorship_service_set = models.ForeignKey(
         MentorshipServiceSet,
@@ -523,14 +605,14 @@ class Plan(AbstractPriceByTime):
         blank=True,
         null=True,
         default=None,
-        help_text='Mentorship service sets to be sold in this service and plan')
+        help_text='Mentorship service set to be sold in this service and plan')
 
     event_type_set = models.ForeignKey(EventTypeSet,
                                        on_delete=models.SET_NULL,
                                        blank=True,
                                        null=True,
                                        default=None,
-                                       help_text='Event type sets to be sold in this service and plan')
+                                       help_text='Event type set to be sold in this service and plan')
 
     invites = models.ManyToManyField(UserInvite,
                                      blank=True,
@@ -645,10 +727,12 @@ BAG_STATUS = [
 BAG = 'BAG'
 CHARGE = 'CHARGE'
 PREVIEW = 'PREVIEW'
+INVITED = 'INVITED'
 BAG_TYPE = [
     (BAG, 'Bag'),
     (CHARGE, 'Charge'),
     (PREVIEW, 'Preview'),
+    (INVITED, 'Invited'),
 ]
 
 NO_SET = 'NO_SET'
@@ -669,7 +753,11 @@ class Bag(AbstractAmountByTime):
     Represents a credit that can be used by a user to use a service.
     """
 
-    status = models.CharField(max_length=8, choices=BAG_STATUS, default=CHECKING, help_text='Bag status')
+    status = models.CharField(max_length=8,
+                              choices=BAG_STATUS,
+                              default=CHECKING,
+                              help_text='Bag status',
+                              db_index=True)
     type = models.CharField(max_length=7, choices=BAG_TYPE, default=BAG, help_text='Bag type')
     chosen_period = models.CharField(
         max_length=7,
@@ -683,17 +771,6 @@ class Bag(AbstractAmountByTime):
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text='Customer')
     service_items = models.ManyToManyField(ServiceItem, blank=True, help_text='Service items')
     plans = models.ManyToManyField(Plan, blank=True, help_text='Plans')
-    selected_cohorts = models.ManyToManyField('admissions.Cohort',
-                                              blank=True,
-                                              help_text='Selected cohorts for the plans of services')
-
-    selected_mentorship_service_sets = models.ManyToManyField(
-        MentorshipServiceSet,
-        blank=True,
-        help_text='Selected mentorship service sets for the plans of services')
-
-    selected_event_type_sets = models.ManyToManyField(
-        EventTypeSet, blank=True, help_text='Selected event type sets for the plans of services')
 
     is_recurrent = models.BooleanField(default=False, help_text='will it be a recurrent payment?')
     was_delivered = models.BooleanField(default=False, help_text='Was it delivered to the user?')
@@ -712,26 +789,6 @@ class Bag(AbstractAmountByTime):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-    def clean(self):
-        settings = get_user_settings(self.user.id)
-        if self.id and self.selected_cohorts.count() > 1:
-            raise forms.ValidationError(
-                translation(settings.lang,
-                            en='You can only select one cohort per bag',
-                            es='Solo puedes seleccionar un cohorte por bolsa'))
-
-        if self.id and self.selected_mentorship_service_sets.count() > 1:
-            raise forms.ValidationError(
-                translation(settings.lang,
-                            en='You can only select one mentorship service set per bag',
-                            es='Solo puedes seleccionar un conjunto de servicios de mentoría por bolsa'))
-
-        if self.id and self.selected_event_type_sets.count() > 1:
-            raise forms.ValidationError(
-                translation(settings.lang,
-                            en='You can only select one event type set per bag',
-                            es='Solo puedes seleccionar un conjunto de tipos de evento por bolsa'))
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -772,6 +829,7 @@ class Invoice(models.Model):
     status = models.CharField(max_length=17,
                               choices=INVOICE_STATUS,
                               default=PENDING,
+                              db_index=True,
                               help_text='Invoice status')
 
     bag = models.ForeignKey('Bag', on_delete=models.CASCADE, help_text='Bag')
@@ -826,7 +884,11 @@ class AbstractIOweYou(models.Model):
     Common fields for all I owe you.
     """
 
-    status = models.CharField(max_length=13, choices=SUBSCRIPTION_STATUS, default=ACTIVE, help_text='Status')
+    status = models.CharField(max_length=13,
+                              choices=SUBSCRIPTION_STATUS,
+                              default=ACTIVE,
+                              help_text='Status',
+                              db_index=True)
     status_message = models.CharField(max_length=250,
                                       null=True,
                                       blank=True,
@@ -838,12 +900,13 @@ class AbstractIOweYou(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text='Customer')
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text='Academy owner')
 
-    selected_cohort = models.ForeignKey(Cohort,
-                                        on_delete=models.CASCADE,
-                                        null=True,
-                                        blank=True,
-                                        default=None,
-                                        help_text='Cohort which the plans and services is for')
+    selected_cohort_set = models.ForeignKey(CohortSet,
+                                            on_delete=models.CASCADE,
+                                            null=True,
+                                            blank=True,
+                                            default=None,
+                                            help_text='Cohort set which the plans and services is for')
+    joined_cohorts = models.ManyToManyField(Cohort, blank=True, help_text='Cohorts those that he/she joined')
     selected_mentorship_service_set = models.ForeignKey(
         MentorshipServiceSet,
         on_delete=models.CASCADE,
@@ -937,6 +1000,7 @@ class Subscription(AbstractIOweYou):
         default=None,
         null=True,
         blank=True,
+        db_index=True,
         help_text='Valid until, after this date the subscription will be destroyed')
 
     # this reminds the service items to change the stock scheduler on change
@@ -1014,12 +1078,12 @@ class Consumable(AbstractServiceItem):
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text='Customer')
 
     # this could be used for the queries on the consumer, to recognize which resource is belong the consumable
-    cohort = models.ForeignKey(Cohort,
-                               on_delete=models.CASCADE,
-                               default=None,
-                               blank=True,
-                               null=True,
-                               help_text='Cohort which the consumable belongs to')
+    cohort_set = models.ForeignKey(CohortSet,
+                                   on_delete=models.CASCADE,
+                                   default=None,
+                                   blank=True,
+                                   null=True,
+                                   help_text='Cohort which the consumable belongs to')
     event_type_set = models.ForeignKey(EventTypeSet,
                                        on_delete=models.CASCADE,
                                        default=None,
@@ -1110,7 +1174,7 @@ class Consumable(AbstractServiceItem):
         return cls.list(user=user, lang=lang, service=service, permission=permission, extra=extra).first()
 
     def clean(self) -> None:
-        resources = [self.cohort]
+        resources = [self.cohort_set]
 
         if self.id:
             resources += [self.event_type_set, self.mentorship_service_set]
@@ -1205,7 +1269,7 @@ class ConsumptionSession(models.Model):
 
         utc_now = timezone.now()
 
-        resource = consumable.mentorship_service_set or consumable.event_type_set or consumable.cohort
+        resource = consumable.mentorship_service_set or consumable.event_type_set or consumable.cohort_set
         id = resource.id if resource else 0
         slug = resource.slug if resource else ''
 

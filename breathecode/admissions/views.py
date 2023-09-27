@@ -1,4 +1,5 @@
 import logging
+import os
 
 import pytz
 from django.contrib.auth.models import AnonymousUser, User
@@ -11,9 +12,12 @@ from rest_framework.exceptions import ParseError, PermissionDenied, ValidationEr
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from breathecode.admissions import tasks
 
 from breathecode.admissions.caches import (CohortCache, CohortUserCache, TeacherCache)
+from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
+from breathecode.utils.i18n import translation
 from .permissions.consumers import cohort_by_url_param
 from breathecode.utils import (APIViewExtensions, DatetimeInteger, GenerateLookupsMixin,
                                HeaderLimitOffsetPagination, ValidationException, capable_of, localize_query)
@@ -53,10 +57,10 @@ def get_all_academies(request, id=None):
     status = request.GET.get('status')
     if status:
         items = items.filter(status__in=status.upper().split(','))
-    
+
     academy_ids = request.GET.get('academy_id')
     if academy_ids:
-        items = items.filter(id__in=academy_id.split(','))
+        items = items.filter(id__in=academy_ids.split(','))
 
     serializer = AcademySerializer(items, many=True)
     return Response(serializer.data)
@@ -157,102 +161,105 @@ def get_public_syllabus(request, id=None):
     return Response(serializer.data)
 
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def get_cohorts(request, id=None):
-    items = Cohort.objects.filter(private=False)
+class PublicCohortView(APIView):
+    permission_classes = [AllowAny]
+    extensions = APIViewExtensions(cache=CohortCache, paginate=True, sort='-kickoff_date')
 
-    items = items.annotate(longitude=Value(None, output_field=FloatField()),
-                           latitude=Value(None, output_field=FloatField()))
+    def get(self, request, id=None):
+        handler = self.extensions(request)
 
-    upcoming = request.GET.get('upcoming', None)
-    if upcoming == 'true':
-        now = timezone.now()
-        items = items.filter(Q(kickoff_date__gte=now) | Q(never_ends=True))
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
 
-    never_ends = request.GET.get('never_ends', None)
-    if never_ends == 'false':
-        items = items.filter(never_ends=False)
+        items = Cohort.objects.filter(private=False).select_related('syllabus_version__syllabus')
 
-    academy = request.GET.get('academy', None)
-    if academy is not None:
-        items = items.filter(academy__slug__in=academy.split(','))
+        items = items.annotate(longitude=Value(None, output_field=FloatField()),
+                               latitude=Value(None, output_field=FloatField()))
 
-    location = request.GET.get('location', None)
-    if location is not None:
-        items = items.filter(academy__slug__in=location.split(','))
+        upcoming = request.GET.get('upcoming', None)
+        if upcoming == 'true':
+            now = timezone.now()
+            items = items.filter(Q(kickoff_date__gte=now) | Q(never_ends=True))
 
-    ids = request.GET.get('id', None)
-    if ids is not None:
-        items = items.filter(id__in=ids.split(','))
+        never_ends = request.GET.get('never_ends', None)
+        if never_ends == 'false':
+            items = items.filter(never_ends=False)
 
-    slugs = request.GET.get('slug', None)
-    if slugs is not None:
-        items = items.filter(slug__in=slugs.split(','))
+        academy = request.GET.get('academy', None)
+        if academy is not None:
+            items = items.filter(academy__slug__in=academy.split(','))
 
-    stage = request.GET.get('stage')
-    if stage:
-        items = items.filter(stage__in=stage.upper().split(','))
-    else:
-        items = items.exclude(stage='DELETED')
+        location = request.GET.get('location', None)
+        if location is not None:
+            items = items.filter(academy__slug__in=location.split(','))
 
-    if coordinates := request.GET.get('coordinates', ''):
-        try:
-            latitude, longitude = coordinates.split(',')
-            latitude = float(latitude)
-            longitude = float(longitude)
-        except:
-            raise ValidationException('Bad coordinates, the format is latitude,longitude',
-                                      slug='bad-coordinates')
+        ids = request.GET.get('id', None)
+        if ids is not None:
+            items = items.filter(id__in=ids.split(','))
 
-        if latitude > 90 or latitude < -90:
-            raise ValidationException('Bad latitude', slug='bad-latitude')
+        slugs = request.GET.get('slug', None)
+        if slugs is not None:
+            items = items.filter(slug__in=slugs.split(','))
 
-        if longitude > 180 or longitude < -180:
-            raise ValidationException('Bad longitude', slug='bad-longitude')
-
-        items = items.annotate(longitude=Value(longitude, FloatField()),
-                               latitude=Value(latitude, FloatField()))
-
-    saas = request.GET.get('saas', '').lower()
-    if saas == 'true':
-        items = items.filter(academy__available_as_saas=True)
-
-    elif saas == 'false':
-        items = items.filter(academy__available_as_saas=False)
-
-    syllabus_slug = request.GET.get('syllabus_slug', '')
-    if syllabus_slug:
-        items = items.filter(syllabus_version__syllabus__slug=syllabus_slug)
-
-    plan = request.GET.get('plan', '')
-    if plan == 'true':
-        items = items.filter(academy__main_currency__isnull=False, plan__id__gte=1).distinct()
-
-    elif plan == 'false':
-        items = items.filter().exclude(plan__id__gte=1).distinct()
-
-    elif plan:
-        kwargs = {}
-
-        if isinstance(plan, int) or plan.isnumeric():
-            kwargs['plan__id'] = plan
+        stage = request.GET.get('stage')
+        if stage:
+            items = items.filter(stage__in=stage.upper().split(','))
         else:
-            kwargs['plan__slug'] = plan
+            items = items.exclude(stage='DELETED')
 
-        items = items.filter(**kwargs).distinct()
+        if coordinates := request.GET.get('coordinates', ''):
+            try:
+                latitude, longitude = coordinates.split(',')
+                latitude = float(latitude)
+                longitude = float(longitude)
+            except:
+                raise ValidationException('Bad coordinates, the format is latitude,longitude',
+                                          slug='bad-coordinates')
 
-    sort = request.GET.get('sort', None)
-    if sort is None or sort == '':
-        sort = '-kickoff_date'
+            if latitude > 90 or latitude < -90:
+                raise ValidationException('Bad latitude', slug='bad-latitude')
 
-    items = items.order_by(sort)
+            if longitude > 180 or longitude < -180:
+                raise ValidationException('Bad longitude', slug='bad-longitude')
 
-    serializer = PublicCohortSerializer(items, many=True)
-    data = sorted(serializer.data,
-                  key=lambda x: x['distance'] or float('inf')) if coordinates else serializer.data
+            items = items.annotate(longitude=Value(longitude, FloatField()),
+                                   latitude=Value(latitude, FloatField()))
 
-    return Response(data)
+        saas = request.GET.get('saas', '').lower()
+        if saas == 'true':
+            items = items.filter(academy__available_as_saas=True)
+
+        elif saas == 'false':
+            items = items.filter(academy__available_as_saas=False)
+
+        syllabus_slug = request.GET.get('syllabus_slug', '')
+        if syllabus_slug:
+            items = items.filter(syllabus_version__syllabus__slug=syllabus_slug)
+
+        plan = request.GET.get('plan', '')
+        if plan == 'true':
+            items = items.filter(academy__main_currency__isnull=False, cohortset__isnull=False).distinct()
+
+        elif plan == 'false':
+            items = items.filter().exclude(cohortset__isnull=True).distinct()
+
+        elif plan:
+            kwargs = {}
+
+            if isinstance(plan, int) or plan.isnumeric():
+                kwargs['cohortset__plan__id'] = plan
+            else:
+                kwargs['cohortset__plan__slug'] = plan
+
+            items = items.filter(**kwargs).distinct()
+
+        items = handler.queryset(items)
+        serializer = PublicCohortSerializer(items, many=True)
+        data = sorted(serializer.data,
+                      key=lambda x: x['distance'] or float('inf')) if coordinates else serializer.data
+
+        return handler.response(data)
 
 
 class AcademyReportView(APIView):
@@ -381,7 +388,7 @@ class CohortUserView(APIView, GenerateLookupsMixin):
 
         items = handler.queryset(items)
         serializer = GetCohortUserSerializer(items, many=True)
-        return Response(serializer.data)
+        return handler.response(serializer.data)
 
     def post(self, request, cohort_id=None, user_id=None):
 
@@ -1678,6 +1685,41 @@ class SyllabusVersionView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class AllSyllabusVersionsView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+
+        items = SyllabusVersion.objects.all()
+        lookup = {}
+
+        if 'version' in self.request.GET:
+            param = self.request.GET.get('version')
+            lookup['version'] = param
+
+        if 'slug' in self.request.GET:
+            param = self.request.GET.get('slug')
+            lookup['syllabus__slug'] = param
+
+        if 'academy' in self.request.GET:
+            param = self.request.GET.get('academy')
+            lookup['syllabus__academy_owner__id__in'] = [p for p in param.split(',')]
+
+        if 'is_documentation' in self.request.GET:
+            param = self.request.GET.get('is_documentation')
+            if param == 'True':
+                lookup['syllabus__is_documentation'] = True
+
+        items = items.filter(syllabus__private=False, **lookup).order_by('version')
+
+        serializer = GetSyllabusVersionSerializer(items, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class PublicCohortUserView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
@@ -1718,7 +1760,7 @@ class PublicCohortUserView(APIView, GenerateLookupsMixin):
 
         items = handler.queryset(items)
         serializer = GetPublicCohortUserSerializer(items, many=True)
-        return Response(serializer.data)
+        return handler.response(serializer.data)
 
 
 class AcademyCohortHistoryView(APIView):
@@ -1806,3 +1848,75 @@ class MeCohortUserHistoryView(APIView):
         } for cohort_user in items]
 
         return Response(data)
+
+
+class CohortJoinView(APIView):
+    extensions = APIViewExtensions(cache=CohortUserCache, paginate=True)
+
+    def post(self, request, cohort_id=None):
+        from breathecode.payments.models import Subscription, PlanFinancing
+        from breathecode.payments.serializers import GetAbstractIOweYouSerializer
+
+        lang = get_user_language(request)
+
+        cohort = Cohort.objects.filter(Q(ending_date=None, never_ends=True)
+                                       | Q(ending_date__gte=timezone.now(), never_ends=False),
+                                       id=cohort_id).first()
+
+        if not cohort:
+            raise ValidationException(translation(lang,
+                                                  en='Cohort not found',
+                                                  es='Cohorte no encontrada',
+                                                  slug='not-found'),
+                                      code=404)
+
+        if CohortUser.objects.filter(cohort__id=cohort_id, user__id=request.user.id).count():
+            raise ValidationException(translation(lang,
+                                                  en='You are already part of this cohort',
+                                                  es='Ya eres parte de esta cohorte',
+                                                  slug='already-joined-to-cohort'),
+                                      code=400)
+
+        resource_available_now = Q(valid_until=None) | Q(valid_until__gte=timezone.now())
+        resource_belongs_to_user = Q(user__id=request.user.id, selected_cohort_set__cohorts=cohort)
+        excludes = Q(status='ERROR') | Q(status='CANCELED') | Q(status='PAYMENT_ISSUE') | Q(status='EXPIRED')
+
+        # it inherits from the an AbstractIOweYou, so you can apply polymorphism
+        resource = Subscription.objects.filter(resource_available_now,
+                                               resource_belongs_to_user).exclude(excludes).first()
+
+        if not resource:
+            resource = PlanFinancing.objects.filter(resource_available_now,
+                                                    resource_belongs_to_user).exclude(excludes).first()
+
+        if not resource:
+            raise ValidationException(translation(
+                lang,
+                en='You can\'t join to this cohort due to you didn\'t subscribe to it',
+                es='No puedes unirte a esta cohorte porque no te has suscrito a ella',
+                slug='not-subscribed'),
+                                      code=400)
+
+        if resource.joined_cohorts.filter(id=cohort.id).count():
+            raise ValidationException(translation(lang,
+                                                  en='You have already joined to this cohort',
+                                                  es='Ya te has unido a esta cohorte',
+                                                  slug='already-joined'),
+                                      code=400)
+
+        if cohort.never_ends == False and resource.joined_cohorts.filter(never_ends=False).count() > 0:
+            raise ValidationException(translation(
+                lang,
+                en='You can\'t join to this cohort because you are already subscribed to another cohort',
+                es='No puedes unirte a esta cohorte porque ya estás suscrito a otra cohorte',
+                slug='already-joined-to-another-cohort'),
+                                      code=400)
+
+        resource.joined_cohorts.add(cohort)
+
+        tasks.build_cohort_user.delay(cohort_id, request.user.id, 'STUDENT')
+        tasks.build_profile_academy.delay(cohort.academy.id, request.user.id, 'student')
+
+        serializer = GetAbstractIOweYouSerializer(resource, many=False)
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

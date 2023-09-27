@@ -1,11 +1,12 @@
 from django.urls import path
-from .views import (AcademyActivateView, AcademyView, CohortMeView, CohortUserView, AcademyCohortView,
-                    MeCohortUserHistoryView, SyllabusVersionView, SyllabusView, get_timezones, UserView,
-                    UserMeView, AcademyCohortUserView, get_schedule, AcademySyllabusScheduleView,
-                    SyllabusScheduleView, get_all_academies, get_cohorts, AcademyCohortTimeSlotView,
-                    handle_test_syllabus, AcademySyllabusScheduleTimeSlotView, AcademySyncCohortTimeSlotView,
-                    AcademyReportView, get_public_syllabus, SyllabusAssetView, PublicCohortUserView,
-                    AcademyCohortHistoryView, AcademyTeacherView, get_single_academy)
+from .views import (AcademyActivateView, AcademyView, CohortJoinView, CohortMeView, CohortUserView,
+                    AcademyCohortView, MeCohortUserHistoryView, SyllabusVersionView, SyllabusView,
+                    get_timezones, UserView, UserMeView, AcademyCohortUserView, get_schedule,
+                    AllSyllabusVersionsView, AcademySyllabusScheduleView, SyllabusScheduleView,
+                    get_all_academies, PublicCohortView, AcademyCohortTimeSlotView, handle_test_syllabus,
+                    AcademySyllabusScheduleTimeSlotView, AcademySyncCohortTimeSlotView, AcademyReportView,
+                    get_public_syllabus, SyllabusAssetView, PublicCohortUserView, AcademyCohortHistoryView,
+                    AcademyTeacherView, get_single_academy)
 
 app_name = 'admissions'
 urlpatterns = [
@@ -13,8 +14,9 @@ urlpatterns = [
     path('academy/cohort/me', CohortMeView.as_view(), name='academy_cohort_me'),
     path('public/syllabus', get_public_syllabus),
     # deprecated methods, soon to be deleted
-    path('cohort/all', get_cohorts, name='cohort_all'),
+    path('cohort/all', PublicCohortView.as_view(), name='cohort_all'),
     path('cohort/user', CohortUserView.as_view(), name='cohort_user'),
+    path('cohort/<int:cohort_id>/join', CohortJoinView.as_view(), name='cohort_id_join'),
     path('cohort/<int:cohort_id>/user/<int:user_id>', CohortUserView.as_view(), name='cohort_id_user_id'),
     path('cohort/<int:cohort_id>/user', CohortUserView.as_view(), name='cohort_id_user'),
 
@@ -78,6 +80,7 @@ urlpatterns = [
     path('syllabus/test', handle_test_syllabus),
     path('syllabus/<int:syllabus_id>', SyllabusView.as_view(), name='syllabus_id'),
     path('syllabus/<int:syllabus_id>/version', SyllabusVersionView.as_view(), name='syllabus_id_version'),
+    path('syllabus/version', AllSyllabusVersionsView.as_view(), name='syllabus_version'),
     path('syllabus/<int:syllabus_id>/version/<int:version>',
          SyllabusVersionView.as_view(),
          name='syllabus_id_version_version'),

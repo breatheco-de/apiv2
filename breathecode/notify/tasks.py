@@ -1,11 +1,13 @@
+from datetime import datetime
 import logging, os, requests, json
 from celery import shared_task, Task
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils import timezone
-from .actions import sync_slack_team_channel, sync_slack_team_users, send_email_message
+from .actions import sync_slack_team_channel, sync_slack_team_users
 from breathecode.services.slack.client import Slack
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.authenticate.models import Token
+from decimal import Decimal
 
 from breathecode.notify import actions
 
@@ -97,14 +99,47 @@ def async_slack_command(post_data):
 
 @shared_task
 def async_deliver_hook(target, payload, hook_id=None, **kwargs):
-    logger.debug('Starting async_deliver_hook')
-    from .utils.hook_manager import HookManager
     """
     target:     the url to receive the payload.
     payload:    a python primitive data structure
     instance:   a possibly null "trigger" instance
     hook:       the defining Hook object (useful for removing)
     """
+
+    from .utils.hook_manager import HookManager
+
+    def parse_payload(payload):
+        for key in payload:
+            if isinstance(payload[key], datetime):
+                payload[key] = payload[key].isoformat().replace('+00:00', 'Z')
+
+            elif isinstance(payload[key], Decimal):
+                payload[key] = str(payload[key])
+
+            elif isinstance(payload[key], list):
+                l = []
+                for item in payload[key]:
+                    l.append(parse_payload(item))
+
+                payload[key] = l
+
+            elif isinstance(payload[key], dict):
+                payload[key] = parse_payload(payload[key])
+
+        return payload
+
+    logger.info('Starting async_deliver_hook')
+
+    if isinstance(payload, dict):
+        payload = parse_payload(payload)
+
+    elif isinstance(payload, list):
+        l = []
+        for item in payload:
+            l.append(parse_payload(item))
+
+        payload = l
+
     encoded_payload = json.dumps(payload, cls=DjangoJSONEncoder)
     response = requests.post(url=target,
                              data=encoded_payload,
@@ -118,20 +153,26 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
             hook.delete()
 
         else:
-            data = hook.sample_data
-            if not isinstance(data, list):
-                data = []
 
-            if 'data' in payload and isinstance(payload['data'], dict):
-                data.append(payload['data'])
-            elif isinstance(payload, dict):
-                data.append(payload)
+            try:
+                data = hook.sample_data
+                if not isinstance(data, list):
+                    data = []
 
-            if len(data) > 10:
-                data = data[1:10]
+                if 'data' in payload and isinstance(payload['data'], dict):
+                    data.append(payload['data'])
+                elif isinstance(payload, dict):
+                    data.append(json.loads(encoded_payload))
 
-            hook.last_response_code = response.status_code
-            hook.last_call_at = timezone.now()
-            hook.sample_data = data
-            hook.total_calls = hook.total_calls + 1
-            hook.save()
+                if len(data) > 10:
+                    data = data[1:10]
+
+                hook.last_response_code = response.status_code
+                hook.last_call_at = timezone.now()
+                hook.sample_data = data
+                hook.total_calls = hook.total_calls + 1
+                hook.save()
+            except Exception:
+                logger.exception(
+                    f'Error while trying to save hook call with status code {response.status_code}.')
+                logger.error(payload)

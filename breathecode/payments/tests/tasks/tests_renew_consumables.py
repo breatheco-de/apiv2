@@ -19,7 +19,7 @@ UTC_NOW = timezone.now()
 
 def consumable_item(data={}):
     return {
-        'cohort_id': None,
+        'cohort_set_id': None,
         'event_type_set_id': None,
         'how_many': -1,
         'id': 0,
@@ -175,13 +175,16 @@ class PaymentsTestSuite(PaymentsTestCase):
         service_item = {'how_many': -1}
         if random.randint(0, 1) == 1:
             service_item['how_many'] = random.randint(1, 100)
+        academy = {'available_as_saas': True}
 
         model = self.bc.database.create(service_stock_scheduler=1,
                                         plan=plan,
                                         service_item=service_item,
                                         plan_financing=plan_financing,
                                         plan_service_item_handler=1,
-                                        cohort=2)
+                                        cohort=2,
+                                        cohort_set=2,
+                                        academy=academy)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -190,14 +193,14 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(logging.Logger.info.call_args_list, [
             call('Starting renew_consumables for service stock scheduler 1'),
-            call('The consumable 1 for cohort 1 was built'),
+            call('The consumable 1 for cohort set 1 was built'),
             call('The scheduler 1 was renewed'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
             consumable_item({
-                'cohort_id': 1,
+                'cohort_set_id': 1,
                 'id': 1,
                 'service_item_id': 1,
                 'user_id': 1,
@@ -459,13 +462,16 @@ class PaymentsTestSuite(PaymentsTestCase):
         service_item = {'how_many': -1}
         if random.randint(0, 1) == 1:
             service_item['how_many'] = random.randint(1, 100)
+        academy = {'available_as_saas': True}
 
         model = self.bc.database.create(service_stock_scheduler=1,
                                         plan=plan,
                                         service_item=service_item,
                                         subscription=subscription,
                                         plan_service_item_handler=1,
-                                        cohort=2)
+                                        cohort=2,
+                                        cohort_set=2,
+                                        academy=academy)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -474,14 +480,14 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(logging.Logger.info.call_args_list, [
             call('Starting renew_consumables for service stock scheduler 1'),
-            call('The consumable 1 for cohort 1 was built'),
+            call('The consumable 1 for cohort set 1 was built'),
             call('The scheduler 1 was renewed'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
             consumable_item({
-                'cohort_id': 1,
+                'cohort_set_id': 1,
                 'id': 1,
                 'service_item_id': 1,
                 'user_id': 1,
@@ -701,12 +707,15 @@ class PaymentsTestSuite(PaymentsTestCase):
         service_item = {'how_many': -1}
         if random.randint(0, 1) == 1:
             service_item['how_many'] = random.randint(1, 100)
+        academy = {'available_as_saas': True}
 
         model = self.bc.database.create(service_stock_scheduler=1,
                                         service_item=service_item,
                                         subscription=subscription,
                                         subscription_service_item=1,
-                                        cohort=2)
+                                        cohort=2,
+                                        cohort_set=2,
+                                        academy=academy)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -715,14 +724,14 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(logging.Logger.info.call_args_list, [
             call('Starting renew_consumables for service stock scheduler 1'),
-            call('The consumable 1 for cohort 1 was built'),
+            call('The consumable 1 for cohort set 1 was built'),
             call('The scheduler 1 was renewed'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
             consumable_item({
-                'cohort_id': 1,
+                'cohort_set_id': 1,
                 'id': 1,
                 'service_item_id': 1,
                 'user_id': 1,

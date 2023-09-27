@@ -130,9 +130,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(logging.Logger.info.call_args_list, [
             call('Starting persist_single_lead'),
         ])
-        self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Status 400 - You need to specify the form entry data'),
-        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(requests.get.error.call_args_list, [])
         self.assertEqual(requests.post.error.call_args_list, [])
@@ -157,9 +155,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(logging.Logger.info.call_args_list, [
             call('Starting persist_single_lead'),
         ])
-        self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Status 400 - Missing location information'),
-        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(requests.get.error.call_args_list, [])
         self.assertEqual(requests.post.error.call_args_list, [])
@@ -185,9 +181,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(logging.Logger.info.call_args_list, [
             call('Starting persist_single_lead'),
         ])
-        self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Status 400 - No academy found with slug they-killed-kenny'),
-        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(requests.get.error.call_args_list, [])
         self.assertEqual(requests.post.error.call_args_list, [])
@@ -339,10 +333,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             call('found tags'),
             call({model.tag.slug}),
         ])
-        self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Status 400 - No automation was specified and the the specified tag has no automation either'
-                 ),
-        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(requests.get.error.call_args_list, [])
         self.assertEqual(requests.post.error.call_args_list, [])
@@ -381,9 +372,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             call('found tags'),
             call({model.tag.slug}),
         ])
-        self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Status 400 - The email doesn\'t exist'),
-        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(requests.get.error.call_args_list, [])
         self.assertEqual(requests.post.error.call_args_list, [])
@@ -464,9 +453,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             call({model.tag.slug}),
         ])
 
-        self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Status 400 - The email doesn\'t exist'),
-        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(requests.get.error.call_args_list, [])
         self.assertEqual(requests.post.error.call_args_list, [])
@@ -512,9 +499,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             call({model.tag.slug}),
         ])
 
-        self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Status 400 - The first name doesn\'t exist'),
-        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(requests.get.error.call_args_list, [])
         self.assertEqual(requests.post.error.call_args_list, [])
@@ -561,9 +546,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             call({model.tag.slug}),
         ])
 
-        self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Status 400 - The last name doesn\'t exist'),
-        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(requests.get.error.call_args_list, [])
         self.assertEqual(requests.post.error.call_args_list, [])
@@ -611,9 +594,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             call({model.tag.slug}),
         ])
 
-        self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Status 400 - The phone doesn\'t exist'),
-        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(requests.get.error.call_args_list, [])
         self.assertEqual(requests.post.error.call_args_list, [])
@@ -661,9 +642,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             call('found tags'),
             call({model.tag.slug}),
         ])
-        self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Status 400 - The id doesn\'t exist'),
-        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(requests.get.error.call_args_list, [])
         self.assertEqual(requests.post.error.call_args_list, [])
@@ -714,9 +693,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             call({model.tag.slug}),
         ])
 
-        self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Status 400 - FormEntry not found (id: 123123123)'),
-        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(requests.get.error.call_args_list, [])
         self.assertEqual(requests.post.error.call_args_list, [])
@@ -771,9 +748,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             call({model.tag.slug}),
         ])
 
-        self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Status 400 - The course doesn\'t exist'),
-        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(requests.get.call_args_list, [])
         self.assertEqual(requests.post.call_args_list, [])

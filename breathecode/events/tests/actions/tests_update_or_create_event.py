@@ -1,6 +1,9 @@
 import logging
+import os
+import random
+from uuid import UUID
 import breathecode.events.actions as actions
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, PropertyMock, call, patch
 from breathecode.tests.mocks.eventbrite.constants.events import EVENTBRITE_EVENTS
 from django.utils import timezone
 from ..mixins import EventTestCase
@@ -15,6 +18,9 @@ status_map = {
     'ended': 'ACTIVE',
     'canceled': 'DELETED',
 }
+
+seed = os.urandom(16)
+uuid = UUID(bytes=seed, version=4)
 
 
 def log_mock():
@@ -76,7 +82,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(actions.update_event_description_from_eventbrite.call_args_list, [])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.all_event_dict(), [])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [])
 
     """
     🔽🔽🔽 Without academy
@@ -105,7 +111,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(actions.update_event_description_from_eventbrite.call_args_list, [])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.all_event_dict(), [])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [])
 
     """
     🔽🔽🔽 With academy
@@ -118,6 +124,8 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'create_or_update_organizer', create_or_update_organizer_mock())
     @patch.object(actions, 'update_event_description_from_eventbrite', MagicMock())
     @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('uuid.uuid4', PropertyMock(MagicMock=uuid))
+    @patch('os.urandom', MagicMock(return_value=seed))
     def test_update_or_create_event__with_academy(self):
         import logging
         import breathecode.events.actions as actions
@@ -151,7 +159,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'url': event['url'],
             'banner': event['logo']['url'],
             'tags': '',
-            'slug': 'geektalks-presentacion-de-proyectos-finales-1',
+            'slug': f'geektalks-presentacion-de-proyectos-finales-{uuid}',
             'capacity': event['capacity'],
             'currency': event['currency'],
             'starting_at': self.iso_to_datetime(event['start']['utc']),
@@ -175,10 +183,11 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'live_stream_url': None,
             'eventbrite_sync_description': '2021-11-23 09:10:58.295264+00:00',
             'host_user_id': None,
-            'free_for_bootcamps': None,
+            'free_for_bootcamps': True,
+            'uuid': uuid,
         }
 
-        self.assertEqual(self.all_event_dict(), [kwargs])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [kwargs])
 
     """
     🔽🔽🔽 With academy and event
@@ -190,6 +199,8 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'create_or_update_venue', create_or_update_venue_mock())
     @patch.object(actions, 'create_or_update_organizer', create_or_update_organizer_mock())
     @patch.object(actions, 'update_event_description_from_eventbrite', MagicMock())
+    @patch('uuid.uuid4', PropertyMock(MagicMock=uuid))
+    @patch('os.urandom', MagicMock(return_value=seed))
     def test_update_or_create_event__with_event(self):
         import logging
         import breathecode.events.actions as actions
@@ -231,7 +242,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'banner': event['logo']['url'],
             'capacity': event['capacity'],
             'tags': '',
-            'slug': 'geektalks-presentacion-de-proyectos-finales-1',
+            'slug': f'geektalks-presentacion-de-proyectos-finales-{uuid}',
             'starting_at': self.iso_to_datetime(event['start']['utc']),
             'ending_at': self.iso_to_datetime(event['end']['utc']),
             'host': None,
@@ -253,7 +264,8 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'live_stream_url': None,
             'eventbrite_sync_description': '2021-11-23 09:10:58.295264+00:00',
             'host_user_id': None,
-            'free_for_bootcamps': None,
+            'free_for_bootcamps': True,
+            'uuid': uuid,
         }
 
-        self.assertEqual(self.all_event_dict(), [kwargs])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [kwargs])

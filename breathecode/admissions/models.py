@@ -5,7 +5,7 @@ from django import forms
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
-from .signals import student_edu_status_updated, academy_saved, syllabus_version_json_updated, cohort_stage_updated
+from .signals import syllabus_version_json_updated
 from . import signals
 
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', None)
@@ -69,6 +69,7 @@ class Academy(models.Model):
                                 help_text='It has to be a square',
                                 default='/static/icons/picture.png')
     website_url = models.CharField(max_length=255, blank=True, null=True, default=None)
+    white_label_url = models.CharField(max_length=255, blank=True, null=True, default=None)
 
     street_address = models.CharField(max_length=250)
 
@@ -188,6 +189,7 @@ class Syllabus(models.Model):
 
     # by default a syllabus can be re-used by any other academy
     private = models.BooleanField(default=False)
+    is_documentation = models.BooleanField(default=False)
 
     # a syllabus can be shared with other academy, but only the academy owner can update or delete it
     academy_owner = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
@@ -303,6 +305,7 @@ COHORT_STAGE = (
 
 class Cohort(models.Model):
     _current_history_log = None
+    _old_stage = None
 
     slug = models.CharField(max_length=150, unique=True)
     name = models.CharField(max_length=150)
@@ -375,7 +378,7 @@ class Cohort(models.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._current_history_log = self.history_log
-        self.__old_stage = self.stage
+        self._old_stage = self.stage
 
     def clean(self):
         if self.stage:
@@ -409,7 +412,7 @@ class Cohort(models.Model):
         self.full_clean()
 
         stage_updated = False
-        if self.pk is None or self.__old_stage != self.stage:
+        if self.pk is None or self._old_stage != self.stage:
             stage_updated = True
 
         super().save(*args, **kwargs)

@@ -1,10 +1,9 @@
 import logging
-import serpy
-from breathecode.admissions.models import Cohort, Academy
-from breathecode.payments.models import AcademyService, Plan, PlanOfferTranslation, Service, ServiceItem, ServiceItemFeature, Subscription
+from breathecode.admissions.models import Cohort
+from breathecode.payments.models import AcademyService, Plan, PlanOfferTranslation, Service, ServiceItem, ServiceItemFeature
 from django.db.models.query_utils import Q
 from rest_framework.exceptions import ValidationError
-from breathecode.utils import serializers, custom_serpy
+from breathecode.utils import serializers, serpy
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -64,7 +63,7 @@ class GetGroupSerializer(serpy.Serializer):
 
 
 class GetServiceSmallSerializer(serpy.Serializer):
-    # title = serpy.Field()
+    title = serpy.Field()
     slug = serpy.Field()
     # description = serpy.Field()
     # owner = GetAcademySmallSerializer(many=False)
@@ -75,8 +74,8 @@ class GetServiceSmallSerializer(serpy.Serializer):
         return GetGroupSerializer(obj.groups.all(), many=True).data
 
 
-class GetServiceSerializer(custom_serpy.Serializer):
-    # title = serpy.Field()
+class GetServiceSerializer(serpy.Serializer):
+    title = serpy.Field()
     slug = serpy.Field()
     # description = serpy.Field()
     currency = GetCurrencySmallSerializer(many=False)
@@ -86,7 +85,7 @@ class GetServiceSerializer(custom_serpy.Serializer):
     groups = serpy.MethodField()
     cohorts = serpy.MethodField()
     mentorship_services = serpy.MethodField()
-    cohorts = custom_serpy.MethodField()
+    cohorts = serpy.MethodField()
 
     def get_groups(self, obj):
         return GetGroupSerializer(obj.groups.all(), many=True).data
@@ -139,6 +138,7 @@ class GetServiceItemSerializer(serpy.Serializer):
 
 
 class GetServiceItemFeatureShortSerializer(serpy.Serializer):
+    title = serpy.Field()
     description = serpy.Field()
     one_line_desc = serpy.Field()
 
@@ -175,7 +175,7 @@ class GetFinancingOptionSerializer(serpy.Serializer):
     currency = GetCurrencySmallSerializer()
 
 
-class GetPlanSmallSerializer(custom_serpy.Serializer):
+class GetPlanSmallSerializer(serpy.Serializer):
     # title = serpy.Field()
     slug = serpy.Field()
     # description = serpy.Field()
@@ -189,7 +189,7 @@ class GetPlanSmallSerializer(custom_serpy.Serializer):
     has_available_cohorts = serpy.MethodField()
 
     def get_has_available_cohorts(self, obj):
-        return obj.available_cohorts.exists()
+        return bool(obj.cohort_set)
 
     def get_service_items(self, obj):
         return GetServiceItemSerializer(obj.service_items.all(), many=True).data
@@ -212,14 +212,14 @@ class GetPlanSerializer(GetPlanSmallSerializer):
     owner = GetAcademySmallSerializer(required=False, many=False)
 
 
-class GetPlanOfferTranslationSerializer(custom_serpy.Serializer):
+class GetPlanOfferTranslationSerializer(serpy.Serializer):
     lang = serpy.Field()
     title = serpy.Field()
     description = serpy.Field()
     short_description = serpy.Field()
 
 
-class GetPlanOfferSerializer(custom_serpy.Serializer):
+class GetPlanOfferSerializer(serpy.Serializer):
     original_plan = GetPlanSerializer(required=False, many=False)
     suggested_plan = GetPlanSerializer(required=False, many=False)
     details = serpy.MethodField()
@@ -338,6 +338,16 @@ class GetMentorshipServiceSetSerializer(GetMentorshipServiceSetSmallSerializer):
         return GetAcademyServiceSmallSerializer(items, many=True).data
 
 
+class GetCohortSetSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    academy = GetAcademySmallSerializer(many=False)
+    cohorts = serpy.MethodField()
+
+    def get_cohorts(self, obj):
+        return GetCohortSerializer(obj.cohorts.filter(), many=True).data
+
+
 class GetEventTypeSerializer(serpy.Serializer):
 
     id = serpy.Field()
@@ -377,21 +387,15 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
     user = GetUserSmallSerializer(many=False)
     academy = GetAcademySmallSerializer(many=False)
 
-    selected_cohort = GetCohortSerializer(many=False, required=False)
+    selected_cohort_set = GetCohortSetSerializer(many=False, required=False)
     selected_mentorship_service_set = GetMentorshipServiceSetSerializer(many=False, required=False)
     selected_event_type_set = GetEventTypeSetSerializer(many=False, required=False)
 
-    plans = serpy.MethodField()
-    invoices = serpy.MethodField()
+    plans = serpy.ManyToManyField(GetPlanSmallSerializer(attr='plans', many=True))
+    invoices = serpy.ManyToManyField(GetInvoiceSerializer(attr='invoices', many=True))
 
     next_payment_at = serpy.Field()
     valid_until = serpy.Field()
-
-    def get_plans(self, obj):
-        return GetPlanSmallSerializer(obj.plans.filter(), many=True).data
-
-    def get_invoices(self, obj):
-        return GetInvoiceSerializer(obj.invoices.filter(), many=True).data
 
 
 class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
@@ -454,7 +458,7 @@ class ServiceItemSerializer(serializers.Serializer):
         return attrs
 
 
-class PlanSerializer(serializers.Serializer):
+class PlanSerializer(serializers.ModelSerializer):
     status_fields = ['status', 'renew_every_unit', 'trial_duration_unit', 'time_of_life_unit']
 
     class Meta:
@@ -463,3 +467,34 @@ class PlanSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         return attrs
+
+    def create(self, validated_data):
+        return Plan.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        for key in validated_data:
+            setattr(instance, key, validated_data[key])
+
+        instance.save()
+        return instance
+
+
+class PutPlanSerializer(PlanSerializer):
+    status_fields = ['status', 'renew_every_unit', 'trial_duration_unit', 'time_of_life_unit']
+
+    class Meta:
+        model = Plan
+        fields = '__all__'
+
+    def validate(self, attrs):
+        return attrs
+
+    def create(self, validated_data):
+        return Plan.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        for key in validated_data:
+            setattr(instance, key, validated_data[key])
+
+        instance.save()
+        return instance

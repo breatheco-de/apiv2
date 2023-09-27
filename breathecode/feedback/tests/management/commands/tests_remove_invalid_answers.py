@@ -1,19 +1,23 @@
 import random
 from unittest.mock import MagicMock, call, patch
+
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
 from ...mixins import FeedbackTestCase
 from breathecode.feedback.management.commands.remove_invalid_answers import Command
 import sys
 
 
-class TokenTestSuite(FeedbackTestCase):
+# class TokenTestSuite(FeedbackTestCase):
+class TestRemoveInvalidAnswers(LegacyAPITestCase):
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     @patch('sys.stdout.write', MagicMock())
-    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_run_handler(self):
         surveys = [{'cohort_id': n} for n in range(1, 4)]
-        cohort_users = [{'cohort_id': n, 'user_id': n} for n in range(1, 4)]
+        cohort_users = [{
+            'cohort_id': n,
+            'user_id': n,
+            'educational_status': random.choice(['POSTPONED', 'SUSPENDED', 'DROPPED'])
+        } for n in range(1, 4)]
         answers = [{
             'survey_id': n,
             'cohort_id': n,
@@ -89,5 +93,4 @@ class TokenTestSuite(FeedbackTestCase):
             self.bc.format.to_dict(answer_db[17]),
         ])
 
-        self.assertEqual(str(sys.stdout.write.call_args_list),
-                         str([call('Successfully deleted invalid answers\n')]))
+        self.bc.check.calls(sys.stdout.write.call_args_list, [call('Successfully deleted invalid answers\n')])

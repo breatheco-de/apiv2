@@ -293,7 +293,7 @@ class LeadTestSuite(MarketingTestCase):
             'academy': None,
             'latitude': self.bc.format.to_decimal_string(data['latitude']),
             'longitude': self.bc.format.to_decimal_string(data['longitude']),
-            'attribution_id': 1000,
+            'attribution_id': '75b36c508866d18732305da14fe9a0',
         })
 
         self.assertEqual(json, expected)
@@ -306,7 +306,7 @@ class LeadTestSuite(MarketingTestCase):
                 'latitude': Decimal(data['latitude']),
                 'longitude': Decimal(data['longitude']),
                 'storage_status_text': f"No academy found with slug {data['location']}",
-                'attribution_id': 1000,
+                'attribution_id': '75b36c508866d18732305da14fe9a0',
             })
         ])
 
@@ -355,10 +355,10 @@ class LeadTestSuite(MarketingTestCase):
             expected = post_serializer({
                 **data,
                 'id': model.academy.id,
-                'academy': model.academy.id,
+                'academy': model.academy.id if model.academy.id not in [1, 2] else None,
                 'latitude': self.bc.format.to_decimal_string(data['latitude']),
                 'longitude': self.bc.format.to_decimal_string(data['longitude']),
-                'attribution_id': 1000,
+                'attribution_id': '75b36c508866d18732305da14fe9a0',
             })
 
             self.assertEqual(json, expected)
@@ -367,11 +367,11 @@ class LeadTestSuite(MarketingTestCase):
                 form_entry_field({
                     **data,
                     'id': model.academy.id,
-                    'academy_id': model.academy.id,
+                    'academy_id': model.academy.id if model.academy.id not in [1, 2] else None,
                     'latitude': Decimal(data['latitude']),
                     'longitude': Decimal(data['longitude']),
                     'storage_status_text': 'No academy found with slug midgard',
-                    'attribution_id': 1000,
+                    'attribution_id': '75b36c508866d18732305da14fe9a0',
                 })
             ])
 

@@ -1,10 +1,12 @@
+import os
+from uuid import UUID
 from breathecode.events.caches import EventCache
 from django.urls.base import reverse_lazy
 
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from ..mixins.new_events_tests_case import EventTestCase
 from breathecode.services import datetime_to_iso_format
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, PropertyMock, call, patch
 
 
 def user_serializer(user):
@@ -13,6 +15,10 @@ def user_serializer(user):
         'id': user.id,
         'last_name': user.last_name,
     }
+
+
+seed = os.urandom(16)
+uuid = UUID(bytes=seed, version=4)
 
 
 def get_serializer(event, academy, data={}):
@@ -176,7 +182,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [{
+        self.assertEqual(self.bc.database.list_of('events.Event'), [{
             **self.model_to_dict(model, 'event'),
         }])
 
@@ -210,7 +216,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [{
+        self.assertEqual(self.bc.database.list_of('events.Event'), [{
             **self.model_to_dict(model, 'event'),
         }])
 
@@ -249,7 +255,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [self.model_to_dict(model, 'event')])
 
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__with_spaces(self):
@@ -282,7 +288,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [self.model_to_dict(model, 'event')])
 
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__starts_with_comma(self):
@@ -315,7 +321,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [self.model_to_dict(model, 'event')])
 
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__ends_with_comma(self):
@@ -348,7 +354,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [self.model_to_dict(model, 'event')])
 
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__one_tag_not_exists(self):
@@ -381,7 +387,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [self.model_to_dict(model, 'event')])
 
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__two_tags_not_exists(self):
@@ -414,7 +420,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [self.model_to_dict(model, 'event')])
 
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__one_of_two_tags_not_exists(self):
@@ -448,12 +454,14 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [self.model_to_dict(model, 'event')])
 
     """
     🔽🔽🔽 Put
     """
 
+    @patch('uuid.uuid4', PropertyMock(MagicMock=uuid))
+    @patch('os.urandom', MagicMock(return_value=seed))
     def test_academy_cohort_id__put(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -518,20 +526,21 @@ class AcademyEventIdTestSuite(EventTestCase):
             'slug': None,
             'live_stream_url': None,
             'host_user': 1,
-            'free_for_bootcamps': None,
+            'free_for_bootcamps': True,
+            'uuid': str(uuid),
             **data,
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(self.all_event_dict(), [{
+        self.assertEqual(self.bc.database.list_of('events.Event'), [{
             **self.model_to_dict(model, 'event'),
             **data,
             'organization_id': 1,
             'starting_at': current_date,
             'ending_at': current_date,
             'slug': None,
-            'free_for_bootcamps': None,
+            'free_for_bootcamps': True,
         }])
 
     """
@@ -570,7 +579,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [{
+        self.assertEqual(self.bc.database.list_of('events.Event'), [{
             **self.model_to_dict(model, 'event'),
         }])
 
@@ -614,7 +623,7 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [{
+        self.assertEqual(self.bc.database.list_of('events.Event'), [{
             **self.model_to_dict(model, 'event'),
         }])
 
@@ -653,11 +662,13 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [{
+        self.assertEqual(self.bc.database.list_of('events.Event'), [{
             **self.model_to_dict(model, 'event'),
         }])
 
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
+    @patch('uuid.uuid4', PropertyMock(MagicMock=uuid))
+    @patch('os.urandom', MagicMock(return_value=seed))
     def test_academy_cohort_id__put__with_tags(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -719,19 +730,20 @@ class AcademyEventIdTestSuite(EventTestCase):
             'currency': 'USD',
             'live_stream_url': None,
             'host_user': 1,
-            'free_for_bootcamps': None,
+            'free_for_bootcamps': True,
+            'uuid': str(uuid),
             **data,
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(self.all_event_dict(), [{
+        self.assertEqual(self.bc.database.list_of('events.Event'), [{
             **self.model_to_dict(model, 'event'),
             **data,
             'organization_id': 1,
             'starting_at': current_date,
             'ending_at': current_date,
-            'free_for_bootcamps': None,
+            'free_for_bootcamps': True,
         }])
 
     """
@@ -739,6 +751,8 @@ class AcademyEventIdTestSuite(EventTestCase):
     """
 
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
+    @patch('uuid.uuid4', PropertyMock(MagicMock=uuid))
+    @patch('os.urandom', MagicMock(return_value=seed))
     def test_academy_cohort_id__put__with_duplicate_tags(self):
         self.headers(academy=1)
 
@@ -811,19 +825,20 @@ class AcademyEventIdTestSuite(EventTestCase):
             'currency': 'USD',
             'live_stream_url': None,
             'host_user': 1,
-            'free_for_bootcamps': None,
+            'free_for_bootcamps': True,
+            'uuid': str(uuid),
             **data,
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(self.all_event_dict(), [{
+        self.assertEqual(self.bc.database.list_of('events.Event'), [{
             **self.model_to_dict(model, 'event'),
             **data,
             'organization_id': 1,
             'starting_at': current_date,
             'ending_at': current_date,
-            'free_for_bootcamps': None,
+            'free_for_bootcamps': True,
         }])
 
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())

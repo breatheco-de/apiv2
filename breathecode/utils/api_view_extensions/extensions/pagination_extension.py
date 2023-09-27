@@ -13,7 +13,7 @@ REQUIREMENTS = ['cache']
 OFFSET_QUERY_PARAM = 'offset'
 LIMIT_QUERY_PARAM = 'limit'
 MAX_LIMIT = None
-DEFAULT_LIMIT = 100
+DEFAULT_LIMIT = 1000
 
 
 def _positive_int(integer_string, strict=False, cutoff=None):

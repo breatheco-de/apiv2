@@ -44,6 +44,7 @@ def feature_serializer(service_item_feature):
     return {
         'description': service_item_feature.description,
         'one_line_desc': service_item_feature.one_line_desc,
+        'title': service_item_feature.title,
     }
 
 
@@ -56,6 +57,7 @@ def get_serializer(service_item, service, service_item_features=[], data={}):
             'groups': [],
             'private': service.private,
             'slug': service.slug,
+            'title': service.title,
         },
         'unit_type': service_item.unit_type,
         **data,

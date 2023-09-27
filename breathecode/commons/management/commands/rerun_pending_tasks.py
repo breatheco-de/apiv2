@@ -14,7 +14,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         utc_now = datetime.utcnow()
         tolerance = timedelta(minutes=TOLERANCE)
-        ids = TaskManager.objects.filter(last_run__gt=utc_now - tolerance,
+        ids = TaskManager.objects.filter(last_run__lt=utc_now - tolerance,
                                          status='PENDING').values_list('id', flat=True)
 
         for id in ids:

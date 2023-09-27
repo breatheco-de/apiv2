@@ -7,7 +7,7 @@ from traitlets import Instance
 from breathecode.admissions.actions import ImportCohortTimeSlots
 from django.db.models import Q
 from breathecode.assignments.models import Task
-from breathecode.utils import ValidationException, localize_query, SerpyExtensions, serializers
+from breathecode.utils import ValidationException, localize_query, serializers, serpy
 from django.contrib.auth.models import User
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
 from breathecode.assignments.serializers import TaskGETSmallSerializer
@@ -291,8 +291,8 @@ class GetSyllabusVersionSerializer(serpy.Serializer):
 class SmallCohortTimeSlotSerializer(serpy.Serializer):
     """The serializer schema definition."""
     id = serpy.Field()
-    starting_at = SerpyExtensions.DatetimeIntegerField()
-    ending_at = SerpyExtensions.DatetimeIntegerField()
+    starting_at = serpy.DatetimeIntegerField()
+    ending_at = serpy.DatetimeIntegerField()
     recurrent = serpy.Field()
     recurrency_type = serpy.Field()
 
@@ -338,17 +338,12 @@ class PublicCohortSerializer(serpy.Serializer):
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
     remote_available = serpy.Field()
-    schedule = GetSmallSyllabusScheduleSerializer(required=False)
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
     academy = GetAcademySerializer()
     distance = serpy.MethodField()
     timezone = serpy.Field()
     schedule = GetSmallSyllabusScheduleSerializer(required=False)
-    timeslots = serpy.MethodField()
-
-    def get_timeslots(self, obj):
-        timeslots = CohortTimeSlot.objects.filter(cohort__id=obj.id)
-        return SmallCohortTimeSlotSerializer(timeslots, many=True).data
+    timeslots = serpy.ManyToManyField(SmallCohortTimeSlotSerializer(attr='cohorttimeslot_set', many=True))
 
     def get_distance(self, obj):
         if not obj.latitude or not obj.longitude or not obj.academy.latitude or not obj.academy.longitude:
@@ -462,8 +457,8 @@ class GETCohortTimeSlotSerializer(serpy.Serializer):
     """The serializer schema definition."""
     id = serpy.Field()
     cohort = serpy.MethodField()
-    starting_at = SerpyExtensions.DatetimeIntegerField()
-    ending_at = SerpyExtensions.DatetimeIntegerField()
+    starting_at = serpy.DatetimeIntegerField()
+    ending_at = serpy.DatetimeIntegerField()
     recurrent = serpy.Field()
     recurrency_type = serpy.Field()
     created_at = serpy.Field()
@@ -477,8 +472,8 @@ class GETSyllabusScheduleTimeSlotSerializer(serpy.Serializer):
     """The serializer schema definition."""
     id = serpy.Field()
     schedule = serpy.MethodField()
-    starting_at = SerpyExtensions.DatetimeIntegerField()
-    ending_at = SerpyExtensions.DatetimeIntegerField()
+    starting_at = serpy.DatetimeIntegerField()
+    ending_at = serpy.DatetimeIntegerField()
     recurrent = serpy.Field()
     recurrency_type = serpy.Field()
     created_at = serpy.Field()

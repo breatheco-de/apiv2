@@ -44,8 +44,14 @@ class Database:
 
     # @override_settings(DEBUG=True)
     def print_queries(self, db='default'):
+        print()
+        print('---------------- Queries ----------------\n')
         for query in connections[db].queries:
             print(f'{query["time"]} {query["sql"]}\n')
+
+        print('----------------- Count -----------------\n')
+        print(f'Queries: {len(connections[db].queries)}\n')
+        print('-----------------------------------------\n')
 
     @classmethod
     def get_model(cls, path: str) -> Model:
@@ -587,7 +593,14 @@ class Database:
         get credentials.
         """
 
-        return GenerateModelsMixin.generate_models(self._parent, _new_implementation=True, *args, **kwargs)
+        #TODO: remove it in a future
+        if self._parent:
+            return GenerateModelsMixin.generate_models(self._parent,
+                                                       _new_implementation=True,
+                                                       *args,
+                                                       **kwargs)
+
+        return GenerateModelsMixin().generate_models(_new_implementation=True, *args, **kwargs)
 
     @database_sync_to_async
     def async_create(self, *args, **kwargs) -> dict[str, Model | list[Model]]:

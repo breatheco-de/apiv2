@@ -14,16 +14,16 @@ from breathecode.payments import tasks
 UTC_NOW = timezone.now()
 
 
-def consumption_session(live_class, cohort, user, consumable, data={}):
+def consumption_session(live_class, cohort_set, user, consumable, data={}):
     return {
         'consumable_id': consumable.id,
         'duration': timedelta(),
         'eta': ...,
         'how_many': 1.0,
         'id': 0,
-        'path': 'admissions.Cohort',
-        'related_id': cohort.id,
-        'related_slug': cohort.slug,
+        'path': 'payments.CohortSet',
+        'related_id': cohort_set.id,
+        'related_slug': cohort_set.slug,
         'request': {
             'args': [],
             'headers': {
@@ -221,7 +221,7 @@ class AcademyEventTestSuite(EventTestCase):
 
     # Given: no Consumable, with LiveClass, CohortUser, User have Group and Permission
     # When: Feature flag set to False, right hash and cohort.live_class_join set
-    # Then: return 301 to cohort.online_meeting_url
+    # Then: return 302 to cohort.online_meeting_url
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes',
            MagicMock(return_value=False))
@@ -260,7 +260,7 @@ class AcademyEventTestSuite(EventTestCase):
                 f.write(expected)
 
         self.assertEqual(content, expected)
-        self.assertEqual(response.status_code, 301)
+        self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, online_meeting_url)
 
         self.assertEqual(self.bc.database.list_of('events.LiveClass'), [
@@ -475,14 +475,18 @@ class AcademyEventTestSuite(EventTestCase):
         cohort = {'online_meeting_url': online_meeting_url, 'available_as_saas': True}
         delta = timedelta(seconds=random.randint(1, 1000))
         live_class = {'starting_at': UTC_NOW - delta, 'ending_at': UTC_NOW + delta}
+        academy = {'available_as_saas': True}
         model = self.bc.database.create(user=1,
                                         group=1,
                                         permission=permission,
                                         live_class=live_class,
                                         cohort_user=1,
                                         cohort=cohort,
+                                        cohort_set=1,
+                                        cohort_set_cohort=1,
                                         consumable=1,
-                                        token=1)
+                                        token=1,
+                                        academy=academy)
         querystring = self.bc.format.to_querystring({'token': model.token.key})
 
         url = reverse_lazy('events:me_event_liveclass_join_hash', kwargs={'hash': model.live_class.hash
@@ -502,7 +506,7 @@ class AcademyEventTestSuite(EventTestCase):
                 f.write(expected)
 
         self.assertEqual(content, expected)
-        self.assertEqual(response.status_code, 301)
+        self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, online_meeting_url)
 
         self.assertEqual(self.bc.database.list_of('events.LiveClass'), [
@@ -514,7 +518,7 @@ class AcademyEventTestSuite(EventTestCase):
 
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             consumption_session(model.live_class,
-                                model.cohort,
+                                model.cohort_set,
                                 model.user,
                                 model.consumable,
                                 data={
@@ -544,14 +548,18 @@ class AcademyEventTestSuite(EventTestCase):
         cohort = {'online_meeting_url': online_meeting_url, 'available_as_saas': True}
         delta = timedelta(seconds=random.randint(1, 1000))
         live_class = {'starting_at': UTC_NOW + delta, 'ending_at': UTC_NOW + delta}
+        academy = {'available_as_saas': True}
         model = self.bc.database.create(user=1,
                                         group=1,
                                         permission=permission,
                                         live_class=live_class,
                                         cohort_user=1,
                                         cohort=cohort,
+                                        cohort_set=1,
+                                        cohort_set_cohort=1,
                                         consumable=1,
-                                        token=1)
+                                        token=1,
+                                        academy=academy)
         querystring = self.bc.format.to_querystring({'token': model.token.key})
 
         url = reverse_lazy('events:me_event_liveclass_join_hash', kwargs={'hash': model.live_class.hash
@@ -582,7 +590,7 @@ class AcademyEventTestSuite(EventTestCase):
 
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
             consumption_session(model.live_class,
-                                model.cohort,
+                                model.cohort_set,
                                 model.user,
                                 model.consumable,
                                 data={

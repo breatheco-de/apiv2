@@ -2040,8 +2040,8 @@ class GitpodTestSuite(ProvisioningTestCase):
 
         cohort = {
             'academy_id': 1,
-            'kickoff_date': self.bc.datetime.now() + timedelta(days=1),
-            'ending_date': self.bc.datetime.now() - timedelta(days=1),
+            'kickoff_date': datetime.utcnow() + timedelta(days=1),
+            'ending_date': datetime.utcnow() - timedelta(days=1),
         }
 
         model = self.bc.database.create(user=10,

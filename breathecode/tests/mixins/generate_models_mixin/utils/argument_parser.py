@@ -1,4 +1,7 @@
+from datetime import datetime
 from typing import Any
+
+import pytz
 
 from breathecode.tests.mixins.generate_models_mixin.exceptions import BadArgument
 
@@ -8,12 +11,20 @@ list_of_args = list[tuple[int, dict[str, Any]]]
 args = list[tuple[int, dict[str, Any]]]
 
 
+def argument_fixer(arg: dict) -> Any:
+    for key in arg:
+        if isinstance(arg[key], datetime):
+            if arg[key].tzinfo is None:
+                arg[key] = arg[key].replace(tzinfo=pytz.utc)
+    return arg
+
+
 def integer_parser(arg: int) -> args:
     return (arg, dict())
 
 
 def dict_parser(arg: int) -> args:
-    return (1, arg or dict())
+    return (1, argument_fixer(arg or dict()))
 
 
 def boolean_parser(arg: int) -> args:
@@ -25,10 +36,10 @@ def tuple_parser(arg: tuple[Any, Any]) -> list_of_args:
         raise BadArgument('The tuple should have length of two elements')
 
     if isinstance(arg[0], int) and isinstance(arg[1], dict):
-        return (arg[0], arg[1] or dict())
+        return (arg[0], argument_fixer(arg[1] or dict()))
 
     if isinstance(arg[0], int) and isinstance(arg[1], dict):
-        return (arg[1], arg[0] or dict())
+        return (arg[1], argument_fixer(arg[0] or dict()))
 
     raise BadArgument(f'The tuple[{arg[0].__class__.__name__}, {arg[0].__class__.__name__}] is invalid')
 

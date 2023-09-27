@@ -1,18 +1,21 @@
 from unittest.mock import MagicMock, patch
-from ..mixins.new_auth_test_case import AuthTestCase
+
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
 
 
 def capitalize(string: str) -> str:
     return string[0].upper() + string[1:]
 
 
-class ModelProfileAcademyTestSuite(AuthTestCase):
+class TestModelProfileAcademy(LegacyAPITestCase):
     """
     🔽🔽🔽 Adding a ProfileAcademy, with bad role
     """
 
     @patch('django.db.models.signals.post_save.send', MagicMock())
-    def test_adding_a_profile_academy__with_bad_role(self):
+    def test_adding_a_profile_academy__with_bad_role(self, enable_signals):
+        enable_signals()
+
         group = {'name': 'Student'}
         model = self.bc.database.create(profile_academy=1, group=group)
         model.profile_academy.delete()
@@ -25,7 +28,9 @@ class ModelProfileAcademyTestSuite(AuthTestCase):
     """
 
     @patch('django.db.models.signals.post_save.send', MagicMock())
-    def test_adding_a_profile_academy__with_right_role__status_invited(self):
+    def test_adding_a_profile_academy__with_right_role__status_invited(self, enable_signals):
+        enable_signals()
+
         cases = ['student', 'teacher']
         for case in cases:
             group_name = capitalize(case)
@@ -46,7 +51,9 @@ class ModelProfileAcademyTestSuite(AuthTestCase):
     """
 
     @patch('django.db.models.signals.post_save.send', MagicMock())
-    def test_adding_a_profile_academy__with_right_role__status_active(self):
+    def test_adding_a_profile_academy__with_right_role__status_active(self, enable_signals):
+        enable_signals()
+
         cases = ['student', 'teacher']
         for case in cases:
             group_name = capitalize(case)
@@ -66,7 +73,9 @@ class ModelProfileAcademyTestSuite(AuthTestCase):
     """
 
     @patch('django.db.models.signals.post_save.send', MagicMock())
-    def test_adding_two_profile_academy__with_right_role__status_active(self):
+    def test_adding_two_profile_academy__with_right_role__status_active(self, enable_signals):
+        enable_signals()
+
         cases = ['student', 'teacher']
         for case in cases:
             group_name = capitalize(case)
@@ -84,12 +93,14 @@ class ModelProfileAcademyTestSuite(AuthTestCase):
             self.bc.database.delete('auth.Group')
 
 
-class ModelMentorProfileTestSuite(AuthTestCase):
+class TestModelMentorProfile(LegacyAPITestCase):
     """
     🔽🔽🔽 Adding a ProfileAcademy
     """
 
-    def test_adding_a_mentor_profile(self):
+    def test_adding_a_mentor_profile(self, enable_signals):
+        enable_signals()
+
         group = {'name': 'Mentor'}
         model = self.bc.database.create(mentor_profile=1, group=group)
 
@@ -102,7 +113,9 @@ class ModelMentorProfileTestSuite(AuthTestCase):
     🔽🔽🔽 Adding two ProfileAcademy
     """
 
-    def test_adding_two_mentor_profile(self):
+    def test_adding_two_mentor_profile(self, enable_signals):
+        enable_signals()
+
         group = {'name': 'Mentor'}
         model = self.bc.database.create(mentor_profile=2, group=group)
 

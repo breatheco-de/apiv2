@@ -147,7 +147,7 @@ def api_url():
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def send_cohort_survey(self, user_id, survey_id):
-    logger.debug('Starting send_cohort_survey')
+    logger.info('Starting send_cohort_survey')
     survey = Survey.objects.filter(id=survey_id).first()
     if survey is None:
         logger.error('Survey not found')
@@ -178,7 +178,7 @@ def send_cohort_survey(self, user_id, survey_id):
     has_slackuser = hasattr(user, 'slackuser')
     if not user.email and not has_slackuser:
         message = f'Author not have email and slack, this survey cannot be send by {str(user.id)}'
-        logger.debug(message)
+        logger.info(message)
         raise Exception(message)
 
     token, created = Token.get_or_create(user, token_type='temporal', hours_length=48)
@@ -218,7 +218,7 @@ def process_student_graduation(self, cohort_id, user_id):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def recalculate_survey_scores(self, survey_id):
-    logger.debug('Starting recalculate_survey_score')
+    logger.info('Starting recalculate_survey_score')
 
     survey = Survey.objects.filter(id=survey_id).first()
     if survey is None:
@@ -288,7 +288,7 @@ def process_answer_received(self, answer_id):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def send_mentorship_session_survey(self, session_id):
-    logger.debug('Starting send_mentorship_session_survey')
+    logger.info('Starting send_mentorship_session_survey')
     session = MentorshipSession.objects.filter(id=session_id).first()
     if session is None:
         logger.error('Mentoring session not found', slug='without-mentorship-session')
@@ -326,14 +326,14 @@ def send_mentorship_session_survey(self, session_id):
         answer.status = 'SENT'
         answer.save()
     elif answer.status == 'ANSWERED':
-        logger.debug(f'This survey about MentorshipSession {session.id} was answered',
-                     slug='answer-with-status-answered')
+        logger.info(f'This survey about MentorshipSession {session.id} was answered',
+                    slug='answer-with-status-answered')
         return False
 
     has_slackuser = hasattr(session.mentee, 'slackuser')
     if not session.mentee.email:
         message = f'Author not have email, this survey cannot be send by {session.mentee.id}'
-        logger.debug(message, slug='mentee-without-email')
+        logger.info(message, slug='mentee-without-email')
         return False
 
     token, created = Token.get_or_create(session.mentee, token_type='temporal', hours_length=48)

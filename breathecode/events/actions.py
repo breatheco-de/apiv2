@@ -47,18 +47,23 @@ def get_my_event_types(_user):
 
         def process_i_owe_you(i_owe_them: QuerySet[AbstractIOweYou]):
             for i_owe_you in i_owe_them:
-                if (i_owe_you.selected_cohort and i_owe_you.selected_cohort.academy
-                        and i_owe_you.selected_cohort.academy not in academies):
-                    academies.append(i_owe_you.selected_cohort.academy)
+                if (i_owe_you.selected_cohort_set and i_owe_you.selected_cohort_set.cohorts.first().academy
+                        and i_owe_you.selected_cohort_set.cohorts.first().academy not in academies):
+                    academies.append(i_owe_you.selected_cohort_set.cohorts.first().academy)
 
-                if i_owe_you.selected_cohort and i_owe_you.selected_cohort not in cohorts:
-                    cohorts.append(i_owe_you.selected_cohort)
+                if i_owe_you.selected_cohort_set and i_owe_you.selected_cohort_set.cohorts.first(
+                ) not in cohorts:
+                    cohorts.append(i_owe_you.selected_cohort_set.cohorts.first())
 
-                if (i_owe_you.selected_cohort and i_owe_you.selected_cohort.syllabus_version
-                        and i_owe_you.selected_cohort.syllabus_version.syllabus not in syllabus):
+                if (i_owe_you.selected_cohort_set
+                        and i_owe_you.selected_cohort_set.cohorts.first().syllabus_version
+                        and i_owe_you.selected_cohort_set.cohorts.first().syllabus_version.syllabus
+                        not in syllabus):
                     syllabus.append({
-                        'syllabus': i_owe_you.selected_cohort.syllabus_version.syllabus,
-                        'academy': i_owe_you.selected_cohort.academy,
+                        'syllabus':
+                        i_owe_you.selected_cohort_set.cohorts.first().syllabus_version.syllabus,
+                        'academy':
+                        i_owe_you.selected_cohort_set.cohorts.first().academy,
                     })
 
                 if (i_owe_you.selected_event_type_set
@@ -81,7 +86,7 @@ def get_my_event_types(_user):
 
         utc_now = timezone.now()
         statuses = ['CANCELLED', 'DEPRECATED']
-        at_least_one_resource_linked = (Q(selected_cohort__isnull=False)
+        at_least_one_resource_linked = (Q(selected_cohort_set__isnull=False)
                                         | Q(selected_mentorship_service_set__isnull=False)
                                         | Q(selected_event_type_set__isnull=False))
 
@@ -505,7 +510,7 @@ def update_or_create_event(data, org):
 
 def publish_event_from_eventbrite(data, org: Organization) -> None:
     if not data:  #skip if no data
-        logger.debug('Ignored event')
+        logger.info('Ignored event')
         raise ValueError('data is empty')
 
     now = get_current_iso_string()
@@ -521,7 +526,7 @@ def publish_event_from_eventbrite(data, org: Organization) -> None:
             event.eventbrite_sync_description = now
             event.eventbrite_sync_status = 'PERSISTED'
             event.save()
-            logger.debug(f'The events with the eventbrite id `{data["id"]}` were saved')
+            logger.info(f'The events with the eventbrite id `{data["id"]}` were saved')
         return events.first()
 
     except Warning as e:
