@@ -568,7 +568,7 @@ class AssetView(APIView, GenerateLookupsMixin):
             lookup['status__in'] = [p.upper() for p in param.split(',')]
 
         try:
-            if 'academy' in self.request.GET:
+            if 'academy' in self.request.GET and self.request.GET.get('academy') not in ['null', '']:
                 param = self.request.GET.get('academy')
                 lookup['academy__in'] = [int(p) for p in param.split(',')]
         except:

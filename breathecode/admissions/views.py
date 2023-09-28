@@ -1479,6 +1479,11 @@ class SyllabusView(APIView):
         items = Syllabus.objects.filter(Q(academy_owner__id=academy_id)
                                         | Q(private=False)).exclude(academy_owner__isnull=True)
 
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
+
+
         items = handler.queryset(items)
         serializer = GetSyllabusSerializer(items, many=True)
 
