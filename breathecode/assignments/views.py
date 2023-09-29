@@ -569,7 +569,7 @@ class TaskMeView(APIView):
 
         a_slug = request.GET.get('associated_slug', None)
         if a_slug is not None:
-            items = items.filter(associated_slug__in=a_slug.split(','))
+            items = items.filter(associated_slug__in=[p.lower() for p in a_slug.split(',')])
 
         items = handler.queryset(items)
 
