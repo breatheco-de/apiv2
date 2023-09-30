@@ -1483,7 +1483,6 @@ class SyllabusView(APIView):
         if like is not None:
             items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
 
-
         items = handler.queryset(items)
         serializer = GetSyllabusSerializer(items, many=True)
 

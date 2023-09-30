@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 import pytest
 from scripts.utils.environment import reset_environment, test_environment
@@ -8,6 +9,7 @@ from faker import Faker
 from urllib3.connectionpool import HTTPConnectionPool
 from django.db.models.signals import ModelSignal
 from breathecode.notify.utils.hook_manager import HookManagerClass
+from django.utils import timezone
 
 # set ENV as test before run django
 os.environ['ENV'] = 'test'
@@ -27,6 +29,22 @@ def pytest_configure():
 @pytest.fixture
 def bc(request):
     return Breathecode(request.instance)
+
+
+@pytest.fixture
+def set_datetime(monkeypatch):
+
+    def patch(new_datetime):
+        monkeypatch.setattr(timezone, 'now', lambda: new_datetime)
+
+    yield patch
+
+
+@pytest.fixture
+def utc_now(set_datetime):
+    utc_now = timezone.now()
+    set_datetime(utc_now)
+    yield utc_now
 
 
 @pytest.fixture(autouse=True)
