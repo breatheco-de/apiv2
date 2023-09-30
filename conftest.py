@@ -32,7 +32,7 @@ def bc(request):
 
 
 @pytest.fixture
-def freeze_the_datetime(monkeypatch):
+def set_datetime(monkeypatch):
 
     def patch(new_datetime):
         monkeypatch.setattr(timezone, 'now', lambda: new_datetime)
@@ -41,9 +41,9 @@ def freeze_the_datetime(monkeypatch):
 
 
 @pytest.fixture
-def utc_now(freeze_the_datetime):
+def utc_now(set_datetime):
     utc_now = timezone.now()
-    freeze_the_datetime(utc_now)
+    set_datetime(utc_now)
     yield utc_now
 
 
