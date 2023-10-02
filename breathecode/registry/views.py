@@ -499,14 +499,14 @@ class AssetView(APIView, GenerateLookupsMixin):
 
         items = Asset.objects.all()
         lookup = {}
-
-        if 'author' in self.request.GET:
-            param = self.request.GET.get('author')
-            lookup['author__id'] = param
-
-        if 'owner' in self.request.GET:
-            param = self.request.GET.get('owner')
-            lookup['owner__id'] = param
+        query = handler.lookup.build(
+            lang,
+            strings={'iexact': [
+                'test_status',
+                'sync_status',
+            ]},
+            ids=['author', 'owner'],
+        )
 
         like = request.GET.get('like', None)
         if like is not None:
@@ -521,14 +521,6 @@ class AssetView(APIView, GenerateLookupsMixin):
         if 'category' in self.request.GET:
             param = self.request.GET.get('category')
             lookup['category__slug__in'] = [p for p in param.split(',')]
-
-        if 'test_status' in self.request.GET:
-            param = self.request.GET.get('test_status')
-            lookup['test_status__iexact'] = param
-
-        if 'sync_status' in self.request.GET:
-            param = self.request.GET.get('sync_status')
-            lookup['sync_status__iexact'] = param
 
         if 'slug' in self.request.GET:
             asset_type = self.request.GET.get('asset_type', None)
@@ -609,12 +601,12 @@ class AssetView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('exclude_category')
             items = items.exclude(category__slug__in=[p for p in param.split(',') if p])
 
-        items = items.filter(**lookup)
+        items = items.filter(query, **lookup)
         items = handler.queryset(items)
 
         if 'big' in self.request.GET:
             serializer = AssetMidSerializer(items, many=True)
-        elif 'with_techs' in self.request.GET:
+        elif 'expand' in self.request.GET and self.request.GET.get('expand') == 'technologies':
             serializer = AssetAndTechnologySerializer(items, many=True)
         else:
             serializer = AssetSerializer(items, many=True)

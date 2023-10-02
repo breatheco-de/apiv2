@@ -27,7 +27,7 @@ from .views import (
 
 app_name = 'registry'
 urlpatterns = [
-    path('asset', AssetView.as_view()),
+    path('asset', AssetView.as_view(), name='assets'),
     path('asset/test', handle_test_asset),
     path('asset/thumbnail/<str:asset_slug>', AssetThumbnailView.as_view(), name='asset_thumbnail_slug'),
     path('asset/preview/<str:asset_slug>', render_preview_html),
