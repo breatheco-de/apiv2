@@ -26,12 +26,16 @@ from django.http import HttpResponse
 @private_view()
 def render_html_all_bills(request, token):
 
-    status_maper = {
-        'DUE': 'under review',
-        'APPROVED': 'ready to pay',
-        'PAID': 'already paid',
-        'IGNORED': 'ignored',
-    }
+    def map_status(_status):
+        status_maper = {
+            'DUE': 'under review',
+            'APPROVED': 'ready to pay',
+            'PAID': 'already paid',
+            'IGNORED': 'ignored',
+        }
+        if _status not in status_maper: return _status
+        return status_maper[_status]
+        
 
     lookup = {}
 
@@ -53,8 +57,8 @@ def render_html_all_bills(request, token):
     data = {
         'status': status,
         'token': token.key,
-        'title': f'Payments {status_maper[status]}',
-        'possible_status': [(key, status_maper[key]) for key, label in BILL_STATUS],
+        'title': f'Payments {map_status(status)}',
+        'possible_status': [(key, map_status(key)) for key, label in BILL_STATUS],
         'bills': serializer.data,
         'total_price': total_price
     }
