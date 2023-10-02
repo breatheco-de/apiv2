@@ -321,10 +321,12 @@ def async_delete_asset_images(asset_slug):
 @shared_task
 def async_update_frontend_asset_cache(asset):
     try:
+        if os.getenv('APP_URL', '') != 'production':
+            return
         logger.info(f'async_remove_img_from_cloud')
-        URL = os.getenv('APP_URL', '') + '/api/update/asset'
+        URL = os.getenv('APP_URL', '') + f'/api/update/asset/{asset.slug}'
         serializer = AssetSerializer(asset, many=False)
-        r = requests.put(url=URL, data=serializer.data)
+        requests.put(url=URL)
     except Exception as e:
         logger.error(str(e))
 
