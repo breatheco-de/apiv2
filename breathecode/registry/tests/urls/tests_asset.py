@@ -1,5 +1,4 @@
 import pytest
-from unittest.mock import MagicMock, call
 from django.urls.base import reverse_lazy
 from breathecode.tests.mixins.legacy import LegacyAPITestCase
 from django.utils import timezone
