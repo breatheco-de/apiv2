@@ -321,7 +321,7 @@ def async_delete_asset_images(asset_slug):
 @shared_task
 def async_update_frontend_asset_cache(asset):
     try:
-        if os.getenv('APP_URL', '') != 'production':
+        if os.getenv('ENV', '') != 'production':
             return
         logger.info(f'async_remove_img_from_cloud')
         URL = os.getenv('APP_URL', '') + f'/api/update/asset/{asset.slug}'
