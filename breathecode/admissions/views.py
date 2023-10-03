@@ -1896,8 +1896,8 @@ class CohortJoinView(APIView):
         if not resource:
             raise ValidationException(translation(
                 lang,
-                en='You can\'t join to this cohort due to you didn\'t subscribe to it',
-                es='No puedes unirte a esta cohorte porque no te has suscrito a ella',
+                en='Your current subscription does not include access to this cohort',
+                es='Tus subscripciones actuales no incluyen poder acceder a esta cohort',
                 slug='not-subscribed'),
                                       code=400)
 
