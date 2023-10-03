@@ -29,6 +29,21 @@ def bc(request):
     return Breathecode(request.instance)
 
 
+@pytest.fixture
+def client():
+    from django.test.client import Client
+
+    return Client()
+
+
+from django.core.cache import cache
+
+
+@pytest.fixture(autouse=True)
+def clear_cache():
+    cache.clear()
+
+
 @pytest.fixture(autouse=True)
 def enable_hook_manager(monkeypatch):
     """

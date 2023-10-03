@@ -74,58 +74,57 @@ def get_serializer_technology(technology, data={}):
     }
 
 
-class TestRegistryAsset(LegacyAPITestCase):
+def test_with_no_assets(bc: Breathecode, client):
 
-    def test_with_no_assets(self, bc: Breathecode):
+    url = reverse_lazy('registry:assets')
+    response = client.get(url)
+    json = response.json()
 
-        Asset = bc.database.get_model('registry.Asset')
+    assert json == []
+    assert bc.database.list_of('registry.Asset') == []
 
-        url = reverse_lazy('registry:assets')
-        response = self.client.get(url)
-        json = response.json()
 
-        assert bc.database.list_of('registry.Asset') == []
-        assert json == []
+def test_one_asset(bc: Breathecode, client):
 
-    def test_one_asset(self, bc: Breathecode):
+    model = bc.database.create(asset=1)
 
-        model = bc.database.create(asset=1)
+    url = reverse_lazy('registry:assets')
+    response = client.get(url)
+    json = response.json()
 
-        url = reverse_lazy('registry:assets')
-        response = self.client.get(url)
-        json = response.json()
+    expected = [get_serializer(model.asset)]
 
-        expected = [get_serializer(model.asset)]
+    assert json == expected
+    assert bc.database.list_of('registry.Asset') == [bc.format.to_dict(model.asset)]
 
-        assert json == expected
-        assert bc.database.list_of('registry.Asset') == [bc.format.to_dict(model.asset)]
 
-    def test_many_assets(self, bc: Breathecode):
+def test_many_assets(bc: Breathecode, client):
 
-        model = bc.database.create(asset=3)
+    model = bc.database.create(asset=3)
 
-        url = reverse_lazy('registry:assets')
-        response = self.client.get(url)
-        json = response.json()
+    url = reverse_lazy('registry:assets')
+    response = client.get(url)
+    json = response.json()
 
-        expected = [get_serializer(asset) for asset in model.asset]
+    expected = [get_serializer(asset) for asset in model.asset]
 
-        assert json == expected
-        assert bc.database.list_of('registry.Asset') == bc.format.to_dict(model.asset)
+    assert json == expected
+    assert bc.database.list_of('registry.Asset') == bc.format.to_dict(model.asset)
 
-    def test_assets_technologies_expand(self, bc: Breathecode):
 
-        technology = {'slug': 'learn-react', 'title': 'Learn React'}
-        model = bc.database.create(asset_technology=(1, technology), asset=(3, {'technologies': 1}))
+def test_assets_technologies_expand(bc: Breathecode, client):
 
-        url = reverse_lazy('registry:assets') + f'?expand=technologies'
-        response = self.client.get(url)
-        json = response.json()
+    technology = {'slug': 'learn-react', 'title': 'Learn React'}
+    model = bc.database.create(asset_technology=(1, technology), asset=(3, {'technologies': 1}))
 
-        expected = [
-            get_serializer(asset, data={'technologies': [get_serializer_technology(model.asset_technology)]})
-            for asset in model.asset
-        ]
+    url = reverse_lazy('registry:assets') + f'?expand=technologies'
+    response = client.get(url)
+    json = response.json()
 
-        assert json == expected
-        assert bc.database.list_of('registry.Asset') == bc.format.to_dict(model.asset)
+    expected = [
+        get_serializer(asset, data={'technologies': [get_serializer_technology(model.asset_technology)]})
+        for asset in model.asset
+    ]
+
+    assert json == expected
+    assert bc.database.list_of('registry.Asset') == bc.format.to_dict(model.asset)
