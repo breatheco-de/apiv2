@@ -2,7 +2,7 @@ import inspect
 import logging
 from typing import Callable
 from breathecode.utils.exceptions import ProgrammingError
-from celery import shared_task
+import celery
 from django.db import transaction
 from django.utils import timezone
 import copy
@@ -30,7 +30,7 @@ class Task(object):
         if self.reverse and not callable(self.reverse):
             raise ProgrammingError('Reverse must be a callable')
 
-        self.parent_decorator = shared_task(*args, **kwargs)
+        self.parent_decorator = celery.shared_task(*args, **kwargs)
 
     def get_fn_desc(self, function: Callable) -> tuple[str, str] or tuple[None, None]:
         if not function:
@@ -83,7 +83,7 @@ class Task(object):
                 x.last_run = last_run
                 x.save()
 
-            if x.status in ['CANCELLED', 'REVERSED', 'PAUSED', 'ABORTED']:
+            if x.status in ['CANCELLED', 'REVERSED', 'PAUSED', 'ABORTED', 'DONE']:
                 x.killed = True
                 x.save()
                 return
@@ -107,16 +107,18 @@ class Task(object):
                     except Exception as e:
                         transaction.savepoint_rollback(sid)
 
-                        x.status = 'ERROR'
-                        x.status_message = str(e)[:255]
-                        x.save()
+                        error = str(e)[:255]
+                        exception = e
+                x.status = 'ERROR'
+                x.status_message = error
+                x.save()
 
-                        # fallback
-                        if self.fallback:
-                            return self.fallback(*args, **kwargs, exception=e)
+                # fallback
+                if self.fallback:
+                    return self.fallback(*args, **kwargs, exception=exception)
 
-                        # behavior by default
-                        raise e
+                # behavior by default
+                raise exception
 
             try:
                 res = function(*args, **kwargs)

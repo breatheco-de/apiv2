@@ -24,7 +24,11 @@ if os.getenv('ENV') == 'test':
 # - namespace='CELERY' means all celery-related configuration keys
 #   should have a `CELERY_` prefix.
 app.config_from_object('django.conf:settings')
-app.conf.update(BROKER_URL=REDIS_URL, CELERY_RESULT_BACKEND=REDIS_URL, namespace='CELERY', broker_pool_limit=1, result_expires=10)
+app.conf.update(BROKER_URL=REDIS_URL,
+                CELERY_RESULT_BACKEND=REDIS_URL,
+                namespace='CELERY',
+                broker_pool_limit=1,
+                result_expires=10)
 
 # Load task modules from all registered Django app configs.
 app.autodiscover_tasks()
