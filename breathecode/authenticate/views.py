@@ -1564,6 +1564,19 @@ def render_user_invite(request, token):
         })
 
 
+# @api_view(['GET', 'POST'])
+# @permission_classes([AllowAny])
+# def accept_invite(request, token, member_id=None):
+#     # TODO: Abstract logic from "render_invite" that accepts and invite, to re-use the code for this view as well
+#     # create "accept_invite" action that raises exeptions and you can capture those
+#     # exceptions and convert them into json here, but into HTML on the render_inv ite.
+#     try:
+#       accept_invite_action(invite, request)
+#     except as e:
+#       raise ValidationException(e.message)
+  
+
+
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 def render_invite(request, token, member_id=None):
@@ -1600,6 +1613,13 @@ def render_invite(request, token, member_id=None):
 
     if request.method == 'POST':
         form = InviteForm(_dict)
+
+    # this is how you can capture the exception and render an html
+    # try:
+    #   accept_invite_action(invite, request)
+    # except as e:
+    #   return render(request, 'form_invite.html', {'form': form})
+
         password1 = request.POST.get('password', None)
         password2 = request.POST.get('repeat_password', None)
 
