@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+import random
 import pytest
 from scripts.utils.environment import reset_environment, test_environment
 from breathecode.utils.exceptions import TestError
@@ -10,6 +11,7 @@ from urllib3.connectionpool import HTTPConnectionPool
 from django.db.models.signals import ModelSignal
 from breathecode.notify.utils.hook_manager import HookManagerClass
 from django.utils import timezone
+from django.core.cache import cache
 
 # set ENV as test before run django
 os.environ['ENV'] = 'test'
@@ -25,6 +27,46 @@ def pytest_configure():
     os.environ['SQLALCHEMY_SILENCE_UBER_WARNING'] = '1'
 
 
+@pytest.fixture
+def get_args(fake):
+
+    def wrapper(num):
+        args = []
+
+        for _ in range(0, num):
+            n = random.randint(0, 2)
+            if n == 0:
+                args.append(fake.slug())
+            elif n == 1:
+                args.append(random.randint(1, 100))
+            elif n == 2:
+                args.append(random.randint(1, 10000) / 100)
+
+        return tuple(args)
+
+    yield wrapper
+
+
+@pytest.fixture
+def get_kwargs(fake):
+
+    def wrapper(num):
+        kwargs = {}
+
+        for _ in range(0, num):
+            n = random.randint(0, 2)
+            if n == 0:
+                kwargs[fake.slug()] = fake.slug()
+            elif n == 1:
+                kwargs[fake.slug()] = random.randint(1, 100)
+            elif n == 2:
+                kwargs[fake.slug()] = random.randint(1, 10000) / 100
+
+        return kwargs
+
+    yield wrapper
+
+
 # it does not work yet
 @pytest.fixture
 def bc(request):
@@ -38,6 +80,23 @@ def set_datetime(monkeypatch):
         monkeypatch.setattr(timezone, 'now', lambda: new_datetime)
 
     yield patch
+
+
+@pytest.fixture
+def client():
+    from django.test.client import Client
+
+    return Client()
+
+
+@pytest.fixture(autouse=True)
+def clear_cache():
+
+    def wrapper():
+        cache.clear()
+
+    wrapper()
+    yield wrapper
 
 
 @pytest.fixture

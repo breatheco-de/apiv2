@@ -1,15 +1,13 @@
 from datetime import timedelta
 import random
 import importlib
-import json
+
 from unittest.mock import MagicMock, call
 from logging import Logger
 import pytest
 from breathecode.commons import tasks
 from breathecode.commons.tasks import mark_task_as_reversed
-import breathecode.admissions.tasks as admissions_tasks
-import breathecode.payments.tasks as payments_tasks
-import breathecode.events.tasks as events_tasks
+
 from django.utils import timezone
 
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
