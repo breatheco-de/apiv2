@@ -297,6 +297,15 @@ class ParentAssetTechnologySerializer(serpy.Serializer):
     is_deprecated = serpy.Field()
 
 
+class AssetAndTechnologySerializer(AssetSerializer):
+
+    technologies = serpy.MethodField()
+
+    def get_technologies(self, obj):
+        techs = AssetTechnology.objects.filter(id__in=obj.technologies.all())
+        return ParentAssetTechnologySerializer(techs, many=True).data
+
+
 class AssetTechnologySerializer(ParentAssetTechnologySerializer):
     parent = ParentAssetTechnologySerializer(required=False)
 
