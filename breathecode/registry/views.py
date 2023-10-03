@@ -499,23 +499,26 @@ class AssetView(APIView, GenerateLookupsMixin):
 
         items = Asset.objects.all()
         lookup = {}
-        query = handler.lookup.build(
-            lang,
-            strings={
-                'iexact': [
-                    'test_status',
-                    'sync_status',
-                ],
-                'in': ['difficulty', 'status', 'asset_type', 'category__slug', 'technologies__slug']
-            },
-            ids=['author', 'owner'],
-            bools={
-                'exact': ['with_video', 'interactive', 'graded'],
-            },
-            overwrite={
-                'category': 'category__slug',
-                'technologies': 'technologies__slug',
-            })
+        query = handler.lookup.build(lang,
+                                     strings={
+                                         'iexact': [
+                                             'test_status',
+                                             'sync_status',
+                                         ],
+                                         'in': [
+                                             'difficulty', 'status', 'asset_type', 'category__slug',
+                                             'technologies__slug', 'seo_keywords__slug'
+                                         ]
+                                     },
+                                     ids=['author', 'owner'],
+                                     bools={
+                                         'exact': ['with_video', 'interactive', 'graded'],
+                                     },
+                                     overwrite={
+                                         'category': 'category__slug',
+                                         'technologies': 'technologies__slug',
+                                         'seo_keywords': 'seo_keywords__slug'
+                                     })
 
         like = request.GET.get('like', None)
         if like is not None:
@@ -543,10 +546,6 @@ class AssetView(APIView, GenerateLookupsMixin):
             lookup['visibility__in'] = [p.upper() for p in param.split(',')]
         else:
             lookup['visibility'] = 'PUBLIC'
-
-        if 'keywords' in self.request.GET:
-            param = self.request.GET.get('keywords')
-            items = items.filter(seo_keywords__slug__in=param.split(','))
 
         try:
             if 'academy' in self.request.GET and self.request.GET.get('academy') not in ['null', '']:
