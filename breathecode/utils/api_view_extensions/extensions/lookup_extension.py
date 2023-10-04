@@ -54,7 +54,10 @@ class Field:
     def string(mode: str) -> Callable[[str, str, str], Q]:
 
         def handler(lang: str, key: str, value: str, alias=None) -> str:
-            return Q(**{f'{key}__{mode}': value})
+            param = value
+            if (mode == 'in'):
+                param = param.split(',') if param is not None else []
+            return Q(**{f'{key}__{mode}': param})
 
         return handler
 

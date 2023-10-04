@@ -72,7 +72,10 @@ class RegistryModelsMixin(ModelsMixin):
             models['asset'] = create_models(asset, 'registry.Asset', **kargs)
 
         if 'asset_technology' in models and 'asset' in models:
-            for instance in models['asset_technology']:
+            technologies = models['asset_technology']
+            if not isinstance(technologies, list):
+                technologies = [models['asset_technology']]
+            for instance in technologies:
                 instance.featured_asset = just_one(models['asset'])
                 instance.save()
 

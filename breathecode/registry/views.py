@@ -29,7 +29,7 @@ from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerialize
                           PostKeywordClusterSerializer, PostKeywordSerializer, PUTKeywordSerializer,
                           AssetKeywordBigSerializer, PUTCategorySerializer, POSTCategorySerializer,
                           KeywordClusterMidSerializer, SEOReportSerializer, OriginalityScanSerializer,
-                          VariableSmallSerializer)
+                          VariableSmallSerializer, AssetAndTechnologySerializer)
 from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
 from breathecode.utils.views import render_message
 from rest_framework.response import Response
@@ -499,36 +499,32 @@ class AssetView(APIView, GenerateLookupsMixin):
 
         items = Asset.objects.all()
         lookup = {}
-
-        if 'author' in self.request.GET:
-            param = self.request.GET.get('author')
-            lookup['author__id'] = param
-
-        if 'owner' in self.request.GET:
-            param = self.request.GET.get('owner')
-            lookup['owner__id'] = param
+        query = handler.lookup.build(lang,
+                                     strings={
+                                         'iexact': [
+                                             'test_status',
+                                             'sync_status',
+                                         ],
+                                         'in': [
+                                             'difficulty', 'status', 'asset_type', 'category__slug',
+                                             'technologies__slug', 'seo_keywords__slug'
+                                         ]
+                                     },
+                                     ids=['author', 'owner'],
+                                     bools={
+                                         'exact': ['with_video', 'interactive', 'graded'],
+                                     },
+                                     overwrite={
+                                         'category': 'category__slug',
+                                         'technologies': 'technologies__slug',
+                                         'seo_keywords': 'seo_keywords__slug'
+                                     })
 
         like = request.GET.get('like', None)
         if like is not None:
             items = items.filter(
                 Q(slug__icontains=like) | Q(title__icontains=like)
                 | Q(assetalias__slug__icontains=like))
-
-        if 'asset_type' in self.request.GET:
-            param = self.request.GET.get('asset_type')
-            lookup['asset_type__in'] = [p.upper() for p in param.split(',') if p]
-
-        if 'category' in self.request.GET:
-            param = self.request.GET.get('category')
-            lookup['category__slug__in'] = [p for p in param.split(',')]
-
-        if 'test_status' in self.request.GET:
-            param = self.request.GET.get('test_status')
-            lookup['test_status__iexact'] = param
-
-        if 'sync_status' in self.request.GET:
-            param = self.request.GET.get('sync_status')
-            lookup['sync_status__iexact'] = param
 
         if 'slug' in self.request.GET:
             asset_type = self.request.GET.get('asset_type', None)
@@ -551,22 +547,6 @@ class AssetView(APIView, GenerateLookupsMixin):
         else:
             lookup['visibility'] = 'PUBLIC'
 
-        if 'technologies' in self.request.GET:
-            param = self.request.GET.get('technologies')
-            lookup['technologies__slug__in'] = [p.lower() for p in param.split(',')]
-
-        if 'difficulty' in self.request.GET:
-            param = self.request.GET.get('difficulty')
-            lookup['difficulty__in'] = [p.upper() for p in param.split(',')]
-
-        if 'keywords' in self.request.GET:
-            param = self.request.GET.get('keywords')
-            items = items.filter(seo_keywords__slug__in=param.split(','))
-
-        if 'status' in self.request.GET:
-            param = self.request.GET.get('status')
-            lookup['status__in'] = [p.upper() for p in param.split(',')]
-
         try:
             if 'academy' in self.request.GET and self.request.GET.get('academy') not in ['null', '']:
                 param = self.request.GET.get('academy')
@@ -582,16 +562,6 @@ class AssetView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('video')
             if param == 'true':
                 lookup['with_video'] = True
-
-        if 'interactive' in self.request.GET:
-            param = self.request.GET.get('interactive')
-            if param == 'true':
-                lookup['interactive'] = True
-
-        if 'graded' in self.request.GET:
-            param = self.request.GET.get('graded')
-            if param == 'true':
-                lookup['graded'] = True
 
         lookup['external'] = False
         if 'external' in self.request.GET:
@@ -609,11 +579,13 @@ class AssetView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('exclude_category')
             items = items.exclude(category__slug__in=[p for p in param.split(',') if p])
 
-        items = items.filter(**lookup)
+        items = items.filter(query, **lookup)
         items = handler.queryset(items)
 
         if 'big' in self.request.GET:
             serializer = AssetMidSerializer(items, many=True)
+        elif 'expand' in self.request.GET and self.request.GET.get('expand') == 'technologies':
+            serializer = AssetAndTechnologySerializer(items, many=True)
         else:
             serializer = AssetSerializer(items, many=True)
 
