@@ -46,7 +46,7 @@ def setup(bc: Breathecode, fake, monkeypatch, get_args, get_kwargs):
     def _arrange(*, task_manager, transaction=None, bind=False, with_fallback=False, with_reverse=False):
         c = MagicMock()
         name = fake.slug().replace('-', '_')
-        # module ='breathecode.commons.tasks'
+
         inner_fn.__name__ = name
         inner_fn.__module__ = 'breathecode.commons.tasks'
 
