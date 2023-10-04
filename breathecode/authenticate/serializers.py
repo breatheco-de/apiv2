@@ -19,6 +19,7 @@ from rest_framework import serializers
 from django.db.models import Q
 from django.contrib.auth.models import Permission
 from breathecode.mentorship.models import MentorProfile
+import breathecode.activity.tasks as tasks_activity
 
 logger = logging.getLogger(__name__)
 
@@ -1090,6 +1091,9 @@ class ProfileSerializer(serializers.ModelSerializer):
         exclude = ()
 
 
+import breathecode.activity.tasks as tasks_activity
+
+
 class UserInviteWaitingListSerializer(serializers.ModelSerializer):
     access_token = serializers.SerializerMethodField()
     plans = serializers.SerializerMethodField()
@@ -1277,6 +1281,11 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         if self.course:
             self.course.invites.add(instance)
+
+        tasks_activity.add_activity.delay(self.user.id,
+                                          'invite_created',
+                                          related_type='auth.UserInvite',
+                                          related_id=instance.id)
 
         return instance
 

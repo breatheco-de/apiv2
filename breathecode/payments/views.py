@@ -34,6 +34,7 @@ from breathecode.utils.payment_exception import PaymentException
 from breathecode.utils.validation_exception import ValidationException
 from django.db import transaction
 from breathecode.utils import getLogger
+import breathecode.activity.tasks as tasks_activity
 
 logger = getLogger(__name__)
 
@@ -1601,6 +1602,12 @@ class PayView(APIView):
                             admissions_tasks.build_profile_academy.delay(cohort.academy.id, bag.user.id)
 
                 serializer = GetInvoiceSerializer(invoice, many=False)
+
+                tasks_activity.add_activity.delay(request.user.id,
+                                                  'checkout_completed',
+                                                  related_type='payments.Invoice',
+                                                  related_id=serializer.id)
+
                 return Response(serializer.data, status=201)
 
             except Exception as e:

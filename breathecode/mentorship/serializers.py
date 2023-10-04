@@ -11,6 +11,7 @@ from breathecode.services.calendly import Calendly
 from breathecode.utils.datetime_integer import duration_to_str
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.utils.i18n import translation
+import breathecode.activity.tasks as tasks_activity
 
 
 class GetAcademySmallSerializer(serpy.Serializer):
@@ -728,6 +729,30 @@ class SessionPUTSerializer(serializers.ModelSerializer):
         else:
             bill.status = 'RECALCULATE'
             bill.save()
+
+        if 'started_at' in data and self.instance.started_at is None:
+            tasks_activity.add_activity.delay(self.instance.mentee,
+                                              'mentorship_session_checkin',
+                                              related_type='mentorship.MentorshipSession',
+                                              related_id=self.instance.id)
+
+        if 'mentor_joined_at' in data and self.instance.mentor_joined_at is None:
+            tasks_activity.add_activity.delay(self.instance.mentor,
+                                              'mentorship_session_checkin',
+                                              related_type='mentorship.MentorshipSession',
+                                              related_id=self.instance.id)
+
+        if 'mentee_left_at' in data and self.instance.mentee_left_at is None:
+            tasks_activity.add_activity.delay(self.instance.mentee,
+                                              'mentorship_session_checkout',
+                                              related_type='mentorship.MentorshipSession',
+                                              related_id=self.instance.id)
+
+        if 'mentor_left_at' in data and self.instance.mentor_left_at is None:
+            tasks_activity.add_activity.delay(self.instance.mentor,
+                                              'mentorship_session_checkout',
+                                              related_type='mentorship.MentorshipSession',
+                                              related_id=self.instance.id)
 
         return result
 
