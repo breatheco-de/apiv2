@@ -443,10 +443,11 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
     renew_plan_financing_consumables.delay(plan_financing.id)
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@task(bind=True, base=BaseTaskWithRetry)
 def build_service_stock_scheduler_from_subscription(self,
                                                     subscription_id: int,
-                                                    user_id: Optional[int] = None):
+                                                    user_id: Optional[int] = None,
+                                                    **_: Any):
     """Build service stock scheduler for a subscription."""
 
     logger.info(
@@ -518,10 +519,11 @@ def build_service_stock_scheduler_from_subscription(self,
     renew_subscription_consumables.delay(subscription.id)
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@task(bind=True, base=BaseTaskWithRetry)
 def build_service_stock_scheduler_from_plan_financing(self,
                                                       plan_financing_id: int,
-                                                      user_id: Optional[int] = None):
+                                                      user_id: Optional[int] = None,
+                                                      **_: Any):
     """Build service stock scheduler for a plan financing."""
 
     logger.info(
@@ -577,8 +579,8 @@ def build_service_stock_scheduler_from_plan_financing(self,
     renew_plan_financing_consumables.delay(plan_financing.id)
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def build_subscription(self, bag_id: int, invoice_id: int, start_date: Optional[datetime] = None):
+@task(bind=True, base=BaseTaskWithRetry)
+def build_subscription(self, bag_id: int, invoice_id: int, start_date: Optional[datetime] = None, **_: Any):
     logger.info(f'Starting build_subscription for bag {bag_id}')
 
     if not (bag := Bag.objects.filter(id=bag_id, status='PAID', was_delivered=False).first()):
@@ -638,8 +640,8 @@ def build_subscription(self, bag_id: int, invoice_id: int, start_date: Optional[
     logger.info(f'Subscription was created with id {subscription.id}')
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def build_plan_financing(self, bag_id: int, invoice_id: int, is_free: bool = False):
+@task(bind=True, base=BaseTaskWithRetry)
+def build_plan_financing(self, bag_id: int, invoice_id: int, is_free: bool = False, **_: Any):
     logger.info(f'Starting build_plan_financing for bag {bag_id}')
 
     if not (bag := Bag.objects.filter(id=bag_id, status='PAID', was_delivered=False).first()):
@@ -706,8 +708,8 @@ def build_plan_financing(self, bag_id: int, invoice_id: int, is_free: bool = Fal
     logger.info(f'PlanFinancing was created with id {financing.id}')
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def build_free_subscription(self, bag_id: int, invoice_id: int):
+@task(bind=True, base=BaseTaskWithRetry)
+def build_free_subscription(self, bag_id: int, invoice_id: int, **_: Any):
     logger.info(f'Starting build_free_subscription for bag {bag_id}')
 
     if not (bag := Bag.objects.filter(id=bag_id, status='PAID', was_delivered=False).first()):
@@ -792,8 +794,8 @@ def build_free_subscription(self, bag_id: int, invoice_id: int):
     bag.save()
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def end_the_consumption_session(self, consumption_session_id: int, how_many: float = 1.0):
+@task(bind=True, base=BaseTaskWithRetry)
+def end_the_consumption_session(self, consumption_session_id: int, how_many: float = 1.0, **_: Any):
     logger.info(f'Starting end_the_consumption_session for ConsumptionSession {consumption_session_id}')
 
     session = ConsumptionSession.objects.filter(id=consumption_session_id).first()
@@ -857,8 +859,8 @@ def build_consumables_from_bag(bag_id: int, **_: Any):
     bag.save()
 
 
-@shared_task(bind=False, base=BaseTaskWithRetry)
-def refund_mentoring_session(session_id: int):
+@task(bind=False, base=BaseTaskWithRetry)
+def refund_mentoring_session(session_id: int, **_: Any):
     from breathecode.mentorship.models import MentorshipSession
 
     logger.info(f'Starting refund_mentoring_session for mentoring session {session_id}')
@@ -895,7 +897,7 @@ def refund_mentoring_session(session_id: int):
     consumption_session.save()
 
 
-@shared_task(bind=False, base=BaseTaskWithRetry)
+@task(bind=False, base=BaseTaskWithRetry)
 def add_cohort_set_to_subscription(subscription_id: int, cohort_set_id: int, **_: Any):
     logger.info(
         f'Starting add_cohort_set_to_subscription for subscription {subscription_id} cohort_set {cohort_set_id}'

@@ -110,6 +110,7 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
 
     def parse_payload(payload):
         for key in payload:
+            # TypeError("string indices must be integers, not 'str'")
             if isinstance(payload[key], datetime):
                 payload[key] = payload[key].isoformat().replace('+00:00', 'Z')
 
