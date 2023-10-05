@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from breathecode.commons.tasks import mark_task_as_pending
+from breathecode.commons import tasks
 from ...models import TaskManager
 from datetime import datetime
 from datetime import timedelta
@@ -18,7 +18,7 @@ class Command(BaseCommand):
                                          status='PENDING').values_list('id', flat=True)
 
         for id in ids:
-            mark_task_as_pending.delay(id, force=True)
+            tasks.mark_task_as_pending.delay(id, force=True)
 
         if ids:
             msg = self.style.SUCCESS(f"Rerunning TaskManager's {', '.join([str(id) for id in ids])}")
