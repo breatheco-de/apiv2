@@ -635,7 +635,7 @@ class V2AcademyActivityView(APIView):
         """
 
         job_config = bigquery.QueryJobConfig(query_parameters=[
-            bigquery.ScalarQueryParameter('academy_id', 'INT64', academy_id),
+            bigquery.ScalarQueryParameter('academy_id', 'INT64', int(academy_id)),
             bigquery.ScalarQueryParameter('user_id', 'INT64', request.user.id),
             bigquery.ScalarQueryParameter('limit', 'INT64', limit),
             bigquery.ScalarQueryParameter('offset', 'INT64', offset),
