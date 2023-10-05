@@ -219,20 +219,20 @@ class PUTTaskSerializer(serializers.ModelSerializer):
             tasks_activity.add_activity.delay(self.context['request'].user.id,
                                               'read_assignment',
                                               related_type='assignments.Task',
-                                              related_id=self.id)
+                                              related_id=instance.id)
 
         if 'revision_status' in validated_data and validated_data[
                 'revision_status'] != instance.revision_status:
             tasks_activity.add_activity.delay(self.context['request'].user.id,
                                               'assignment_review_status_updated',
                                               related_type='assignments.Task',
-                                              related_id=self.id)
+                                              related_id=instance.id)
 
         if 'task_status' in validated_data and validated_data['task_status'] != instance.task_status:
             tasks_activity.add_activity.delay(self.context['request'].user.id,
                                               'assignment_status_updated',
                                               related_type='assignments.Task',
-                                              related_id=self.id)
+                                              related_id=instance.id)
 
         return super().update(instance, validated_data)
 

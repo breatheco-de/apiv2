@@ -730,29 +730,29 @@ class SessionPUTSerializer(serializers.ModelSerializer):
             bill.status = 'RECALCULATE'
             bill.save()
 
-        if 'started_at' in data and self.instance.started_at is None:
-            tasks_activity.add_activity.delay(self.instance.mentee,
+        if instance and 'started_at' in validated_data and instance.started_at is None:
+            tasks_activity.add_activity.delay(instance.mentee,
                                               'mentorship_session_checkin',
                                               related_type='mentorship.MentorshipSession',
-                                              related_id=self.instance.id)
+                                              related_id=instance.id)
 
-        if 'mentor_joined_at' in data and self.instance.mentor_joined_at is None:
-            tasks_activity.add_activity.delay(self.instance.mentor,
+        if instance and 'mentor_joined_at' in validated_data and instance.mentor_joined_at is None:
+            tasks_activity.add_activity.delay(instance.mentor,
                                               'mentorship_session_checkin',
                                               related_type='mentorship.MentorshipSession',
-                                              related_id=self.instance.id)
+                                              related_id=instance.id)
 
-        if 'mentee_left_at' in data and self.instance.mentee_left_at is None:
-            tasks_activity.add_activity.delay(self.instance.mentee,
+        if instance and 'mentee_left_at' in validated_data and instance.mentee_left_at is None:
+            tasks_activity.add_activity.delay(instance.mentee,
                                               'mentorship_session_checkout',
                                               related_type='mentorship.MentorshipSession',
-                                              related_id=self.instance.id)
+                                              related_id=instance.id)
 
-        if 'mentor_left_at' in data and self.instance.mentor_left_at is None:
-            tasks_activity.add_activity.delay(self.instance.mentor,
+        if instance and 'mentor_left_at' in validated_data and instance.mentor_left_at is None:
+            tasks_activity.add_activity.delay(instance.mentor,
                                               'mentorship_session_checkout',
                                               related_type='mentorship.MentorshipSession',
-                                              related_id=self.instance.id)
+                                              related_id=instance.id)
 
         return result
 

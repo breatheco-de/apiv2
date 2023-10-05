@@ -4,8 +4,10 @@ Test /answer
 from unittest.mock import MagicMock, call, patch
 
 from django.urls.base import reverse_lazy
+import pytest
 from rest_framework import status
 from ..mixins import AssignmentsTestCase
+import breathecode.activity.tasks as activity_tasks
 
 
 def get_serializer(self, task, user):
@@ -73,6 +75,12 @@ def task_row(self, task, data={}):
     }
 
 
+@pytest.fixture(autouse=True)
+def setup(monkeypatch):
+    monkeypatch.setattr(activity_tasks.add_activity, 'delay', MagicMock())
+    yield
+
+
 class MediaTestSuite(AssignmentsTestCase):
     """Test /answer"""
     """
@@ -91,6 +99,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Get without Task
@@ -111,6 +120,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Get with Task
@@ -131,6 +141,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Get with Task but the other user
@@ -152,6 +163,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Put without Task
@@ -180,6 +192,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Put with Task
@@ -218,6 +231,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Put with Task of other user passing task_status
@@ -252,6 +266,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Put with Task of other user passing live_url
@@ -286,6 +301,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Put with Task of other user passing github_url
@@ -320,6 +336,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Put with Task of other user passing revision_status
@@ -353,6 +370,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
@@ -406,9 +424,17 @@ class MediaTestSuite(AssignmentsTestCase):
             self.assertEqual(student_task_notification.delay.call_args_list, [call(index + 1)])
             self.assertEqual(teacher_task_notification.delay.call_args_list, [])
 
+            self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+                call((index * 2) + 2,
+                     'assignment_review_status_updated',
+                     related_type='assignments.Task',
+                     related_id=index + 1),
+            ])
+
             # teardown
             self.bc.database.delete('assignments.Task')
             student_task_notification.delay.call_args_list = []
+            activity_tasks.add_activity.delay.call_args_list = []
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
@@ -452,6 +478,9 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(student_task_notification.delay.call_args_list, [call(1)])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(2, 'assignment_review_status_updated', related_type='assignments.Task', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Put prevent mark task as done if it is not delivered
@@ -491,6 +520,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
@@ -526,6 +556,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
@@ -562,6 +593,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
@@ -579,6 +611,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
@@ -592,6 +625,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
@@ -610,3 +644,4 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])

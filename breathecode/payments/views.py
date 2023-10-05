@@ -1606,7 +1606,7 @@ class PayView(APIView):
                 tasks_activity.add_activity.delay(request.user.id,
                                                   'checkout_completed',
                                                   related_type='payments.Invoice',
-                                                  related_id=serializer.id)
+                                                  related_id=serializer.instance.id)
 
                 return Response(serializer.data, status=201)
 

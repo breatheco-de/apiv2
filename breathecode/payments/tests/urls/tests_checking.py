@@ -4,10 +4,12 @@ from unittest.mock import MagicMock, call, patch
 
 from django.urls import reverse_lazy
 from django.utils import timezone
+import pytest
 from rest_framework import status
 from breathecode.payments import actions
 
 from breathecode.payments.tests.mixins.payments_test_case import PaymentsTestCase
+import breathecode.activity.tasks as activity_tasks
 
 UTC_NOW = timezone.now()
 
@@ -116,6 +118,12 @@ def get_serializer(bag,
     }
 
 
+@pytest.fixture(autouse=True)
+def setup(monkeypatch):
+    monkeypatch.setattr(activity_tasks.add_activity, 'delay', MagicMock())
+    yield
+
+
 class SignalTestSuite(PaymentsTestCase):
     """
     🔽🔽🔽 GET without auth
@@ -133,6 +141,7 @@ class SignalTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Get with zero Bag
@@ -157,6 +166,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
             format_user_setting({'lang': 'en'}),
         ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Get with one Bag, type is BAG
@@ -218,6 +228,11 @@ class SignalTestSuite(PaymentsTestCase):
             # teardown
             self.bc.database.delete('payments.Bag', model.bag.id)
             self.bc.database.delete('authenticate.UserSetting', model.bag.id)
+            self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+                call(model.user.id, 'bag_created', related_type='payments.Bag', related_id=model.user.id),
+            ])
+
+            activity_tasks.add_activity.delay.call_args_list = []
 
     """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing nothing
@@ -249,6 +264,9 @@ class SignalTestSuite(PaymentsTestCase):
                 'id': model.user.id,
                 'user_id': model.user.id,
             }),
+        ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
         ])
 
     """
@@ -307,6 +325,9 @@ class SignalTestSuite(PaymentsTestCase):
                 'user_id': model.user.id,
             }),
         ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview and many ServiceItem and Plan that not found
@@ -344,6 +365,9 @@ class SignalTestSuite(PaymentsTestCase):
                 'user_id': model.user.id,
             }),
         ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview and many ServiceItem and Plan that not found
@@ -380,6 +404,9 @@ class SignalTestSuite(PaymentsTestCase):
                 'id': model.user.id,
                 'user_id': model.user.id,
             }),
+        ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
         ])
 
     """
@@ -425,6 +452,9 @@ class SignalTestSuite(PaymentsTestCase):
                 'id': model.user.id,
                 'user_id': model.user.id,
             }),
+        ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
         ])
 
     """
@@ -482,6 +512,9 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview and many ServiceItem and Plan found,
@@ -570,6 +603,9 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview and many ServiceItem and Plan found,
@@ -684,6 +720,9 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview and many ServiceItem and Plan found,
@@ -793,6 +832,9 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview and many ServiceItem and Plan found,
@@ -897,6 +939,9 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__with_bag__type_bag__passing_type_preview__items_found__taking_free_plan__renewable(self):
@@ -996,6 +1041,9 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview and many ServiceItem and Plan found,
@@ -1111,6 +1159,9 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview and many ServiceItem and Plan found,
@@ -1199,6 +1250,9 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview and many ServiceItem and Plan found,
@@ -1316,6 +1370,9 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview and many ServiceItem and Plan found,
@@ -1407,6 +1464,9 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview and many ServiceItem and Plan found,
@@ -1500,6 +1560,9 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview and many ServiceItem and Plan found,
@@ -1592,6 +1655,9 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     # When: Passing just the plan in the body without academy
     #    -> and the academy have a currency
@@ -1701,6 +1767,9 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     # When: Passing just the plan in the body without academy
     #    -> and the academy have a currency
@@ -1812,6 +1881,9 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     # When: Passing just the plan in the body without academy
     #    -> and the academy have a currency
@@ -1921,6 +1993,9 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     # When: Passing just the cohort in the body without academy
     #    -> and the academy have a currency
@@ -2033,3 +2108,6 @@ class SignalTestSuite(PaymentsTestCase):
         ])
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])

@@ -793,13 +793,15 @@ class Bag(AbstractAmountByTime):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def save(self, *args, **kwargs):
+        created = self.pk is None
         self.full_clean()
-        new_bag = super().save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
-        tasks_activity.add_activity.delay(self.instance.user,
-                                          'bag_created',
-                                          related_type='payments.Bag',
-                                          related_id=new_bag.id)
+        if created:
+            tasks_activity.add_activity.delay(self.user.id,
+                                              'bag_created',
+                                              related_type='payments.Bag',
+                                              related_id=self.id)
 
     def __str__(self) -> str:
         return f'{self.type} {self.status} {self.chosen_period}'
