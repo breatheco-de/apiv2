@@ -574,8 +574,10 @@ class V2MeActivityView(APIView):
         if kind:
             data.append(bigquery.ScalarQueryParameter('kind', 'STRING', kind))
 
+        job_config = bigquery.QueryJobConfig(query_parameters=data)
+
         # Run the query
-        query_job = client.query(query, job_config=data)
+        query_job = client.query(query, job_config=job_config)
         results = query_job.result()
 
         serializer = ActivitySerializer(results, many=True)
