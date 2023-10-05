@@ -26,6 +26,8 @@ from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils.validators.language import validate_language_code
 from breathecode.utils.i18n import translation
 
+import breathecode.activity.tasks as tasks_activity
+
 # https://devdocs.prestashop-project.org/1.7/webservice/resources/warehouses/
 
 # ⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇ #
@@ -791,8 +793,15 @@ class Bag(AbstractAmountByTime):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def save(self, *args, **kwargs):
+        created = self.pk is None
         self.full_clean()
         super().save(*args, **kwargs)
+
+        if created:
+            tasks_activity.add_activity.delay(self.user.id,
+                                              'bag_created',
+                                              related_type='payments.Bag',
+                                              related_id=self.id)
 
     def __str__(self) -> str:
         return f'{self.type} {self.status} {self.chosen_period}'

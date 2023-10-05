@@ -6,6 +6,7 @@ import random
 from unittest.mock import MagicMock, call, patch
 
 from django.utils import timezone
+import pytest
 from breathecode.payments import tasks
 
 from ...tasks import charge_plan_financing
@@ -14,6 +15,7 @@ from ..mixins import PaymentsTestCase
 from dateutil.relativedelta import relativedelta
 from mixer.backend.django import mixer
 from breathecode.payments.services import Stripe
+import breathecode.activity.tasks as activity_tasks
 
 UTC_NOW = timezone.now()
 
@@ -96,6 +98,12 @@ def calculate_relative_delta(unit: float, unit_type: str):
     return relativedelta(**delta_args)
 
 
+@pytest.fixture(autouse=True)
+def setup(monkeypatch):
+    monkeypatch.setattr(activity_tasks.add_activity, 'delay', MagicMock())
+    yield
+
+
 #FIXME: create_v2 fail in this test file
 class PaymentsTestSuite(PaymentsTestCase):
     """
@@ -120,6 +128,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [])
         self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
         self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 PlanFinancing with zero Invoice
@@ -167,6 +176,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 },
             ])
         self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 PlanFinancing process to charge
@@ -239,6 +249,10 @@ class PaymentsTestSuite(PaymentsTestCase):
                     'LINK': '/plan-financing/1'
                 })
         ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+            call(1, 'bag_created', related_type='payments.Bag', related_id=2),
+        ])
 
     """
     🔽🔽🔽 PlanFinancing error when try to charge
@@ -296,6 +310,10 @@ class PaymentsTestSuite(PaymentsTestCase):
                     'LINK': '/plan-financing/1'
                 })
         ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+            call(1, 'bag_created', related_type='payments.Bag', related_id=2),
+        ])
 
     """
     🔽🔽🔽 PlanFinancing is over
@@ -346,6 +364,9 @@ class PaymentsTestSuite(PaymentsTestCase):
             },
         ])
         self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 PlanFinancing try to charge, but a undexpected exception is raised, the database is rollbacked
@@ -407,6 +428,10 @@ class PaymentsTestSuite(PaymentsTestCase):
         ])
 
         self.assertEqual(Stripe.refund_payment.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+            call(1, 'bag_created', related_type='payments.Bag', related_id=2),
+        ])
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
@@ -463,3 +488,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         ])
 
         self.assertEqual(Stripe.refund_payment.call_args_list, [call(model.invoice)])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+            call(1, 'bag_created', related_type='payments.Bag', related_id=2),
+        ])

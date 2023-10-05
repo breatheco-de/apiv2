@@ -2,15 +2,14 @@ from datetime import timedelta
 import math
 import random
 from unittest.mock import MagicMock, call, patch
-from rest_framework.authtoken.models import Token
+import pytest
 
 from django.urls import reverse_lazy
 from rest_framework import status
 
-from breathecode.payments import signals
-
 from django.utils import timezone
 from ..mixins import PaymentsTestCase
+import breathecode.activity.tasks as activity_tasks
 
 UTC_NOW = timezone.now()
 
@@ -299,6 +298,12 @@ def get_subscription_serializer(self,
     }
 
 
+@pytest.fixture(autouse=True)
+def setup(monkeypatch):
+    monkeypatch.setattr(activity_tasks.add_activity, 'delay', MagicMock())
+    yield
+
+
 class SignalTestSuite(PaymentsTestCase):
     """
     🔽🔽🔽 GET without auth
@@ -314,6 +319,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Get without items
@@ -334,6 +340,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Get with many PlanFinancing and Subscription
@@ -421,6 +428,9 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by subscription
@@ -476,6 +486,9 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by plan financing
@@ -531,6 +544,9 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by subscription and plan financing
@@ -598,6 +614,9 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with many PlanFinancing and Subscription, with wrong statuses
@@ -645,6 +664,9 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by status
@@ -736,6 +758,9 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by wrong invoice
@@ -784,6 +809,9 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by good invoice
@@ -870,6 +898,9 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by wrong service
@@ -919,6 +950,9 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by good service
@@ -1007,6 +1041,9 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by wrong plan
@@ -1056,6 +1093,9 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by good plan
@@ -1144,6 +1184,9 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by wrong cohort
@@ -1193,6 +1236,9 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by good cohort
@@ -1296,6 +1342,9 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by wrong MentorshipServiceSet
@@ -1345,6 +1394,9 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by good MentorshipServiceSet
@@ -1441,6 +1493,9 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by wrong EventTypeSet
@@ -1490,6 +1545,9 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Get with many PlanFinancing and Subscription, filter by good MentorshipServiceSet
@@ -1584,3 +1642,6 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])

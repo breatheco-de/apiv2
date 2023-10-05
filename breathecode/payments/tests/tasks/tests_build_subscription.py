@@ -6,12 +6,14 @@ import random
 from unittest.mock import MagicMock, call, patch
 
 from django.utils import timezone
+import pytest
 from breathecode.payments import tasks
 
 from ...tasks import build_subscription
 
 from ..mixins import PaymentsTestCase
 from dateutil.relativedelta import relativedelta
+import breathecode.activity.tasks as activity_tasks
 
 UTC_NOW = timezone.now()
 
@@ -35,6 +37,12 @@ def subscription_item(data={}):
     }
 
 
+@pytest.fixture(autouse=True)
+def setup(monkeypatch):
+    monkeypatch.setattr(activity_tasks.add_activity, 'delay', MagicMock())
+    yield
+
+
 #FIXME: create_v2 fail in this test file
 class PaymentsTestSuite(PaymentsTestCase):
     """
@@ -54,6 +62,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [])
         self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 With Bag
@@ -79,6 +88,9 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [self.bc.format.to_dict(model.bag)])
         self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 With Bag and Invoice
@@ -141,6 +153,9 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(tasks.build_service_stock_scheduler_from_subscription.delay.call_args_list, [
             call(1),
+        ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
         ])
 
     """
@@ -213,6 +228,9 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(tasks.build_service_stock_scheduler_from_subscription.delay.call_args_list, [
             call(1),
         ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 With Bag, Invoice and EventTypeSet
@@ -281,6 +299,9 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(tasks.build_service_stock_scheduler_from_subscription.delay.call_args_list, [
             call(1),
         ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 With Bag, Invoice and MentorshipServiceSet
@@ -348,4 +369,7 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(tasks.build_service_stock_scheduler_from_subscription.delay.call_args_list, [
             call(1),
+        ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
         ])

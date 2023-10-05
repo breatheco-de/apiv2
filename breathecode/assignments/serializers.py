@@ -6,6 +6,7 @@ from breathecode.utils import ValidationException
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import ProfileAcademy, Token
 from django.contrib.auth.models import User
+import breathecode.activity.tasks as tasks_activity
 
 logger = logging.getLogger(__name__)
 
@@ -212,6 +213,28 @@ class PUTTaskSerializer(serializers.ModelSerializer):
                     slug='editing-revision-status-but-is-not-teacher-or-assistant')
 
         return data
+
+    def update(self, instance, validated_data):
+        if 'opened_at' in validated_data and validated_data['opened_at'] > instance.opened_at:
+            tasks_activity.add_activity.delay(self.context['request'].user.id,
+                                              'read_assignment',
+                                              related_type='assignments.Task',
+                                              related_id=instance.id)
+
+        if 'revision_status' in validated_data and validated_data[
+                'revision_status'] != instance.revision_status:
+            tasks_activity.add_activity.delay(self.context['request'].user.id,
+                                              'assignment_review_status_updated',
+                                              related_type='assignments.Task',
+                                              related_id=instance.id)
+
+        if 'task_status' in validated_data and validated_data['task_status'] != instance.task_status:
+            tasks_activity.add_activity.delay(self.context['request'].user.id,
+                                              'assignment_status_updated',
+                                              related_type='assignments.Task',
+                                              related_id=instance.id)
+
+        return super().update(instance, validated_data)
 
 
 class FinalProjectGETSerializer(serpy.Serializer):
