@@ -565,14 +565,17 @@ class V2MeActivityView(APIView):
             OFFSET @offset
         """
 
-        job_config = bigquery.QueryJobConfig(query_parameters=[
+        data = [
             bigquery.ScalarQueryParameter('user_id', 'INT64', request.user.id),
             bigquery.ScalarQueryParameter('limit', 'INT64', limit),
             bigquery.ScalarQueryParameter('offset', 'INT64', offset),
-        ])
+        ]
+
+        if kind:
+            data.append(bigquery.ScalarQueryParameter('kind', 'STRING', kind))
 
         # Run the query
-        query_job = client.query(query, job_config=job_config)
+        query_job = client.query(query, job_config=data)
         results = query_job.result()
 
         serializer = ActivitySerializer(results, many=True)
@@ -634,15 +637,17 @@ class V2AcademyActivityView(APIView):
             OFFSET @offset
         """
 
-        job_config = bigquery.QueryJobConfig(query_parameters=[
+        data = [
             bigquery.ScalarQueryParameter('academy_id', 'INT64', int(academy_id)),
             bigquery.ScalarQueryParameter('user_id', 'INT64', request.user.id),
             bigquery.ScalarQueryParameter('limit', 'INT64', limit),
             bigquery.ScalarQueryParameter('offset', 'INT64', offset),
-        ])
+        ]
 
         if kind:
-            job_config.query_parameters.append(bigquery.ScalarQueryParameter('kind', 'STRING', kind))
+            data.append(bigquery.ScalarQueryParameter('kind', 'STRING', kind))
+
+        job_config = bigquery.QueryJobConfig(query_parameters=data)
 
         # Run the query
         query_job = client.query(query, job_config=job_config)
