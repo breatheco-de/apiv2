@@ -35,7 +35,6 @@ def render_html_all_bills(request, token):
         }
         if _status not in status_maper: return _status
         return status_maper[_status]
-        
 
     lookup = {}
 
