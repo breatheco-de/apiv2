@@ -37,6 +37,8 @@ def post_asset_slug_modified(sender, instance: Asset, **kwargs):
 @receiver(asset_title_modified, sender=Asset)
 def asset_title_was_updated(sender, instance, **kwargs):
 
+    async_update_frontend_asset_cache(instance)
+
     # ignore unpublished assets
     if instance.status != 'PUBLISHED':
         return False
@@ -47,8 +49,6 @@ def asset_title_was_updated(sender, instance, **kwargs):
 
     if instance.title is None or instance.title == '':
         return False
-
-    async_update_frontend_asset_cache(instance)
 
     # taking thumbnail for the first time
     if instance.preview is None or instance.preview == '':
