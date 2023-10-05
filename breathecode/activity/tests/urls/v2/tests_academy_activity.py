@@ -50,7 +50,7 @@ def bigquery_client_mock(self, n=1, user_id=1, kind=None):
             FROM `{project_id}.{dataset}.activity`
             WHERE user_id = @user_id
                 AND meta.academy = @academy_id
-                {'AND meta.kind = @kind' if kind else ''}
+                {'AND kind = @kind' if kind else ''}
             ORDER BY id DESC
             LIMIT @limit
             OFFSET @offset
@@ -121,7 +121,7 @@ class MediaTestSuite(MediaTestCase):
 
             self.bc.check.calls(BigQuery.client.call_args_list, [call()])
             assert client_mock.query.call_args[0][0] == query
-            assert 'AND meta.kind = @kind' in query
+            assert 'AND kind = @kind' in query
             self.bc.check.calls(result_mock.result.call_args_list, [call()])
 
         self.assertEqual(json, expected)

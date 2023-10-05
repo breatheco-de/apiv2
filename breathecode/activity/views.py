@@ -559,7 +559,7 @@ class V2MeActivityView(APIView):
             SELECT *
             FROM `{project_id}.{dataset}.activity`
             WHERE user_id = @user_id
-                {'AND meta.kind = @kind' if kind else ''}
+                {'AND kind = @kind' if kind else ''}
             ORDER BY id DESC
             LIMIT @limit
             OFFSET @offset
@@ -628,7 +628,7 @@ class V2AcademyActivityView(APIView):
             FROM `{project_id}.{dataset}.activity`
             WHERE user_id = @user_id
                 AND meta.academy = @academy_id
-                {'AND meta.kind = @kind' if kind else ''}
+                {'AND kind = @kind' if kind else ''}
             ORDER BY id DESC
             LIMIT @limit
             OFFSET @offset
