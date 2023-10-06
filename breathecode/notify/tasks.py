@@ -126,7 +126,6 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
                     payload[key], set):
                 l = []
                 for item in payload[key]:
-                    print(item)
                     l.append(parse_payload(item))
 
                 payload[key] = l
