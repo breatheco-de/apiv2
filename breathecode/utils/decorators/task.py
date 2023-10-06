@@ -34,7 +34,6 @@ def parse_payload(payload: dict):
                 payload[key], set):
             l = []
             for item in payload[key]:
-                print(item)
                 l.append(parse_payload(item))
 
             payload[key] = l
@@ -95,18 +94,7 @@ class Task(object):
             created = False
             if x is None:
                 created = True
-                from unittest.mock import call
 
-                print(
-                    call(task_module=task_module,
-                         task_name=task_name,
-                         reverse_module=reverse_module,
-                         reverse_name=reverse_name,
-                         arguments=arguments,
-                         status='PENDING',
-                         current_page=page + 1,
-                         total_pages=total_pages,
-                         last_run=last_run))
                 x = TaskManager.objects.create(task_module=task_module,
                                                task_name=task_name,
                                                reverse_module=reverse_module,
