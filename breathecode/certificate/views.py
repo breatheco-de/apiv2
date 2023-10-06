@@ -251,7 +251,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
                                           code=404,
                                           slug='no-user-specialty')
 
-            layout = cert.layout.slug if cart.layout is not None else 'default'
+            layout = cert.layout.slug if cert.layout is not None else 'default'
             generate_one_certificate.delay(cu.cohort_id, cu.user_id, layout=layout)
 
         serializer = UserSpecialtySerializer(certs, many=True)
