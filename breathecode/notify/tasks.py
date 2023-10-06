@@ -110,8 +110,11 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
 
     from .utils.hook_manager import HookManager
 
-    def parse_payload(payload):
-        for key in payload:
+    def parse_payload(payload: dict):
+        if not isinstance(payload, dict):
+            return payload
+
+        for key in payload.keys():
             # TypeError("string indices must be integers, not 'str'")
             if isinstance(payload[key], datetime):
                 payload[key] = payload[key].isoformat().replace('+00:00', 'Z')
@@ -119,9 +122,11 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
             elif isinstance(payload[key], Decimal):
                 payload[key] = str(payload[key])
 
-            elif isinstance(payload[key], list):
+            elif isinstance(payload[key], list) or isinstance(payload[key], tuple) or isinstance(
+                    payload[key], set):
                 l = []
                 for item in payload[key]:
+                    print(item)
                     l.append(parse_payload(item))
 
                 payload[key] = l
