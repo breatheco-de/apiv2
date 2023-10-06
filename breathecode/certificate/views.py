@@ -250,7 +250,9 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
                 raise ValidationException('There is no certificate for this student and cohort',
                                           code=404,
                                           slug='no-user-specialty')
-            generate_one_certificate.delay(cu.cohort_id, cu.user_id, layout='default')
+
+            layout = cert.layout.slug if cart.layout is not None else 'default'
+            generate_one_certificate.delay(cu.cohort_id, cu.user_id, layout=layout)
 
         serializer = UserSpecialtySerializer(certs, many=True)
 
