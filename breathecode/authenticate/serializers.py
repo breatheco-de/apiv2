@@ -809,6 +809,9 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             if 'invite' in validated_data:
                 del validated_data['invite']
 
+            if 'plans' in validated_data:
+                del validated_data['plans']
+
             profile_academy = ProfileAcademy.objects.create(
                 **{
                     **validated_data,
@@ -830,7 +833,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             return profile_academy
 
         plans: list[Plan] = []
-        if 'plan' in validated_data:
+        if 'plans' in validated_data:
             plan_list = validated_data.pop('plans')
             for plan_id in plan_list:
                 plan = Plan.objects.filter(id=plan_id).first()
@@ -898,6 +901,9 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
             for plan in plans:
                 plan.invites.add(invite)
+
+            if 'plans' in validated_data:
+                del validated_data['plans']
 
             return ProfileAcademy.objects.create(
                 **{
