@@ -727,13 +727,16 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
     cohort = serializers.ListField(child=serializers.IntegerField(write_only=True, required=False),
                                    write_only=True,
                                    required=False)
+    plans = serializers.ListField(child=serializers.IntegerField(write_only=True, required=False),
+                                  write_only=True,
+                                  required=False)
     user = serializers.IntegerField(write_only=True, required=False)
     status = serializers.CharField(read_only=True)
 
     class Meta:
         model = ProfileAcademy
         fields = ('email', 'user', 'first_name', 'last_name', 'address', 'phone', 'invite', 'cohort',
-                  'status')
+                  'status', 'plans')
         list_serializer_class = StudentPOSTListSerializer
 
     def validate(self, data):
@@ -769,6 +772,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
+        from breathecode.payments.models import Plan
 
         academy = Academy.objects.filter(id=self.context.get('academy_id')).first()
         if academy is None:
@@ -824,6 +828,15 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     'LINK': url,
                 })
             return profile_academy
+
+        plans: list[Plan] = []
+        if 'plan' in validated_data:
+            plan_list = validated_data.pop('plans')
+            for plan_id in plan_list:
+                plan = Plan.objects.filter(id=plan_id).first()
+                if plan is None:
+                    raise ValidationException('Plan not found', slug='plan-not-found')
+                plans.append(plan)
 
         if 'user' not in validated_data:
             validated_data.pop('invite')  # the front end sends invite=true so we need to remove it
@@ -882,6 +895,9 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                         'LINK': url,
                         'FIST_NAME': validated_data['first_name']
                     })
+
+            for plan in plans:
+                plan.invites.add(invite)
 
             return ProfileAcademy.objects.create(
                 **{
