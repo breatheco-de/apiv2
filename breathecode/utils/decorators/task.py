@@ -1,3 +1,5 @@
+from datetime import datetime
+from decimal import Decimal
 import inspect
 import logging
 from typing import Callable
@@ -14,6 +16,33 @@ logger = logging.getLogger(__name__)
 
 class AbortTask(Exception):
     pass
+
+
+def parse_payload(payload: dict):
+    if not isinstance(payload, dict):
+        return payload
+
+    for key in payload.keys():
+        # TypeError("string indices must be integers, not 'str'")
+        if isinstance(payload[key], datetime):
+            payload[key] = payload[key].isoformat().replace('+00:00', 'Z')
+
+        elif isinstance(payload[key], Decimal):
+            payload[key] = str(payload[key])
+
+        elif isinstance(payload[key], list) or isinstance(payload[key], tuple) or isinstance(
+                payload[key], set):
+            l = []
+            for item in payload[key]:
+                print(item)
+                l.append(parse_payload(item))
+
+            payload[key] = l
+
+        elif isinstance(payload[key], dict):
+            payload[key] = parse_payload(payload[key])
+
+    return payload
 
 
 class Task(object):
@@ -49,10 +78,10 @@ class Task(object):
         def wrapper(*args, **kwargs):
             task_module, task_name = self.get_fn_desc(function)
             reverse_module, reverse_name = self.get_fn_desc(self.reverse)
-            arguments = {
+            arguments = parse_payload({
                 'args': args[1:] if self.bind else args,
                 'kwargs': kwargs,
-            }
+            })
 
             page = kwargs.get('page', 0)
             total_pages = kwargs.get('total_pages', 1)
@@ -66,6 +95,18 @@ class Task(object):
             created = False
             if x is None:
                 created = True
+                from unittest.mock import call
+
+                print(
+                    call(task_module=task_module,
+                         task_name=task_name,
+                         reverse_module=reverse_module,
+                         reverse_name=reverse_name,
+                         arguments=arguments,
+                         status='PENDING',
+                         current_page=page + 1,
+                         total_pages=total_pages,
+                         last_run=last_run))
                 x = TaskManager.objects.create(task_module=task_module,
                                                task_name=task_name,
                                                reverse_module=reverse_module,
