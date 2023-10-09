@@ -12,6 +12,7 @@ from django.db.models.signals import ModelSignal
 from breathecode.notify.utils.hook_manager import HookManagerClass
 from django.utils import timezone
 from django.core.cache import cache
+from rest_framework.test import APIClient
 
 # set ENV as test before run django
 os.environ['ENV'] = 'test'
@@ -84,9 +85,7 @@ def set_datetime(monkeypatch):
 
 @pytest.fixture
 def client():
-    from django.test.client import Client
-
-    return Client()
+    return APIClient()
 
 
 @pytest.fixture(autouse=True)

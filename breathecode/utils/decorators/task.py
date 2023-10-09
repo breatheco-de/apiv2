@@ -94,7 +94,6 @@ class Task(object):
             created = False
             if x is None:
                 created = True
-
                 x = TaskManager.objects.create(task_module=task_module,
                                                task_name=task_name,
                                                reverse_module=reverse_module,

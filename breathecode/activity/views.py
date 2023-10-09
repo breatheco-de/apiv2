@@ -559,17 +559,22 @@ class V2MeActivityView(APIView):
             SELECT *
             FROM `{project_id}.{dataset}.activity`
             WHERE user_id = @user_id
-                {'AND meta.kind = @kind' if kind else ''}
+                {'AND kind = @kind' if kind else ''}
             ORDER BY id DESC
             LIMIT @limit
             OFFSET @offset
         """
 
-        job_config = bigquery.QueryJobConfig(query_parameters=[
+        data = [
             bigquery.ScalarQueryParameter('user_id', 'INT64', request.user.id),
             bigquery.ScalarQueryParameter('limit', 'INT64', limit),
             bigquery.ScalarQueryParameter('offset', 'INT64', offset),
-        ])
+        ]
+
+        if kind:
+            data.append(bigquery.ScalarQueryParameter('kind', 'STRING', kind))
+
+        job_config = bigquery.QueryJobConfig(query_parameters=data)
 
         # Run the query
         query_job = client.query(query, job_config=job_config)
@@ -628,21 +633,23 @@ class V2AcademyActivityView(APIView):
             FROM `{project_id}.{dataset}.activity`
             WHERE user_id = @user_id
                 AND meta.academy = @academy_id
-                {'AND meta.kind = @kind' if kind else ''}
+                {'AND kind = @kind' if kind else ''}
             ORDER BY id DESC
             LIMIT @limit
             OFFSET @offset
         """
 
-        job_config = bigquery.QueryJobConfig(query_parameters=[
-            bigquery.ScalarQueryParameter('academy_id', 'INT64', academy_id),
+        data = [
+            bigquery.ScalarQueryParameter('academy_id', 'INT64', int(academy_id)),
             bigquery.ScalarQueryParameter('user_id', 'INT64', request.user.id),
             bigquery.ScalarQueryParameter('limit', 'INT64', limit),
             bigquery.ScalarQueryParameter('offset', 'INT64', offset),
-        ])
+        ]
 
         if kind:
-            job_config.query_parameters.append(bigquery.ScalarQueryParameter('kind', 'STRING', kind))
+            data.append(bigquery.ScalarQueryParameter('kind', 'STRING', kind))
+
+        job_config = bigquery.QueryJobConfig(query_parameters=data)
 
         # Run the query
         query_job = client.query(query, job_config=job_config)

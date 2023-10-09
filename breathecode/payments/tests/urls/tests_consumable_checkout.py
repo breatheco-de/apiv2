@@ -1,5 +1,6 @@
 import math
 import random
+import pytest
 import stripe
 from unittest.mock import MagicMock, call, patch
 from django.urls import reverse_lazy
@@ -7,6 +8,7 @@ from rest_framework import status
 
 from django.utils import timezone
 from ..mixins import PaymentsTestCase
+import breathecode.activity.tasks as activity_tasks
 
 UTC_NOW = timezone.now()
 
@@ -118,6 +120,12 @@ def get_discounted_price(academy_service, num_items) -> float:
     return amount - discount
 
 
+@pytest.fixture(autouse=True)
+def setup(monkeypatch):
+    monkeypatch.setattr(activity_tasks.add_activity, 'delay', MagicMock())
+    yield
+
+
 class SignalTestSuite(PaymentsTestCase):
     # When: no auth
     # Then: return 401
@@ -135,6 +143,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     # Given: 1 User
     # When: is auth and no service in body
@@ -160,6 +169,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
             format_user_setting({'lang': 'en'}),
         ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     # Given: 1 User
     # When: is auth and service that not found in body
@@ -186,6 +196,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
             format_user_setting({'lang': 'en'}),
         ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     # Given: 1 User and 1 Service
     # When: is auth, with a service in body
@@ -212,6 +223,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
             format_user_setting({'lang': 'en'}),
         ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     # Given: 1 User and 1 Service
     # When: is auth, with a service and how_many in body
@@ -238,6 +250,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
             format_user_setting({'lang': 'en'}),
         ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     # Given: 1 User and 1 Service
     # When: is auth, with a service, how_many and academy in body, and academy not found
@@ -264,6 +277,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
             format_user_setting({'lang': 'en'}),
         ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     # Given: 1 User, 1 Service and 1 Academy
     # When: is auth, with a service, how_many and academy in body, resource is required
@@ -290,6 +304,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
             format_user_setting({'lang': 'en'}),
         ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     # Given: 1 User, 1 Service and 1 Academy
     # When: is auth, with a service, how_many, academy and event_type_set in body,
@@ -318,6 +333,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
             format_user_setting({'lang': 'en'}),
         ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     # Given: 1 User, 1 Service and 1 Academy
     # When: is auth, with a service, how_many, academy and mentorship_service_set in body,
@@ -346,6 +362,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
             format_user_setting({'lang': 'en'}),
         ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     # Given: 1 User, 1 Service and 1 Academy
     # When: is auth, with a service, how_many and academy in body,
@@ -382,6 +399,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
             format_user_setting({'lang': 'en'}),
         ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     # Given: 1 User, 1 Service and 1 Academy
     # When: is auth, with a service, how_many and academy in body,
@@ -419,6 +437,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
             format_user_setting({'lang': 'en'}),
         ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     # Given: 1 User, 1 Service, 1 Academy and 1 AcademyService
     # When: is auth, with a service, how_many and academy in body,
@@ -474,6 +493,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(stripe.Charge.create.call_args_list, [])
         self.assertEqual(stripe.Customer.create.call_args_list, [])
         self.assertEqual(stripe.Refund.create.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     # Given: 1 User, 1 Service, 1 Academy and 1 AcademyService
     # When: is auth, with a service, how_many and academy in body,
@@ -527,6 +547,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.assertEqual(stripe.Charge.create.call_args_list, [])
         self.assertEqual(stripe.Customer.create.call_args_list, [])
         self.assertEqual(stripe.Refund.create.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     # Given: 1 User, 1 Service, 1 Academy, 1 AcademyService and 1 MentorshipServiceSet
     # When: is auth, with a service, how_many, academy and mentorship_service_set in body,
@@ -572,6 +593,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.check.calls(stripe.Charge.create.call_args_list, [])
         self.assertEqual(stripe.Customer.create.call_args_list, [])
         self.assertEqual(stripe.Refund.create.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     # Given: 1 User, 1 Service, 1 Academy, 1 AcademyService and 1 MentorshipServiceSet
     # When: is auth, with a service, how_many, academy and mentorship_service_set in body,
@@ -646,6 +668,9 @@ class SignalTestSuite(PaymentsTestCase):
             call(email=model.user.email, name=f'{model.user.first_name} {model.user.last_name}'),
         ])
         self.assertEqual(stripe.Refund.create.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     # Given: 1 User, 1 Service, 1 Academy, 1 AcademyService and 1 EventTypeSet
     # When: is auth, with a service, how_many, academy and event_type_set in body,
@@ -720,3 +745,6 @@ class SignalTestSuite(PaymentsTestCase):
             call(email=model.user.email, name=f'{model.user.first_name} {model.user.last_name}'),
         ])
         self.assertEqual(stripe.Refund.create.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])

@@ -19,6 +19,7 @@ from rest_framework import serializers
 from django.db.models import Q
 from django.contrib.auth.models import Permission
 from breathecode.mentorship.models import MentorProfile
+import breathecode.activity.tasks as tasks_activity
 
 logger = logging.getLogger(__name__)
 
@@ -726,13 +727,16 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
     cohort = serializers.ListField(child=serializers.IntegerField(write_only=True, required=False),
                                    write_only=True,
                                    required=False)
+    plans = serializers.ListField(child=serializers.IntegerField(write_only=True, required=False),
+                                  write_only=True,
+                                  required=False)
     user = serializers.IntegerField(write_only=True, required=False)
     status = serializers.CharField(read_only=True)
 
     class Meta:
         model = ProfileAcademy
         fields = ('email', 'user', 'first_name', 'last_name', 'address', 'phone', 'invite', 'cohort',
-                  'status')
+                  'status', 'plans')
         list_serializer_class = StudentPOSTListSerializer
 
     def validate(self, data):
@@ -768,6 +772,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
+        from breathecode.payments.models import Plan
 
         academy = Academy.objects.filter(id=self.context.get('academy_id')).first()
         if academy is None:
@@ -804,6 +809,9 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             if 'invite' in validated_data:
                 del validated_data['invite']
 
+            if 'plans' in validated_data:
+                del validated_data['plans']
+
             profile_academy = ProfileAcademy.objects.create(
                 **{
                     **validated_data,
@@ -823,6 +831,15 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     'LINK': url,
                 })
             return profile_academy
+
+        plans: list[Plan] = []
+        if 'plans' in validated_data:
+            plan_list = validated_data.pop('plans')
+            for plan_id in plan_list:
+                plan = Plan.objects.filter(id=plan_id).first()
+                if plan is None:
+                    raise ValidationException('Plan not found', slug='plan-not-found')
+                plans.append(plan)
 
         if 'user' not in validated_data:
             validated_data.pop('invite')  # the front end sends invite=true so we need to remove it
@@ -881,6 +898,12 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                         'LINK': url,
                         'FIST_NAME': validated_data['first_name']
                     })
+
+            for plan in plans:
+                plan.invites.add(invite)
+
+            if 'plans' in validated_data:
+                del validated_data['plans']
 
             return ProfileAcademy.objects.create(
                 **{
@@ -1090,6 +1113,9 @@ class ProfileSerializer(serializers.ModelSerializer):
         exclude = ()
 
 
+import breathecode.activity.tasks as tasks_activity
+
+
 class UserInviteWaitingListSerializer(serializers.ModelSerializer):
     access_token = serializers.SerializerMethodField()
     plans = serializers.SerializerMethodField()
@@ -1277,6 +1303,12 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         if self.course:
             self.course.invites.add(instance)
+
+        if self.user:
+            tasks_activity.add_activity.delay(self.user.id,
+                                              'invite_created',
+                                              related_type='auth.UserInvite',
+                                              related_id=instance.id)
 
         return instance
 

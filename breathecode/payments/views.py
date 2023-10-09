@@ -34,6 +34,7 @@ from breathecode.utils.payment_exception import PaymentException
 from breathecode.utils.validation_exception import ValidationException
 from django.db import transaction
 from breathecode.utils import getLogger
+import breathecode.activity.tasks as tasks_activity
 
 logger = getLogger(__name__)
 
@@ -1416,13 +1417,13 @@ class PayView(APIView):
 
                 current_reputation = reputation.get_reputation()
                 if current_reputation == 'FRAUD' or current_reputation == 'BAD':
-                    raise PaymentException(
-                        translation(
-                            lang,
-                            en=
-                            'The payment could not be completed because you have a bad reputation on this platform',
-                            es='No se pudo completar el pago porque tienes mala reputación en esta plataforma',
-                            slug='fraud-or-bad-reputation'))
+                    raise PaymentException(translation(
+                        lang,
+                        en=
+                        'The payment could not be completed because you have a bad reputation on this platform',
+                        es='No se pudo completar el pago porque tienes mala reputación en esta plataforma'),
+                                           slug='fraud-or-bad-reputation',
+                                           silent=True)
 
                 # do no show the bags of type preview they are build
                 # type = request.data.get('type', 'BAG').upper()
@@ -1601,6 +1602,12 @@ class PayView(APIView):
                             admissions_tasks.build_profile_academy.delay(cohort.academy.id, bag.user.id)
 
                 serializer = GetInvoiceSerializer(invoice, many=False)
+
+                tasks_activity.add_activity.delay(request.user.id,
+                                                  'checkout_completed',
+                                                  related_type='payments.Invoice',
+                                                  related_id=serializer.instance.id)
+
                 return Response(serializer.data, status=201)
 
             except Exception as e:

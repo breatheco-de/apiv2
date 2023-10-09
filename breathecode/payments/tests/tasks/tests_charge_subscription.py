@@ -6,14 +6,18 @@ import random
 from unittest.mock import MagicMock, call, patch
 
 from django.utils import timezone
-from breathecode.payments import tasks
+import pytest
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
 
 from ...tasks import charge_subscription
 from breathecode.notify import actions as notify_actions
-from ..mixins import PaymentsTestCase
 from dateutil.relativedelta import relativedelta
 from mixer.backend.django import mixer
 from breathecode.payments.services import Stripe
+from rest_framework.test import APIClient
+from breathecode.tests.mixins.breathecode_mixin import Breathecode
+import breathecode.activity.tasks as activity_tasks
+from ..mixins import PaymentsTestCase
 
 UTC_NOW = timezone.now()
 
@@ -96,7 +100,12 @@ def calculate_relative_delta(unit: float, unit_type: str):
     return relativedelta(**delta_args)
 
 
-#FIXME: create_v2 fail in this test file
+@pytest.fixture(autouse=True)
+def setup(monkeypatch):
+    monkeypatch.setattr(activity_tasks.add_activity, 'delay', MagicMock())
+    yield
+
+
 class PaymentsTestSuite(PaymentsTestCase):
     """
     🔽🔽🔽 Subscription not found
@@ -120,6 +129,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [])
         self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Subscription with zero Invoice
@@ -161,6 +171,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 },
             ])
         self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Subscription process to charge
@@ -234,6 +245,10 @@ class PaymentsTestSuite(PaymentsTestCase):
                     'LINK': '/subscription/1'
                 })
         ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+            call(1, 'bag_created', related_type='payments.Bag', related_id=2),
+        ])
 
     """
     🔽🔽🔽 Subscription error when try to charge
@@ -291,6 +306,10 @@ class PaymentsTestSuite(PaymentsTestCase):
                     'LINK': '/subscription/1'
                 })
         ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+            call(1, 'bag_created', related_type='payments.Bag', related_id=2),
+        ])
 
     """
     🔽🔽🔽 Subscription is over
@@ -342,6 +361,9 @@ class PaymentsTestSuite(PaymentsTestCase):
             },
         ])
         self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 Subscription try to charge, but a undexpected exception is raised, the database is rollbacked
@@ -403,6 +425,10 @@ class PaymentsTestSuite(PaymentsTestCase):
         ])
 
         self.assertEqual(Stripe.refund_payment.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+            call(1, 'bag_created', related_type='payments.Bag', related_id=2),
+        ])
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
@@ -459,3 +485,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         ])
 
         self.assertEqual(Stripe.refund_payment.call_args_list, [call(model.invoice)])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+            call(1, 'bag_created', related_type='payments.Bag', related_id=2),
+        ])

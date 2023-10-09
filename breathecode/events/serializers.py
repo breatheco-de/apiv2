@@ -12,6 +12,7 @@ from rest_framework import serializers
 import serpy, logging
 from django.utils import timezone
 from django.db.models.query_utils import Q
+import breathecode.activity.tasks as tasks_activity
 
 logger = logging.getLogger(__name__)
 
@@ -575,6 +576,12 @@ class PUTEventCheckinSerializer(serializers.ModelSerializer):
         # if "attended_at" not in data and self.instance.attended_at is None:
         #     new_data['attended_at'] = timezone.now()
 
+        if 'attended_at' in data and self.instance.attended_at is None:
+            tasks_activity.add_activity.delay(self.instance.attendee,
+                                              'event_checkin_assisted',
+                                              related_type='events.EventCheckin',
+                                              related_id=self.instance.id)
+
         event_checkin = super().update(instance, {**validated_data, **new_data})
         return event_checkin
 
@@ -603,6 +610,16 @@ class POSTEventCheckinSerializer(serializers.ModelSerializer):
                                       code=400)
 
         return data
+
+    def create(self, validated_data):
+        event_checkin = super().create(validated_data)
+
+        tasks_activity.add_activity.delay(event_checkin.attendee,
+                                          'event_checkin_created',
+                                          related_type='events.EventCheckin',
+                                          related_id=event_checkin.id)
+
+        return event_checkin
 
 
 class PostEventTypeSerializer(EventTypeSerializerMixin):

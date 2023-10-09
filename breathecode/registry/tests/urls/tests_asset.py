@@ -1,8 +1,9 @@
 import pytest
+from unittest.mock import MagicMock, call, patch
 from django.urls.base import reverse_lazy
-from breathecode.tests.mixins.legacy import LegacyAPITestCase
 from django.utils import timezone
 from breathecode.tests.mixins.breathecode_mixin import Breathecode
+from breathecode.utils.api_view_extensions.extensions import lookup_extension
 
 UTC_NOW = timezone.now()
 
@@ -222,6 +223,52 @@ def test_assets_with_category(bc: Breathecode, client):
     json = response.json()
 
     expected = [get_serializer(model.asset[0])]
+
+    assert json == expected
+    assert bc.database.list_of('registry.Asset') == bc.format.to_dict(model.asset)
+
+
+@patch('breathecode.utils.api_view_extensions.extensions.lookup_extension.compile_lookup',
+       MagicMock(wraps=lookup_extension.compile_lookup))
+def test_lookup_extension(bc: Breathecode, client):
+
+    assets = [{'asset_type': 'LESSON'}, {'asset_type': 'PROJECT'}]
+    model = bc.database.create(asset=assets)
+
+    args, kwargs = bc.format.call('en',
+                                  strings={
+                                      'iexact': [
+                                          'test_status',
+                                          'sync_status',
+                                      ],
+                                      'in': [
+                                          'difficulty', 'status', 'asset_type', 'category__slug',
+                                          'technologies__slug', 'seo_keywords__slug'
+                                      ],
+                                  },
+                                  ids=['author', 'owner'],
+                                  bools={
+                                      'exact': ['with_video', 'interactive', 'graded'],
+                                  },
+                                  overwrite={
+                                      'category': 'category__slug',
+                                      'technologies': 'technologies__slug',
+                                      'seo_keywords': 'seo_keywords__slug'
+                                  })
+
+    query = bc.format.lookup(*args, **kwargs)
+    url = reverse_lazy('registry:asset') + '?' + bc.format.querystring(query)
+
+    assert [x for x in query] == [
+        'author', 'owner', 'test_status', 'sync_status', 'difficulty', 'status', 'asset_type', 'category',
+        'technologies', 'seo_keywords', 'with_video', 'interactive', 'graded'
+    ]
+
+    response = client.get(url)
+
+    json = response.json()
+
+    expected = []
 
     assert json == expected
     assert bc.database.list_of('registry.Asset') == bc.format.to_dict(model.asset)
