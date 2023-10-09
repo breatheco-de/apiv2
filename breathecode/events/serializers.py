@@ -614,7 +614,7 @@ class POSTEventCheckinSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         event_checkin = super().create(validated_data)
 
-        tasks_activity.add_activity.delay(event_checkin.attendee,
+        tasks_activity.add_activity.delay(event_checkin.attendee.id,
                                           'event_checkin_created',
                                           related_type='events.EventCheckin',
                                           related_id=event_checkin.id)
