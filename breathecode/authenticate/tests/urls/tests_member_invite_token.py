@@ -6,6 +6,7 @@ from django.core.handlers.wsgi import WSGIRequest
 from unittest.mock import MagicMock, patch
 from django.template import loader
 from django.urls.base import reverse_lazy
+import pytest
 from rest_framework import status
 from django.http.request import HttpRequest
 from random import randint
@@ -137,6 +138,28 @@ class GetHasherMock:
 
     def salt(self):
         return 'salt'
+
+
+def post_serializer(data={}):
+    return {
+        'created_at': ...,
+        'email': None,
+        'id': 0,
+        'sent_at': None,
+        'status': 'PENDING',
+        **data,
+    }
+
+
+created_at = None
+
+
+@pytest.fixture(autouse=True)
+def setup(monkeypatch, utc_now):
+    global created_at
+    created_at = utc_now
+    monkeypatch.setattr('django.utils.timezone.now', MagicMock(return_value=utc_now))
+    yield
 
 
 class AuthenticateTestSuite(AuthTestCase):
@@ -1019,4 +1042,89 @@ class AuthenticateTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.user),
         ])
 
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
+
+    """
+    🔽🔽🔽 POST JSON password is empty, UserInvite with email
+    """
+
+    @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
+    @patch('django.contrib.auth.hashers.get_hasher', MagicMock(side_effect=GetHasherMock))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    def test__post__json__password_is_empty(self):
+        user_invite = {'email': 'user@dotdotdotdot.dot'}
+        model = self.bc.database.create(user_invite=user_invite)
+        url = reverse_lazy('authenticate:member_invite_token', kwargs={'token': model.user_invite.token})
+
+        data = {'first_name': 'abc', 'last_name': 'xyz'}
+        response = self.client.post(url, data, format='json')
+
+        json = response.json()
+        expected = {'detail': 'Password is empty', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
+            self.bc.format.to_dict(model.user_invite),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('auth.User'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
+
+    """
+    🔽🔽🔽 POST JSON with first name, last name and passwords, UserInvite with email
+    """
+
+    @patch('django.template.loader.render_to_string', MagicMock(side_effect=render_to_string_mock))
+    @patch('django.contrib.auth.hashers.get_hasher', MagicMock(side_effect=GetHasherMock))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    def test__post__json__with_first_name_last_name_and_passwords(self):
+        user_invite = {'email': 'user@dotdotdotdot.dot'}
+        model = self.bc.database.create(user_invite=user_invite)
+        url = reverse_lazy('authenticate:member_invite_token', kwargs={'token': model.user_invite.token})
+        data = {
+            'first_name': 'abc',
+            'last_name': 'xyz',
+            'password': '^3^3uUppppp',
+            'repeat_password': '^3^3uUppppp',
+        }
+        response = self.client.post(url, data, format='json')
+
+        json = response.json()
+        expected = post_serializer({
+            'id': 1,
+            'created_at': self.bc.datetime.to_iso_string(created_at),
+            'status': 'ACCEPTED',
+            'email': 'user@dotdotdotdot.dot',
+        })
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
+                         [{
+                             **self.bc.format.to_dict(model.user_invite),
+                             'status': 'ACCEPTED',
+                             'is_email_validated': True,
+                         }])
+
+        user_db = [
+            x for x in self.bc.database.list_of('auth.User') if x['date_joined'] and x.pop('date_joined')
+        ]
+        self.assertEqual(user_db, [{
+            'email': 'user@dotdotdotdot.dot',
+            'first_name': 'abc',
+            'id': 1,
+            'is_active': True,
+            'is_staff': False,
+            'is_superuser': False,
+            'last_login': None,
+            'last_name': 'xyz',
+            'password': CSRF_TOKEN,
+            'username': 'user@dotdotdotdot.dot'
+        }])
+
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])

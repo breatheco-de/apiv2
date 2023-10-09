@@ -1291,7 +1291,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         now = str(timezone.now())
 
         if not self.instance:
-            data['token'] = hashlib.sha1((now + data['email']).encode('UTF-8')).hexdigest()
+            data['token'] = hashlib.sha512((data['email']).encode('UTF-8') + os.urandom(64)).hexdigest()
 
         return data
 
