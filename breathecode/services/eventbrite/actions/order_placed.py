@@ -50,6 +50,7 @@ def order_placed(self, webhook, payload: dict):
     elif not EventCheckin.objects.filter(email=email, event=local_event, attendee=local_attendee).count():
         event_checkin = EventCheckin.objects.filter(email=email, event=local_event).first()
         event_checkin.attendee = local_attendee
+        event_checkin.utm_source = 'eventbrite'
         event_checkin.save()
 
     contact = {

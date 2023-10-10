@@ -416,6 +416,10 @@ class EventHookCheckinSerializer(serpy.Serializer):
     id = serpy.Field()
     email = serpy.Field()
     status = serpy.Field()
+    utm_url = serpy.Field()
+    utm_source = serpy.Field()
+    utm_campaign = serpy.Field()
+    utm_medium = serpy.Field()
     created_at = serpy.Field()
     attended_at = serpy.Field()
     attendee = UserSerializer(required=False)
@@ -614,7 +618,7 @@ class POSTEventCheckinSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         event_checkin = super().create(validated_data)
 
-        tasks_activity.add_activity.delay(event_checkin.attendee,
+        tasks_activity.add_activity.delay(event_checkin.attendee.id,
                                           'event_checkin_created',
                                           related_type='events.EventCheckin',
                                           related_id=event_checkin.id)
