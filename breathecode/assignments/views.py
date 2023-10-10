@@ -644,7 +644,7 @@ class TaskMeView(APIView):
             tasks_activity.add_activity.delay(request.user.id,
                                               'open_syllabus_module',
                                               related_type='assignments.Task',
-                                              related_id=serializer.id)
+                                              related_id=serializer.data['id'])
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
