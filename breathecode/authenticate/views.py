@@ -44,9 +44,9 @@ from breathecode.utils.i18n import translation
 from breathecode.utils.shorteners import C
 from breathecode.utils.views import (private_view, render_message, set_query_parameter)
 
-from .actions import (generate_academy_token, get_app, get_user_language, resend_invite, reset_password,
-                      set_gitpod_user_expiration, update_gitpod_users, sync_organization_members,
-                      get_github_scopes, accept_invite)
+from .actions import (accept_invite_action, generate_academy_token, get_app, get_user_language, resend_invite,
+                      reset_password, set_gitpod_user_expiration, update_gitpod_users,
+                      sync_organization_members, get_github_scopes, accept_invite)
 from .authentication import ExpiringTokenAuthentication
 from .forms import (InviteForm, LoginForm, PasswordChangeCustomForm, PickPasswordForm, ResetPasswordForm,
                     SyncGithubUsersForm)
@@ -1572,10 +1572,11 @@ def render_user_invite(request, token):
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 def render_invite(request, token, member_id=None):
-    from breathecode.payments.models import Invoice, Bag, Plan
     _dict = request.POST.copy()
     _dict['token'] = token
     _dict['callback'] = request.GET.get('callback', '')
+
+    lang = get_user_language(request)
 
     if request.method == 'GET':
         invite = UserInvite.objects.filter(token=token, status='PENDING').first()
@@ -1603,123 +1604,28 @@ def render_invite(request, token, member_id=None):
             'form': form,
         })
 
+    if request.method == 'POST' and request.META.get('CONTENT_TYPE') == 'application/json':
+        _dict = request.data
+        _dict['token'] = token
+        _dict['callback'] = request.GET.get('callback', '')
+
+        try:
+            invite = accept_invite_action(_dict, token, lang)
+        except Exception as e:
+            raise ValidationException(str(e))
+
+        serializer = UserInviteShortSerializer(invite, many=False)
+        return Response(serializer.data)
+
     if request.method == 'POST':
-        form = InviteForm(_dict)
-        password1 = request.POST.get('password', None)
-        password2 = request.POST.get('repeat_password', None)
-
-        invite = UserInvite.objects.filter(token=str(token), status='PENDING', email__isnull=False).first()
-        if invite is None:
-            messages.error(request, 'Invalid or expired invitation ' + str(token))
-            return render(request, 'form_invite.html', {'form': form})
-
-        first_name = request.POST.get('first_name', None)
-        last_name = request.POST.get('last_name', None)
-        if first_name is None or first_name == '' or last_name is None or last_name == '':
-            messages.error(request, 'Invalid first or last name')
+        try:
+            accept_invite_action(_dict, token, lang)
+        except Exception as e:
+            form = InviteForm(_dict)
+            messages.error(request, str(e))
             return render(request, 'form_invite.html', {
                 'form': form,
             })
-
-        if password1 != password2:
-            messages.error(request, 'Passwords don\'t match')
-            return render(request, 'form_invite.html', {
-                'form': form,
-            })
-
-        if not password1:
-            messages.error(request, 'Password is empty')
-            return render(request, 'form_invite.html', {
-                'form': form,
-            })
-
-        user = User.objects.filter(email=invite.email).first()
-        if user is None:
-            user = User(email=invite.email, first_name=first_name, last_name=last_name, username=invite.email)
-            user.save()
-            user.set_password(password1)
-            user.save()
-
-        if invite.academy is not None:
-            profile = ProfileAcademy.objects.filter(email=invite.email, academy=invite.academy).first()
-            if profile is None:
-                role = invite.role
-                if not role:
-                    role = Role.objects.filter(slug='student').first()
-
-                if not role:
-                    messages.error(
-                        request, 'Unexpected error occurred with invite, please contact the '
-                        'staff of 4geeks')
-                    return render(request, 'form_invite.html', {
-                        'form': form,
-                    })
-
-                profile = ProfileAcademy(email=invite.email,
-                                         academy=invite.academy,
-                                         role=role,
-                                         first_name=first_name,
-                                         last_name=last_name)
-
-                if invite.first_name is not None and invite.first_name != '':
-                    profile.first_name = invite.first_name
-                if invite.last_name is not None and invite.last_name != '':
-                    profile.last_name = invite.last_name
-
-            profile.user = user
-            profile.status = 'ACTIVE'
-            profile.save()
-
-        if invite.cohort is not None:
-            role = 'student'
-            if invite.role is not None and invite.role.slug != 'student':
-                role = invite.role.slug.upper()
-
-            cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
-            if cu is None:
-                cu = CohortUser(user=user, cohort=invite.cohort, role=role.upper())
-                cu.save()
-
-            plan = Plan.objects.filter(cohort_set__cohorts=invite.cohort, invites=invite).first()
-
-            if plan and invite.user and invite.cohort.academy.main_currency and (
-                    invite.cohort.available_as_saas == True or
-                (invite.cohort.available_as_saas == None
-                 and invite.cohort.academy.available_as_saas == True)):
-                utc_now = timezone.now()
-
-                bag = Bag()
-                bag.chosen_period = 'NO_SET'
-                bag.status = 'PAID'
-                bag.type = 'INVITED'
-                bag.how_many_installments = 1
-                bag.academy = invite.cohort.academy
-                bag.user = user
-                bag.is_recurrent = False
-                bag.was_delivered = False
-                bag.token = None
-                bag.currency = invite.cohort.academy.main_currency
-                bag.expires_at = None
-
-                bag.save()
-
-                bag.plans.add(plan)
-                bag.selected_cohorts.add(invite.cohort)
-
-                invoice = Invoice(amount=0,
-                                  paid_at=utc_now,
-                                  user=invite.user,
-                                  bag=bag,
-                                  academy=bag.academy,
-                                  status='FULFILLED',
-                                  currency=bag.academy.main_currency)
-                invoice.save()
-
-                payment_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=True)
-
-        invite.status = 'ACCEPTED'
-        invite.is_email_validated = True
-        invite.save()
 
         callback = request.POST.get('callback', None)
         if callback:
