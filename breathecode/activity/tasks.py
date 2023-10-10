@@ -153,7 +153,7 @@ def add_activity(user_id: int,
                  related_id: Optional[str | int] = None,
                  related_slug: Optional[str] = None,
                  **_):
-    logger.info('Executing add_activity')
+    logger.info(f'Executing add_activity related to {str(kind)}')
 
     if related_type and not (bool(related_id) ^ bool(related_slug)):
         raise AbortTask(
