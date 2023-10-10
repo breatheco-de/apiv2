@@ -639,12 +639,12 @@ class TaskMeView(APIView):
                                         },
                                         many=True)
         if serializer.is_valid():
-            serializer.save()
+            task = serializer.save()
             # tasks.teacher_task_notification.delay(serializer.data['id'])
             tasks_activity.add_activity.delay(request.user.id,
                                               'open_syllabus_module',
                                               related_type='assignments.Task',
-                                              related_id=serializer.data['id'])
+                                              related_id=task.id)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
