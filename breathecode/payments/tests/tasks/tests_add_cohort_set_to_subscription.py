@@ -59,6 +59,8 @@ def test_subscription_set_not_found(bc: Breathecode, reset_mock_calls):
 
     assert Logger.info.call_args_list == [
         call('Starting add_cohort_set_to_subscription for subscription 1 cohort_set 1'),
+        # retry
+        call('Starting add_cohort_set_to_subscription for subscription 1 cohort_set 1'),
     ]
     assert Logger.error.call_args_list == [call('Subscription with id 1 not found', exc_info=True)]
 
@@ -77,6 +79,8 @@ def test_cohort_set_not_found(bc: Breathecode, reset_mock_calls):
     assert bc.database.list_of('payments.Subscription') == [bc.format.to_dict(model.subscription)]
 
     assert Logger.info.call_args_list == [
+        call('Starting add_cohort_set_to_subscription for subscription 1 cohort_set 1'),
+        # retry
         call('Starting add_cohort_set_to_subscription for subscription 1 cohort_set 1'),
     ]
     assert Logger.error.call_args_list == [call('CohortSet with id 1 not found', exc_info=True)]

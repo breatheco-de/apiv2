@@ -123,8 +123,13 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [])
 
-        self.bc.check.calls(logging.Logger.info.call_args_list,
-                            [call(f'Starting calculate_bill_amounts for hash {slug}')])
+        self.bc.check.calls(
+            logging.Logger.info.call_args_list,
+            [
+                call(f'Starting calculate_bill_amounts for hash {slug}'),
+                # retried
+                call(f'Starting calculate_bill_amounts for hash {slug}'),
+            ])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
             call(f'Does not exists bills for hash {slug}', exc_info=True),
         ])
@@ -155,8 +160,13 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             self.bc.format.to_dict(model.provisioning_bill),
         ])
 
-        self.bc.check.calls(logging.Logger.info.call_args_list,
-                            [call(f'Starting calculate_bill_amounts for hash {bad_slug}')])
+        self.bc.check.calls(
+            logging.Logger.info.call_args_list,
+            [
+                call(f'Starting calculate_bill_amounts for hash {bad_slug}'),
+                # retried
+                call(f'Starting calculate_bill_amounts for hash {bad_slug}'),
+            ])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
             call(f'Does not exists bills for hash {bad_slug}', exc_info=True),
         ])
@@ -538,9 +548,13 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             },
         ])
 
-        self.bc.check.calls(logging.Logger.info.call_args_list, [
-            call(f'Starting calculate_bill_amounts for hash {slug}'),
-        ])
+        self.bc.check.calls(
+            logging.Logger.info.call_args_list,
+            [
+                call(f'Starting calculate_bill_amounts for hash {slug}'),
+                # retried
+                call(f'Starting calculate_bill_amounts for hash {slug}'),
+            ])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
             call(f'Does not exists bills for hash {slug}', exc_info=True),
         ])
@@ -707,9 +721,13 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             },
         ])
 
-        self.bc.check.calls(logging.Logger.info.call_args_list, [
-            call(f'Starting calculate_bill_amounts for hash {slug}'),
-        ])
+        self.bc.check.calls(
+            logging.Logger.info.call_args_list,
+            [
+                call(f'Starting calculate_bill_amounts for hash {slug}'),
+                # retried
+                call(f'Starting calculate_bill_amounts for hash {slug}'),
+            ])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
             call(f'Does not exists bills for hash {slug}', exc_info=True),
         ])

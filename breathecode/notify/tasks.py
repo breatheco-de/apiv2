@@ -4,7 +4,7 @@ from celery import shared_task, Task
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils import timezone
 
-from breathecode.utils.decorators import task
+from breathecode.utils.decorators import task, AbortTask
 from .actions import sync_slack_team_channel, sync_slack_team_users
 from breathecode.services.slack.client import Slack
 from breathecode.mentorship.models import MentorshipSession
@@ -126,7 +126,6 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
                     payload[key], set):
                 l = []
                 for item in payload[key]:
-                    print(item)
                     l.append(parse_payload(item))
 
                 payload[key] = l
@@ -182,5 +181,6 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
                 hook.save()
 
     except Exception:
-        logger.exception(f'Error while trying to save hook call with status code {response.status_code}.')
         logger.error(payload)
+        raise AbortTask(
+            f'Error while trying to save hook call with status code {response.status_code}. {payload}')

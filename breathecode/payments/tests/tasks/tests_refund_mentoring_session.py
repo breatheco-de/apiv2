@@ -31,7 +31,7 @@ class TestPayments(LegacyAPITestCase):
             call('Starting refund_mentoring_session for mentoring session 1'),
         ])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
-            call('MentoringSession with id 1 not found or is invalid'),
+            call('MentoringSession with id 1 not found or is invalid', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [])
@@ -61,7 +61,7 @@ class TestPayments(LegacyAPITestCase):
             call('Starting refund_mentoring_session for mentoring session 1'),
         ])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
-            call('MentoringSession with id 1 not found or is invalid'),
+            call('MentoringSession with id 1 not found or is invalid', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
@@ -94,7 +94,7 @@ class TestPayments(LegacyAPITestCase):
             call('Starting refund_mentoring_session for mentoring session 1'),
         ])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
-            call('MentoringSession with id 1 not found or is invalid'),
+            call('MentoringSession with id 1 not found or is invalid', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
@@ -128,7 +128,7 @@ class TestPayments(LegacyAPITestCase):
             call('Starting refund_mentoring_session for mentoring session 1'),
         ])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
-            call('MentoringSession with id 1 not found or is invalid'),
+            call('MentoringSession with id 1 not found or is invalid', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
@@ -161,7 +161,7 @@ class TestPayments(LegacyAPITestCase):
             call('Starting refund_mentoring_session for mentoring session 1'),
         ])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
-            call('MentoringSession with id 1 not found or is invalid'),
+            call('MentoringSession with id 1 not found or is invalid', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
@@ -200,7 +200,7 @@ class TestPayments(LegacyAPITestCase):
             call('Starting refund_mentoring_session for mentoring session 1'),
         ])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
-            call('ConsumptionSession not found for mentorship session 1'),
+            call('ConsumptionSession not found for mentorship session 1', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
@@ -361,7 +361,7 @@ class TestPayments(LegacyAPITestCase):
             call('Starting refund_mentoring_session for mentoring session 1'),
         ])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
-            call('ConsumptionSession not found for mentorship session 1'),
+            call('ConsumptionSession not found for mentorship session 1', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [

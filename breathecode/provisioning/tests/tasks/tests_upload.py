@@ -271,7 +271,13 @@ class RandomFileTestSuite(ProvisioningTestCase):
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.GithubAcademyUser'), [])
 
-        self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
+        self.bc.check.calls(
+            logging.Logger.info.call_args_list,
+            [
+                call(f'Starting upload for hash {slug}'),
+                # retrying
+                call(f'Starting upload for hash {slug}'),
+            ])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
             call(f'File {slug} not found', exc_info=True),
         ])

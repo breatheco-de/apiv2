@@ -1,6 +1,7 @@
 from datetime import datetime
 import os
 import random
+from unittest.mock import patch
 import pytest
 from scripts.utils.environment import reset_environment, test_environment
 from breathecode.utils.exceptions import TestError
@@ -119,6 +120,18 @@ def enable_hook_manager(monkeypatch):
         monkeypatch.setattr(HookManagerClass, 'process_model_event', original_process_model_event)
 
     yield enable
+
+
+@pytest.fixture(autouse=True)
+def dont_wait_for_rescheduling_tasks(monkeypatch):
+    """
+    Don't wait for rescheduling tasks by default. You can re-enable it within a test by calling the provided wrapper.
+    """
+
+    with patch('breathecode.utils.decorators.task.RETRIES_LIMIT', 2):
+        with patch('breathecode.utils.decorators.task.Task.reattemp_settings',
+                   lambda *args, **kwargs: dict()):
+            yield
 
 
 from django.dispatch.dispatcher import Signal
