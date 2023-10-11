@@ -39,6 +39,9 @@ ALLOWED_TYPES = {
         'mentorship_session_checkin',
         'mentorship_session_checkout',
     ],
+    'payments.Invoice': [
+        'checkout_completed',
+    ],
 }
 
 
@@ -124,8 +127,8 @@ class FillActivityMeta:
             'user_username': instance.user.username if instance.user else None,
             'user_first_name': instance.user.first_name if instance.user else None,
             'user_last_name': instance.user.last_name if instance.user else None,
-            'opened_at': instance.opened_at.isoformat() if instance.opened_at else None,
-            'sent_at': instance.sent_at.isoformat() if instance.sent_at else None,
+            'opened_at': instance.opened_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ') if instance.opened_at else None,
+            'sent_at': instance.sent_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ') if instance.sent_at else None,
         }
 
     @classmethod
@@ -166,8 +169,9 @@ class FillActivityMeta:
             'id': instance.id,
             'slug': instance.slug,
             'name': instance.name,
-            'kickoff_date': instance.kickoff_date.isoformat(),
-            'ending_date': instance.ending_date.isoformat() if instance.ending_date else None,
+            'kickoff_date': instance.kickoff_date.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+            'ending_date':
+            instance.ending_date.strftime('%Y-%m-%dT%H:%M:%S.%fZ') if instance.ending_date else None,
             'current_day': instance.current_day,
             'current_module': instance.current_module,
             'stage': instance.stage,
@@ -212,7 +216,7 @@ class FillActivityMeta:
             'task_type': instance.task_type,
             'github_url': instance.github_url,
             'live_url': instance.live_url,
-            'opened_at': instance.opened_at.isoformat() if instance.opened_at else None,
+            'opened_at': instance.opened_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ') if instance.opened_at else None,
             'cohort': instance.cohort.slug if instance.cohort else None,
         }
 
@@ -230,16 +234,26 @@ class FillActivityMeta:
             raise AbortTask(f'EventCheckin {related_id or related_slug} not found')
 
         return {
-            'id': instance.id,
-            'email': instance.email,
-            'attendee_email': instance.attendee.email if instance.attendee else None,
-            'attendee_username': instance.attendee.username if instance.attendee else None,
-            'attendee_first_name': instance.attendee.first_name if instance.attendee else None,
-            'attendee_last_name': instance.attendee.last_name if instance.attendee else None,
-            'event_id': instance.event.id,
-            'event_slug': instance.event.slug,
-            'status': instance.status,
-            'attended_at': instance.attended_at.isoformat() if instance.attended_at else None,
+            'id':
+            instance.id,
+            'email':
+            instance.email,
+            'attendee_email':
+            instance.attendee.email if instance.attendee else None,
+            'attendee_username':
+            instance.attendee.username if instance.attendee else None,
+            'attendee_first_name':
+            instance.attendee.first_name if instance.attendee else None,
+            'attendee_last_name':
+            instance.attendee.last_name if instance.attendee else None,
+            'event_id':
+            instance.event.id,
+            'event_slug':
+            instance.event.slug,
+            'status':
+            instance.status,
+            'attended_at':
+            instance.attended_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ') if instance.attended_at else None,
         }
 
     @classmethod
@@ -256,33 +270,92 @@ class FillActivityMeta:
             raise AbortTask(f'MentorshipSession {related_id or related_slug} not found')
 
         return {
+            'id':
+            instance.id,
+            'name':
+            instance.name,
+            'is_online':
+            instance.is_online,
+            'latitude':
+            instance.latitude,
+            'longitude':
+            instance.longitude,
+            'mentor_id':
+            instance.mentor.id if instance.mentor else None,
+            'mentor_slug':
+            instance.mentor.slug if instance.mentor else None,
+            'mentor_name':
+            instance.mentor.name if instance.mentor else None,
+            'service':
+            instance.service.slug if instance.service else None,
+            'mentee_email':
+            instance.mentee.email if instance.mentee else None,
+            'mentee_username':
+            instance.mentee.username if instance.mentee else None,
+            'mentee_first_name':
+            instance.mentee.first_name if instance.mentee else None,
+            'mentee_last_name':
+            instance.mentee.last_name if instance.mentee else None,
+            'online_meeting_url':
+            instance.online_meeting_url,
+            'online_recording_url':
+            instance.online_recording_url,
+            'status':
+            instance.status,
+            'allow_billing':
+            instance.allow_billing,
+            'bill':
+            instance.bill.id if instance.bill else None,
+            'suggested_accounted_duration':
+            instance.suggested_accounted_duration,
+            'accounted_duration':
+            instance.accounted_duration,
+            'starts_at':
+            instance.starts_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ') if instance.starts_at else None,
+            'ends_at':
+            instance.ends_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ') if instance.ends_at else None,
+            'started_at':
+            instance.started_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ') if instance.started_at else None,
+            'ended_at':
+            instance.ended_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ') if instance.ended_at else None,
+            'mentor_joined_at':
+            instance.mentor_joined_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+            if instance.mentor_joined_at else None,
+            'mentor_left_at':
+            instance.mentor_left_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ') if instance.mentor_left_at else None,
+            'mentee_left_at':
+            instance.mentee_left_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ') if instance.mentee_left_at else None,
+        }
+
+    @classmethod
+    def invoice(cls,
+                kind: str,
+                related_id: Optional[str | int] = None,
+                related_slug: Optional[str] = None) -> dict[str, Any]:
+        from breathecode.payments.models import Invoice
+
+        kwargs = cls._get_query(related_id, related_slug)
+        instance = Invoice.objects.filter(**kwargs).first()
+
+        if not instance:
+            raise AbortTask(f'Invoice {related_id or related_slug} not found')
+
+        return {
             'id': instance.id,
-            'name': instance.name,
-            'is_online': instance.is_online,
-            'latitude': instance.latitude,
-            'longitude': instance.longitude,
-            'mentor_id': instance.mentor.id if instance.mentor else None,
-            'mentor_slug': instance.mentor.slug if instance.mentor else None,
-            'mentor_name': instance.mentor.name if instance.mentor else None,
-            'service': instance.service.slug if instance.service else None,
-            'mentee_email': instance.mentee.email if instance.mentee else None,
-            'mentee_username': instance.mentee.username if instance.mentee else None,
-            'mentee_first_name': instance.mentee.first_name if instance.mentee else None,
-            'mentee_last_name': instance.mentee.last_name if instance.mentee else None,
-            'online_meeting_url': instance.online_meeting_url,
-            'online_recording_url': instance.online_recording_url,
+            'amount': instance.amount,
+            'currency': instance.currency.code,
+            'paid_at': instance.paid_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+            'refunded_at':
+            instance.refunded_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ') if instance.refunded_at else None,
+            'refunded_at':
+            instance.refunded_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ') if instance.refunded_at else None,
             'status': instance.status,
-            'allow_billing': instance.allow_billing,
-            'bill': instance.bill.id if instance.bill else None,
-            'suggested_accounted_duration': instance.suggested_accounted_duration,
-            'accounted_duration': instance.accounted_duration,
-            'starts_at': instance.starts_at.isoformat() if instance.starts_at else None,
-            'ends_at': instance.ends_at.isoformat() if instance.ends_at else None,
-            'started_at': instance.started_at.isoformat() if instance.started_at else None,
-            'ended_at': instance.ended_at.isoformat() if instance.ended_at else None,
-            'mentor_joined_at': instance.mentor_joined_at.isoformat() if instance.mentor_joined_at else None,
-            'mentor_left_at': instance.mentor_left_at.isoformat() if instance.mentor_left_at else None,
-            'mentee_left_at': instance.mentee_left_at.isoformat() if instance.mentee_left_at else None,
+            'bag': instance.bag.id,
+            'academy': instance.academy.slug,
+            'user_email': instance.user.email,
+            'user_username': instance.user.username,
+            'user_first_name': instance.user.first_name,
+            'user_last_name': instance.user.last_name,
         }
 
     @classmethod
@@ -311,7 +384,8 @@ class FillActivityMeta:
             'user_last_name': instance.user.last_name,
             'is_recurrent': instance.is_recurrent,
             'was_delivered': instance.was_delivered,
-            'expires_at': instance.expires_at.isoformat() if instance.expires_at else None,
+            'expires_at':
+            instance.expires_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ') if instance.expires_at else None,
         }
 
     @classmethod
@@ -343,10 +417,11 @@ class FillActivityMeta:
             'selected_cohort': instance.selected_cohort.slug if instance.selected_cohort else None,
             'selected_mentorship_service_set': selected_mentorship_service_set,
             'selected_event_type_set': selected_event_type_set,
-            'paid_at': instance.paid_at.isoformat(),
+            'paid_at': instance.paid_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
             'is_refundable': instance.is_refundable,
-            'next_payment_at': instance.next_payment_at.isoformat(),
-            'valid_until': instance.valid_until.isoformat() if instance.valid_until else None,
+            'next_payment_at': instance.next_payment_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+            'valid_until':
+            instance.valid_until.strftime('%Y-%m-%dT%H:%M:%S.%fZ') if instance.valid_until else None,
             'pay_every': instance.pay_every,
             'pay_every_unit': instance.pay_every_unit,
         }
@@ -370,20 +445,34 @@ class FillActivityMeta:
         selected_event_type_set = (instance.selected_event_type_set.slug
                                    if instance.selected_event_type_set else None)
         return {
-            'id': instance.id,
-            'status': instance.status,
-            'user_email': instance.user.email,
-            'user_username': instance.user.username,
-            'user_first_name': instance.user.first_name,
-            'user_last_name': instance.user.last_name,
-            'academy': instance.academy.slug,
-            'selected_cohort': instance.selected_cohort.slug if instance.selected_cohort else None,
-            'selected_mentorship_service_set': selected_mentorship_service_set,
-            'selected_event_type_set': selected_event_type_set,
-            'next_payment_at': instance.next_payment_at.isoformat(),
-            'valid_until': instance.valid_until.isoformat(),
-            'plan_expires_at': instance.plan_expires_at.isoformat() if instance.plan_expires_at else None,
-            'monthly_price': instance.monthly_price,
+            'id':
+            instance.id,
+            'status':
+            instance.status,
+            'user_email':
+            instance.user.email,
+            'user_username':
+            instance.user.username,
+            'user_first_name':
+            instance.user.first_name,
+            'user_last_name':
+            instance.user.last_name,
+            'academy':
+            instance.academy.slug,
+            'selected_cohort':
+            instance.selected_cohort.slug if instance.selected_cohort else None,
+            'selected_mentorship_service_set':
+            selected_mentorship_service_set,
+            'selected_event_type_set':
+            selected_event_type_set,
+            'next_payment_at':
+            instance.next_payment_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+            'valid_until':
+            instance.valid_until.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+            'plan_expires_at':
+            instance.plan_expires_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ') if instance.plan_expires_at else None,
+            'monthly_price':
+            instance.monthly_price,
         }
 
 
@@ -433,5 +522,8 @@ def get_activity_meta(kind: str,
     if related_type == 'mentorship.MentorshipSession' and kind in ALLOWED_TYPES[
             'mentorship.MentorshipSession']:
         return FillActivityMeta.mentorship_session(*args)
+
+    if related_type == 'payments.Invoice' and kind in ALLOWED_TYPES['payments.Invoice']:
+        return FillActivityMeta.invoice(*args)
 
     raise AbortTask(f'kind {kind} is not supported by {related_type} yet')

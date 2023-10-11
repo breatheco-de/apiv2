@@ -1,10 +1,11 @@
 from django.urls import path
 
-from .views import (AcademyPlanCohortView, AcademyPlanView, AcademyServiceView, AcademyAcademyServiceView,
-                    AcademySubscriptionView, BagView, CardView, CheckingView, ConsumableCheckoutView,
-                    EventTypeSetView, MeConsumableView, MeInvoiceView, AcademyInvoiceView,
-                    MeSubscriptionCancelView, MeSubscriptionChargeView, MentorshipServiceSetView, PayView,
-                    PlanOfferView, PlanView, ServiceItemView, ServiceView, MeSubscriptionView)
+from .views import (AcademyCohortSetCohortView, AcademyPlanView, AcademyServiceView,
+                    AcademyAcademyServiceView, AcademySubscriptionView, BagView, CardView, CheckingView,
+                    ConsumableCheckoutView, EventTypeSetView, MeConsumableView, MeInvoiceView,
+                    AcademyInvoiceView, MeSubscriptionCancelView, MeSubscriptionChargeView,
+                    MentorshipServiceSetView, PayView, PlanOfferView, PlanView, ServiceItemView, ServiceView,
+                    MeSubscriptionView)
 
 app_name = 'payments'
 urlpatterns = [
@@ -14,8 +15,8 @@ urlpatterns = [
     path('academy/plan', AcademyPlanView.as_view(), name='academy_plan'),
     path('academy/plan/<int:plan_id>', AcademyPlanView.as_view(), name='academy_plan_id'),
     path('academy/plan/<slug:plan_slug>', AcademyPlanView.as_view(), name='academy_plan_slug'),
-    path('academy/plan/<int:plan_id>/cohort', AcademyPlanCohortView.as_view()),
-    path('academy/plan/<slug:plan_slug>/cohort', AcademyPlanCohortView.as_view()),
+    path('academy/cohortset/<int:cohort_set_id>/cohort', AcademyCohortSetCohortView.as_view()),
+    path('academy/cohortset/<slug:cohort_set_slug>/cohort', AcademyCohortSetCohortView.as_view()),
     path('service', ServiceView.as_view()),
     path('service/<slug:service_slug>', ServiceView.as_view()),
     path('service/<slug:service_slug>/items', ServiceItemView.as_view()),

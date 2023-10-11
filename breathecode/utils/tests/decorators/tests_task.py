@@ -92,6 +92,7 @@ def db_item(data={}):
                 'task_manager_id': 1
             }
         },
+        'attemps': 1,
         'current_page': 1,
         'id': 1,
         'killed': False,

@@ -56,9 +56,15 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
 
-        self.assertEqual(logging.Logger.info.call_args_list,
-                         [call('Starting build_plan_financing for bag 1')])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('Bag with id 1 not found')])
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call('Starting build_plan_financing for bag 1'),
+                # retrying
+                call('Starting build_plan_financing for bag 1'),
+            ])
+        self.assertEqual(logging.Logger.error.call_args_list,
+                         [call('Bag with id 1 not found', exc_info=True)])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [])
         self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
@@ -83,9 +89,15 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
 
-        self.assertEqual(logging.Logger.info.call_args_list,
-                         [call('Starting build_plan_financing for bag 1')])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('Invoice with id 1 not found')])
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call('Starting build_plan_financing for bag 1'),
+                # retrying
+                call('Starting build_plan_financing for bag 1'),
+            ])
+        self.assertEqual(logging.Logger.error.call_args_list,
+                         [call('Invoice with id 1 not found', exc_info=True)])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [self.bc.format.to_dict(model.bag)])
         self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
@@ -134,7 +146,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting build_plan_financing for bag 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('An invoice without amount is prohibited (id: 1)'),
+            call('An invoice without amount is prohibited (id: 1)', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [

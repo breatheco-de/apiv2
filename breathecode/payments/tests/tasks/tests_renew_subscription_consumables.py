@@ -41,10 +41,16 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
 
-        self.assertEqual(logging.Logger.info.call_args_list, [
-            call('Starting renew_subscription_consumables for id 1'),
-        ])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('Subscription with id 1 not found')])
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call('Starting renew_subscription_consumables for id 1'),
+                # retrying
+                call('Starting renew_subscription_consumables for id 1'),
+            ],
+        )
+        self.assertEqual(logging.Logger.error.call_args_list,
+                         [call('Subscription with id 1 not found', exc_info=True)])
 
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), [])
 
@@ -70,7 +76,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting renew_subscription_consumables for id 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The subscription 1 needs to be paid to renew the consumables'),
+            call('The subscription 1 needs to be paid to renew the consumables', exc_info=True),
         ])
 
         self.assertEqual(tasks.renew_consumables.delay.call_args_list, [])
@@ -137,7 +143,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting renew_subscription_consumables for id 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The subscription 1 is over'),
+            call('The subscription 1 is over', exc_info=True),
         ])
 
         self.assertEqual(tasks.renew_consumables.delay.call_args_list, [])

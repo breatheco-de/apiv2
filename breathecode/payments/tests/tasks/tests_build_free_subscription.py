@@ -56,9 +56,16 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
 
-        self.assertEqual(logging.Logger.info.call_args_list,
-                         [call('Starting build_free_subscription for bag 1')])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('Bag with id 1 not found')])
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call('Starting build_free_subscription for bag 1'),
+                # retry
+                call('Starting build_free_subscription for bag 1'),
+            ],
+        )
+        self.assertEqual(logging.Logger.error.call_args_list,
+                         [call('Bag with id 1 not found', exc_info=True)])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [])
         self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
@@ -83,9 +90,17 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
 
-        self.assertEqual(logging.Logger.info.call_args_list,
-                         [call('Starting build_free_subscription for bag 1')])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('Invoice with id 1 not found')])
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call('Starting build_free_subscription for bag 1'),
+                # retry
+                call('Starting build_free_subscription for bag 1'),
+            ],
+        )
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Invoice with id 1 not found', exc_info=True),
+        ])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [self.bc.format.to_dict(model.bag)])
         self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
@@ -124,7 +139,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting build_free_subscription for bag 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Not have plans to associated to this free subscription in the bag 1'),
+            call('Not have plans to associated to this free subscription in the bag 1', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [
@@ -255,7 +270,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         ])
 
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The invoice with id 1 is invalid for a free subscription'),
+            call('The invoice with id 1 is invalid for a free subscription', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [

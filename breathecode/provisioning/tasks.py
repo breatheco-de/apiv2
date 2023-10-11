@@ -9,7 +9,7 @@ from dateutil.relativedelta import relativedelta
 from celery import Task
 import pandas as pd
 from breathecode.payments.services.stripe import Stripe
-from breathecode.utils.decorators import task, AbortTask
+from breathecode.utils.decorators import task, AbortTask, RetryTask
 
 from breathecode.provisioning import actions
 from breathecode.provisioning.models import ProvisioningBill, ProvisioningConsumptionEvent, ProvisioningUserConsumption
@@ -58,7 +58,7 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
         bills = bills.exclude(status__in=['DISPUTED', 'IGNORED', 'PAID'])
 
     if not bills.exists():
-        raise AbortTask(f'Does not exists bills for hash {hash}')
+        raise RetryTask(f'Does not exists bills for hash {hash}')
 
     if bills[0].vendor.name == 'Gitpod':
         fields = ['id', 'credits', 'startTime', 'endTime', 'kind', 'userName', 'contextURL']
@@ -173,7 +173,7 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
     storage = Storage()
     cloud_file = storage.file(os.getenv('PROVISIONING_BUCKET', None), hash)
     if not cloud_file.exists():
-        raise AbortTask(f'File {hash} not found')
+        raise RetryTask(f'File {hash} not found')
 
     bills = ProvisioningBill.objects.filter(hash=hash).exclude(status='PENDING')
     if bills.exists() and not force:

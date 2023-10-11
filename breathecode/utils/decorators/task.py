@@ -1,20 +1,27 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
+import importlib
 import inspect
 import logging
-from typing import Callable
+from typing import Any, Callable
 from breathecode.utils.exceptions import ProgrammingError
 import celery
 from django.db import transaction
 from django.utils import timezone
 import copy
 
-__all__ = ['task', 'AbortTask']
+__all__ = ['task', 'AbortTask', 'RetryTask']
 
 logger = logging.getLogger(__name__)
+RETRIES_LIMIT = 10
+RETRY_AFTER = timedelta(seconds=5)
 
 
 class AbortTask(Exception):
+    pass
+
+
+class RetryTask(Exception):
     pass
 
 
@@ -69,6 +76,19 @@ class Task(object):
 
         return module_name, function_name
 
+    def reattemp_settings(self) -> dict[str, datetime]:
+        """
+        Return a dict with the settings to reattemp the task.
+        """
+        return {'eta': timezone.now() + RETRY_AFTER}
+
+    def reattemp(self, task_module: str, task_name: str, attemps: int, args: tuple[Any], kwargs: dict[str,
+                                                                                                      Any]):
+        module = importlib.import_module(task_module)
+        x = getattr(module, task_name, None)
+
+        x.apply_async(args=args, kwargs={**kwargs, 'attemps': attemps}, **self.reattemp_settings())
+
     def __call__(self, function):
         from breathecode.commons.models import TaskManager
 
@@ -84,6 +104,7 @@ class Task(object):
 
             page = kwargs.get('page', 0)
             total_pages = kwargs.get('total_pages', 1)
+            attemps = kwargs.get('attemps', None)
             task_manager_id = kwargs.get('task_manager_id', None)
             last_run = timezone.now()
 
@@ -96,6 +117,7 @@ class Task(object):
                 created = True
                 x = TaskManager.objects.create(task_module=task_module,
                                                task_name=task_name,
+                                               attemps=1,
                                                reverse_module=reverse_module,
                                                reverse_name=reverse_name,
                                                arguments=arguments,
@@ -109,6 +131,10 @@ class Task(object):
             if not created:
                 x.current_page = page + 1
                 x.last_run = last_run
+
+                if attemps:
+                    x.attemps = attemps + 1
+
                 x.save()
 
             if x.status in ['CANCELLED', 'REVERSED', 'PAUSED', 'ABORTED', 'DONE']:
@@ -117,10 +143,32 @@ class Task(object):
                 return
 
             if self.is_transaction == True:
+                error = None
                 with transaction.atomic():
                     sid = transaction.savepoint()
                     try:
-                        return function(*args, **kwargs)
+                        x.status_message = ''
+                        x.save()
+
+                        res = function(*args, **kwargs)
+
+                    except RetryTask as e:
+                        x.status_message = str(e)[:255]
+
+                        if x.attemps >= RETRIES_LIMIT:
+                            logger.exception(str(e))
+                            x.status = 'ERROR'
+                            x.save()
+
+                        else:
+                            logger.warn(str(e))
+                            x.save()
+
+                            self.reattemp(x.task_module, x.task_name, x.attemps, arguments['args'],
+                                          arguments['kwargs'])
+
+                        # it don't raise anything to manage the reattems with the task manager
+                        return
 
                     except AbortTask as e:
                         x.status = 'ABORTED'
@@ -137,41 +185,62 @@ class Task(object):
 
                         error = str(e)[:255]
                         exception = e
-                x.status = 'ERROR'
-                x.status_message = error
-                x.save()
 
-                # fallback
-                if self.fallback:
-                    return self.fallback(*args, **kwargs, exception=exception)
+                if error:
+                    x.status = 'ERROR'
+                    x.status_message = error
+                    x.save()
 
-                # behavior by default
-                raise exception
+                    # fallback
+                    if self.fallback:
+                        return self.fallback(*args, **kwargs, exception=exception)
 
-            try:
-                res = function(*args, **kwargs)
+                    # behavior by default
+                    raise exception
 
-            except AbortTask as e:
-                x.status = 'ABORTED'
-                x.status_message = str(e)[:255]
-                x.save()
+            else:
+                try:
+                    res = function(*args, **kwargs)
 
-                logger.exception(str(e))
+                except RetryTask as e:
+                    x.status_message = str(e)[:255]
 
-                # avoid reattempts
-                return
+                    if x.attemps >= RETRIES_LIMIT:
+                        logger.exception(str(e))
+                        x.status = 'ERROR'
+                        x.save()
 
-            except Exception as e:
-                x.status = 'ERROR'
-                x.status_message = str(e)[:255]
-                x.save()
+                    else:
+                        logger.warn(str(e))
+                        x.save()
 
-                # fallback
-                if self.fallback:
-                    return self.fallback(*args, **kwargs, exception=e)
+                        self.reattemp(x.task_module, x.task_name, x.attemps, arguments['args'],
+                                      arguments['kwargs'])
 
-                # behavior by default
-                raise e
+                    # it don't raise anything to manage the reattems with the task manager
+                    return
+
+                except AbortTask as e:
+                    x.status = 'ABORTED'
+                    x.status_message = str(e)[:255]
+                    x.save()
+
+                    logger.exception(str(e))
+
+                    # avoid reattempts
+                    return
+
+                except Exception as e:
+                    x.status = 'ERROR'
+                    x.status_message = str(e)[:255]
+                    x.save()
+
+                    # fallback
+                    if self.fallback:
+                        return self.fallback(*args, **kwargs, exception=e)
+
+                    # behavior by default
+                    raise e
 
             if x.total_pages == x.current_page:
                 x.status = 'DONE'
