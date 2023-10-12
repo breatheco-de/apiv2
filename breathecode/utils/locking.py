@@ -35,10 +35,9 @@ logger = getLogger(__name__)
 ENV = os.getenv('ENV', '')
 REDIS_URL = os.getenv('REDIS_URL', '')
 
-pool = ConnectionPool.from_url(
-    REDIS_URL,
-    ssl_cert_reqs=None  # Disable SSL certificate verification
-)
+pool = ConnectionPool.from_url(REDIS_URL)
+# Modify the connection_kwargs to disable SSL certificate verification ssl_cert_reqs="none"
+redis_client = Redis(connection_pool=pool, ssl_cert_reqs='none')
 
 
 class LockManager(models.Manager):
@@ -47,8 +46,6 @@ class LockManager(models.Manager):
         instance, created = None, False
 
         if lock and ENV != 'test':
-
-            redis_client = Redis(connection_pool=pool)
 
             # Dynamically retrieve the class name and create a unique lock key based on the kwargs
             class_name = self.model.__name__
