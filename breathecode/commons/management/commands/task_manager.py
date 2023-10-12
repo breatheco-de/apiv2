@@ -62,9 +62,10 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(msg))
 
     def daily_report(self, msg):
-        if not is_report_time():
-            self.stdout.write(self.style.SUCCESS('Not report time, skipping.'))
-            return
+        # TODO: uncomment this
+        # if not is_report_time():
+        #     self.stdout.write(self.style.SUCCESS('Not report time, skipping.'))
+        #     return
 
         tasks = TaskManager.objects.filter()
         errors = tasks.filter(status='ERROR')
