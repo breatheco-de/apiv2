@@ -44,3 +44,4 @@ class TaskWatcherAdmin(admin.ModelAdmin):
     list_display = ['user', 'email', 'on_error', 'on_success', 'watch_progress']
     search_fields = ['email', 'user__email', 'user__username', 'user__first_name', 'user__last_name']
     list_filter = ['on_error', 'on_success', 'watch_progress']
+    raw_id_fields = ['user']
