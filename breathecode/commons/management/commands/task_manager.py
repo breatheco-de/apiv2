@@ -126,8 +126,7 @@ class Command(BaseCommand):
 
         for watcher in watchers:
             send_email_message('task_manager_report',
-                               watcher.email or watcher.user.email,
-                               message, {
+                               watcher.email or watcher.user.email, {
                                    'report': report,
                                    'errors': errors,
                                    'done': done,
