@@ -44,6 +44,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.utc_now = datetime.utcnow()
         self.rerun_pending_tasks()
+        self.daily_report()
 
     def rerun_pending_tasks(self):
         tolerance = timedelta(minutes=TOLERANCE)
