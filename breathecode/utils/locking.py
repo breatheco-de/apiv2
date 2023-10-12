@@ -25,8 +25,7 @@ bag, created = Bag.objects.get_or_create(
 """
 
 from django.db import models, transaction
-import os
-from redis import ConnectionPool, Redis
+import os, redis
 from redis.lock import Lock
 from redis.exceptions import LockError
 from breathecode.utils import getLogger
@@ -36,13 +35,11 @@ logger = getLogger(__name__)
 ENV = os.getenv('ENV', '')
 REDIS_URL = os.getenv('REDIS_URL', '')
 
-pool = ConnectionPool.from_url(REDIS_URL)
 # Modify the connection_kwargs to disable SSL certificate verification ssl_cert_reqs="none"
-redis_kwargs = {}
-kwargs = {} if REDIS_URL.startswith('redis://') else {
+redis_kwargs = {} if REDIS_URL.startswith('redis://') else {
     'ssl_cert_reqs': ssl.CERT_NONE,
 }
-redis_client = Redis(connection_pool=pool, **kwargs)
+redis_client = redis.from_url(REDIS_URL, **redis_kwargs)
 
 
 class LockManager(models.Manager):
