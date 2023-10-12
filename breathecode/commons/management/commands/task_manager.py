@@ -3,8 +3,8 @@ from django.core.management.base import BaseCommand
 from breathecode.commons import tasks
 from breathecode.notify.actions import send_email_message
 from ...models import TaskManager, TaskWatcher
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
+from django.db.models import Q
 
 TOLERANCE = 30
 
@@ -68,7 +68,7 @@ class Command(BaseCommand):
         #     return
 
         tasks = TaskManager.objects.filter()
-        errors = tasks.filter(status='ERROR')
+        errors = tasks.filter(Q(status='ERROR') | Q(status='ABORTED'))
         error_number = errors.count()
 
         if not error_number:
