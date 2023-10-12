@@ -10,7 +10,7 @@ Task manager daily report.
 Errors.
 
 {% for module_name, tasks in report.items %}
-   - {{ module_name }}: {{tasks.__total__}}
+   - {{ module_name }}: {{tasks.abc_total_cba}}
   {% for task_name, task in tasks.items %}
       - {{ task_name }}: {{ task.ERROR }}
   {% endfor %}

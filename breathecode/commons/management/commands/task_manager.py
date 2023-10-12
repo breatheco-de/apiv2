@@ -122,7 +122,7 @@ class Command(BaseCommand):
 
                     report[module_name][task_name][status] = length
 
-            report[module_name]['__total__'] = n
+            report[module_name]['abc_total_cba'] = n
 
         for watcher in watchers:
             send_email_message('task_manager_report',
