@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0;" />
+    <meta name="format-detection" content="telephone=no" />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/flowbite/1.8.1/flowbite.min.css"
+      rel="stylesheet"
+    />
+
+    <title>Task manager - Daily report</title>
+  </head>
+
+  <body
+    class="block p-6 bg-white hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700"
+  >
+    <h2 class="text-center text-4xl font-bold dark:text-white">
+      <mark class="px-2 text-white bg-purple-600 rounded dark:bg-purple-500"
+        >Task manager</mark
+      >
+      daily report
+    </h2>
+
+    <br />
+    <div class="relative overflow-x-auto">
+      <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+        <thead
+          class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400"
+        >
+          <tr>
+            <th scope="col" class="px-6 py-3">Module</th>
+            <th scope="col" class="px-6 py-3">Task</th>
+            <th scope="col" class="px-6 py-3">Resume</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for module_name, tasks in report.items %} {% for task_name, task in
+          tasks.items %}
+
+          <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+            <th
+              scope="row"
+              class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white"
+            >
+              {{module_name}}
+            </th>
+            <td class="px-6 py-4">{{task_name}}</td>
+            <td class="px-6 py-4">
+              <a
+                href="{{API_URL}}/admin/commons/taskmanager/?status__exact=PENDING&task_module={{module_name}}&task_name={{task_name}}"
+              >
+                <span
+                  class="bg-blue-100 text-blue-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300"
+                  >{{task.PENDING}}</span
+                >
+              </a>
+              <a
+                href="{{API_URL}}/admin/commons/taskmanager/?status__exact=DONE&task_module={{module_name}}&task_name={{task_name}}"
+              >
+                <span
+                  class="bg-green-100 text-green-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300"
+                  >{{task.DONE}}</span
+                >
+              </a>
+              <a
+                href="{{API_URL}}/admin/commons/taskmanager/?status__exact=CANCELLED&task_module={{module_name}}&task_name={{task_name}}"
+              >
+                <span
+                  class="bg-gray-100 text-gray-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full dark:bg-gray-700 dark:text-gray-300"
+                  >{{task.CANCELLED}}</span
+                >
+              </a>
+              <a
+                href="{{API_URL}}/admin/commons/taskmanager/?status__exact=REVERSED&task_module={{module_name}}&task_name={{task_name}}"
+              >
+                <span
+                  class="bg-pink-100 text-pink-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full dark:bg-pink-900 dark:text-pink-300"
+                  >{{task.REVERSED}}</span
+                >
+              </a>
+              <a
+                href="{{API_URL}}/admin/commons/taskmanager/?status__exact=PAUSED&task_module={{module_name}}&task_name={{task_name}}"
+              >
+                <span
+                  class="bg-gray-200 text-gray-900 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full dark:bg-gray-700 dark:text-gray-300"
+                  >{{task.PAUSED}}</span
+                >
+              </a>
+              <a
+                href="{{API_URL}}/admin/commons/taskmanager/?status__exact=ABORTED&task_module={{module_name}}&task_name={{task_name}}"
+              >
+                <span
+                  class="bg-yellow-100 text-yellow-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300"
+                  >{{task.ABORTED}}</span
+                >
+              </a>
+              <a
+                href="{{API_URL}}/admin/commons/taskmanager/?status__exact=ERROR&task_module={{module_name}}&task_name={{task_name}}"
+              >
+                <span
+                  class="bg-red-100 text-red-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full dark:bg-red-900 dark:text-red-300"
+                  >{{task.ERROR}}</span
+                >
+              </a>
+            </td>
+          </tr>
+          {% endfor %} {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </body>
+</html>

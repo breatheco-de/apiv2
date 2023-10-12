@@ -22,7 +22,7 @@ if FIREBASE_KEY is not None and FIREBASE_KEY != '':
 logger = logging.getLogger(__name__)
 
 
-def send_email_message(template_slug, to, data={}):
+def send_email_message(template_slug, to, data={}, force=False):
 
     if to is None or to == '' or (isinstance(to, list) and len(to) == 0):
         raise ValidationException(f'Invalid email to send notification to {str(to)}')
@@ -30,7 +30,7 @@ def send_email_message(template_slug, to, data={}):
     if isinstance(to, list) == False:
         to = [to]
 
-    if os.getenv('EMAIL_NOTIFICATIONS_ENABLED', False) == 'TRUE':
+    if os.getenv('EMAIL_NOTIFICATIONS_ENABLED', False) == 'TRUE' or force:
         template = get_template_content(template_slug, data, ['email'])
 
         result = requests.post(f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages",
