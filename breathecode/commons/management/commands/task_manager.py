@@ -63,10 +63,9 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(msg))
 
     def daily_report(self):
-        # TODO: uncomment this
-        # if not is_report_time():
-        #     self.stdout.write(self.style.SUCCESS('Not report time, skipping.'))
-        #     return
+        if not is_report_time():
+            self.stdout.write(self.style.SUCCESS('Not report time, skipping.'))
+            return
 
         tasks = TaskManager.objects.filter()
         errors = tasks.filter(Q(status='ERROR') | Q(status='ABORTED'))
