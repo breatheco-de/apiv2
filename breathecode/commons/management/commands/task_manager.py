@@ -110,7 +110,7 @@ class Command(BaseCommand):
             n = 0
 
             for task_name in task_names:
-                if task_name not in report[module_name][task_name]:
+                if task_name not in report[module_name]:
                     report[module_name][task_name] = {}
 
                 for status in STATUSES:
