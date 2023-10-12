@@ -135,4 +135,5 @@ class Command(BaseCommand):
                                    'paused': paused,
                                    'aborted': aborted,
                                },
-                               force=True)
+                               force=True,
+                               inline_css=True)
