@@ -45,6 +45,10 @@ def event_checkin_serializer(id, event, user):
     return {
         'attended_at': UTC_NOW,
         'attendee_id': user.id,
+        'utm_campaign': None,
+        'utm_medium': None,
+        'utm_source': None,
+        'utm_url': None,
         'email': user.email,
         'event_id': event.id,
         'id': id,

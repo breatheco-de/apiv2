@@ -1623,10 +1623,11 @@ class PayView(APIView):
 
                 serializer = GetInvoiceSerializer(invoice, many=False)
 
-                tasks_activity.add_activity.delay(request.user.id,
-                                                  'checkout_completed',
-                                                  related_type='payments.Invoice',
-                                                  related_id=serializer.instance.id)
+                # TODO: Implement payments.Invoice in ALLOWED_TYPES before uncommenting this line
+                # tasks_activity.add_activity.delay(request.user.id,
+                #                                   'checkout_completed',
+                #                                   related_type='payments.Invoice',
+                #                                   related_id=serializer.instance.id)
 
                 return Response(serializer.data, status=201)
 
