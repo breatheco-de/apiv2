@@ -25,6 +25,7 @@ from breathecode.utils.validation_exception import ValidationException
 
 from breathecode.utils.validators.language import validate_language_code
 from breathecode.utils.i18n import translation
+from breathecode.utils.locking import LockManager
 
 import breathecode.activity.tasks as tasks_activity
 
@@ -754,6 +755,7 @@ class Bag(AbstractAmountByTime):
     """
     Represents a credit that can be used by a user to use a service.
     """
+    objects = LockManager()
 
     status = models.CharField(max_length=8,
                               choices=BAG_STATUS,

@@ -1078,7 +1078,7 @@ class BagView(APIView):
         s.add_contact(request.user)
 
         # do no show the bags of type preview they are build
-        bag, _ = Bag.objects.get_or_create(user=request.user, status='CHECKING', type='BAG')
+        bag, _ = Bag.objects.get_or_create(lock=True, user=request.user, status='CHECKING', type='BAG')
         add_items_to_bag(request, bag, lang)
         # actions.check_dependencies_in_bag(bag, lang)
 
@@ -1111,6 +1111,7 @@ class CheckingView(APIView):
                                                           slug='not-found'),
                                               code=404)
                 if bag_type == 'PREVIEW':
+
                     academy = request.data.get('academy')
                     kwargs = {}
 
@@ -1158,7 +1159,9 @@ class CheckingView(APIView):
                             slug='not-found'),
                                                   code=404)
 
-                    bag, created = Bag.objects.get_or_create(user=request.user,
+                    # Locked operation to avoid creating twice if 2 web instances are requesting in parallel
+                    bag, created = Bag.objects.get_or_create(lock=True,
+                                                             user=request.user,
                                                              status='CHECKING',
                                                              type=bag_type,
                                                              academy=academy,
