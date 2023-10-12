@@ -30,6 +30,7 @@ from redis import ConnectionPool, Redis
 from redis.lock import Lock
 from redis.exceptions import LockError
 from breathecode.utils import getLogger
+import ssl
 
 logger = getLogger(__name__)
 ENV = os.getenv('ENV', '')
@@ -37,7 +38,11 @@ REDIS_URL = os.getenv('REDIS_URL', '')
 
 pool = ConnectionPool.from_url(REDIS_URL)
 # Modify the connection_kwargs to disable SSL certificate verification ssl_cert_reqs="none"
-redis_client = Redis(connection_pool=pool, ssl_cert_reqs='none')
+redis_kwargs = {}
+kwargs = {} if REDIS_URL.startswith('redis://') else {
+    'ssl_cert_reqs': ssl.CERT_NONE,
+}
+redis_client = Redis(connection_pool=pool, **kwargs)
 
 
 class LockManager(models.Manager):
