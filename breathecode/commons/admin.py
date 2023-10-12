@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import TaskManager
+from .models import TaskManager, TaskWatcher
 from breathecode.commons import tasks
 
 
@@ -37,3 +37,10 @@ class TaskManagerAdmin(admin.ModelAdmin):
     search_fields = ['task_module', 'task_name', 'reverse_module', 'reverse_name']
     list_filter = ['status', 'killed', 'task_module']
     actions = [pause, resume, cancel, reverse, force_reverse]
+
+
+@admin.register(TaskWatcher)
+class TaskWatcherAdmin(admin.ModelAdmin):
+    list_display = ['user', 'email', 'on_error', 'on_success', 'watch_progress']
+    search_fields = ['email', 'user__email', 'user__username', 'user__first_name', 'user__last_name']
+    list_filter = ['on_error', 'on_success', 'watch_progress']
