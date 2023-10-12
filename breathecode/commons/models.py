@@ -1,5 +1,7 @@
 from django.db import models
 
+from django.contrib.auth.models import User
+
 PENDING = 'PENDING'
 DONE = 'DONE'
 CANCELLED = 'CANCELLED'
@@ -21,6 +23,7 @@ TASK_STATUS = (
 class TaskManager(models.Model):
     current_page = models.IntegerField(default=0, blank=True, null=True)
     total_pages = models.IntegerField(default=0, blank=True, null=True)
+    attemps = models.IntegerField(default=1)
 
     task_module = models.CharField(max_length=200)
     task_name = models.CharField(max_length=200)
@@ -40,3 +43,20 @@ class TaskManager(models.Model):
 
     def __str__(self):
         return self.task_module + '.' + self.task_name + ' ' + str(self.arguments)
+
+
+class TaskWatcher(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    tasks = models.ManyToManyField(TaskManager,
+                                   blank=True,
+                                   related_name='watchers',
+                                   help_text='Notify for the progress of these tasks')
+
+    email = models.EmailField(blank=True, null=True)
+
+    on_error = models.BooleanField(default=True)
+    on_success = models.BooleanField(default=True)
+    watch_progress = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.user.email

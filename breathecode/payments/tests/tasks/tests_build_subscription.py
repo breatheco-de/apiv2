@@ -56,8 +56,16 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
 
-        self.assertEqual(logging.Logger.info.call_args_list, [call('Starting build_subscription for bag 1')])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('Bag with id 1 not found')])
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call('Starting build_subscription for bag 1'),
+                # retrying
+                call('Starting build_subscription for bag 1'),
+            ])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Bag with id 1 not found', exc_info=True),
+        ])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [])
         self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
@@ -82,8 +90,16 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
 
-        self.assertEqual(logging.Logger.info.call_args_list, [call('Starting build_subscription for bag 1')])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('Invoice with id 1 not found')])
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call('Starting build_subscription for bag 1'),
+                # retrying
+                call('Starting build_subscription for bag 1'),
+            ])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Invoice with id 1 not found', exc_info=True),
+        ])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [self.bc.format.to_dict(model.bag)])
         self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])

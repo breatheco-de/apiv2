@@ -41,10 +41,16 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
 
-        self.assertEqual(logging.Logger.info.call_args_list, [
-            call('Starting renew_plan_financing_consumables for id 1'),
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call('Starting renew_plan_financing_consumables for id 1'),
+                # retrying
+                call('Starting renew_plan_financing_consumables for id 1'),
+            ])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('PlanFinancing with id 1 not found', exc_info=True),
         ])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('PlanFinancing with id 1 not found')])
 
         self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), [])
 
@@ -77,7 +83,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting renew_plan_financing_consumables for id 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The PlanFinancing 1 needs to be paid to renew the consumables'),
+            call('The PlanFinancing 1 needs to be paid to renew the consumables', exc_info=True),
         ])
 
         self.assertEqual(tasks.renew_consumables.delay.call_args_list, [])
@@ -153,7 +159,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting renew_plan_financing_consumables for id 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The plan financing 1 is over'),
+            call('The plan financing 1 is over', exc_info=True),
         ])
 
         self.assertEqual(tasks.renew_consumables.delay.call_args_list, [])

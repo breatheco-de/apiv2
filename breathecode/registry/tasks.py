@@ -323,8 +323,9 @@ def async_update_frontend_asset_cache(asset):
     try:
         if os.getenv('ENV', '') != 'production':
             return
-        logger.info(f'async_remove_img_from_cloud')
-        URL = os.getenv('APP_URL', '') + f'/api/update/asset/{asset.slug}'
+
+        logger.info(f'async_update_frontend_asset_cache')
+        URL = os.getenv('APP_URL', '') + f'/api/asset/{asset.slug}'
         serializer = AssetSerializer(asset, many=False)
         requests.put(url=URL)
     except Exception as e:

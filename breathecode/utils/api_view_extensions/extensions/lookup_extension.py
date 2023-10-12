@@ -282,6 +282,9 @@ class LookupExtension(ExtensionBase):
 
         return frozenset(result.items())
 
+    def _fixer(self, querystring: dict[str, str], fix) -> dict[str, str]:
+        return querystring
+
     def build(self, lang: str, overwrite: dict = dict(), **kwargs: dict | tuple) -> tuple[tuple, dict]:
 
         # foreign
@@ -296,6 +299,7 @@ class LookupExtension(ExtensionBase):
 
         # opts
         custom_fields = kwargs.get('custom_fields', dict())
+        fix = kwargs.get('custom_fields', dict())
 
         # serialize foreign
         ids = tuple(ids)
@@ -316,6 +320,9 @@ class LookupExtension(ExtensionBase):
                                 strings=strings,
                                 datetimes=datetimes,
                                 bools=bools)
+
+        if fix:
+            querystring = self._fixer(querystring, fix)
 
         return self._build_lookup(lang, lookup, querystring, custom_fields, overwrite)
 
