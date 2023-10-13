@@ -425,7 +425,11 @@ class ConfirmEmailView(APIView):
 
         invite = UserInvite.objects.filter(token=token).first()
         if invite is None:
-            raise ValidationException('Invite not found', code=404, slug='user-invite-not-found')
+            e = ValidationException('Invite not found', code=404, slug='user-invite-not-found')
+            if request.META.get('HTTP_ACCEPT') == 'application/json':
+                raise e
+
+            return render_message(request, e.get_message(), status=404)
 
         if not invite.email:
             errors.append(C(f'This invite don\'t have email, contact to admin', slug=f'without-email'))
@@ -434,13 +438,22 @@ class ConfirmEmailView(APIView):
             errors.append(C(f'Email already validated', slug=f'email-already-validated'))
 
         if errors:
-            raise ValidationException(errors, code=400)
+            e = ValidationException(errors, code=400)
+            if request.META.get('HTTP_ACCEPT') == 'application/json':
+                raise e
+
+            return render_message(request, e.get_message(), status=400)
 
         invite.is_email_validated = True
         invite.save()
 
-        serializer = UserInviteShortSerializer(invite, many=False)
-        return Response(serializer.data)
+        if request.META.get('HTTP_ACCEPT') == 'application/json':
+            # If it's JSON, use your serializer and return a JSON response.
+            serializer = UserInviteShortSerializer(invite, many=False)
+            return Response(serializer.data)
+
+        # If not JSON, return your HTML message.
+        return render_message(request, f'Your email was validated, you can close this page.')
 
 
 class ResendInviteView(APIView):
