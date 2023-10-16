@@ -13,10 +13,8 @@ ALLOWED_TYPES = {
     'auth.User': [
         'login',
     ],
-    'admissions.Cohort': [
-        'open_syllabus_module',
-    ],
     'assignments.Task': [
+        'open_syllabus_module',
         'read_assignment',
         'assignment_review_status_updated',
         'assignment_status_updated',

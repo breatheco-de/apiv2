@@ -48,3 +48,25 @@ class ValidationException(APIException):
 
     def _get_details(self):
         return [ValidationException(x.args[0], **{**x.kwargs, 'code': self.status_code}) for x in self.detail]
+
+    def get_message(self):
+        if isinstance(self.detail, str):
+            return self.detail
+
+        message = '. '.join([x.detail for x in self.detail])
+
+        if message[-1] != '.':
+            message += ('.' if self.detail else '')
+
+        return message
+
+    def get_message_list(self):
+        if isinstance(self.detail, list):
+            message = '. '.join([x.detail for x in self.detail])
+
+            if message[-1] != '.':
+                message += ('.' if self.detail else '')
+
+            return message
+
+        return [self.detail]

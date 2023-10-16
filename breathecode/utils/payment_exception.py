@@ -35,3 +35,15 @@ class PaymentException(APIException):
 
     def _get_details(self):
         return [PaymentException(x.args[0], **{**x.kwargs, 'code': self.status_code}) for x in self.detail]
+
+    def get_message(self):
+        if isinstance(self.detail, str):
+            return self.detail
+
+        return '. \n'.join([x.kwargs['slug'] if 'slug' in x.kwargs else x.args[0] for x in self.detail])
+
+    def get_message_list(self):
+        if isinstance(self.detail, list):
+            return [x.kwargs['slug'] if 'slug' in x.kwargs else x.args[0] for x in self.detail]
+
+        return [self.detail]

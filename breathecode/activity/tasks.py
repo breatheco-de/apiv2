@@ -187,8 +187,12 @@ def add_activity(user_id: int,
 
     for key in meta:
         t = 'STRING'
-        if isinstance(meta[key], date) or (isinstance(meta[key], str)
-                                           and ISO_STRING_PATTERN.match(meta[key])):
+
+        # keep it adobe than the date confitional
+        if isinstance(meta[key], datetime) or (isinstance(meta[key], str)
+                                               and ISO_STRING_PATTERN.match(meta[key])):
+            t = 'TIMESTAMP'
+        elif isinstance(meta[key], date):
             t = 'DATE'
         elif isinstance(meta[key], str):
             pass
@@ -198,8 +202,6 @@ def add_activity(user_id: int,
             t = 'INT64'
         elif isinstance(meta[key], float):
             t = 'FLOAT64'
-        elif isinstance(meta[key], datetime):
-            t = 'TIMESTAMP'
 
         job_config.query_parameters += [bigquery.ScalarQueryParameter(key, t, meta[key])]
         meta_struct += f'@{key} as {key}, '
@@ -220,4 +222,8 @@ def add_activity(user_id: int,
             STRUCT({meta_struct}) as meta
     """
 
-    client.query(query, job_config=job_config)
+    query_job = client.query(query, job_config=job_config)
+    query_job.done()
+
+    if query_job.error_result:
+        raise Exception(query_job.error_result.get('message', 'No description'))
