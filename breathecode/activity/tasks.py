@@ -222,4 +222,8 @@ def add_activity(user_id: int,
             STRUCT({meta_struct}) as meta
     """
 
-    client.query(query, job_config=job_config)
+    query_job = client.query(query, job_config=job_config)
+    query_job.done()
+
+    if query_job.error_result:
+        raise Exception(query_job.error_result.get('message', 'No description'))
