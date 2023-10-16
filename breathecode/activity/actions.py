@@ -86,8 +86,8 @@ class FillActivityMeta:
             'role': instance.role.slug if instance.role else None,
             'first_name': instance.first_name,
             'last_name': instance.last_name,
-            'academy': instance.cohort.slug if instance.academy else None,
-            'cohort': instance.cohort.slug if instance.cohort else None,
+            'academy': instance.cohort.id if instance.academy else None,
+            'cohort': instance.cohort.id if instance.cohort else None,
         }
 
     @classmethod
@@ -115,8 +115,8 @@ class FillActivityMeta:
             'mentor_username': instance.mentor.username if instance.user else None,
             'mentor_first_name': instance.mentor.first_name if instance.user else None,
             'mentor_last_name': instance.mentor.last_name if instance.user else None,
-            'cohort': instance.cohort.slug if instance.cohort else None,
-            'academy': instance.academy.slug if instance.academy else None,
+            'cohort': instance.cohort.id if instance.cohort else None,
+            'academy': instance.academy.id if instance.academy else None,
             'score': instance.score,
             'comment': instance.comment,
             'survey': instance.survey.id if instance.survey else None,
@@ -179,7 +179,7 @@ class FillActivityMeta:
             'remote_available': instance.remote_available,
             'online_meeting_url': instance.online_meeting_url,
             'timezone': instance.timezone,
-            'academy': instance.academy.slug if instance.academy else None,
+            'academy': instance.academy.id if instance.academy else None,
             'syllabus': syllabus,
             'intro_video': instance.intro_video,
             'schedule': instance.schedule.name if instance.schedule else None,
@@ -215,7 +215,7 @@ class FillActivityMeta:
             'github_url': instance.github_url,
             'live_url': instance.live_url,
             'opened_at': instance.opened_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ') if instance.opened_at else None,
-            'cohort': instance.cohort.slug if instance.cohort else None,
+            'cohort': instance.cohort.id if instance.cohort else None,
         }
 
     @classmethod
@@ -349,7 +349,7 @@ class FillActivityMeta:
             instance.refunded_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ') if instance.refunded_at else None,
             'status': instance.status,
             'bag': instance.bag.id,
-            'academy': instance.academy.slug,
+            'academy': instance.academy.id,
             'user_email': instance.user.email,
             'user_username': instance.user.username,
             'user_first_name': instance.user.first_name,
@@ -375,7 +375,7 @@ class FillActivityMeta:
             'type': instance.type,
             'chosen_period': instance.chosen_period,
             'how_many_installments': instance.how_many_installments,
-            'academy': instance.academy.slug,
+            'academy': instance.academy.id,
             'user_email': instance.user.email,
             'user_username': instance.user.username,
             'user_first_name': instance.user.first_name,
@@ -411,8 +411,8 @@ class FillActivityMeta:
             'user_username': instance.user.username,
             'user_first_name': instance.user.first_name,
             'user_last_name': instance.user.last_name,
-            'academy': instance.academy.slug,
-            'selected_cohort': instance.selected_cohort.slug if instance.selected_cohort else None,
+            'academy': instance.academy.id,
+            'selected_cohort': instance.selected_cohort.id if instance.selected_cohort else None,
             'selected_mentorship_service_set': selected_mentorship_service_set,
             'selected_event_type_set': selected_event_type_set,
             'paid_at': instance.paid_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
@@ -456,9 +456,9 @@ class FillActivityMeta:
             'user_last_name':
             instance.user.last_name,
             'academy':
-            instance.academy.slug,
+            instance.academy.id,
             'selected_cohort':
-            instance.selected_cohort.slug if instance.selected_cohort else None,
+            instance.selected_cohort.id if instance.selected_cohort else None,
             'selected_mentorship_service_set':
             selected_mentorship_service_set,
             'selected_event_type_set':
