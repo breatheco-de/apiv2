@@ -30,7 +30,7 @@ ALLOWED_TYPES = [
     ('auth.UserInvite', 'user_invite', 'invite_status_updated', obj()),
     ('feedback.Answer', 'answer', 'nps_answered', obj()),
     ('auth.User', 'user', 'login', obj()),
-    ('admissions.Cohort', 'cohort', 'open_syllabus_module', obj()),
+    ('assignments.Task', 'task', 'open_syllabus_module', obj()),
     ('assignments.Task', 'task', 'read_assignment', obj()),
     ('assignments.Task', 'task', 'assignment_review_status_updated', obj()),
     ('assignments.Task', 'task', 'assignment_status_updated', obj()),
@@ -73,9 +73,8 @@ class MediaTestSuite(MediaTestCase):
         kind = self.bc.fake.slug()
 
         allowed = [
-            'auth.UserInvite', 'feedback.Answer', 'auth.User', 'admissions.Cohort', 'assignments.Task',
-            'events.EventCheckin', 'payments.Bag', 'payments.Subscription', 'payments.PlanFinancing',
-            'mentorship.MentorshipSession'
+            'auth.UserInvite', 'feedback.Answer', 'auth.User', 'assignments.Task', 'events.EventCheckin',
+            'payments.Bag', 'payments.Subscription', 'payments.PlanFinancing', 'mentorship.MentorshipSession'
         ]
 
         for related_type in allowed:
