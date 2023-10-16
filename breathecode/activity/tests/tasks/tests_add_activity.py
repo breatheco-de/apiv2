@@ -108,7 +108,8 @@ class MediaTestSuite(MediaTestCase):
             self.bc.check.calls(BigQuery.client.call_args_list, [])
             self.bc.check.calls(result_mock.result.call_args_list, [])
 
-        self.bc.check.calls(logging.Logger.info.call_args_list, [call('Executing add_activity')])
+        self.bc.check.calls(logging.Logger.info.call_args_list,
+                            [call(f'Executing add_activity related to {kind}')])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
             call(
                 'If related_type is provided, either related_id or related_slug must be provided, '
@@ -134,7 +135,8 @@ class MediaTestSuite(MediaTestCase):
             self.bc.check.calls(BigQuery.client.call_args_list, [])
             self.bc.check.calls(result_mock.result.call_args_list, [])
 
-        self.bc.check.calls(logging.Logger.info.call_args_list, [call('Executing add_activity')])
+        self.bc.check.calls(logging.Logger.info.call_args_list,
+                            [call(f'Executing add_activity related to {kind}')])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
             call('If related_type is not provided, both related_id and related_slug must also be absent.',
                  exc_info=True),
@@ -161,7 +163,8 @@ class MediaTestSuite(MediaTestCase):
             assert client_mock.query.call_args[0][0] == query
             self.bc.check.calls(result_mock.result.call_args_list, [])
 
-        self.bc.check.calls(logging.Logger.info.call_args_list, [call('Executing add_activity')])
+        self.bc.check.calls(logging.Logger.info.call_args_list,
+                            [call(f'Executing add_activity related to {kind}')])
         self.bc.check.calls(logging.Logger.error.call_args_list, [])
 
         self.bc.check.calls(actions.get_activity_meta.call_args_list, [call(kind, 'auth.User', 1, None)])
@@ -188,7 +191,8 @@ class MediaTestSuite(MediaTestCase):
             assert client_mock.query.call_args[0][0] == query
             self.bc.check.calls(result_mock.result.call_args_list, [])
 
-        self.bc.check.calls(logging.Logger.info.call_args_list, [call('Executing add_activity')])
+        self.bc.check.calls(logging.Logger.info.call_args_list,
+                            [call(f'Executing add_activity related to {kind}')])
         self.bc.check.calls(logging.Logger.error.call_args_list, [])
 
         self.bc.check.calls(actions.get_activity_meta.call_args_list,
@@ -223,5 +227,6 @@ class MediaTestSuite(MediaTestCase):
                     call(kind, 'auth.User', 1, None),
                 ])
 
-        self.bc.check.calls(logging.Logger.info.call_args_list, [call('Executing add_activity')])
+        self.bc.check.calls(logging.Logger.info.call_args_list,
+                            [call(f'Executing add_activity related to {kind}')])
         self.bc.check.calls(logging.Logger.error.call_args_list, [])
