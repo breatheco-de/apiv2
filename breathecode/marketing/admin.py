@@ -181,7 +181,7 @@ class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
         'storage_status', 'location', 'course', 'deal_status', PPCFilter, 'lead_generation_app', 'utm_medium',
         'utm_campaign', 'utm_source'
     ]
-    actions = [send_to_active_campaign, get_geoinfo, fetch_more_facebook_info, 'async_export_as_csv']
+    actions = [send_to_active_campaign, get_geoinfo, fetch_more_facebook_info, 'async_export_as_csv'] + change_field(['bogota-colombia', 'mexicocity-mexico', 'quito-ecuador', 'buenosaires-argentina', 'caracas-venezuela', 'online'], name='location')
 
     def _attribution_id(self, obj):
 
