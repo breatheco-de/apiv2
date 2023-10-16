@@ -18,10 +18,12 @@ RETRY_AFTER = timedelta(seconds=5)
 
 
 class AbortTask(Exception):
+    """Abort task due to it doesn't meet the requirements, it will not be reattemped."""
     pass
 
 
 class RetryTask(Exception):
+    """Retry task due to it doesn't meet the requirements for a syncronization issue like a not found, it will be reattemped."""
     pass
 
 
