@@ -204,6 +204,7 @@ class FormEntryHookSerializer(serpy.Serializer):
     ac_contact_id = serpy.Field()
     ac_deal_id = serpy.Field()
     ac_deal_amount = serpy.Field()
+    ac_deal_currency_code = serpy.Field()
     ac_expected_cohort = serpy.Field()
     ac_expected_cohort_date = serpy.Field()
 
