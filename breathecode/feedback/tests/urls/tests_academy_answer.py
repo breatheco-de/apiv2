@@ -5,6 +5,7 @@ import re, urllib
 from unittest.mock import MagicMock, call, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
+from breathecode.feedback.caches import AnswerCache
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
     apply_google_cloud_client_mock,
@@ -1028,8 +1029,11 @@ class AnswerTestSuite(FeedbackTestCase):
         url = reverse_lazy('feedback:answer')
         self.client.get(url)
 
-        self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['LanguageExtension', 'LookupExtension', 'PaginationExtension', 'SortExtension']),
+        self.bc.check.calls(APIViewExtensionHandlers._spy_extensions.call_args_list, [
+            call([
+                'CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension',
+                'SortExtension'
+            ]),
         ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -1048,5 +1052,5 @@ class AnswerTestSuite(FeedbackTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
-            call(sort='-created_at', paginate=True),
+            call(cache=AnswerCache, sort='-created_at', paginate=True),
         ])

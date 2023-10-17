@@ -3,7 +3,7 @@ import os
 from django.contrib.auth.models import User
 from django.db.models.query_utils import Q
 from breathecode.authenticate.actions import get_user_language, get_user_settings, server_id
-from breathecode.events.caches import EventCache
+from breathecode.events.caches import EventCache, LiveClassCache
 from .permissions.consumers import event_by_url_param, live_class_by_url_param
 from breathecode.utils import APIException
 from datetime import datetime, timedelta
@@ -179,11 +179,15 @@ class EventView(APIView):
 
 
 class EventMeView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
+    extensions = APIViewExtensions(cache=EventCache, cache_per_user=True, paginate=True)
 
     def get(self, request, event_id=None):
+
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
 
         items = get_my_event_types(request.user)
         lang = get_user_language(request)
@@ -221,16 +225,21 @@ class EventMeView(APIView):
             lookup['online_event'] = False
 
         items = items.filter(**lookup)
-
+        items = handler.queryset(items)
         serializer = EventBigSerializer(items, many=True)
-        return Response(serializer.data)
+
+        return handler.response(serializer.data)
 
 
 class MeLiveClassView(APIView):
-    extensions = APIViewExtensions(sort='-starting_at', paginate=True)
+    extensions = APIViewExtensions(cache=LiveClassCache, sort='-starting_at', paginate=True)
 
     def get(self, request):
         handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
 
         lang = get_user_language(request)
 

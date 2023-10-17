@@ -484,10 +484,11 @@ class AssetView(APIView, GenerateLookupsMixin):
     def get(self, request, asset_slug=None):
         handler = self.extensions(request)
         cache = handler.cache.get()
-        lang = get_user_language(request)
 
         if cache is not None:
             return Response(cache, status=status.HTTP_200_OK)
+
+        lang = get_user_language(request)
 
         if asset_slug is not None:
             asset = Asset.get_by_slug(asset_slug, request)
