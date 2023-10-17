@@ -15,6 +15,7 @@ from breathecode.admissions import tasks as admissions_tasks
 from breathecode.payments import actions
 from breathecode.payments.actions import (PlanFinder, add_items_to_bag, filter_consumables, get_amount,
                                           get_amount_by_chosen_period, get_balance_by_resource)
+from breathecode.payments.caches import PlanOfferCache
 from breathecode.payments.models import (AcademyService, Bag, CohortSet, Consumable, Currency, EventTypeSet,
                                          FinancialReputation, Invoice, MentorshipServiceSet, Plan,
                                          PlanFinancing, PlanOffer, Service, ServiceItem, Subscription)
@@ -653,6 +654,7 @@ class EventTypeSetView(APIView):
         return Response(serializer.data)
 
 
+# TODO: this view is not cachable yet.
 class MeSubscriptionView(APIView):
     # this cannot support cache because the cache does not support associated two models to a response yet
     extensions = APIViewExtensions(sort='-id')
@@ -1020,7 +1022,7 @@ class CardView(APIView):
 
 class PlanOfferView(APIView):
     permission_classes = [AllowAny]
-    extensions = APIViewExtensions(sort='-id', paginate=True)
+    extensions = APIViewExtensions(cache=PlanOfferCache, sort='-id', paginate=True)
 
     def get_lookup(self, key, value):
         args = ()
@@ -1049,6 +1051,11 @@ class PlanOfferView(APIView):
 
     def get(self, request):
         handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
+
         lang = get_user_language(request)
         utc_now = timezone.now()
 

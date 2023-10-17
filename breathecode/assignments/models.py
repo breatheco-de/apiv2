@@ -56,18 +56,18 @@ class Task(models.Model):
     _current_task_status = None
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    associated_slug = models.SlugField(max_length=150)
-    title = models.CharField(max_length=150)
+    associated_slug = models.SlugField(max_length=150, db_index=True)
+    title = models.CharField(max_length=150, db_index=True)
 
-    rigobot_repository_id = models.IntegerField(null=True, blank=True, default=None)
+    rigobot_repository_id = models.IntegerField(null=True, blank=True, default=None, db_index=True)
 
-    task_status = models.CharField(max_length=15, choices=TASK_STATUS, default=PENDING)
-    revision_status = models.CharField(max_length=15, choices=REVISION_STATUS, default=PENDING)
-    task_type = models.CharField(max_length=15, choices=TASK_TYPE)
+    task_status = models.CharField(max_length=15, choices=TASK_STATUS, default=PENDING, db_index=True)
+    revision_status = models.CharField(max_length=15, choices=REVISION_STATUS, default=PENDING, db_index=True)
+    task_type = models.CharField(max_length=15, choices=TASK_TYPE, db_index=True)
     github_url = models.CharField(max_length=150, blank=True, default=None, null=True)
     live_url = models.CharField(max_length=150, blank=True, default=None, null=True)
     description = models.TextField(max_length=450, blank=True)
-    opened_at = models.DateTimeField(null=True, blank=True, default=None)
+    opened_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
 
     subtasks = models.JSONField(
         default=None,

@@ -1,11 +1,18 @@
 from __future__ import annotations
 import urllib.parse, json
 from django.core.cache import cache
-from datetime import datetime
+from datetime import datetime, timedelta
 from breathecode.tests.mixins import DatetimeMixin
 
 __all__ = ['Cache', 'CACHE_DESCRIPTORS']
 CACHE_DESCRIPTORS: dict[int, Cache] = {}
+
+
+def serializer(obj):
+    if isinstance(obj, timedelta):
+        return str(obj.total_seconds())
+
+    return obj
 
 
 class Cache(DatetimeMixin):
@@ -99,7 +106,7 @@ class Cache(DatetimeMixin):
         key = self.__generate_key__(**kwargs)
         data = self.__fix_fields_in_array__(data)
 
-        json_data = json.dumps(data)
+        json_data = json.dumps(data, default=serializer)
         cache.set(key, json_data)
 
         self.__add_key_to_storage__(key)
