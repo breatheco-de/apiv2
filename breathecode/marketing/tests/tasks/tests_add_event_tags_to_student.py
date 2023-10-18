@@ -38,7 +38,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     🔽🔽🔽 Without optional arguments
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
@@ -49,9 +49,9 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         add_event_tags_to_student.delay(1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
+        self.assertEqual(logging.Logger.info.call_args_list, [call(TASK_STARTED_MESSAGE)])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Impossible to determine the user email'),
+            call('Impossible to determine the user email', exc_info=True),
         ])
 
         self.assertEqual(requests.get.call_args_list, [])
@@ -61,7 +61,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     🔽🔽🔽 Without Academy
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
@@ -72,9 +72,9 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         add_event_tags_to_student.delay(1, user_id=1, email='pokemon@potato.io')
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
+        self.assertEqual(logging.Logger.info.call_args_list, [call(TASK_STARTED_MESSAGE)])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('You can\'t provide the user_id and email together'),
+            call('You can\'t provide the user_id and email together', exc_info=True),
         ])
 
         self.assertEqual(requests.get.call_args_list, [])
@@ -84,7 +84,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     🔽🔽🔽 Without User
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
@@ -95,8 +95,9 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         add_event_tags_to_student.delay(1, user_id=1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('We can\'t get the user email')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call(TASK_STARTED_MESSAGE)])
+        self.assertEqual(logging.Logger.error.call_args_list,
+                         [call('We can\'t get the user email', exc_info=True)])
         self.assertEqual(requests.get.call_args_list, [])
         self.assertEqual(requests.post.call_args_list, [])
 
@@ -104,7 +105,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     🔽🔽🔽 Without Event
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
@@ -114,14 +115,17 @@ class AnswerIdTestSuite(MarketingTestCase):
         import requests
 
         self.generate_models(user=True)
+
+        logging.Logger.info.call_args_list = []
+
         add_event_tags_to_student.delay(1, user_id=1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('Event 1 not found')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call(TASK_STARTED_MESSAGE)])
+        self.assertEqual(logging.Logger.error.call_args_list, [call('Event 1 not found', exc_info=True)])
         self.assertEqual(requests.get.call_args_list, [])
         self.assertEqual(requests.post.call_args_list, [])
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('breathecode.events.signals.event_saved', MagicMock())
@@ -133,8 +137,8 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         add_event_tags_to_student.delay(1, email='pokemon@potato.io')
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('Event 1 not found')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call(TASK_STARTED_MESSAGE)])
+        self.assertEqual(logging.Logger.error.call_args_list, [call('Event 1 not found', exc_info=True)])
         self.assertEqual(requests.get.call_args_list, [])
         self.assertEqual(requests.post.call_args_list, [])
 
@@ -142,7 +146,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     🔽🔽🔽 Without Academy
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('breathecode.events.signals.event_saved', MagicMock())
@@ -153,17 +157,20 @@ class AnswerIdTestSuite(MarketingTestCase):
         import requests
 
         self.generate_models(user=True, event=True)
+
+        logging.Logger.info.call_args_list = []
+
         add_event_tags_to_student.delay(1, user_id=1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
+        self.assertEqual(logging.Logger.info.call_args_list, [call(TASK_STARTED_MESSAGE)])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Impossible to determine the academy'),
+            call('Impossible to determine the academy', exc_info=True),
         ])
 
         self.assertEqual(requests.get.call_args_list, [])
         self.assertEqual(requests.post.call_args_list, [])
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
@@ -173,11 +180,14 @@ class AnswerIdTestSuite(MarketingTestCase):
         import requests
 
         self.generate_models(event=True)
+
+        logging.Logger.info.call_args_list = []
+
         add_event_tags_to_student.delay(1, email='pokemon@potato.io')
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
+        self.assertEqual(logging.Logger.info.call_args_list, [call(TASK_STARTED_MESSAGE)])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Impossible to determine the academy'),
+            call('Impossible to determine the academy', exc_info=True),
         ])
 
         self.assertEqual(requests.get.call_args_list, [])
@@ -187,7 +197,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     🔽🔽🔽 Without ActiveCampaignAcademy
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
@@ -197,17 +207,20 @@ class AnswerIdTestSuite(MarketingTestCase):
         import requests
 
         self.generate_models(user=True, event=True, academy=True)
+
+        logging.Logger.info.call_args_list = []
+
         add_event_tags_to_student.delay(1, user_id=1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
+        self.assertEqual(logging.Logger.info.call_args_list, [call(TASK_STARTED_MESSAGE)])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('ActiveCampaign Academy 1 not found'),
+            call('ActiveCampaign Academy 1 not found', exc_info=True),
         ])
 
         self.assertEqual(requests.get.call_args_list, [])
         self.assertEqual(requests.post.call_args_list, [])
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
@@ -217,11 +230,14 @@ class AnswerIdTestSuite(MarketingTestCase):
         import requests
 
         self.generate_models(event=True, academy=True)
+
+        logging.Logger.info.call_args_list = []
+
         add_event_tags_to_student.delay(1, email='pokemon@potato.io')
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
+        self.assertEqual(logging.Logger.info.call_args_list, [call(TASK_STARTED_MESSAGE)])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('ActiveCampaign Academy 1 not found'),
+            call('ActiveCampaign Academy 1 not found', exc_info=True),
         ])
 
         self.assertEqual(requests.get.call_args_list, [])
@@ -231,7 +247,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     🔽🔽🔽 Without Tag
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
@@ -241,19 +257,23 @@ class AnswerIdTestSuite(MarketingTestCase):
         import requests
 
         self.generate_models(user=True, event=True, academy=True, active_campaign_academy=True)
+
+        logging.Logger.info.call_args_list = []
+
         add_event_tags_to_student.delay(1, user_id=1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [
+        self.assertEqual(logging.Logger.info.call_args_list, [
             call(TASK_STARTED_MESSAGE),
-            call('Tags not found'),
         ])
 
-        self.assertEqual(logging.Logger.error.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Tags not found', exc_info=True),
+        ])
 
         self.assertEqual(requests.get.call_args_list, [])
         self.assertEqual(requests.post.call_args_list, [])
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
@@ -263,14 +283,18 @@ class AnswerIdTestSuite(MarketingTestCase):
         import requests
 
         self.generate_models(event=True, academy=True, active_campaign_academy=True)
+
+        logging.Logger.info.call_args_list = []
+
         add_event_tags_to_student.delay(1, email='pokemon@potato.io')
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [
+        self.assertEqual(logging.Logger.info.call_args_list, [
             call(TASK_STARTED_MESSAGE),
-            call('Tags not found'),
         ])
 
-        self.assertEqual(logging.Logger.error.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Tags not found', exc_info=True),
+        ])
 
         self.assertEqual(requests.get.call_args_list, [])
         self.assertEqual(requests.post.call_args_list, [])
@@ -279,7 +303,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     🔽🔽🔽 With a exception in ActiveCampaign.get_contact_by_email
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch(GET_CONTACT_BY_EMAIL_PATH, MagicMock(side_effect=Exception(GET_CONTACT_BY_EMAIL_EXCEPTION)))
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
@@ -301,15 +325,20 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      event_kwargs=event_kwargs,
                                      active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
+        logging.Logger.info.call_args_list = []
+
+        logging.Logger.info.call_args_list = []
+
         add_event_tags_to_student.delay(1, user_id=1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
-        self.assertEqual(logging.Logger.error.call_args_list, [call(GET_CONTACT_BY_EMAIL_EXCEPTION)])
+        self.assertEqual(logging.Logger.info.call_args_list, [call(TASK_STARTED_MESSAGE)])
+        self.assertEqual(logging.Logger.error.call_args_list,
+                         [call(GET_CONTACT_BY_EMAIL_EXCEPTION, exc_info=True)])
 
         self.assertEqual(requests.get.call_args_list, [])
         self.assertEqual(requests.post.call_args_list, [])
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch(GET_CONTACT_BY_EMAIL_PATH, MagicMock(side_effect=Exception(GET_CONTACT_BY_EMAIL_EXCEPTION)))
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
@@ -330,10 +359,13 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      event_kwargs=event_kwargs,
                                      active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
+        logging.Logger.info.call_args_list = []
+
         add_event_tags_to_student.delay(1, email='pokemon@potato.io')
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
-        self.assertEqual(logging.Logger.error.call_args_list, [call(GET_CONTACT_BY_EMAIL_EXCEPTION)])
+        self.assertEqual(logging.Logger.info.call_args_list, [call(TASK_STARTED_MESSAGE)])
+        self.assertEqual(logging.Logger.error.call_args_list,
+                         [call(GET_CONTACT_BY_EMAIL_EXCEPTION, exc_info=True)])
 
         self.assertEqual(requests.get.call_args_list, [])
         self.assertEqual(requests.post.call_args_list, [])
@@ -342,7 +374,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     🔽🔽🔽 With a exception in ActiveCampaign.add_tag_to_contact
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch(ADD_TAG_TO_CONTACT_PATH, MagicMock(side_effect=Exception(ADD_TAG_TO_CONTACT_EXCEPTION)))
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
@@ -364,14 +396,17 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      event_kwargs=event_kwargs,
                                      active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
+        logging.Logger.info.call_args_list = []
+
         add_event_tags_to_student.delay(1, user_id=1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [
+        self.assertEqual(logging.Logger.info.call_args_list, [
             call(TASK_STARTED_MESSAGE),
             call('Adding tag 1 to acp contact 1'),
         ])
 
-        self.assertEqual(logging.Logger.error.call_args_list, [call(ADD_TAG_TO_CONTACT_EXCEPTION)])
+        self.assertEqual(logging.Logger.error.call_args_list,
+                         [call(ADD_TAG_TO_CONTACT_EXCEPTION, exc_info=True)])
         self.assertEqual(requests.get.call_args_list, [
             call('https://ac.ca/api/3/contacts',
                  headers={'Api-Token': model.active_campaign_academy.ac_key},
@@ -381,7 +416,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(requests.post.call_args_list, [])
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch(ADD_TAG_TO_CONTACT_PATH, MagicMock(side_effect=Exception(ADD_TAG_TO_CONTACT_EXCEPTION)))
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
@@ -402,14 +437,17 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      event_kwargs=event_kwargs,
                                      active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
+        logging.Logger.info.call_args_list = []
+
         add_event_tags_to_student.delay(1, email='pokemon@potato.io')
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [
+        self.assertEqual(logging.Logger.info.call_args_list, [
             call(TASK_STARTED_MESSAGE),
             call('Adding tag 1 to acp contact 1'),
         ])
 
-        self.assertEqual(logging.Logger.error.call_args_list, [call(ADD_TAG_TO_CONTACT_EXCEPTION)])
+        self.assertEqual(logging.Logger.error.call_args_list,
+                         [call(ADD_TAG_TO_CONTACT_EXCEPTION, exc_info=True)])
         self.assertEqual(requests.get.call_args_list, [
             call('https://ac.ca/api/3/contacts',
                  headers={'Api-Token': model.active_campaign_academy.ac_key},
@@ -423,7 +461,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     🔽🔽🔽 With one Tag
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
@@ -444,9 +482,11 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      event_kwargs=event_kwargs,
                                      active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
+        logging.Logger.info.call_args_list = []
+
         add_event_tags_to_student.delay(1, user_id=1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [
+        self.assertEqual(logging.Logger.info.call_args_list, [
             call(TASK_STARTED_MESSAGE),
             call('Adding tag 1 to acp contact 1'),
         ])
@@ -473,7 +513,7 @@ class AnswerIdTestSuite(MarketingTestCase):
                  timeout=2),
         ])
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
@@ -493,9 +533,11 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      event_kwargs=event_kwargs,
                                      active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
+        logging.Logger.info.call_args_list = []
+
         add_event_tags_to_student.delay(1, email='pokemon@potato.io')
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [
+        self.assertEqual(logging.Logger.info.call_args_list, [
             call(TASK_STARTED_MESSAGE),
             call('Adding tag 1 to acp contact 1'),
         ])
@@ -526,7 +568,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     🔽🔽🔽 With two Tags
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
@@ -550,9 +592,11 @@ class AnswerIdTestSuite(MarketingTestCase):
         tag_kwargs = {'slug': 'they-killed-kenny2'}
         model2 = self.generate_models(tag=True, tag_kwargs=tag_kwargs, models=base)
 
+        logging.Logger.info.call_args_list = []
+
         add_event_tags_to_student.delay(1, user_id=1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [
+        self.assertEqual(logging.Logger.info.call_args_list, [
             call(TASK_STARTED_MESSAGE),
             call('Adding tag 1 to acp contact 1'),
             call('Adding tag 2 to acp contact 1'),
@@ -591,7 +635,7 @@ class AnswerIdTestSuite(MarketingTestCase):
                  timeout=2),
         ])
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
@@ -614,9 +658,11 @@ class AnswerIdTestSuite(MarketingTestCase):
         tag_kwargs = {'slug': 'they-killed-kenny2'}
         model2 = self.generate_models(tag=True, tag_kwargs=tag_kwargs, models=base)
 
+        logging.Logger.info.call_args_list = []
+
         add_event_tags_to_student.delay(1, email='pokemon@potato.io')
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [
+        self.assertEqual(logging.Logger.info.call_args_list, [
             call(TASK_STARTED_MESSAGE),
             call('Adding tag 1 to acp contact 1'),
             call('Adding tag 2 to acp contact 1'),
@@ -659,7 +705,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     🔽🔽🔽 With two Tags, a with event name and the other from the tags attr
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
@@ -686,9 +732,11 @@ class AnswerIdTestSuite(MarketingTestCase):
         tag_kwargs = {'slug': 'they-killed-kenny2'}
         model2 = self.generate_models(tag=True, tag_kwargs=tag_kwargs, models=base)
 
+        logging.Logger.info.call_args_list = []
+
         add_event_tags_to_student.delay(1, user_id=1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [
+        self.assertEqual(logging.Logger.info.call_args_list, [
             call(TASK_STARTED_MESSAGE),
             call('Adding tag 1 to acp contact 1'),
             call('Adding tag 2 to acp contact 1'),
@@ -727,7 +775,7 @@ class AnswerIdTestSuite(MarketingTestCase):
                  timeout=2),
         ])
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
@@ -753,9 +801,11 @@ class AnswerIdTestSuite(MarketingTestCase):
         tag_kwargs = {'slug': 'they-killed-kenny2'}
         model2 = self.generate_models(tag=True, tag_kwargs=tag_kwargs, models=base)
 
+        logging.Logger.info.call_args_list = []
+
         add_event_tags_to_student.delay(1, email='pokemon@potato.io')
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [
+        self.assertEqual(logging.Logger.info.call_args_list, [
             call(TASK_STARTED_MESSAGE),
             call('Adding tag 1 to acp contact 1'),
             call('Adding tag 2 to acp contact 1'),
@@ -798,7 +848,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     🔽🔽🔽 With three Tags, a with event name and the other from the tags attr
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
@@ -829,9 +879,11 @@ class AnswerIdTestSuite(MarketingTestCase):
         tag_kwargs = {'slug': 'they-killed-kenny3'}
         model3 = self.generate_models(tag=True, tag_kwargs=tag_kwargs, models=base)
 
+        logging.Logger.info.call_args_list = []
+
         add_event_tags_to_student.delay(1, user_id=1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [
+        self.assertEqual(logging.Logger.info.call_args_list, [
             call(TASK_STARTED_MESSAGE),
             call('Adding tag 1 to acp contact 1'),
             call('Adding tag 2 to acp contact 1'),
@@ -882,7 +934,7 @@ class AnswerIdTestSuite(MarketingTestCase):
                  timeout=2),
         ])
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
@@ -912,9 +964,11 @@ class AnswerIdTestSuite(MarketingTestCase):
         tag_kwargs = {'slug': 'they-killed-kenny3'}
         model3 = self.generate_models(tag=True, tag_kwargs=tag_kwargs, models=base)
 
+        logging.Logger.info.call_args_list = []
+
         add_event_tags_to_student.delay(1, email='pokemon@potato.io')
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [
+        self.assertEqual(logging.Logger.info.call_args_list, [
             call(TASK_STARTED_MESSAGE),
             call('Adding tag 1 to acp contact 1'),
             call('Adding tag 2 to acp contact 1'),

@@ -188,6 +188,8 @@ class Task(object):
                         error = str(e)[:255]
                         exception = e
 
+                        logger.exception(str(e))
+
                 if error:
                     x.status = 'ERROR'
                     x.status_message = error
@@ -236,6 +238,8 @@ class Task(object):
                     x.status = 'ERROR'
                     x.status_message = str(e)[:255]
                     x.save()
+
+                    logger.exception(str(e))
 
                     # fallback
                     if self.fallback:
