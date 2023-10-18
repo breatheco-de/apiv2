@@ -114,7 +114,7 @@ class MediaTestSuite(MediaTestCase):
             add_activity.delay(1, kind, related_type='auth.User')
 
             self.bc.check.calls(BigQuery.client.call_args_list, [])
-            self.bc.check.calls(result_mock.result.call_args_list, [])
+            self.bc.check.calls(result_mock.done.call_args_list, [])
 
         self.bc.check.calls(logging.Logger.info.call_args_list,
                             [call(f'Executing add_activity related to {kind}')])
@@ -141,7 +141,7 @@ class MediaTestSuite(MediaTestCase):
             add_activity.delay(1, kind, related_id=1, related_slug='slug')
 
             self.bc.check.calls(BigQuery.client.call_args_list, [])
-            self.bc.check.calls(result_mock.result.call_args_list, [])
+            self.bc.check.calls(result_mock.done.call_args_list, [])
 
         self.bc.check.calls(logging.Logger.info.call_args_list,
                             [call(f'Executing add_activity related to {kind}')])
@@ -169,7 +169,7 @@ class MediaTestSuite(MediaTestCase):
 
             self.bc.check.calls(BigQuery.client.call_args_list, [call()])
             assert client_mock.query.call_args[0][0] == query
-            self.bc.check.calls(result_mock.result.call_args_list, [])
+            self.bc.check.calls(result_mock.done.call_args_list, [call()])
 
         self.bc.check.calls(logging.Logger.info.call_args_list,
                             [call(f'Executing add_activity related to {kind}')])
@@ -197,7 +197,7 @@ class MediaTestSuite(MediaTestCase):
 
             self.bc.check.calls(BigQuery.client.call_args_list, [call()])
             assert client_mock.query.call_args[0][0] == query
-            self.bc.check.calls(result_mock.result.call_args_list, [])
+            self.bc.check.calls(result_mock.done.call_args_list, [call()])
 
         self.bc.check.calls(logging.Logger.info.call_args_list,
                             [call(f'Executing add_activity related to {kind}')])
@@ -230,7 +230,7 @@ class MediaTestSuite(MediaTestCase):
 
                 self.bc.check.calls(BigQuery.client.call_args_list, [call()])
                 assert client_mock.query.call_args[0][0] == query
-                self.bc.check.calls(result_mock.result.call_args_list, [])
+                self.bc.check.calls(result_mock.done.call_args_list, [call()])
                 self.bc.check.calls(actions.get_activity_meta.call_args_list, [
                     call(kind, 'auth.User', 1, None),
                 ])
@@ -270,7 +270,7 @@ class MediaTestSuite(MediaTestCase):
 
                 self.bc.check.calls(BigQuery.client.call_args_list, [call()])
                 assert client_mock.query.call_args[0][0] == query
-                self.bc.check.calls(result_mock.result.call_args_list, [])
+                self.bc.check.calls(result_mock.done.call_args_list, [call()])
                 self.bc.check.calls(actions.get_activity_meta.call_args_list, [
                     call(kind, 'auth.User', 1, None),
                 ])
