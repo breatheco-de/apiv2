@@ -44,7 +44,7 @@ def persist_single_lead(form_data, **_: Any):
             entry = FormEntry.objects.filter(id=form_data['id']).first()
             if entry is not None:
                 entry.storage_status_text = str(e)
-                entry.status = 'ERROR'
+                entry.storage_status = 'ERROR'
                 entry.save()
 
         raise e
