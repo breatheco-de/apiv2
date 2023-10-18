@@ -13,10 +13,8 @@ ALLOWED_TYPES = {
     'auth.User': [
         'login',
     ],
-    'admissions.Cohort': [
-        'open_syllabus_module',
-    ],
     'assignments.Task': [
+        'open_syllabus_module',
         'read_assignment',
         'assignment_review_status_updated',
         'assignment_status_updated',
@@ -38,6 +36,9 @@ ALLOWED_TYPES = {
         'mentoring_session_scheduled',
         'mentorship_session_checkin',
         'mentorship_session_checkout',
+    ],
+    'payments.Invoice': [
+        'checkout_completed',
     ],
 }
 
@@ -70,24 +71,36 @@ class FillActivityMeta:
         if not instance:
             raise AbortTask(f'UserInvite {related_id or related_slug} not found')
 
-        return {
+        obj = {
             'id': instance.id,
             'email': instance.email,
             'phone': instance.phone,
             'status': instance.status,
             'process_status': instance.process_status,
-            'author_email': instance.author.email if instance.author else None,
-            'author_username': instance.author.username if instance.author else None,
-            'user_email': instance.user.email if instance.user else None,
-            'user_username': instance.user.username if instance.user else None,
-            'user_first_name': instance.user.first_name if instance.user else None,
-            'user_last_name': instance.user.last_name if instance.user else None,
-            'role': instance.role.slug if instance.role else None,
             'first_name': instance.first_name,
             'last_name': instance.last_name,
-            'academy': instance.cohort.slug if instance.academy else None,
-            'cohort': instance.cohort.slug if instance.cohort else None,
         }
+
+        if instance.author:
+            obj['author_email'] = instance.author.email
+            obj['author_username'] = instance.author.username
+
+        if instance.user:
+            obj['user_email'] = instance.user.email
+            obj['user_username'] = instance.user.username
+            obj['user_first_name'] = instance.user.first_name
+            obj['user_last_name'] = instance.user.last_name
+
+        if instance.role:
+            obj['role'] = instance.role.slug
+
+        if instance.academy:
+            obj['academy'] = instance.academy.id
+
+        if instance.cohort:
+            obj['cohort'] = instance.cohort.id
+
+        return obj
 
     @classmethod
     def answer(cls,
@@ -102,31 +115,51 @@ class FillActivityMeta:
         if not instance:
             raise AbortTask(f'Answer {related_id or related_slug} not found')
 
-        return {
+        obj = {
             'id': instance.id,
             'title': instance.title,
             'lowest': instance.lowest,
             'highest': instance.highest,
             'lang': instance.lang,
-            'event': instance.event.slug if instance.event else None,
-            'mentorship_session': instance.mentorship_session.name if instance.mentorship_session else None,
-            'mentor_email': instance.mentor.email if instance.user else None,
-            'mentor_username': instance.mentor.username if instance.user else None,
-            'mentor_first_name': instance.mentor.first_name if instance.user else None,
-            'mentor_last_name': instance.mentor.last_name if instance.user else None,
-            'cohort': instance.cohort.slug if instance.cohort else None,
-            'academy': instance.academy.slug if instance.academy else None,
             'score': instance.score,
             'comment': instance.comment,
-            'survey': instance.survey.id if instance.survey else None,
             'status': instance.status,
-            'user_email': instance.user.email if instance.user else None,
-            'user_username': instance.user.username if instance.user else None,
-            'user_first_name': instance.user.first_name if instance.user else None,
-            'user_last_name': instance.user.last_name if instance.user else None,
-            'opened_at': instance.opened_at.isoformat() if instance.opened_at else None,
-            'sent_at': instance.sent_at.isoformat() if instance.sent_at else None,
         }
+
+        if instance.user:
+            obj['user_email'] = instance.user.email
+            obj['user_username'] = instance.user.username
+            obj['user_first_name'] = instance.user.first_name
+            obj['user_last_name'] = instance.user.last_name
+
+        if instance.mentor:
+            obj['mentor_email'] = instance.mentor.email
+            obj['mentor_username'] = instance.mentor.username
+            obj['mentor_first_name'] = instance.mentor.first_name
+            obj['mentor_last_name'] = instance.mentor.last_name
+
+        if instance.academy:
+            obj['academy'] = instance.academy.id
+
+        if instance.cohort:
+            obj['cohort'] = instance.cohort.id
+
+        if instance.survey:
+            obj['survey'] = instance.survey.id
+
+        if instance.mentorship_session:
+            obj['mentorship_session'] = instance.mentorship_session.name
+
+        if instance.event:
+            obj['event'] = instance.event.slug
+
+        if instance.opened_at:
+            obj['opened_at'] = instance.opened_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        if instance.sent_at:
+            obj['sent_at'] = instance.sent_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        return obj
 
     @classmethod
     def user(cls,
@@ -141,11 +174,13 @@ class FillActivityMeta:
         if not instance:
             raise AbortTask(f'User {related_id or related_slug} not found')
 
-        return {
+        obj = {
             'id': instance.id,
             'email': instance.email,
             'username': instance.username,
         }
+
+        return obj
 
     @classmethod
     def cohort(cls,
@@ -162,12 +197,10 @@ class FillActivityMeta:
 
         syllabus = (f'{instance.syllabus_version.syllabus.slug}.v{instance.syllabus_version.version}'
                     if instance.syllabus_version else None)
-        return {
+        obj = {
             'id': instance.id,
             'slug': instance.slug,
             'name': instance.name,
-            'kickoff_date': instance.kickoff_date.isoformat(),
-            'ending_date': instance.ending_date.isoformat() if instance.ending_date else None,
             'current_day': instance.current_day,
             'current_module': instance.current_module,
             'stage': instance.stage,
@@ -177,14 +210,26 @@ class FillActivityMeta:
             'remote_available': instance.remote_available,
             'online_meeting_url': instance.online_meeting_url,
             'timezone': instance.timezone,
-            'academy': instance.academy.slug if instance.academy else None,
             'syllabus': syllabus,
             'intro_video': instance.intro_video,
-            'schedule': instance.schedule.name if instance.schedule else None,
             'is_hidden_on_prework': instance.is_hidden_on_prework,
             'available_as_saas': instance.available_as_saas,
             'language': instance.language,
         }
+
+        if instance.academy:
+            obj['academy'] = instance.academy.id
+
+        if instance.schedule:
+            obj['schedule'] = instance.schedule.name
+
+        if instance.kickoff_date:
+            obj['kickoff_date'] = instance.kickoff_date.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        if instance.ending_date:
+            obj['ending_date'] = instance.ending_date.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        return obj
 
     @classmethod
     def task(cls,
@@ -199,12 +244,8 @@ class FillActivityMeta:
         if not instance:
             raise AbortTask(f'Task {related_id or related_slug} not found')
 
-        return {
+        obj = {
             'id': instance.id,
-            'user_email': instance.user.email if instance.user else None,
-            'user_username': instance.user.username if instance.user else None,
-            'user_first_name': instance.user.first_name if instance.user else None,
-            'user_last_name': instance.user.last_name if instance.user else None,
             'associated_slug': instance.associated_slug,
             'title': instance.title,
             'task_status': instance.task_status,
@@ -212,9 +253,21 @@ class FillActivityMeta:
             'task_type': instance.task_type,
             'github_url': instance.github_url,
             'live_url': instance.live_url,
-            'opened_at': instance.opened_at.isoformat() if instance.opened_at else None,
-            'cohort': instance.cohort.slug if instance.cohort else None,
         }
+
+        if instance.user:
+            obj['user_email'] = instance.user.email
+            obj['user_username'] = instance.user.username
+            obj['user_first_name'] = instance.user.first_name
+            obj['user_last_name'] = instance.user.last_name
+
+        if instance.cohort:
+            obj['cohort'] = instance.cohort.id
+
+        if instance.opened_at:
+            obj['opened_at'] = instance.opened_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        return obj
 
     @classmethod
     def event_checkin(cls,
@@ -229,18 +282,24 @@ class FillActivityMeta:
         if not instance:
             raise AbortTask(f'EventCheckin {related_id or related_slug} not found')
 
-        return {
+        obj = {
             'id': instance.id,
             'email': instance.email,
-            'attendee_email': instance.attendee.email if instance.attendee else None,
-            'attendee_username': instance.attendee.username if instance.attendee else None,
-            'attendee_first_name': instance.attendee.first_name if instance.attendee else None,
-            'attendee_last_name': instance.attendee.last_name if instance.attendee else None,
             'event_id': instance.event.id,
             'event_slug': instance.event.slug,
             'status': instance.status,
-            'attended_at': instance.attended_at.isoformat() if instance.attended_at else None,
         }
+
+        if instance.attendee:
+            obj['attendee_email'] = instance.attendee.email
+            obj['attendee_username'] = instance.attendee.username
+            obj['attendee_first_name'] = instance.attendee.first_name
+            obj['attendee_last_name'] = instance.attendee.last_name
+
+        if instance.attended_at:
+            obj['attended_at'] = instance.attended_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        return obj
 
     @classmethod
     def mentorship_session(cls,
@@ -255,35 +314,93 @@ class FillActivityMeta:
         if not instance:
             raise AbortTask(f'MentorshipSession {related_id or related_slug} not found')
 
-        return {
+        obj = {
             'id': instance.id,
             'name': instance.name,
             'is_online': instance.is_online,
             'latitude': instance.latitude,
             'longitude': instance.longitude,
-            'mentor_id': instance.mentor.id if instance.mentor else None,
-            'mentor_slug': instance.mentor.slug if instance.mentor else None,
-            'mentor_name': instance.mentor.name if instance.mentor else None,
-            'service': instance.service.slug if instance.service else None,
-            'mentee_email': instance.mentee.email if instance.mentee else None,
-            'mentee_username': instance.mentee.username if instance.mentee else None,
-            'mentee_first_name': instance.mentee.first_name if instance.mentee else None,
-            'mentee_last_name': instance.mentee.last_name if instance.mentee else None,
             'online_meeting_url': instance.online_meeting_url,
             'online_recording_url': instance.online_recording_url,
             'status': instance.status,
             'allow_billing': instance.allow_billing,
-            'bill': instance.bill.id if instance.bill else None,
             'suggested_accounted_duration': instance.suggested_accounted_duration,
             'accounted_duration': instance.accounted_duration,
-            'starts_at': instance.starts_at.isoformat() if instance.starts_at else None,
-            'ends_at': instance.ends_at.isoformat() if instance.ends_at else None,
-            'started_at': instance.started_at.isoformat() if instance.started_at else None,
-            'ended_at': instance.ended_at.isoformat() if instance.ended_at else None,
-            'mentor_joined_at': instance.mentor_joined_at.isoformat() if instance.mentor_joined_at else None,
-            'mentor_left_at': instance.mentor_left_at.isoformat() if instance.mentor_left_at else None,
-            'mentee_left_at': instance.mentee_left_at.isoformat() if instance.mentee_left_at else None,
         }
+
+        if instance.mentor:
+            obj['mentor_id'] = instance.mentor.id
+            obj['mentor_slug'] = instance.mentor.slug
+            obj['mentor_name'] = instance.mentor.name
+
+        if instance.mentee:
+            obj['mentee_email'] = instance.mentee.email
+            obj['mentee_username'] = instance.mentee.username
+            obj['mentee_first_name'] = instance.mentee.first_name
+            obj['mentee_last_name'] = instance.mentee.last_name
+
+        if instance.service:
+            obj['service'] = instance.service.slug
+
+        if instance.bill:
+            obj['bill'] = instance.bill.id
+
+        if instance.starts_at:
+            obj['starts_at'] = instance.starts_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        if instance.ends_at:
+            obj['ends_at'] = instance.ends_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        if instance.started_at:
+            obj['started_at'] = instance.started_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        if instance.ended_at:
+            obj['ended_at'] = instance.ended_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        if instance.mentor_joined_at:
+            obj['mentor_joined_at'] = instance.mentor_joined_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        if instance.mentor_left_at:
+            obj['mentor_left_at'] = instance.mentor_left_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        if instance.mentee_left_at:
+            obj['mentee_left_at'] = instance.mentee_left_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        return obj
+
+    @classmethod
+    def invoice(cls,
+                kind: str,
+                related_id: Optional[str | int] = None,
+                related_slug: Optional[str] = None) -> dict[str, Any]:
+        from breathecode.payments.models import Invoice
+
+        kwargs = cls._get_query(related_id, related_slug)
+        instance = Invoice.objects.filter(**kwargs).first()
+
+        if not instance:
+            raise AbortTask(f'Invoice {related_id or related_slug} not found')
+
+        obj = {
+            'id': instance.id,
+            'amount': instance.amount,
+            'currency': instance.currency.code,
+            'status': instance.status,
+            'bag': instance.bag.id,
+            'academy': instance.academy.id,
+            'user_email': instance.user.email,
+            'user_username': instance.user.username,
+            'user_first_name': instance.user.first_name,
+            'user_last_name': instance.user.last_name,
+        }
+
+        if instance.paid_at:
+            obj['paid_at'] = instance.paid_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        if instance.refunded_at:
+            obj['refunded_at'] = instance.refunded_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        return obj
 
     @classmethod
     def bag(cls,
@@ -298,21 +415,25 @@ class FillActivityMeta:
         if not instance:
             raise AbortTask(f'Bag {related_id or related_slug} not found')
 
-        return {
+        obj = {
             'id': instance.id,
             'status': instance.status,
             'type': instance.type,
             'chosen_period': instance.chosen_period,
             'how_many_installments': instance.how_many_installments,
-            'academy': instance.academy.slug,
+            'academy': instance.academy.id,
             'user_email': instance.user.email,
             'user_username': instance.user.username,
             'user_first_name': instance.user.first_name,
             'user_last_name': instance.user.last_name,
             'is_recurrent': instance.is_recurrent,
             'was_delivered': instance.was_delivered,
-            'expires_at': instance.expires_at.isoformat() if instance.expires_at else None,
         }
+
+        if instance.expires_at:
+            obj['expires_at'] = instance.expires_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        return obj
 
     @classmethod
     def subscription(cls,
@@ -327,29 +448,38 @@ class FillActivityMeta:
         if not instance:
             raise AbortTask(f'Subscription {related_id or related_slug} not found')
 
-        selected_mentorship_service_set = (instance.selected_mentorship_service_set.slug
-                                           if instance.selected_mentorship_service_set else None)
-
-        selected_event_type_set = (instance.selected_event_type_set.slug
-                                   if instance.selected_event_type_set else None)
-        return {
+        obj = {
             'id': instance.id,
             'status': instance.status,
             'user_email': instance.user.email,
             'user_username': instance.user.username,
             'user_first_name': instance.user.first_name,
             'user_last_name': instance.user.last_name,
-            'academy': instance.academy.slug,
-            'selected_cohort': instance.selected_cohort.slug if instance.selected_cohort else None,
-            'selected_mentorship_service_set': selected_mentorship_service_set,
-            'selected_event_type_set': selected_event_type_set,
-            'paid_at': instance.paid_at.isoformat(),
+            'academy': instance.academy.id,
             'is_refundable': instance.is_refundable,
-            'next_payment_at': instance.next_payment_at.isoformat(),
-            'valid_until': instance.valid_until.isoformat() if instance.valid_until else None,
             'pay_every': instance.pay_every,
             'pay_every_unit': instance.pay_every_unit,
         }
+
+        if instance.selected_cohort_set:
+            obj['selected_cohort_set'] = instance.selected_cohort_set.slug
+
+        if instance.selected_mentorship_service_set:
+            obj['selected_mentorship_service_set'] = instance.selected_mentorship_service_set.slug
+
+        if instance.selected_event_type_set:
+            obj['selected_event_type_set'] = instance.selected_event_type_set.slug
+
+        if instance.paid_at:
+            obj['paid_at'] = instance.paid_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        if instance.next_payment_at:
+            obj['next_payment_at'] = instance.next_payment_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        if instance.valid_until:
+            obj['valid_until'] = instance.valid_until.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        return obj
 
     @classmethod
     def plan_financing(cls,
@@ -369,22 +499,32 @@ class FillActivityMeta:
 
         selected_event_type_set = (instance.selected_event_type_set.slug
                                    if instance.selected_event_type_set else None)
-        return {
+        obj = {
             'id': instance.id,
             'status': instance.status,
             'user_email': instance.user.email,
             'user_username': instance.user.username,
             'user_first_name': instance.user.first_name,
             'user_last_name': instance.user.last_name,
-            'academy': instance.academy.slug,
-            'selected_cohort': instance.selected_cohort.slug if instance.selected_cohort else None,
+            'academy': instance.academy.id,
             'selected_mentorship_service_set': selected_mentorship_service_set,
             'selected_event_type_set': selected_event_type_set,
-            'next_payment_at': instance.next_payment_at.isoformat(),
-            'valid_until': instance.valid_until.isoformat(),
-            'plan_expires_at': instance.plan_expires_at.isoformat() if instance.plan_expires_at else None,
             'monthly_price': instance.monthly_price,
         }
+
+        if instance.selected_cohort_set:
+            obj['selected_cohort_set'] = instance.selected_cohort_set.slug
+
+        if instance.next_payment_at:
+            obj['next_payment_at'] = instance.next_payment_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        if instance.valid_until:
+            obj['valid_until'] = instance.valid_until.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        if instance.plan_expires_at:
+            obj['plan_expires_at'] = instance.plan_expires_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        return obj
 
 
 def get_activity_meta(kind: str,
@@ -433,5 +573,8 @@ def get_activity_meta(kind: str,
     if related_type == 'mentorship.MentorshipSession' and kind in ALLOWED_TYPES[
             'mentorship.MentorshipSession']:
         return FillActivityMeta.mentorship_session(*args)
+
+    if related_type == 'payments.Invoice' and kind in ALLOWED_TYPES['payments.Invoice']:
+        return FillActivityMeta.invoice(*args)
 
     raise AbortTask(f'kind {kind} is not supported by {related_type} yet')

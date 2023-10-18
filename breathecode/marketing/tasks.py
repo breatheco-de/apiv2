@@ -1,6 +1,6 @@
 import re
 import os
-from typing import Optional
+from typing import Any, Optional
 from celery import shared_task, Task
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -14,6 +14,7 @@ from .models import AcademyAlias, FormEntry, ShortLink, ActiveCampaignWebhook, A
 from breathecode.monitoring.models import CSVUpload
 from .serializers import (PostFormEntrySerializer)
 from .actions import register_new_lead, save_get_geolocal, acp_ids, bind_formentry_with_webhook
+from breathecode.utils.decorators.task import AbortTask, RetryTask, task
 
 logger = getLogger(__name__)
 is_test_env = os.getenv('ENV') == 'test'
@@ -26,28 +27,15 @@ class BaseTaskWithRetry(Task):
     retry_backoff = True
 
 
-@shared_task
-def persist_leads():
-    logger.debug('Starting persist_leads')
-    entries = FormEntry.objects.filter(storage_status='PENDING')
-
-    for entry in entries:
-        form_data = entry.toFormData()
-        result = register_new_lead(form_data)
-        if result is not None and result != False:
-            save_get_geolocal(entry, form_data)
-
-    return True
-
-
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def persist_single_lead(self, form_data):
+@task()
+def persist_single_lead(form_data, **_: Any):
     logger.info('Starting persist_single_lead')
 
     entry = None
     try:
         entry = register_new_lead(form_data)
-    except ValidationException as e:
+
+    except Exception as e:
         if not form_data:
             return
 
@@ -56,14 +44,10 @@ def persist_single_lead(self, form_data):
             entry = FormEntry.objects.filter(id=form_data['id']).first()
             if entry is not None:
                 entry.storage_status_text = str(e)
-                entry.status = 'ERROR'
+                entry.storage_status = 'ERROR'
                 entry.save()
 
-    except Exception as e:
-        if not form_data:
-            return
-
-        logger.error(str(e))
+        raise e
 
     if entry is not None and entry != False and not is_test_env:
         save_get_geolocal(entry, form_data)
@@ -71,14 +55,13 @@ def persist_single_lead(self, form_data):
     return True
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def update_link_viewcount(self, slug):
-    logger.debug('Starting update_link_viewcount')
+@task()
+def update_link_viewcount(slug, **_: Any):
+    logger.info('Starting update_link_viewcount')
 
     sl = ShortLink.objects.filter(slug=slug).first()
     if sl is None:
-        logger.debug(f'ShortLink with slug {slug} not found')
-        return False
+        raise RetryTask(f'ShortLink with slug {slug} not found')
 
     sl.hits = sl.hits + 1
     sl.lastclick_at = timezone.now()
@@ -89,16 +72,18 @@ def update_link_viewcount(self, slug):
         sl.destination_status_text = result['status_text']
         sl.destination_status = 'ERROR'
         sl.save()
+
+        raise Exception(result['status_text'])
+
     else:
         sl.destination_status = 'ACTIVE'
         sl.destination_status_text = result['status_text']
         sl.save()
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def async_activecampaign_webhook(self, webhook_id):
-    logger.debug('Starting async_activecampaign_webhook')
-    status = 'ok'
+@task()
+def async_activecampaign_webhook(webhook_id, **_: Any):
+    logger.info('Starting async_activecampaign_webhook')
 
     webhook = ActiveCampaignWebhook.objects.filter(id=webhook_id).first()
     ac_academy = webhook.ac_academy
@@ -111,8 +96,7 @@ def async_activecampaign_webhook(self, webhook_id):
             client.execute_action(webhook_id, acp_ids)
         except Exception as e:
             logger.debug(f'ActiveCampaign Webhook Exception')
-            logger.debug(str(e))
-            status = 'error'
+            raise e
 
     else:
         message = f"ActiveCampaign Academy Profile {webhook_id} doesn\'t exist"
@@ -122,90 +106,75 @@ def async_activecampaign_webhook(self, webhook_id):
         webhook.save()
 
         logger.debug(message)
-        status = 'error'
+        raise Exception(message)
 
-    logger.debug(f'ActiveCampaign webook status: {status}')
+    logger.debug(f'ActiveCampaign webook status: ok')
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def add_cohort_task_to_student(self, user_id, cohort_id, academy_id):
-    logger.warn('Task add_cohort_task_to_student started')
+@task()
+def add_cohort_task_to_student(user_id, cohort_id, academy_id, **_: Any):
+    logger.info('Task add_cohort_task_to_student started')
 
     if not Academy.objects.filter(id=academy_id).exists():
-        logger.error(f'Academy {academy_id} not found')
-        return
+        raise AbortTask(f'Academy {academy_id} not found')
 
     ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
     if ac_academy is None:
-        logger.error(f'ActiveCampaign Academy {academy_id} not found')
-        return
+        raise AbortTask(f'ActiveCampaign Academy {academy_id} not found')
 
     user = User.objects.filter(id=user_id).first()
     if user is None:
-        logger.error(f'User {user_id} not found')
-        return
+        raise AbortTask(f'User {user_id} not found')
 
     cohort = Cohort.objects.filter(id=cohort_id).first()
     if cohort is None:
-        logger.error(f'Cohort {cohort_id} not found')
-        return
+        raise AbortTask(f'Cohort {cohort_id} not found')
 
     client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
     tag = Tag.objects.filter(slug__iexact=cohort.slug, ac_academy__id=ac_academy.id).first()
 
     if tag is None:
-        logger.error(
+        raise AbortTask(
             f'Cohort tag `{cohort.slug}` does not exist in the system, the tag could not be added to the student. '
             'This tag was supposed to be created by the system when creating a new cohort')
-        return False
 
-    try:
-        contact = client.get_contact_by_email(user.email)
+    contact = client.get_contact_by_email(user.email)
 
-        logger.warn(f'Adding tag {tag.id} to acp contact {contact["id"]}')
-        client.add_tag_to_contact(contact['id'], tag.acp_id)
-
-    except Exception as e:
-        logger.error(str(e))
+    logger.info(f'Adding tag {tag.id} to acp contact {contact["id"]}')
+    client.add_tag_to_contact(contact['id'], tag.acp_id)
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def add_event_tags_to_student(self,
-                              event_id: int,
+@task()
+def add_event_tags_to_student(event_id: int,
                               user_id: Optional[int] = None,
-                              email: Optional[str] = None):
-    logger.warn('Task add_event_tags_to_student started')
+                              email: Optional[str] = None,
+                              **_: Any):
+    logger.info('Task add_event_tags_to_student started')
 
     if not user_id and not email:
-        logger.error('Impossible to determine the user email')
-        return
+        raise AbortTask('Impossible to determine the user email')
 
     if user_id and email:
-        logger.error('You can\'t provide the user_id and email together')
-        return
+        raise AbortTask('You can\'t provide the user_id and email together')
 
     if not email:
         email = User.objects.filter(id=user_id).values_list('email', flat=True).first()
 
     if not email:
-        logger.error('We can\'t get the user email')
-        return
+        raise AbortTask('We can\'t get the user email')
 
     event = Event.objects.filter(id=event_id).first()
     if event is None:
-        logger.error(f'Event {event_id} not found')
-        return
+        raise AbortTask(f'Event {event_id} not found')
 
     if not event.academy:
-        logger.error(f'Impossible to determine the academy')
-        return
+        raise AbortTask(f'Impossible to determine the academy')
 
     academy = event.academy
 
     ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=academy.id).first()
     if ac_academy is None:
-        logger.error(f'ActiveCampaign Academy {academy.id} not found')
-        return
+        raise AbortTask(f'ActiveCampaign Academy {academy.id} not found')
 
     client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
     tag_slugs = [x for x in event.tags.split(',') if x]  # prevent a tag with the slug ''
@@ -214,80 +183,57 @@ def add_event_tags_to_student(self,
 
     tags = Tag.objects.filter(slug__in=tag_slugs, ac_academy__id=ac_academy.id)
     if not tags:
-        logger.warn('Tags not found')
-        return
+        raise AbortTask('Tags not found')
 
-    try:
-        contact = client.get_contact_by_email(email)
-        for tag in tags:
-            logger.warn(f'Adding tag {tag.id} to acp contact {contact["id"]}')
-            client.add_tag_to_contact(contact['id'], tag.acp_id)
-
-    except Exception as e:
-        logger.error(str(e))
+    contact = client.get_contact_by_email(email)
+    for tag in tags:
+        logger.info(f'Adding tag {tag.id} to acp contact {contact["id"]}')
+        client.add_tag_to_contact(contact['id'], tag.acp_id)
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def add_cohort_slug_as_acp_tag(self, cohort_id: int, academy_id: int) -> None:
-    logger.warn('Task add_cohort_slug_as_acp_tag started')
+@task()
+def add_cohort_slug_as_acp_tag(cohort_id: int, academy_id: int, **_: Any) -> None:
+    logger.info('Task add_cohort_slug_as_acp_tag started')
 
     if not Academy.objects.filter(id=academy_id).exists():
-        logger.error(f'Academy {academy_id} not found')
-        return
+        raise AbortTask(f'Academy {academy_id} not found')
 
     ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
     if ac_academy is None:
-        logger.error(f'ActiveCampaign Academy {academy_id} not found')
-        return
+        raise AbortTask(f'ActiveCampaign Academy {academy_id} not found')
 
     cohort = Cohort.objects.filter(id=cohort_id).first()
     if cohort is None:
-        logger.error(f'Cohort {cohort_id} not found')
-        return
+        raise AbortTask(f'Cohort {cohort_id} not found')
 
     client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
     tag = Tag.objects.filter(slug=cohort.slug, ac_academy__id=ac_academy.id).first()
     if tag:
-        logger.warn(f'Tag for cohort `{cohort.slug}` already exists')
-        return
+        raise AbortTask(f'Tag for cohort `{cohort.slug}` already exists')
 
-    try:
-        data = client.create_tag(cohort.slug,
-                                 description=f'Cohort {cohort.slug} at {ac_academy.academy.slug}')
+    data = client.create_tag(cohort.slug, description=f'Cohort {cohort.slug} at {ac_academy.academy.slug}')
 
-        tag = Tag(slug=data['tag'],
-                  acp_id=data['id'],
-                  tag_type='COHORT',
-                  ac_academy=ac_academy,
-                  subscribers=0)
-        tag.save()
-
-    except:
-        logger.exception(f'There was an error creating tag for cohort {cohort.slug}',
-                         slug='exception-creating-tag-in-acp')
+    tag = Tag(slug=data['tag'], acp_id=data['id'], tag_type='COHORT', ac_academy=ac_academy, subscribers=0)
+    tag.save()
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def add_event_slug_as_acp_tag(self, event_id: int, academy_id: int, force=False) -> None:
-    logger.warn('Task add_event_slug_as_acp_tag started')
+@task()
+def add_event_slug_as_acp_tag(event_id: int, academy_id: int, force=False, **_: Any) -> None:
+    logger.info('Task add_event_slug_as_acp_tag started')
 
     if not Academy.objects.filter(id=academy_id).exists():
-        logger.error(f'Academy {academy_id} not found')
-        return
+        raise AbortTask(f'Academy {academy_id} not found')
 
     ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
     if ac_academy is None:
-        logger.error(f'ActiveCampaign Academy {academy_id} not found')
-        return
+        raise AbortTask(f'ActiveCampaign Academy {academy_id} not found')
 
     event = Event.objects.filter(id=event_id).first()
     if event is None:
-        logger.error(f'Event {event_id} not found')
-        return
+        raise AbortTask(f'Event {event_id} not found')
 
     if not event.slug:
-        logger.error(f'Event {event_id} does not have slug')
-        return
+        raise AbortTask(f'Event {event_id} does not have slug')
 
     client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
 
@@ -297,50 +243,37 @@ def add_event_slug_as_acp_tag(self, event_id: int, academy_id: int, force=False)
         new_tag_slug = f'event-{event.slug}'
 
     if (tag := Tag.objects.filter(slug=new_tag_slug, ac_academy__id=ac_academy.id).first()) and not force:
-        logger.error(f'Tag for event `{event.slug}` already exists')
-        return
+        raise AbortTask(f'Tag for event `{event.slug}` already exists')
 
-    try:
-        data = client.create_tag(new_tag_slug, description=f'Event {event.slug} at {ac_academy.academy.slug}')
+    data = client.create_tag(new_tag_slug, description=f'Event {event.slug} at {ac_academy.academy.slug}')
 
-        # retry create the tag in Active Campaign
-        if tag:
-            tag.slug = data['tag']
-            tag.acp_id = data['id']
-            tag.tag_type = 'EVENT'
-            tag.ac_academy = ac_academy
+    # retry create the tag in Active Campaign
+    if tag:
+        tag.slug = data['tag']
+        tag.acp_id = data['id']
+        tag.tag_type = 'EVENT'
+        tag.ac_academy = ac_academy
 
-        else:
-            tag = Tag(slug=data['tag'],
-                      acp_id=data['id'],
-                      tag_type='EVENT',
-                      ac_academy=ac_academy,
-                      subscribers=0)
+    else:
+        tag = Tag(slug=data['tag'], acp_id=data['id'], tag_type='EVENT', ac_academy=ac_academy, subscribers=0)
 
-        tag.save()
-
-    except:
-        logger.exception(f'There was an error creating tag for event {event.slug}',
-                         slug='exception-creating-tag-in-acp')
+    tag.save()
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def add_downloadable_slug_as_acp_tag(self, downloadable_id: int, academy_id: int) -> None:
-    logger.warn('Task add_downloadable_slug_as_acp_tag started')
+@task()
+def add_downloadable_slug_as_acp_tag(downloadable_id: int, academy_id: int, **_: Any) -> None:
+    logger.info('Task add_downloadable_slug_as_acp_tag started')
 
     if not Academy.objects.filter(id=academy_id).exists():
-        logger.error(f'Academy {academy_id} not found')
-        return
+        raise AbortTask(f'Academy {academy_id} not found')
 
     ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
     if ac_academy is None:
-        logger.error(f'ActiveCampaign Academy {academy_id} not found')
-        return
+        raise AbortTask(f'ActiveCampaign Academy {academy_id} not found')
 
     downloadable = Downloadable.objects.filter(id=downloadable_id).first()
     if downloadable is None:
-        logger.error(f'Downloadable {downloadable_id} not found')
-        return
+        raise AbortTask(f'Downloadable {downloadable_id} not found')
 
     client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
 
@@ -352,8 +285,7 @@ def add_downloadable_slug_as_acp_tag(self, downloadable_id: int, academy_id: int
     tag = Tag.objects.filter(slug=new_tag_slug, ac_academy__id=ac_academy.id).first()
 
     if tag:
-        logger.warn(f'Tag for downloadable `{downloadable.slug}` already exists')
-        return
+        raise AbortTask(f'Tag for downloadable `{downloadable.slug}` already exists')
 
     try:
         data = client.create_tag(new_tag_slug,
@@ -366,20 +298,25 @@ def add_downloadable_slug_as_acp_tag(self, downloadable_id: int, academy_id: int
                   subscribers=0)
         tag.save()
 
-    except:
-        logger.exception(f'There was an error creating tag for downloadable {downloadable.slug}')
+    except Exception as e:
+        logger.error(f'There was an error creating tag for downloadable {downloadable.slug}')
+        raise e
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def create_form_entry(self, csv_upload_id, **item):
+@task()
+def create_form_entry(csv_upload_id, **item):
+    # remove the task manager parameters
+    item.pop('pop', None)
+    item.pop('total_pages', None)
+    item.pop('attemps', None)
+    item.pop('task_manager_id', None)
 
     logger.info('Create form entry started')
 
     csv_upload = CSVUpload.objects.filter(id=csv_upload_id).first()
 
     if not csv_upload:
-        logger.error('No CSVUpload found with this id')
-        return ''
+        raise RetryTask('No CSVUpload found with this id')
 
     form_entry = FormEntry()
 
@@ -472,5 +409,5 @@ def create_form_entry(self, csv_upload_id, **item):
             persist_single_lead.delay(serializer.data)
         logger.info('create_form_entry successfully created')
 
-    # state = vars(form_entry).copy()
-    # del state['_state']
+    else:
+        raise Exception(error_message)

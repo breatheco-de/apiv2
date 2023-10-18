@@ -363,9 +363,6 @@ class BagHandler:
                 elif self.selected_cohort_set and isinstance(self.selected_cohort_set, str):
                     kwargs['cohort_set__slug'] = self.selected_cohort_set
 
-                else:
-                    exclude['cohort_set__isnull'] = False
-
                 print(kwargs, exclude)
 
                 if not Plan.objects.filter(**kwargs).exclude(**exclude):

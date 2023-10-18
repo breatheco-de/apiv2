@@ -278,7 +278,11 @@ def get_user_settings(user_id: int) -> UserSetting:
     from breathecode.marketing.models import FormEntry
     from breathecode.feedback.models import Answer
 
-    settings, created = UserSetting.objects.get_or_create(user_id=user_id)
+    try:
+        settings, created = UserSetting.objects.get_or_create(user_id=user_id)
+    except Exception as e:
+        # race condition
+        settings, created = UserSetting.objects.get_or_create(user_id=user_id)
 
     if created and (cohort_user :=
                     CohortUser.objects.filter(user__id=user_id).exclude(cohort__language='').first()):
@@ -902,3 +906,117 @@ def get_app(pk: str | int) -> App:
         raise Exception('App not found')
 
     return app
+
+
+def accept_invite_action(data={}, token=None, lang='en'):
+    from breathecode.payments.models import Invoice, Bag, Plan
+
+    password1 = data.get('password', None)
+    password2 = data.get('repeat_password', None)
+
+    invite = UserInvite.objects.filter(token=str(token), status='PENDING', email__isnull=False).first()
+    if invite is None:
+        raise Exception(
+            translation(lang,
+                        en='Invalid or expired invitation ' + str(token),
+                        es='Invitación inválida o expirada ' + str(token)))
+
+    first_name = data.get('first_name', None)
+    last_name = data.get('last_name', None)
+    if first_name is None or first_name == '' or last_name is None or last_name == '':
+        raise Exception(translation(lang, en='Invalid first or last name', es='Nombre o apellido inválido'))
+
+    if password1 != password2:
+        raise Exception(translation(lang, en='Passwords don\'t match', es='Las contraseñas no coinciden'))
+
+    if not password1:
+        raise Exception(translation(lang, en='Password is empty', es='La contraseña está vacía'))
+
+    user = User.objects.filter(email=invite.email).first()
+    if user is None:
+        user = User(email=invite.email, first_name=first_name, last_name=last_name, username=invite.email)
+        user.save()
+        user.set_password(password1)
+        user.save()
+
+    if invite.academy is not None:
+        profile = ProfileAcademy.objects.filter(email=invite.email, academy=invite.academy).first()
+        if profile is None:
+            role = invite.role
+            if not role:
+                role = Role.objects.filter(slug='student').first()
+
+            if not role:
+                raise Exception(
+                    translation(lang,
+                                en='Unexpected error occurred with invite, please contact the '
+                                'staff of 4geeks',
+                                es='Ocurrió un error inesperado con la invitación, por favor '
+                                'contacta al staff de 4geeks'))
+
+            profile = ProfileAcademy(email=invite.email,
+                                     academy=invite.academy,
+                                     role=role,
+                                     first_name=first_name,
+                                     last_name=last_name)
+
+            if invite.first_name is not None and invite.first_name != '':
+                profile.first_name = invite.first_name
+            if invite.last_name is not None and invite.last_name != '':
+                profile.last_name = invite.last_name
+
+        profile.user = user
+        profile.status = 'ACTIVE'
+        profile.save()
+
+    if invite.cohort is not None:
+        role = 'student'
+        if invite.role is not None and invite.role.slug != 'student':
+            role = invite.role.slug.upper()
+
+        cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
+        if cu is None:
+            cu = CohortUser(user=user, cohort=invite.cohort, role=role.upper())
+            cu.save()
+
+        plan = Plan.objects.filter(cohort_set__cohorts=invite.cohort, invites=invite).first()
+
+        if plan and invite.user and invite.cohort.academy.main_currency and (
+                invite.cohort.available_as_saas == True or
+            (invite.cohort.available_as_saas == None and invite.cohort.academy.available_as_saas == True)):
+            utc_now = timezone.now()
+
+            bag = Bag()
+            bag.chosen_period = 'NO_SET'
+            bag.status = 'PAID'
+            bag.type = 'INVITED'
+            bag.how_many_installments = 1
+            bag.academy = invite.cohort.academy
+            bag.user = user
+            bag.is_recurrent = False
+            bag.was_delivered = False
+            bag.token = None
+            bag.currency = invite.cohort.academy.main_currency
+            bag.expires_at = None
+
+            bag.save()
+
+            bag.plans.add(plan)
+            bag.selected_cohorts.add(invite.cohort)
+
+            invoice = Invoice(amount=0,
+                              paid_at=utc_now,
+                              user=invite.user,
+                              bag=bag,
+                              academy=bag.academy,
+                              status='FULFILLED',
+                              currency=bag.academy.main_currency)
+            invoice.save()
+
+            payment_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=True)
+
+    invite.status = 'ACCEPTED'
+    invite.is_email_validated = True
+    invite.save()
+
+    return invite

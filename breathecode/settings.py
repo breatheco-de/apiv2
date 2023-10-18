@@ -100,7 +100,7 @@ REST_FRAMEWORK = {
     'EXCEPTION_HANDLER':
     'breathecode.utils.breathecode_exception_handler',
     'PAGE_SIZE':
-    20,
+    100,
     'DEFAULT_VERSION':
     'v1',
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -154,6 +154,8 @@ MIDDLEWARE += [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     #'breathecode.utils.admin_timezone.TimezoneMiddleware',
 ]
+
+DISABLE_SERVER_SIDE_CURSORS = True  # required when using pgbouncer's pool_mode=transaction
 
 AUTHENTICATION_BACKENDS = ('django.contrib.auth.backends.ModelBackend', )
 
@@ -329,7 +331,8 @@ CACHES = {
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
             'CONNECTION_POOL_KWARGS': {
-                'ssl_cert_reqs': None
+                'ssl_cert_reqs': None,
+                'max_connections': 4,
             },
         }
     }

@@ -19,6 +19,7 @@ from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils.views import set_query_parameter
 from breathecode.monitoring.decorators import WebhookTask
 from .models import Asset, AssetImage
+from .serializers import AssetSerializer
 from .actions import (pull_from_github, screenshots_bucket, test_asset, clean_asset_readme,
                       upload_image_to_bucket, asset_images_bucket, add_syllabus_translations)
 
@@ -315,6 +316,20 @@ def async_delete_asset_images(asset_slug):
         logger.info(f'Image {img.name} was deleted')
 
     return True
+
+
+@shared_task
+def async_update_frontend_asset_cache(asset):
+    try:
+        if os.getenv('ENV', '') != 'production':
+            return
+
+        logger.info(f'async_update_frontend_asset_cache')
+        URL = os.getenv('APP_URL', '') + f'/api/asset/{asset.slug}'
+        serializer = AssetSerializer(asset, many=False)
+        requests.put(url=URL)
+    except Exception as e:
+        logger.error(str(e))
 
 
 @shared_task

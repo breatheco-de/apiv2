@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from breathecode.commons.tasks import mark_task_as_pending
+from breathecode.commons import tasks
 from ...models import TaskManager
 from datetime import datetime
 from datetime import timedelta
@@ -8,17 +8,18 @@ from datetime import timedelta
 TOLERANCE = 30
 
 
+# it's deprecated, use task_manager instead.
 class Command(BaseCommand):
     help = 'Rerun all the tasks that are pending and were run in the last 10 minutes'
 
     def handle(self, *args, **options):
         utc_now = datetime.utcnow()
         tolerance = timedelta(minutes=TOLERANCE)
-        ids = TaskManager.objects.filter(last_run__gt=utc_now - tolerance,
+        ids = TaskManager.objects.filter(last_run__lt=utc_now - tolerance,
                                          status='PENDING').values_list('id', flat=True)
 
         for id in ids:
-            mark_task_as_pending.delay(id, force=True)
+            tasks.mark_task_as_pending.delay(id, force=True)
 
         if ids:
             msg = self.style.SUCCESS(f"Rerunning TaskManager's {', '.join([str(id) for id in ids])}")

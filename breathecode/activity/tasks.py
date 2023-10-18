@@ -1,5 +1,6 @@
 from datetime import date, datetime
 import logging, os
+import re
 from typing import Optional
 from uuid import uuid4
 from celery import shared_task, Task
@@ -16,6 +17,10 @@ from google.cloud import bigquery
 API_URL = os.getenv('API_URL', '')
 
 logger = logging.getLogger(__name__)
+
+ISO_STRING_PATTERN = re.compile(
+    r'^\d{4}-(0[1-9]|1[0-2])-([12]\d|0[1-9]|3[01])T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\.\d{6}(Z|\+\d{2}:\d{2})?$'
+)
 
 
 class BaseTaskWithRetry(Task):
@@ -148,7 +153,7 @@ def add_activity(user_id: int,
                  related_id: Optional[str | int] = None,
                  related_slug: Optional[str] = None,
                  **_):
-    logger.info('Executing add_activity')
+    logger.info(f'Executing add_activity related to {str(kind)}')
 
     if related_type and not (bool(related_id) ^ bool(related_slug)):
         raise AbortTask(
@@ -182,18 +187,21 @@ def add_activity(user_id: int,
 
     for key in meta:
         t = 'STRING'
-        if isinstance(meta[key], str):
+
+        # keep it adobe than the date confitional
+        if isinstance(meta[key], datetime) or (isinstance(meta[key], str)
+                                               and ISO_STRING_PATTERN.match(meta[key])):
+            t = 'TIMESTAMP'
+        elif isinstance(meta[key], date):
+            t = 'DATE'
+        elif isinstance(meta[key], str):
             pass
+        elif isinstance(meta[key], bool):
+            t = 'BOOL'
         elif isinstance(meta[key], int):
             t = 'INT64'
         elif isinstance(meta[key], float):
             t = 'FLOAT64'
-        elif isinstance(meta[key], bool):
-            t = 'BOOL'
-        elif isinstance(meta[key], datetime):
-            t = 'TIMESTAMP'
-        elif isinstance(meta[key], date):
-            t = 'DATE'
 
         job_config.query_parameters += [bigquery.ScalarQueryParameter(key, t, meta[key])]
         meta_struct += f'@{key} as {key}, '
@@ -215,4 +223,7 @@ def add_activity(user_id: int,
     """
 
     query_job = client.query(query, job_config=job_config)
-    query_job.result()
+    query_job.done()
+
+    if query_job.error_result:
+        raise Exception(query_job.error_result.get('message', 'No description'))

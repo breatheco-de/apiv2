@@ -3,11 +3,13 @@ Test /v1/auth/subscribe
 """
 import hashlib
 from datetime import datetime
+import os
 import random
 from unittest.mock import MagicMock, call, patch
 
 from django.urls.base import reverse_lazy
 from django.utils import timezone
+import pytest
 from rest_framework import status
 
 from breathecode.notify import actions as notify_actions
@@ -126,6 +128,15 @@ def put_serializer(user_invite, cohort=None, syllabus=None, plans=[], data={}):
     }
 
 
+b = os.urandom(64)
+
+
+@pytest.fixture(autouse=True)
+def setup(monkeypatch):
+    monkeypatch.setattr('os.urandom', lambda _: b)
+    yield
+
+
 class SubscribeTestSuite(AuthTestCase):
     """Test /v1/auth/subscribe"""
     """
@@ -188,8 +199,7 @@ class SubscribeTestSuite(AuthTestCase):
                              'role_id': None,
                              'sent_at': None,
                              'status': 'ACCEPTED',
-                             'token': hashlib.sha1(
-                                 (str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
+                             'token': hashlib.sha512('pokemon@potato.io'.encode('UTF-8') + b).hexdigest(),
                              'process_message': '',
                              'process_status': 'DONE',
                              'syllabus_id': None,
@@ -434,7 +444,7 @@ class SubscribeTestSuite(AuthTestCase):
                 'role_id': None,
                 'sent_at': None,
                 'status': 'ACCEPTED',
-                'token': hashlib.sha1((str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
+                'token': hashlib.sha512(('pokemon@potato.io').encode('UTF-8') + b).hexdigest(),
                 'process_message': '',
                 'process_status': 'DONE',
                 'syllabus_id': None,
@@ -468,8 +478,8 @@ class SubscribeTestSuite(AuthTestCase):
                 'verify_email', 'pokemon@potato.io', {
                     'SUBJECT':
                     '4Geeks - Validate account',
-                    'LINK': ('http://localhost:8000/v1/auth/password/' + hashlib.sha1(
-                        (str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest())
+                    'LINK': ('http://localhost:8000/v1/auth/password/' +
+                             hashlib.sha512('pokemon@potato.io'.encode('UTF-8') + b).hexdigest())
                 })
         ])
 
@@ -534,7 +544,7 @@ class SubscribeTestSuite(AuthTestCase):
                 'status': 'WAITING_LIST',
                 'process_message': '',
                 'process_status': 'PENDING',
-                'token': hashlib.sha1((str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
+                'token': hashlib.sha512(('pokemon@potato.io').encode('UTF-8') + b).hexdigest(),
                 'syllabus_id': None,
                 **data,
             }
@@ -602,7 +612,7 @@ class SubscribeTestSuite(AuthTestCase):
                 'role_id': None,
                 'sent_at': None,
                 'status': 'ACCEPTED',
-                'token': hashlib.sha1((str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
+                'token': hashlib.sha512(('pokemon@potato.io').encode('UTF-8') + b).hexdigest(),
                 'process_message': '',
                 'process_status': 'DONE',
                 'syllabus_id': None,
@@ -614,7 +624,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [plan_db_item(model.plan, data={})])
         self.bc.check.queryset_with_pks(model.plan.invites.all(), [2])
 
-        token = hashlib.sha1((str(now) + data['email']).encode('UTF-8')).hexdigest()
+        token = hashlib.sha512('pokemon@potato.io'.encode('UTF-8') + b).hexdigest()
 
         self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
             call('verify_email', 'pokemon@potato.io', {
@@ -724,7 +734,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
             user_invite_db_item(
                 data={
-                    'token': hashlib.sha1((str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
+                    'token': hashlib.sha512(('pokemon@potato.io').encode('UTF-8') + b).hexdigest(),
                     'process_status': 'DONE',
                     'status': 'ACCEPTED',
                     'academy_id': 1,
@@ -750,7 +760,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.bc.check.queryset_with_pks(model.course.invites.all(), [1])
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
-        token = hashlib.sha1((str(now) + data['email']).encode('UTF-8')).hexdigest()
+        token = hashlib.sha512('pokemon@potato.io'.encode('UTF-8') + b).hexdigest()
 
         self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
             call('verify_email', 'pokemon@potato.io', {
@@ -803,7 +813,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
             user_invite_db_item(
                 data={
-                    'token': hashlib.sha1((str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
+                    'token': hashlib.sha512(('pokemon@potato.io').encode('UTF-8') + b).hexdigest(),
                     'process_status': 'DONE',
                     'status': 'ACCEPTED',
                     'academy_id': 1,
@@ -830,7 +840,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.bc.check.queryset_with_pks(model.course.invites.all(), [1])
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
-        token = hashlib.sha1((str(now) + data['email']).encode('UTF-8')).hexdigest()
+        token = hashlib.sha512('pokemon@potato.io'.encode('UTF-8') + b).hexdigest()
 
         self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
             call('verify_email', 'pokemon@potato.io', {
@@ -933,7 +943,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
             user_invite_db_item(
                 data={
-                    'token': hashlib.sha1((str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
+                    'token': hashlib.sha512(('pokemon@potato.io').encode('UTF-8') + b).hexdigest(),
                     'process_status': 'PENDING',
                     'status': 'WAITING_LIST',
                     'academy_id': 1,
@@ -996,7 +1006,7 @@ class SubscribeTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.user_invite),
             user_invite_db_item(
                 data={
-                    'token': hashlib.sha1((str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
+                    'token': hashlib.sha512(('pokemon@potato.io').encode('UTF-8') + b).hexdigest(),
                     'process_status': 'PENDING',
                     'status': 'WAITING_LIST',
                     'academy_id': 1,
@@ -1059,7 +1069,7 @@ class SubscribeTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.user_invite),
             user_invite_db_item(
                 data={
-                    'token': hashlib.sha1((str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
+                    'token': hashlib.sha512(('pokemon@potato.io').encode('UTF-8') + b).hexdigest(),
                     'process_status': 'PENDING',
                     'status': 'WAITING_LIST',
                     'academy_id': None,
@@ -1122,7 +1132,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        token = hashlib.sha1((str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest()
+        token = hashlib.sha512(('pokemon@potato.io').encode('UTF-8') + b).hexdigest()
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
             self.bc.format.to_dict(model.user_invite),
             user_invite_db_item(
@@ -1216,7 +1226,7 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        token = hashlib.sha1((str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest()
+        token = hashlib.sha512(('pokemon@potato.io').encode('UTF-8') + b).hexdigest()
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
             self.bc.format.to_dict(model.user_invite),
             user_invite_db_item(
@@ -1858,7 +1868,7 @@ class SubscribeTestSuite(AuthTestCase):
                 'asset_id': None,
                 'sent_at': None,
                 'status': 'ACCEPTED',
-                'token': hashlib.sha1((str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
+                'token': hashlib.sha512(('pokemon@potato.io').encode('UTF-8') + b).hexdigest(),
                 'process_message': '',
                 'process_status': 'DONE',
                 'token': token,

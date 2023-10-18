@@ -30,6 +30,7 @@ from .actions import sync_cohort_tasks
 import breathecode.assignments.tasks as tasks
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils.i18n import translation
+import breathecode.activity.tasks as tasks_activity
 
 logger = logging.getLogger(__name__)
 
@@ -567,6 +568,10 @@ class TaskMeView(APIView):
                 slugs = [x for x in cohorts if not x.isnumeric()]
                 items = items.filter(Q(cohort__slug__in=slugs) | Q(cohort__id__in=ids))
 
+        a_slug = request.GET.get('associated_slug', None)
+        if a_slug is not None:
+            items = items.filter(associated_slug__in=[p.lower() for p in a_slug.split(',')])
+
         items = handler.queryset(items)
 
         serializer = TaskGETSerializer(items, many=True)
@@ -634,8 +639,14 @@ class TaskMeView(APIView):
                                         },
                                         many=True)
         if serializer.is_valid():
-            serializer.save()
+            tasks = serializer.save()
             # tasks.teacher_task_notification.delay(serializer.data['id'])
+            for t in tasks:
+                tasks_activity.add_activity.delay(request.user.id,
+                                                  'open_syllabus_module',
+                                                  related_type='assignments.Task',
+                                                  related_id=t.id)
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

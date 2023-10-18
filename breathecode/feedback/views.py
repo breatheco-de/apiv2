@@ -24,6 +24,7 @@ from django.db.models import Q
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from django.db.models import QuerySet
 from .utils import strings
+import breathecode.activity.tasks as tasks_activity
 
 
 @api_view(['GET'])
@@ -75,11 +76,15 @@ class GetAnswerView(APIView):
     List all snippets, or create a new snippet.
     """
 
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(cache=AnswerCache, sort='-created_at', paginate=True)
 
     @capable_of('read_nps_answers')
     def get(self, request, format=None, academy_id=None):
         handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
 
         items = Answer.objects.filter(academy__id=academy_id)
         lookup = {}
@@ -146,6 +151,10 @@ class AnswerMeView(APIView):
                                              'answer': answer_id
                                          })
         if serializer.is_valid():
+            tasks_activity.add_activity.delay(request.user.id,
+                                              'nps_answered',
+                                              related_type='feedback.Answer',
+                                              related_id=answer_id)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -14,7 +14,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from breathecode.admissions import tasks
 
-from breathecode.admissions.caches import (CohortCache, CohortUserCache, TeacherCache)
+from breathecode.admissions.caches import (CohortCache, CohortUserCache, SyllabusVersionCache, TeacherCache,
+                                           UserCache)
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.utils.i18n import translation
@@ -290,8 +291,14 @@ class AcademyActivateView(APIView):
 
 
 class UserMeView(APIView):
+    extensions = APIViewExtensions(cache=UserCache, cache_per_user=True)
 
     def get(self, request, format=None):
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
 
         try:
             if isinstance(request.user, AnonymousUser):
@@ -300,8 +307,8 @@ class UserMeView(APIView):
         except User.DoesNotExist:
             raise PermissionDenied("You don't have a user")
 
-        users = UserMeSerializer(request.user)
-        return Response(users.data)
+        serializer = UserMeSerializer(request.user)
+        return handler.response(serializer.data)
 
 
 # Create your views here.
@@ -552,13 +559,18 @@ class CohortUserView(APIView, GenerateLookupsMixin):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
-class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
-    """
-    List all snippets, or create a new snippet.
-    """
+class AcademyCohortUserView(APIView, GenerateLookupsMixin):
+    extensions = APIViewExtensions(cache=CohortUserCache, paginate=True)
 
     @capable_of('read_all_cohort')
     def get(self, request, format=None, cohort_id=None, user_id=None, academy_id=None):
+
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
+
         if user_id is not None:
             item = CohortUser.objects.filter(cohort__academy__id=academy_id,
                                              user__id=user_id,
@@ -620,16 +632,14 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
         except Exception as e:
             raise ValidationException(str(e), 400)
 
-        page = self.paginate_queryset(items, request)
         tasks = request.GET.get('tasks', None)
-        serializer = GetCohortUserTasksSerializer(
-            page, many=True) if tasks is not None and tasks == 'True' else GetCohortUserSerializer(page,
-                                                                                                   many=True)
 
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
-        else:
-            return Response(serializer.data, status=200)
+        items = handler.queryset(items)
+        serializer = GetCohortUserTasksSerializer(
+            items, many=True) if tasks is not None and tasks == 'True' else GetCohortUserSerializer(items,
+                                                                                                    many=True)
+
+        return handler.response(serializer.data)
 
     @capable_of('crud_cohort')
     def post(self, request, cohort_id=None, academy_id=None, user_id=None):
@@ -1479,6 +1489,10 @@ class SyllabusView(APIView):
         items = Syllabus.objects.filter(Q(academy_owner__id=academy_id)
                                         | Q(private=False)).exclude(academy_owner__isnull=True)
 
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
+
         items = handler.queryset(items)
         serializer = GetSyllabusSerializer(items, many=True)
 
@@ -1569,12 +1583,16 @@ class SyllabusAssetView(APIView, HeaderLimitOffsetPagination):
 
 
 class SyllabusVersionView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
+    extensions = APIViewExtensions(cache=SyllabusVersionCache, paginate=True)
 
     @capable_of('read_syllabus')
     def get(self, request, syllabus_id=None, syllabus_slug=None, version=None, academy_id=None):
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
+
         if academy_id is None:
             raise ValidationException('Missing academy id', slug='missing-academy-id')
 
@@ -1599,19 +1617,21 @@ class SyllabusVersionView(APIView):
                                           slug='syllabus-version-not-found')
 
             serializer = GetSyllabusVersionSerializer(syllabus_version, many=False)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            return handler.response(serializer.data)
 
-        syllabus_version = SyllabusVersion.objects.filter(
+        items = SyllabusVersion.objects.filter(
             Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
             Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
         ).order_by('version')
 
         _status = request.GET.get('status', None)
         if _status is not None:
-            syllabus_version = syllabus_version.filter(status__in=_status.upper().split(','))
+            items = items.filter(status__in=_status.upper().split(','))
 
-        serializer = GetSyllabusVersionSerializer(syllabus_version, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        items = handler.queryset(items)
+        serializer = GetSyllabusVersionSerializer(items, many=True)
+
+        return handler.response(serializer.data)
 
     @capable_of('crud_syllabus')
     def post(self, request, syllabus_id=None, syllabus_slug=None, academy_id=None):
@@ -1683,6 +1703,41 @@ class SyllabusVersionView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AllSyllabusVersionsView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+
+        items = SyllabusVersion.objects.all()
+        lookup = {}
+
+        if 'version' in self.request.GET:
+            param = self.request.GET.get('version')
+            lookup['version'] = param
+
+        if 'slug' in self.request.GET:
+            param = self.request.GET.get('slug')
+            lookup['syllabus__slug'] = param
+
+        if 'academy' in self.request.GET:
+            param = self.request.GET.get('academy')
+            lookup['syllabus__academy_owner__id__in'] = [p for p in param.split(',')]
+
+        if 'is_documentation' in self.request.GET:
+            param = self.request.GET.get('is_documentation')
+            if param == 'True':
+                lookup['syllabus__is_documentation'] = True
+
+        items = items.filter(syllabus__private=False, **lookup).order_by('version')
+
+        serializer = GetSyllabusVersionSerializer(items, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class PublicCohortUserView(APIView, GenerateLookupsMixin):
@@ -1857,8 +1912,8 @@ class CohortJoinView(APIView):
         if not resource:
             raise ValidationException(translation(
                 lang,
-                en='You can\'t join to this cohort due to you didn\'t subscribe to it',
-                es='No puedes unirte a esta cohorte porque no te has suscrito a ella',
+                en='Your current subscription does not include access to this cohort',
+                es='Tus subscripciones actuales no incluyen poder acceder a esta cohort',
                 slug='not-subscribed'),
                                       code=400)
 

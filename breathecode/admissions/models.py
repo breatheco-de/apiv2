@@ -31,15 +31,15 @@ class UserAdmissions(User):
 
 
 class Country(models.Model):
-    code = models.CharField(max_length=3, primary_key=True)
-    name = models.CharField(max_length=30)
+    code = models.CharField(max_length=3, primary_key=True, db_index=True)
+    name = models.CharField(max_length=30, db_index=True)
 
     def __str__(self):
         return f'{self.name} ({self.code})'
 
 
 class City(models.Model):
-    name = models.CharField(max_length=30)
+    name = models.CharField(max_length=30, db_index=True)
     country = models.ForeignKey(Country, on_delete=models.CASCADE)
 
     def __str__(self):
@@ -62,8 +62,8 @@ class Academy(models.Model):
         super(Academy, self).__init__(*args, **kwargs)
         self.__old_slug = self.slug
 
-    slug = models.SlugField(max_length=100, unique=True)
-    name = models.CharField(max_length=150)
+    slug = models.SlugField(max_length=100, unique=True, db_index=True)
+    name = models.CharField(max_length=150, db_index=True)
     logo_url = models.CharField(max_length=255)
     icon_url = models.CharField(max_length=255,
                                 help_text='It has to be a square',
@@ -94,30 +94,36 @@ class Academy(models.Model):
 
     city = models.ForeignKey(City, on_delete=models.CASCADE, null=True)
     country = models.ForeignKey(Country, on_delete=models.CASCADE, null=True)
-    latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
-    zip_code = models.IntegerField(blank=True, null=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True, db_index=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True, db_index=True)
+    zip_code = models.IntegerField(blank=True, null=True, db_index=True)
     white_labeled = models.BooleanField(default=False)
 
-    active_campaign_slug = models.SlugField(max_length=100, unique=False, null=True, default=None, blank=True)
+    active_campaign_slug = models.SlugField(max_length=100,
+                                            unique=False,
+                                            null=True,
+                                            default=None,
+                                            blank=True,
+                                            db_index=True)
 
     available_as_saas = models.BooleanField(
-        default=False, help_text='Academies available as SAAS will be sold thru 4Geeks.com')
+        default=False, help_text='Academies available as SAAS will be sold thru 4Geeks.com', db_index=True)
 
     is_hidden_on_prework = models.BooleanField(
         default=True,
         null=False,
         blank=False,
-        help_text='Determines if the cohorts will be shown in the dashboard if it\'s status is \'PREWORK\'')
+        help_text='Determines if the cohorts will be shown in the dashboard if it\'s status is \'PREWORK\'',
+        db_index=True)
 
-    status = models.CharField(max_length=15, choices=ACADEMY_STATUS, default=ACTIVE)
+    status = models.CharField(max_length=15, choices=ACADEMY_STATUS, default=ACTIVE, db_index=True)
     main_currency = models.ForeignKey('payments.Currency',
                                       on_delete=models.CASCADE,
                                       null=True,
                                       blank=True,
                                       related_name='+')
 
-    timezone = models.CharField(max_length=50, null=True, default=None, blank=True)
+    timezone = models.CharField(max_length=50, null=True, default=None, blank=True, db_index=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -170,8 +176,8 @@ SCHEDULE_TYPE = (
 
 
 class Syllabus(models.Model):
-    slug = models.SlugField(max_length=100, blank=True, null=True, default=None)
-    name = models.CharField(max_length=150, blank=True, null=True, default=None)
+    slug = models.SlugField(max_length=100, blank=True, null=True, default=None, db_index=True)
+    name = models.CharField(max_length=150, blank=True, null=True, default=None, db_index=True)
     main_technologies = models.CharField(max_length=150,
                                          blank=True,
                                          null=True,
@@ -188,7 +194,8 @@ class Syllabus(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     # by default a syllabus can be re-used by any other academy
-    private = models.BooleanField(default=False)
+    private = models.BooleanField(default=False, db_index=True)
+    is_documentation = models.BooleanField(default=False, db_index=True)
 
     # a syllabus can be shared with other academy, but only the academy owner can update or delete it
     academy_owner = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
@@ -219,13 +226,16 @@ INTEGRITY_STATUS = (
 class SyllabusVersion(models.Model):
     json = models.JSONField()
 
-    version = models.PositiveSmallIntegerField()
+    version = models.PositiveSmallIntegerField(db_index=True)
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE)
-    status = models.CharField(max_length=15, choices=VERSION_STATUS, default=PUBLISHED)
+    status = models.CharField(max_length=15, choices=VERSION_STATUS, default=PUBLISHED, db_index=True)
     change_log_details = models.TextField(max_length=450, blank=True, null=True, default=None)
 
-    integrity_status = models.CharField(max_length=15, choices=INTEGRITY_STATUS, default=PENDING)
-    integrity_check_at = models.DateTimeField(null=True, blank=True, default=None)
+    integrity_status = models.CharField(max_length=15,
+                                        choices=INTEGRITY_STATUS,
+                                        default=PENDING,
+                                        db_index=True)
+    integrity_check_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
     integrity_report = models.JSONField(null=True, blank=True, default=None)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -258,10 +268,10 @@ class SyllabusVersion(models.Model):
 
 
 class SyllabusSchedule(models.Model):
-    name = models.CharField(max_length=150)
+    name = models.CharField(max_length=150, db_index=True)
 
-    schedule_type = models.CharField(max_length=15, choices=SCHEDULE_TYPE, default='PART-TIME')
-    description = models.TextField(max_length=450)
+    schedule_type = models.CharField(max_length=15, choices=SCHEDULE_TYPE, default='PART-TIME', db_index=True)
+    description = models.TextField(max_length=450, db_index=True)
 
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE, default=None, null=True)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, default=None, null=True)
@@ -306,11 +316,11 @@ class Cohort(models.Model):
     _current_history_log = None
     _old_stage = None
 
-    slug = models.CharField(max_length=150, unique=True)
-    name = models.CharField(max_length=150)
+    slug = models.CharField(max_length=150, unique=True, db_index=True)
+    name = models.CharField(max_length=150, db_index=True)
 
-    kickoff_date = models.DateTimeField()
-    ending_date = models.DateTimeField(blank=True, null=True)
+    kickoff_date = models.DateTimeField(db_index=True)
+    ending_date = models.DateTimeField(blank=True, null=True, db_index=True)
     current_day = models.IntegerField(
         help_text='Each day the teacher takes attendancy and increases the day in one', default=1)
     current_module = models.IntegerField(
@@ -320,21 +330,24 @@ class Cohort(models.Model):
         help_text=
         'The syllabus is separated by modules, from 1 to N and the teacher decides when to start a new mobule (after a couple of days)'
     )
-    stage = models.CharField(max_length=15, choices=COHORT_STAGE, default=INACTIVE)
+    stage = models.CharField(max_length=15, choices=COHORT_STAGE, default=INACTIVE, db_index=True)
     private = models.BooleanField(
         default=False,
         help_text=
-        'It will not show on the public API endpoints but you will still be able to add people manually')
+        'It will not show on the public API endpoints but you will still be able to add people manually',
+        db_index=True)
     accepts_enrollment_suggestions = models.BooleanField(
-        default=True, help_text='The system will suggest won leads to be added to this cohort')
+        default=True, help_text='The system will suggest won leads to be added to this cohort', db_index=True)
 
-    never_ends = models.BooleanField(default=False)
+    never_ends = models.BooleanField(default=False, db_index=True)
 
     remote_available = models.BooleanField(
-        default=True, help_text='True (default) if the students from other cities can take it from home')
+        default=True,
+        help_text='True (default) if the students from other cities can take it from home',
+        db_index=True)
     online_meeting_url = models.URLField(max_length=255, blank=True, default=None, null=True)
 
-    timezone = models.CharField(max_length=50, null=True, default=None, blank=True)
+    timezone = models.CharField(max_length=50, null=True, default=None, blank=True, db_index=True)
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 
@@ -361,15 +374,17 @@ class Cohort(models.Model):
         default=True,
         null=True,
         blank=True,
-        help_text='Determines if the cohort will be shown in the dashboard if it\'s status is \'PREWORK\'')
+        help_text='Determines if the cohort will be shown in the dashboard if it\'s status is \'PREWORK\'',
+        db_index=True)
 
     available_as_saas = models.BooleanField(
         default=False,
         null=True,
         blank=True,
-        help_text='Cohorts available as SAAS will be sold through plans at 4Geeks.com')
+        help_text='Cohorts available as SAAS will be sold through plans at 4Geeks.com',
+        db_index=True)
 
-    language = models.CharField(max_length=2, default='en')
+    language = models.CharField(max_length=2, default='en', db_index=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -472,10 +487,12 @@ class CohortUser(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)
-    role = models.CharField(max_length=9, choices=COHORT_ROLE, default=STUDENT)
+    role = models.CharField(max_length=9, choices=COHORT_ROLE, default=STUDENT, db_index=True)
 
     watching = models.BooleanField(
-        default=False, help_text='You can active students to the watch list and monitor them closely')
+        default=False,
+        help_text='You can active students to the watch list and monitor them closely',
+        db_index=True)
 
     history_log = models.JSONField(
         default=dict,
@@ -488,13 +505,15 @@ class CohortUser(models.Model):
                                         choices=FINANTIAL_STATUS,
                                         default=None,
                                         null=True,
-                                        blank=True)
+                                        blank=True,
+                                        db_index=True)
 
     educational_status = models.CharField(max_length=15,
                                           choices=EDU_STATUS,
                                           default=ACTIVE,
                                           null=True,
-                                          blank=True)
+                                          blank=True,
+                                          db_index=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -554,7 +573,8 @@ class TimeSlot(models.Model):
         validators=[
             MaxValueValidator(300000000000),  # year 3000
             MinValueValidator(202101010000),  # year 2021, month 1 and day 1
-        ])
+        ],
+        db_index=True)
 
     ending_at = models.BigIntegerField(
         help_text=date_integer_description,
@@ -562,16 +582,18 @@ class TimeSlot(models.Model):
         validators=[
             MaxValueValidator(300000000000),  # year 3000
             MinValueValidator(202101010000),  # year 2021, month 1 and day 1
-        ])
+        ],
+        db_index=True)
 
-    timezone = models.CharField(max_length=50, default='America/New_York')
-    recurrent = models.BooleanField(default=True)
-    recurrency_type = models.CharField(max_length=10, choices=RECURRENCY_TYPE, default=WEEKLY)
+    timezone = models.CharField(max_length=50, default='America/New_York', db_index=True)
+    recurrent = models.BooleanField(default=True, db_index=True)
+    recurrency_type = models.CharField(max_length=10, choices=RECURRENCY_TYPE, default=WEEKLY, db_index=True)
 
     removed_at = models.DateTimeField(null=True,
                                       default=None,
                                       blank=True,
-                                      help_text='This will be available until this date')
+                                      help_text='This will be available until this date',
+                                      db_index=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 

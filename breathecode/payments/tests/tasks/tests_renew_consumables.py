@@ -44,11 +44,15 @@ class PaymentsTestSuite(PaymentsTestCase):
     def test_scheduler_not_found(self):
         renew_consumables.delay(1)
 
-        self.assertEqual(logging.Logger.info.call_args_list, [
-            call('Starting renew_consumables for service stock scheduler 1'),
-        ])
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call('Starting renew_consumables for service stock scheduler 1'),
+                # retrying
+                call('Starting renew_consumables for service stock scheduler 1'),
+            ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('ServiceStockScheduler with id 1 not found'),
+            call('ServiceStockScheduler with id 1 not found', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
@@ -82,7 +86,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting renew_consumables for service stock scheduler 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The plan financing 1 is over'),
+            call('The plan financing 1 is over', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
@@ -116,7 +120,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting renew_consumables for service stock scheduler 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The plan financing 1 needs to be paid to renew the consumables'),
+            call('The plan financing 1 needs to be paid to renew the consumables', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
@@ -175,6 +179,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         service_item = {'how_many': -1}
         if random.randint(0, 1) == 1:
             service_item['how_many'] = random.randint(1, 100)
+        academy = {'available_as_saas': True}
 
         model = self.bc.database.create(service_stock_scheduler=1,
                                         plan=plan,
@@ -182,7 +187,8 @@ class PaymentsTestSuite(PaymentsTestCase):
                                         plan_financing=plan_financing,
                                         plan_service_item_handler=1,
                                         cohort=2,
-                                        cohort_set=2)
+                                        cohort_set=2,
+                                        academy=academy)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -367,7 +373,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting renew_consumables for service stock scheduler 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The subscription 1 is over'),
+            call('The subscription 1 is over', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
@@ -401,7 +407,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting renew_consumables for service stock scheduler 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The subscription 1 needs to be paid to renew the consumables'),
+            call('The subscription 1 needs to be paid to renew the consumables', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
@@ -460,6 +466,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         service_item = {'how_many': -1}
         if random.randint(0, 1) == 1:
             service_item['how_many'] = random.randint(1, 100)
+        academy = {'available_as_saas': True}
 
         model = self.bc.database.create(service_stock_scheduler=1,
                                         plan=plan,
@@ -467,7 +474,8 @@ class PaymentsTestSuite(PaymentsTestCase):
                                         subscription=subscription,
                                         plan_service_item_handler=1,
                                         cohort=2,
-                                        cohort_set=2)
+                                        cohort_set=2,
+                                        academy=academy)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -614,7 +622,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting renew_consumables for service stock scheduler 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The subscription 1 is over'),
+            call('The subscription 1 is over', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
@@ -646,7 +654,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting renew_consumables for service stock scheduler 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The subscription 1 needs to be paid to renew the consumables'),
+            call('The subscription 1 needs to be paid to renew the consumables', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
@@ -703,13 +711,15 @@ class PaymentsTestSuite(PaymentsTestCase):
         service_item = {'how_many': -1}
         if random.randint(0, 1) == 1:
             service_item['how_many'] = random.randint(1, 100)
+        academy = {'available_as_saas': True}
 
         model = self.bc.database.create(service_stock_scheduler=1,
                                         service_item=service_item,
                                         subscription=subscription,
                                         subscription_service_item=1,
                                         cohort=2,
-                                        cohort_set=2)
+                                        cohort_set=2,
+                                        academy=academy)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []

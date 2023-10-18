@@ -1166,6 +1166,11 @@ class CourseView(APIView):
 
     def get(self, request, course_slug=None):
         handler = self.extensions(request)
+
+        # cache = handler.cache.get()
+        # if cache is not None:
+        #     return Response(cache, status=status.HTTP_200_OK)
+
         lang = get_user_language(request)
 
         if course_slug:
@@ -1188,11 +1193,11 @@ class CourseView(APIView):
 
         if academy := request.GET.get('academy'):
             args, kwargs = self.get_lookup('academy', academy)
-            items = items.filter(*args, **kwargs)  #.distinct()
+            items = items.filter(*args, **kwargs)
 
         if syllabus := request.GET.get('syllabus'):
             args, kwargs = self.get_lookup('syllabus', syllabus)
-            items = items.filter(*args, **kwargs)  #.distinct()
+            items = items.filter(*args, **kwargs)
 
         if status := request.GET.get('status'):
             items = items.filter(status__in=status.split(','))

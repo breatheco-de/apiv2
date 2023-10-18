@@ -219,6 +219,10 @@ class EventbriteWebhookTestSuite(EventTestCase):
             'email': 'john.smith@example.com',
             'event_id': 1,
             'id': 1,
+            'utm_campaign': None,
+            'utm_medium': None,
+            'utm_source': 'eventbrite',
+            'utm_url': None,
             'status': 'PENDING',
             'attended_at': None
         }])
@@ -263,6 +267,10 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.assertEqual(self.all_event_checkin_dict(), [{
             'attendee_id': None,
             'email': 'john.smith@example.com',
+            'utm_campaign': None,
+            'utm_medium': None,
+            'utm_source': 'eventbrite',
+            'utm_url': None,
             'event_id': 1,
             'id': 1,
             'status': 'PENDING',
@@ -321,6 +329,10 @@ class EventbriteWebhookTestSuite(EventTestCase):
 
         self.assertEqual(self.all_event_checkin_dict(), [{
             'attendee_id': 1,
+            'utm_campaign': None,
+            'utm_medium': None,
+            'utm_source': 'eventbrite',
+            'utm_url': None,
             'email': 'john.smith@example.com',
             'event_id': 1,
             'id': 1,
@@ -417,6 +429,10 @@ class EventbriteWebhookTestSuite(EventTestCase):
 
         self.assertEqual(self.all_event_checkin_dict(), [{
             'attendee_id': 1,
+            'utm_campaign': None,
+            'utm_medium': None,
+            'utm_source': 'eventbrite',
+            'utm_url': None,
             'email': 'john.smith@example.com',
             'event_id': 1,
             'id': 1,
@@ -514,6 +530,10 @@ class EventbriteWebhookTestSuite(EventTestCase):
 
         self.assertEqual(self.all_event_checkin_dict(), [{
             'attendee_id': 1,
+            'utm_campaign': None,
+            'utm_medium': None,
+            'utm_source': 'eventbrite',
+            'utm_url': None,
             'email': 'john.smith@example.com',
             'event_id': 1,
             'id': 1,

@@ -13,6 +13,7 @@ from .models import Device, SlackChannel, SlackTeam, SlackUser, SlackUserTeam
 from django.conf import settings
 import requests
 from twilio.rest import Client
+from premailer import transform
 
 push_service = None
 FIREBASE_KEY = os.getenv('FIREBASE_KEY', None)
@@ -22,7 +23,7 @@ if FIREBASE_KEY is not None and FIREBASE_KEY != '':
 logger = logging.getLogger(__name__)
 
 
-def send_email_message(template_slug, to, data={}):
+def send_email_message(template_slug, to, data={}, force=False, inline_css=False):
 
     if to is None or to == '' or (isinstance(to, list) and len(to) == 0):
         raise ValidationException(f'Invalid email to send notification to {str(to)}')
@@ -30,8 +31,8 @@ def send_email_message(template_slug, to, data={}):
     if isinstance(to, list) == False:
         to = [to]
 
-    if os.getenv('EMAIL_NOTIFICATIONS_ENABLED', False) == 'TRUE':
-        template = get_template_content(template_slug, data, ['email'])
+    if os.getenv('EMAIL_NOTIFICATIONS_ENABLED', False) == 'TRUE' or force:
+        template = get_template_content(template_slug, data, ['email'], inline_css=inline_css)
 
         result = requests.post(f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages",
                                auth=('api', os.environ.get('MAILGUN_API_KEY', '')),
@@ -180,7 +181,7 @@ def notify_all(slug, user, data):
     send_slack('nps', user.slackuser, data)
 
 
-def get_template_content(slug, data={}, formats=None):
+def get_template_content(slug, data={}, formats=None, inline_css=False):
     #d = Context({ 'username': username })
     con = {
         'API_URL': os.environ.get('API_URL'),
@@ -216,6 +217,9 @@ def get_template_content(slug, data={}, formats=None):
     if formats is not None and 'html' in formats:
         html = get_template(slug + '.html')
         templates['html'] = html.render(z)
+
+    if 'html' in templates and inline_css:
+        templates['html'] = transform(templates['html'])
 
     if formats is not None and 'slack' in formats:
         fms = get_template(slug + '.slack')

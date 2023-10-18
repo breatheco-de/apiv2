@@ -6,7 +6,8 @@ from django.urls import reverse_lazy
 from rest_framework import status
 
 from django.utils import timezone
-from ..mixins import PaymentsTestCase
+
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
 
 UTC_NOW = timezone.now()
 
@@ -106,7 +107,7 @@ def serialize_consumable(consumable, data={}):
     }
 
 
-class SignalTestSuite(PaymentsTestCase):
+class TestSignal(LegacyAPITestCase):
     """
     🔽🔽🔽 GET without auth
     """
@@ -183,7 +184,9 @@ class SignalTestSuite(PaymentsTestCase):
         how_many_belong_to2 = sum([x['how_many'] for x in belong_to2])
         how_many_belong_to3 = sum([x['how_many'] for x in belong_to3])
 
-        model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3)
+        academy = {'available_as_saas': True}
+
+        model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3, academy=academy)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable')
@@ -237,7 +240,9 @@ class SignalTestSuite(PaymentsTestCase):
             'cohort_set_id': math.floor(n / 3) + 1
         } for n in range(9)]
 
-        model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3)
+        academy = {'available_as_saas': True}
+
+        model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3, academy=academy)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable') + '?cohort_set=4,5,6'
@@ -272,7 +277,9 @@ class SignalTestSuite(PaymentsTestCase):
         how_many_belong_to2 = sum([x['how_many'] for x in belong_to2])
         how_many_belong_to3 = sum([x['how_many'] for x in belong_to3])
 
-        model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3)
+        academy = {'available_as_saas': True}
+
+        model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3, academy=academy)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable') + '?cohort_set=1,2,3'
@@ -673,7 +680,9 @@ class SignalTestSuite(PaymentsTestCase):
         how_many_belong_to2 = sum([x['how_many'] for x in belong_to2])
         how_many_belong_to3 = sum([x['how_many'] for x in belong_to3])
 
-        model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3)
+        academy = {'available_as_saas': True}
+
+        model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3, academy=academy)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable')
@@ -727,7 +736,9 @@ class SignalTestSuite(PaymentsTestCase):
             'cohort_set_id': math.floor(n / 3) + 1
         } for n in range(9)]
 
-        model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3)
+        academy = {'available_as_saas': True}
+
+        model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3, academy=academy)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable') + f'?cohort_set_slug=blabla1,blabla2,blabla3'
@@ -763,7 +774,9 @@ class SignalTestSuite(PaymentsTestCase):
         how_many_belong_to2 = sum([x['how_many'] for x in belong_to2])
         how_many_belong_to3 = sum([x['how_many'] for x in belong_to3])
 
-        model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3)
+        academy = {'available_as_saas': True}
+
+        model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3, academy=academy)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable'
@@ -1189,13 +1202,16 @@ class SignalTestSuite(PaymentsTestCase):
         how_many_belong_to2 = sum([x['how_many'] for x in belong_to2])
         how_many_belong_to3 = sum([x['how_many'] for x in belong_to3])
 
+        academy = {'available_as_saas': True}
+
         event_type_set = {'event_type_id': 1}
         model = self.bc.database.create(user=1,
                                         consumable=consumables,
                                         event_type_set=event_type_set,
                                         event_type={'icon_url': 'https://www.google.com'},
                                         cohort_set=1,
-                                        mentorship_service_set=1)
+                                        mentorship_service_set=1,
+                                        academy=academy)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable'

@@ -250,65 +250,13 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
                 raise ValidationException('There is no certificate for this student and cohort',
                                           code=404,
                                           slug='no-user-specialty')
-            generate_one_certificate.delay(cu.cohort_id, cu.user_id, layout='default')
+
+            layout = cert.layout.slug if cert.layout is not None else 'default'
+            generate_one_certificate.delay(cu.cohort_id, cu.user_id, layout=layout)
 
         serializer = UserSpecialtySerializer(certs, many=True)
 
         return Response(serializer.data)
-
-
-# class CertificateSyllabusVersionView(APIView):
-#     """
-#     List all snippets, or create a new snippet.
-#     """
-#     def get(self, request, course_slug=None, version=None):
-#         course = Course.objects.filter(slug=course_slug).first()
-#         if course is None:
-#             raise serializers.ValidationError("Course slug not found", code=404)
-
-#         syl = None
-#         if version is None:
-#             syl = course.syllabus_set.all()
-#             serializer = SyllabusSmallSerializer(syl, many=True)
-#             return Response(serializer.data, status=status.HTTP_200_OK)
-#         else:
-#             syl = course.syllabus_set.filter(version=version).first()
-
-#         if syl is None:
-#             raise serializers.ValidationError("Syllabus not found", code=404)
-
-#         serializer = GetSyllabusVersionSerializer(syl, many=False)
-#         return Response(serializer.data, status=status.HTTP_200_OK)
-#     def post(self, request, course_slug=None):
-#         version = 1
-#         course = Course.objects.filter(slug=course_slug).first()
-#         if course is None:
-#             raise serializers.ValidationError(f"Invalid course slug {course__slug}", code=404)
-
-#         item = Syllabus.objects.filter(course__slug=course_slug).order_by('version').first()
-
-#         if item is not None:
-#             version = item.version + 1
-
-#         serializer = SyllabusVersionSerializer(data=request.data, context={"course": course})
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-#     def put(self, request, course_slug=None, version=None):
-#         if version is None:
-#             raise serializers.ValidationError("Missing syllabus version", code=400)
-
-#         item = Syllabus.objects.filter(course__slug=course_slug, version=version).first()
-#         if item is None:
-#             raise serializers.ValidationError("Syllabus version not found", code=404)
-
-#         serializer = SyllabusVersionSerializer(item, data=request.data, many=False)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class CertificateMeView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):

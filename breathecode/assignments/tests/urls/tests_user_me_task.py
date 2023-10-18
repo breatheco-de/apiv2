@@ -4,6 +4,7 @@ Test /answer
 from django.utils import timezone
 from unittest.mock import MagicMock, call, patch
 from django.urls.base import reverse_lazy
+import pytest
 from rest_framework import status
 import random
 from breathecode.assignments.caches import TaskCache
@@ -13,6 +14,7 @@ from breathecode.utils.api_view_extensions.api_view_extension_handlers import \
 from breathecode.assignments import tasks
 
 from ..mixins import AssignmentsTestCase
+import breathecode.activity.tasks as activity_tasks
 
 UTC_NOW = timezone.now()
 
@@ -80,6 +82,12 @@ def put_serializer(self, task, data={}):
     }
 
 
+@pytest.fixture(autouse=True)
+def setup(monkeypatch):
+    monkeypatch.setattr(activity_tasks.add_activity, 'delay', MagicMock())
+    yield
+
+
 class MediaTestSuite(AssignmentsTestCase):
     """Test /answer"""
     """
@@ -99,6 +107,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Get without Task
@@ -120,6 +129,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Get with one Task
@@ -141,6 +151,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Get with two Task
@@ -162,6 +173,61 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
+
+    """
+    🔽🔽🔽 Get with querystring assets
+    """
+
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    def test_user_me_task__with_query_string_assets(self):
+        model = self.bc.database.create(user=1,
+                                        task=[{
+                                            'associated_slug': 'fine'
+                                        }, {
+                                            'associated_slug': 'super'
+                                        }])
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('assignments:user_me_task') + '?associated_slug=fine,super'
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = [get_serializer(self, task, model.user) for task in model.task]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
+
+    """
+    🔽🔽🔽 Get with querystring assets no results
+    """
+
+    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    def test_user_me_task__with_query_string_assets_no_results(self):
+        model = self.bc.database.create(user=1,
+                                        task=[{
+                                            'associated_slug': 'fine'
+                                        }, {
+                                            'associated_slug': 'super'
+                                        }])
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('assignments:user_me_task') + '?associated_slug=kenny'
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = []
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Get with one Task but the other user
@@ -184,6 +250,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Get with two Task but the other user
@@ -206,6 +273,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Delete
@@ -225,6 +293,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
@@ -260,6 +329,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_207_MULTI_STATUS)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
@@ -291,6 +361,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_207_MULTI_STATUS)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Put
@@ -315,6 +386,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
@@ -334,6 +406,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Put without Task, one item in body
@@ -358,6 +431,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Put without Task, one item in body, with id
@@ -382,6 +456,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Put with Task, one item in body, with id
@@ -409,6 +484,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
@@ -450,6 +526,10 @@ class MediaTestSuite(AssignmentsTestCase):
             **self.bc.format.to_dict(model.task[x]),
             **data[x]
         } for x in range(0, 2)])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(model.user.id, 'assignment_status_updated', related_type='assignments.Task', related_id=x.id)
+            for x in model.task if data[x.id - 1]['task_status'] != x.task_status
+        ])
 
     """
     🔽🔽🔽 Put with Task, one item in body, passing revision_status
@@ -490,6 +570,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
             # teardown
             self.bc.database.delete('assignments.Task')
+            self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Put with Task, one item in body, passing revision_status, teacher is auth
@@ -549,9 +630,17 @@ class MediaTestSuite(AssignmentsTestCase):
             self.assertEqual(tasks.student_task_notification.delay.call_args_list, [call(index + 1)])
             self.assertEqual(tasks.teacher_task_notification.delay.call_args_list, [])
 
+            self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+                call(model.user[1].id,
+                     'assignment_review_status_updated',
+                     related_type='assignments.Task',
+                     related_id=model.task.id),
+            ])
+
             # teardown
             self.bc.database.delete('assignments.Task')
             tasks.student_task_notification.delay.call_args_list = []
+            activity_tasks.add_activity.delay.call_args_list = []
 
     @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
     @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
@@ -573,3 +662,4 @@ class MediaTestSuite(AssignmentsTestCase):
         self.bc.check.calls(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
             call(cache=TaskCache, cache_per_user=True, paginate=True),
         ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])

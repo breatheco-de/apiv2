@@ -8,6 +8,7 @@ from django.db.models import Q
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import HttpResponse, HttpResponseRedirect
+from breathecode.mentorship.caches import MentorProfileCache
 from breathecode.services.calendly import Calendly
 from breathecode.authenticate.models import Token
 from breathecode.authenticate.models import ProfileAcademy
@@ -714,11 +715,15 @@ class ServiceView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
 
 class MentorView(APIView, HeaderLimitOffsetPagination):
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(cache=MentorProfileCache, sort='-created_at', paginate=True)
 
     @capable_of('read_mentorship_mentor')
     def get(self, request, mentor_id=None, academy_id=None):
         handler = self.extensions(request)
+        cache = handler.cache.get()
+
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
 
         if mentor_id is not None:
             mentor = MentorProfile.objects.filter(id=mentor_id, services__academy__id=academy_id).first()

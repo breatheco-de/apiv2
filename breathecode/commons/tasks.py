@@ -15,19 +15,19 @@ TOLERANCE = 10
 def mark_task_as_cancelled(task_manager_id):
     logger.info(f'Running mark_task_as_cancelled for {task_manager_id}')
 
-    x = TaskManager.objects.filter(id=task_manager_id, status='PENDING').first()
+    x = TaskManager.objects.filter(id=task_manager_id).first()
     if x is None:
         logger.error(f'TaskManager {task_manager_id} not found')
         return
 
-    if x.status == 'DONE':
+    if x.status not in ['PENDING', 'PAUSED']:
         logger.warn(f'TaskManager {task_manager_id} was already DONE')
         return
 
     x.status = 'CANCELLED'
     x.save()
 
-    logger.info(f'TaskManager {task_manager_id} CANCELLED')
+    logger.info(f'TaskManager {task_manager_id} is being marked as CANCELLED')
 
 
 # do not use our own task decorator
@@ -46,14 +46,14 @@ def mark_task_as_reversed(task_manager_id, *, attempts=0, force=False):
 
     if not force and (x.status != 'DONE' and not x.last_run < timezone.now() - timedelta(minutes=TOLERANCE)
                       and not x.killed and attempts < 10):
-        logger.warn(f'TaskManager {task_manager_id} was not killed, scheduling to run again')
+        logger.warn(f'TaskManager {task_manager_id} was not killed, scheduling to run it again')
 
         x.status = 'CANCELLED'
         x.save()
 
         mark_task_as_reversed.apply_async(args=(task_manager_id, ),
                                           kwargs={'attempts': attempts + 1},
-                                          eta=datetime.utcnow() + timedelta(seconds=30))
+                                          eta=timezone.now() + timedelta(seconds=30))
         return
 
     x.status = 'REVERSED'
@@ -61,9 +61,10 @@ def mark_task_as_reversed(task_manager_id, *, attempts=0, force=False):
 
     module = importlib.import_module(x.reverse_module)
     function = getattr(module, x.reverse_name)
+    print('function', function, x.arguments)
     function(*x.arguments['args'], **x.arguments['kwargs'])
 
-    logger.info(f'TaskManager {task_manager_id} REVERSED')
+    logger.info(f'TaskManager {task_manager_id} is being marked as REVERSED')
 
 
 # do not use our own task decorator
@@ -77,18 +78,18 @@ def mark_task_as_paused(task_manager_id):
         return
 
     if x.status != 'PENDING':
-        logger.warn(f'TaskManager {task_manager_id} was already DONE')
+        logger.warn(f'TaskManager {task_manager_id} is not running')
         return
 
     x.status = 'PAUSED'
     x.save()
 
-    logger.info(f'TaskManager {task_manager_id} PAUSED')
+    logger.info(f'TaskManager {task_manager_id} is being marked as PAUSED')
 
 
 # do not use our own task decorator
 @shared_task(bind=False)
-def mark_task_as_pending(task_manager_id, *, attempts=0, force=False):
+def mark_task_as_pending(task_manager_id, *, attempts=0, force=False, last_run=None):
     logger.info(f'Running mark_task_as_pending for {task_manager_id}')
 
     x = TaskManager.objects.filter(id=task_manager_id).first()
@@ -96,17 +97,24 @@ def mark_task_as_pending(task_manager_id, *, attempts=0, force=False):
         logger.error(f'TaskManager {task_manager_id} not found')
         return
 
-    if x.status not in ['DONE', 'CANCELLED', 'REVERSED']:
+    if x.status in ['DONE', 'CANCELLED', 'REVERSED']:
         logger.warn(f'TaskManager {task_manager_id} was already DONE')
+        return
+
+    if last_run and last_run != x.last_run:
+        logger.warn(f'TaskManager {task_manager_id} is already running')
         return
 
     if force is False and not x.last_run < timezone.now() - timedelta(
             minutes=TOLERANCE) and not x.killed and attempts < 10:
-        logger.warn(f'TaskManager {task_manager_id} was not killed, scheduling to run again')
+        logger.warn(f'TaskManager {task_manager_id} was not killed, scheduling to run it again')
 
         mark_task_as_pending.apply_async(args=(task_manager_id, ),
-                                         kwargs={'attempts': attempts + 1},
-                                         eta=datetime.utcnow() + timedelta(seconds=30))
+                                         kwargs={
+                                             'attempts': attempts + 1,
+                                             'last_run': last_run or x.last_run,
+                                         },
+                                         eta=timezone.now() + timedelta(seconds=30))
         return
 
     x.status = 'PENDING'
@@ -115,10 +123,12 @@ def mark_task_as_pending(task_manager_id, *, attempts=0, force=False):
 
     module = importlib.import_module(x.task_module)
     function = getattr(module, x.task_name)
-    function.delay(*x.arguments['args'], {
-        **x.arguments['kwargs'],
-        'page': x.current_page + 1,
-        'total_pages': x.total_pages,
-    })
+    function.delay(
+        *x.arguments['args'], **{
+            **x.arguments['kwargs'],
+            'page': x.current_page + 1,
+            'total_pages': x.total_pages,
+            'task_manager_id': task_manager_id,
+        })
 
-    logger.info(f'TaskManager {task_manager_id} is PENDING')
+    logger.info(f'TaskManager {task_manager_id} is being marked as PENDING')

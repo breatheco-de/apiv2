@@ -6,6 +6,7 @@ import random
 from unittest.mock import MagicMock, call, patch
 
 from django.utils import timezone
+import pytest
 from breathecode.payments import tasks
 from breathecode.payments.actions import calculate_relative_delta
 
@@ -13,6 +14,7 @@ from ...tasks import build_plan_financing
 
 from ..mixins import PaymentsTestCase
 from dateutil.relativedelta import relativedelta
+import breathecode.activity.tasks as activity_tasks
 
 UTC_NOW = timezone.now()
 
@@ -35,6 +37,12 @@ def plan_financing_item(data={}):
     }
 
 
+@pytest.fixture(autouse=True)
+def setup(monkeypatch):
+    monkeypatch.setattr(activity_tasks.add_activity, 'delay', MagicMock())
+    yield
+
+
 #FIXME: create_v2 fail in this test file
 class PaymentsTestSuite(PaymentsTestCase):
     """
@@ -48,13 +56,20 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
 
-        self.assertEqual(logging.Logger.info.call_args_list,
-                         [call('Starting build_plan_financing for bag 1')])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('Bag with id 1 not found')])
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call('Starting build_plan_financing for bag 1'),
+                # retrying
+                call('Starting build_plan_financing for bag 1'),
+            ])
+        self.assertEqual(logging.Logger.error.call_args_list,
+                         [call('Bag with id 1 not found', exc_info=True)])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [])
         self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
         self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     """
     🔽🔽🔽 With Bag
@@ -74,13 +89,22 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
 
-        self.assertEqual(logging.Logger.info.call_args_list,
-                         [call('Starting build_plan_financing for bag 1')])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('Invoice with id 1 not found')])
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call('Starting build_plan_financing for bag 1'),
+                # retrying
+                call('Starting build_plan_financing for bag 1'),
+            ])
+        self.assertEqual(logging.Logger.error.call_args_list,
+                         [call('Invoice with id 1 not found', exc_info=True)])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [self.bc.format.to_dict(model.bag)])
         self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
         self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 With Bag and Invoice
@@ -122,7 +146,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting build_plan_financing for bag 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('An invoice without amount is prohibited (id: 1)'),
+            call('An invoice without amount is prohibited (id: 1)', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [
@@ -137,6 +161,9 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), [])
 
         self.assertEqual(tasks.build_service_stock_scheduler_from_plan_financing.delay.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 With Bag and Invoice with amount
@@ -204,6 +231,9 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(tasks.build_service_stock_scheduler_from_plan_financing.delay.call_args_list,
                          [call(1)])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 With Bag with Cohort and Invoice with amount
@@ -222,8 +252,14 @@ class PaymentsTestSuite(PaymentsTestCase):
         }
         invoice = {'status': 'FULFILLED', 'amount': amount}
         plan = {'is_renewable': False}
+        academy = {'available_as_saas': True}
 
-        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plan, cohort=1, cohort_set=1)
+        model = self.bc.database.create(bag=bag,
+                                        invoice=invoice,
+                                        plan=plan,
+                                        cohort=1,
+                                        cohort_set=1,
+                                        academy=academy)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -275,6 +311,9 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(tasks.build_service_stock_scheduler_from_plan_financing.delay.call_args_list, [
             call(1),
+        ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
         ])
 
     """
@@ -346,6 +385,9 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(tasks.build_service_stock_scheduler_from_plan_financing.delay.call_args_list, [
             call(1),
         ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
 
     """
     🔽🔽🔽 With Bag with MentorshipServiceSet and Invoice with amount
@@ -415,4 +457,7 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(tasks.build_service_stock_scheduler_from_plan_financing.delay.call_args_list, [
             call(1),
+        ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
         ])

@@ -46,6 +46,7 @@ class AssetTechnology(models.Model):
                             null=True,
                             help_text='Leave blank if will be shown in all languages')
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, default=None, blank=True, null=True)
+    is_deprecated = models.BooleanField(default=False)
     featured_asset = models.ForeignKey('Asset',
                                        on_delete=models.SET_NULL,
                                        default=None,
@@ -77,6 +78,14 @@ class AssetTechnology(models.Model):
             technology = technology.parent
 
         return technology
+
+    def validate(self):
+        if self.is_deprecated and self.parent is None:
+            raise Exception(
+                f'You cannot mark a technology as deprecated if it doesn\'t have a parent technology')
+
+    def clean(self):
+        self.validate()
 
 
 class AssetCategory(models.Model):
@@ -277,10 +286,15 @@ class Asset(models.Model):
         max_length=200,
         unique=True,
         help_text=
-        'Asset must be unique within the entire database because they could be published into 4geeks.com (shared among all academies)'
-    )
-    title = models.CharField(max_length=200, blank=True)
-    lang = models.CharField(max_length=2, blank=True, null=True, default=None, help_text='E.g: en, es, it')
+        'Asset must be unique within the entire database because they could be published into 4geeks.com (shared among all academies)',
+        db_index=True)
+    title = models.CharField(max_length=200, blank=True, db_index=True)
+    lang = models.CharField(max_length=2,
+                            blank=True,
+                            null=True,
+                            default=None,
+                            help_text='E.g: en, es, it',
+                            db_index=True)
 
     all_translations = models.ManyToManyField('self', blank=True)
     technologies = models.ManyToManyField(AssetTechnology, blank=True)
@@ -313,7 +327,7 @@ class Asset(models.Model):
     solution_video_url = models.URLField(null=True, blank=True, default=None)
     readme = models.TextField(null=True, blank=True, default=None)
     readme_raw = models.TextField(null=True, blank=True, default=None)
-    readme_updated_at = models.DateTimeField(null=True, blank=True, default=None)
+    readme_updated_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
 
     html = models.TextField(null=True, blank=True, default=None)
 
@@ -324,13 +338,13 @@ class Asset(models.Model):
     external = models.BooleanField(
         default=False,
         help_text=
-        'External assets will open in a new window, they are not built using breathecode or learnpack tecnology'
-    )
+        'External assets will open in a new window, they are not built using breathecode or learnpack tecnology',
+        db_index=True)
 
-    interactive = models.BooleanField(default=False)
-    with_solutions = models.BooleanField(default=False)
-    with_video = models.BooleanField(default=False)
-    graded = models.BooleanField(default=False)
+    interactive = models.BooleanField(default=False, db_index=True)
+    with_solutions = models.BooleanField(default=False, db_index=True)
+    with_video = models.BooleanField(default=False, db_index=True)
+    graded = models.BooleanField(default=False, db_index=True)
     gitpod = models.BooleanField(default=False)
     duration = models.IntegerField(null=True, blank=True, default=None, help_text='In hours')
 
@@ -339,30 +353,34 @@ class Asset(models.Model):
         max_length=20,
         choices=VISIBILITY,
         default=PUBLIC,
-        help_text='It won\'t be shown on the website unleast the status is published')
-    asset_type = models.CharField(max_length=20, choices=TYPE)
+        help_text='It won\'t be shown on the website unleast the status is published',
+        db_index=True)
+    asset_type = models.CharField(max_length=20, choices=TYPE, db_index=True)
 
     status = models.CharField(max_length=20,
                               choices=ASSET_STATUS,
                               default=NOT_STARTED,
-                              help_text='Related to the publishing of the asset')
+                              help_text='Related to the publishing of the asset',
+                              db_index=True)
     sync_status = models.CharField(max_length=20,
                                    choices=ASSET_SYNC_STATUS,
                                    default=None,
                                    null=True,
                                    blank=True,
-                                   help_text='Internal state automatically set by the system based on sync')
-    last_synch_at = models.DateTimeField(null=True, blank=True, default=None)
-    github_commit_hash = models.CharField(max_length=100, null=True, blank=True, default=None)
+                                   help_text='Internal state automatically set by the system based on sync',
+                                   db_index=True)
+    last_synch_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
+    github_commit_hash = models.CharField(max_length=100, null=True, blank=True, default=None, db_index=True)
 
     test_status = models.CharField(max_length=20,
                                    choices=ASSET_SYNC_STATUS,
                                    default=None,
                                    null=True,
                                    blank=True,
-                                   help_text='Internal state automatically set by the system based on test')
-    published_at = models.DateTimeField(null=True, blank=True, default=None)
-    last_test_at = models.DateTimeField(null=True, blank=True, default=None)
+                                   help_text='Internal state automatically set by the system based on test',
+                                   db_index=True)
+    published_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
+    last_test_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
     status_text = models.TextField(null=True,
                                    default=None,
                                    blank=True,
@@ -372,7 +390,8 @@ class Asset(models.Model):
                                         null=True,
                                         default=None,
                                         blank=True,
-                                        help_text='Github usernames separated by comma')
+                                        help_text='Github usernames separated by comma',
+                                        db_index=True)
     assessment = models.ForeignKey(Assessment,
                                    on_delete=models.SET_NULL,
                                    default=None,
@@ -393,7 +412,7 @@ class Asset(models.Model):
                               null=True,
                               help_text='The owner has the github premissions to update the lesson')
 
-    is_seo_tracked = models.BooleanField(default=True)
+    is_seo_tracked = models.BooleanField(default=True, db_index=True)
     seo_keywords = models.ManyToManyField(AssetKeyword,
                                           blank=True,
                                           help_text='Optimize for a max of two keywords per asset')
@@ -402,12 +421,12 @@ class Asset(models.Model):
                                             blank=True,
                                             default=None,
                                             help_text='Automatically filled (1 to 100)')
-    last_seo_scan_at = models.DateTimeField(null=True, blank=True, default=None)
+    last_seo_scan_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
     seo_json_status = models.JSONField(null=True, blank=True, default=None)
 
     # clean status refers to the cleaning of the readme file
 
-    last_cleaning_at = models.DateTimeField(null=True, blank=True, default=None)
+    last_cleaning_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
     cleaning_status_details = models.TextField(null=True, blank=True, default=None)
     cleaning_status = models.CharField(
         max_length=20,
@@ -415,7 +434,8 @@ class Asset(models.Model):
         default='PENDING',
         null=True,
         blank=True,
-        help_text='Internal state automatically set by the system based on cleanup')
+        help_text='Internal state automatically set by the system based on cleanup',
+        db_index=True)
 
     delivery_instructions = models.TextField(null=True,
                                              default=None,

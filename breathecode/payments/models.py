@@ -25,6 +25,9 @@ from breathecode.utils.validation_exception import ValidationException
 
 from breathecode.utils.validators.language import validate_language_code
 from breathecode.utils.i18n import translation
+from breathecode.utils.locking import LockManager
+
+import breathecode.activity.tasks as tasks_activity
 
 # https://devdocs.prestashop-project.org/1.7/webservice/resources/warehouses/
 
@@ -280,6 +283,7 @@ class ServiceItemFeature(models.Model):
     lang = models.CharField(max_length=5,
                             validators=[validate_language_code],
                             help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US')
+    title = models.CharField(max_length=30, help_text='Title of the service item', default=None, null=True)
     description = models.CharField(max_length=255, help_text='Description of the service item')
     one_line_desc = models.CharField(max_length=30, help_text='One line description of the service item')
 
@@ -320,8 +324,10 @@ class FinancingOption(models.Model):
 
 class CohortSet(models.Model):
     """
-    M2M between plan and ServiceItem
+    Cohort set.
     """
+
+    _lang = 'en'
 
     slug = models.SlugField(
         max_length=100,
@@ -330,7 +336,24 @@ class CohortSet(models.Model):
         help_text='A human-readable identifier, it must be unique and it can only contain letters, '
         'numbers and hyphens')
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
-    cohorts = models.ManyToManyField(Cohort, blank=True)
+    cohorts = models.ManyToManyField(Cohort,
+                                     blank=True,
+                                     through='CohortSetCohort',
+                                     through_fields=('cohort_set', 'cohort'))
+
+    def clean(self) -> None:
+        if self.academy.available_as_saas == False:
+            raise forms.ValidationError(
+                translation(self._lang,
+                            en='Academy is not available as SaaS',
+                            es='La academia no está disponible como SaaS',
+                            slug='academy-not-available-as-saas'))
+
+        return super().clean()
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 
 class CohortSetTranslation(models.Model):
@@ -341,6 +364,39 @@ class CohortSetTranslation(models.Model):
     title = models.CharField(max_length=60, help_text='Title of the cohort set')
     description = models.CharField(max_length=255, help_text='Description of the cohort set')
     short_description = models.CharField(max_length=255, help_text='Short description of the cohort set')
+
+
+class CohortSetCohort(models.Model):
+    """
+    M2M between CohortSet and Cohort.
+    """
+
+    _lang = 'en'
+
+    cohort_set = models.ForeignKey(CohortSet, on_delete=models.CASCADE, help_text='Cohort set')
+    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, help_text='Cohort')
+
+    def clean(self) -> None:
+        if self.cohort.available_as_saas is False or (self.cohort.available_as_saas == None
+                                                      and self.cohort.academy.available_as_saas is False):
+            raise forms.ValidationError(
+                translation(self._lang,
+                            en='Cohort is not available as SaaS',
+                            es='El cohort no está disponible como SaaS',
+                            slug='cohort-not-available-as-saas'))
+
+        if self.cohort_set.academy != self.cohort.academy:
+            raise forms.ValidationError(
+                translation(self._lang,
+                            en='Cohort and cohort set must be from the same academy',
+                            es='El cohort y el cohort set deben ser de la misma academia',
+                            slug='cohort-and-cohort-set-must-be-from-the-same-academy'))
+
+        return super().clean()
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 
 class MentorshipServiceSet(models.Model):
@@ -699,6 +755,7 @@ class Bag(AbstractAmountByTime):
     """
     Represents a credit that can be used by a user to use a service.
     """
+    objects = LockManager()
 
     status = models.CharField(max_length=8,
                               choices=BAG_STATUS,
@@ -738,8 +795,15 @@ class Bag(AbstractAmountByTime):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def save(self, *args, **kwargs):
+        created = self.pk is None
         self.full_clean()
         super().save(*args, **kwargs)
+
+        if created:
+            tasks_activity.add_activity.delay(self.user.id,
+                                              'bag_created',
+                                              related_type='payments.Bag',
+                                              related_id=self.id)
 
     def __str__(self) -> str:
         return f'{self.type} {self.status} {self.chosen_period}'

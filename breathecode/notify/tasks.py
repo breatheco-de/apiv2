@@ -1,11 +1,15 @@
+from datetime import datetime
 import logging, os, requests, json
 from celery import shared_task, Task
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils import timezone
-from .actions import sync_slack_team_channel, sync_slack_team_users, send_email_message
+
+from breathecode.utils.decorators import task, AbortTask
+from .actions import sync_slack_team_channel, sync_slack_team_users
 from breathecode.services.slack.client import Slack
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.authenticate.models import Token
+from decimal import Decimal
 
 from breathecode.notify import actions
 
@@ -95,7 +99,7 @@ def async_slack_command(post_data):
         return False
 
 
-@shared_task
+@task()
 def async_deliver_hook(target, payload, hook_id=None, **kwargs):
     """
     target:     the url to receive the payload.
@@ -106,22 +110,58 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
 
     from .utils.hook_manager import HookManager
 
-    logger.debug('Starting async_deliver_hook')
-    encoded_payload = json.dumps(payload, cls=DjangoJSONEncoder)
-    response = requests.post(url=target,
-                             data=encoded_payload,
-                             headers={'Content-Type': 'application/json'},
-                             timeout=2)
+    def parse_payload(payload: dict):
+        if not isinstance(payload, dict):
+            return payload
 
-    if hook_id:
-        HookModel = HookManager.get_hook_model()
-        hook = HookModel.objects.get(id=hook_id)
-        if response.status_code == 410:
-            hook.delete()
+        for key in payload.keys():
+            # TypeError("string indices must be integers, not 'str'")
+            if isinstance(payload[key], datetime):
+                payload[key] = payload[key].isoformat().replace('+00:00', 'Z')
 
-        else:
+            elif isinstance(payload[key], Decimal):
+                payload[key] = str(payload[key])
 
-            try:
+            elif isinstance(payload[key], list) or isinstance(payload[key], tuple) or isinstance(
+                    payload[key], set):
+                l = []
+                for item in payload[key]:
+                    l.append(parse_payload(item))
+
+                payload[key] = l
+
+            elif isinstance(payload[key], dict):
+                payload[key] = parse_payload(payload[key])
+
+        return payload
+
+    logger.info('Starting async_deliver_hook')
+
+    try:
+        if isinstance(payload, dict):
+            payload = parse_payload(payload)
+
+        elif isinstance(payload, list):
+            l = []
+            for item in payload:
+                l.append(parse_payload(item))
+
+            payload = l
+
+        encoded_payload = json.dumps(payload, cls=DjangoJSONEncoder)
+        response = requests.post(url=target,
+                                 data=encoded_payload,
+                                 headers={'Content-Type': 'application/json'},
+                                 timeout=2)
+
+        if hook_id:
+            HookModel = HookManager.get_hook_model()
+            hook = HookModel.objects.get(id=hook_id)
+            if response.status_code == 410:
+                hook.delete()
+
+            else:
+
                 data = hook.sample_data
                 if not isinstance(data, list):
                     data = []
@@ -139,7 +179,8 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
                 hook.sample_data = data
                 hook.total_calls = hook.total_calls + 1
                 hook.save()
-            except Exception as e:
-                logger.error(
-                    f'Error while trying to save hook call with status code {response.status_code}. {str(e)}')
-                logger.debug(data)
+
+    except Exception:
+        logger.error(payload)
+        raise AbortTask(
+            f'Error while trying to save hook call with status code {response.status_code}. {payload}')

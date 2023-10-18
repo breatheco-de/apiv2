@@ -12,27 +12,21 @@ from breathecode.payments import actions
 from breathecode.payments.services.stripe import Stripe
 from dateutil.relativedelta import relativedelta
 from breathecode.payments.signals import consume_service
-from breathecode.utils.decorators import task, AbortTask
+from breathecode.utils.decorators import task, AbortTask, RetryTask
 from breathecode.utils.i18n import translation
+from django.db.models import Q
 
-from .models import AbstractIOweYou, Bag, Consumable, ConsumptionSession, Invoice, PlanFinancing, PlanServiceItem, PlanServiceItemHandler, Service, ServiceStockScheduler, Subscription, SubscriptionServiceItem
+from .models import AbstractIOweYou, Bag, CohortSet, Consumable, ConsumptionSession, Invoice, PlanFinancing, PlanServiceItem, PlanServiceItemHandler, Service, ServiceStockScheduler, Subscription, SubscriptionServiceItem
 from breathecode.payments.signals import reimburse_service_units
 
 logger = logging.getLogger(__name__)
-
-
-class BaseTaskWithRetry(Task):
-    autoretry_for = (Exception, )
-    #                                           seconds
-    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
-    retry_backoff = True
 
 
 def get_app_url():
     return os.getenv('APP_URL', '')
 
 
-@task(bind=True, base=BaseTaskWithRetry)
+@task(bind=True)
 def renew_consumables(self, scheduler_id: int, **_: Any):
     """Renew consumables."""
 
@@ -49,8 +43,7 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     logger.info(f'Starting renew_consumables for service stock scheduler {scheduler_id}')
 
     if not (scheduler := ServiceStockScheduler.objects.filter(id=scheduler_id).first()):
-        logger.error(f'ServiceStockScheduler with id {scheduler_id} not found')
-        return
+        raise RetryTask(f'ServiceStockScheduler with id {scheduler_id} not found')
 
     utc_now = timezone.now()
 
@@ -58,30 +51,26 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     if (scheduler.plan_handler and scheduler.plan_handler.subscription
             and scheduler.plan_handler.subscription.valid_until
             and scheduler.plan_handler.subscription.valid_until < utc_now):
-        logger.error(f'The subscription {scheduler.plan_handler.subscription.id} is over')
-        return
+        raise AbortTask(f'The subscription {scheduler.plan_handler.subscription.id} is over')
 
     # it needs to be paid
     if (scheduler.plan_handler and scheduler.plan_handler.subscription
             and scheduler.plan_handler.subscription.next_payment_at < utc_now):
-        logger.error(
+        raise AbortTask(
             f'The subscription {scheduler.plan_handler.subscription.id} needs to be paid to renew the '
             'consumables')
-        return
 
     # is over
     if (scheduler.plan_handler and scheduler.plan_handler.plan_financing
             and scheduler.plan_handler.plan_financing.valid_until < utc_now):
-        logger.error(f'The plan financing {scheduler.plan_handler.plan_financing.id} is over')
-        return
+        raise AbortTask(f'The plan financing {scheduler.plan_handler.plan_financing.id} is over')
 
     # it needs to be paid
     if (scheduler.plan_handler and scheduler.plan_handler.plan_financing
             and scheduler.plan_handler.plan_financing.next_payment_at < utc_now):
-        logger.error(
+        raise AbortTask(
             f'The plan financing {scheduler.plan_handler.plan_financing.id} needs to be paid to renew '
             'the consumables')
-        return
 
     if (scheduler.plan_handler and scheduler.plan_handler.plan_financing
             and scheduler.plan_handler.handler.plan.time_of_life
@@ -97,16 +86,14 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     # is over
     if (scheduler.subscription_handler and scheduler.subscription_handler.subscription
             and scheduler.subscription_handler.subscription.valid_until < utc_now):
-        logger.error(f'The subscription {scheduler.subscription_handler.subscription.id} is over')
-        return
+        raise AbortTask(f'The subscription {scheduler.subscription_handler.subscription.id} is over')
 
     # it needs to be paid
     if (scheduler.subscription_handler and scheduler.subscription_handler.subscription
             and scheduler.subscription_handler.subscription.next_payment_at < utc_now):
-        logger.error(
+        raise AbortTask(
             f'The subscription {scheduler.subscription_handler.subscription.id} needs to be paid to renew '
             'the consumables')
-        return
 
     if (scheduler.valid_until and scheduler.valid_until - timedelta(days=1) < utc_now):
         logger.info(f'The scheduler {scheduler.id} don\'t needs to be renewed')
@@ -174,24 +161,21 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     logger.info(f'The scheduler {scheduler.id} was renewed')
 
 
-@task(bind=True, base=BaseTaskWithRetry)
+@task(bind=True)
 def renew_subscription_consumables(self, subscription_id: int, **_: Any):
     """Renew consumables belongs to a subscription."""
 
     logger.info(f'Starting renew_subscription_consumables for id {subscription_id}')
 
     if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
-        logger.error(f'Subscription with id {subscription_id} not found')
-        return
+        raise RetryTask(f'Subscription with id {subscription_id} not found')
 
     utc_now = timezone.now()
     if subscription.valid_until and subscription.valid_until < utc_now:
-        logger.error(f'The subscription {subscription.id} is over')
-        return
+        raise AbortTask(f'The subscription {subscription.id} is over')
 
     if subscription.next_payment_at < utc_now:
-        logger.error(f'The subscription {subscription.id} needs to be paid to renew the consumables')
-        return
+        raise AbortTask(f'The subscription {subscription.id} needs to be paid to renew the consumables')
 
     for scheduler in ServiceStockScheduler.objects.filter(subscription_handler__subscription=subscription):
         renew_consumables.delay(scheduler.id)
@@ -200,24 +184,21 @@ def renew_subscription_consumables(self, subscription_id: int, **_: Any):
         renew_consumables.delay(scheduler.id)
 
 
-@task(bind=True, base=BaseTaskWithRetry)
+@task(bind=True)
 def renew_plan_financing_consumables(self, plan_financing_id: int, **_: Any):
     """Renew consumables belongs to a plan financing."""
 
     logger.info(f'Starting renew_plan_financing_consumables for id {plan_financing_id}')
 
     if not (plan_financing := PlanFinancing.objects.filter(id=plan_financing_id).first()):
-        logger.error(f'PlanFinancing with id {plan_financing_id} not found')
-        return
+        raise RetryTask(f'PlanFinancing with id {plan_financing_id} not found')
 
     utc_now = timezone.now()
     if plan_financing.valid_until and plan_financing.valid_until < utc_now:
-        logger.error(f'The plan financing {plan_financing.id} is over')
-        return
+        raise AbortTask(f'The plan financing {plan_financing.id} is over')
 
     if plan_financing.next_payment_at < utc_now:
-        logger.error(f'The PlanFinancing {plan_financing.id} needs to be paid to renew the consumables')
-        return
+        raise AbortTask(f'The PlanFinancing {plan_financing.id} needs to be paid to renew the consumables')
 
     if plan_financing.plan_expires_at and plan_financing.plan_expires_at < utc_now:
         logger.info(f'The services related to PlanFinancing {plan_financing.id} is over')
@@ -249,7 +230,7 @@ def fallback_charge_subscription(self, subscription_id: int, exception: Exceptio
         s.refund_payment(invoice)
 
 
-@task(bind=True, base=BaseTaskWithRetry, transaction=True, fallback=fallback_charge_subscription)
+@task(bind=True, transaction=True, fallback=fallback_charge_subscription)
 def charge_subscription(self, subscription_id: int, **_: Any):
     """Renews a subscription."""
 
@@ -357,7 +338,7 @@ def fallback_charge_plan_financing(self, plan_financing_id: int, exception: Exce
         s.refund_payment(invoice)
 
 
-@task(bind=True, base=BaseTaskWithRetry, transaction=True, fallback=fallback_charge_plan_financing)
+@task(bind=True, transaction=True, fallback=fallback_charge_plan_financing)
 def charge_plan_financing(self, plan_financing_id: int, **_: Any):
     """Renew a plan financing."""
 
@@ -442,10 +423,11 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
     renew_plan_financing_consumables.delay(plan_financing.id)
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@task(bind=True)
 def build_service_stock_scheduler_from_subscription(self,
                                                     subscription_id: int,
-                                                    user_id: Optional[int] = None):
+                                                    user_id: Optional[int] = None,
+                                                    **_: Any):
     """Build service stock scheduler for a subscription."""
 
     logger.info(
@@ -477,8 +459,7 @@ def build_service_stock_scheduler_from_subscription(self,
 
     if not (subscription := Subscription.objects.filter(id=subscription_id, **
                                                         additional_args['subscription']).first()):
-        logger.error(f'Subscription with id {subscription_id} not found')
-        return
+        raise RetryTask(f'Subscription with id {subscription_id} not found')
 
     utc_now = timezone.now()
 
@@ -517,10 +498,11 @@ def build_service_stock_scheduler_from_subscription(self,
     renew_subscription_consumables.delay(subscription.id)
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@task(bind=True)
 def build_service_stock_scheduler_from_plan_financing(self,
                                                       plan_financing_id: int,
-                                                      user_id: Optional[int] = None):
+                                                      user_id: Optional[int] = None,
+                                                      **_: Any):
     """Build service stock scheduler for a plan financing."""
 
     logger.info(
@@ -549,8 +531,7 @@ def build_service_stock_scheduler_from_plan_financing(self,
 
     if not (plan_financing := PlanFinancing.objects.filter(id=plan_financing_id,
                                                            **additional_args['plan_financing']).first()):
-        logger.error(f'PlanFinancing with id {plan_financing_id} not found')
-        return
+        raise RetryTask(f'PlanFinancing with id {plan_financing_id} not found')
 
     for plan in plan_financing.plans.all():
         for handler in PlanServiceItem.objects.filter(plan=plan):
@@ -576,17 +557,15 @@ def build_service_stock_scheduler_from_plan_financing(self,
     renew_plan_financing_consumables.delay(plan_financing.id)
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def build_subscription(self, bag_id: int, invoice_id: int, start_date: Optional[datetime] = None):
+@task(bind=True)
+def build_subscription(self, bag_id: int, invoice_id: int, start_date: Optional[datetime] = None, **_: Any):
     logger.info(f'Starting build_subscription for bag {bag_id}')
 
     if not (bag := Bag.objects.filter(id=bag_id, status='PAID', was_delivered=False).first()):
-        logger.error(f'Bag with id {bag_id} not found')
-        return
+        raise RetryTask(f'Bag with id {bag_id} not found')
 
     if not (invoice := Invoice.objects.filter(id=invoice_id, status='FULFILLED').first()):
-        logger.error(f'Invoice with id {invoice_id} not found')
-        return
+        raise RetryTask(f'Invoice with id {invoice_id} not found')
 
     months = 1
 
@@ -637,21 +616,18 @@ def build_subscription(self, bag_id: int, invoice_id: int, start_date: Optional[
     logger.info(f'Subscription was created with id {subscription.id}')
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def build_plan_financing(self, bag_id: int, invoice_id: int, is_free: bool = False):
+@task(bind=True)
+def build_plan_financing(self, bag_id: int, invoice_id: int, is_free: bool = False, **_: Any):
     logger.info(f'Starting build_plan_financing for bag {bag_id}')
 
     if not (bag := Bag.objects.filter(id=bag_id, status='PAID', was_delivered=False).first()):
-        logger.error(f'Bag with id {bag_id} not found')
-        return
+        raise RetryTask(f'Bag with id {bag_id} not found')
 
     if not (invoice := Invoice.objects.filter(id=invoice_id, status='FULFILLED').first()):
-        logger.error(f'Invoice with id {invoice_id} not found')
-        return
+        raise RetryTask(f'Invoice with id {invoice_id} not found')
 
     if not is_free and not invoice.amount:
-        logger.error(f'An invoice without amount is prohibited (id: {invoice_id})')
-        return
+        raise AbortTask(f'An invoice without amount is prohibited (id: {invoice_id})')
 
     utc_now = timezone.now()
     months = bag.how_many_installments
@@ -705,27 +681,23 @@ def build_plan_financing(self, bag_id: int, invoice_id: int, is_free: bool = Fal
     logger.info(f'PlanFinancing was created with id {financing.id}')
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def build_free_subscription(self, bag_id: int, invoice_id: int):
+@task(bind=True)
+def build_free_subscription(self, bag_id: int, invoice_id: int, **_: Any):
     logger.info(f'Starting build_free_subscription for bag {bag_id}')
 
     if not (bag := Bag.objects.filter(id=bag_id, status='PAID', was_delivered=False).first()):
-        logger.error(f'Bag with id {bag_id} not found')
-        return
+        raise RetryTask(f'Bag with id {bag_id} not found')
 
     if not (invoice := Invoice.objects.filter(id=invoice_id, status='FULFILLED').first()):
-        logger.error(f'Invoice with id {invoice_id} not found')
-        return
+        raise RetryTask(f'Invoice with id {invoice_id} not found')
 
     if invoice.amount != 0:
-        logger.error(f'The invoice with id {invoice_id} is invalid for a free subscription')
-        return
+        raise AbortTask(f'The invoice with id {invoice_id} is invalid for a free subscription')
 
     plans = bag.plans.all()
 
     if not plans:
-        logger.error(f'Not have plans to associated to this free subscription in the bag {bag_id}')
-        return
+        raise AbortTask(f'Not have plans to associated to this free subscription in the bag {bag_id}')
 
     for plan in plans:
         is_free_trial = True
@@ -791,18 +763,16 @@ def build_free_subscription(self, bag_id: int, invoice_id: int):
     bag.save()
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def end_the_consumption_session(self, consumption_session_id: int, how_many: float = 1.0):
+@task(bind=True)
+def end_the_consumption_session(self, consumption_session_id: int, how_many: float = 1.0, **_: Any):
     logger.info(f'Starting end_the_consumption_session for ConsumptionSession {consumption_session_id}')
 
     session = ConsumptionSession.objects.filter(id=consumption_session_id).first()
     if not session:
-        logger.error(f'ConsumptionSession with id {consumption_session_id} not found')
-        return
+        raise AbortTask(f'ConsumptionSession with id {consumption_session_id} not found')
 
     if session.status != 'PENDING':
-        logger.error(f'ConsumptionSession with id {consumption_session_id} already processed')
-        return
+        raise AbortTask(f'ConsumptionSession with id {consumption_session_id} already processed')
 
     consumable = session.consumable
     consume_service.send(instance=consumable, sender=consumable.__class__, how_many=how_many)
@@ -814,20 +784,18 @@ def end_the_consumption_session(self, consumption_session_id: int, how_many: flo
 
 # TODO: this task is not being used, if you will use this task, you need to take in consideration
 # you need fix the logic about the consumable valid until, maybe this must be removed
-@task(bind=True, base=BaseTaskWithRetry)
+@task(bind=True)
 def build_consumables_from_bag(bag_id: int, **_: Any):
     logger.info(f'Starting build_consumables_from_bag for bag {bag_id}')
 
     if not (bag := Bag.objects.filter(id=bag_id, status='PAID', was_delivered=False).first()):
-        logger.error(f'Bag with id {bag_id} not found')
-        return
+        raise RetryTask(f'Bag with id {bag_id} not found')
 
     mentorship_service_set = bag.selected_mentorship_service_sets.first()
     event_type_set = bag.selected_event_type_sets.first()
 
     if [mentorship_service_set, event_type_set].count(None) != 1:
-        logger.error(f'Bag with id {bag_id} not have a resource associated')
-        return
+        raise AbortTask(f'Bag with id {bag_id} not have a resource associated')
 
     consumables = []
     for service_item in bag.service_items.all():
@@ -839,8 +807,8 @@ def build_consumables_from_bag(bag_id: int, **_: Any):
             kwargs['event_type_set'] = event_type_set
 
         if not kwargs:
-            logger.error(f'Bag with id {bag_id} have a resource associated opposite to the service item type')
-            return
+            raise AbortTask(
+                f'Bag with id {bag_id} have a resource associated opposite to the service item type')
 
         consumables.append(
             Consumable(service_item=service_item,
@@ -856,8 +824,8 @@ def build_consumables_from_bag(bag_id: int, **_: Any):
     bag.save()
 
 
-@shared_task(bind=False, base=BaseTaskWithRetry)
-def refund_mentoring_session(session_id: int):
+@task(bind=False)
+def refund_mentoring_session(session_id: int, **_: Any):
     from breathecode.mentorship.models import MentorshipSession
 
     logger.info(f'Starting refund_mentoring_session for mentoring session {session_id}')
@@ -865,8 +833,7 @@ def refund_mentoring_session(session_id: int):
     if not (mentorship_session := MentorshipSession.objects.filter(
             id=session_id, mentee__isnull=False, service__isnull=False, status__in=['FAILED', 'IGNORED'
                                                                                     ]).first()):
-        logger.error(f'MentoringSession with id {session_id} not found or is invalid')
-        return
+        raise AbortTask(f'MentoringSession with id {session_id} not found or is invalid')
 
     mentee = mentorship_session.mentee
     service = mentorship_session.service
@@ -876,12 +843,10 @@ def refund_mentoring_session(session_id: int):
         consumable__mentorship_service_set__mentorship_services=service).exclude(status='CANCELLED').first()
 
     if not consumption_session:
-        logger.error(f'ConsumptionSession not found for mentorship session {session_id}')
-        return
+        raise AbortTask(f'ConsumptionSession not found for mentorship session {session_id}')
 
     if consumption_session.status == 'CANCELLED':
-        logger.error(f'ConsumptionSession already cancelled for mentorship session {session_id}')
-        return
+        raise AbortTask(f'ConsumptionSession already cancelled for mentorship session {session_id}')
 
     if consumption_session.status == 'DONE':
         logger.info('Refunding consumption session because it was discounted')
@@ -892,3 +857,29 @@ def refund_mentoring_session(session_id: int):
 
     consumption_session.status = 'CANCELLED'
     consumption_session.save()
+
+
+@task(bind=False)
+def add_cohort_set_to_subscription(subscription_id: int, cohort_set_id: int, **_: Any):
+    logger.info(
+        f'Starting add_cohort_set_to_subscription for subscription {subscription_id} cohort_set {cohort_set_id}'
+    )
+
+    subscription = Subscription.objects.filter(id=subscription_id).exclude(
+        status__in=['CANCELLED', 'DEPRECATED']).first()
+
+    if not subscription:
+        raise RetryTask(f'Subscription with id {subscription_id} not found')
+
+    if subscription.valid_until and subscription.valid_until < timezone.now():
+        raise AbortTask(f'The subscription {subscription.id} is over')
+
+    if subscription.selected_cohort_set:
+        raise AbortTask(f'Subscription with id {subscription_id} already have a cohort set')
+
+    cohort_set = CohortSet.objects.filter(id=cohort_set_id).first()
+    if not cohort_set:
+        raise RetryTask(f'CohortSet with id {cohort_set_id} not found')
+
+    subscription.selected_cohort_set = cohort_set
+    subscription.save()

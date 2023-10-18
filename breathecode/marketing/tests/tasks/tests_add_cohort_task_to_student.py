@@ -30,7 +30,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     🔽🔽🔽 Without Academy
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch('requests.get', apply_requests_request_mock([(200, AC_URL, AC_RESPONSE)]))
@@ -40,14 +40,14 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         add_cohort_task_to_student.delay(1, 1, 1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('Academy 1 not found')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call(TASK_STARTED_MESSAGE)])
+        self.assertEqual(logging.Logger.error.call_args_list, [call('Academy 1 not found', exc_info=True)])
 
     """
     🔽🔽🔽 Without ActiveCampaignAcademy
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch('requests.get', apply_requests_request_mock([(200, AC_URL, AC_RESPONSE)]))
@@ -57,16 +57,19 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         model = self.generate_models(academy=True)
 
+        logging.Logger.info.call_args_list = []
+
         add_cohort_task_to_student.delay(1, 1, 1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('ActiveCampaign Academy 1 not found')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call(TASK_STARTED_MESSAGE)])
+        self.assertEqual(logging.Logger.error.call_args_list,
+                         [call('ActiveCampaign Academy 1 not found', exc_info=True)])
 
     """
     🔽🔽🔽 Without User
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch('requests.get', apply_requests_request_mock([(200, AC_URL, AC_RESPONSE)]))
@@ -80,16 +83,18 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      active_campaign_academy=True,
                                      active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
+        logging.Logger.info.call_args_list = []
+
         add_cohort_task_to_student.delay(1, 1, 1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('User 1 not found')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call(TASK_STARTED_MESSAGE)])
+        self.assertEqual(logging.Logger.error.call_args_list, [call('User 1 not found', exc_info=True)])
 
     """
     🔽🔽🔽 Without Cohort
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch('requests.get', apply_requests_request_mock([(200, AC_URL, AC_RESPONSE)]))
@@ -104,16 +109,18 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      active_campaign_academy=True,
                                      active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
+        logging.Logger.info.call_args_list = []
+
         add_cohort_task_to_student.delay(1, 1, 1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('Cohort 1 not found')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call(TASK_STARTED_MESSAGE)])
+        self.assertEqual(logging.Logger.error.call_args_list, [call('Cohort 1 not found', exc_info=True)])
 
     """
     🔽🔽🔽 Tag not exists
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch('requests.get', apply_requests_request_mock([(200, AC_URL, AC_RESPONSE)]))
@@ -129,22 +136,25 @@ class AnswerIdTestSuite(MarketingTestCase):
                                          active_campaign_academy=True,
                                          active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
+        logging.Logger.info.call_args_list = []
+
         add_cohort_task_to_student.delay(1, 1, 1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [
+        self.assertEqual(logging.Logger.info.call_args_list, [
             call(TASK_STARTED_MESSAGE),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
             call(
                 f'Cohort tag `{model.cohort.slug}` does not exist in the system, the tag could not be added to the '
-                'student. This tag was supposed to be created by the system when creating a new cohort'),
+                'student. This tag was supposed to be created by the system when creating a new cohort',
+                exc_info=True),
         ])
 
     """
     🔽🔽🔽 Tag already exists in active campaign
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch('requests.get', apply_requests_request_mock([(200, AC_URL, AC_RESPONSE)]))
@@ -165,10 +175,12 @@ class AnswerIdTestSuite(MarketingTestCase):
                                          tag_kwargs=tag_kwargs,
                                          cohort=cohort_kwargs)
 
+        logging.Logger.info.call_args_list = []
+
         add_cohort_task_to_student.delay(1, 1, 1)
 
         self.assertEqual(self.bc.database.list_of('marketing.Tag'), [self.model_to_dict(model, 'tag')])
-        self.assertEqual(logging.Logger.warn.call_args_list, [
+        self.assertEqual(logging.Logger.info.call_args_list, [
             call(TASK_STARTED_MESSAGE),
             call('Adding tag 1 to acp contact 1'),
         ])
@@ -178,7 +190,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     🔽🔽🔽 Tag already exists in active campaign and return status 404 in post method
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch('requests.get', apply_requests_request_mock([(200, AC_URL, AC_RESPONSE)]))
@@ -199,23 +211,25 @@ class AnswerIdTestSuite(MarketingTestCase):
                                          tag_kwargs=tag_kwargs,
                                          cohort=cohort_kwargs)
 
+        logging.Logger.info.call_args_list = []
+
         add_cohort_task_to_student.delay(1, 1, 1)
 
         self.assertEqual(self.bc.database.list_of('marketing.Tag'), [self.model_to_dict(model, 'tag')])
-        self.assertEqual(logging.Logger.warn.call_args_list, [
+        self.assertEqual(logging.Logger.info.call_args_list, [
             call(TASK_STARTED_MESSAGE),
             call('Adding tag 1 to acp contact 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
             call(AC_POST_RESPONSE),
-            call('Failed to add tag to contact 1 with status=404'),
+            call('Failed to add tag to contact 1 with status=404', exc_info=True),
         ])
 
     """
     🔽🔽🔽 Tag already exists in active campaign and return status 201 but the api was changed
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch('requests.get', apply_requests_request_mock([(200, AC_URL, AC_RESPONSE)]))
@@ -236,22 +250,24 @@ class AnswerIdTestSuite(MarketingTestCase):
                                          tag_kwargs=tag_kwargs,
                                          cohort=cohort_kwargs)
 
+        logging.Logger.info.call_args_list = []
+
         add_cohort_task_to_student.delay(1, 1, 1)
 
         self.assertEqual(self.bc.database.list_of('marketing.Tag'), [self.model_to_dict(model, 'tag')])
-        self.assertEqual(logging.Logger.warn.call_args_list, [
+        self.assertEqual(logging.Logger.info.call_args_list, [
             call(TASK_STARTED_MESSAGE),
             call('Adding tag 1 to acp contact 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Bad response format from ActiveCampaign when adding a new tag to contact'),
+            call('Bad response format from ActiveCampaign when adding a new tag to contact', exc_info=True),
         ])
 
     """
     🔽🔽🔽 Active campaign return a empty list of contacts
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     @patch('requests.get', apply_requests_request_mock([(200, AC_URL, AC_EMPTY_RESPONSE)]))
@@ -270,11 +286,13 @@ class AnswerIdTestSuite(MarketingTestCase):
                                          tag_kwargs=tag_kwargs,
                                          cohort=cohort_kwargs)
 
+        logging.Logger.info.call_args_list = []
+
         add_cohort_task_to_student.delay(1, 1, 1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [
+        self.assertEqual(logging.Logger.info.call_args_list, [
             call(TASK_STARTED_MESSAGE),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call(f'Problem fetching contact in activecampaign with email {model.user.email}'),
+            call(f'Problem fetching contact in activecampaign with email {model.user.email}', exc_info=True),
         ])

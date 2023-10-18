@@ -120,3 +120,6 @@ django-storages = {extras = ["google"], version = "*"}
 newrelic = "*"
 graphene-django = "*"
 graphene-django-optimizer = "*"
+sqlalchemy = "<2.0"
+pytest-env = "*"
+premailer = "*"
