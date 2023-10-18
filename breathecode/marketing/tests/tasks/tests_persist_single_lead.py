@@ -784,6 +784,7 @@ class AnswerIdTestSuite(MarketingTestCase):
                          [{
                              **db,
                              'ac_contact_id': None,
+                             'storage_status': 'ERROR',
                              'storage_status_text': "The course doesn't exist",
                          }])
 
