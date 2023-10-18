@@ -415,7 +415,9 @@ class UserInvite(models.Model):
         self._email = self.email
 
     email = models.CharField(blank=False, max_length=150, null=True, default=None)
+
     is_email_validated = models.BooleanField(default=False)
+    has_marketing_consent = models.BooleanField(default=False)
 
     user = models.ForeignKey(User,
                              on_delete=models.CASCADE,
@@ -431,6 +433,14 @@ class UserInvite(models.Model):
                                  blank=True)
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, null=True, default=None, blank=True)
     role = models.ForeignKey(Role, on_delete=models.CASCADE, null=True, default=None, blank=True)
+    event_slug = models.SlugField(max_length=40,
+                                  blank=True,
+                                  null=True,
+                                  help_text='If set, the user signed up because of an Event')
+    asset_slug = models.SlugField(max_length=40,
+                                  blank=True,
+                                  null=True,
+                                  help_text='If set, the user signed up because of an Asset')
 
     first_name = models.CharField(max_length=100, default=None, null=True)
     last_name = models.CharField(max_length=100, default=None, null=True)
@@ -457,6 +467,11 @@ class UserInvite(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
     sent_at = models.DateTimeField(default=None, null=True, blank=True)
+
+    conversion_info = models.JSONField(default=None,
+                                       blank=True,
+                                       null=True,
+                                       help_text='UTMs and other conversion information.')
 
     def __str__(self):
         return f'Invite for {self.email}'
