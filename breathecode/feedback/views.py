@@ -76,11 +76,15 @@ class GetAnswerView(APIView):
     List all snippets, or create a new snippet.
     """
 
-    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+    extensions = APIViewExtensions(cache=AnswerCache, sort='-created_at', paginate=True)
 
     @capable_of('read_nps_answers')
     def get(self, request, format=None, academy_id=None):
         handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
 
         items = Answer.objects.filter(academy__id=academy_id)
         lookup = {}

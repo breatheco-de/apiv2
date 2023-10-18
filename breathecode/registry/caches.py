@@ -4,8 +4,11 @@ from .models import Asset, AssetComment, AssetTechnology, AssetKeyword, KeywordC
 
 class AssetCache(Cache):
     model = Asset
-    depends = ['User', 'AssetTechnology', 'AssetCategory', 'KeywordCluster', 'AssetKeyword', 'Assessment']
-    parents = ['AssetAlias', 'AssetErrorLog']
+    # KeywordCluster?
+    depends = [
+        'User', 'AssetTechnology', 'AssetCategory', 'KeywordCluster', 'AssetKeyword', 'Assessment', 'Academy'
+    ]
+    parents = ['AssetAlias', 'AssetComment', 'SEOReport', 'AssetImage', 'OriginalityScan', 'AssetErrorLog']
 
 
 class AssetCommentCache(Cache):
@@ -16,29 +19,29 @@ class AssetCommentCache(Cache):
 
 class TechnologyCache(Cache):
     model = AssetTechnology
-    depends = []
-    parents = []
+    depends = ['Asset']
+    parents = ['Asset']
 
 
 class ContentVariableCache(Cache):
     model = ContentVariable
-    depends = []
+    depends = ['Academy']
     parents = []
 
 
 class CategoryCache(Cache):
     model = AssetCategory
-    depends = []
-    parents = []
+    depends = ['Academy']
+    parents = ['AssetCategory']
 
 
 class KeywordCache(Cache):
     model = AssetKeyword
-    depends = []
+    depends = ['KeywordCluster', 'Academy']
     parents = ['KeywordCluster']
 
 
 class KeywordClusterCache(Cache):
     model = KeywordCluster
-    depends = ['KeywordCluster', 'Asset']
+    depends = ['Academy']
     parents = []
