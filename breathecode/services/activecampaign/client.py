@@ -203,10 +203,10 @@ class ActiveCampaign:
                              headers={'Api-Token': self.token},
                              json=body,
                              timeout=2)
-        logger.warn(f'Creating tag `{body["tag"]["tag"]}` on active campaign')
+        logger.info(f'Creating tag `{body["tag"]["tag"]}` on active campaign')
 
         if resp.status_code == 201:
-            logger.warn(f'Tag created successfully')
+            logger.info(f'Tag created successfully')
             body = resp.json()
 
             if 'tag' in body:

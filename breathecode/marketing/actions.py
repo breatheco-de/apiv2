@@ -2,6 +2,7 @@ import os, re, requests, json
 from typing import Optional
 from itertools import chain
 from django.utils import timezone
+from breathecode.utils.decorators.task import RetryTask
 
 from breathecode.utils.i18n import translation
 from .models import FormEntry, Tag, Automation, ActiveCampaignAcademy, AcademyAlias
@@ -267,7 +268,7 @@ def register_new_lead(form_entry=None):
         ac_academy = ActiveCampaignAcademy.objects.filter(academy__slug=form_entry['location']).first()
 
     if ac_academy is None:
-        raise ValidationException(f"No academy found with slug {form_entry['location']}")
+        raise RetryTask(f"No academy found with slug {form_entry['location']}")
 
     automations = get_lead_automations(ac_academy, form_entry)
 

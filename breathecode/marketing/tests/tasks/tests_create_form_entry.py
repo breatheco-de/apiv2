@@ -217,12 +217,16 @@ class CreateFormEntryTestSuite(MarketingTestCase):
     def test_create_form_entry_with_dict_empty_without_csv_upload_id(self):
         """Test create_form_entry task without data"""
 
-        create_form_entry(1, **{})
+        create_form_entry.delay(1, **{})
 
         self.assertEqual(self.count_form_entry(), 0)
         self.assertEqual(self.bc.database.list_of('monitoring.CSVUpload'), [])
-        self.assertEqual(logging.Logger.info.call_args_list, [call('Create form entry started')])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('No CSVUpload found with this id')])
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Create form entry started'),
+            call('Create form entry started'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list,
+                         [call('No CSVUpload found with this id', exc_info=True)])
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
@@ -233,7 +237,7 @@ class CreateFormEntryTestSuite(MarketingTestCase):
 
         model = self.bc.database.create(csv_upload={'log': ''})
         logging.Logger.info.call_args_list = []
-        create_form_entry(1, **{})
+        create_form_entry.delay(1, **{})
 
         self.assertEqual(self.count_form_entry(), 0)
         self.assertEqual(self.bc.database.list_of('monitoring.CSVUpload'),
@@ -251,7 +255,10 @@ class CreateFormEntryTestSuite(MarketingTestCase):
             call('No email in form entry'),
             call('No location or academy in form entry'),
             call('Missing field in received item'),
-            call({})
+            call({}),
+            call(
+                'No first name in form entry, No last name in form entry, No email in form entry, No location or academy in form entry. ',
+                exc_info=True),
         ])
 
         self.assertEqual(tasks.persist_single_lead.delay.call_args_list, [])
@@ -288,7 +295,7 @@ class CreateFormEntryTestSuite(MarketingTestCase):
                 'location': 'Madrid',
                 'academy': slug
             }
-            create_form_entry(1, **data)
+            create_form_entry.delay(1, **data)
 
             self.assertEqual(self.count_form_entry(), 0)
             self.assertEqual(self.bc.database.list_of('monitoring.CSVUpload'),
@@ -310,7 +317,13 @@ class CreateFormEntryTestSuite(MarketingTestCase):
                 call('email has incorrect format'),
                 call('No location or academy in form entry'),
                 call('Missing field in received item'),
-                call(data)
+                call(data),
+                call(
+                    f'No academy exists with this academy active_campaign_slug: {slug}, No '
+                    f'academy exists with this academy slug: {slug}, first name has incorrect characters, '
+                    'last name has incorrect characters, email has incorrect format, No location or '
+                    'academy in form entry. ',
+                    exc_info=True),
             ])
             self.assertEqual(tasks.persist_single_lead.delay.call_args_list, [])
 
@@ -335,7 +348,7 @@ class CreateFormEntryTestSuite(MarketingTestCase):
             'location': model.academy.active_campaign_slug,
             'academy': model.academy.slug
         }
-        create_form_entry(1, **data)
+        create_form_entry.delay(1, **data)
 
         del data['academy']
 
