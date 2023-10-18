@@ -230,6 +230,7 @@ class LeadTestSuite(MarketingTestCase):
             form_entry_field({
                 'id': 1,
                 'academy_id': None,
+                'storage_status': 'ERROR',
                 'storage_status_text': 'Missing location information',
                 'attribution_id': None,
             })
@@ -305,6 +306,7 @@ class LeadTestSuite(MarketingTestCase):
                 'academy_id': None,
                 'latitude': Decimal(data['latitude']),
                 'longitude': Decimal(data['longitude']),
+                'storage_status': 'ERROR',
                 'storage_status_text': f"No academy found with slug {data['location']}",
                 'attribution_id': '75b36c508866d18732305da14fe9a0',
             })
@@ -370,6 +372,7 @@ class LeadTestSuite(MarketingTestCase):
                     'academy_id': model.academy.id if model.academy.id not in [1, 2] else None,
                     'latitude': Decimal(data['latitude']),
                     'longitude': Decimal(data['longitude']),
+                    'storage_status': 'ERROR',
                     'storage_status_text': 'No academy found with slug midgard',
                     'attribution_id': '75b36c508866d18732305da14fe9a0',
                 })
