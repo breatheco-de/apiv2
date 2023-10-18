@@ -1167,9 +1167,9 @@ class CourseView(APIView):
     def get(self, request, course_slug=None):
         handler = self.extensions(request)
 
-        cache = handler.cache.get()
-        if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+        # cache = handler.cache.get()
+        # if cache is not None:
+        #     return Response(cache, status=status.HTTP_200_OK)
 
         lang = get_user_language(request)
 
