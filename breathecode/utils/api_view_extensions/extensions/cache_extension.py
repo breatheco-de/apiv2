@@ -58,5 +58,10 @@ class CacheExtension(ExtensionBase):
 
     def _apply_response_mutation(self, data: list[dict] | dict, headers: dict = {}):
         params = self._get_params()
-        self._cache.set(data, **params)
+
+        try:
+            self._cache.set(data, **params)
+        except Exception:
+            logger.exception('Error while trying to set the cache')
+
         return (data, headers)
