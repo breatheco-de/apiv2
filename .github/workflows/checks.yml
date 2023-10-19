@@ -43,9 +43,9 @@ jobs:
           path: |
             ~/.local/share/virtualenvs
             ~/.cache/pip
-          key: ${{ runner.os }}-pipenv2-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-pipenv3-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv2-
+            ${{ runner.os }}-pipenv3-
 
       # Install dependencies using Pipenv
       - name: Install dependencies
@@ -85,9 +85,9 @@ jobs:
           path: |
             ~/.local/share/virtualenvs
             ~/.cache/pip
-          key: ${{ runner.os }}-pipenv2-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-pipenv3-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv2-
+            ${{ runner.os }}-pipenv3-
 
       # Install Pipenv
       - name: Install dependencies
@@ -123,9 +123,9 @@ jobs:
           path: |
             ~/.local/share/virtualenvs
             ~/.cache/pip
-          key: ${{ runner.os }}-pipenv2-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-pipenv3-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv2-
+            ${{ runner.os }}-pipenv3-
 
       # Install Pipenv
       - name: Install dependencies
@@ -165,9 +165,9 @@ jobs:
           path: |
             ~/.local/share/virtualenvs
             ~/.cache/pip
-          key: ${{ runner.os }}-pipenv2-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-pipenv3-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv2-
+            ${{ runner.os }}-pipenv3-
 
       # Install Pipenv
       - name: Install dependencies
@@ -199,9 +199,9 @@ jobs:
           path: |
             ~/.local/share/virtualenvs
             ~/.cache/pip
-          key: ${{ runner.os }}-pipenv2-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-pipenv3-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv2-
+            ${{ runner.os }}-pipenv3-
 
       # Install Pipenv
       - name: Install dependencies
@@ -233,9 +233,9 @@ jobs:
           path: |
             ~/.local/share/virtualenvs
             ~/.cache/pip
-          key: ${{ runner.os }}-pipenv2-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-pipenv3-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv2-
+            ${{ runner.os }}-pipenv3-
 
       # Install Pipenv
       - name: Install dependencies
@@ -267,9 +267,9 @@ jobs:
           path: |
             ~/.local/share/virtualenvs
             ~/.cache/pip
-          key: ${{ runner.os }}-pipenv2-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-pipenv3-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv2-
+            ${{ runner.os }}-pipenv3-
 
       # Install Pipenv
       - name: Install dependencies
@@ -301,9 +301,9 @@ jobs:
           path: |
             ~/.local/share/virtualenvs
             ~/.cache/pip
-          key: ${{ runner.os }}-pipenv2-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-pipenv3-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv2-
+            ${{ runner.os }}-pipenv3-
 
       # Install Pipenv
       - name: Install dependencies
@@ -335,9 +335,9 @@ jobs:
           path: |
             ~/.local/share/virtualenvs
             ~/.cache/pip
-          key: ${{ runner.os }}-pipenv2-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-pipenv3-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv2-
+            ${{ runner.os }}-pipenv3-
 
       # Install Pipenv
       - name: Install dependencies
@@ -388,9 +388,9 @@ jobs:
           path: |
             ~/.local/share/virtualenvs
             ~/.cache/pip
-          key: ${{ runner.os }}-pipenv2-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-pipenv3-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv2-
+            ${{ runner.os }}-pipenv3-
 
       # Install Pipenv
       - name: Install dependencies
@@ -426,9 +426,9 @@ jobs:
           path: |
             ~/.local/share/virtualenvs
             ~/.cache/pip
-          key: ${{ runner.os }}-pipenv2-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-pipenv3-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv2-
+            ${{ runner.os }}-pipenv3-
 
       # Install Pipenv
       - name: Install dependencies
