@@ -1,6 +1,6 @@
 from typing import Any, Optional
 
-from breathecode.utils.decorators.task import AbortTask
+from breathecode.utils.decorators.task import AbortTask, RetryTask
 
 ALLOWED_TYPES = {
     'auth.UserInvite': [
@@ -69,7 +69,7 @@ class FillActivityMeta:
         instance = UserInvite.objects.filter(**kwargs).first()
 
         if not instance:
-            raise AbortTask(f'UserInvite {related_id or related_slug} not found')
+            raise RetryTask(f'UserInvite {related_id or related_slug} not found')
 
         obj = {
             'id': instance.id,
@@ -113,7 +113,7 @@ class FillActivityMeta:
         instance = Answer.objects.filter(**kwargs).first()
 
         if not instance:
-            raise AbortTask(f'Answer {related_id or related_slug} not found')
+            raise RetryTask(f'Answer {related_id or related_slug} not found')
 
         obj = {
             'id': instance.id,
@@ -172,7 +172,7 @@ class FillActivityMeta:
         instance = User.objects.filter(**kwargs).first()
 
         if not instance:
-            raise AbortTask(f'User {related_id or related_slug} not found')
+            raise RetryTask(f'User {related_id or related_slug} not found')
 
         obj = {
             'id': instance.id,
@@ -193,7 +193,7 @@ class FillActivityMeta:
         instance = Cohort.objects.filter(**kwargs).first()
 
         if not instance:
-            raise AbortTask(f'Cohort {related_id or related_slug} not found')
+            raise RetryTask(f'Cohort {related_id or related_slug} not found')
 
         syllabus = (f'{instance.syllabus_version.syllabus.slug}.v{instance.syllabus_version.version}'
                     if instance.syllabus_version else None)
@@ -242,7 +242,7 @@ class FillActivityMeta:
         instance = Task.objects.filter(**kwargs).first()
 
         if not instance:
-            raise AbortTask(f'Task {related_id or related_slug} not found')
+            raise RetryTask(f'Task {related_id or related_slug} not found')
 
         obj = {
             'id': instance.id,
@@ -280,7 +280,7 @@ class FillActivityMeta:
         instance = EventCheckin.objects.filter(**kwargs).first()
 
         if not instance:
-            raise AbortTask(f'EventCheckin {related_id or related_slug} not found')
+            raise RetryTask(f'EventCheckin {related_id or related_slug} not found')
 
         obj = {
             'id': instance.id,
@@ -312,7 +312,7 @@ class FillActivityMeta:
         instance = MentorshipSession.objects.filter(**kwargs).first()
 
         if not instance:
-            raise AbortTask(f'MentorshipSession {related_id or related_slug} not found')
+            raise RetryTask(f'MentorshipSession {related_id or related_slug} not found')
 
         obj = {
             'id': instance.id,
@@ -379,7 +379,7 @@ class FillActivityMeta:
         instance = Invoice.objects.filter(**kwargs).first()
 
         if not instance:
-            raise AbortTask(f'Invoice {related_id or related_slug} not found')
+            raise RetryTask(f'Invoice {related_id or related_slug} not found')
 
         obj = {
             'id': instance.id,
@@ -413,7 +413,7 @@ class FillActivityMeta:
         instance = Bag.objects.filter(**kwargs).first()
 
         if not instance:
-            raise AbortTask(f'Bag {related_id or related_slug} not found')
+            raise RetryTask(f'Bag {related_id or related_slug} not found')
 
         obj = {
             'id': instance.id,
@@ -446,7 +446,7 @@ class FillActivityMeta:
         instance = Subscription.objects.filter(**kwargs).first()
 
         if not instance:
-            raise AbortTask(f'Subscription {related_id or related_slug} not found')
+            raise RetryTask(f'Subscription {related_id or related_slug} not found')
 
         obj = {
             'id': instance.id,
@@ -492,7 +492,7 @@ class FillActivityMeta:
         instance = PlanFinancing.objects.filter(**kwargs).first()
 
         if not instance:
-            raise AbortTask(f'PlanFinancing {related_id or related_slug} not found')
+            raise RetryTask(f'PlanFinancing {related_id or related_slug} not found')
 
         selected_mentorship_service_set = (instance.selected_mentorship_service_set.slug
                                            if instance.selected_mentorship_service_set else None)

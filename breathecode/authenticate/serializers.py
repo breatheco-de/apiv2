@@ -1173,6 +1173,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         model = Profile
         exclude = ()
 
+
 class UserInviteWaitingListSerializer(serializers.ModelSerializer):
     access_token = serializers.SerializerMethodField()
     plans = serializers.SerializerMethodField()

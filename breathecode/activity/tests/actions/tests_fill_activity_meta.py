@@ -4,7 +4,7 @@ Test /answer
 
 from django.utils import timezone
 from breathecode.activity.actions import FillActivityMeta
-from breathecode.utils.decorators.task import AbortTask
+from breathecode.utils.decorators.task import AbortTask, RetryTask
 from ..mixins import MediaTestCase
 
 UTC_NOW = timezone.now()
@@ -15,7 +15,7 @@ class UserTestSuite(MediaTestCase):
     def test_id_not_found(self):
         kind = self.bc.fake.slug()
 
-        with self.assertRaisesMessage(AbortTask, f'User 1 not found'):
+        with self.assertRaisesMessage(RetryTask, f'User 1 not found'):
             FillActivityMeta.user(kind, 1, None)
 
     def test_slug_not_found(self):
