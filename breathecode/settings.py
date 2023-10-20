@@ -324,15 +324,16 @@ REDIS_URL = os.getenv('REDIS_URL', '')
 
 IS_REDIS_WITH_SSL = REDIS_URL.startswith('rediss://')
 
+CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 60 * 24))
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
         'LOCATION': os.environ.get('REDIS_URL'),
+        'TIMEOUT': CACHE_MIDDLEWARE_SECONDS,
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
             'CONNECTION_POOL_KWARGS': {
                 'ssl_cert_reqs': None,
-                'max_connections': 4,
             },
         }
     }
@@ -348,8 +349,6 @@ if IS_TEST_ENV:
 
 elif not IS_REDIS_WITH_SSL:
     del CACHES['default']['OPTIONS']
-
-CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 120))
 
 # TODO: decouple file storage from django
 # if ENVIRONMENT != 'test':

@@ -34,9 +34,12 @@ def mark_saas_student_as_graduated(sender: Type[Task], instance: Task, **kwargs:
         return
 
     syllabus_assets = get_assets_on_syllabus(cohort.syllabus_version.id, True)
-    tasks = Task.objects.filter(cohort=cohort.id, user=instance.user.id, task_status='DONE')
+    how_many_mandatory_tasks = Task.objects.filter(cohort=cohort.id,
+                                                   user=instance.user.id,
+                                                   task_status='DONE',
+                                                   associated_slug__in=syllabus_assets).count()
 
-    if len(syllabus_assets) == len(tasks):
+    if len(syllabus_assets) == how_many_mandatory_tasks:
         cohort_user = CohortUser.objects.filter(user=instance.user.id, cohort=cohort.id).first()
         cohort_user.educational_status = 'GRADUATED'
         cohort_user.save()
