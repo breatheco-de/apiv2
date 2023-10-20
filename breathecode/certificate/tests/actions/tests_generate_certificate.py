@@ -3,8 +3,14 @@ Tasks tests
 """
 import re
 from unittest.mock import MagicMock, call, patch
+import hashlib
+
+import pytest
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
 from breathecode.utils import APIException
 from django.utils import timezone
+
+from breathecode.utils.validation_exception import ValidationException
 from ...actions import generate_certificate, strings
 import breathecode.certificate.signals as signals
 from ..mixins import CertificateTestCase
@@ -16,7 +22,45 @@ from ..mocks import (
 )
 
 
-class ActionGenerateCertificateTestCase(CertificateTestCase):
+class TestActionGenerateCertificate(LegacyAPITestCase):
+    # TODO: this function fix the difference between run tests in all modules
+    # and certificate, should be removed in a future
+    def clear_preview_url(self, dicts: list[dict]):
+        """
+        Clear preview url to evit one diff when run test in all tests and just
+        certificate tests
+        """
+        return [{**item, 'preview_url': None} for item in dicts]
+
+    def clear_keys(self, dicts, keys):
+        _d = {}
+        for k in keys:
+            _d[k] = None
+
+        return [{**item, **_d} for item in dicts]
+
+    def remove_is_clean_for_one_item(self, item):
+        if 'is_cleaned' in item:
+            del item['is_cleaned']
+        return item
+
+    def generate_update_hash(self, instance):
+        kwargs = {
+            'signed_by': instance.signed_by,
+            'signed_by_role': instance.signed_by_role,
+            'status': instance.status,
+            'layout': instance.layout,
+            'expires_at': instance.expires_at,
+            'issued_at': instance.issued_at,
+        }
+
+        important_fields = ['signed_by', 'signed_by_role', 'status', 'layout', 'expires_at', 'issued_at']
+
+        important_values = '-'.join(
+            [str(kwargs.get(field) if field in kwargs else None) for field in sorted(important_fields)])
+
+        return hashlib.sha1(important_values.encode('UTF-8')).hexdigest()
+
     """
     🔽🔽🔽 With User and without Cohort
     """
@@ -35,7 +79,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         except Exception as e:
             self.assertEqual(str(e), 'missing-cohort-user')
 
-        self.assertEqual(self.all_user_specialty_dict(), [])
+        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [])
 
         self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
 
@@ -57,7 +101,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         except Exception as e:
             self.assertEqual(str(e), 'missing-cohort-user')
 
-        self.assertEqual(self.all_user_specialty_dict(), [])
+        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [])
 
         self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
 
@@ -131,8 +175,9 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         }
 
         self.assertEqual(result, expected)
-        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
-                         [expected])
+        self.assertEqual(
+            self.clear_keys(self.bc.database.list_of('certificate.UserSpecialty'), ['preview_url', 'token']),
+            [expected])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
@@ -158,7 +203,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         except Exception as e:
             self.assertEqual(str(e), 'missing-syllabus-version')
 
-        self.assertEqual(self.all_user_specialty_dict(), [])
+        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
@@ -187,7 +232,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         except Exception as e:
             self.assertEqual(str(e), 'missing-specialty')
 
-        self.assertEqual(self.all_user_specialty_dict(), [])
+        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [])
 
         self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
 
@@ -215,7 +260,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         except Exception as e:
             self.assertEqual(str(e), 'missing-specialty')
 
-        self.assertEqual(self.all_user_specialty_dict(), [])
+        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [])
 
         self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
 
@@ -245,7 +290,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         except Exception as e:
             self.assertEqual(str(e), 'no-default-layout')
 
-        self.assertEqual(self.all_user_specialty_dict(), [])
+        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [])
 
         self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
 
@@ -276,7 +321,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         except Exception as e:
             self.assertEqual(str(e), 'without-main-teacher')
 
-        self.assertEqual(self.all_user_specialty_dict(), [])
+        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [])
 
         self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
 
@@ -337,8 +382,9 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         }
 
         self.assertEqual(result, expected)
-        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
-                         [expected])
+        self.assertEqual(
+            self.clear_keys(self.bc.database.list_of('certificate.UserSpecialty'), ['preview_url', 'token']),
+            [expected])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
@@ -425,8 +471,9 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'update_hash': self.generate_update_hash(user_specialty),
         }
         self.assertEqual(result, expected)
-        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
-                         [expected])
+        self.assertEqual(
+            self.clear_keys(self.bc.database.list_of('certificate.UserSpecialty'), ['preview_url', 'token']),
+            [expected])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
@@ -502,8 +549,9 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'update_hash': self.generate_update_hash(user_specialty),
         }
         self.assertEqual(result, expected)
-        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
-                         [expected])
+        self.assertEqual(
+            self.clear_keys(self.bc.database.list_of('certificate.UserSpecialty'), ['preview_url', 'token']),
+            [expected])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
@@ -580,8 +628,9 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'update_hash': self.generate_update_hash(user_specialty),
         }
         self.assertEqual(result, expected)
-        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
-                         [expected])
+        self.assertEqual(
+            self.clear_keys(self.bc.database.list_of('certificate.UserSpecialty'), ['preview_url', 'token']),
+            [expected])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
@@ -645,8 +694,9 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'update_hash': self.generate_update_hash(user_specialty),
         }
         self.assertEqual(result, expected)
-        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
-                         [expected])
+        self.assertEqual(
+            self.clear_keys(self.bc.database.list_of('certificate.UserSpecialty'), ['preview_url', 'token']),
+            [expected])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
@@ -710,8 +760,9 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         }
 
         self.assertEqual(result, expected)
-        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
-                         [expected])
+        self.assertEqual(
+            self.clear_keys(self.bc.database.list_of('certificate.UserSpecialty'), ['preview_url', 'token']),
+            [expected])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
@@ -777,8 +828,9 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         }
 
         self.assertEqual(result, expected)
-        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
-                         [expected])
+        self.assertEqual(
+            self.clear_keys(self.bc.database.list_of('certificate.UserSpecialty'), ['preview_url', 'token']),
+            [expected])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
@@ -844,10 +896,11 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
 
         self.assertEqual(result, expected)
 
-        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()), [{
-            **expected,
-            'token': token,
-        }])
+        self.assertEqual(self.clear_preview_url(self.bc.database.list_of('certificate.UserSpecialty')),
+                         [{
+                             **expected,
+                             'token': token,
+                         }])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
@@ -923,10 +976,11 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertEqual(result, expected)
         del expected['is_cleaned']
 
-        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()), [{
-            **expected, 'token': token,
-            'issued_at': issued_at
-        }])
+        self.assertEqual(self.clear_preview_url(self.bc.database.list_of('certificate.UserSpecialty')),
+                         [{
+                             **expected, 'token': token,
+                             'issued_at': issued_at
+                         }])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
@@ -1004,10 +1058,11 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertEqual(result, expected)
         del expected['is_cleaned']
 
-        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()), [{
-            **expected, 'token': token,
-            'issued_at': issued_at
-        }])
+        self.assertEqual(self.clear_preview_url(self.bc.database.list_of('certificate.UserSpecialty')),
+                         [{
+                             **expected, 'token': token,
+                             'issued_at': issued_at
+                         }])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
@@ -1021,10 +1076,19 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
-    def test_generate_certificate__lang_es(self):
-        cohort_kwargs = {'stage': 'ENDED', 'current_day': 9545799, 'language': 'es'}
+    @pytest.mark.parametrize('current_day,duration_in_days,never_ends', [
+        (9545799, 9545799, False),
+        (1, 9545799, True),
+    ])
+    def test_generate_certificate__lang_es(self, current_day, duration_in_days, never_ends):
+        cohort_kwargs = {
+            'stage': 'ENDED',
+            'current_day': current_day,
+            'language': 'es',
+            'never_ends': never_ends
+        }
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
-        syllabus_kwargs = {'duration_in_days': 9545799}
+        syllabus_kwargs = {'duration_in_days': duration_in_days}
         model = self.generate_models(user=True,
                                      cohort=True,
                                      cohort_user=True,
@@ -1036,6 +1100,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                      cohort_kwargs=cohort_kwargs,
                                      cohort_user_kwargs=cohort_user_kwargs,
                                      syllabus_kwargs=syllabus_kwargs)
+
+        signals.user_specialty_saved.send.call_args_list = []
 
         base = model.copy()
         del base['user']
@@ -1079,15 +1145,135 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertEqual(result, expected)
         del expected['is_cleaned']
 
-        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()), [{
-            **expected, 'token': token,
-            'issued_at': issued_at
-        }])
+        self.assertEqual(self.clear_preview_url(self.bc.database.list_of('certificate.UserSpecialty')),
+                         [{
+                             **expected, 'token': token,
+                             'issued_at': issued_at
+                         }])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
             call(instance=user_specialty, sender=user_specialty.__class__),
         ])
+
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @pytest.mark.parametrize('stage', ['INACTIVE', 'PREWORK', 'STARTED', 'FINAL_PROJECT', 'ENDED'])
+    def test_generate_certificate__lang_es__never_ends_true(self, stage):
+        cohort_kwargs = {'stage': stage, 'current_day': 1, 'language': 'es', 'never_ends': True}
+        cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
+        syllabus_kwargs = {'duration_in_days': 9545799}
+        model = self.generate_models(user=True,
+                                     cohort=True,
+                                     cohort_user=True,
+                                     syllabus_version=True,
+                                     syllabus=True,
+                                     syllabus_schedule=True,
+                                     specialty=True,
+                                     layout_design=True,
+                                     cohort_kwargs=cohort_kwargs,
+                                     cohort_user_kwargs=cohort_user_kwargs,
+                                     syllabus_kwargs=syllabus_kwargs)
+
+        base = model.copy()
+        del base['user']
+        del base['cohort_user']
+
+        cohort_user_kwargs = {'role': 'TEACHER'}
+        teacher_model = self.generate_models(user=True,
+                                             cohort_user=True,
+                                             cohort_user_kwargs=cohort_user_kwargs,
+                                             models=base)
+
+        signals.user_specialty_saved.send.call_args_list = []
+
+        start = timezone.now()
+        result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
+        end = timezone.now()
+        issued_at = result['issued_at']
+        self.assertGreater(issued_at, start)
+        self.assertLess(issued_at, end)
+        del result['issued_at']
+
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
+        expected = {
+            'academy_id': 1,
+            'cohort_id': 1,
+            'expires_at': None,
+            'id': 1,
+            'layout_id': 1,
+            'preview_url': None,
+            'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
+            'signed_by_role': strings[model['cohort'].language]['Main Instructor'],
+            'specialty_id': 1,
+            'status': 'PERSISTED',
+            'status_text': 'Certificate successfully queued for PDF generation',
+            'user_id': 1,
+            'is_cleaned': True,
+            'update_hash': self.generate_update_hash(user_specialty),
+        }
+
+        self.assertToken(result['token'])
+        token = result['token']
+        del result['token']
+
+        self.assertEqual(result, expected)
+        del expected['is_cleaned']
+
+        self.assertEqual(self.clear_preview_url(self.bc.database.list_of('certificate.UserSpecialty')),
+                         [{
+                             **expected, 'token': token,
+                             'issued_at': issued_at
+                         }])
+
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+            call(instance=user_specialty, sender=user_specialty.__class__),
+        ])
+
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    def test_generate_certificate__lang_es__never_ends_true__stage_deleted(self):
+        stage = 'DELETED'
+        cohort_kwargs = {'stage': stage, 'current_day': 1, 'language': 'es', 'never_ends': True}
+        cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
+        syllabus_kwargs = {'duration_in_days': 9545799}
+        model = self.generate_models(user=True,
+                                     cohort=True,
+                                     cohort_user=True,
+                                     syllabus_version=True,
+                                     syllabus=True,
+                                     syllabus_schedule=True,
+                                     specialty=True,
+                                     layout_design=True,
+                                     cohort_kwargs=cohort_kwargs,
+                                     cohort_user_kwargs=cohort_user_kwargs,
+                                     syllabus_kwargs=syllabus_kwargs)
+
+        base = model.copy()
+        del base['user']
+        del base['cohort_user']
+
+        cohort_user_kwargs = {'role': 'TEACHER'}
+        self.generate_models(user=True, cohort_user=True, cohort_user_kwargs=cohort_user_kwargs, models=base)
+
+        signals.user_specialty_saved.send.call_args_list = []
+
+        with pytest.raises(ValidationException, match='missing-cohort-user'):
+            self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
+
+        self.assertEqual(self.clear_preview_url(self.bc.database.list_of('certificate.UserSpecialty')), [])
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
 
     """
     🔽🔽🔽 Retry generate certificate
@@ -1135,7 +1321,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         user_specialty = self.model_to_dict(model, 'user_specialty')
         del user_specialty['is_cleaned']
 
-        self.assertEqual(self.all_user_specialty_dict(), [user_specialty])
+        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [user_specialty])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
