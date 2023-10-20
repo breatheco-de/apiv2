@@ -9,6 +9,8 @@ import pytest
 from breathecode.tests.mixins.legacy import LegacyAPITestCase
 from breathecode.utils import APIException
 from django.utils import timezone
+
+from breathecode.utils.validation_exception import ValidationException
 from ...actions import generate_certificate, strings
 import breathecode.certificate.signals as signals
 from ..mixins import CertificateTestCase
@@ -1161,8 +1163,9 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
-    def test_generate_certificate__lang_es__never_ends_true(self):
-        cohort_kwargs = {'stage': 'ENDED', 'current_day': 1, 'language': 'es', 'never_ends': True}
+    @pytest.mark.parametrize('stage', ['INACTIVE', 'PREWORK', 'STARTED', 'FINAL_PROJECT', 'ENDED'])
+    def test_generate_certificate__lang_es__never_ends_true(self, stage):
+        cohort_kwargs = {'stage': stage, 'current_day': 1, 'language': 'es', 'never_ends': True}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
         syllabus_kwargs = {'duration_in_days': 9545799}
         model = self.generate_models(user=True,
@@ -1186,12 +1189,15 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
                                              cohort_user=True,
                                              cohort_user_kwargs=cohort_user_kwargs,
                                              models=base)
+
+        signals.user_specialty_saved.send.call_args_list = []
+
         start = timezone.now()
         result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
         end = timezone.now()
         issued_at = result['issued_at']
-        # self.assertGreater(issued_at, start)
-        # self.assertLess(issued_at, end)
+        self.assertGreater(issued_at, start)
+        self.assertLess(issued_at, end)
         del result['issued_at']
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
@@ -1229,6 +1235,45 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
         self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
             call(instance=user_specialty, sender=user_specialty.__class__),
         ])
+
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    def test_generate_certificate__lang_es__never_ends_true__stage_deleted(self):
+        stage = 'DELETED'
+        cohort_kwargs = {'stage': stage, 'current_day': 1, 'language': 'es', 'never_ends': True}
+        cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
+        syllabus_kwargs = {'duration_in_days': 9545799}
+        model = self.generate_models(user=True,
+                                     cohort=True,
+                                     cohort_user=True,
+                                     syllabus_version=True,
+                                     syllabus=True,
+                                     syllabus_schedule=True,
+                                     specialty=True,
+                                     layout_design=True,
+                                     cohort_kwargs=cohort_kwargs,
+                                     cohort_user_kwargs=cohort_user_kwargs,
+                                     syllabus_kwargs=syllabus_kwargs)
+
+        base = model.copy()
+        del base['user']
+        del base['cohort_user']
+
+        cohort_user_kwargs = {'role': 'TEACHER'}
+        self.generate_models(user=True, cohort_user=True, cohort_user_kwargs=cohort_user_kwargs, models=base)
+
+        signals.user_specialty_saved.send.call_args_list = []
+
+        with pytest.raises(ValidationException, match='missing-cohort-user'):
+            self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
+
+        self.assertEqual(self.clear_preview_url(self.bc.database.list_of('certificate.UserSpecialty')), [])
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
 
     """
     🔽🔽🔽 Retry generate certificate
