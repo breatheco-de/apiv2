@@ -8,7 +8,7 @@ class Command(BaseCommand):
     help = 'Delete logs and other garbage'
 
     def handle(self, *args, **options):
-        how_many_days = 30
+        how_many_days = 60
         webhooks = EventbriteWebhook.objects.filter(created_at__lte=datetime.now() -
                                                     timedelta(days=how_many_days))
         count = webhooks.count()
