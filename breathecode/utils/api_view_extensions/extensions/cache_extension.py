@@ -37,17 +37,18 @@ class CacheExtension(ExtensionBase):
         return {**self._request.GET.dict(), **self._request.parser_context['kwargs'], **extends}
 
     def get(self) -> dict:
-        try:
-            # allow requests to disable cache with querystring "cache" variable
-            _cache_is_active = self._request.GET.get('cache', 'true').lower() in ['true', '1', 'yes']
-            if not _cache_is_active:
-                logger.debug('Cache has been forced to disable')
-                return None
+        # allow requests to disable cache with querystring "cache" variable
+        cache_is_active = self._request.GET.get('cache', 'true').lower() in ['true', '1', 'yes']
+        if not cache_is_active:
+            logger.debug('Cache has been forced to disable')
+            return None
 
+        try:
             params = self._get_params()
             return self._cache.get(**params)
 
         except Exception:
+            logger.exception('Error while trying to get the cache')
             return None
 
     def _get_order_of_response(self) -> int:

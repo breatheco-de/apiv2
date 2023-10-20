@@ -4,6 +4,7 @@ from celery import shared_task
 from datetime import datetime, timedelta
 from breathecode.commons.models import TaskManager
 from django.utils import timezone
+from breathecode.utils import CACHE_DESCRIPTORS
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,6 @@ def mark_task_as_reversed(task_manager_id, *, attempts=0, force=False):
 
     module = importlib.import_module(x.reverse_module)
     function = getattr(module, x.reverse_name)
-    print('function', function, x.arguments)
     function(*x.arguments['args'], **x.arguments['kwargs'])
 
     logger.info(f'TaskManager {task_manager_id} is being marked as REVERSED')
@@ -132,3 +132,18 @@ def mark_task_as_pending(task_manager_id, *, attempts=0, force=False, last_run=N
         })
 
     logger.info(f'TaskManager {task_manager_id} is being marked as PENDING')
+
+
+@shared_task(bind=False)
+def clean_task(key, attempts=0):
+    if attempts == 10:
+        logger.error(f'clean_task {key} failed 10 times')
+        return
+
+    cache = CACHE_DESCRIPTORS[key]
+
+    try:
+        cache.clear()
+
+    except Exception:
+        clean_task.async_apply(args=(key, attempts + 1), countdown=5, priority=10)

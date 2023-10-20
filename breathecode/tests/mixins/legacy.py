@@ -1,3 +1,4 @@
+import re
 from contextlib2 import contextmanager
 import pytest
 
@@ -7,6 +8,8 @@ from breathecode.tests.mixins.generate_models_mixin.generate_models_mixin import
 from rest_framework.test import APIClient
 
 __all__ = ['LegacyAPITestCase']
+
+token_pattern = re.compile(r'^[0-9a-zA-Z]{,40}$')
 
 
 class LegacyAPITestCase(BreathecodeMixin, GenerateModelsMixin, CacheMixin):
@@ -32,6 +35,20 @@ class LegacyAPITestCase(BreathecodeMixin, GenerateModelsMixin, CacheMixin):
         else:
             assert arg1 == arg2
 
+    def assertGreater(self, arg1, arg2, msg=None):
+        if msg:
+            assert arg1 > arg2, msg
+
+        else:
+            assert arg1 > arg2
+
+    def assertLess(self, arg1, arg2, msg=None):
+        if msg:
+            assert arg1 < arg2, msg
+
+        else:
+            assert arg1 < arg2
+
     @contextmanager
     def assertRaisesMessage(self, expected_exception, expected_message):
         try:
@@ -40,3 +57,22 @@ class LegacyAPITestCase(BreathecodeMixin, GenerateModelsMixin, CacheMixin):
             assert str(e) == expected_message, f"Expected '{expected_message}', but got '{str(e)}'"
         except Exception as e:
             pytest.fail(f'Expected {expected_exception} but it was not raised.')
+
+    def assertToken(self, expected: str):
+        """
+        Assert that token have a valid format.
+
+        Usage:
+
+        ```py
+        rigth_token = 'f6fc84c9f21c24907d6bee6eec38cabab5fa9a7be8c4a7827fe9e56f245bd2d5'
+        bad_token = 'Potato'
+
+        # pass because is a right token
+        self.bc.check.token(rigth_hash)  # 🟢
+
+        # fail because is a bad token
+        self.bc.check.token(bad_hash)  # 🔴
+        ```
+        """
+        assert bool(token_pattern.match(expected))
