@@ -20,6 +20,5 @@ def post_save_user_specialty(sender, instance: UserSpecialty, **kwargs):
 
 @receiver(student_edu_status_updated, sender=CohortUser)
 def generate_certificate(sender, instance: CohortUser, **kwargs):
-    print(instance)
     if instance.cohort.available_as_saas and instance.educational_status == 'GRADUATED':
         tasks.generate_one_certificate(instance.cohort.id, instance.user.id, None)
