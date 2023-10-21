@@ -15,6 +15,7 @@ from breathecode.admissions import tasks as admissions_tasks
 from breathecode.payments import actions
 from breathecode.payments.actions import (PlanFinder, add_items_to_bag, filter_consumables, get_amount,
                                           get_amount_by_chosen_period, get_balance_by_resource)
+from breathecode.payments.caches import PlanOfferCache
 from breathecode.payments.models import (AcademyService, Bag, CohortSet, Consumable, Currency, EventTypeSet,
                                          FinancialReputation, Invoice, MentorshipServiceSet, Plan,
                                          PlanFinancing, PlanOffer, Service, ServiceItem, Subscription)
@@ -31,6 +32,7 @@ from breathecode.utils.decorators.capable_of import capable_of
 from breathecode.utils.generate_lookups_mixin import GenerateLookupsMixin
 from breathecode.utils.i18n import translation
 from breathecode.utils.payment_exception import PaymentException
+from breathecode.utils.shorteners import C
 from breathecode.utils.validation_exception import ValidationException
 from django.db import transaction
 from breathecode.utils import getLogger
@@ -245,15 +247,29 @@ class AcademyPlanView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class AcademyPlanCohortView(APIView, GenerateLookupsMixin):
+class AcademyCohortSetCohortView(APIView):
     extensions = APIViewExtensions(sort='-id', paginate=True)
 
     @capable_of('crud_plan')
-    def put(self, request, plan_id=None, plan_slug=None, academy_id=None):
-        lookups = self.generate_lookups(request, many_fields=['id', 'slug'])
+    def put(self, request, cohort_set_id=None, cohort_set_slug=None, academy_id=None):
         lang = get_user_language(request)
 
-        if not (plan := Plan.objects.filter(Q(id=plan_id) | Q(slug=plan_slug),
+        handler = self.extensions(request)
+        query = handler.lookup.build(lang,
+                                     ints={
+                                         'in': [
+                                             'id',
+                                         ],
+                                     },
+                                     strings={
+                                         'in': [
+                                             'slug',
+                                         ],
+                                     },
+                                     fix={'lower': 'slug'})
+
+        if not (cohort_set
+                := CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug),
                                             owner__id=academy_id).exclude(status='DELETED').first()):
             raise ValidationException(translation(lang,
                                                   en='Plan not found',
@@ -261,18 +277,23 @@ class AcademyPlanCohortView(APIView, GenerateLookupsMixin):
                                                   slug='not-found'),
                                       code=404)
 
-        if not (items := Cohort.objects.filter(**lookups)):
+        if not (items := Cohort.objects.filter(query)):
             raise ValidationException(translation(lang,
                                                   en='Cohort not found',
                                                   es='Cohort no encontrada',
                                                   slug='cohort-not-found'),
                                       code=404)
 
-        created = False
+        raise ValidationException(C(f'This invite don\'t have email, contact to admin',
+                                    slug=f'without-email'))
+        data = []
         for item in items:
-            if item not in plan.available_cohorts.all():
-                created = True
+            if item in cohort_set.cohorts.all():
+                data.append({'cohort': item.id, 'cohort_set': cohort_set.id})
                 plan.available_cohorts.add(item)
+
+            else:
+                ...
 
         return Response({'status': 'ok'}, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
@@ -633,6 +654,7 @@ class EventTypeSetView(APIView):
         return Response(serializer.data)
 
 
+# TODO: this view is not cachable yet.
 class MeSubscriptionView(APIView):
     # this cannot support cache because the cache does not support associated two models to a response yet
     extensions = APIViewExtensions(sort='-id')
@@ -1000,7 +1022,7 @@ class CardView(APIView):
 
 class PlanOfferView(APIView):
     permission_classes = [AllowAny]
-    extensions = APIViewExtensions(sort='-id', paginate=True)
+    extensions = APIViewExtensions(cache=PlanOfferCache, sort='-id', paginate=True)
 
     def get_lookup(self, key, value):
         args = ()
@@ -1029,6 +1051,11 @@ class PlanOfferView(APIView):
 
     def get(self, request):
         handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return Response(cache, status=status.HTTP_200_OK)
+
         lang = get_user_language(request)
         utc_now = timezone.now()
 

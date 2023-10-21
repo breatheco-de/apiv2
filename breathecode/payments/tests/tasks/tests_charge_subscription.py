@@ -404,7 +404,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(logging.Logger.info.call_args_list, [
             call('Starting charge_subscription for subscription 1'),
         ])
-        self.assertEqual(logging.Logger.error.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list, [call(error, exc_info=True)])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [
             self.bc.format.to_dict(model.bag),
@@ -464,7 +464,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(logging.Logger.info.call_args_list, [
             call('Starting charge_subscription for subscription 1'),
         ])
-        self.assertEqual(logging.Logger.error.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list, [call(error, exc_info=True)])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [
             self.bc.format.to_dict(model.bag),

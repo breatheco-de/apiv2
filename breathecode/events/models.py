@@ -375,8 +375,8 @@ class LiveClass(models.Model):
     started_at = models.DateTimeField(default=None, blank=True, null=True)
     ended_at = models.DateTimeField(default=None, blank=True, null=True)
 
-    starting_at = models.DateTimeField()
-    ending_at = models.DateTimeField()
+    starting_at = models.DateTimeField(db_index=True)
+    ending_at = models.DateTimeField(db_index=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

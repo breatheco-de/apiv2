@@ -27,7 +27,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     🔽🔽🔽 Without Academy
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
@@ -37,14 +37,14 @@ class AnswerIdTestSuite(MarketingTestCase):
         add_downloadable_slug_as_acp_tag.delay(1, 1)
 
         self.assertEqual(self.bc.database.list_of('marketing.Tag'), [])
-        self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('Academy 1 not found')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call(TASK_STARTED_MESSAGE)])
+        self.assertEqual(logging.Logger.error.call_args_list, [call('Academy 1 not found', exc_info=True)])
 
     """
     🔽🔽🔽 Without ActiveCampaignAcademy
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
@@ -53,18 +53,21 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         model = self.generate_models(academy=True)
 
+        logging.Logger.info.call_args_list = []
+
         add_downloadable_slug_as_acp_tag.delay(1, 1)
 
         self.assertEqual(self.bc.database.list_of('marketing.Tag'), [])
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('ActiveCampaign Academy 1 not found')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call(TASK_STARTED_MESSAGE)])
+        self.assertEqual(logging.Logger.error.call_args_list,
+                         [call('ActiveCampaign Academy 1 not found', exc_info=True)])
 
     """
     🔽🔽🔽 Without Downloadable
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
@@ -76,18 +79,21 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      active_campaign_academy=True,
                                      active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
+        logging.Logger.info.call_args_list = []
+
         add_downloadable_slug_as_acp_tag.delay(1, 1)
 
         self.assertEqual(self.bc.database.list_of('marketing.Tag'), [])
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('Downloadable 1 not found')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call(TASK_STARTED_MESSAGE)])
+        self.assertEqual(logging.Logger.error.call_args_list,
+                         [call('Downloadable 1 not found', exc_info=True)])
 
     """
     🔽🔽🔽 Create a Tag in active campaign
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
@@ -99,6 +105,8 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      downloadable=True,
                                      active_campaign_academy=True,
                                      active_campaign_academy_kwargs=active_campaign_academy_kwargs)
+
+        logging.Logger.info.call_args_list = []
 
         add_downloadable_slug_as_acp_tag.delay(1, 1)
 
@@ -115,7 +123,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             'tag_type': 'DOWNLOADABLE',
         }])
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [
+        self.assertEqual(logging.Logger.info.call_args_list, [
             call(TASK_STARTED_MESSAGE),
             call(f'Creating tag `down-{model.downloadable.slug}` on active campaign'),
             call('Tag created successfully'),
@@ -126,7 +134,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     🔽🔽🔽 Tag already exists in active campaign
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
@@ -147,13 +155,16 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      tag_kwargs=tag_kwargs,
                                      downloadable=downloadable_kwargs)
 
+        logging.Logger.info.call_args_list = []
+
         add_downloadable_slug_as_acp_tag.delay(1, 1)
 
         self.assertEqual(self.bc.database.list_of('marketing.Tag'), [self.model_to_dict(model, 'tag')])
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [
+        self.assertEqual(logging.Logger.info.call_args_list, [
             call(TASK_STARTED_MESSAGE),
-            call(f'Tag for downloadable `{model.downloadable.slug}` already exists'),
         ])
 
-        self.assertEqual(logging.Logger.error.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call(f'Tag for downloadable `{model.downloadable.slug}` already exists', exc_info=True),
+        ])

@@ -118,6 +118,34 @@ def weeks_to_days(json):
     return json
 
 
+def get_assets_on_syllabus(syllabus_version_id, only_mandatory=False):
+    syllabus = SyllabusVersion.objects.filter(id=syllabus_version_id).first()
+    key_map = {
+        'QUIZ': 'quizzes',
+        'LESSON': 'lessons',
+        'EXERCISE': 'replits',
+        'PROJECT': 'assignments',
+    }
+
+    findings = []
+
+    if isinstance(syllabus.json, str):
+        syllabus.json = json.loads(syllabus.json)
+
+    syllabus.json = weeks_to_days(syllabus.json)
+
+    for day in syllabus.json['days']:
+        for atype in key_map:
+            if key_map[atype] not in day:
+                continue
+
+            for asset in day[key_map[atype]]:
+                if isinstance(asset, dict) and (not only_mandatory or asset['mandatory']):
+                    findings.append(asset['slug'])
+
+    return findings
+
+
 def find_asset_on_json(asset_slug, asset_type=None):
 
     logger.debug(f'Searching slug {asset_slug} in all the syllabus and versions')

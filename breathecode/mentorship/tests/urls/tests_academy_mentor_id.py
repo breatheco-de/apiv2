@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, call, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
 import breathecode.mentorship.actions as actions
+from breathecode.mentorship.caches import MentorProfileCache
 
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from ..mixins import MentorshipTestCase
@@ -316,11 +317,14 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['LanguageExtension', 'LookupExtension', 'PaginationExtension', 'SortExtension']),
+            call([
+                'CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension',
+                'SortExtension'
+            ]),
         ])
 
         self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
-            call(sort='-created_at', paginate=True),
+            call(cache=MentorProfileCache, sort='-created_at', paginate=True),
         ])
 
     """

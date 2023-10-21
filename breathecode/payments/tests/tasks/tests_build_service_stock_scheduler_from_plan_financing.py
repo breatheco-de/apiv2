@@ -40,10 +40,16 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
 
-        self.assertEqual(logging.Logger.info.call_args_list, [
-            call('Starting build_service_stock_scheduler_from_plan_financing for subscription 1'),
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call('Starting build_service_stock_scheduler_from_plan_financing for subscription 1'),
+                # retrying
+                call('Starting build_service_stock_scheduler_from_plan_financing for subscription 1'),
+            ])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('PlanFinancing with id 1 not found', exc_info=True),
         ])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('PlanFinancing with id 1 not found')])
 
         self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), [])
 

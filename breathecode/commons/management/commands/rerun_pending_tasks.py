@@ -8,6 +8,7 @@ from datetime import timedelta
 TOLERANCE = 30
 
 
+# it's deprecated, use task_manager instead.
 class Command(BaseCommand):
     help = 'Rerun all the tasks that are pending and were run in the last 10 minutes'
 

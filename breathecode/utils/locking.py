@@ -39,15 +39,19 @@ REDIS_URL = os.getenv('REDIS_URL', '')
 redis_kwargs = {} if REDIS_URL.startswith('redis://') else {
     'ssl_cert_reqs': ssl.CERT_NONE,
 }
-redis_client = redis.from_url(REDIS_URL, **redis_kwargs)
+redis_client = None
 
 
 class LockManager(models.Manager):
 
     def get_or_create(self, lock=False, **kwargs):
+        global redis_client
+
         instance, created = None, False
 
         if lock and ENV != 'test':
+            if redis_client == None:
+                redis_client = redis.from_url(REDIS_URL, **redis_kwargs)
 
             # Dynamically retrieve the class name and create a unique lock key based on the kwargs
             class_name = self.model.__name__

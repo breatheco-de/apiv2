@@ -1,0 +1,17 @@
+Task manager daily report.
+
+ - {{error_number}} failed tasks.
+ - {{done}} completed tasks.
+ - {{cancelled}} canceled tasks.
+ - {{reversed}} reversed tasks.
+ - {{paused}} paused tasks.
+ - {{aborted}} aborted tasks.
+
+Errors.
+
+{% for module_name, tasks in report.items %}
+   - {{ module_name }}: {{tasks.abc_total_cba}}
+  {% for task_name, task in tasks.items %}
+      - {{ task_name }}: {{ task.ERROR }}
+  {% endfor %}
+{% endfor %}

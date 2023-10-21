@@ -1,6 +1,7 @@
 from breathecode.utils import getLogger
 from celery import shared_task, Task
 from breathecode.admissions.models import CohortUser
+from breathecode.utils.decorators.task import task
 
 # Get an instance of a logger
 logger = getLogger(__name__)
@@ -13,8 +14,8 @@ class BaseTaskWithRetry(Task):
     retry_backoff = True
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def take_screenshot(self, certificate_id):
+@task(bind=True, base=BaseTaskWithRetry)
+def take_screenshot(self, certificate_id, **_):
     logger.debug('Starting take_screenshot')
     # unittest.mock.patch is poor applying mocks
     from .actions import certificate_screenshot
@@ -26,8 +27,8 @@ def take_screenshot(self, certificate_id):
         return False
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def remove_screenshot(self, certificate_id):
+@task(bind=True, base=BaseTaskWithRetry)
+def remove_screenshot(self, certificate_id, **_):
     from .actions import remove_certificate_screenshot
 
     logger.debug('Starting remove_screenshot')
@@ -40,8 +41,8 @@ def remove_screenshot(self, certificate_id):
     return True
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def reset_screenshot(self, certificate_id):
+@task(bind=True, base=BaseTaskWithRetry)
+def reset_screenshot(self, certificate_id, **_):
     logger.debug('Starting reset_screenshot')
     # unittest.mock.patch is poor applying mocks
     from .actions import certificate_screenshot, remove_certificate_screenshot
@@ -56,8 +57,8 @@ def reset_screenshot(self, certificate_id):
     return True
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def generate_cohort_certificates(self, cohort_id):
+@task(bind=True, base=BaseTaskWithRetry)
+def generate_cohort_certificates(self, cohort_id, **_):
     logger.debug('Starting generate_cohort_certificates')
     from .actions import generate_certificate
 
@@ -71,8 +72,8 @@ def generate_cohort_certificates(self, cohort_id):
             logger.exception(f'Error generating certificate for {str(cu.user.id)} cohort {str(cu.cohort.id)}')
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
-def generate_one_certificate(self, cohort_id, user_id, layout):
+@task(bind=True, base=BaseTaskWithRetry)
+def generate_one_certificate(self, cohort_id, user_id, layout, **_):
     logger.info('Starting generate_cohort_certificates', slug='starting-generating-certificate')
     from .actions import generate_certificate
 

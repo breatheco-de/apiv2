@@ -44,11 +44,15 @@ class PaymentsTestSuite(PaymentsTestCase):
     def test_scheduler_not_found(self):
         renew_consumables.delay(1)
 
-        self.assertEqual(logging.Logger.info.call_args_list, [
-            call('Starting renew_consumables for service stock scheduler 1'),
-        ])
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call('Starting renew_consumables for service stock scheduler 1'),
+                # retrying
+                call('Starting renew_consumables for service stock scheduler 1'),
+            ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('ServiceStockScheduler with id 1 not found'),
+            call('ServiceStockScheduler with id 1 not found', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
@@ -82,7 +86,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting renew_consumables for service stock scheduler 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The plan financing 1 is over'),
+            call('The plan financing 1 is over', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
@@ -116,7 +120,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting renew_consumables for service stock scheduler 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The plan financing 1 needs to be paid to renew the consumables'),
+            call('The plan financing 1 needs to be paid to renew the consumables', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
@@ -369,7 +373,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting renew_consumables for service stock scheduler 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The subscription 1 is over'),
+            call('The subscription 1 is over', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
@@ -403,7 +407,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting renew_consumables for service stock scheduler 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The subscription 1 needs to be paid to renew the consumables'),
+            call('The subscription 1 needs to be paid to renew the consumables', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
@@ -618,7 +622,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting renew_consumables for service stock scheduler 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The subscription 1 is over'),
+            call('The subscription 1 is over', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
@@ -650,7 +654,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting renew_consumables for service stock scheduler 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The subscription 1 needs to be paid to renew the consumables'),
+            call('The subscription 1 needs to be paid to renew the consumables', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
