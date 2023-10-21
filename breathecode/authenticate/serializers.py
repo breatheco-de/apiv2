@@ -11,7 +11,8 @@ from django.contrib.auth.models import User
 
 from breathecode.utils.i18n import translation
 from .models import (CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile, Token, GitpodUser,
-                     GithubAcademyUser, AcademyAuthSettings)
+                     GithubAcademyUser, AcademyAuthSettings, UserSetting)
+from breathecode.authenticate.actions import get_user_settings
 from breathecode.utils import ValidationException
 from breathecode.admissions.models import Academy, Cohort, Syllabus
 from rest_framework.exceptions import ValidationError
@@ -386,12 +387,20 @@ class SmallAppUserAgreementSerializer(serpy.Serializer):
         return obj.agreement_version == obj.app.agreement_version
 
 
+class SettingsSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    lang = serpy.Field()
+    main_currency = serpy.Field()
+
+
 class UserSerializer(AppUserSerializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
 
     roles = serpy.MethodField()
     permissions = serpy.MethodField()
+    settings = serpy.MethodField()
 
     def get_permissions(self, obj):
         permissions = Permission.objects.none()
@@ -404,6 +413,10 @@ class UserSerializer(AppUserSerializer):
     def get_roles(self, obj):
         roles = ProfileAcademy.objects.filter(user=obj.id)
         return ProfileAcademySmallSerializer(roles, many=True).data
+
+    def get_settings(self, obj):
+        settings = get_user_settings(obj.id)
+        return SettingsSerializer(settings, many=False).data
 
 
 class GroupSerializer(serpy.Serializer):
@@ -487,6 +500,13 @@ class UserMeSerializer(serializers.ModelSerializer):
                 raise ValidationException('Error saving user profile')
 
         return super().update(self.instance, validated_data)
+
+
+class UserSettingsSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = UserSetting
+        exclude = ('user', )
 
 
 class MemberPOSTSerializer(serializers.ModelSerializer):
