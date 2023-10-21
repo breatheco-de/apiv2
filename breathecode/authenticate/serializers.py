@@ -1416,6 +1416,11 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                              is_active=True)
             self.user.save()
 
+            # create default settings for user
+            settings = get_user_settings(self.user.id)
+            settings.lang = lang
+            settings.save()
+
             subject = translation(
                 lang,
                 en='4Geeks - Validate account',
@@ -1424,6 +1429,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
             notify_actions.send_email_message(
                 'verify_email', self.user.email, {
                     'SUBJECT': subject,
+                    'LANG': lang,
                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{obj.token}'
                 })
 

@@ -204,6 +204,7 @@ class UserSettingAdmin(admin.ModelAdmin):
     list_display = ('user', 'lang', 'main_currency')
     search_fields = ['user__first_name', 'user__last_name', 'user__email', 'user_id']
     raw_id_fields = ['user']
+    list_filter = ('lang', 'main_currency')
     # actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]
 
 
