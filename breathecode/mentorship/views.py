@@ -723,7 +723,7 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
         cache = handler.cache.get()
 
         if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 
         if mentor_id is not None:
             mentor = MentorProfile.objects.filter(id=mentor_id, services__academy__id=academy_id).first()

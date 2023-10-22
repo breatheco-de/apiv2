@@ -114,7 +114,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         request = request.get(f'/the-beans-should-not-have-sugar/1')
 
         view = TestView.as_view()
-        view(request).render()
+        view(request)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
             call([
@@ -140,7 +140,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         request = request.get(f'/the-beans-should-not-have-sugar/1')
 
         view = TestView.as_view()
-        view(request).render()
+        view(request)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
             call(cache=CohortCache, sort='name', paginate=True),
@@ -159,7 +159,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         request = request.get(f'/the-beans-should-not-have-sugar/1')
 
         view = CachePerUserTestView.as_view()
-        view(request).render()
+        view(request)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
             call(cache=CohortCache, cache_per_user=True, sort='name', paginate=False),
@@ -178,7 +178,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         request = request.get(f'/the-beans-should-not-have-sugar/1')
 
         view = CachePrefixTestView.as_view()
-        view(request).render()
+        view(request)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
             call(cache=CohortCache,
@@ -199,7 +199,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         view = TestView.as_view()
 
-        response = view(request).render()
+        response = view(request)
         expected = []
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
@@ -217,7 +217,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         view = TestView.as_view()
 
-        response = view(request).render()
+        response = view(request)
         expected = GetCohortSerializer([model.cohort], many=True).data
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
@@ -235,7 +235,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         view = TestView.as_view()
 
-        response = view(request).render()
+        response = view(request)
         expected = GetCohortSerializer(sorted(model.cohort, key=lambda x: x.name), many=True).data
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
@@ -255,7 +255,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         view = TestView.as_view()
 
-        response = view(request).render()
+        response = view(request)
         expected = GetCohortSerializer(model.cohort[4:], many=True).data
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
@@ -278,7 +278,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             view = TestView.as_view()
             response = view(request).render()
 
-            self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+            self.assertEqual(json.loads(json.loads(response.content.decode('utf-8'))), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(cohort_cache.keys(), ['Cohort__'])
 
@@ -298,7 +298,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             view = TestView.as_view()
             response = view(request).render()
 
-            self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+            self.assertEqual(json.loads(json.loads(response.content.decode('utf-8'))), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(cohort_cache.keys(), ['Cohort__sort=slug&slug=100%2C101%2C110%2C111'])
             self.assertEqual(cache.get('Cohort__sort=slug&slug=100%2C101%2C110%2C111'),
@@ -321,7 +321,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={slug}')
 
             view = TestView.as_view()
-            response = view(request).render()
+            response = view(request)
             expected = GetCohortSerializer([model.cohort], many=True).data
 
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
@@ -353,7 +353,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             response = view(request).render()
             expected = case + case
 
-            self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+            self.assertEqual(json.loads(json.loads(response.content.decode('utf-8'))), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(cohort_cache.keys(), ['Cohort__', f'Cohort__sort=slug&slug={slug}'])
             self.assertEqual(cache.get('Cohort__'), json_data_root)
@@ -379,7 +379,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             view = CachePerUserTestView.as_view()
             response = view(request).render()
 
-            self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+            self.assertEqual(json.loads(json.loads(response.content.decode('utf-8'))), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(cohort_cache.keys(),
                              ['Cohort__sort=slug&slug=100%2C101%2C110%2C111&request.user.id=None'])
@@ -403,7 +403,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={slug}')
 
             view = CachePerUserTestView.as_view()
-            response = view(request).render()
+            response = view(request)
             expected = GetCohortSerializer([model.cohort], many=True).data
 
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
@@ -437,7 +437,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             response = view(request).render()
             expected = case + case
 
-            self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+            self.assertEqual(json.loads(json.loads(response.content.decode('utf-8'))), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(cohort_cache.keys(),
                              ['Cohort__', f'Cohort__sort=slug&slug={slug}&request.user.id=None'])
@@ -469,7 +469,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             view = CachePerUserTestView.as_view()
             response = view(request).render()
 
-            self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+            self.assertEqual(json.loads(json.loads(response.content.decode('utf-8'))), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(
                 cohort_cache.keys(),
@@ -496,7 +496,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
             force_authenticate(request, user=model.user)
             view = CachePerUserTestView.as_view()
-            response = view(request).render()
+            response = view(request)
             expected = GetCohortSerializer([model.cohort], many=True).data
 
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
@@ -532,7 +532,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             response = view(request).render()
             expected = case + case
 
-            self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+            self.assertEqual(json.loads(json.loads(response.content.decode('utf-8'))), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(cohort_cache.keys(),
                              ['Cohort__', f'Cohort__sort=slug&slug={slug}&request.user.id={model.user.id}'])
@@ -565,7 +565,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             view = CachePrefixTestView.as_view()
             response = view(request).render()
 
-            self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+            self.assertEqual(json.loads(json.loads(response.content.decode('utf-8'))), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(cohort_cache.keys(), [
                 'Cohort__sort=slug&slug=100%2C101%2C110%2C111&breathecode.view.get=the-beans-should-not-have-sugar'
@@ -593,7 +593,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={slug}')
 
             view = CachePrefixTestView.as_view()
-            response = view(request).render()
+            response = view(request)
             expected = GetCohortSerializer([model.cohort], many=True).data
 
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
@@ -635,7 +635,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             response = view(request).render()
             expected = case + case
 
-            self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+            self.assertEqual(json.loads(json.loads(response.content.decode('utf-8'))), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(cohort_cache.keys(), [
                 'Cohort__',
@@ -661,7 +661,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         view = TestView.as_view()
 
-        response = view(request).render()
+        response = view(request)
         expected = GetCohortSerializer(sorted(model.cohort, key=lambda x: x.name), many=True).data
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
@@ -681,7 +681,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         view = TestView.as_view()
 
-        response = view(request).render()
+        response = view(request)
         expected = GetCohortSerializer(sorted(model.cohort, key=lambda x: x.name)[:20], many=True).data
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
@@ -697,7 +697,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         view = TestView.as_view()
 
-        response = view(request).render()
+        response = view(request)
         expected = {
             'count': 10,
             'first': None,
@@ -720,7 +720,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         view = TestView.as_view()
 
-        response = view(request).render()
+        response = view(request)
         expected = {
             'count': 10,
             'first': 'http://testserver/the-beans-should-not-have-sugar?limit=5',
@@ -743,7 +743,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         view = TestView.as_view()
 
-        response = view(request).render()
+        response = view(request)
         expected = {
             'count': 10,
             'first': 'http://testserver/the-beans-should-not-have-sugar?limit=5',
@@ -770,7 +770,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         view = PaginateFalseTestView.as_view()
 
-        response = view(request).render()
+        response = view(request)
         expected = GetCohortSerializer(sorted(model.cohort, key=lambda x: x.name), many=True).data
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
@@ -786,7 +786,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         view = PaginateFalseTestView.as_view()
 
-        response = view(request).render()
+        response = view(request)
         expected = GetCohortSerializer(sorted(model.cohort, key=lambda x: x.name), many=True).data
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
@@ -802,7 +802,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         view = PaginateFalseTestView.as_view()
 
-        response = view(request).render()
+        response = view(request)
         expected = GetCohortSerializer(sorted(model.cohort, key=lambda x: x.name), many=True).data
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
@@ -818,7 +818,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         view = PaginateFalseTestView.as_view()
 
-        response = view(request).render()
+        response = view(request)
         expected = GetCohortSerializer(sorted(model.cohort, key=lambda x: x.name), many=True).data
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
@@ -843,7 +843,7 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
         request = request.get(f'/the-beans-should-not-have-sugar/1')
 
         view = TestView.as_view()
-        view(request, id=1).render()
+        view(request, id=1)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
             call([
@@ -882,7 +882,7 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
 
         view = TestView.as_view()
 
-        response = view(request, id=1).render()
+        response = view(request, id=1)
         expected = GetCohortSerializer(model.cohort, many=False).data
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
@@ -906,7 +906,7 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
             view = TestView.as_view()
             response = view(request, id=1).render()
 
-            self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+            self.assertEqual(json.loads(json.loads(response.content.decode('utf-8'))), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(cohort_cache.keys(), ['Cohort__id=1'])
             self.assertEqual(cache.get('Cohort__id=1'), serialize_cache_value(expected))
@@ -928,7 +928,7 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
         request = request.get(f'/the-beans-should-not-have-sugar/1')
 
         view = TestView.as_view()
-        response = view(request, id=1).render()
+        response = view(request, id=1)
         expected = GetCohortSerializer(model.cohort, many=False).data
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
@@ -962,7 +962,7 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
             self.assertEqual(cohort_cache.keys(), ['Cohort__', 'Cohort__id=1'])
             expected = case[1]
 
-            self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+            self.assertEqual(json.loads(json.loads(response.content.decode('utf-8'))), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(cohort_cache.keys(), ['Cohort__', 'Cohort__id=1'])
             self.assertEqual(cache.get('Cohort__'), json_data_root)

@@ -45,7 +45,7 @@ class CacheExtension(ExtensionBase):
 
         try:
             params = self._get_params()
-            return self._cache.get(**params)
+            return self._cache.get(**params, _v2=True)
 
         except Exception:
             logger.exception('Error while trying to get the cache')
@@ -61,7 +61,7 @@ class CacheExtension(ExtensionBase):
         params = self._get_params()
 
         try:
-            self._cache.set(data, **params)
+            data = self._cache.set(data, **params)
         except Exception:
             logger.exception('Error while trying to set the cache')
 
