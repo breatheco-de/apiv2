@@ -167,9 +167,15 @@ class PublicCohortView(APIView):
     extensions = APIViewExtensions(cache=CohortCache, paginate=True, sort='-kickoff_date')
 
     def get(self, request, id=None):
+        n1 = timezone.now()
         handler = self.extensions(request)
+        n2 = timezone.now()
+        print(1, n2 - n1)
 
+        n2 = timezone.now()
         cache = handler.cache.get()
+        n3 = timezone.now()
+        print(2, n3 - n2)
         if cache is not None:
             return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 

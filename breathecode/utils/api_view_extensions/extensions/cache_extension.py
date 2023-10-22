@@ -3,6 +3,7 @@ from typing import Optional
 from breathecode.utils.api_view_extensions.extension_base import ExtensionBase
 from breathecode.utils.api_view_extensions.priorities.response_order import ResponseOrder
 from breathecode.utils.cache import Cache
+from django.utils import timezone
 
 __all__ = ['CacheExtension']
 
@@ -38,13 +39,20 @@ class CacheExtension(ExtensionBase):
 
     def get(self) -> dict:
         # allow requests to disable cache with querystring "cache" variable
+
+        n1 = timezone.now()
         cache_is_active = self._request.GET.get('cache', 'true').lower() in ['true', '1', 'yes']
+        n2 = timezone.now()
+        print(3, n2 - n1)
         if not cache_is_active:
             logger.debug('Cache has been forced to disable')
             return None
 
         try:
+            n2 = timezone.now()
             params = self._get_params()
+            n3 = timezone.now()
+            print(4, n3 - n2)
             return self._cache.get(**params, _v2=True)
 
         except Exception:
