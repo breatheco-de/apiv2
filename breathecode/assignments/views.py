@@ -1,4 +1,4 @@
-from django.http import HttpResponseRedirect, StreamingHttpResponse
+from django.http import HttpResponse, HttpResponseRedirect, StreamingHttpResponse
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 import logging, hashlib, os
@@ -336,7 +336,7 @@ class CohortTaskView(APIView, GenerateLookupsMixin):
         handler = self.extensions(request)
         cache = handler.cache.get()
         if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 
         items = Task.objects.all()
         lookup = {}
@@ -531,7 +531,7 @@ class TaskMeView(APIView):
         handler = self.extensions(request)
         cache = handler.cache.get()
         if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 
         if not user_id:
             user_id = request.user.id

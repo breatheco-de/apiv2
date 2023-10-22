@@ -187,7 +187,7 @@ class EventMeView(APIView):
 
         cache = handler.cache.get()
         if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 
         items = get_my_event_types(request.user)
         lang = get_user_language(request)
@@ -239,7 +239,7 @@ class MeLiveClassView(APIView):
 
         cache = handler.cache.get()
         if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+            return HttpResponse('{}', content_type='application/json', status=status.HTTP_200_OK)
 
         lang = get_user_language(request)
 
@@ -423,7 +423,7 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
 
         cache = handler.cache.get()
         if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 
         if event_id is not None:
             single_event = Event.objects.filter(id=event_id, academy__id=academy_id).first()
