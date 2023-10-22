@@ -3,6 +3,7 @@ import urllib.parse, json
 from django.core.cache import cache
 from datetime import datetime, timedelta
 from breathecode.tests.mixins import DatetimeMixin
+from django.utils import timezone
 
 __all__ = ['Cache', 'CACHE_DESCRIPTORS']
 CACHE_DESCRIPTORS: dict[int, Cache] = {}
@@ -66,11 +67,19 @@ class Cache(DatetimeMixin):
         self.__clear_one__()
 
     def get(self, _v2=False, **kwargs) -> dict:
+        n1 = timezone.now()
         key = self.__generate_key__(**kwargs)
+        n2 = timezone.now()
+        print(5, n2 - n1)
+        n2 = timezone.now()
         json_data = cache.get(key)
+        n3 = timezone.now()
+        print(6, n3 - n2)
 
         if _v2:
             return json_data
+
+        print(777)
 
         return json.loads(json_data) if json_data else None
 
