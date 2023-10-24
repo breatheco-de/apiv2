@@ -567,9 +567,9 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
 
         handler = self.extensions(request)
 
-        cache = handler.cache.get()
-        if cache is not None:
-            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
+        # cache = handler.cache.get()
+        # if cache is not None:
+        #     return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 
         if user_id is not None:
             item = CohortUser.objects.filter(cohort__academy__id=academy_id,
