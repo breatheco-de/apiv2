@@ -113,7 +113,7 @@ def post_serializer(plans=[], data={}):
     }
 
 
-def put_serializer(user_invite, cohort=None, syllabus=None, plans=[], data={}):
+def put_serializer(user_invite, cohort=None, syllabus=None, user=None, plans=[], data={}):
     return {
         'id': user_invite.id,
         'access_token': None,
@@ -123,6 +123,7 @@ def put_serializer(user_invite, cohort=None, syllabus=None, plans=[], data={}):
         'first_name': user_invite.first_name,
         'last_name': user_invite.last_name,
         'phone': user_invite.phone,
+        'user': user.id if user else None,
         'plans': [plan_serializer(plan) for plan in plans],
         **data,
     }
@@ -179,6 +180,7 @@ class SubscribeTestSuite(AuthTestCase):
         expected = post_serializer(data={
             'id': 1,
             'access_token': access_token,
+            'user': 1,
             **data,
         })
 
@@ -424,6 +426,7 @@ class SubscribeTestSuite(AuthTestCase):
         expected = post_serializer(data={
             'id': 2,
             'access_token': access_token,
+            'user': 1,
             **data,
         })
 
@@ -476,6 +479,8 @@ class SubscribeTestSuite(AuthTestCase):
         self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
             call(
                 'verify_email', 'pokemon@potato.io', {
+                    'LANG':
+                    'en',
                     'SUBJECT':
                     '4Geeks - Validate account',
                     'LINK': ('http://localhost:8000/v1/auth/password/' +
@@ -589,11 +594,13 @@ class SubscribeTestSuite(AuthTestCase):
 
         del data['plan']
         json = response.json()
-        expected = post_serializer(plans=[model.plan], data={
-            'id': 2,
-            'access_token': access_token,
-            **data,
-        })
+        expected = post_serializer(plans=[model.plan],
+                                   data={
+                                       'id': 2,
+                                       'access_token': access_token,
+                                       'user': 1,
+                                       **data,
+                                   })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -627,10 +634,12 @@ class SubscribeTestSuite(AuthTestCase):
         token = hashlib.sha512('pokemon@potato.io'.encode('UTF-8') + b).hexdigest()
 
         self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
-            call('verify_email', 'pokemon@potato.io', {
-                'SUBJECT': '4Geeks - Validate account',
-                'LINK': f'http://localhost:8000/v1/auth/password/{token}'
-            })
+            call(
+                'verify_email', 'pokemon@potato.io', {
+                    'LANG': 'en',
+                    'SUBJECT': '4Geeks - Validate account',
+                    'LINK': f'http://localhost:8000/v1/auth/password/{token}'
+                })
         ])
 
         User = self.bc.database.get_model('auth.User')
@@ -723,11 +732,13 @@ class SubscribeTestSuite(AuthTestCase):
 
         del data['course']
         json = response.json()
-        expected = post_serializer(plans=[], data={
-            'id': 1,
-            'access_token': access_token,
-            **data,
-        })
+        expected = post_serializer(plans=[],
+                                   data={
+                                       'id': 1,
+                                       'access_token': access_token,
+                                       'user': 1,
+                                       **data,
+                                   })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -763,10 +774,12 @@ class SubscribeTestSuite(AuthTestCase):
         token = hashlib.sha512('pokemon@potato.io'.encode('UTF-8') + b).hexdigest()
 
         self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
-            call('verify_email', 'pokemon@potato.io', {
-                'SUBJECT': '4Geeks - Validate account',
-                'LINK': f'http://localhost:8000/v1/auth/password/{token}'
-            })
+            call(
+                'verify_email', 'pokemon@potato.io', {
+                    'LANG': 'en',
+                    'SUBJECT': '4Geeks - Validate account',
+                    'LINK': f'http://localhost:8000/v1/auth/password/{token}'
+                })
         ])
 
         User = self.bc.database.get_model('auth.User')
@@ -800,11 +813,13 @@ class SubscribeTestSuite(AuthTestCase):
 
         del data['course']
         json = response.json()
-        expected = post_serializer(plans=[], data={
-            'id': 1,
-            'access_token': access_token,
-            **data,
-        })
+        expected = post_serializer(plans=[],
+                                   data={
+                                       'id': 1,
+                                       'access_token': access_token,
+                                       'user': 1,
+                                       **data,
+                                   })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -843,10 +858,12 @@ class SubscribeTestSuite(AuthTestCase):
         token = hashlib.sha512('pokemon@potato.io'.encode('UTF-8') + b).hexdigest()
 
         self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
-            call('verify_email', 'pokemon@potato.io', {
-                'SUBJECT': '4Geeks - Validate account',
-                'LINK': f'http://localhost:8000/v1/auth/password/{token}'
-            })
+            call(
+                'verify_email', 'pokemon@potato.io', {
+                    'LANG': 'en',
+                    'SUBJECT': '4Geeks - Validate account',
+                    'LINK': f'http://localhost:8000/v1/auth/password/{token}'
+                })
         ])
 
         User = self.bc.database.get_model('auth.User')
@@ -933,6 +950,7 @@ class SubscribeTestSuite(AuthTestCase):
         expected = post_serializer(plans=[], data={
             'id': 1,
             'access_token': None,
+            'user': None,
             **data,
         })
 
@@ -995,6 +1013,7 @@ class SubscribeTestSuite(AuthTestCase):
         expected = post_serializer(plans=[], data={
             'id': 2,
             'access_token': None,
+            'user': None,
             **data,
         })
 
@@ -1055,11 +1074,13 @@ class SubscribeTestSuite(AuthTestCase):
         del data['plan']
 
         json = response.json()
-        expected = post_serializer(plans=[model.plan], data={
-            'id': 2,
-            'access_token': None,
-            **data,
-        })
+        expected = post_serializer(plans=[model.plan],
+                                   data={
+                                       'id': 2,
+                                       'access_token': None,
+                                       'user': None,
+                                       **data,
+                                   })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -1126,6 +1147,7 @@ class SubscribeTestSuite(AuthTestCase):
                                        'id': 2,
                                        'access_token': access_token,
                                        'cohort': 1,
+                                       'user': 1,
                                        **data,
                                    })
 
@@ -1174,10 +1196,12 @@ class SubscribeTestSuite(AuthTestCase):
         }])
 
         self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
-            call('verify_email', 'pokemon@potato.io', {
-                'SUBJECT': '4Geeks - Validate account',
-                'LINK': f'http://localhost:8000/v1/auth/password/{token}'
-            })
+            call(
+                'verify_email', 'pokemon@potato.io', {
+                    'LANG': 'en',
+                    'SUBJECT': '4Geeks - Validate account',
+                    'LINK': f'http://localhost:8000/v1/auth/password/{token}'
+                })
         ])
 
         user = self.bc.database.get('auth.User', 1, dict=False)
@@ -1220,6 +1244,7 @@ class SubscribeTestSuite(AuthTestCase):
                                        'id': 2,
                                        'access_token': access_token,
                                        'syllabus': 1,
+                                       'user': 1,
                                        **data,
                                    })
 
@@ -1268,10 +1293,12 @@ class SubscribeTestSuite(AuthTestCase):
         }])
 
         self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
-            call('verify_email', 'pokemon@potato.io', {
-                'SUBJECT': '4Geeks - Validate account',
-                'LINK': f'http://localhost:8000/v1/auth/password/{token}'
-            })
+            call(
+                'verify_email', 'pokemon@potato.io', {
+                    'LANG': 'en',
+                    'SUBJECT': '4Geeks - Validate account',
+                    'LINK': f'http://localhost:8000/v1/auth/password/{token}'
+                })
         ])
 
         user = self.bc.database.get('auth.User', 1, dict=False)
@@ -1336,11 +1363,13 @@ class SubscribeTestSuite(AuthTestCase):
 
         json = response.json()
 
-        expected = put_serializer(model.user_invite, data={
-            'id': 1,
-            'access_token': access_token,
-            **data,
-        })
+        expected = put_serializer(model.user_invite,
+                                  data={
+                                      'id': 1,
+                                      'access_token': access_token,
+                                      'user': 1,
+                                      **data,
+                                  })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -1390,10 +1419,12 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
         self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
-            call('verify_email', 'pokemon@potato.io', {
-                'SUBJECT': '4Geeks - Validate account',
-                'LINK': f'http://localhost:8000/v1/auth/password/{token}'
-            })
+            call(
+                'verify_email', 'pokemon@potato.io', {
+                    'LANG': 'en',
+                    'SUBJECT': '4Geeks - Validate account',
+                    'LINK': f'http://localhost:8000/v1/auth/password/{token}'
+                })
         ])
 
         user = self.bc.database.get('auth.User', 1, dict=False)
@@ -1500,11 +1531,13 @@ class SubscribeTestSuite(AuthTestCase):
         del data['token']
 
         json = response.json()
-        expected = put_serializer(model.user_invite, data={
-            'id': 1,
-            'access_token': access_token,
-            **data,
-        })
+        expected = put_serializer(model.user_invite,
+                                  data={
+                                      'id': 1,
+                                      'access_token': access_token,
+                                      'user': 1,
+                                      **data,
+                                  })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -1556,10 +1589,12 @@ class SubscribeTestSuite(AuthTestCase):
         }])
 
         self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
-            call('verify_email', 'pokemon@potato.io', {
-                'SUBJECT': '4Geeks - Validate account',
-                'LINK': f'http://localhost:8000/v1/auth/password/{token}'
-            })
+            call(
+                'verify_email', 'pokemon@potato.io', {
+                    'LANG': 'en',
+                    'SUBJECT': '4Geeks - Validate account',
+                    'LINK': f'http://localhost:8000/v1/auth/password/{token}'
+                })
         ])
 
         user = self.bc.database.get('auth.User', 1, dict=False)
@@ -1599,11 +1634,13 @@ class SubscribeTestSuite(AuthTestCase):
         del data['token']
 
         json = response.json()
-        expected = put_serializer(model.user_invite, data={
-            'id': 1,
-            'access_token': access_token,
-            **data,
-        })
+        expected = put_serializer(model.user_invite,
+                                  data={
+                                      'id': 1,
+                                      'access_token': access_token,
+                                      'user': 1,
+                                      **data,
+                                  })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -1655,10 +1692,12 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
         self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
-            call('verify_email', 'pokemon@potato.io', {
-                'SUBJECT': '4Geeks - Validate account',
-                'LINK': f'http://localhost:8000/v1/auth/password/{token}'
-            })
+            call(
+                'verify_email', 'pokemon@potato.io', {
+                    'LANG': 'en',
+                    'SUBJECT': '4Geeks - Validate account',
+                    'LINK': f'http://localhost:8000/v1/auth/password/{token}'
+                })
         ])
 
         user = self.bc.database.get('auth.User', 1, dict=False)
@@ -1699,11 +1738,13 @@ class SubscribeTestSuite(AuthTestCase):
         del data['token']
 
         json = response.json()
-        expected = put_serializer(model.user_invite, data={
-            'id': 1,
-            'access_token': access_token,
-            **data,
-        })
+        expected = put_serializer(model.user_invite,
+                                  user=model.user,
+                                  data={
+                                      'id': 1,
+                                      'access_token': access_token,
+                                      **data,
+                                  })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -1843,11 +1884,13 @@ class SubscribeTestSuite(AuthTestCase):
 
         json = response.json()
 
-        expected = put_serializer(model.user_invite, data={
-            'id': 1,
-            'access_token': access_token,
-            **data,
-        })
+        expected = put_serializer(model.user_invite,
+                                  data={
+                                      'id': 1,
+                                      'access_token': access_token,
+                                      'user': 1,
+                                      **data,
+                                  })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -1899,10 +1942,12 @@ class SubscribeTestSuite(AuthTestCase):
         }])
 
         self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
-            call('verify_email', 'pokemon@potato.io', {
-                'SUBJECT': '4Geeks - Validate account',
-                'LINK': f'http://localhost:8000/v1/auth/password/{token}'
-            })
+            call(
+                'verify_email', 'pokemon@potato.io', {
+                    'LANG': 'en',
+                    'SUBJECT': '4Geeks - Validate account',
+                    'LINK': f'http://localhost:8000/v1/auth/password/{token}'
+                })
         ])
 
         user = self.bc.database.get('auth.User', 1, dict=False)
@@ -1947,11 +1992,13 @@ class SubscribeTestSuite(AuthTestCase):
         del data['token']
 
         json = response.json()
-        expected = put_serializer(model.user_invite, data={
-            'id': 1,
-            'access_token': access_token,
-            **data,
-        })
+        expected = put_serializer(model.user_invite,
+                                  data={
+                                      'id': 1,
+                                      'access_token': access_token,
+                                      'user': 1,
+                                      **data,
+                                  })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -2003,10 +2050,12 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
         self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
-            call('verify_email', 'pokemon@potato.io', {
-                'SUBJECT': '4Geeks - Validate account',
-                'LINK': f'http://localhost:8000/v1/auth/password/{token}'
-            })
+            call(
+                'verify_email', 'pokemon@potato.io', {
+                    'LANG': 'en',
+                    'SUBJECT': '4Geeks - Validate account',
+                    'LINK': f'http://localhost:8000/v1/auth/password/{token}'
+                })
         ])
 
         user = self.bc.database.get('auth.User', 1, dict=False)
@@ -2053,11 +2102,13 @@ class SubscribeTestSuite(AuthTestCase):
         del data['token']
 
         json = response.json()
-        expected = put_serializer(model.user_invite, data={
-            'id': 1,
-            'access_token': access_token,
-            **data,
-        })
+        expected = put_serializer(model.user_invite,
+                                  user=model.user,
+                                  data={
+                                      'id': 1,
+                                      'access_token': access_token,
+                                      **data,
+                                  })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -2209,10 +2260,13 @@ class SubscribeTestSuite(AuthTestCase):
         del data['plan']
 
         json = response.json()
-        expected = put_serializer(model.user_invite, plans=[model.plan], data={
-            'id': 1,
-            **data,
-        })
+        expected = put_serializer(model.user_invite,
+                                  plans=[model.plan],
+                                  data={
+                                      'id': 1,
+                                      'user': None,
+                                      **data,
+                                  })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -2288,6 +2342,7 @@ class SubscribeTestSuite(AuthTestCase):
                                   data={
                                       'id': 1,
                                       'access_token': access_token,
+                                      'user': 1,
                                       **data,
                                   })
 
@@ -2338,10 +2393,12 @@ class SubscribeTestSuite(AuthTestCase):
         }])
 
         self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
-            call('verify_email', 'pokemon@potato.io', {
-                'SUBJECT': '4Geeks - Validate account',
-                'LINK': f'http://localhost:8000/v1/auth/password/{token}'
-            })
+            call(
+                'verify_email', 'pokemon@potato.io', {
+                    'LANG': 'en',
+                    'SUBJECT': '4Geeks - Validate account',
+                    'LINK': f'http://localhost:8000/v1/auth/password/{token}'
+                })
         ])
 
         user = self.bc.database.get('auth.User', 1, dict=False)
@@ -2424,11 +2481,13 @@ class SubscribeTestSuite(AuthTestCase):
         del data['course']
 
         json = response.json()
-        expected = post_serializer(plans=[], data={
-            'id': 1,
-            'access_token': access_token,
-            **data,
-        })
+        expected = post_serializer(plans=[],
+                                   data={
+                                       'id': 1,
+                                       'access_token': access_token,
+                                       'user': 1,
+                                       **data,
+                                   })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -2462,10 +2521,12 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
         self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
-            call('verify_email', 'pokemon@potato.io', {
-                'SUBJECT': '4Geeks - Validate account',
-                'LINK': f'http://localhost:8000/v1/auth/password/{token}'
-            })
+            call(
+                'verify_email', 'pokemon@potato.io', {
+                    'LANG': 'en',
+                    'SUBJECT': '4Geeks - Validate account',
+                    'LINK': f'http://localhost:8000/v1/auth/password/{token}'
+                })
         ])
 
         User = self.bc.database.get_model('auth.User')
@@ -2509,11 +2570,13 @@ class SubscribeTestSuite(AuthTestCase):
         del data['course']
 
         json = response.json()
-        expected = post_serializer(plans=[], data={
-            'id': 1,
-            'access_token': access_token,
-            **data,
-        })
+        expected = post_serializer(plans=[],
+                                   data={
+                                       'id': 1,
+                                       'access_token': access_token,
+                                       'user': 1,
+                                       **data,
+                                   })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -2550,10 +2613,12 @@ class SubscribeTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
         self.bc.check.calls(notify_actions.send_email_message.call_args_list, [
-            call('verify_email', 'pokemon@potato.io', {
-                'SUBJECT': '4Geeks - Validate account',
-                'LINK': f'http://localhost:8000/v1/auth/password/{token}'
-            })
+            call(
+                'verify_email', 'pokemon@potato.io', {
+                    'LANG': 'en',
+                    'SUBJECT': '4Geeks - Validate account',
+                    'LINK': f'http://localhost:8000/v1/auth/password/{token}'
+                })
         ])
 
         User = self.bc.database.get_model('auth.User')
@@ -2659,6 +2724,7 @@ class SubscribeTestSuite(AuthTestCase):
         expected = post_serializer(plans=[], data={
             'id': 1,
             'access_token': None,
+            'user': None,
             **data,
         })
 
