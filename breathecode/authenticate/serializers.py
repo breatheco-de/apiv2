@@ -608,7 +608,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                                                   slug='last-name-not-found'),
                                       code=400)
 
-        event_slug = data.get('event_slug', None)
+        event = data.get('event', None)
         if event is not None:
             try:
                 args = {}
@@ -1373,6 +1373,67 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         if not self.instance:
             data['token'] = hashlib.sha512((data['email']).encode('UTF-8') + os.urandom(64)).hexdigest()
+
+        event = data.get('event', None)
+        if event is not None:
+            try:
+                args = {}
+                if isinstance(event, int):
+                    args['id'] = event
+                else:
+                    args['slug'] = event
+
+                event = Event.objects.filter(**args).get()
+                data['event_slug'] = event.slug
+
+            except Exception as e:
+                raise ValidationException(translation(lang,
+                                                      en='Unable to find the given Event',
+                                                      es='Imposible encontrar el Evento dado',
+                                                      slug='event-not-found'),
+                                          code=400)
+
+        asset = data.get('asset', None)
+        if asset is not None:
+            try:
+                args = {}
+                if isinstance(asset, int):
+                    args['id'] = asset
+                else:
+                    args['slug'] = asset
+
+                asset = Asset.objects.filter(**args).get()
+                data['asset_slug'] = asset.slug
+
+            except Exception as e:
+                raise ValidationException(translation(lang,
+                                                      en='Unable to find the given Asset',
+                                                      es='Imposible encontrar el Asset dado',
+                                                      slug='asset-not-found'),
+                                          code=400)
+
+        conversion_info = data.get('conversion_info', None)
+        if conversion_info is not None:
+            if not isinstance(conversion_info, dict):
+                raise ValidationException(translation(lang,
+                                                      en='conversion_info should be a JSON object',
+                                                      es='conversion_info debería ser un objeto de JSON',
+                                                      slug='conversion-info-json-type'),
+                                          code=400)
+
+            expected_keys = [
+                'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'conversion_url', 'landing_url',
+                'user_agent', 'plan', 'location'
+            ]
+
+            for key in conversion_info.keys():
+                if key not in expected_keys:
+                    raise ValidationException(translation(
+                        lang,
+                        en=f'Invalid key {key} provided in the conversion_info',
+                        es=f'Clave inválida {key} agregada en el conversion_info',
+                        slug='conversion-info-invalid-key'),
+                                              code=400)
 
         return data
 
