@@ -654,7 +654,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                                           code=400)
 
             expected_keys = [
-                'placement', 'medium', 'src', 'term', 'content', 'conversion_url', 'landing_url',
+                'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'conversion_url', 'landing_url',
                 'user_agent', 'plan', 'location'
             ]
 
