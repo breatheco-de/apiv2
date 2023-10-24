@@ -38,7 +38,9 @@ if __name__ == '__main__':
 
     os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 
-    exit_code = os.system(f'pytest {dir} --disable-pytest-warnings --cov={module} --cov-report xml -n auto')
+    exit_code = os.system(
+        f'export DATABASE_URL=sqlite:///:memory: pytest {dir} --disable-pytest-warnings --cov={module} --cov-report xml -n auto'
+    )
 
     # python don't return 256
     if exit_code:
