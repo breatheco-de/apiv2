@@ -25,21 +25,15 @@ bag, created = Bag.objects.get_or_create(
 """
 
 from django.db import models, transaction
-import os, redis
+import os
 from redis.lock import Lock
 from redis.exceptions import LockError
 from breathecode.utils import getLogger
+from breathecode.setup import get_redis
 import ssl
 
 logger = getLogger(__name__)
 ENV = os.getenv('ENV', '')
-REDIS_URL = os.getenv('REDIS_URL', '')
-
-# Modify the connection_kwargs to disable SSL certificate verification ssl_cert_reqs="none"
-redis_kwargs = {} if REDIS_URL.startswith('redis://') else {
-    'ssl_cert_reqs': ssl.CERT_NONE,
-}
-redis_client = None
 
 
 class LockManager(models.Manager):
@@ -50,8 +44,8 @@ class LockManager(models.Manager):
         instance, created = None, False
 
         if lock and ENV != 'test':
-            if redis_client == None:
-                redis_client = redis.from_url(REDIS_URL, **redis_kwargs)
+
+            redis_client = get_redis()
 
             # Dynamically retrieve the class name and create a unique lock key based on the kwargs
             class_name = self.model.__name__
