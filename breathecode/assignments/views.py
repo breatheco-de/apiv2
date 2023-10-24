@@ -1,4 +1,4 @@
-from django.http import HttpResponseRedirect, StreamingHttpResponse
+from django.http import HttpResponse, HttpResponseRedirect, StreamingHttpResponse
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 import logging, hashlib, os

@@ -4,7 +4,7 @@ import os
 import pytz
 from django.contrib.auth.models import AnonymousUser, User
 from django.db.models import FloatField, Max, Q, Value
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -91,7 +91,7 @@ class AcademyTeacherView(APIView, GenerateLookupsMixin):
         handler = self.extensions(request)
         cache = handler.cache.get()
         if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 
         items = ProfileAcademy.objects.filter(academy__id=academy_id,
                                               role__slug__in=['teacher', 'assistant'
@@ -171,7 +171,7 @@ class PublicCohortView(APIView):
 
         cache = handler.cache.get()
         if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 
         items = Cohort.objects.filter(private=False).select_related('syllabus_version__syllabus')
 
@@ -298,7 +298,7 @@ class UserMeView(APIView):
 
         cache = handler.cache.get()
         if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 
         try:
             if isinstance(request.user, AnonymousUser):
@@ -569,7 +569,7 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
 
         cache = handler.cache.get()
         if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 
         if user_id is not None:
             item = CohortUser.objects.filter(cohort__academy__id=academy_id,
@@ -1091,7 +1091,7 @@ class CohortMeView(APIView, GenerateLookupsMixin):
 
         cache = handler.cache.get()
         if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 
         if cohort_id is not None:
             if cohort_id.isnumeric():
@@ -1591,7 +1591,7 @@ class SyllabusVersionView(APIView):
 
         cache = handler.cache.get()
         if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 
         if academy_id is None:
             raise ValidationException('Missing academy id', slug='missing-academy-id')
@@ -1754,7 +1754,7 @@ class PublicCohortUserView(APIView, GenerateLookupsMixin):
 
         cache = handler.cache.get()
         if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 
         items = CohortUser.objects.all()
 

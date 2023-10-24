@@ -1169,7 +1169,7 @@ class CourseView(APIView):
 
         cache = handler.cache.get()
         if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 
         lang = get_user_language(request)
 

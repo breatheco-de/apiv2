@@ -31,6 +31,9 @@ class CacheExtension(ExtensionBase):
         if self._cache_per_user:
             extends['request.user.id'] = self._request.user.id
 
+        if lang := self._request.META.get('HTTP_ACCEPT_LANGUAGE'):
+            extends['request.headers.accept-language'] = lang
+
         if self._cache_prefix:
             extends['breathecode.view.get'] = self._cache_prefix
 
@@ -38,6 +41,7 @@ class CacheExtension(ExtensionBase):
 
     def get(self) -> dict:
         # allow requests to disable cache with querystring "cache" variable
+
         cache_is_active = self._request.GET.get('cache', 'true').lower() in ['true', '1', 'yes']
         if not cache_is_active:
             logger.debug('Cache has been forced to disable')
@@ -45,7 +49,7 @@ class CacheExtension(ExtensionBase):
 
         try:
             params = self._get_params()
-            return self._cache.get(**params)
+            return self._cache.get(**params, _v2=True)
 
         except Exception:
             logger.exception('Error while trying to get the cache')
@@ -61,7 +65,7 @@ class CacheExtension(ExtensionBase):
         params = self._get_params()
 
         try:
-            self._cache.set(data, **params)
+            data = self._cache.set(data, **params)
         except Exception:
             logger.exception('Error while trying to set the cache')
 

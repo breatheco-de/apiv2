@@ -65,9 +65,13 @@ class Cache(DatetimeMixin):
 
         self.__clear_one__()
 
-    def get(self, **kwargs) -> dict:
+    def get(self, _v2=False, **kwargs) -> dict:
         key = self.__generate_key__(**kwargs)
         json_data = cache.get(key)
+
+        if _v2:
+            return json_data
+
         return json.loads(json_data) if json_data else None
 
     def __fix_fields__(self, data):
@@ -102,7 +106,7 @@ class Cache(DatetimeMixin):
 
         return check_data
 
-    def set(self, data, **kwargs):
+    def set(self, data, **kwargs) -> str:
         key = self.__generate_key__(**kwargs)
         data = self.__fix_fields_in_array__(data)
 
@@ -110,3 +114,4 @@ class Cache(DatetimeMixin):
         cache.set(key, json_data)
 
         self.__add_key_to_storage__(key)
+        return json_data
