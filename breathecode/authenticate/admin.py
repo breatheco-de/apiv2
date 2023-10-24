@@ -100,9 +100,9 @@ def accept_all_users_from_waiting_list(modeladmin, request, queryset: QuerySet[U
 class UserInviteAdmin(admin.ModelAdmin):
     search_fields = ['email', 'first_name', 'last_name', 'user__email']
     raw_id_fields = ['user', 'author', 'cohort']
-    list_filter = ['academy', 'role', 'status', 'is_email_validated', 'process_status']
+    list_filter = ['academy', 'status', 'is_email_validated', 'process_status', 'role', 'country']
     list_display = ('email', 'is_email_validated', 'first_name', 'last_name', 'status', 'academy', 'token',
-                    'created_at', 'invite_url')
+                    'created_at', 'invite_url', 'country')
     actions = [accept_selected_users_from_waiting_list, accept_all_users_from_waiting_list]
 
     def invite_url(self, obj):
