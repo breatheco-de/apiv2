@@ -329,7 +329,7 @@ IS_REDIS_WITH_SSL_ON_HEROKU = False
 IS_REDIS_WITH_SSL = False
 
 # local or heroku redis url
-if REDIS_URL == '':
+if REDIS_URL == '' or REDIS_URL == 'redis://localhost:6379':
     REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
 
     # support for heroku redis addon

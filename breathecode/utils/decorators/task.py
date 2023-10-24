@@ -10,7 +10,7 @@ from django.db import transaction
 from django.utils import timezone
 import copy
 
-__all__ = ['task', 'AbortTask', 'RetryTask']
+__all__ = ['task', 'AbortTask', 'RetryTask', 'RETRIES_LIMIT']
 
 logger = logging.getLogger(__name__)
 RETRIES_LIMIT = 10
