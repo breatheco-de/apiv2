@@ -179,3 +179,4 @@ dump.rdb
 *.pem
 *.key
 *.crt
+*:Zone.Identifier

@@ -23,8 +23,10 @@ def images_use(client, report):
         if 'alt' not in image.attrs or image.attrs['alt'] == '':
             report.bad(-10, f'No alt found for image with source "{image.attrs["src"]}"')
 
+    if len(images) == 0:
+        report.bad(-5, f'Article must have at least one image, diagram or graphic')
+        
     #report.good('No errors found on keyword density')
-
 
 images_use.description = """
 Include an alt message on each image.

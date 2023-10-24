@@ -9,7 +9,8 @@ from django.utils.html import format_html
 from .models import (App, AppOptionalScope, AppRequiredScope, AppUserAgreement, CredentialsGithub, DeviceId,
                      LegacyKey, OptionalScopeSet, Scope, Token, UserProxy, Profile, CredentialsSlack,
                      ProfileAcademy, Role, CredentialsFacebook, Capability, UserInvite, CredentialsGoogle,
-                     AcademyProxy, GitpodUser, GithubAcademyUser, AcademyAuthSettings, GithubAcademyUserLog)
+                     AcademyProxy, GitpodUser, GithubAcademyUser, AcademyAuthSettings, GithubAcademyUserLog,
+                     UserSetting)
 from .tasks import async_set_gitpod_user_expiration
 from breathecode.utils.admin import change_field
 from django.contrib.admin import SimpleListFilter
@@ -195,6 +196,15 @@ class ProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'phone', 'github_username', 'avatar_url')
     search_fields = ['user__first_name', 'user__last_name', 'user__email']
     raw_id_fields = ['user']
+    # actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]
+
+
+@admin.register(UserSetting)
+class UserSettingAdmin(admin.ModelAdmin):
+    list_display = ('user', 'lang', 'main_currency')
+    search_fields = ['user__first_name', 'user__last_name', 'user__email', 'user__id']
+    raw_id_fields = ['user']
+    list_filter = ('lang', 'main_currency')
     # actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]
 
 

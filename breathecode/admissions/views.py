@@ -363,9 +363,9 @@ class CohortUserView(APIView, GenerateLookupsMixin):
 
         handler = self.extensions(request)
 
-        cache = handler.cache.get()
-        if cache is not None:
-            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
+        # cache = handler.cache.get()
+        # if cache is not None:
+        #     return Response(cache, status=status.HTTP_200_OK)
 
         items = CohortUser.objects.all()
 
@@ -1144,9 +1144,9 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
     def get(self, request, cohort_id=None, academy_id=None):
         handler = self.extensions(request)
 
-        cache = handler.cache.get()
-        if cache is not None:
-            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
+        # cache = handler.cache.get()
+        # if cache is not None:
+        #     return Response(cache, status=status.HTTP_200_OK)
 
         if cohort_id is not None:
             item = None

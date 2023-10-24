@@ -1053,9 +1053,9 @@ class PlanOfferView(APIView):
     def get(self, request):
         handler = self.extensions(request)
 
-        cache = handler.cache.get()
-        if cache is not None:
-            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
+        # cache = handler.cache.get()
+        # if cache is not None:
+        #     return Response(cache, status=status.HTTP_200_OK)
 
         lang = get_user_language(request)
         utc_now = timezone.now()

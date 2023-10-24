@@ -334,9 +334,9 @@ class CohortTaskView(APIView, GenerateLookupsMixin):
     @capable_of('read_assignment')
     def get(self, request, cohort_id, academy_id):
         handler = self.extensions(request)
-        cache = handler.cache.get()
-        if cache is not None:
-            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
+        # cache = handler.cache.get()
+        # if cache is not None:
+        #     return Response(cache, status=status.HTTP_200_OK)
 
         items = Task.objects.all()
         lookup = {}
@@ -529,9 +529,9 @@ class TaskMeView(APIView):
 
     def get(self, request, task_id=None, user_id=None):
         handler = self.extensions(request)
-        cache = handler.cache.get()
-        if cache is not None:
-            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
+        # cache = handler.cache.get()
+        # if cache is not None:
+        #     return Response(cache, status=status.HTTP_200_OK)
 
         if not user_id:
             user_id = request.user.id
