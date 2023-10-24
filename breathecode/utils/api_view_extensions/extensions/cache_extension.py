@@ -31,6 +31,9 @@ class CacheExtension(ExtensionBase):
         if self._cache_per_user:
             extends['request.user.id'] = self._request.user.id
 
+        if lang := self._request.META.get('HTTP_ACCEPT_LANGUAGE'):
+            extends['request.headers.accept-language'] = lang
+
         if self._cache_prefix:
             extends['breathecode.view.get'] = self._cache_prefix
 
