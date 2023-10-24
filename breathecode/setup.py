@@ -82,6 +82,6 @@ def get_redis():
     settings, redis_kwargs, REDIS_URL = get_redis_config()
 
     if redis_client == None:
-        redis_client = redis.from_url(REDIS_URL, **redis_kwargs)
+        redis_client = redis.from_url(REDIS_URL, **settings)
 
     return redis_client
