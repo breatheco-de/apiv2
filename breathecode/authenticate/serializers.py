@@ -608,7 +608,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                                                   slug='last-name-not-found'),
                                       code=400)
 
-        event = data.get('event', None)
+        event_slug = data.get('event_slug', None)
         if event is not None:
             try:
                 args = {}
@@ -618,6 +618,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     args['slug'] = event
 
                 event = Event.objects.filter(**args).get()
+                data['event_slug'] = event.slug
 
             except Exception as e:
                 raise ValidationException(translation(lang,
@@ -636,6 +637,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     args['slug'] = asset
 
                 asset = Asset.objects.filter(**args).get()
+                data['asset_slug'] = asset.slug
 
             except Exception as e:
                 raise ValidationException(translation(lang,
