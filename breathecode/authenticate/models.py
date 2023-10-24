@@ -468,6 +468,11 @@ class UserInvite(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
     sent_at = models.DateTimeField(default=None, null=True, blank=True)
 
+    country = models.CharField(max_length=30, null=True, default=None, blank=True)
+    city = models.CharField(max_length=30, null=True, default=None, blank=True)
+    latitude = models.DecimalField(max_digits=30, decimal_places=15, null=True, default=None, blank=True)
+    longitude = models.DecimalField(max_digits=30, decimal_places=15, null=True, default=None, blank=True)
+
     conversion_info = models.JSONField(default=None,
                                        blank=True,
                                        null=True,
