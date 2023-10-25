@@ -134,6 +134,7 @@ class GetServiceSerializer(serpy.Serializer):
 class GetServiceItemSerializer(serpy.Serializer):
     unit_type = serpy.Field()
     how_many = serpy.Field()
+    sort_priority = serpy.Field()
     service = GetServiceSmallSerializer()
 
 
