@@ -278,7 +278,11 @@ def get_user_settings(user_id: int) -> UserSetting:
     from breathecode.marketing.models import FormEntry
     from breathecode.feedback.models import Answer
 
-    settings, created = UserSetting.objects.get_or_create(user_id=user_id)
+    try:
+        settings, created = UserSetting.objects.get_or_create(user_id=user_id)
+    except Exception as e:
+        # race condition
+        settings, created = UserSetting.objects.get_or_create(user_id=user_id)
 
     if created and (cohort_user :=
                     CohortUser.objects.filter(user__id=user_id).exclude(cohort__language='').first()):

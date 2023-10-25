@@ -61,7 +61,7 @@ class Profile(models.Model):
                              default='')  # validators should be a list
 
     show_tutorial = models.BooleanField(
-        default=True, help_text='Set true if you want to show the tutorial on the user UI/UX')
+        default=True, help_text='Set true if you want to show the tutorial on the user UI/UX', db_index=True)
 
     twitter_username = models.CharField(max_length=50, blank=True, null=True)
     github_username = models.CharField(max_length=50, blank=True, null=True)
@@ -415,7 +415,9 @@ class UserInvite(models.Model):
         self._email = self.email
 
     email = models.CharField(blank=False, max_length=150, null=True, default=None)
+
     is_email_validated = models.BooleanField(default=False)
+    has_marketing_consent = models.BooleanField(default=False)
 
     user = models.ForeignKey(User,
                              on_delete=models.CASCADE,
@@ -431,6 +433,14 @@ class UserInvite(models.Model):
                                  blank=True)
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, null=True, default=None, blank=True)
     role = models.ForeignKey(Role, on_delete=models.CASCADE, null=True, default=None, blank=True)
+    event_slug = models.SlugField(max_length=40,
+                                  blank=True,
+                                  null=True,
+                                  help_text='If set, the user signed up because of an Event')
+    asset_slug = models.SlugField(max_length=40,
+                                  blank=True,
+                                  null=True,
+                                  help_text='If set, the user signed up because of an Asset')
 
     first_name = models.CharField(max_length=100, default=None, null=True)
     last_name = models.CharField(max_length=100, default=None, null=True)
@@ -457,6 +467,16 @@ class UserInvite(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
     sent_at = models.DateTimeField(default=None, null=True, blank=True)
+
+    country = models.CharField(max_length=30, null=True, default=None, blank=True)
+    city = models.CharField(max_length=30, null=True, default=None, blank=True)
+    latitude = models.DecimalField(max_digits=30, decimal_places=15, null=True, default=None, blank=True)
+    longitude = models.DecimalField(max_digits=30, decimal_places=15, null=True, default=None, blank=True)
+
+    conversion_info = models.JSONField(default=None,
+                                       blank=True,
+                                       null=True,
+                                       help_text='UTMs and other conversion information.')
 
     def __str__(self):
         return f'Invite for {self.email}'
@@ -495,12 +515,12 @@ class ProfileAcademy(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True)
 
-    email = models.CharField(blank=False, max_length=150, null=True, default=None)
+    email = models.CharField(blank=False, max_length=150, null=True, default=None, db_index=True)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     role = models.ForeignKey(Role, on_delete=models.CASCADE)
 
-    first_name = models.CharField(max_length=100, default=None, null=True)
-    last_name = models.CharField(max_length=100, default=None, null=True)
+    first_name = models.CharField(max_length=100, default=None, null=True, db_index=True)
+    last_name = models.CharField(max_length=100, default=None, null=True, db_index=True)
     address = models.CharField(max_length=255, blank=True, default=None, null=True)
 
     phone_regex = RegexValidator(
@@ -509,7 +529,7 @@ class ProfileAcademy(models.Model):
     phone = models.CharField(validators=[phone_regex], max_length=17, blank=True,
                              default='')  # validators should be a list
 
-    status = models.CharField(max_length=15, choices=PROFILE_ACADEMY_STATUS, default=INVITED)
+    status = models.CharField(max_length=15, choices=PROFILE_ACADEMY_STATUS, default=INVITED, db_index=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -764,8 +784,8 @@ class Token(rest_framework.authtoken.models.Token):
                              related_name='auth_token',
                              on_delete=models.CASCADE,
                              verbose_name=_('User'))
-    token_type = models.CharField(max_length=64, default='temporal')
-    expires_at = models.DateTimeField(default=None, blank=True, null=True)
+    token_type = models.CharField(max_length=64, default='temporal', db_index=True)
+    expires_at = models.DateTimeField(default=None, blank=True, null=True, db_index=True)
 
     def save(self, *args, **kwargs):
         without_expire_at = not self.expires_at

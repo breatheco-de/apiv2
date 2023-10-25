@@ -24,7 +24,7 @@ from .views import (AcademyInviteView, AcademyTokenView, AppUserAgreementView, A
                     get_users, login_html_view, pick_password, render_academy_invite, render_invite,
                     render_user_invite, reset_password_view, save_facebook_token, save_github_token,
                     save_google_token, save_slack_token, sync_gitpod_users_view, GithubUserView,
-                    AcademyGithubSyncView, AcademyAuthSettingsView)
+                    AcademyGithubSyncView, AcademyAuthSettingsView, UserSettingsView)
 
 app_name = 'authenticate'
 urlpatterns = [
@@ -34,6 +34,7 @@ urlpatterns = [
     path('subscribe/', WaitingListView.as_view(), name='subscribe'),
     path('user/', get_users, name='user'),
     path('user/me', UserMeView.as_view(), name='user_me'),
+    path('user/me/settings', UserSettingsView.as_view(), name='user_me_settings'),
     path('user/<str:id_or_email>', get_user_by_id_or_email),
     path('role', get_roles, name='role'),
     path('role/<str:role_slug>', get_roles, name='role_slug'),

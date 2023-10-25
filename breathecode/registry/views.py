@@ -148,7 +148,7 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
         handler = self.extensions(request)
         cache = handler.cache.get()
         if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 
         items = AssetTechnology.objects.all()
         lookup = {}
@@ -484,10 +484,11 @@ class AssetView(APIView, GenerateLookupsMixin):
     def get(self, request, asset_slug=None):
         handler = self.extensions(request)
         cache = handler.cache.get()
-        lang = get_user_language(request)
 
         if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
+
+        lang = get_user_language(request)
 
         if asset_slug is not None:
             asset = Asset.get_by_slug(asset_slug, request)
@@ -767,7 +768,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         handler = self.extensions(request)
         cache = handler.cache.get()
         if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 
         if asset_slug is not None:
             asset = Asset.get_by_slug(asset_slug, request)
@@ -1021,7 +1022,7 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
         handler = self.extensions(request)
         cache = handler.cache.get()
         if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 
         items = AssetComment.objects.filter(asset__academy__id=academy_id)
         lookup = {}
@@ -1126,7 +1127,7 @@ class AcademyCategoryView(APIView, GenerateLookupsMixin):
         handler = self.extensions(request)
         cache = handler.cache.get()
         if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 
         items = AssetCategory.objects.filter(academy__id=academy_id)
         lookup = {}
@@ -1210,7 +1211,7 @@ class AcademyKeywordView(APIView, GenerateLookupsMixin):
         handler = self.extensions(request)
         cache = handler.cache.get()
         if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 
         items = AssetKeyword.objects.filter(academy__id=academy_id)
         lookup = {}
@@ -1305,7 +1306,7 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
         # cache has been disabled because I cant get it to refresh then keywords are resigned to assets
         # cache = handler.cache.get()
         # if cache is not None:
-        #     return Response(cache, status=status.HTTP_200_OK)
+        #     return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 
         items = KeywordCluster.objects.filter(academy__id=academy_id)
         lookup = {}

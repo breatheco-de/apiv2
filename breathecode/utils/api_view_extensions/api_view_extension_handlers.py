@@ -2,6 +2,7 @@ import os
 from django.db.models import QuerySet
 from django.core.handlers.wsgi import WSGIRequest
 from typing import Any, Optional
+from django.http import HttpResponse
 from rest_framework.response import Response
 from rest_framework import status
 from breathecode.utils.api_view_extensions.extension_base import ExtensionBase
@@ -70,6 +71,8 @@ class APIViewExtensionHandlers:
 
         headers = {}
 
+        is_json = isinstance(data, dict) or isinstance(data, list)
+
         # The extension can decide if act or not
         extensions_allowed = [
             x for x in self._instances if x._can_modify_response() and x._get_order_of_response() != -1
@@ -78,6 +81,12 @@ class APIViewExtensionHandlers:
         extensions = sorted(extensions_allowed, key=lambda x: x._get_order_of_response())
         for extension in extensions:
             data, headers = extension._apply_response_mutation(data, headers)
+
+        if is_json and isinstance(data, str):
+            return HttpResponse(data,
+                                content_type='application/json',
+                                status=status.HTTP_200_OK,
+                                headers=headers)
 
         return Response(data, status=status.HTTP_200_OK, headers=headers)
 

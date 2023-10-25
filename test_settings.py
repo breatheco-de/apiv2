@@ -7,7 +7,9 @@ from breathecode.settings import *  # noqa: F401
 
 DEBUG = True
 
-DATABASE_URL = os.getenv('DATABASE_URL', None)
+DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///:memory:')
+os.environ['DATABASE_URL'] = DATABASE_URL
+
 # only use SQL Lite in localhost
 # if DATABASE_URL is None or 'localhost' in DATABASE_URL:
 DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}}

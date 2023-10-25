@@ -19,6 +19,8 @@ import logging
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
 
+from breathecode.setup import configure_redis
+
 # TODO: decouple file storage from django
 # from django.utils.http import http_date
 
@@ -320,36 +322,60 @@ CORS_ALLOW_HEADERS = [
     'http-access-control-request-method',
 ]
 
-REDIS_URL = os.getenv('REDIS_URL', '')
+# production redis url
+REDIS_URL = os.getenv('REDIS_COM_URL', '')
+kwargs = {}
+IS_REDIS_WITH_SSL_ON_HEROKU = False
+IS_REDIS_WITH_SSL = False
 
-IS_REDIS_WITH_SSL = REDIS_URL.startswith('rediss://')
+# local or heroku redis url
+if REDIS_URL == '' or REDIS_URL == 'redis://localhost:6379':
+    REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
 
+    # support for heroku redis addon
+    if REDIS_URL.startswith('redis://'):
+        IS_REDIS_WITH_SSL_ON_HEROKU = True
+
+else:
+    IS_REDIS_WITH_SSL = True
+
+CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 60 * 24))
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.environ.get('REDIS_URL'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'CONNECTION_POOL_KWARGS': {
-                'ssl_cert_reqs': None,
-                'max_connections': 4,
-            },
-        }
+        'LOCATION': REDIS_URL,
+        'TIMEOUT': CACHE_MIDDLEWARE_SECONDS,
     }
 }
 
+if IS_REDIS_WITH_SSL_ON_HEROKU:
+    CACHES['default']['OPTIONS'] = {
+        'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        'CONNECTION_POOL_KWARGS': {
+            'ssl_cert_reqs': None,
+        },
+    }
+elif IS_REDIS_WITH_SSL:
+    redis_ca_cert_path, redis_user_cert_path, redis_user_private_key_path = configure_redis()
+    CACHES['default']['OPTIONS'] = {
+        'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        'CONNECTION_POOL_KWARGS': {
+            'ssl_cert_reqs': 'required',
+            'ssl_ca_certs': redis_ca_cert_path,
+            'ssl_certfile': redis_user_cert_path,
+            'ssl_keyfile': redis_user_private_key_path,
+        }
+    }
+
 if IS_TEST_ENV:
-    del CACHES['default']['OPTIONS']
     CACHES['default'] = {
         **CACHES['default'],
         'LOCATION': 'breathecode',
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
     }
 
-elif not IS_REDIS_WITH_SSL:
-    del CACHES['default']['OPTIONS']
-
-CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 120))
+# overwrite the redis url with the new one
+os.environ['REDIS_URL'] = REDIS_URL
 
 # TODO: decouple file storage from django
 # if ENVIRONMENT != 'test':
@@ -442,7 +468,7 @@ heroku_redis_ssl_host = {
     'address': REDIS_URL,  # The 'rediss' schema denotes a SSL connection.
 }
 
-if IS_REDIS_WITH_SSL:
+if IS_REDIS_WITH_SSL_ON_HEROKU:
     heroku_redis_ssl_host['address'] += '?ssl_cert_reqs=none'
 
 # keep last part of the file

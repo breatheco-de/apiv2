@@ -1,4 +1,4 @@
-from django.http import HttpResponseRedirect, StreamingHttpResponse
+from django.http import HttpResponse, HttpResponseRedirect, StreamingHttpResponse
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 import logging, hashlib, os
@@ -334,9 +334,9 @@ class CohortTaskView(APIView, GenerateLookupsMixin):
     @capable_of('read_assignment')
     def get(self, request, cohort_id, academy_id):
         handler = self.extensions(request)
-        cache = handler.cache.get()
-        if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+        # cache = handler.cache.get()
+        # if cache is not None:
+        #     return Response(cache, status=status.HTTP_200_OK)
 
         items = Task.objects.all()
         lookup = {}
@@ -529,9 +529,9 @@ class TaskMeView(APIView):
 
     def get(self, request, task_id=None, user_id=None):
         handler = self.extensions(request)
-        cache = handler.cache.get()
-        if cache is not None:
-            return Response(cache, status=status.HTTP_200_OK)
+        # cache = handler.cache.get()
+        # if cache is not None:
+        #     return Response(cache, status=status.HTTP_200_OK)
 
         if not user_id:
             user_id = request.user.id
@@ -642,11 +642,11 @@ class TaskMeView(APIView):
             tasks = serializer.save()
             # tasks.teacher_task_notification.delay(serializer.data['id'])
             for t in tasks:
-              tasks_activity.add_activity.delay(request.user.id,
-                                                'open_syllabus_module',
-                                                related_type='assignments.Task',
-                                                related_id=t.id)
-              
+                tasks_activity.add_activity.delay(request.user.id,
+                                                  'open_syllabus_module',
+                                                  related_type='assignments.Task',
+                                                  related_id=t.id)
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

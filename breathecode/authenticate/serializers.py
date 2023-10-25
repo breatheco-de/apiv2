@@ -11,7 +11,8 @@ from django.contrib.auth.models import User
 
 from breathecode.utils.i18n import translation
 from .models import (CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile, Token, GitpodUser,
-                     GithubAcademyUser, AcademyAuthSettings)
+                     GithubAcademyUser, AcademyAuthSettings, UserSetting)
+from breathecode.authenticate.actions import get_user_settings
 from breathecode.utils import ValidationException
 from breathecode.admissions.models import Academy, Cohort, Syllabus
 from rest_framework.exceptions import ValidationError
@@ -19,6 +20,8 @@ from rest_framework import serializers
 from django.db.models import Q
 from django.contrib.auth.models import Permission
 from breathecode.mentorship.models import MentorProfile
+from breathecode.events.models import Event
+from breathecode.registry.models import Asset
 import breathecode.activity.tasks as tasks_activity
 
 logger = logging.getLogger(__name__)
@@ -386,12 +389,20 @@ class SmallAppUserAgreementSerializer(serpy.Serializer):
         return obj.agreement_version == obj.app.agreement_version
 
 
+class SettingsSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    lang = serpy.Field()
+    main_currency = serpy.Field()
+
+
 class UserSerializer(AppUserSerializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
 
     roles = serpy.MethodField()
     permissions = serpy.MethodField()
+    settings = serpy.MethodField()
 
     def get_permissions(self, obj):
         permissions = Permission.objects.none()
@@ -404,6 +415,10 @@ class UserSerializer(AppUserSerializer):
     def get_roles(self, obj):
         roles = ProfileAcademy.objects.filter(user=obj.id)
         return ProfileAcademySmallSerializer(roles, many=True).data
+
+    def get_settings(self, obj):
+        settings = get_user_settings(obj.id)
+        return SettingsSerializer(settings, many=False).data
 
 
 class GroupSerializer(serpy.Serializer):
@@ -487,6 +502,13 @@ class UserMeSerializer(serializers.ModelSerializer):
                 raise ValidationException('Error saving user profile')
 
         return super().update(self.instance, validated_data)
+
+
+class UserSettingsSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = UserSetting
+        exclude = ('user', )
 
 
 class MemberPOSTSerializer(serializers.ModelSerializer):
@@ -585,6 +607,67 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                                                   es='Imposible encontrar el apellido en este usuario',
                                                   slug='last-name-not-found'),
                                       code=400)
+
+        event = data.get('event', None)
+        if event is not None:
+            try:
+                args = {}
+                if isinstance(event, int):
+                    args['id'] = event
+                else:
+                    args['slug'] = event
+
+                event = Event.objects.filter(**args).get()
+                data['event_slug'] = event.slug
+
+            except Exception as e:
+                raise ValidationException(translation(lang,
+                                                      en='Unable to find the given Event',
+                                                      es='Imposible encontrar el Evento dado',
+                                                      slug='event-not-found'),
+                                          code=400)
+
+        asset = data.get('asset', None)
+        if asset is not None:
+            try:
+                args = {}
+                if isinstance(asset, int):
+                    args['id'] = asset
+                else:
+                    args['slug'] = asset
+
+                asset = Asset.objects.filter(**args).get()
+                data['asset_slug'] = asset.slug
+
+            except Exception as e:
+                raise ValidationException(translation(lang,
+                                                      en='Unable to find the given Asset',
+                                                      es='Imposible encontrar el Asset dado',
+                                                      slug='asset-not-found'),
+                                          code=400)
+
+        conversion_info = data.get('conversion_info', None)
+        if conversion_info is not None:
+            if not isinstance(conversion_info, dict):
+                raise ValidationException(translation(lang,
+                                                      en='conversion_info should be a JSON object',
+                                                      es='conversion_info debería ser un objeto de JSON',
+                                                      slug='conversion-info-json-type'),
+                                          code=400)
+
+            expected_keys = [
+                'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'conversion_url', 'landing_url',
+                'user_agent', 'plan', 'location'
+            ]
+
+            for key in conversion_info.keys():
+                if key not in expected_keys:
+                    raise ValidationException(translation(
+                        lang,
+                        en=f'Invalid key {key} provided in the conversion_info',
+                        es=f'Clave inválida {key} agregada en el conversion_info',
+                        slug='conversion-info-invalid-key'),
+                                              code=400)
 
         return data
 
@@ -1113,19 +1196,16 @@ class ProfileSerializer(serializers.ModelSerializer):
         exclude = ()
 
 
-import breathecode.activity.tasks as tasks_activity
-
-
 class UserInviteWaitingListSerializer(serializers.ModelSerializer):
     access_token = serializers.SerializerMethodField()
     plans = serializers.SerializerMethodField()
     plan = serializers.ReadOnlyField()
+    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
 
     class Meta:
         model = UserInvite
-
         fields = ('id', 'email', 'first_name', 'last_name', 'phone', 'cohort', 'syllabus', 'access_token',
-                  'plan', 'plans')
+                  'plan', 'plans', 'user', 'conversion_info', 'country', 'city', 'latitude', 'longitude')
 
     def validate(self, data: dict[str, str]):
         from breathecode.payments.models import Plan
@@ -1293,6 +1373,67 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         if not self.instance:
             data['token'] = hashlib.sha512((data['email']).encode('UTF-8') + os.urandom(64)).hexdigest()
 
+        event = data.get('event', None)
+        if event is not None:
+            try:
+                args = {}
+                if isinstance(event, int):
+                    args['id'] = event
+                else:
+                    args['slug'] = event
+
+                event = Event.objects.filter(**args).get()
+                data['event_slug'] = event.slug
+
+            except Exception as e:
+                raise ValidationException(translation(lang,
+                                                      en='Unable to find the given Event',
+                                                      es='Imposible encontrar el Evento dado',
+                                                      slug='event-not-found'),
+                                          code=400)
+
+        asset = data.get('asset', None)
+        if asset is not None:
+            try:
+                args = {}
+                if isinstance(asset, int):
+                    args['id'] = asset
+                else:
+                    args['slug'] = asset
+
+                asset = Asset.objects.filter(**args).get()
+                data['asset_slug'] = asset.slug
+
+            except Exception as e:
+                raise ValidationException(translation(lang,
+                                                      en='Unable to find the given Asset',
+                                                      es='Imposible encontrar el Asset dado',
+                                                      slug='asset-not-found'),
+                                          code=400)
+
+        conversion_info = data.get('conversion_info', None)
+        if conversion_info is not None:
+            if not isinstance(conversion_info, dict):
+                raise ValidationException(translation(lang,
+                                                      en='conversion_info should be a JSON object',
+                                                      es='conversion_info debería ser un objeto de JSON',
+                                                      slug='conversion-info-json-type'),
+                                          code=400)
+
+            expected_keys = [
+                'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'conversion_url', 'landing_url',
+                'user_agent', 'plan', 'location'
+            ]
+
+            for key in conversion_info.keys():
+                if key not in expected_keys:
+                    raise ValidationException(translation(
+                        lang,
+                        en=f'Invalid key {key} provided in the conversion_info',
+                        es=f'Clave inválida {key} agregada en el conversion_info',
+                        slug='conversion-info-invalid-key'),
+                                              code=400)
+
         return data
 
     def create(self, *args, **kwargs):
@@ -1338,6 +1479,11 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                              is_active=True)
             self.user.save()
 
+            # create default settings for user
+            settings = get_user_settings(self.user.id)
+            settings.lang = lang
+            settings.save()
+
             subject = translation(
                 lang,
                 en='4Geeks - Validate account',
@@ -1346,6 +1492,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
             notify_actions.send_email_message(
                 'verify_email', self.user.email, {
                     'SUBJECT': subject,
+                    'LANG': lang,
                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{obj.token}'
                 })
 

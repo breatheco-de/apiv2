@@ -158,3 +158,9 @@ dump.rdb
 # Visual Studio Code
 .vscode/
 .theia/
+
+# Redis and any certificate files
+*.pem
+*.key
+*.crt
+*:Zone.Identifier

@@ -36,7 +36,11 @@ if __name__ == '__main__':
     if os.path.exists(xml_path):
         os.remove(xml_path)
 
-    exit_code = os.system(f'pytest {dir} --disable-pytest-warnings --cov={module} --cov-report xml -n auto')
+    os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+
+    exit_code = os.system(
+        f'export DATABASE_URL=sqlite:///:memory: pytest {dir} --disable-pytest-warnings --cov={module} --cov-report xml -n auto'
+    )
 
     # python don't return 256
     if exit_code:

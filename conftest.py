@@ -17,6 +17,7 @@ from rest_framework.test import APIClient
 
 # set ENV as test before run django
 os.environ['ENV'] = 'test'
+os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 
 FAKE = Faker()
 pytest_plugins = ('celery.contrib.pytest', )

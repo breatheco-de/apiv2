@@ -123,7 +123,7 @@ class EventbriteWebhookAdmin(admin.ModelAdmin):
     list_filter = ['organization_id', 'status', 'action']
     search_fields = [
         'organization_id', 'status', 'event__title', 'event__slug', 'attendee__email', 'attendee__first_name',
-        'attendee__last_name'
+        'attendee__last_name', 'event__uuid'
     ]
     raw_id_fields = ['event', 'attendee']
     actions = [reattempt_eventbrite_webhook]

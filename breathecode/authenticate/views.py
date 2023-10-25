@@ -63,10 +63,11 @@ from .serializers import (AppUserSerializer, AuthSerializer, GetGitpodUserSerial
                           UserInviteSmallSerializer, UserInviteWaitingListSerializer, UserMeSerializer,
                           UserSerializer, UserSmallSerializer, UserTinySerializer, GithubUserSerializer,
                           PUTGithubUserSerializer, AuthSettingsBigSerializer, AcademyAuthSettingsSerializer,
-                          POSTGithubUserSerializer)
+                          POSTGithubUserSerializer, SettingsSerializer, UserSettingsSerializer)
 
 import breathecode.payments.tasks as payment_tasks
 import breathecode.activity.tasks as tasks_activity
+from breathecode.authenticate.actions import get_user_settings
 
 logger = logging.getLogger(__name__)
 APP_URL = os.getenv('APP_URL', '')
@@ -797,6 +798,35 @@ class UserMeView(APIView):
             raise ValidationException('You don\'t have a user', slug='user-not-found', code=403)
 
         serializer = UserMeSerializer(request.user, data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserSettingsView(APIView):
+
+    def get(self, request, format=None):
+        try:
+            if isinstance(request.user, AnonymousUser):
+                raise ValidationException('There is not user', slug='without-auth', code=403)
+
+        except User.DoesNotExist:
+            raise ValidationException('You don\'t have a user', slug='user-not-found', code=403)
+
+        settings = get_user_settings(request.user.id)
+        serializer = SettingsSerializer(settings)
+        return Response(serializer.data)
+
+    def put(self, request):
+        try:
+            if isinstance(request.user, AnonymousUser):
+                raise ValidationException('Invalid or unauthenticated user', slug='without-auth', code=403)
+
+        except User.DoesNotExist:
+            raise ValidationException('You don\'t have a user', slug='user-not-found', code=403)
+
+        serializer = UserSettingsSerializer(request.user, data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)

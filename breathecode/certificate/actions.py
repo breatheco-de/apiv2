@@ -42,7 +42,7 @@ def generate_certificate(user, cohort=None, layout=None):
     if cohort:
         query['cohort__id'] = cohort.id
 
-    cohort_user = CohortUser.objects.filter(**query).first()
+    cohort_user = CohortUser.objects.filter(**query).exclude(cohort__stage='DELETED').first()
 
     if not cohort_user:
         raise ValidationException("Impossible to obtain the student cohort, maybe it's none assigned",
@@ -135,13 +135,13 @@ def generate_certificate(user, cohort=None, layout=None):
                                       'status GRADUATED',
                                       slug='bad-educational-status')
 
-        if cohort.current_day != cohort.syllabus_version.syllabus.duration_in_days:
+        if not cohort.never_ends and cohort.current_day != cohort.syllabus_version.syllabus.duration_in_days:
             raise ValidationException(
                 'Cohort current day should be '
                 f'{cohort.syllabus_version.syllabus.duration_in_days}',
                 slug='cohort-not-finished')
 
-        if cohort.stage != 'ENDED':
+        if not cohort.never_ends and cohort.stage != 'ENDED':
             raise ValidationException(
                 f"The student cohort stage has to be 'ENDED' before you can issue any certificates",
                 slug='cohort-without-status-ended')

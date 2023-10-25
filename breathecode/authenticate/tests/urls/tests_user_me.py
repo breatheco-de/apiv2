@@ -14,7 +14,21 @@ def get_permission_serializer(permission):
     }
 
 
-def get_serializer(self, user, credentials_github=None, profile_academies=[], profile=None, permissions=[]):
+def user_setting_serializer(user_setting):
+    return {
+        'lang': user_setting.lang,
+        'main_currency': user_setting.main_currency,
+    }
+
+
+def get_serializer(self,
+                   user,
+                   credentials_github=None,
+                   profile_academies=[],
+                   profile=None,
+                   permissions=[],
+                   user_setting=None,
+                   data={}):
     return {
         'id':
         user.id,
@@ -24,6 +38,8 @@ def get_serializer(self, user, credentials_github=None, profile_academies=[], pr
         user.first_name,
         'last_name':
         user.last_name,
+        'settings':
+        user_setting_serializer(user_setting) if user_setting else None,
         'permissions': [get_permission_serializer(x) for x in permissions],
         'github': {
             'avatar_url': credentials_github.avatar_url,
@@ -44,6 +60,7 @@ def get_serializer(self, user, credentials_github=None, profile_academies=[], pr
             'id': profile_academy.id,
             'role': profile_academy.role.slug,
         } for profile_academy in profile_academies],
+        **data,
     }
 
 
@@ -86,7 +103,12 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = get_serializer(self, model.user)
+        expected = get_serializer(self,
+                                  model.user,
+                                  data={'settings': {
+                                      'lang': 'en',
+                                      'main_currency': None,
+                                  }})
 
         self.assertEqual(json, expected)
 
@@ -102,7 +124,13 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = get_serializer(self, model.user, credentials_github=model.credentials_github)
+        expected = get_serializer(self,
+                                  model.user,
+                                  credentials_github=model.credentials_github,
+                                  data={'settings': {
+                                      'lang': 'en',
+                                      'main_currency': None,
+                                  }})
 
         self.assertEqual(json, expected)
 
@@ -118,7 +146,13 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = get_serializer(self, model.user, profile_academies=[model.profile_academy])
+        expected = get_serializer(self,
+                                  model.user,
+                                  profile_academies=[model.profile_academy],
+                                  data={'settings': {
+                                      'lang': 'en',
+                                      'main_currency': None,
+                                  }})
 
         self.assertEqual(json, expected)
 
@@ -134,7 +168,13 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = get_serializer(self, model.user, profile=model.profile)
+        expected = get_serializer(self,
+                                  model.user,
+                                  profile=model.profile,
+                                  data={'settings': {
+                                      'lang': 'en',
+                                      'main_currency': None,
+                                  }})
 
         self.assertEqual(json, expected)
 
@@ -150,7 +190,14 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = get_serializer(self, model.user, profile=model.profile, permissions=[])
+        expected = get_serializer(self,
+                                  model.user,
+                                  profile=model.profile,
+                                  permissions=[],
+                                  data={'settings': {
+                                      'lang': 'en',
+                                      'main_currency': None,
+                                  }})
 
         self.assertEqual(json, expected)
 
@@ -166,7 +213,14 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = get_serializer(self, model.user, profile=model.profile, permissions=[model.permission])
+        expected = get_serializer(self,
+                                  model.user,
+                                  profile=model.profile,
+                                  permissions=[model.permission],
+                                  data={'settings': {
+                                      'lang': 'en',
+                                      'main_currency': None,
+                                  }})
 
         self.assertEqual(json, expected)
 
@@ -182,7 +236,14 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = get_serializer(self, model.user, profile=model.profile, permissions=[model.permission])
+        expected = get_serializer(self,
+                                  model.user,
+                                  profile=model.profile,
+                                  permissions=[model.permission],
+                                  data={'settings': {
+                                      'lang': 'en',
+                                      'main_currency': None,
+                                  }})
 
         self.assertEqual(json, expected)
 
@@ -215,6 +276,10 @@ class AuthenticateTestSuite(AuthTestCase):
                                       model.permission[2],
                                       model.permission[1],
                                       model.permission[0],
-                                  ])
+                                  ],
+                                  data={'settings': {
+                                      'lang': 'en',
+                                      'main_currency': None,
+                                  }})
 
         self.assertEqual(json, expected)
