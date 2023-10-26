@@ -1454,11 +1454,11 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         if self.course:
             self.course.invites.add(instance)
 
-        if self.user:
-            tasks_activity.add_activity.delay(self.user.id,
-                                              'invite_created',
-                                              related_type='auth.UserInvite',
-                                              related_id=instance.id)
+        # if self.user:
+        #     tasks_activity.add_activity.delay(self.user.id,
+        #                                       'invite_created',
+        #                                       related_type='auth.UserInvite',
+        #                                       related_id=instance.id)
 
         return instance
 
