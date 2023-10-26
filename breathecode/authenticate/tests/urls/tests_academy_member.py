@@ -88,6 +88,10 @@ def generate_user_invite(data: dict) -> dict:
         'process_message': '',
         'process_status': 'PENDING',
         'user_id': None,
+        'city': None,
+        'country': None,
+        'latitude': None,
+        'longitude': None,
         **data,
     }
 
