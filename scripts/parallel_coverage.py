@@ -1,6 +1,7 @@
 #!/bin/env python
 
 import os
+import random
 import sys
 import shutil
 import webbrowser
@@ -38,8 +39,13 @@ if __name__ == '__main__':
     if os.path.exists(htmlcov_path):
         shutil.rmtree(htmlcov_path)
 
-    exit_code = os.system(f'pytest {dir} --disable-pytest-warnings {sys.argv[1]} {sys.argv[2]} '
-                          f'--cov={module} --cov-report html -n auto')
+    # this fix a problem caused by the geniuses at pytest-xdist
+    seed = random.randint(0, 4294967295)
+    command = (f'pytest {dir} --disable-pytest-warnings {sys.argv[1]} {sys.argv[2]} '
+               f'--cov={module} --cov-report html -n auto --nomigrations --durations=1')
+
+    # unix like support
+    exit_code = os.system(f'export RANDOM={seed}; {command}')
 
     webbrowser.open('file://' + os.path.realpath(os.path.join(os.getcwd(), 'htmlcov', 'index.html')))
 

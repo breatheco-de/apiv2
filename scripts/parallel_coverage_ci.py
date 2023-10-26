@@ -1,6 +1,7 @@
 #!/bin/env python
 
 import os
+import random
 import sys
 from pathlib import Path
 
@@ -38,9 +39,14 @@ if __name__ == '__main__':
 
     os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 
-    exit_code = os.system(
-        f'export DATABASE_URL=sqlite:///:memory: pytest {dir} --disable-pytest-warnings --cov={module} --cov-report xml -n auto'
-    )
+    # prefix = 'export DATABASE_URL=sqlite:///:memory: '
+
+    # this fix a problem caused by the geniuses at pytest-xdist
+    seed = random.randint(0, 4294967295)
+    command = f'pytest {dir} --disable-pytest-warnings --cov={module} --cov-report xml -n auto --durations=1'
+
+    # unix like support
+    exit_code = os.system(f'export RANDOM={seed}; {command}')
 
     # python don't return 256
     if exit_code:
