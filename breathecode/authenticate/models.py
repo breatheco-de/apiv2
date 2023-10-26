@@ -478,6 +478,9 @@ class UserInvite(models.Model):
                                        null=True,
                                        help_text='UTMs and other conversion information.')
 
+    email_quality = models.FloatField(default=None, blank=True, null=True)
+    email_status = models.JSONField(default=None, blank=True, null=True)
+
     def __str__(self):
         return f'Invite for {self.email}'
 

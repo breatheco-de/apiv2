@@ -22,6 +22,7 @@ from django.contrib.auth.models import Permission
 from breathecode.mentorship.models import MentorProfile
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
+from breathecode.marketing.actions import validate_email
 import breathecode.activity.tasks as tasks_activity
 
 logger = logging.getLogger(__name__)
@@ -656,8 +657,8 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                                           code=400)
 
             expected_keys = [
-                'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'conversion_url', 'landing_url',
-                'user_agent', 'plan', 'location'
+                'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'conversion_url',
+                'landing_url', 'user_agent', 'plan', 'location'
             ]
 
             for key in conversion_info.keys():
@@ -1219,6 +1220,8 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         data['email'] = data['email'].lower()
 
+        email_validation = validate_email(data['email'], lang)
+
         extra = {}
 
         plan = None
@@ -1421,8 +1424,8 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                                           code=400)
 
             expected_keys = [
-                'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'conversion_url', 'landing_url',
-                'user_agent', 'plan', 'location'
+                'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'conversion_url',
+                'landing_url', 'user_agent', 'plan', 'location'
             ]
 
             for key in conversion_info.keys():
