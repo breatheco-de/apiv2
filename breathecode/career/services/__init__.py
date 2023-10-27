@@ -1,6 +1,4 @@
 import logging
-from django.contrib import messages
-from .base_scraper import *
 
 logger = logging.getLogger(__name__)
 

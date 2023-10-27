@@ -8,10 +8,8 @@ from breathecode.admissions.signals import student_edu_status_updated
 from breathecode.admissions.models import CohortUser
 from django.dispatch import receiver
 from .tasks import async_remove_from_organization, async_add_to_organization
-from breathecode.authenticate.models import App, AppOptionalScope, AppRequiredScope, AppUserAgreement, ProfileAcademy
+from breathecode.authenticate.models import AppOptionalScope, AppRequiredScope, AppUserAgreement, ProfileAcademy
 from breathecode.mentorship.models import MentorProfile
-from django.db.models import Q
-from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 

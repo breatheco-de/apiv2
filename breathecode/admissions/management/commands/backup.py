@@ -35,7 +35,7 @@ class Command(BaseCommand, DatetimeMixin):
         self.all_model_names = []
 
         if not 'mode' in options:
-            return self.stderr.write(self.style.ERROR(f'missing mode arguments'))
+            return self.stderr.write(self.style.ERROR('missing mode arguments'))
 
         module_name = options['module']
         model_name = options['model']

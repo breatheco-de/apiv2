@@ -1,12 +1,12 @@
-import logging, time, datetime, hashlib, requests, csv
+import logging, time, requests, csv
 from io import StringIO
-import json, re, os, subprocess, sys
+import json, re, os, sys
 from django.utils import timezone
 from breathecode.utils import ScriptNotification
 from breathecode.admissions.models import Academy
 from breathecode.utils.script_notification import WrongScriptConfiguration
 from breathecode.utils.validation_exception import ValidationException
-from .models import CSVUpload, Endpoint, CSVDownload, RepositoryWebhook, StripeEvent
+from .models import Endpoint, CSVDownload, RepositoryWebhook, StripeEvent
 from breathecode.services.slack.actions.monitoring import render_snooze_text_endpoint, render_snooze_script
 
 logger = logging.getLogger(__name__)
@@ -56,7 +56,7 @@ def test_link(url, test_pattern=None):
         result['status_text'] = 'Connection Timeout'
     except requests.ConnectionError:
         result['status_code'] = 404
-        result['status_text'] = f'Connection Error 404'
+        result['status_text'] = 'Connection Error 404'
 
     logger.debug(f'Tested {url} {result["status_text"]} with {result["status_code"]}')
     return result

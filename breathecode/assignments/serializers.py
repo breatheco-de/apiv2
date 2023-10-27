@@ -1,7 +1,6 @@
 import serpy, logging, os
 from rest_framework import serializers
 from .models import Task, FinalProject, UserAttachment
-from rest_framework.exceptions import ValidationError
 from breathecode.utils import ValidationException
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import ProfileAcademy, Token

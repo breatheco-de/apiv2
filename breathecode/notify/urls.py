@@ -1,5 +1,4 @@
-from django.contrib import admin
-from django.urls import path, include
+from django.urls import path
 from .views import (test_email, preview_template, process_interaction, slack_command, preview_slack_template,
                     HooksView, get_sample_data)
 

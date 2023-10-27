@@ -3,7 +3,6 @@ import os
 from breathecode.authenticate.models import Token
 from breathecode.utils import ValidationException
 from breathecode.utils import getLogger
-from django.db.models import Avg
 from celery import shared_task, Task
 from django.utils import timezone
 from breathecode.notify import actions as notify_actions

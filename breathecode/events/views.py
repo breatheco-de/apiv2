@@ -2,22 +2,18 @@ import os
 
 from django.contrib.auth.models import User
 from django.db.models.query_utils import Q
-from breathecode.authenticate.actions import get_user_language, get_user_settings, server_id
+from breathecode.authenticate.actions import get_user_language, server_id
 from breathecode.events.caches import EventCache, LiveClassCache
 from .permissions.consumers import event_by_url_param, live_class_by_url_param
-from breathecode.utils import APIException
 from datetime import datetime, timedelta
-from breathecode.utils.views import private_view, render_message, set_query_parameter
+from breathecode.utils.views import private_view, render_message
 from django.shortcuts import redirect, render
 import logging
 import re
 import pytz
-from django.core.exceptions import FieldError
-from django.contrib.auth.hashers import check_password, make_password
 
 from django.http.response import HttpResponse
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from breathecode.utils.cache import Cache
 from django.utils import timezone
 
 from rest_framework import status
@@ -52,7 +48,6 @@ from .tasks import async_eventbrite_webhook
 from breathecode.utils import ValidationException
 from breathecode.utils import response_207
 from icalendar import Calendar as iCalendar, Event as iEvent, vCalAddress, vText
-import breathecode.events.receivers
 
 logger = logging.getLogger(__name__)
 MONDAY = 0
@@ -843,7 +838,7 @@ class EventCheckinView(APIView):
 
     def get(self, request, event_id):
         if event_id is None:
-            raise ValidationException(f'event_id must not be null', status.HTTP_404_NOT_FOUND)
+            raise ValidationException('event_id must not be null', status.HTTP_404_NOT_FOUND)
 
         try:
             event_id = int(event_id)
@@ -1083,7 +1078,7 @@ class OrganizationWebhookView(APIView, HeaderLimitOffsetPagination):
 
         org = Organization.objects.filter(academy__id=academy_id).first()
         if not org:
-            raise ValidationException(f'Academy has no organization', code=400, slug='organization-no-found')
+            raise ValidationException('Academy has no organization', code=400, slug='organization-no-found')
 
         webhooks = EventbriteWebhook.objects.filter(organization_id=org.id).order_by('-updated_at')
         page = self.paginate_queryset(webhooks, request)
@@ -1160,7 +1155,7 @@ class ICalStudentView(APIView):
         calendar = iCalendar()
         calendar.add('prodid', f'-//4Geeks//Student Schedule ({user_id}) {key}//EN')
         calendar.add('METHOD', 'PUBLISH')
-        calendar.add('X-WR-CALNAME', f'Academy - Schedule')
+        calendar.add('X-WR-CALNAME', 'Academy - Schedule')
         calendar.add('X-WR-CALDESC', '')
         calendar.add('REFRESH-INTERVAL;VALUE=DURATION', 'PT15M')
 
@@ -1278,7 +1273,7 @@ class ICalCohortsView(APIView):
         calendar = iCalendar()
         calendar.add('prodid', f'-//4Geeks//Academy Cohorts{academies_repr} {key}//EN')
         calendar.add('METHOD', 'PUBLISH')
-        calendar.add('X-WR-CALNAME', f'Academy - Cohorts')
+        calendar.add('X-WR-CALNAME', 'Academy - Cohorts')
         calendar.add('X-WR-CALDESC', '')
         calendar.add('REFRESH-INTERVAL;VALUE=DURATION', 'PT15M')
 
@@ -1450,7 +1445,7 @@ class ICalEventView(APIView):
         calendar = iCalendar()
         calendar.add('prodid', f'-//4Geeks//Academy Events{academies_repr} {key}//EN')
         calendar.add('METHOD', 'PUBLISH')
-        calendar.add('X-WR-CALNAME', f'Academy - Events')
+        calendar.add('X-WR-CALNAME', 'Academy - Events')
         calendar.add('X-WR-CALDESC', '')
         calendar.add('REFRESH-INTERVAL;VALUE=DURATION', 'PT15M')
 

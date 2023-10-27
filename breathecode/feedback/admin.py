@@ -192,7 +192,7 @@ class AnswerAdmin(admin.ModelAdmin, AdminExportCsvMixin):
 
 
 def send_big_cohort_bulk_survey(modeladmin, request, queryset):
-    logger.debug(f'send_big_cohort_bulk_survey called')
+    logger.debug('send_big_cohort_bulk_survey called')
 
     # cohort_ids = queryset.values_list('id', flat=True)
     surveys = queryset.all()
@@ -209,7 +209,7 @@ def send_big_cohort_bulk_survey(modeladmin, request, queryset):
         messages.error(request, message='Some surveys have not been sent')
     s.save()
 
-    logger.info(f'All surveys scheduled to send for cohorts')
+    logger.info('All surveys scheduled to send for cohorts')
 
 
 send_big_cohort_bulk_survey.short_description = 'Send survey to all cohort students'

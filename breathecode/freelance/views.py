@@ -1,24 +1,20 @@
 from datetime import datetime
-from django.shortcuts import render
 from rest_framework.response import Response
 from .serializers import (BillSerializer, SmallIssueSerializer, BigBillSerializer,
-                          SmallFreelancerMemberSerializer, SmallProjectSerializer, BigProjectSerializer,
-                          BigInvoiceSerializer, SmallBillSerializer)
+                          SmallFreelancerMemberSerializer, BigProjectSerializer, BigInvoiceSerializer,
+                          SmallBillSerializer)
 from rest_framework.permissions import AllowAny
 from rest_framework import status
-from django.utils import timezone
 from django.db.models import Q
 from rest_framework.decorators import api_view, permission_classes
 from .actions import sync_user_issues, generate_freelancer_bill, generate_project_invoice
 from .models import (Bill, Freelancer, Issue, BILL_STATUS, AcademyFreelanceProject, FreelanceProjectMember,
                      ProjectInvoice)
-from .tasks import async_repository_issue_github
 from rest_framework.views import APIView
 from breathecode.utils.views import private_view
 from breathecode.notify.actions import get_template_content
 from breathecode.utils.decorators import capable_of
 from breathecode.utils.validation_exception import ValidationException
-from breathecode.admissions.models import Academy
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from django.http import HttpResponse
 

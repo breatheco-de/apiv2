@@ -5,4 +5,4 @@ class NotifyConfig(AppConfig):
     name = 'breathecode.notify'
 
     def ready(self):
-        from . import receivers
+        from . import receivers  # noqa: F401

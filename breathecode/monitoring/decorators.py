@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from celery import shared_task, Task
+from celery import Task
 from .models import RepositoryWebhook
 
 logger = logging.getLogger(__name__)

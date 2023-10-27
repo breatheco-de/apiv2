@@ -1,8 +1,4 @@
-from .models import Answer
-from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
 import serpy
-from django.utils import timezone
 
 
 class UserSerializer(serpy.Serializer):

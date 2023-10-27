@@ -1,9 +1,7 @@
-import logging, json, os
+import logging
 from typing import Type
 from django.dispatch import receiver
-from breathecode.admissions.signals import student_edu_status_updated
 from breathecode.monitoring.models import StripeEvent
-from django.db.models.signals import post_delete, post_save, pre_delete
 from breathecode.monitoring import signals as monitoring_signals
 
 from breathecode.provisioning.models import ProvisioningBill

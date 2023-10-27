@@ -1,11 +1,10 @@
-import requests
 from django.db import models
 from collections import OrderedDict
 from django.core import serializers
 from django.conf import settings
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
-from rest_framework.exceptions import ParseError, PermissionDenied, ValidationError
+from rest_framework.exceptions import ValidationError
 
 __all__ = [
     'UserProxy', 'CohortProxy', 'Device', 'SlackTeam', 'SlackUser', 'SlackUserTeam', 'SlackChannel', 'Hook'

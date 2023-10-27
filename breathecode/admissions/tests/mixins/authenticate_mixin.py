@@ -2,10 +2,8 @@
 Collections of mixins used to login in authorize microservice
 """
 from breathecode.authenticate.models import Capability, ProfileAcademy, Role
-from datetime import datetime
 from rest_framework.test import APITestCase
 from mixer.backend.django import mixer
-from django.contrib.auth.models import User
 from breathecode.tests.mixins import DevelopmentEnvironment, DateFormatterMixin
 
 

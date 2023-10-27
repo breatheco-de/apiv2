@@ -162,10 +162,10 @@ class MentorAdmin(admin.ModelAdmin):
         }
 
         if obj.online_meeting_url is None:
-            return format_html(f"<span class='badge bg-error'> Missing Meeting URL</span>")
+            return format_html("<span class='badge bg-error'> Missing Meeting URL</span>")
 
         if obj.booking_url is None:
-            return format_html(f"<span class='badge bg-error'> Missing Booking URL</span>")
+            return format_html("<span class='badge bg-error'> Missing Booking URL</span>")
 
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 

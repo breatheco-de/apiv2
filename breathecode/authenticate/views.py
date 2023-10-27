@@ -46,14 +46,13 @@ from breathecode.utils.views import (private_view, render_message, set_query_par
 
 from .actions import (accept_invite_action, generate_academy_token, get_app, get_user_language, resend_invite,
                       reset_password, set_gitpod_user_expiration, update_gitpod_users,
-                      sync_organization_members, get_github_scopes, accept_invite)
+                      sync_organization_members, accept_invite)
 from .authentication import ExpiringTokenAuthentication
 from .forms import (InviteForm, LoginForm, PasswordChangeCustomForm, PickPasswordForm, ResetPasswordForm,
                     SyncGithubUsersForm)
-from .models import (App, AppOptionalScope, AppRequiredScope, AppUserAgreement, CredentialsFacebook,
-                     CredentialsGithub, CredentialsGoogle, CredentialsSlack, GitpodUser, OptionalScopeSet,
-                     Profile, ProfileAcademy, Role, Scope, Token, UserInvite, GithubAcademyUser,
-                     AcademyAuthSettings)
+from .models import (AppUserAgreement, CredentialsFacebook, CredentialsGithub, CredentialsGoogle,
+                     CredentialsSlack, GitpodUser, OptionalScopeSet, Profile, ProfileAcademy, Role, Scope,
+                     Token, UserInvite, GithubAcademyUser, AcademyAuthSettings)
 from .serializers import (AppUserSerializer, AuthSerializer, GetGitpodUserSerializer,
                           GetProfileAcademySerializer, GetProfileAcademySmallSerializer, GetProfileSerializer,
                           GitpodUserSmallSerializer, MemberPOSTSerializer, MemberPUTSerializer,
@@ -65,7 +64,6 @@ from .serializers import (AppUserSerializer, AuthSerializer, GetGitpodUserSerial
                           PUTGithubUserSerializer, AuthSettingsBigSerializer, AcademyAuthSettingsSerializer,
                           POSTGithubUserSerializer, SettingsSerializer, UserSettingsSerializer)
 
-import breathecode.payments.tasks as payment_tasks
 import breathecode.activity.tasks as tasks_activity
 from breathecode.authenticate.actions import get_user_settings
 
@@ -379,7 +377,7 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         accept_invite(user=request.user)
 
         if new_status is None:
-            raise ValidationException(f'Please specify new status for the invites', slug='missing-status')
+            raise ValidationException('Please specify new status for the invites', slug='missing-status')
 
         if new_status.upper() not in ['ACCEPTED', 'REJECTED']:
             raise ValidationException(f'Invalid invite status {new_status}', slug='invalid-status')
@@ -433,10 +431,10 @@ class ConfirmEmailView(APIView):
             return render_message(request, e.get_message(), status=404)
 
         if not invite.email:
-            errors.append(C(f'This invite don\'t have email, contact to admin', slug=f'without-email'))
+            errors.append(C('This invite don\'t have email, contact to admin', slug='without-email'))
 
         if invite.is_email_validated:
-            errors.append(C(f'Email already validated', slug=f'email-already-validated'))
+            errors.append(C('Email already validated', slug='email-already-validated'))
 
         if errors:
             e = ValidationException(errors, code=400)
@@ -454,7 +452,7 @@ class ConfirmEmailView(APIView):
             return Response(serializer.data)
 
         # If not JSON, return your HTML message.
-        return render_message(request, f'Your email was validated, you can close this page.')
+        return render_message(request, 'Your email was validated, you can close this page.')
 
 
 class ResendInviteView(APIView):
@@ -476,11 +474,11 @@ class ResendInviteView(APIView):
 
         if invite.status == 'WAITING_LIST':
             status = invite.status.lower()
-            errors.append(C(f'You are in the waiting list, ', slug=f'user-already-{status}'))
+            errors.append(C('You are in the waiting list, ', slug=f'user-already-{status}'))
 
         if not invite.email:
             status = invite.status.lower()
-            errors.append(C(f'This invite don\'t have email, contact to admin', slug=f'without-email'))
+            errors.append(C('This invite don\'t have email, contact to admin', slug='without-email'))
 
         now = timezone.now()
         minutes = 10
@@ -1016,7 +1014,7 @@ def save_github_token(request):
             if token is not None and token != '':
                 token = Token.get_valid(token)
                 if not token:
-                    logger.debug(f'Token not found or is expired')
+                    logger.debug('Token not found or is expired')
                     raise ValidationException(
                         'Token was not found or is expired, please use a different token',
                         code=404,
@@ -1597,7 +1595,7 @@ def render_user_invite(request, token):
     pending_invites = UserInvite.objects.filter(email=token.user.email, status='PENDING')
     if pending_invites.count() == 0:
         return render_message(request,
-                              f'You don\'t have any more pending invites',
+                              'You don\'t have any more pending invites',
                               btn_label='Continue to 4Geeks',
                               btn_url=APP_URL)
 
@@ -1605,7 +1603,7 @@ def render_user_invite(request, token):
     url = os.getenv('API_URL') + '/v1/auth/member/invite?' + querystr
     return render(
         request, 'user_invite.html', {
-            'subject': f'Invitation to study at 4Geeks.com',
+            'subject': 'Invitation to study at 4Geeks.com',
             'invites': UserInviteSmallSerializer(pending_invites, many=True).data,
             'LINK': url,
             'user': UserTinySerializer(token.user, many=False).data
@@ -1698,7 +1696,7 @@ def render_academy_invite(request, token):
     pending_invites = ProfileAcademy.objects.filter(user__id=token.user.id, status='INVITED')
     if pending_invites.count() == 0:
         return render_message(request,
-                              f'You don\'t have any more pending invites',
+                              'You don\'t have any more pending invites',
                               btn_label='Continue to 4Geeks',
                               btn_url=APP_URL)
 
@@ -1706,7 +1704,7 @@ def render_academy_invite(request, token):
     url = os.getenv('API_URL') + '/v1/auth/academy/html/invite?' + querystr
     return render(
         request, 'academy_invite.html', {
-            'subject': f'Invitation to study at 4Geeks.com',
+            'subject': 'Invitation to study at 4Geeks.com',
             'invites': ProfileAcademySmallSerializer(pending_invites, many=True).data,
             'LINK': url,
             'user': UserTinySerializer(token.user, many=False).data

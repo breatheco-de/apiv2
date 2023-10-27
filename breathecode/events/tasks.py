@@ -1,6 +1,5 @@
 import logging
 from breathecode.admissions.models import CohortTimeSlot
-from breathecode.events.actions import fix_datetime_weekday
 from breathecode.services.eventbrite import Eventbrite
 from celery import shared_task, Task
 
@@ -43,7 +42,7 @@ def async_eventbrite_webhook(self, eventbrite_webhook_id):
             client = Eventbrite(organization.eventbrite_key)
             client.execute_action(eventbrite_webhook_id)
         except Exception as e:
-            logger.debug(f'Eventbrite exception')
+            logger.debug('Eventbrite exception')
             logger.debug(str(e))
             status = 'error'
 

@@ -572,7 +572,7 @@ class AssetThumbnailGenerator:
 
         preview_url = self.asset.get_preview_generation_url()
         if preview_url is None:
-            raise Exception(f'Not able to retrieve a preview generation url')
+            raise Exception('Not able to retrieve a preview generation url')
 
         filename = self.asset.get_thumbnail_name()
         url = set_query_parameter(preview_url, 'slug', self.asset.slug)
@@ -672,7 +672,7 @@ def pull_learnpack_asset(github, asset, override_meta):
         if 'preview' in config:
             asset.preview = config['preview']
         else:
-            raise Exception(f'Missing preview URL')
+            raise Exception('Missing preview URL')
 
         if 'video-id' in config:
             asset.solution_video_url = get_video_url(str(config['video-id']))
@@ -787,7 +787,7 @@ def scan_asset_originality(asset):
     try:
         credentials = asset.academy.credentialsoriginality
     except Exception as e:
-        scan.status_text = f'Error retriving originality credentials for academy: ' + str(e)
+        scan.status_text = 'Error retriving originality credentials for academy: ' + str(e)
         scan.status = 'ERROR'
         scan.save()
         raise Exception(scan.status_text)

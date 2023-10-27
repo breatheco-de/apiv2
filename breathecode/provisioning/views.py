@@ -1,6 +1,5 @@
 from datetime import date
 import hashlib
-from io import StringIO
 import math
 import os
 from django.http import HttpResponse
@@ -42,10 +41,10 @@ def redirect_new_container(request, token):
 
     user = token.user
     cohort_id = request.GET.get('cohort', None)
-    if cohort_id is None: return render_message(request, f'Please specificy a cohort in the URL')
+    if cohort_id is None: return render_message(request, 'Please specificy a cohort in the URL')
 
     url = request.GET.get('repo', None)
-    if url is None: return render_message(request, f'Please specify a repository in the URL')
+    if url is None: return render_message(request, 'Please specify a repository in the URL')
 
     cu = CohortUser.objects.filter(user=user, cohort_id=cohort_id).first()
     if cu is None: return render_message(request, f"You don't seem to belong to this cohort {cohort_id}.")
@@ -76,10 +75,10 @@ def redirect_workspaces(request, token):
 
     user = token.user
     cohort_id = request.GET.get('cohort', None)
-    if cohort_id is None: return render_message(request, f'Please specificy a cohort in the URL')
+    if cohort_id is None: return render_message(request, 'Please specificy a cohort in the URL')
 
     url = request.GET.get('repo', None)
-    if url is None: return render_message(request, f"Please specificy a repository \"repo\" in the URL")
+    if url is None: return render_message(request, "Please specificy a repository \"repo\" in the URL")
 
     cu = CohortUser.objects.filter(user=user, cohort_id=cohort_id).first()
     if cu is None: return render_message(request, f"You don't seem to belong to this cohort {cohort_id}.")

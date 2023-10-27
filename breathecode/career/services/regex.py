@@ -1,7 +1,5 @@
-import re
 from datetime import datetime, timedelta
 from django.utils import timezone
-from breathecode.utils.datetime_integer import DatetimeInteger
 
 
 def days_ago_to_date(findings, string_date):

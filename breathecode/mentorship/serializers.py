@@ -3,7 +3,6 @@ from breathecode.payments.models import Consumable
 from breathecode.utils import ValidationException
 from .models import MentorshipSession, MentorshipService, MentorProfile, MentorshipBill, CalendlyOrganization
 import breathecode.mentorship.actions as actions
-from breathecode.admissions.models import CohortUser
 from .actions import generate_mentor_bill
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
@@ -425,7 +424,7 @@ class BillSessionSerializer(serpy.Serializer):
         else:
             message += f'Started on {obj.started_at.strftime("%m/%d/%Y at %H:%M:%S")}. <br />'
             if obj.mentor_joined_at is None:
-                message += f'The mentor never joined'
+                message += 'The mentor never joined'
             elif obj.mentor_joined_at > obj.started_at:
                 message += f'The mentor joined {duration_to_str(obj.mentor_joined_at - obj.started_at)} before. <br />'
             elif obj.started_at > obj.mentor_joined_at:
@@ -439,9 +438,9 @@ class BillSessionSerializer(serpy.Serializer):
 
                     message += f'With extra time of {duration_to_str(extra_time)}. <br />'
                 else:
-                    message += f'No extra time detected <br />'
+                    message += 'No extra time detected <br />'
             else:
-                message += f'The mentorship has not ended yet. <br />'
+                message += 'The mentorship has not ended yet. <br />'
                 if obj.ends_at is not None:
                     message += f'But it was supposed to end after {duration_to_str(obj.ends_at - obj.started_at)} <br />'
 
@@ -460,7 +459,7 @@ class BillSessionSerializer(serpy.Serializer):
             return 'Ended before it started'
 
         if (end_date - obj.started_at).days > 1:
-            return f'Many days'
+            return 'Many days'
 
         return duration_to_str(obj.ended_at - obj.started_at)
 
@@ -476,7 +475,7 @@ class BillSessionSerializer(serpy.Serializer):
             return None
 
         if (obj.ended_at - obj.started_at).days > 1:
-            return f'Many days of extra time, probably it was never closed'
+            return 'Many days of extra time, probably it was never closed'
 
         if obj.service is None:
             return 'Please setup service for this session'

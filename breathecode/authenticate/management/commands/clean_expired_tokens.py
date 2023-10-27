@@ -1,6 +1,4 @@
-import os, requests, sys, pytz
-from datetime import datetime
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 
 from ...actions import delete_tokens
 

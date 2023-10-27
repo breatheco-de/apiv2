@@ -17,7 +17,7 @@ from slugify import slugify
 from breathecode.authenticate.exceptions import (BadArguments, InvalidTokenType, TokenNotFound,
                                                  TryToGetOrCreateAOneTimeToken)
 from breathecode.utils.validators import validate_language_code
-from .signals import invite_status_updated, academy_invite_accepted
+from .signals import academy_invite_accepted
 from breathecode.admissions.models import Academy, Cohort
 
 from breathecode.authenticate import signals

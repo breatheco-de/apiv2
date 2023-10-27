@@ -1,9 +1,6 @@
 from collections import OrderedDict
 import logging
-from typing_extensions import Required
-from django.http import QueryDict
 import serpy
-from traitlets import Instance
 from breathecode.admissions.actions import ImportCohortTimeSlots
 from django.db.models import Q
 from breathecode.assignments.models import Task
@@ -790,7 +787,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         cohorts = localize_query(cohorts, request).first()
 
         if not cohorts:
-            logger.debug(f'Cohort not be found in related academies')
+            logger.debug('Cohort not be found in related academies')
             raise ValidationException('Specified cohort not be found')
 
         prohibited_stages = ['INACTIVE', 'DELETED', 'ENDED']

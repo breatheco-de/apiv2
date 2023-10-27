@@ -2,7 +2,7 @@ from datetime import datetime
 import pytz
 import re
 import random
-from typing import Optional, TypedDict
+from typing import TypedDict
 from django.utils import timezone
 from breathecode.authenticate.models import (AcademyAuthSettings, CredentialsGithub, GithubAcademyUser,
                                              GithubAcademyUserLog, ProfileAcademy)
@@ -11,7 +11,7 @@ from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils import getLogger
 from breathecode.services.github import Github
 from breathecode.utils.i18n import translation
-from breathecode.admissions.models import Academy, Cohort, CohortUser
+from breathecode.admissions.models import Academy, CohortUser
 from .models import (ProvisioningUserConsumption, ProvisioningConsumptionEvent, ProvisioningConsumptionKind,
                      ProvisioningPrice, ProvisioningBill, ProvisioningProfile, ProvisioningVendor)
 from django.db.models import QuerySet, Q
@@ -275,7 +275,7 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
         context['provisioning_vendors']['Codespaces'] = provisioning_vendor
 
     if not provisioning_vendor:
-        errors.append(f'Provisioning vendor Codespaces not found')
+        errors.append('Provisioning vendor Codespaces not found')
 
     for academy in academies:
         ls = context['logs'].get((field['Username'], academy.id), None)
@@ -441,7 +441,7 @@ def add_gitpod_activity(context: ActivityContext, field: dict, position: int):
         context['provisioning_vendors']['Gitpod'] = provisioning_vendor
 
     if not provisioning_vendor:
-        errors.append(f'Provisioning vendor Gitpod not found')
+        errors.append('Provisioning vendor Gitpod not found')
 
     if academies:
         for academy in academies:

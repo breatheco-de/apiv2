@@ -1,24 +1,15 @@
-import logging, re, os
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-from django.shortcuts import render
-from django.utils import timezone
+import logging
 from rest_framework.permissions import AllowAny
-from django.http import HttpResponseRedirect, HttpResponse
+from django.http import HttpResponse
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from breathecode.utils import (capable_of, GenerateLookupsMixin, ValidationException,
-                               HeaderLimitOffsetPagination, APIViewExtensions)
-from breathecode.admissions.models import Cohort, CohortUser, Academy
-from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy, Profile, CredentialsSlack
-from .actions import get_template, get_template_content
-from .models import Device, Hook
+from breathecode.utils import (GenerateLookupsMixin, ValidationException, APIViewExtensions)
+from .actions import get_template_content
+from .models import Hook
 from .tasks import async_slack_action, async_slack_command
-from .serializers import DeviceSerializer, HookSerializer
-from breathecode.services.slack.client import Slack
-import traceback
+from .serializers import HookSerializer
 
 logger = logging.getLogger(__name__)
 

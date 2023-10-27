@@ -1,4 +1,3 @@
-from typing import Any
 import pytz
 import re
 import logging
@@ -11,7 +10,7 @@ from breathecode.payments.models import AbstractIOweYou, PlanFinancing, Subscrip
 from breathecode.utils.datetime_integer import DatetimeInteger
 from django.db.models import QuerySet
 
-from .models import EventTypeVisibilitySetting, Organization, Venue, Event, Organizer, EventType
+from .models import Organization, Venue, Event, Organizer, EventType
 from .utils import Eventbrite
 from django.db.models import QuerySet
 
@@ -247,7 +246,7 @@ def create_or_update_venue(data, org, force_update=False):
 
 def export_event_description_to_eventbrite(event: Event) -> None:
     if not event:
-        logger.error(f'Event is not being provided')
+        logger.error('Event is not being provided')
         return
 
     if not event.eventbrite_id:
@@ -398,7 +397,7 @@ def get_current_iso_string():
 
 def update_event_description_from_eventbrite(event: Event) -> None:
     if not event:
-        logger.error(f'Event is not being provided')
+        logger.error('Event is not being provided')
         return
 
     if not event.eventbrite_id:

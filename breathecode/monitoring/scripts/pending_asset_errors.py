@@ -10,7 +10,7 @@ errors = AssetErrorLog.objects.filter(status='ERROR')
 
 total_errors = errors.count()
 if total_errors == 0:
-    print(f'No asset errors found')
+    print('No asset errors found')
 
 else:
     content = ''

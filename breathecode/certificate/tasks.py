@@ -1,5 +1,5 @@
 from breathecode.utils import getLogger
-from celery import shared_task, Task
+from celery import Task
 from breathecode.admissions.models import CohortUser
 from breathecode.utils.decorators.task import task
 

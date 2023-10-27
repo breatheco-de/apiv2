@@ -14,12 +14,11 @@ from .models import (CredentialsGithub, ProfileAcademy, Role, UserInvite, Profil
                      GithubAcademyUser, AcademyAuthSettings, UserSetting)
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.utils import ValidationException
-from breathecode.admissions.models import Academy, Cohort, Syllabus
+from breathecode.admissions.models import Academy, Cohort
 from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from django.db.models import Q
 from django.contrib.auth.models import Permission
-from breathecode.mentorship.models import MentorProfile
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
 import breathecode.activity.tasks as tasks_activity

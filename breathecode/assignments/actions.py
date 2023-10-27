@@ -1,7 +1,7 @@
 import requests, os, logging
 
 from breathecode.utils.validation_exception import ValidationException
-from .models import Task, User
+from .models import Task
 from breathecode.admissions.models import CohortUser
 
 logger = logging.getLogger(__name__)

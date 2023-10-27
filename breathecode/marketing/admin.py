@@ -348,7 +348,7 @@ class TagAdmin(admin.ModelAdmin, AdminExportCsvMixin):
                 f"<div><span class='badge bg-error' style='font-size: 11px;'>Will delete</span><p style='margin:0; padding: 0; font-size: 9px;'>On {obj.disputed_at.strftime('%b %d, %y')}</p></div>"
             )
         else:
-            return format_html(f"<span class='badge'></span>")
+            return format_html("<span class='badge'></span>")
 
 
 @admin.register(Automation)
@@ -488,14 +488,14 @@ class LeadGenerationAppAdmin(admin.ModelAdmin):
             'ERROR': 'bg-error',
         }
         if obj.last_call_status is None:
-            return format_html(f"<span class='badge'>Not yet called</span>")
+            return format_html("<span class='badge'>Not yet called</span>")
         return format_html(
             f"<span class='badge {colors[obj.last_call_status]}'>{obj.last_call_status}</span>")
 
 
 def course_module_keys_validation(course_module):
     if course_module['name'] is None or course_module['name'] == '':
-        return f'The module does not have a name.'
+        return 'The module does not have a name.'
     if course_module['slug'] is None or course_module['slug'] == '':
         return f'The module {course_module["name"]} does not have a slug.'
     if course_module['icon_url'] is None or course_module['icon_url'] == '':

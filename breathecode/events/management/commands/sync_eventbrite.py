@@ -1,6 +1,4 @@
-import os, requests, sys, pytz
-from datetime import datetime
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from ...models import Organization
 from ...tasks import persist_organization_events
 from django.utils import timezone

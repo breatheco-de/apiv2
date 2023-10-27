@@ -389,7 +389,7 @@ class SyllabusVersionAdmin(admin.ModelAdmin):
 
     def owner(self, obj):
         if obj.syllabus.academy_owner is None:
-            return format_html(f'<span class="badge bg-error">No academy owner</span>')
+            return format_html('<span class="badge bg-error">No academy owner</span>')
 
         return format_html(f'<span>{obj.syllabus.academy_owner.name}</span>')
 
@@ -489,7 +489,7 @@ def replicate_in_all(modeladmin, request, queryset: QuerySet[SyllabusSchedule]):
             'because it already exists')
 
     else:
-        messages.add_message(request, messages.INFO, f'All academies in sync with those syllabus schedules')
+        messages.add_message(request, messages.INFO, 'All academies in sync with those syllabus schedules')
 
 
 replicate_in_all.short_description = 'Replicate same timeslots in all academies'

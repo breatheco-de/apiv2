@@ -1,5 +1,4 @@
 from datetime import timedelta
-from django.http import HttpResponse
 
 from django.utils import timezone
 from rest_framework import status
@@ -30,7 +29,6 @@ from breathecode.payments.serializers import (
 from breathecode.payments.services.stripe import Stripe
 from breathecode.utils import APIViewExtensions
 from breathecode.utils.decorators.capable_of import capable_of
-from breathecode.utils.generate_lookups_mixin import GenerateLookupsMixin
 from breathecode.utils.i18n import translation
 from breathecode.utils.payment_exception import PaymentException
 from breathecode.utils.shorteners import C
@@ -285,8 +283,7 @@ class AcademyCohortSetCohortView(APIView):
                                                   slug='cohort-not-found'),
                                       code=404)
 
-        raise ValidationException(C(f'This invite don\'t have email, contact to admin',
-                                    slug=f'without-email'))
+        raise ValidationException(C('This invite don\'t have email, contact to admin', slug='without-email'))
         data = []
         for item in items:
             if item in cohort_set.cohorts.all():

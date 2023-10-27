@@ -66,7 +66,7 @@ def send_survey_group(survey=None, cohort=None):
     except Exception as e:
 
         survey.status = 'FATAL'
-        result['error'].append(f'Error sending survey to group: ' + str(e))
+        result['error'].append('Error sending survey to group: ' + str(e))
         survey.status_json = json.dumps(result)
         survey.save()
         raise e
@@ -194,7 +194,7 @@ def create_user_graduation_reviews(user, cohort):
         ).count()
         if total_reviews > 0:
             logger.debug(
-                f'No new reviews will be requested, student already has pending requests for this cohort')
+                'No new reviews will be requested, student already has pending requests for this cohort')
             return False
 
         platforms = ReviewPlatform.objects.all()

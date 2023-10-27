@@ -165,7 +165,7 @@ def get_accounted_time(_session):
                                                'accounted for the bill.')
             else:
                 response['accounted_duration'] = timedelta(seconds=0)
-                response['status_message'] += f'No time will be included on the bill.'
+                response['status_message'] += 'No time will be included on the bill.'
             return response
 
         elif session.started_at is not None:
@@ -243,7 +243,7 @@ def get_accounted_time(_session):
 
         else:
             response['accounted_duration'] = timedelta(seconds=0)
-            response['status_message'] = f'No one joined this session, nothing will be accounted for.'
+            response['status_message'] = 'No one joined this session, nothing will be accounted for.'
             return response
 
     _duration = get_duration(_session)

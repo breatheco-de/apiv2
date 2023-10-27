@@ -7,7 +7,7 @@ import random
 import re
 import secrets
 import string
-from typing import Any, Optional
+from typing import Optional
 import urllib.parse
 from random import randint
 from django.core.handlers.wsgi import WSGIRequest
@@ -189,7 +189,7 @@ def set_gitpod_user_expiration(gitpoduser_id):
             if last_cohort is not None:
                 gitpod_user.academy = last_cohort.cohort.academy
                 gitpod_user.target_cohort = last_cohort.cohort
-                gitpod_user.delete_status = f'It will be deleted soon because no active cohort was found, the last one it had active was ' + last_cohort.cohort.name
+                gitpod_user.delete_status = 'It will be deleted soon because no active cohort was found, the last one it had active was ' + last_cohort.cohort.name
 
     if (gitpod_user.user is None or gitpod_user.expires_at is None) and gitpod_user.delete_status == '':
         gitpod_user.expires_at = timezone.now() + datetime.timedelta(days=3)
@@ -375,7 +375,7 @@ def add_to_organization(cohort_id, user_id):
 
         if github_user.storage_status == 'SYNCHED' and github_user.storage_action == 'ADD':
             # user already added
-            github_user.log(f'User was already added')
+            github_user.log('User was already added')
             return True
 
         github_user.storage_status = 'PENDING'
@@ -479,8 +479,8 @@ def sync_organization_members(academy_id, only_status=None):
     credentials = CredentialsGithub.objects.filter(user=settings.github_owner).first()
     if settings.github_owner is None or credentials is None:
         raise ValidationException(translation(
-            en=f'Organization has no owner or it has no github credentials',
-            es=f'La organizacion no tiene dueño o no este tiene credenciales para github'),
+            en='Organization has no owner or it has no github credentials',
+            es='La organizacion no tiene dueño o no este tiene credenciales para github'),
                                   slug='invalid-owner')
 
     # print('Procesing following slugs', academy_slugs)

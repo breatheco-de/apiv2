@@ -1,8 +1,6 @@
 import logging, os
-from django.contrib import admin, messages
+from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from breathecode.admissions.admin import CohortAdmin
-from django.contrib.auth.models import User
 from breathecode.authenticate.models import Token
 from django.utils.html import format_html
 from .models import Task, UserAttachment, UserProxy, CohortProxy, FinalProject

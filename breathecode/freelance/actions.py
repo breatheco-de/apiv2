@@ -1,11 +1,8 @@
-import os, re, json, logging
-from itertools import chain
+import re, logging
 from django.db.models import Q
 from .models import Freelancer, Issue, Bill, ProjectInvoice, ISSUE_STATUS
 from breathecode.authenticate.models import CredentialsGithub
 from breathecode.admissions.models import Academy
-from schema import Schema, And, Use, Optional, SchemaError
-from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
 from github import Github
 from breathecode.services.activecampaign import ActiveCampaign
 from breathecode.marketing.actions import acp_ids
@@ -124,7 +121,7 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
                     f'Assigned github user: {assigne["id"]} is not a freelancer but is the main user associated to this issue'
                 )
         else:
-            raise Exception(f'There was no freelancer associated with this issue')
+            raise Exception('There was no freelancer associated with this issue')
 
     _issue.freelancer = freelancer
     hours = get_hours(_issue.body)
@@ -162,12 +159,12 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
 def sync_user_issues(freelancer, academy_slug=None):
 
     if freelancer.github_user is None:
-        raise ValueError(f'Freelancer has not github user')
+        raise ValueError('Freelancer has not github user')
 
     github_id = freelancer.github_user.github_id
     credentials = CredentialsGithub.objects.filter(github_id=github_id).first()
     if credentials is None:
-        raise ValueError(f'Credentials for this user {gitub_user_id} not found')
+        raise ValueError(f'Credentials for this user {github_id} not found')
 
     g = Github(credentials.token)
     user = g.get_user()

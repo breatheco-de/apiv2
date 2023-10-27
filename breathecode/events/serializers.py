@@ -476,8 +476,8 @@ class EventSerializer(serializers.ModelSerializer):
         if online_event == True and (live_stream_url is None or live_stream_url == ''):
             raise ValidationException(
                 translation(lang,
-                            en=f'live_stream_url cannot be empty if the event is online.',
-                            es=f'Si el evento es online, entonces live_stream_url no puede estar vacío.',
+                            en='live_stream_url cannot be empty if the event is online.',
+                            es='Si el evento es online, entonces live_stream_url no puede estar vacío.',
                             slug='live-stream-url-empty'))
 
         existing_events = Event.objects.filter(slug=slug)

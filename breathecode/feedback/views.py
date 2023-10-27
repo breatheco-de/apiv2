@@ -1,16 +1,12 @@
-import re
-from django.shortcuts import render
 from django.utils import timezone
-from django.db.models import Avg
 from django.http import HttpResponse
 from breathecode.admissions.models import CohortUser, Academy
 from .caches import AnswerCache
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from .models import Answer, Survey, ReviewPlatform, Review
 from .tasks import generate_user_cohort_survey_answers
-from rest_framework import serializers
-from rest_framework.exceptions import ValidationError, NotFound
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.exceptions import NotFound
+from rest_framework.permissions import AllowAny
 from .serializers import (AnswerPUTSerializer, AnswerSerializer, SurveySerializer, SurveyPUTSerializer,
                           BigAnswerSerializer, SurveySmallSerializer, ReviewPlatformSerializer,
                           ReviewSmallSerializer, ReviewPUTSerializer)
@@ -20,10 +16,7 @@ from rest_framework.views import APIView
 from rest_framework import status
 from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
 from PIL import Image
-from django.db.models import Q
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from django.db.models import QuerySet
-from .utils import strings
 import breathecode.activity.tasks as tasks_activity
 
 

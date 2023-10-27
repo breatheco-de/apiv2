@@ -1,16 +1,12 @@
-from django.core.mail import EmailMultiAlternatives
 from rest_framework.exceptions import APIException
-import os, logging, json, re
+import os, logging, json
 from django.template.loader import get_template
-from django.contrib.auth.models import User
-from django.template import Context
 from django.utils import timezone
 from pyfcm import FCMNotification
 from breathecode.services.slack import client
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.utils import ValidationException
 from .models import Device, SlackChannel, SlackTeam, SlackUser, SlackUserTeam
-from django.conf import settings
 import requests
 from twilio.rest import Client
 from premailer import transform

@@ -50,7 +50,7 @@ def send_mentorship_starting_notification(session_id):
             'SUBJECT': 'Mentorship session starting',
             'MESSAGE':
             f'Mentee {session.mentee.first_name} {session.mentee.last_name} is joining your session, please come back to this email when the session is over to marke it as completed',
-            'BUTTON': f'Finish and review this session',
+            'BUTTON': 'Finish and review this session',
             'LINK': f'{get_api_url()}/mentor/session/{session.id}?token={token.key}',
         })
 

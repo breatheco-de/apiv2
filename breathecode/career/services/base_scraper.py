@@ -1,8 +1,7 @@
 import re
 
 from abc import ABC, abstractmethod
-from ..models import Platform, Spider, Job, Employer, Position, PositionAlias, CareerTag, Location, LocationAlias, ZyteProject
-from breathecode.utils import ValidationException
+from ..models import Job, Employer, PositionAlias, CareerTag, Location, LocationAlias
 from breathecode.career.services.regex import _cases_salary, _cases_date
 
 
