@@ -1,6 +1,6 @@
 import logging, os
 import re
-from typing import Any, TypedDict
+from typing import Any
 import ldclient
 from ldclient.config import Config
 from ldclient import Context, LDClient

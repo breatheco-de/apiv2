@@ -62,7 +62,7 @@ class Eventbrite:
         return result
 
     def get_my_organizations(self):
-        data = self.request('GET', f'/users/me/organizations/')
+        data = self.request('GET', '/users/me/organizations/')
         return data
 
     def get_organization_events(self, organization_id):

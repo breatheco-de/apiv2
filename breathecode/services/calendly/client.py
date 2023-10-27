@@ -1,4 +1,3 @@
-import re
 import logging
 import os
 import urllib
@@ -71,9 +70,8 @@ class Calendly:
         return result
 
     def subscribe(self, org_uri, org_hash):
-        query_string = {'expand': 'organizer', 'status': 'live'}
         data = self.request('POST',
-                            f'/webhook_subscriptions',
+                            '/webhook_subscriptions',
                             json={
                                 'url': f'{API_URL}/v1/mentorship/calendly/webhook/{org_hash}',
                                 'events': ['invitee.created', 'invitee.canceled'],
@@ -89,14 +87,13 @@ class Calendly:
         return self.request('DELETE', f'/webhook_subscriptions/{webhook_uuid}')
 
     def unsubscribe_all(self, org_uri):
-        query_string = {'expand': 'organizer', 'status': 'live'}
         data = self.get_subscriptions(org_uri)
         for webhook in data:
             self.unsubscribe(urlparse(webhook['uri']).path.split('/')[-1])
 
     def get_subscriptions(self, org_uri):
         data = self.request('GET',
-                            f'/webhook_subscriptions',
+                            '/webhook_subscriptions',
                             query_string={
                                 'organization': f'{org_uri}',
                                 'scope': 'organization',
@@ -111,13 +108,10 @@ class Calendly:
         return data
 
     def get_organization(self):
-        data = self.request('GET', f'/users/me')
+        data = self.request('GET', '/users/me')
         return data
 
     def execute_action(self, calendly_webhook_id: int):
-        # wonderful way to fix one poor mocking system
-        import requests
-
         # prevent circular dependency import between thousand modules previuosly loaded and cached
         from breathecode.mentorship.models import CalendlyWebhook, CalendlyOrganization
 

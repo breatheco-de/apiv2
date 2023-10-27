@@ -5,7 +5,7 @@ from django.shortcuts import redirect, render
 from django.db.models import Q, Count
 from django.http import HttpResponse
 from django.core.validators import URLValidator
-from .tasks import async_pull_from_github, async_create_asset_thumbnail_legacy
+from .tasks import async_pull_from_github
 from breathecode.services.seo import SEOAnalyzer
 from breathecode.utils.i18n import translation
 from breathecode.authenticate.actions import get_user_language
@@ -17,8 +17,8 @@ from .actions import (AssetThumbnailGenerator, test_asset, pull_from_github, tes
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import ProfileAcademy
-from .caches import (AssetCache, AssetCommentCache, KeywordCache, KeywordClusterCache, TechnologyCache,
-                     CategoryCache, ContentVariableCache)
+from .caches import (AssetCache, AssetCommentCache, KeywordCache, TechnologyCache, CategoryCache,
+                     ContentVariableCache)
 
 from rest_framework.permissions import AllowAny
 from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerializer, AssetTechnologySerializer,
@@ -90,7 +90,7 @@ def render_preview_html(request, asset_slug):
         return render_message(request, f'Asset with slug {asset_slug} not found')
 
     if asset.asset_type == 'QUIZ':
-        return render_message(request, f'Quiz cannot be previewed')
+        return render_message(request, 'Quiz cannot be previewed')
 
     readme = asset.get_readme(parse=True)
     return render(
@@ -626,7 +626,7 @@ class AcademyAssetActionView(APIView):
             elif action_slug == 'push':
                 if asset.asset_type not in ['ARTICLE', 'LESSON']:
                     raise ValidationException(
-                        f'Only lessons and articles and be pushed to github, please update the Github repository yourself and come back to pull the changes from here'
+                        'Only lessons and articles and be pushed to github, please update the Github repository yourself and come back to pull the changes from here'
                     )
 
                 push_to_github(asset.slug, author=request.user)

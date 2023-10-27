@@ -4,7 +4,6 @@ import os
 import time
 import re
 import pathlib
-from urllib.parse import urlencode
 from typing import Optional
 from celery import shared_task, Task
 from breathecode.services.seo import SEOAnalyzer
@@ -19,7 +18,6 @@ from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils.views import set_query_parameter
 from breathecode.monitoring.decorators import WebhookTask
 from .models import Asset, AssetImage
-from .serializers import AssetSerializer
 from .actions import (pull_from_github, screenshots_bucket, test_asset, clean_asset_readme,
                       upload_image_to_bucket, asset_images_bucket, add_syllabus_translations)
 
@@ -67,7 +65,7 @@ def async_test_asset(asset_slug):
     try:
         if test_asset(a):
             return True
-    except Exception as e:
+    except Exception:
         logger.exception(f'Error testing asset {a.slug}')
 
     return False
@@ -98,7 +96,7 @@ def async_execute_seo_report(asset_slug):
     try:
         report = SEOAnalyzer(a)
         report.start()
-    except Exception as e:
+    except Exception:
         logger.exception(f'Error running SEO report asset {a.slug}')
 
     return False
@@ -129,7 +127,7 @@ def async_create_asset_thumbnail(asset_slug: str):
 
     preview_url = asset.get_preview_generation_url()
     if preview_url is None:
-        logger.warn(f'Not able to retrieve a preview generation')
+        logger.warn('Not able to retrieve a preview generation')
         return False
 
     name = asset.get_thumbnail_name()
@@ -235,8 +233,6 @@ def async_create_asset_thumbnail(asset_slug: str):
 def async_download_readme_images(asset_slug):
     logger.debug(f'Downloading images for asset {asset_slug}')
 
-    from ..services.google_cloud import Storage
-
     asset = Asset.get_by_slug(asset_slug)
     if asset is None:
         raise Exception(f'Asset with slug {asset_slug} not found')
@@ -324,9 +320,8 @@ def async_update_frontend_asset_cache(asset):
         if os.getenv('ENV', '') != 'production':
             return
 
-        logger.info(f'async_update_frontend_asset_cache')
+        logger.info('async_update_frontend_asset_cache')
         URL = os.getenv('APP_URL', '') + f'/api/asset/{asset.slug}'
-        serializer = AssetSerializer(asset, many=False)
         requests.put(url=URL)
     except Exception as e:
         logger.error(str(e))
@@ -335,7 +330,7 @@ def async_update_frontend_asset_cache(asset):
 @shared_task
 def async_remove_img_from_cloud(id):
 
-    logger.info(f'async_remove_img_from_cloud')
+    logger.info('async_remove_img_from_cloud')
 
     img = AssetImage.objects.filter(id=id).first()
     if img is None:

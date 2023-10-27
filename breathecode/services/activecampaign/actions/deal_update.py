@@ -1,7 +1,6 @@
 import logging
-from django.contrib.auth.models import User
 from django.utils import timezone
-from breathecode.marketing.models import FormEntry, AcademyAlias
+from breathecode.marketing.models import AcademyAlias
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +52,7 @@ def deal_update(AC, webhook, payload: dict, acp_ids):
         entry.ac_deal_currency_code = payload['deal[currency]']
 
     # lets get the custom fields and use them to update some local fields
-    logger.debug(f'looking for deal on activecampaign api')
+    logger.debug('looking for deal on activecampaign api')
     deal_custom_fields = AC.get_deal_customfields(entry.ac_deal_id)
 
     entry = update_expected_cohort(AC, entry, acp_ids, deal_custom_fields)
@@ -101,11 +100,10 @@ def update_expected_cohort(AC, entry, acp_ids, deal_custom_fields):
     deal_ids = acp_ids['deal']
 
     if entry.academy is not None:
-        ac_academy = entry.academy.activecampaignacademy
         if deal_ids['expected_cohort'] in deal_custom_fields:
             entry.ac_expected_cohort = deal_custom_fields[deal_ids['expected_cohort']]
         if deal_ids['expected_cohort_date'] in deal_custom_fields:
             entry.ac_expected_cohort_date = deal_custom_fields[deal_ids['expected_cohort_date']]
     else:
-        logger.debug(f'No academy for EntryForm, ignoring deal custom fields')
+        logger.debug('No academy for EntryForm, ignoring deal custom fields')
     return entry

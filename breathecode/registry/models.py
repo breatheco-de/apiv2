@@ -764,6 +764,7 @@ class SEOReport(models.Model):
     def __init__(self, *args, **kwargs):
         super(SEOReport, self).__init__(*args, **kwargs)
         self.__shared_state = {}
+        self.__log = []
 
     report_type = models.CharField(max_length=40,
                                    help_text='Must be one of the services.seo.action script names')
@@ -779,10 +780,6 @@ class SEOReport(models.Model):
                                blank=True,
                                help_text='Automatically filled (1 to 100)')
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
-
-    def __init__(self, *args, **kwargs):
-        super(SEOReport, self).__init__(*args, **kwargs)
-        self.__log = []
 
     def fatal(self, msg):
         self.__log.append({'rating': -100, 'msg': msg})

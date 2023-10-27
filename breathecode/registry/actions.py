@@ -1,25 +1,19 @@
 import logging, json, os, re, pathlib, base64, hashlib, requests
 from typing import Optional
 from breathecode.media.models import Media, MediaResolution
-from breathecode.media.views import media_gallery_bucket
 from breathecode.utils.views import set_query_parameter
-from breathecode.utils.validation_exception import ValidationException
 from breathecode.services.google_cloud.storage import Storage
 from django.db.models import Q
-from django.contrib.auth.models import User
 from django.utils import timezone
 from django.template.loader import get_template
-from urllib.parse import urlparse, urlencode
-from slugify import slugify
-from breathecode.utils import APIException
-from breathecode.assessment.models import Assessment
+from urllib.parse import urlencode
 from breathecode.assessment.actions import create_from_asset
 from breathecode.authenticate.models import CredentialsGithub
-from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog, ASSET_STATUS, AssetImage, OriginalityScan, ContentVariable
+from .models import Asset, AssetTechnology, AssetErrorLog, ASSET_STATUS, OriginalityScan, ContentVariable
 from .serializers import AssetBigSerializer
 from .utils import (LessonValidator, ExerciseValidator, QuizValidator, AssetException, ProjectValidator,
                     ArticleValidator, OriginalityWrapper)
-from github import Github, GithubException
+from github import Github
 from breathecode.registry import tasks
 
 logger = logging.getLogger(__name__)
@@ -819,7 +813,7 @@ def scan_asset_originality(asset):
             raise Exception('Error receiving originality API response payload')
 
     except Exception as e:
-        scan.status_text = f'Error scanning originality for asset: ' + str(e)
+        scan.status_text = 'Error scanning originality for asset: ' + str(e)
         scan.status = 'ERROR'
         scan.save()
         raise Exception(scan.status_text)
