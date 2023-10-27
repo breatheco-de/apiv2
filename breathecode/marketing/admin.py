@@ -470,7 +470,7 @@ class LeadAppCustomForm(forms.ModelForm):
                     ac_academy__academy__id=self.instance.academy.id).exclude(slug='')  # or something else
             self.fields['default_tags'].queryset = Tag.objects.filter(
                 ac_academy__academy__id=self.instance.academy.id)  # or something else
-        except:
+        except Exception:
             self.fields['default_automations'].queryset = Automation.objects.none()
             self.fields['default_tags'].queryset = Tag.objects.none()
 

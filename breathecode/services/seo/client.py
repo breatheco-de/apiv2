@@ -17,7 +17,11 @@ class SEOAnalyzer:
         'images_use': 0.05
     }
 
-    def __init__(self, asset, exclude=[]):
+    def __init__(self, asset, exclude=None):
+
+        if exclude is None:
+            exclude = []
+
         if asset is None:
             raise Exception('Invalid Asset')
 

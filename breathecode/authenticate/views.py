@@ -1183,7 +1183,7 @@ def save_slack_token(request):
         try:
             payload = base64.b64decode(payload).decode('utf-8')
             payload = parse_qs(payload)
-        except:
+        except Exception:
             raise ValidationError('Cannot decode payload in base64')
 
     if 'url' not in payload:
@@ -1326,7 +1326,7 @@ def save_facebook_token(request):
         try:
             payload = base64.b64decode(payload).decode('utf-8')
             payload = parse_qs(payload)
-        except:
+        except Exception:
             raise ValidationError('Cannot decode payload in base64')
 
     if 'url' not in payload:
@@ -2331,7 +2331,7 @@ def authorize_view(request, token=None, app_slug=None):
     try:
         app = get_app(app_slug)
 
-    except:
+    except Exception:
         return render_message(request,
                               'App not found',
                               btn_label='Continue to 4Geeks',

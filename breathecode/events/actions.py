@@ -239,7 +239,7 @@ def create_or_update_venue(data, org, force_update=False):
 
             venue.save()
 
-    except:
+    except Exception:
         logger.error(f'Error saving venue eventbrite_id: {data["id"]} skipping to the next')
 
     return venue
@@ -419,7 +419,7 @@ def update_event_description_from_eventbrite(event: Event) -> None:
         event.eventbrite_sync_status = 'PERSISTED'
         event.save()
 
-    except:
+    except Exception:
         error = f'The event {eventbrite_id} is coming from eventbrite not have a description'
         logger.warning(error)
         event.eventbrite_sync_description = error

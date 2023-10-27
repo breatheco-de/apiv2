@@ -23,7 +23,10 @@ if FIREBASE_KEY is not None and FIREBASE_KEY != '':
 logger = logging.getLogger(__name__)
 
 
-def send_email_message(template_slug, to, data={}, force=False, inline_css=False):
+def send_email_message(template_slug, to, data=None, force=False, inline_css=False):
+
+    if data is None:
+        data = {}
 
     if to is None or to == '' or (isinstance(to, list) and len(to) == 0):
         raise ValidationException(f'Invalid email to send notification to {str(to)}')
@@ -57,7 +60,10 @@ def send_email_message(template_slug, to, data={}, force=False, inline_css=False
         return True
 
 
-def send_sms(slug, phone_number, data={}):
+def send_sms(slug, phone_number, data=None):
+
+    if data is None:
+        data = {}
 
     template = get_template_content(slug, data, ['sms'])
     # Your Account Sid and Auth Token from twilio.com/console
@@ -74,7 +80,10 @@ def send_sms(slug, phone_number, data={}):
 
 
 # entity can be a cohort or a user
-def send_slack(slug, slackuser=None, team=None, slackchannel=None, data={}):
+def send_slack(slug, slackuser=None, team=None, slackchannel=None, data=None):
+
+    if data is None:
+        data = {}
 
     remitent_id = None
     if slackuser is None and slackchannel is None:
@@ -110,8 +119,11 @@ def send_slack(slug, slackuser=None, team=None, slackchannel=None, data={}):
 
 
 # if would like to specify slack channel or user id and team
-def send_slack_raw(slug, token, channel_id, data={}):
+def send_slack_raw(slug, token, channel_id, data=None):
     logger.debug(f'Sending slack message to {str(channel_id)}')
+
+    if data is None:
+        data = {}
 
     try:
         if 'slack_payload' in data:
@@ -143,7 +155,11 @@ def send_slack_raw(slug, token, channel_id, data={}):
         return False
 
 
-def send_fcm(slug, registration_ids, data={}):
+def send_fcm(slug, registration_ids, data=None):
+
+    if data is None:
+        data = {}
+
     if (len(registration_ids) > 0 and push_service):
         template = get_template_content(slug, data, ['email', 'fms'])
 
@@ -169,7 +185,11 @@ def send_fcm(slug, registration_ids, data={}):
         return False
 
 
-def send_fcm_notification(slug, user_id, data={}):
+def send_fcm_notification(slug, user_id, data=None):
+
+    if data is None:
+        data = {}
+
     device_set = Device.objects.filter(user=user_id)
     registration_ids = [device.registration_id for device in device_set]
     send_fcm(slug, registration_ids, data)
@@ -181,7 +201,11 @@ def notify_all(slug, user, data):
     send_slack('nps', user.slackuser, data)
 
 
-def get_template_content(slug, data={}, formats=None, inline_css=False):
+def get_template_content(slug, data=None, formats=None, inline_css=False):
+
+    if data is None:
+        data = {}
+
     #d = Context({ 'username': username })
     con = {
         'API_URL': os.environ.get('API_URL'),

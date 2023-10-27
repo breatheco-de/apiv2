@@ -124,7 +124,7 @@ def sync_cohort_tasks(cohort):
         try:
             tasks = sync_student_tasks(cu.user, cohort=cohort)
             synchronized = synchronized + tasks
-        except:
+        except Exception:
             continue
 
     return synchronized

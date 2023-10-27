@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Any
+from typing import Any, Optional
 from breathecode.utils.api_view_extensions.extension_base import ExtensionBase
 from breathecode.utils.api_view_extensions.priorities.mutator_order import MutatorOrder
 from breathecode.utils.api_view_extensions.priorities.response_order import ResponseOrder
@@ -65,7 +65,10 @@ class PaginationExtension(ExtensionBase):
         self._limit = self._get_limit()
         return queryset[self._offset:self._offset + self._limit]
 
-    def _apply_response_mutation(self, data: list[dict] | dict, headers: dict = {}):
+    def _apply_response_mutation(self, data: list[dict] | dict, headers: Optional[dict] = None):
+        if headers is None:
+            headers = {}
+
         next_url = self._parse_comma(self._get_next_link())
         previous_url = self._parse_comma(self._get_previous_link())
         first_url = self._parse_comma(self._get_first_link())

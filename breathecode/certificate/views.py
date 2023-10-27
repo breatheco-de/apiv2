@@ -187,7 +187,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
 
         try:
             ids = lookups['id__in']
-        except:
+        except Exception:
             raise ValidationException('User specialties ids were not provided', 404, slug='missing_ids')
 
         if lookups and (user_id or cohort_id):

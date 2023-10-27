@@ -261,7 +261,7 @@ def register_new_lead(form_entry=None):
     try:
         if alias is not None:
             ac_academy = alias.academy.activecampaignacademy
-    except:
+    except Exception:
         pass
 
     if ac_academy is None:
@@ -553,18 +553,18 @@ def get_facebook_lead_info(lead_id, academy_id=None):
         logger.debug('Facebook responded with 200')
         data = resp.json()
         if 'field_data' in data:
-            lead.utm_campaign == data['ad_id']
-            lead.utm_medium == data['ad_id']
-            lead.utm_source == 'facebook'
+            lead.utm_campaign = data['ad_id']
+            lead.utm_medium = data['ad_id']
+            lead.utm_source = 'facebook'
             for field in data['field_data']:
                 if field['name'] == 'first_name' or field['name'] == 'full_name':
-                    lead.first_name == field['values']
+                    lead.first_name = field['values']
                 elif field['name'] == 'last_name':
-                    lead.last_name == field['values']
+                    lead.last_name = field['values']
                 elif field['name'] == 'email':
-                    lead.email == field['values']
+                    lead.email = field['values']
                 elif field['name'] == 'phone':
-                    lead.phone == field['values']
+                    lead.phone = field['values']
             lead.save()
         else:
             logger.fatal('No information about the lead')
@@ -658,7 +658,7 @@ def delete_tag(tag, include_other_academies=False):
 
             return True
 
-    except:
+    except Exception:
         logger.exception(f'There was an error deleting tag for {tag.slug}')
         return False
 

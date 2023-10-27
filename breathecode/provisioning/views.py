@@ -190,7 +190,7 @@ class UploadView(APIView):
                 first = date(int(first[0]), int(first[1]), int(first[2]))
                 last = date(int(last[0]), int(last[1]), int(last[2]))
 
-            except:
+            except Exception:
                 raise ValidationException(
                     translation(lang,
                                 en='CSV file from unknown source',
@@ -228,7 +228,7 @@ class UploadView(APIView):
                 first = date(int(first[0]), int(first[1]), int(first[2]))
                 last = date(int(last[0]), int(last[1]), int(last[2]))
 
-            except:
+            except Exception:
                 raise ValidationException(
                     translation(lang,
                                 en='CSV file from unknown source',

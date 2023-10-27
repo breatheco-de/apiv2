@@ -588,7 +588,7 @@ def filter_consumables(request: WSGIRequest,
     if ids := request.GET.get(key):
         try:
             ids = [int(x) for x in ids.split(',')]
-        except:
+        except Exception:
             raise ValidationException(f'{key} param must be integer')
 
         query_key = custom_query_key or key

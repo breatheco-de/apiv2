@@ -51,7 +51,10 @@ def validate_permission(user: User, permission: str, consumer: bool | HasPermiss
     return found.user_set.filter(id=user.id).exists() or found.group_set.filter(user__id=user.id).exists()
 
 
-def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', data={}, status=None):
+def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', data=None, status=None):
+    if data is None:
+        data = {}
+
     _data = {'MESSAGE': msg, 'BUTTON': btn_label, 'BUTTON_TARGET': btn_target, 'LINK': btn_url}
 
     return render(r, 'message.html', {**_data, **data}, status=status)

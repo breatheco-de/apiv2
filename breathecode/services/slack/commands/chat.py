@@ -11,7 +11,10 @@ from ..exceptions import SlackException
 
 
 @command(capable_of='chatbot_message')
-def execute(bot_name=None, academies=[], **context):
+def execute(bot_name=None, academies=None, **context):
+
+    if academies is None:
+        academies = []
 
     query = ChatBot.objects.filter(academy__id__in=[academies])
 

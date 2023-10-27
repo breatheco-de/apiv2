@@ -74,8 +74,15 @@ class AuthenticateMixin(APITestCase, DevelopmentEnvironment, DateFormatterMixin)
                              profile_academy=False,
                              capability='',
                              role='',
-                             models={},
-                             external_models={}):
+                             models=None,
+                             external_models=None):
+
+        if models is None:
+            models = {}
+
+        if external_models is None:
+            external_models = {}
+
         self.maxDiff = None
         external_models = external_models.copy()
         models = models.copy()

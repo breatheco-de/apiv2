@@ -86,7 +86,7 @@ class Serializer(serpy.Serializer):
 
             if self._field_map[key].__class__ not in SERPY_FIELDS:
 
-                setattr(self._field_map[key], 'child', True)
+                self._field_map[key].child = True
 
                 if self._field_map[key].__class__ == ManyToManyField:
                     self.__class__._prefetch_related.add(self._field_map[key].real_attr)

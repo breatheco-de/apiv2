@@ -296,7 +296,7 @@ def get_user_settings(user_id: int) -> UserSetting:
             settings.lang = lead.browser_lang
             settings.save()
             created = False
-        except:
+        except Exception:
             ...
 
     # if created and (contact := Contact.objects.filter(author__id=user_id,
@@ -453,7 +453,10 @@ def delete_from_github(github_user):
         return False
 
 
-def sync_organization_members(academy_id, only_status=[]):
+def sync_organization_members(academy_id, only_status=None):
+
+    if only_status is None:
+        only_status = []
 
     now = timezone.now()
 
@@ -533,7 +536,7 @@ def sync_organization_members(academy_id, only_status=[]):
                     raise e
                 _member.storage_status = 'SYNCHED'
                 _member.log(f'Sent invitation to {github.email}')
-                _member.storage_action == 'INVITE'
+                _member.storage_action = 'INVITE'
                 _member.storage_synch_at = now
                 _member.save()
 
@@ -741,11 +744,17 @@ def get_signature(app: App,
                   user_id: Optional[int] = None,
                   *,
                   method: str = 'get',
-                  params: dict = {},
+                  params: Optional[dict] = None,
                   body: Optional[dict] = None,
-                  headers: dict = {},
+                  headers: Optional[dict] = None,
                   reverse: bool = False):
     now = timezone.now().isoformat()
+
+    if headers is None:
+        headers = {}
+
+    if params is None:
+        params = {}
 
     payload = {
         'timestamp': now,
@@ -908,8 +917,11 @@ def get_app(pk: str | int) -> App:
     return app
 
 
-def accept_invite_action(data={}, token=None, lang='en'):
+def accept_invite_action(data=None, token=None, lang='en'):
     from breathecode.payments.models import Invoice, Bag, Plan
+
+    if data is None:
+        data = {}
 
     password1 = data.get('password', None)
     password2 = data.get('repeat_password', None)

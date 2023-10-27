@@ -115,7 +115,7 @@ def add_academy_to_answer(modeladmin, request, queryset):
     for answer in queryset:
         try:
             answer.academy = answer.cohort.academy
-        except:
+        except Exception:
             answer.academy = answer.academy
         else:
             pass

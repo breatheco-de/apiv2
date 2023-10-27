@@ -15,9 +15,12 @@ class DailyClient:
         self.token = token
         self.headers = {'Authorization': f'Bearer {token}'}
 
-    def request(self, _type, url, headers={}, query_string=None, data=None):
+    def request(self, _type, url, headers=None, query_string=None, data=None):
         # wonderful way to fix one poor mocking system
         import requests
+
+        if headers is None:
+            headers = {}
 
         _headers = {**self.headers, **headers}
         _query_string = ''

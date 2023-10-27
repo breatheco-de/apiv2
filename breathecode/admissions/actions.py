@@ -289,8 +289,11 @@ class SyllabusLog(object):
         return 400
 
 
-def test_syllabus(syl, validate_assets=False, ignore=[]):
+def test_syllabus(syl, validate_assets=False, ignore=None):
     from breathecode.registry.models import AssetAlias
+
+    if ignore is None:
+        ignore = []
 
     if isinstance(syl, str):
         syl = json.loads(syl)

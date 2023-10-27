@@ -28,7 +28,7 @@ def link_schema(request, required_scopes, authorization: str, use_signature: boo
     try:
         authorization = dict([x.split('=') for x in authorization.split(',')])
 
-    except:
+    except Exception:
         raise ValidationException('Unauthorized', code=401, slug='authorization-header-malformed')
 
     if sorted(authorization.keys()) != ['App', 'Token']:
@@ -128,7 +128,7 @@ def signature_schema(request, required_scopes, authorization: str, use_signature
     try:
         authorization = dict([x.split('=') for x in authorization.split(',')])
 
-    except:
+    except Exception:
         raise ValidationException('Unauthorized', code=401, slug='authorization-header-malformed')
 
     if sorted(authorization.keys()) != ['App', 'Date', 'Nonce', 'SignedHeaders']:
@@ -197,8 +197,11 @@ def signature_schema(request, required_scopes, authorization: str, use_signature
     return app
 
 
-def scope(scopes: list = [], mode: Optional[str] = None) -> callable:
+def scope(scopes: Optional[list] = None, mode: Optional[str] = None) -> callable:
     """This decorator check if the app has access to the scope provided"""
+
+    if scopes is None:
+        scopes = []
 
     def decorator(function: callable) -> callable:
 

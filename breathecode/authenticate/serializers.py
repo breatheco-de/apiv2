@@ -1233,7 +1233,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 plan = Plan.objects.filter(**kwargs).get()
                 extra['plans'] = plan
 
-            except:
+            except Exception:
                 raise ValidationException(
                     translation(lang, en='Plan not found', es='Plan no encontrado', slug='plan-not-found'))
 
@@ -1249,7 +1249,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 course = Course.objects.filter(**kwargs).get()
                 extra['courses'] = course
 
-            except:
+            except Exception:
                 raise ValidationException(
                     translation(lang,
                                 en='Course not found',

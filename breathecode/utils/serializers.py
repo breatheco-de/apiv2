@@ -20,7 +20,7 @@ class ModelSerializer(ModelSerializer):
             try:
                 if data[attr] and isinstance(data[attr], str):
                     data[attr] = data[attr].upper()
-            except:
+            except Exception:
                 ...
 
         return data

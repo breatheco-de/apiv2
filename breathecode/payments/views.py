@@ -1542,7 +1542,7 @@ class PayView(APIView):
                             how_many_months=bag.how_many_installments).first()
                         amount = option.monthly_price
                         bag.monthly_price = amount
-                    except:
+                    except Exception:
                         raise ValidationException(translation(
                             lang,
                             en='Bag bad configured, related to financing option',

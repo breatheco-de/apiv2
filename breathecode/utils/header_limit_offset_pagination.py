@@ -38,7 +38,10 @@ class HeaderLimitOffsetPagination(LimitOffsetPagination):
 
         return string.replace('%2C', ',')
 
-    def get_paginated_response(self, data, count=None, cache=None, cache_kwargs={}):
+    def get_paginated_response(self, data, count=None, cache=None, cache_kwargs=None):
+        if cache_kwargs is None:
+            cache_kwargs = {}
+
         if count:
             self.count = count
 

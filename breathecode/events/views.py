@@ -847,7 +847,7 @@ class EventCheckinView(APIView):
 
         try:
             event_id = int(event_id)
-        except:
+        except Exception:
             raise ValidationException(f'{event_id} must be am integer', slug='Event must be an integer')
 
         event_checkins = EventCheckin.objects.filter(event=event_id)

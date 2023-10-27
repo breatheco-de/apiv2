@@ -116,7 +116,7 @@ def format_languages(code: str) -> list:
             code = s[0]
             try:
                 priority = float(s[1])
-            except:
+            except Exception:
                 raise MalformedLanguageCode('The priority is not a float, example: "en;q=0.5"',
                                             slug='malformed-quantity-language-code')
 

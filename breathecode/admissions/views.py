@@ -214,7 +214,7 @@ class PublicCohortView(APIView):
                 latitude, longitude = coordinates.split(',')
                 latitude = float(latitude)
                 longitude = float(longitude)
-            except:
+            except Exception:
                 raise ValidationException('Bad coordinates, the format is latitude,longitude',
                                           slug='bad-coordinates')
 
@@ -408,12 +408,12 @@ class CohortUserView(APIView, GenerateLookupsMixin):
 
             try:
                 data['user'] = int(data['user'])
-            except:
+            except Exception:
                 ...
 
             try:
                 data['cohort'] = int(data['cohort'])
-            except:
+            except Exception:
                 ...
 
             if 'user' not in data or 'cohort' not in data:
@@ -473,13 +473,13 @@ class CohortUserView(APIView, GenerateLookupsMixin):
                 try:
                     user = int(user)
                     data['user'] = user
-                except:
+                except Exception:
                     raise ValidationException('invalid user_id', code=400)
 
                 try:
                     cohort = int(cohort)
                     data['cohort'] = cohort
-                except:
+                except Exception:
                     raise ValidationException('invalid cohort_id', code=400)
 
             if instance := CohortUser.objects.filter(cohort__id=cohort, user__id=user).first():
@@ -710,13 +710,13 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
                 try:
                     user = int(user)
                     data['user'] = user
-                except:
+                except Exception:
                     raise ValidationException('invalid user_id', code=400)
 
                 try:
                     cohort = int(cohort)
                     data['cohort'] = cohort
-                except:
+                except Exception:
                     raise ValidationException('invalid cohort_id', code=400)
 
             if instance := CohortUser.objects.filter(cohort__id=cohort, user__id=user).first():

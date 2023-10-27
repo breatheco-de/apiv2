@@ -627,22 +627,22 @@ def pull_learnpack_asset(github, asset, override_meta):
     readme_file = None
     try:
         readme_file = repo.get_contents(f'README{lang}.md')
-    except:
+    except Exception:
         raise Exception(f'Translation on README{lang}.md not found')
 
     learn_file = None
     try:
         learn_file = repo.get_contents('learn.json')
-    except:
+    except Exception:
         try:
             learn_file = repo.get_contents('.learn/learn.json')
-        except:
+        except Exception:
             try:
                 learn_file = repo.get_contents('bc.json')
-            except:
+            except Exception:
                 try:
                     learn_file = repo.get_contents('.learn/bc.json')
-                except:
+                except Exception:
                     raise Exception('No configuration learn.json or bc.json file was found')
 
     base64_readme = str(readme_file.content)

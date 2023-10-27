@@ -29,10 +29,13 @@ class APIViewExtensionHandlers:
     _extensions: set[ExtensionBase]
     _instances: set[ExtensionBase]
 
-    def __init__(self, request: WSGIRequest, valid_extensions: set[ExtensionBase] = [], **kwargs):
+    def __init__(self, request: WSGIRequest, valid_extensions: Optional[set[ExtensionBase]] = None, **kwargs):
         """
         Build the handlers
         """
+
+        if valid_extensions is None:
+            valid_extensions = []
 
         self._extensions = valid_extensions
         self._request = request

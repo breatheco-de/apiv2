@@ -333,7 +333,7 @@ class SyncGithubUsersTestSuite(AuthTestCase):
         GithubAcademyUser = self.bc.database.get_model('authenticate.GithubAcademyUser')
         user = GithubAcademyUser.objects.get(id=models2.github_academy_user.id)
         self.assertEqual(user.storage_status, 'SYNCHED')
-        self.assertEqual(user.storage_action, 'ADD')
+        self.assertEqual(user.storage_action, 'INVITE')
         self.assertEqual([l['msg'] for l in user.storage_log],
                          [GithubAcademyUser.create_log(f'Sent invitation to {github_email}')['msg']])
 

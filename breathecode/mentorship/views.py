@@ -339,7 +339,7 @@ class ForwardMeetUrl:
         try:
             actions.mentor_is_ready(mentor)
 
-        except:
+        except Exception:
             return render_message(
                 self.request,
                 f'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.',

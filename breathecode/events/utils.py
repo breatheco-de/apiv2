@@ -20,8 +20,11 @@ class Eventbrite(object):
         # }
         pass
 
-    def request(self, _type, url, headers={}, query_string=None, data=None):
+    def request(self, _type, url, headers=None, query_string=None, data=None):
         import requests
+
+        if headers is None:
+            headers = {}
 
         _headers = {**self.headers, **headers}
         _query_string = '?' + urllib.parse.urlencode(query_string) if query_string else ''

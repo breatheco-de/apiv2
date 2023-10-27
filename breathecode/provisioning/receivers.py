@@ -19,7 +19,7 @@ def bill_was_paid(sender: Type[StripeEvent], instance: StripeEvent, **kwargs):
                 ProvisioningBill.objects.filter(stripe_id=instance.data['payment_link']).update(
                     status='PAID', paid_at=instance.created_at)
 
-        except:
+        except Exception:
             instance.status_texts['provisioning.bill_was_paid'] = 'Invalid context'
             instance.status = 'ERROR'
             instance.save()

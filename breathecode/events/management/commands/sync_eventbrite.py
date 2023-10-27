@@ -30,7 +30,7 @@ class Command(BaseCommand):
         try:
             func = getattr(self, options['entity'])
             func(options)
-        except:
+        except Exception:
             return self.stderr.write(self.style.ERROR(f'Sync method for `{options["entity"]}` no Found!'))
 
     def events(self, options):

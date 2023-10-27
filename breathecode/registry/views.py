@@ -552,7 +552,7 @@ class AssetView(APIView, GenerateLookupsMixin):
             if 'academy' in self.request.GET and self.request.GET.get('academy') not in ['null', '']:
                 param = self.request.GET.get('academy')
                 lookup['academy__in'] = [int(p) for p in param.split(',')]
-        except:
+        except Exception:
             raise ValidationException(translation(lang,
                                                   en='The academy filter value should be an integer',
                                                   es='El valor del filtro de academy debería ser un entero',
