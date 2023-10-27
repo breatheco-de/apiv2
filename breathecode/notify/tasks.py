@@ -155,8 +155,8 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
                                  timeout=2)
 
         if hook_id:
-            HookModel = HookManager.get_hook_model()
-            hook = HookModel.objects.get(id=hook_id)
+            hook_model_cls = HookManager.get_hook_model()
+            hook = hook_model_cls.objects.get(id=hook_id)
             if response.status_code == 410:
                 hook.delete()
 

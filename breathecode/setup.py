@@ -79,9 +79,9 @@ def get_redis_config():
 def get_redis():
     global redis_client
 
-    settings, redis_kwargs, REDIS_URL = get_redis_config()
+    settings, _, redis_url = get_redis_config()
 
     if redis_client == None:
-        redis_client = redis.from_url(REDIS_URL, **settings)
+        redis_client = redis.from_url(redis_url, **settings)
 
     return redis_client

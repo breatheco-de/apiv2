@@ -1,22 +1,19 @@
-import os, requests, sys, pytz, datetime
 from django.utils import timezone
-from django.db.models.expressions import RawSQL
-from django.core.management.base import BaseCommand, CommandError
-from django.db import models as DM
+from django.core.management.base import BaseCommand
+from django.db import models
 from django.db.models import Q, F
 from ...models import Application, MonitorScript
 from ...tasks import monitor_app, execute_scripts
-from ...actions import run_script
 
 
 class BaseSQL(object):
     template = "NOW() - INTERVAL '1 MINUTE' * %(expressions)s"
 
 
-class DurationAgr(BaseSQL, DM.Aggregate):
+class DurationAgr(BaseSQL, models.Aggregate):
 
     def __init__(self, expression, **extra):
-        super(DurationAgr, self).__init__(expression, output_field=DM.DateTimeField(), **extra)
+        super(DurationAgr, self).__init__(expression, output_field=models.DateTimeField(), **extra)
 
 
 class Command(BaseCommand):

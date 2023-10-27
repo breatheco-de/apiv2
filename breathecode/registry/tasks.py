@@ -321,8 +321,8 @@ def async_update_frontend_asset_cache(asset):
             return
 
         logger.info('async_update_frontend_asset_cache')
-        URL = os.getenv('APP_URL', '') + f'/api/asset/{asset.slug}'
-        requests.put(url=URL)
+        url = os.getenv('APP_URL', '') + f'/api/asset/{asset.slug}'
+        requests.put(url=url)
     except Exception as e:
         logger.error(str(e))
 

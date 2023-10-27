@@ -817,9 +817,10 @@ class SessionSerializer(SessionPUTSerializer):
                 slug='mentor-mentee-same-person'),
                                       code=400)
 
-        calendlyOrganization = CalendlyOrganization.objects.filter(academy=self.context['academy_id']).first()
-        if calendlyOrganization is not None:
-            max_sessions = calendlyOrganization.max_concurrent_sessions
+        calendly_organization = CalendlyOrganization.objects.filter(
+            academy=self.context['academy_id']).first()
+        if calendly_organization is not None:
+            max_sessions = calendly_organization.max_concurrent_sessions
             if max_sessions is not None and max_sessions > 0:
                 total_service_mentorships = MentorshipSession.objects.filter(
                     academy=self.context['academy_id'], status='PENDING', mentee=mentee,

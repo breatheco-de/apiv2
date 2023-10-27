@@ -9,11 +9,11 @@ from breathecode.career.services.regex import _cases_salary, _cases_date
 class BaseScraper(ABC):
 
     @abstractmethod
-    def get_location_from_string(cls, location: str):
+    def get_location_from_string(self, location: str):
         pass
 
     @abstractmethod
-    def get_salary_from_string(cls, salary: str):
+    def get_salary_from_string(self, salary: str):
         pass
 
     @classmethod

@@ -230,7 +230,7 @@ def run_script(script):
     import contextlib
 
     @contextlib.contextmanager
-    def stdoutIO(stdout=None):
+    def stdout_io(stdout=None):
         old = sys.stdout
         if stdout is None:
             stdout = StringIO()
@@ -254,7 +254,7 @@ def run_script(script):
 
     if content or exception:
         local = {'result': {'status': 'OPERATIONAL'}}
-        with stdoutIO() as s:
+        with stdout_io() as s:
             try:
                 if exception:
                     raise exception

@@ -563,21 +563,21 @@ def make_alias(modeladmin, request, queryset):
                     request, f'Slug {e.path} already exists for a different asset {alias.asset.asset_type}')
 
 
-def change_status_FIXED_including_similar(modeladmin, request, queryset):
+def change_status_fixed_including_similar(modeladmin, request, queryset):
     errors = queryset.all()
     for e in errors:
         AssetErrorLog.objects.filter(slug=e.slug, asset_type=e.asset_type, path=e.path,
                                      asset=e.asset).update(status='FIXED')
 
 
-def change_status_ERROR_including_similar(modeladmin, request, queryset):
+def change_status_error_including_similar(modeladmin, request, queryset):
     errors = queryset.all()
     for e in errors:
         AssetErrorLog.objects.filter(slug=e.slug, asset_type=e.asset_type, path=e.path,
                                      asset=e.asset).update(status='ERROR')
 
 
-def change_status_IGNORED_including_similar(modeladmin, request, queryset):
+def change_status_ignored_including_similar(modeladmin, request, queryset):
     errors = queryset.all()
     for e in errors:
         AssetErrorLog.objects.filter(slug=e.slug, asset_type=e.asset_type, path=e.path,
@@ -591,8 +591,8 @@ class AssetErrorLogAdmin(admin.ModelAdmin):
     raw_id_fields = ['user', 'asset']
     list_filter = ['status', 'slug', 'asset_type']
     actions = [
-        make_alias, change_status_FIXED_including_similar, change_status_ERROR_including_similar,
-        change_status_IGNORED_including_similar
+        make_alias, change_status_fixed_including_similar, change_status_error_including_similar,
+        change_status_ignored_including_similar
     ]
 
     def current_status(self, obj):

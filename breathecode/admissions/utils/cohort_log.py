@@ -100,7 +100,7 @@ class CohortLog(object):
             else:
                 self.days = [*self.days, CohortDayLog.empty()]
 
-    def logDay(self, payload, day=None):
+    def log_day(self, payload, day=None):
 
         if not isinstance(payload, dict):
             raise Exception('Entry log of cohort day must be a dictionary')

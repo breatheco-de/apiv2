@@ -160,7 +160,7 @@ def find_asset_on_json(asset_slug, asset_type=None):
     findings = []
     for s in syllabus_list:
         logger.debug(f'Starting with syllabus {s.syllabus.slug} version {str(s.version)}')
-        moduleIndex = -1
+        module_index = -1
         if isinstance(s.json, str):
             s.json = json.loads(s.json)
 
@@ -168,20 +168,20 @@ def find_asset_on_json(asset_slug, asset_type=None):
         s.json = weeks_to_days(s.json)
 
         for day in s.json['days']:
-            moduleIndex += 1
-            assetIndex = -1
+            module_index += 1
+            asset_index = -1
 
             for atype in key_map:
                 if key_map[atype] not in day or (asset_type is not None and atype != asset_type.upper()):
                     continue
 
                 for a in day[key_map[atype]]:
-                    assetIndex += 1
+                    asset_index += 1
 
                     if isinstance(a, dict):
                         if a['slug'] == asset_slug:
                             findings.append({
-                                'module': moduleIndex,
+                                'module': module_index,
                                 'version': s.version,
                                 'type': atype,
                                 'syllabus': s.syllabus.slug
@@ -189,7 +189,7 @@ def find_asset_on_json(asset_slug, asset_type=None):
                     else:
                         if a == asset_slug:
                             findings.append({
-                                'module': moduleIndex,
+                                'module': module_index,
                                 'version': s.version,
                                 'type': atype,
                                 'syllabus': s.syllabus.slug
@@ -213,7 +213,7 @@ def update_asset_on_json(from_slug, to_slug, asset_type, simulate=True):
     findings = []
     for s in syllabus_list:
         logger.debug(f'Starting with syllabus {s.syllabus.slug} version {str(s.version)}')
-        moduleIndex = -1
+        module_index = -1
         if isinstance(s.json, str):
             s.json = json.loads(s.json)
 
@@ -221,30 +221,30 @@ def update_asset_on_json(from_slug, to_slug, asset_type, simulate=True):
         s.json = weeks_to_days(s.json)
 
         for day in s.json['days']:
-            moduleIndex += 1
-            assetIndex = -1
+            module_index += 1
+            asset_index = -1
             if key_map[asset_type] not in day:
                 continue
 
             for a in day[key_map[asset_type]]:
-                assetIndex += 1
+                asset_index += 1
 
                 if isinstance(a, dict):
                     if a['slug'] == from_slug:
                         findings.append({
-                            'module': moduleIndex,
+                            'module': module_index,
                             'version': s.version,
                             'syllabus': s.syllabus.slug
                         })
-                        s.json['days'][moduleIndex][key_map[asset_type]][assetIndex]['slug'] = to_slug
+                        s.json['days'][module_index][key_map[asset_type]][asset_index]['slug'] = to_slug
                 else:
                     if a == from_slug:
                         findings.append({
-                            'module': moduleIndex,
+                            'module': module_index,
                             'version': s.version,
                             'syllabus': s.syllabus.slug
                         })
-                        s.json['days'][moduleIndex][key_map[asset_type]][assetIndex] = to_slug
+                        s.json['days'][module_index][key_map[asset_type]][asset_index] = to_slug
         if not simulate:
             s.save()
 

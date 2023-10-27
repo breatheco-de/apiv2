@@ -5,7 +5,7 @@ from .base_scraper import *
 logger = logging.getLogger(__name__)
 
 
-def ScraperFactory(service: str):
+def scraper_factory(service: str):
     import importlib
     try:
         return getattr(importlib.import_module('breathecode.career.services.' + service.lower()),

@@ -59,26 +59,26 @@ class Command(BaseCommand, DatetimeMixin):
         models = []
 
         for x in dir(module):
-            CurrentModel = getattr(module, x)
-            if not inspect.isclass(CurrentModel):
+            model_cls = getattr(module, x)
+            if not inspect.isclass(model_cls):
                 continue
 
-            if not issubclass(CurrentModel, Model):
+            if not issubclass(model_cls, Model):
                 continue
 
-            if (hasattr(CurrentModel, 'Meta') and hasattr(CurrentModel.Meta, 'abstract')
-                    and CurrentModel.__name__ != 'User'):
+            if (hasattr(model_cls, 'Meta') and hasattr(model_cls.Meta, 'abstract')
+                    and model_cls.__name__ != 'User'):
                 continue
 
-            if (hasattr(CurrentModel, 'Meta') and hasattr(CurrentModel.Meta, 'proxy')
-                    and CurrentModel.__name__ != 'User'):
+            if (hasattr(model_cls, 'Meta') and hasattr(model_cls.Meta, 'proxy')
+                    and model_cls.__name__ != 'User'):
                 continue
 
-            if CurrentModel.__name__ in self.all_model_names:
+            if model_cls.__name__ in self.all_model_names:
                 continue
 
-            self.all_model_names.append(CurrentModel.__name__)
-            models.append(CurrentModel.__name__)
+            self.all_model_names.append(model_cls.__name__)
+            models.append(model_cls.__name__)
 
         return models
 
@@ -97,8 +97,8 @@ class Command(BaseCommand, DatetimeMixin):
             return self.stderr.write(
                 self.style.ERROR(f'module `{self.module_name}` not have a model called `{self.model_name}`'))
 
-        CurrentModel = getattr(module, self.model_name)
-        results = CurrentModel.objects.all()
+        model_cls = getattr(module, self.model_name)
+        results = model_cls.objects.all()
         dicts = [self.prepare_data(x) for x in results]
 
         try:

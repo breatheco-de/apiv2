@@ -1,3 +1,5 @@
+# flake8: noqa: N802
+
 import graphene
 from breathecode.admissions.schema import Admissions
 

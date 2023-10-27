@@ -357,7 +357,7 @@ class Contacts(object):
         return self.client._get('contact_delete', aditional_data=[('id', id)])
 
 
-class AC_Old_Client(object):
+class ACOldClient(object):
 
     def __init__(self, url, apikey):
 

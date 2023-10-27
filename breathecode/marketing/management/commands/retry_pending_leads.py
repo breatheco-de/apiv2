@@ -11,4 +11,4 @@ class Command(BaseCommand):
 
         entries = FormEntry.objects.filter(storage_status='PENDING')
         for entry in entries:
-            persist_single_lead.delay(entry.toFormData())
+            persist_single_lead.delay(entry.to_form_data())

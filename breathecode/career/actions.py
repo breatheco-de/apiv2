@@ -6,7 +6,7 @@ from .models import Platform, Spider, Job, Employer, Position, PositionAlias, Ca
 from breathecode.utils import ValidationException
 from datetime import datetime, timedelta
 from django.utils import timezone
-from breathecode.career.services import ScraperFactory
+from breathecode.career.services import scraper_factory
 
 logger = logging.getLogger(__name__)
 
@@ -18,14 +18,14 @@ def run_spider(spider):
         raise ValidationException('First you must specify a spider', slug='missing-spider')
 
     platform = spider.zyte_project.platform.name
-    class_scrapper = ScraperFactory(platform)
+    class_scrapper = scraper_factory(platform)
 
     position = class_scrapper.get_position_from_string(spider.job_search)
     if position is None:
-        positionAlias = PositionAlias()
-        positionAlias.name = spider.job_search
-        positionAlias.position = spider.position
-        positionAlias.save()
+        position_alias = PositionAlias()
+        position_alias.name = spider.job_search
+        position_alias.position = spider.position
+        position_alias.save()
 
     data = {
         'project': spider.zyte_project.zyte_api_deploy,
@@ -83,7 +83,7 @@ def get_scraped_data_of_platform(spider, api_fetch):
         raise ValidationException('Is did not receive results from the API', slug='no-return-json-data')
 
     platform = spider.zyte_project.platform.name
-    class_scrapper = ScraperFactory(platform)
+    class_scrapper = scraper_factory(platform)
     data_project = []
 
     for res_api_jobs in api_fetch['jobs']:
@@ -121,7 +121,7 @@ def get_scraped_data_of_platform(spider, api_fetch):
 
 def save_data(spider, jobs):
     platform = spider.zyte_project.platform.name
-    class_scrapper = ScraperFactory(platform)
+    class_scrapper = scraper_factory(platform)
     new_jobs = 0
 
     for j in jobs:
@@ -138,8 +138,8 @@ def save_data(spider, jobs):
             position = Position(name=j['Searched_job'])
             position.save()
 
-            positionAlias = PositionAlias(name=j['Searched_job'], position=position)
-            positionAlias.save()
+            position_alias = PositionAlias(name=j['Searched_job'], position=position)
+            position_alias.save()
 
         (min_salary, max_salary, salary_str) = class_scrapper.get_salary_from_string(j['Salary'])
 
@@ -184,7 +184,7 @@ def fetch_sync_all_data(spider):
     data_jobs = get_scraped_data_of_platform(spider, res)
 
     platform = spider.zyte_project.platform.name
-    class_scrapper = ScraperFactory(platform)
+    class_scrapper = scraper_factory(platform)
 
     jobs_info_saved = class_scrapper.get_info_amount_jobs_saved(data_jobs)
     if isinstance(jobs_info_saved, tuple):
@@ -208,7 +208,7 @@ def get_was_published_date_from_string(job):
         raise ValidationException('First you must specify a job', slug='data-job-none')
 
     platform = job.spider.zyte_project.platform.name
-    class_scrapper = ScraperFactory(platform)
+    class_scrapper = scraper_factory(platform)
     job.published_date_processed = class_scrapper.get_date_from_string(job.published_date_raw)
     job.save()
 

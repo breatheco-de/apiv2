@@ -115,7 +115,7 @@ def send_to_active_campaign(modeladmin, request, queryset):
     entry = None
     try:
         for entry in entries:
-            entry = register_new_lead(entry.toFormData())
+            entry = register_new_lead(entry.to_form_data())
             if entry.storage_status == 'PERSISTED':
                 total['persisted'] += 1
             else:

@@ -667,7 +667,7 @@ class AcademyProcessView(APIView, GenerateLookupsMixin):
 
         items = FormEntry.objects.filter(**lookups, academy__id=academy_id)
         for item in items:
-            persist_single_lead.delay(item.toFormData())
+            persist_single_lead.delay(item.to_form_data())
 
         return Response({'details': f'{items.count()} leads added to the processing queue'},
                         status=status.HTTP_200_OK)

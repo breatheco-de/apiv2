@@ -10,7 +10,7 @@ __all__ = ['getLogger', 'Logger']
 Base = Annotated[BaseLogger, 'The original Logger']
 
 
-def getLogger(name: Optional[str] = None):
+def getLogger(name: Optional[str] = None):  # noqa: N802
     if not name or isinstance(name, str) and name == root.name:
         return root
     base = BaseLogger.manager.getLogger(name)

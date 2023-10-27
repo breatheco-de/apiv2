@@ -574,7 +574,7 @@ class FormEntry(models.Model):
 
         return None
 
-    def toFormData(self):
+    def to_form_data(self):
         _entry = {
             'id': self.id,
             'first_name': self.first_name,

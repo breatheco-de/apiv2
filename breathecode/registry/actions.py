@@ -451,17 +451,17 @@ def clean_readme_hide_comments(asset):
         raise Exception('Readme with to many <!-- hide -> comments')
 
     replaced = ''
-    startIndex = 0
+    start_index = 0
     while len(findings) > 1:
         opening_comment = findings.pop(0)
-        endIndex = opening_comment.start()
+        end_index = opening_comment.start()
 
-        replaced += content[startIndex:endIndex]
+        replaced += content[start_index:end_index]
 
         closing_comment = findings.pop(0)
-        startIndex = closing_comment.end()
+        start_index = closing_comment.end()
 
-    replaced += content[startIndex:]
+    replaced += content[start_index:]
     asset.set_readme(replaced)
     return asset
 

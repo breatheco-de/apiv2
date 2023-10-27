@@ -62,12 +62,12 @@ def send_sms(slug, phone_number, data={}):
     template = get_template_content(slug, data, ['sms'])
     # Your Account Sid and Auth Token from twilio.com/console
     # DANGER! This is insecure. See http://twil.io/secure
-    TWILLIO_SID = os.environ.get('TWILLIO_SID')
-    TWILLIO_SECRET = os.environ.get('TWILLIO_SECRET')
-    client = Client(TWILLIO_SID, TWILLIO_SECRET)
+    twillio_sid = os.environ.get('TWILLIO_SID')
+    twillio_secret = os.environ.get('TWILLIO_SECRET')
+    client = Client(twillio_sid, twillio_secret)
 
     try:
-        message = client.messages.create(body=template['sms'], from_='+15017122661', to='+1' + phone_number)
+        client.messages.create(body=template['sms'], from_='+15017122661', to='+1' + phone_number)
         return True
     except Exception:
         return False
