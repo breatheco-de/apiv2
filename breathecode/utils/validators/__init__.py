@@ -1,1 +1,1 @@
-from .language import *
+from .language import *  # noqa: F401

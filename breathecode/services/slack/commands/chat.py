@@ -3,12 +3,10 @@ Possible parameters for this command:
 - bot_slug: Name of the bot to chat with
 
 """
-import os
 import openai
 
 from breathecode.mentorship.models import ChatBot
 from ..decorator import command
-from ..utils import to_string
 from ..exceptions import SlackException
 
 
@@ -22,7 +20,7 @@ def execute(bot_name=None, academies=[], **context):
 
     bot = query.first()
     if bot is None:
-        raise SlackException(f'No chatbot was found to respond this message.', slug='chatbot-not-found')
+        raise SlackException('No chatbot was found to respond this message.', slug='chatbot-not-found')
 
     text = context['text']
 

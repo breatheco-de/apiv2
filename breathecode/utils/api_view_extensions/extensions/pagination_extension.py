@@ -1,4 +1,3 @@
-import inspect
 from collections import OrderedDict
 from typing import Any
 from breathecode.utils.api_view_extensions.extension_base import ExtensionBase

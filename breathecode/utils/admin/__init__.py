@@ -1,1 +1,1 @@
-from .change_field import *
+from .change_field import *  # noqa: F401

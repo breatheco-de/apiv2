@@ -1,8 +1,7 @@
-import requests, logging, re, os, json, inspect
-from .decorator import commands, actions
-from breathecode.services.slack.commands import student, cohort, chat
-from breathecode.services.slack.actions import monitoring
+import requests, logging, re, json
 from .exceptions import SlackException
+from breathecode.services.slack import commands
+from breathecode.services.slack import actions
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +102,7 @@ class Slack:
 
         logger.debug(f'Executing {action_class} => {method}')
         if hasattr(actions, action_class):
-            logger.debug(f'Action found')
+            logger.debug('Action found')
             _module = getattr(actions, action_class)  #get action module
 
             if not hasattr(_module, action_class.capitalize()):

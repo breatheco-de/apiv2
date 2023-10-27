@@ -56,7 +56,7 @@ class DailyClient:
         return result
 
     def create_all_rooms(self):
-        data = self.request('GET', f'/v1/rooms')
+        data = self.request('GET', '/v1/rooms')
         return data
 
     def create_room(self, name='', exp_in_seconds=3600, exp_in_epoch=None):
@@ -73,7 +73,7 @@ class DailyClient:
         if name != '':
             payload['properties']['name'] = name
 
-        data = self.request('POST', f'/v1/rooms', data=payload)
+        data = self.request('POST', '/v1/rooms', data=payload)
         return data
 
     def extend_room(self, name='', exp_in_seconds=3600, exp_in_epoch=None):
@@ -84,12 +84,12 @@ class DailyClient:
         else:
             payload = {'properties': {'exp': f'{str(exp_in_epoch)}'}}
 
-        data = self.request('POST', f'/v1/rooms/' + name, data=payload)
+        data = self.request('POST', '/v1/rooms/' + name, data=payload)
         return data
 
     def get_room(self, name=''):
         epoc_now = time.mktime(timezone.now().timetuple())
-        data = self.request('GET', f'/v1/rooms/' + name)
+        data = self.request('GET', '/v1/rooms/' + name)
 
         if epoc_now > data['config']['exp']:
             data['expired'] = True

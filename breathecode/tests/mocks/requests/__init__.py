@@ -1,7 +1,6 @@
 """
 Mocks for `requests` module
 """
-from unittest.mock import Mock
 from .requests_mock import request_mock
 
 # __all__ = [

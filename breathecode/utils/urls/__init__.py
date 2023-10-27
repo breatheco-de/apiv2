@@ -1,1 +1,1 @@
-from .mount_app_openapi import *
+from .mount_app_openapi import *  # noqa: F401

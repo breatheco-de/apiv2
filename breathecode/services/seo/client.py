@@ -1,9 +1,7 @@
-import os, ast, requests, json, logging, re
+import os, logging, re
 import breathecode.services.seo.actions as actions
 from breathecode.registry.models import SEOReport
-from breathecode.utils import APIException
 from django.utils import timezone
-from slugify import slugify
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +100,7 @@ class SEOAnalyzer:
 
                 try:
                     report.how_to_fix = fn.description.strip()
-                except AttributeError as e:
+                except AttributeError:
                     pass
 
                 report.log = report.get_log()

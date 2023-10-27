@@ -30,10 +30,11 @@ from redis.lock import Lock
 from redis.exceptions import LockError
 from breathecode.utils import getLogger
 from breathecode.setup import get_redis
-import ssl
 
 logger = getLogger(__name__)
 ENV = os.getenv('ENV', '')
+
+logger = getLogger(__name__)
 
 
 class LockManager(models.Manager):
@@ -58,7 +59,7 @@ class LockManager(models.Manager):
                         instance, created = super().get_or_create(**kwargs)
             except LockError:
                 # Handle the timeout, e.g., by logging, retrying, or returning an error
-                logger = getLogger(
+                logger.error(
                     f'Could not acquire lock for {class_name} on get_or_create, operation timed out.')
                 return None, False  # Indicate that the operation was not successful
         else:

@@ -2,6 +2,9 @@
 """
 Count Duplicate Github Academy Users
 """
+
+# flake8: noqa: F821
+
 from breathecode.utils import ScriptNotification
 from breathecode.authenticate.models import GithubAcademyUser
 

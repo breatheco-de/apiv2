@@ -3,7 +3,6 @@ Google Cloud Storage Mocks
 """
 from unittest.mock import MagicMock
 from .requests_mock import request_mock
-from .constants import *
 
 EVENTBRITE_PATH = {
     'get': 'requests.get',

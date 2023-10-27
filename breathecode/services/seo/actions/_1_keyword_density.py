@@ -1,6 +1,4 @@
 import logging
-from django.contrib.auth.models import User
-from django.utils import timezone
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
@@ -18,7 +16,7 @@ def keyword_density(client, report):
 
     readme = asset.get_readme(parse=True)
     if 'html' not in readme:
-        report.fatal(f'Asset with {asset_slug} readme cannot be parse into an HTML')
+        report.fatal(f'Asset with {asset.slug} readme cannot be parse into an HTML')
         return False
 
     all_h2s = []

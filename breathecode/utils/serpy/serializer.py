@@ -1,5 +1,4 @@
 import serpy
-from serpy import serializer
 
 from breathecode.utils.validation_exception import ValidationException
 from .field import Field
@@ -42,7 +41,8 @@ class Serializer(serpy.Serializer):
         return super().__new__(cls)
 
     def __init__(self, *args, **kwargs):
-        select = kwargs.pop('select', '')
+        kwargs.pop('select', '')
+        # select = kwargs.pop('select', '')
         # if select:
         #     self._custom_select(select)
 
