@@ -222,7 +222,6 @@ def random_image(fake):
     os.remove(filename)
 
 
-@pytest.fixture(autouse=True, scope='module')
-def fake(random_seed):
-    Faker.seed(random_seed)
+@pytest.fixture(scope='module')
+def fake():
     return _fake

@@ -61,7 +61,6 @@ if __name__ == '__main__':
 
     exit_code = subprocess.run(command, env=env, shell=True).returncode
 
-    print(command)
     print()
     print(f'Seed {seed} used, you can provide it locally to reproduce random errors')
 
