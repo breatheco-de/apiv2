@@ -54,7 +54,7 @@ if __name__ == '__main__':
         os.remove(xml_path)
 
     command = (f'pytest {dir} --disable-pytest-warnings {" ".join(args.pytest_args[1:])} '
-               f'--cov={module} --cov-report xml -n auto --durations=1 --nomigrations')
+               f'--cov={module} --cov-report xml -n auto --durations=1')
 
     env = os.environ.copy()
     env['RANDOM_SEED'] = str(seed)
