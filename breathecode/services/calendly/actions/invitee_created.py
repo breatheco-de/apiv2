@@ -1,5 +1,5 @@
 import logging
-import time
+
 from django.db.models import Q
 from urllib.parse import urlparse
 from django.contrib.auth.models import User
@@ -18,7 +18,7 @@ def invitee_created(self, webhook, payload: dict):
     service = None
     service_slug = payload['tracking']['utm_campaign']
     if service_slug is None:
-        raise Exception(f'Missing service information on calendly iframe info: tracking->utm_campaign')
+        raise Exception('Missing service information on calendly iframe info: tracking->utm_campaign')
 
     service = MentorshipService.objects.filter(slug=service_slug, academy=academy).first()
     if service is None:
@@ -44,7 +44,7 @@ def invitee_created(self, webhook, payload: dict):
     event = event['resource']
 
     if not isinstance(event['event_memberships'], list) or len(event['event_memberships']) == 0:
-        raise Exception(f'No mentor information was found on calendly event')
+        raise Exception('No mentor information was found on calendly event')
 
     mentor_email = event['event_memberships'][0]['user_email']
     mentor_uuid = urlparse(event['event_memberships'][0]['user']).path.split('/')[-1]

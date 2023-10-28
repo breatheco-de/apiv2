@@ -1,3 +1,4 @@
+import os
 import random
 from unittest.mock import MagicMock, call
 from logging import Logger
@@ -5,6 +6,9 @@ import pytest
 from breathecode.commons.tasks import mark_task_as_paused
 
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
+
+# this fix a problem caused by the geniuses at pytest-xdist
+random.seed(os.getenv('RANDOM_SEED'))
 
 param_names = 'task_module,task_name,get_call_args_list'
 

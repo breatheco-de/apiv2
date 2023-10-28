@@ -1,7 +1,6 @@
 import logging
 from django.conf import settings
 
-from breathecode.notify.models import Hook
 from ..tasks import async_deliver_hook
 from django.apps import apps as django_apps
 from django.core.exceptions import ImproperlyConfigured
@@ -80,16 +79,12 @@ class HookManagerClass(object):
                 raise ImproperlyConfigured(
                     "HOOK_CUSTOM_MODEL refers to model '%s' that has not been installed" % model_label)
         else:
-            if model_label in (None, 'notify.Hook'):
-                # from rest_hooks.models import Hook
-                HookModel = Hook
-            else:
+            if model_label not in (None, 'notify.Hook'):
                 try:
-                    HookModel = self.get_module(settings.HOOK_CUSTOM_MODEL)
+                    self.get_module(settings.HOOK_CUSTOM_MODEL)
                 except ImportError:
                     raise ImproperlyConfigured(
                         "HOOK_CUSTOM_MODEL refers to model '%s' that cannot be imported" % model_label)
-            return
 
     def find_and_fire_hook(self,
                            event_name,
@@ -102,9 +97,9 @@ class HookManagerClass(object):
         """
         try:
             from django.contrib.auth import get_user_model
-            User = get_user_model()
+            user_cls = get_user_model()
         except ImportError:
-            from django.contrib.auth.models import User
+            from django.contrib.auth.models import User as user_cls  # noqa: N813
 
         if event_name not in self.HOOK_EVENTS.keys():
             raise Exception('"{}" does not exist in `settings.HOOK_EVENTS`.'.format(event_name))
@@ -113,10 +108,10 @@ class HookManagerClass(object):
 
         # only process hooks from instances from the same academy
         if academy_override is not None:
-            superadmins = User.objects.filter(is_superuser=True).values_list('username', flat=True)
+            superadmins = user_cls.objects.filter(is_superuser=True).values_list('username', flat=True)
             filters['user__username__in'] = [academy_override.slug] + list(superadmins)
         elif hasattr(instance, 'academy') and instance.academy is not None:
-            superadmins = User.objects.filter(is_superuser=True).values_list('username', flat=True)
+            superadmins = user_cls.objects.filter(is_superuser=True).values_list('username', flat=True)
             filters['user__username__in'] = [instance.academy.slug] + list(superadmins)
         else:
             logger.debug(
@@ -136,8 +131,8 @@ class HookManagerClass(object):
         #     else:
         #         raise Exception('{} has no `user` property. REST Hooks needs this.'.format(repr(instance)))
 
-        HookModel = self.get_hook_model()
-        hooks = HookModel.objects.filter(**filters)
+        hook_model_cls = self.get_hook_model()
+        hooks = hook_model_cls.objects.filter(**filters)
         for hook in hooks:
             self.deliver_hook(hook,
                               instance,

@@ -624,8 +624,7 @@ class TokenTestSuite(AuthTestCase):
         self.assertEqual(self.all_token_dict(), [])
 
     def test_validate_and_destroy__token_not_exists__with_arg(self):
-        now = timezone.now()
-        result = Token.delete_expired_tokens(now)
+        result = Token.delete_expired_tokens()
 
         self.assertEqual(result, None)
         self.assertEqual(self.all_token_dict(), [])
@@ -647,7 +646,7 @@ class TokenTestSuite(AuthTestCase):
         now = timezone.now()
         token_kwargs = {'expires_at': now - timedelta(seconds=1)}
         self.generate_models(token=True, token_kwargs=token_kwargs)
-        result = Token.delete_expired_tokens(now)
+        result = Token.delete_expired_tokens()
 
         self.assertEqual(result, None)
         self.assertEqual(self.all_token_dict(), [])
@@ -669,7 +668,7 @@ class TokenTestSuite(AuthTestCase):
         now = timezone.now()
         token_kwargs = {'expires_at': now + timedelta(minutes=1)}
         model = self.generate_models(token=True, token_kwargs=token_kwargs)
-        result = Token.delete_expired_tokens(now)
+        result = Token.delete_expired_tokens()
 
         self.assertEqual(result, None)
         self.assertEqual(self.all_token_dict(), [self.model_to_dict(model, 'token')])

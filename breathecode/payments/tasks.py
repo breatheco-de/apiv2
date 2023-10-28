@@ -4,7 +4,6 @@ import os
 from typing import Any, Optional
 from django.utils import timezone
 
-from celery import Task, shared_task
 from breathecode.authenticate.actions import get_user_settings
 
 from breathecode.notify import actions as notify_actions
@@ -14,7 +13,6 @@ from dateutil.relativedelta import relativedelta
 from breathecode.payments.signals import consume_service
 from breathecode.utils.decorators import task, AbortTask, RetryTask
 from breathecode.utils.i18n import translation
-from django.db.models import Q
 
 from .models import AbstractIOweYou, Bag, CohortSet, Consumable, ConsumptionSession, Invoice, PlanFinancing, PlanServiceItem, PlanServiceItemHandler, Service, ServiceStockScheduler, Subscription, SubscriptionServiceItem
 from breathecode.payments.signals import reimburse_service_units

@@ -2,10 +2,8 @@
 Collections of mixins used to login in authorize microservice
 """
 from breathecode.authenticate.models import Capability, ProfileAcademy, Role
-from datetime import datetime
 from rest_framework.test import APITestCase
 from mixer.backend.django import mixer
-from django.contrib.auth.models import User
 from breathecode.tests.mixins import DevelopmentEnvironment, DateFormatterMixin
 
 
@@ -74,8 +72,15 @@ class AuthenticateMixin(APITestCase, DevelopmentEnvironment, DateFormatterMixin)
                              profile_academy=False,
                              capability='',
                              role='',
-                             models={},
-                             external_models={}):
+                             models=None,
+                             external_models=None):
+
+        if models is None:
+            models = {}
+
+        if external_models is None:
+            external_models = {}
+
         self.maxDiff = None
         external_models = external_models.copy()
         models = models.copy()

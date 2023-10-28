@@ -1,8 +1,8 @@
-import math
+import re
 import serpy
 
 from breathecode.utils.i18n import translation
-from .models import ProvisioningBill, ProvisioningConsumptionEvent, ProvisioningContainer, ProvisioningUserConsumption
+from .models import ProvisioningBill, ProvisioningContainer
 
 from rest_framework import serializers
 from breathecode.utils.validation_exception import ValidationException
@@ -106,9 +106,11 @@ class ProvisioningContainerSerializer(serializers.ModelSerializer):
                     f'Invalid link slug {data["slug"]}, should only contain letters, numbers and slash "-"',
                     slug='invalid-slug-format')
 
-        return {**data, 'academy': academy}
+        #NOTE: this have the propertly academy but it's not defined here
+        return data
 
     def create(self, validated_data):
+        from breathecode.marketing.models import ShortLink
 
         return ShortLink.objects.create(**validated_data, author=self.context.get('request').user)
 

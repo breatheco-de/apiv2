@@ -1,16 +1,12 @@
-from django.core.mail import EmailMultiAlternatives
 from rest_framework.exceptions import APIException
-import os, logging, json, re
+import os, logging, json
 from django.template.loader import get_template
-from django.contrib.auth.models import User
-from django.template import Context
 from django.utils import timezone
 from pyfcm import FCMNotification
 from breathecode.services.slack import client
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.utils import ValidationException
 from .models import Device, SlackChannel, SlackTeam, SlackUser, SlackUserTeam
-from django.conf import settings
 import requests
 from twilio.rest import Client
 from premailer import transform
@@ -23,7 +19,10 @@ if FIREBASE_KEY is not None and FIREBASE_KEY != '':
 logger = logging.getLogger(__name__)
 
 
-def send_email_message(template_slug, to, data={}, force=False, inline_css=False):
+def send_email_message(template_slug, to, data=None, force=False, inline_css=False):
+
+    if data is None:
+        data = {}
 
     if to is None or to == '' or (isinstance(to, list) and len(to) == 0):
         raise ValidationException(f'Invalid email to send notification to {str(to)}')
@@ -57,24 +56,30 @@ def send_email_message(template_slug, to, data={}, force=False, inline_css=False
         return True
 
 
-def send_sms(slug, phone_number, data={}):
+def send_sms(slug, phone_number, data=None):
+
+    if data is None:
+        data = {}
 
     template = get_template_content(slug, data, ['sms'])
     # Your Account Sid and Auth Token from twilio.com/console
     # DANGER! This is insecure. See http://twil.io/secure
-    TWILLIO_SID = os.environ.get('TWILLIO_SID')
-    TWILLIO_SECRET = os.environ.get('TWILLIO_SECRET')
-    client = Client(TWILLIO_SID, TWILLIO_SECRET)
+    twillio_sid = os.environ.get('TWILLIO_SID')
+    twillio_secret = os.environ.get('TWILLIO_SECRET')
+    client = Client(twillio_sid, twillio_secret)
 
     try:
-        message = client.messages.create(body=template['sms'], from_='+15017122661', to='+1' + phone_number)
+        client.messages.create(body=template['sms'], from_='+15017122661', to='+1' + phone_number)
         return True
     except Exception:
         return False
 
 
 # entity can be a cohort or a user
-def send_slack(slug, slackuser=None, team=None, slackchannel=None, data={}):
+def send_slack(slug, slackuser=None, team=None, slackchannel=None, data=None):
+
+    if data is None:
+        data = {}
 
     remitent_id = None
     if slackuser is None and slackchannel is None:
@@ -110,8 +115,11 @@ def send_slack(slug, slackuser=None, team=None, slackchannel=None, data={}):
 
 
 # if would like to specify slack channel or user id and team
-def send_slack_raw(slug, token, channel_id, data={}):
+def send_slack_raw(slug, token, channel_id, data=None):
     logger.debug(f'Sending slack message to {str(channel_id)}')
+
+    if data is None:
+        data = {}
 
     try:
         if 'slack_payload' in data:
@@ -136,14 +144,16 @@ def send_slack_raw(slug, token, channel_id, data={}):
         })
         logger.debug(f'Notification to {str(channel_id)} sent')
         return True
-    except Exception as e:
-        # import traceback
-        # traceback.print_exc()
+    except Exception:
         logger.exception(f'Error sending notification to {str(channel_id)}')
         return False
 
 
-def send_fcm(slug, registration_ids, data={}):
+def send_fcm(slug, registration_ids, data=None):
+
+    if data is None:
+        data = {}
+
     if (len(registration_ids) > 0 and push_service):
         template = get_template_content(slug, data, ['email', 'fms'])
 
@@ -169,7 +179,11 @@ def send_fcm(slug, registration_ids, data={}):
         return False
 
 
-def send_fcm_notification(slug, user_id, data={}):
+def send_fcm_notification(slug, user_id, data=None):
+
+    if data is None:
+        data = {}
+
     device_set = Device.objects.filter(user=user_id)
     registration_ids = [device.registration_id for device in device_set]
     send_fcm(slug, registration_ids, data)
@@ -181,7 +195,11 @@ def notify_all(slug, user, data):
     send_slack('nps', user.slackuser, data)
 
 
-def get_template_content(slug, data={}, formats=None, inline_css=False):
+def get_template_content(slug, data=None, formats=None, inline_css=False):
+
+    if data is None:
+        data = {}
+
     #d = Context({ 'username': username })
     con = {
         'API_URL': os.environ.get('API_URL'),
@@ -404,7 +422,6 @@ def sync_slack_channel(payload, team=None):
         raise Exception('Invalid or missing team')
 
     slack_channel = SlackChannel.objects.filter(slack_id=payload['id']).first()
-    channel = None
     if slack_channel is None:
 
         cohort = Cohort.objects.filter(slug=payload['name_normalized']).first()

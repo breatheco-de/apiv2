@@ -1,7 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from breathecode.admissions.models import Academy
-from breathecode.payments.models import Currency, Service, ServiceTranslation
+from breathecode.payments.models import Service, ServiceTranslation
 
 # GROUP = {'codename': 'CLASSROOM'}
 GROUP = {'codename': 'CLASSROOM'}

@@ -14,7 +14,6 @@ def duration_to_str(duration, include_seconds=False, include_days=False):
         return 'none'
 
     total_seconds = duration.seconds
-    day_value = total_seconds // 86400
     sec_value = total_seconds % (24 * 3600)
     hour_value = sec_value // 3600
     sec_value %= 3600

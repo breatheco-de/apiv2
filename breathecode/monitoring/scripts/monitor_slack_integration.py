@@ -2,6 +2,9 @@
 """
 Alert me when something is missing with the Slack integration
 """
+
+# flake8: noqa: F821
+
 from breathecode.notify.models import SlackTeam
 from breathecode.authenticate.models import CredentialsSlack
 from django.db.models import Q

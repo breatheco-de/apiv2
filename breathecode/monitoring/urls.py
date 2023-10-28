@@ -1,5 +1,4 @@
-from django.contrib import admin
-from django.urls import path, include
+from django.urls import path
 from .views import get_apps, get_endpoints, get_download, get_upload, process_github_webhook, process_stripe_webhook
 
 app_name = 'monitoring'

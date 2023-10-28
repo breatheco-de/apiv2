@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from celery import shared_task, Task
+from celery import Task
 from .models import RepositoryWebhook
 
 logger = logging.getLogger(__name__)
@@ -10,8 +10,6 @@ class WebhookTask(Task):
     pending_status = 'pending...'
 
     def initialize(self, webhook_id):
-
-        status = 'ok'
 
         webhook = RepositoryWebhook.objects.filter(id=webhook_id).first()
         if webhook is None:
@@ -40,7 +38,6 @@ class WebhookTask(Task):
             webhook.status = 'ERROR'
             webhook.status_text = str(ex)[:255]
             logger.debug(ex)
-            status = 'error'
 
         webhook.run_at = datetime.now()
         if webhook.status_text == self.pending_status:

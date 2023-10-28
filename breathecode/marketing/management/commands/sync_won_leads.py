@@ -1,5 +1,4 @@
-from django.core.management.base import BaseCommand, CommandError
-from ...actions import sync_tags, sync_automations
+from django.core.management.base import BaseCommand
 from ...models import FormEntry
 from django.contrib.auth.models import User
 

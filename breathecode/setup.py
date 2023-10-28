@@ -36,17 +36,17 @@ def configure_redis():
 
 def get_redis_config():
     # production redis url
-    REDIS_URL = os.getenv('REDIS_COM_URL', '')
+    redis_url = os.getenv('REDIS_COM_URL', '')
     redis_kwargs = {}
     settings = {}
 
     # local or heroku redis url
 
-    if REDIS_URL == '':
-        REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
+    if redis_url == '':
+        redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
 
         # support for heroku redis addon
-        if REDIS_URL.startswith('redis://') and IS_HEROKU:
+        if redis_url.startswith('redis://') and IS_HEROKU:
             redis_kwargs = {
                 'broker_use_ssl': {
                     'ssl_cert_reqs': ssl.CERT_NONE,
@@ -72,16 +72,16 @@ def get_redis_config():
         }
 
     # overwrite the redis url with the new one
-    os.environ['REDIS_URL'] = REDIS_URL
-    return settings, redis_kwargs, REDIS_URL
+    os.environ['REDIS_URL'] = redis_url
+    return settings, redis_kwargs, redis_url
 
 
 def get_redis():
     global redis_client
 
-    settings, redis_kwargs, REDIS_URL = get_redis_config()
+    settings, _, redis_url = get_redis_config()
 
     if redis_client == None:
-        redis_client = redis.from_url(REDIS_URL, **settings)
+        redis_client = redis.from_url(redis_url, **settings)
 
     return redis_client

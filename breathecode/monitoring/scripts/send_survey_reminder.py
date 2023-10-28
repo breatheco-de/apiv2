@@ -2,9 +2,12 @@
 """
 Reminder for sending surveys to each cohort every 4 weeks
 """
+
+# flake8: noqa: F821
+
 from breathecode.utils import ScriptNotification
 from breathecode.feedback.models import Survey
-from breathecode.admissions.models import Cohort, Academy
+from breathecode.admissions.models import Cohort
 from datetime import datetime, timedelta
 from django.utils import timezone
 

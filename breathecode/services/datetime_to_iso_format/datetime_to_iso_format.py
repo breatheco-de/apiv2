@@ -2,7 +2,7 @@ import re
 from datetime import datetime, tzinfo, timedelta
 
 
-class simple_utc(tzinfo):
+class SimpleUTC(tzinfo):
 
     def tzname(self, **kwargs):
         return 'UTC'
@@ -11,5 +11,5 @@ class simple_utc(tzinfo):
         return timedelta(0)
 
 
-def datetime_to_iso_format(date=datetime.utcnow()) -> str:
-    return re.sub(r'\+00:00$', 'Z', date.replace(tzinfo=simple_utc()).isoformat())
+def datetime_to_iso_format(date: datetime) -> str:
+    return re.sub(r'\+00:00$', 'Z', date.replace(tzinfo=SimpleUTC()).isoformat())

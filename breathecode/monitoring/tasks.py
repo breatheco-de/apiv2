@@ -1,7 +1,7 @@
 from django.utils import timezone
 from celery import shared_task, Task
-from .actions import run_app_diagnostic, run_script, run_endpoint_diagnostic, download_csv
-from .models import Application, MonitorScript, Endpoint, CSVDownload
+from .actions import run_script, run_endpoint_diagnostic, download_csv
+from .models import MonitorScript, Endpoint
 from breathecode.notify.actions import send_email_message, send_slack_raw
 import logging
 

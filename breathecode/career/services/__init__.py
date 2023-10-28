@@ -1,11 +1,10 @@
 import logging
-from django.contrib import messages
-from .base_scraper import *
+from .base_scraper import *  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
 
-def ScraperFactory(service: str):
+def scraper_factory(service: str):
     import importlib
     try:
         return getattr(importlib.import_module('breathecode.career.services.' + service.lower()),

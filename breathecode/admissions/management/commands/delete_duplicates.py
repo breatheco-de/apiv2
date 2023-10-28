@@ -56,4 +56,4 @@ class Command(BaseCommand):
             # bulk delete but cohort user with that id
             (CohortUser.objects.filter(user__id=user, cohort__id=cohort).exclude(id=id).delete())
 
-        self.stdout.write(self.style.SUCCESS(f'Remove duplicates from cohort users has ended'))
+        self.stdout.write(self.style.SUCCESS('Remove duplicates from cohort users has ended'))

@@ -1,4 +1,4 @@
-import os, re, datetime, logging, csv, pytz, secrets, json, hashlib
+import os, re, datetime, logging, csv, pytz, json, hashlib
 from urllib import parse
 from django.utils import timezone
 from datetime import timedelta
@@ -16,12 +16,10 @@ from rest_framework import status
 from django.db.models import Q
 from rest_framework.permissions import AllowAny
 from rest_framework.parsers import FileUploadParser, MultiPartParser
-from slugify import slugify
 from rest_framework.decorators import api_view, permission_classes
 from django.db.models import Count, F, Func, Value, CharField
 from breathecode.utils import (APIException, localize_query, capable_of, ValidationException,
-                               GenerateLookupsMixin, HeaderLimitOffsetPagination, validate_captcha,
-                               num_to_roman)
+                               GenerateLookupsMixin, HeaderLimitOffsetPagination)
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.i18n import translation
 from .serializers import (
@@ -53,7 +51,6 @@ from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
 import breathecode.marketing.tasks as tasks
 import pandas as pd
-from breathecode.services.google_cloud import Recaptcha
 
 logger = logging.getLogger(__name__)
 MIME_ALLOW = 'text/csv'
@@ -138,19 +135,19 @@ def create_lead_from_app(request, app_slug=None):
 
     app_id = request.GET.get('app_id', None)
     if app_id is None:
-        raise ValidationException(f'Invalid app slug and/or id', code=400, slug='without-app-slug-or-app-id')
+        raise ValidationException('Invalid app slug and/or id', code=400, slug='without-app-slug-or-app-id')
 
     if app_slug is None:
         # try get the slug from the encoded app_id
         decoded_id = parse.unquote(app_id)
         if ':' not in decoded_id:
-            raise ValidationException(f'Missing app slug', code=400, slug='without-app-slug-or-app-id')
+            raise ValidationException('Missing app slug', code=400, slug='without-app-slug-or-app-id')
         else:
             app_slug, app_id = decoded_id.split(':')
 
     app = LeadGenerationApp.objects.filter(slug=app_slug, app_id=app_id).first()
     if app is None:
-        raise ValidationException(f'App not found with those credentials', code=401, slug='without-app-id')
+        raise ValidationException('App not found with those credentials', code=401, slug='without-app-id')
 
     app.hits += 1
     app.last_call_at = timezone.now()
@@ -210,17 +207,17 @@ def validate_email_from_app(request, app_slug=None):
     if app_id is None:
         app_id = request.GET.get('app_id', None)
         if app_id is None:
-            raise ValidationException(f'Invalid app slug and/or id',
+            raise ValidationException('Invalid app slug and/or id',
                                       code=400,
                                       slug='without-app-slug-or-app-id')
 
     app = LeadGenerationApp.objects.filter(slug=app_slug, app_id=app_id).first()
     if app is None:
-        raise ValidationException(f'App not found with those credentials', code=401, slug='without-app-id')
+        raise ValidationException('App not found with those credentials', code=401, slug='without-app-id')
 
     email = data['email'] if 'email' in data else None
     if email is None:
-        raise ValidationException(f'Please provide an email to validate',
+        raise ValidationException('Please provide an email to validate',
                                   code=400,
                                   slug='without-app-slug-or-app-id')
 
@@ -228,7 +225,7 @@ def validate_email_from_app(request, app_slug=None):
         # try get the slug from the encoded app_id
         decoded_id = parse.unquote(app_id)
         if ':' not in decoded_id:
-            raise ValidationException(f'Missing app slug', code=400, slug='without-app-slug-or-app-id')
+            raise ValidationException('Missing app slug', code=400, slug='without-app-slug-or-app-id')
         else:
             app_slug, app_id = decoded_id.split(':')
 
@@ -311,10 +308,6 @@ def receive_facebook_lead(request):
         verify_token = ''
         if 'hub.verify_token' in request.GET:
             verify_token = request.GET['hub.verify_token']
-
-        mode = ''
-        if 'hub.mode' in request.GET:
-            mode = request.GET['hub.mode']
 
         if verify_token == os.getenv('FACEBOOK_VERIFY_TOKEN', ''):
             return Response(int(challenge), status=status.HTTP_200_OK)
@@ -667,7 +660,7 @@ class AcademyProcessView(APIView, GenerateLookupsMixin):
 
         items = FormEntry.objects.filter(**lookups, academy__id=academy_id)
         for item in items:
-            persist_single_lead.delay(item.toFormData())
+            persist_single_lead.delay(item.to_form_data())
 
         return Response({'details': f'{items.count()} leads added to the processing queue'},
                         status=status.HTTP_200_OK)
@@ -804,7 +797,7 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
 
         leads = FormEntry.objects.filter(**lookups, academy__id=academy_id)
         if leads.count() == 0:
-            raise ValidationException(f'Leads not found', slug='lead-not-found')
+            raise ValidationException('Leads not found', slug='lead-not-found')
 
         data = {**request.data}
 
@@ -982,7 +975,7 @@ class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             days_ago = i.created_at + timedelta(days=1)
             if days_ago < utc_now:
                 raise ValidationException(
-                    f'You cannot update or delete short links that have been created more than 1 day ago, create a new link instead',
+                    'You cannot update or delete short links that have been created more than 1 day ago, create a new link instead',
                     slug='update-days-ago')
 
         items.delete()
@@ -1003,11 +996,6 @@ class UploadView(APIView):
     # not should get many create and update operations together
     def upload(self, file, academy_id=None, update=False):
         from ..services.google_cloud import Storage
-
-        result = {
-            'data': [],
-            'instance': [],
-        }
 
         if not file:
             raise ValidationException('Missing file in request', code=400)

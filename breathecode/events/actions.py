@@ -1,4 +1,3 @@
-from typing import Any
 import pytz
 import re
 import logging
@@ -9,9 +8,8 @@ from django.utils import timezone
 from breathecode.admissions.models import Cohort, CohortTimeSlot, TimeSlot, CohortUser
 from breathecode.payments.models import AbstractIOweYou, PlanFinancing, Subscription
 from breathecode.utils.datetime_integer import DatetimeInteger
-from django.db.models import QuerySet
 
-from .models import EventTypeVisibilitySetting, Organization, Venue, Event, Organizer, EventType
+from .models import Organization, Venue, Event, Organizer, EventType
 from .utils import Eventbrite
 from django.db.models import QuerySet
 
@@ -239,7 +237,7 @@ def create_or_update_venue(data, org, force_update=False):
 
             venue.save()
 
-    except:
+    except Exception:
         logger.error(f'Error saving venue eventbrite_id: {data["id"]} skipping to the next')
 
     return venue
@@ -247,7 +245,7 @@ def create_or_update_venue(data, org, force_update=False):
 
 def export_event_description_to_eventbrite(event: Event) -> None:
     if not event:
-        logger.error(f'Event is not being provided')
+        logger.error('Event is not being provided')
         return
 
     if not event.eventbrite_id:
@@ -398,7 +396,7 @@ def get_current_iso_string():
 
 def update_event_description_from_eventbrite(event: Event) -> None:
     if not event:
-        logger.error(f'Event is not being provided')
+        logger.error('Event is not being provided')
         return
 
     if not event.eventbrite_id:
@@ -419,7 +417,7 @@ def update_event_description_from_eventbrite(event: Event) -> None:
         event.eventbrite_sync_status = 'PERSISTED'
         event.save()
 
-    except:
+    except Exception:
         error = f'The event {eventbrite_id} is coming from eventbrite not have a description'
         logger.warning(error)
         event.eventbrite_sync_description = error

@@ -1,8 +1,6 @@
-import os, requests, sys, pytz
-from datetime import datetime
+import os
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import User
-from ...models import Task
 from ...actions import sync_student_tasks
 from breathecode.admissions.models import CohortUser
 from django.db.models import Count
@@ -84,5 +82,5 @@ class Command(BaseCommand):
                 total += 1
                 try:
                     sync_student_tasks(user)
-                except Exception as e:
+                except Exception:
                     self.stdout.write(self.style.NOTICE(f'Error synching student stasks for {user.email}'))

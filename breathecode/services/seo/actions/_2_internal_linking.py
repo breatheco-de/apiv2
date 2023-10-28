@@ -1,7 +1,6 @@
 import logging, re
 from urllib.parse import urlparse
-from django.contrib.auth.models import User
-from django.utils import timezone
+
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
@@ -9,10 +8,6 @@ logger = logging.getLogger(__name__)
 
 # You must always return a score number between 1 and 100
 def internal_linking(client, report):
-
-    def count_words(text):
-        words = text.split()
-        return len(words)
 
     asset = client.asset
 
@@ -34,11 +29,11 @@ def internal_linking(client, report):
 
     readme = asset.get_readme(parse=True)
     if 'html' not in readme:
-        logger.fatal(f'Asset with {asset_slug} readme cannot be parse into an HTML')
+        logger.fatal(f'Asset with {asset.slug} readme cannot be parse into an HTML')
         return False
 
     links = BeautifulSoup(readme['html'], features='html.parser').find_all('a')
-    found_links_to_clusters = []
+
     internal_links = []
     for link in links:
         if 'href' not in link.attrs:
@@ -78,7 +73,7 @@ def internal_linking(client, report):
             break
 
     if missing_links:
-        report.bad(-15, f'Please add at least a link every 500 words')
+        report.bad(-15, 'Please add at least a link every 500 words')
 
     #report.good('No errors found on keyword density')
 

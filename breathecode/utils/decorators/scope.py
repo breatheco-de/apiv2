@@ -28,7 +28,7 @@ def link_schema(request, required_scopes, authorization: str, use_signature: boo
     try:
         authorization = dict([x.split('=') for x in authorization.split(',')])
 
-    except:
+    except Exception:
         raise ValidationException('Unauthorized', code=401, slug='authorization-header-malformed')
 
     if sorted(authorization.keys()) != ['App', 'Token']:
@@ -49,7 +49,7 @@ def link_schema(request, required_scopes, authorization: str, use_signature: boo
         key = public_key if public_key else private_key
         payload = jwt.decode(authorization['Token'], key, algorithms=[alg], audience='4geeks')
 
-    except Exception as e:
+    except Exception:
         if not legacy_key:
             raise ValidationException('Unauthorized', code=401, slug='wrong-app-token')
 
@@ -60,7 +60,7 @@ def link_schema(request, required_scopes, authorization: str, use_signature: boo
             key = legacy_public_key if legacy_public_key else legacy_private_key
             payload = jwt.decode(authorization['Token'], key, algorithms=[alg])
 
-        except Exception as e:
+        except Exception:
             raise ValidationException('Unauthorized', code=401, slug='wrong-legacy-app-token')
 
     if payload['sub'] and require_an_agreement:
@@ -123,13 +123,12 @@ def signature_schema(request, required_scopes, authorization: str, use_signature
     """
     Authenticate the request and return a two-tuple of (user, token).
     """
-    from breathecode.authenticate.models import App
     from breathecode.authenticate.actions import get_app_keys, get_user_scopes
 
     try:
         authorization = dict([x.split('=') for x in authorization.split(',')])
 
-    except:
+    except Exception:
         raise ValidationException('Unauthorized', code=401, slug='authorization-header-malformed')
 
     if sorted(authorization.keys()) != ['App', 'Date', 'Nonce', 'SignedHeaders']:
@@ -179,7 +178,7 @@ def signature_schema(request, required_scopes, authorization: str, use_signature
         if (now - timedelta(minutes=TOLERANCE) > date) or (now + timedelta(minutes=TOLERANCE) < date):
             raise Exception()
 
-    except Exception as e:
+    except Exception:
         raise ValidationException('Unauthorized', code=401, slug='bad-timestamp')
 
     app = {
@@ -198,8 +197,11 @@ def signature_schema(request, required_scopes, authorization: str, use_signature
     return app
 
 
-def scope(scopes: list = [], mode: Optional[str] = None) -> callable:
+def scope(scopes: Optional[list] = None, mode: Optional[str] = None) -> callable:
     """This decorator check if the app has access to the scope provided"""
+
+    if scopes is None:
+        scopes = []
 
     def decorator(function: callable) -> callable:
 

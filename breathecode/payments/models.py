@@ -530,7 +530,6 @@ class AcademyService(models.Model):
         return super().save(*args, **kwargs)
 
 
-DRAFT = 'DRAFT'
 ACTIVE = 'ACTIVE'
 UNLISTED = 'UNLISTED'
 DELETED = 'DELETED'
@@ -1121,7 +1120,10 @@ class Consumable(AbstractServiceItem):
              lang: str = 'en',
              service: Optional[Service | str | int] = None,
              permission: Optional[Permission | str | int] = None,
-             extra: dict = {}) -> QuerySet[Consumable]:
+             extra: dict = None) -> QuerySet[Consumable]:
+
+        if extra is None:
+            extra = {}
 
         param = {}
         utc_now = timezone.now()
@@ -1181,7 +1183,11 @@ class Consumable(AbstractServiceItem):
             lang: str = 'en',
             service: Optional[Service | str | int] = None,
             permission: Optional[Permission | str | int] = None,
-            extra: dict = {}) -> Consumable | None:
+            extra: Optional[dict] = None) -> Consumable | None:
+
+        if extra is None:
+            extra = {}
+
         return cls.list(user=user, lang=lang, service=service, permission=permission, extra=extra).first()
 
     def clean(self) -> None:

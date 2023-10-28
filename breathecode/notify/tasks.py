@@ -50,7 +50,7 @@ def send_mentorship_starting_notification(session_id):
             'SUBJECT': 'Mentorship session starting',
             'MESSAGE':
             f'Mentee {session.mentee.first_name} {session.mentee.last_name} is joining your session, please come back to this email when the session is over to marke it as completed',
-            'BUTTON': f'Finish and review this session',
+            'BUTTON': 'Finish and review this session',
             'LINK': f'{get_api_url()}/mentor/session/{session.id}?token={token.key}',
         })
 
@@ -76,7 +76,7 @@ def async_slack_action(post_data):
             logger.error('Error processing slack action')
             return False
 
-    except Exception as e:
+    except Exception:
         logger.exception('Error processing slack action')
         return False
 
@@ -94,7 +94,7 @@ def async_slack_command(post_data):
             logger.error('Error processing slack command')
             return False
 
-    except Exception as e:
+    except Exception:
         logger.exception('Error processing slack command')
         return False
 
@@ -155,8 +155,8 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
                                  timeout=2)
 
         if hook_id:
-            HookModel = HookManager.get_hook_model()
-            hook = HookModel.objects.get(id=hook_id)
+            hook_model_cls = HookManager.get_hook_model()
+            hook = hook_model_cls.objects.get(id=hook_id)
             if response.status_code == 410:
                 hook.delete()
 

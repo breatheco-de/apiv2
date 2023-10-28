@@ -1,1 +1,1 @@
-from .client import Calendly
+from .client import Calendly  # noqa: F401

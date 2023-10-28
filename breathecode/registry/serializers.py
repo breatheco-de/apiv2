@@ -1,16 +1,13 @@
-import serpy, base64
+import serpy
 from slugify import slugify
 
-from breathecode.utils.shorteners import C
 from .models import (Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology, KeywordCluster,
                      AssetCategory, ContentVariable)
-from django.db.models import Count
 from django.utils import timezone
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
 from rest_framework import status
-from rest_framework.exceptions import ValidationError
 from breathecode.utils.validation_exception import ValidationException
 
 
@@ -404,18 +401,18 @@ class PostAssetSerializer(serializers.ModelSerializer):
         validated_data = super().validate(data)
 
         if 'lang' not in validated_data or validated_data['lang'] is None:
-            raise ValidationException(f'Asset is missing a language', slug='no-language')
+            raise ValidationException('Asset is missing a language', slug='no-language')
 
         if 'category' not in data or data['category'] is None:
             if 'all_translations' not in validated_data or len(validated_data['all_translations']) == 0:
                 raise ValidationException(
-                    f'No category was specified and we could not retrieve it from any translation',
+                    'No category was specified and we could not retrieve it from any translation',
                     slug='no-category')
 
             asset_translation = Asset.objects.filter(slug=validated_data['all_translations'][0]).first()
             if asset_translation is None or asset_translation.category is None:
                 raise ValidationException(
-                    f'No category was specified and we could not retrieve it from any translation',
+                    'No category was specified and we could not retrieve it from any translation',
                     slug='no-category')
 
             category_translation = asset_translation.category.all_translations.filter(
@@ -619,8 +616,6 @@ class PutAssetCommentSerializer(serializers.ModelSerializer):
     def validate(self, data):
 
         validated_data = super().validate(data)
-
-        academy_id = self.context.get('academy_id')
         session_user = self.context.get('request').user
 
         if self.instance.owner is not None and self.instance.owner.id == session_user.id:
@@ -674,19 +669,19 @@ class AssetPUTSerializer(serializers.ModelSerializer):
         if member.role.slug == 'content_writer':
             for key in data:
                 if key != 'status' and data[key] != getattr(self.instance, key):
-                    raise ValidationException(f'You are only allowed to change the status of this asset',
+                    raise ValidationException('You are only allowed to change the status of this asset',
                                               status.HTTP_400_BAD_REQUEST)
             if 'status' in data and data['status'] not in [
                     'DRAFT', 'WRITING', 'NOT_STARTED', 'OPTIMIZED', 'PLANNING'
             ]:
                 raise ValidationException(
-                    f'You can only set the status to not started, draft, writing, optimized, or planning',
+                    'You can only set the status to not started, draft, writing, optimized, or planning',
                     status.HTTP_400_BAD_REQUEST)
 
             if self.instance.author is None and data['status'] != 'NOT_STARTED':
                 data['author'] = session_user
             elif self.instance.author.id != session_user.id:
-                raise ValidationException(f'You can only update card assigned to yourself',
+                raise ValidationException('You can only update card assigned to yourself',
                                           status.HTTP_400_BAD_REQUEST)
 
         if 'status' in data and data['status'] == 'PUBLISHED':
@@ -711,13 +706,13 @@ class AssetPUTSerializer(serializers.ModelSerializer):
             category = data['category']
 
         if category is None:
-            raise ValidationException(f'Asset category cannot be null', status.HTTP_400_BAD_REQUEST)
+            raise ValidationException('Asset category cannot be null', status.HTTP_400_BAD_REQUEST)
 
         if lang != category.lang:
             translated_category = category.all_translations.filter(lang=lang).first()
             if translated_category is None:
                 raise ValidationException(
-                    f'Asset category is in a different language than the asset itself and we could not find a category translation that matches the same language',
+                    'Asset category is in a different language than the asset itself and we could not find a category translation that matches the same language',
                     status.HTTP_400_BAD_REQUEST)
             data['category'] = translated_category
 

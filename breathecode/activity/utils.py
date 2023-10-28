@@ -1,5 +1,4 @@
 import json
-import re
 from datetime import datetime
 
 from django.utils import timezone
@@ -62,7 +61,7 @@ def validate_activity_have_correct_data_field(data):
         try:
             json.loads(data['data'])
 
-        except Exception as e:
+        except Exception:
             raise ValidationException('Data is not a JSON: ' + str(data), slug='data-is-not-a-json')
 
 

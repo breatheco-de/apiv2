@@ -1,6 +1,4 @@
 import logging
-from breathecode.services.slack import commands
-from breathecode.services.slack import actions
 
 from .exceptions import SlackException
 
@@ -46,6 +44,7 @@ def command(capable_of=None):
 
 
 def action(only=None):
+    from breathecode.authenticate.models import ProfileAcademy
 
     def decorator(function):
 

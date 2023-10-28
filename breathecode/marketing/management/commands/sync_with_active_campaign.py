@@ -1,4 +1,4 @@
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.utils import timezone
 from ...actions import sync_tags, sync_automations
 from ...models import ActiveCampaignAcademy, ActiveCampaignWebhook

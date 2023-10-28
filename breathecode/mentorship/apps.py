@@ -5,4 +5,4 @@ class MediaConfig(AppConfig):
     name = 'breathecode.mentorship'
 
     def ready(self):
-        from . import receivers
+        from . import receivers  # noqa: F401

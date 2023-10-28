@@ -4,15 +4,13 @@ Checks if there are assets with errors to be fixed
 """
 from breathecode.utils import ScriptNotification
 from breathecode.registry.models import AssetErrorLog
-from datetime import datetime, timedelta
-from django.utils import timezone
 from breathecode.utils.datetime_integer import from_now
 
 errors = AssetErrorLog.objects.filter(status='ERROR')
 
 total_errors = errors.count()
 if total_errors == 0:
-    print(f'No asset errors found')
+    print('No asset errors found')
 
 else:
     content = ''

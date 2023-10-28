@@ -20,8 +20,11 @@ class Eventbrite(object):
         # }
         pass
 
-    def request(self, _type, url, headers={}, query_string=None, data=None):
+    def request(self, _type, url, headers=None, query_string=None, data=None):
         import requests
+
+        if headers is None:
+            headers = {}
 
         _headers = {**self.headers, **headers}
         _query_string = '?' + urllib.parse.urlencode(query_string) if query_string else ''
@@ -55,7 +58,7 @@ class Eventbrite(object):
         return result
 
     def get_my_organizations(self):
-        data = self.request('GET', f'/users/me/organizations/')
+        data = self.request('GET', '/users/me/organizations/')
         return data
 
     def get_organization_events(self, organization_id):

@@ -1,12 +1,10 @@
-from breathecode.authenticate.models import Token
-from breathecode.admissions.models import CohortUser, Cohort
-from breathecode.admissions.serializers import CohortSerializer
+from breathecode.admissions.models import CohortUser
 from breathecode.utils import ValidationException
 from .models import Answer, Survey, Review
 from .actions import send_survey_group
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-import serpy, re
+import serpy
 from django.utils import timezone
 import breathecode.feedback.actions as actions
 
@@ -158,7 +156,6 @@ class AnswerPUTSerializer(serializers.ModelSerializer):
         exclude = ('token', )
 
     def validate(self, data):
-        utc_now = timezone.now()
 
         # the user cannot vote to the same entity within 5 minutes
         answer = Answer.objects.filter(user=self.context['request'].user, id=self.context['answer']).first()
@@ -206,9 +203,8 @@ class SurveySerializer(serializers.ModelSerializer):
                 code=400,
                 slug='cohort-academy-needs-rights')
 
-        reg = re.compile('^[0-9]{0,3}\s[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}$')
         if 'duration' in data and data['duration'] < timezone.timedelta(hours=1):
-            raise ValidationException(f'Minimum duration for surveys is one hour.',
+            raise ValidationException('Minimum duration for surveys is one hour.',
                                       code=400,
                                       slug='minimum-survey-duration-1h')
 

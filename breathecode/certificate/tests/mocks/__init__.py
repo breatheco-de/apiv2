@@ -1,6 +1,9 @@
 """
 Mocks
 """
+
+# flake8: noqa: F401
+
 from .google_cloud_storage import (
     GOOGLE_CLOUD_PATH,
     GOOGLE_CLOUD_INSTANCES,
