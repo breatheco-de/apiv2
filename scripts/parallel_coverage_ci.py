@@ -4,8 +4,6 @@ import os
 import random
 import subprocess
 import sys
-import shutil
-import webbrowser
 from pathlib import Path
 import argparse
 
