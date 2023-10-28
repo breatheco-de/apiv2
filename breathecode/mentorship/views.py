@@ -3,7 +3,6 @@ import re
 from rest_framework.permissions import AllowAny
 from django.shortcuts import render
 from django.utils import timezone
-from django.db.models import Q
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import HttpResponse, HttpResponseRedirect
@@ -1249,7 +1248,7 @@ class BillView(APIView, HeaderLimitOffsetPagination):
                                                      'academy_id': academy_id
                                                  })
         if serializer.is_valid():
-            mentor = serializer.save()
+            serializer.save()
             _serializer = GETBillSmallSerializer(bill, many=many)
             return Response(_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

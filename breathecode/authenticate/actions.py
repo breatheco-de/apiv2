@@ -280,7 +280,7 @@ def get_user_settings(user_id: int) -> UserSetting:
 
     try:
         settings, created = UserSetting.objects.get_or_create(user_id=user_id)
-    except Exception as e:
+    except Exception:
         # race condition
         settings, created = UserSetting.objects.get_or_create(user_id=user_id)
 
@@ -919,6 +919,7 @@ def get_app(pk: str | int) -> App:
 
 def accept_invite_action(data=None, token=None, lang='en'):
     from breathecode.payments.models import Invoice, Bag, Plan
+    from breathecode.payments import tasks as payments_tasks
 
     if data is None:
         data = {}
@@ -1025,7 +1026,7 @@ def accept_invite_action(data=None, token=None, lang='en'):
                               currency=bag.academy.main_currency)
             invoice.save()
 
-            payment_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=True)
+            payments_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=True)
 
     invite.status = 'ACCEPTED'
     invite.is_email_validated = True

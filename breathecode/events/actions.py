@@ -8,7 +8,6 @@ from django.utils import timezone
 from breathecode.admissions.models import Cohort, CohortTimeSlot, TimeSlot, CohortUser
 from breathecode.payments.models import AbstractIOweYou, PlanFinancing, Subscription
 from breathecode.utils.datetime_integer import DatetimeInteger
-from django.db.models import QuerySet
 
 from .models import Organization, Venue, Event, Organizer, EventType
 from .utils import Eventbrite

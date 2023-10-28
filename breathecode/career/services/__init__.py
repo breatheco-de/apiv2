@@ -1,4 +1,5 @@
 import logging
+from .base_scraper import *  # noqa: F401
 
 logger = logging.getLogger(__name__)
 

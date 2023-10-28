@@ -309,10 +309,6 @@ def receive_facebook_lead(request):
         if 'hub.verify_token' in request.GET:
             verify_token = request.GET['hub.verify_token']
 
-        mode = ''
-        if 'hub.mode' in request.GET:
-            mode = request.GET['hub.mode']
-
         if verify_token == os.getenv('FACEBOOK_VERIFY_TOKEN', ''):
             return Response(int(challenge), status=status.HTTP_200_OK)
         else:
@@ -1000,11 +996,6 @@ class UploadView(APIView):
     # not should get many create and update operations together
     def upload(self, file, academy_id=None, update=False):
         from ..services.google_cloud import Storage
-
-        result = {
-            'data': [],
-            'instance': [],
-        }
 
         if not file:
             raise ValidationException('Missing file in request', code=400)

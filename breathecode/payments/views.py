@@ -284,6 +284,8 @@ class AcademyCohortSetCohortView(APIView):
                                       code=404)
 
         raise ValidationException(C('This invite don\'t have email, contact to admin', slug='without-email'))
+
+        #FIXME: this endpoint does not work yet
         data = []
         for item in items:
             if item in cohort_set.cohorts.all():
@@ -459,7 +461,6 @@ class AcademyAcademyServiceView(APIView):
     @capable_of('crud_academyservice')
     def post(self, request, academy_id=None):
         data = request.data
-        lang = get_user_language(request)
 
         data['academy'] = academy_id
 
@@ -894,7 +895,7 @@ class AcademySubscriptionView(APIView):
                                                       slug='not-found'),
                                           code=404)
 
-            serializer = GetSubscriptionSerializer(items, many=True)
+            serializer = GetSubscriptionSerializer(item, many=False)
             return handler.response(serializer.data)
 
         items = Subscription.objects.filter(Q(valid_until__gte=now) | Q(valid_until=None))
@@ -937,7 +938,7 @@ class MeInvoiceView(APIView):
                                                       slug='not-found'),
                                           code=404)
 
-            serializer = GetInvoiceSerializer(items, many=True)
+            serializer = GetInvoiceSerializer(item, many=True)
             return handler.response(serializer.data)
 
         items = Invoice.objects.filter(user=request.user)
@@ -969,7 +970,7 @@ class AcademyInvoiceView(APIView):
                                                       slug='not-found'),
                                           code=404)
 
-            serializer = GetInvoiceSerializer(items, many=True)
+            serializer = GetInvoiceSerializer(item, many=False)
             return handler.response(serializer.data)
 
         items = Invoice.objects.filter(user=request.user, academy__id=academy_id)

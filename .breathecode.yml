@@ -1,6 +1,7 @@
 tests:
   environments:
     whitelist:
+      - RANDOM_SEED
       - SQLALCHEMY_SILENCE_UBER_WARNING
       - SHELL
       - HOME

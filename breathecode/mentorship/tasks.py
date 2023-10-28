@@ -34,7 +34,7 @@ def async_calendly_webhook(self, calendly_webhook_id):
             status = 'error'
 
     else:
-        message = f"Calendly Organization {organization_id} doesn\'t exist"
+        message = f"Calendly Organization {organization.id} doesn\'t exist"
 
         webhook.status = 'ERROR'
         webhook.status_text = message

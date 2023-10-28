@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 def clean_all_tokens(modeladmin, request, queryset):
     user_ids = queryset.values_list('id', flat=True)
-    count = delete_tokens(users=user_ids, status='all')
+    delete_tokens(users=user_ids, status='all')
 
 
 clean_all_tokens.short_description = 'Delete all tokens'
@@ -31,7 +31,7 @@ clean_all_tokens.short_description = 'Delete all tokens'
 
 def clean_expired_tokens(modeladmin, request, queryset):
     user_ids = queryset.values_list('id', flat=True)
-    count = delete_tokens(users=user_ids, status='expired')
+    delete_tokens(users=user_ids, status='expired')
 
 
 clean_expired_tokens.short_description = 'Delete EXPIRED tokens'
@@ -211,7 +211,7 @@ class UserSettingAdmin(admin.ModelAdmin):
 def generate_token(modeladmin, request, queryset):
     academies = queryset.all()
     for a in academies:
-        token = generate_academy_token(a.id)
+        generate_academy_token(a.id)
 
 
 generate_token.short_description = 'Generate academy token'
@@ -220,7 +220,7 @@ generate_token.short_description = 'Generate academy token'
 def reset_token(modeladmin, request, queryset):
     academies = queryset.all()
     for a in academies:
-        token = generate_academy_token(a.id, force=True)
+        generate_academy_token(a.id, force=True)
 
 
 reset_token.short_description = 'RESET academy token'
@@ -239,13 +239,6 @@ class AcademyAdmin(admin.ModelAdmin):
 class DeviceIdAdmin(admin.ModelAdmin):
     list_display = ('name', 'key')
     search_fields = ['name']
-
-
-def async_recalculate_expiration(modeladmin, request, queryset):
-    queryset.update(expires_at=None)
-    gp_users = queryset.all()
-    for gpu in gp_users:
-        gpu = async_set_gitpod_user_expiration.delay(gpu.id)
 
 
 def recalculate_expiration(modeladmin, request, queryset):
@@ -445,7 +438,6 @@ class AcademyAuthSettingsAdmin(admin.ModelAdmin):
             return format_html("<span class='badge bg-success'>No errors</span>")
 
     def authenticate(self, obj):
-        now = timezone.now()
         settings = AcademyAuthSettings.objects.get(id=obj.id)
         if settings.github_owner is None:
             return format_html('no owner')

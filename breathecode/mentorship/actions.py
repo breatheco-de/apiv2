@@ -113,10 +113,10 @@ def extend_session(session: MentorshipSession, duration_in_minutes=None, exp_in_
     daily = DailyClient()
 
     if duration_in_minutes is not None and session.ends_at:
-        room = daily.extend_room(name=session.name, exp_in_seconds=duration_in_minutes * 3600)
+        daily.extend_room(name=session.name, exp_in_seconds=duration_in_minutes * 3600)
         session.ends_at = session.ends_at + timedelta(minutes=duration_in_minutes)
     elif exp_in_epoch is not None:
-        room = daily.extend_room(name=session.name, exp_in_epoch=exp_in_epoch)
+        daily.extend_room(name=session.name, exp_in_epoch=exp_in_epoch)
         session.ends_at = datetime.datetime.fromtimestamp(exp_in_epoch, tz)
 
     session.save()

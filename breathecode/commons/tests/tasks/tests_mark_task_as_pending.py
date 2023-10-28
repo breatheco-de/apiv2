@@ -13,7 +13,7 @@ from django.utils import timezone
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 # this fix a problem caused by the geniuses at pytest-xdist
-random.seed(os.getenv('RANDOM'))
+random.seed(os.getenv('RANDOM_SEED'))
 
 # minutes
 TOLERANCE = random.randint(3, 10)

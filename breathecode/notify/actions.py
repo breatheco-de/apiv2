@@ -144,9 +144,7 @@ def send_slack_raw(slug, token, channel_id, data=None):
         })
         logger.debug(f'Notification to {str(channel_id)} sent')
         return True
-    except Exception as e:
-        # import traceback
-        # traceback.print_exc()
+    except Exception:
         logger.exception(f'Error sending notification to {str(channel_id)}')
         return False
 
@@ -424,7 +422,6 @@ def sync_slack_channel(payload, team=None):
         raise Exception('Invalid or missing team')
 
     slack_channel = SlackChannel.objects.filter(slack_id=payload['id']).first()
-    channel = None
     if slack_channel is None:
 
         cohort = Cohort.objects.filter(slug=payload['name_normalized']).first()

@@ -200,7 +200,7 @@ def send_big_cohort_bulk_survey(modeladmin, request, queryset):
         logger.debug(f'Sending survey {s.id}')
 
         try:
-            result = send_survey_group(survey=s)
+            send_survey_group(survey=s)
         except Exception as e:
             s.status = 'FATAL'
             s.status_json = json.dumps({'errors': [str(e)]})

@@ -12,7 +12,6 @@ def today():
 
 
 def change_format_to_date(findings, string_date):
-    job_id_fecth = findings
     dtz = datetime.strptime(string_date, '%B %d, %Y')
 
     return timezone.make_aware(dtz)

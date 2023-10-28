@@ -178,11 +178,11 @@ class MentorAdmin(admin.ModelAdmin):
 
 
 def avoid_billing_this_session(modeladmin, request, queryset):
-    sessions = queryset.update(allow_billing=False)
+    queryset.update(allow_billing=False)
 
 
 def allow_billing_this_session(modeladmin, request, queryset):
-    sessions = queryset.update(allow_billing=True)
+    queryset.update(allow_billing=True)
 
 
 class BilledFilter(SimpleListFilter):
@@ -279,14 +279,14 @@ def subscribe_to_webhooks(modeladmin, request, queryset):
     entries = queryset.all()
     for org in entries:
         cal = Calendly(token=org.access_token)
-        data = cal.subscribe(org.uri, org.hash)
+        cal.subscribe(org.uri, org.hash)
 
 
 def unsubscribe_to_all_webhooks(modeladmin, request, queryset):
     entries = queryset.all()
     for org in entries:
         cal = Calendly(token=org.access_token)
-        data = cal.unsubscribe_all(org.uri)
+        cal.unsubscribe_all(org.uri)
 
 
 def get_subscription_webhooks(modeladmin, request, queryset):

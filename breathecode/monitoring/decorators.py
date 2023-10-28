@@ -11,8 +11,6 @@ class WebhookTask(Task):
 
     def initialize(self, webhook_id):
 
-        status = 'ok'
-
         webhook = RepositoryWebhook.objects.filter(id=webhook_id).first()
         if webhook is None:
             raise Exception(f'Github Webhook with id {webhook_id} not found')
@@ -40,7 +38,6 @@ class WebhookTask(Task):
             webhook.status = 'ERROR'
             webhook.status_text = str(ex)[:255]
             logger.debug(ex)
-            status = 'error'
 
         webhook.run_at = datetime.now()
         if webhook.status_text == self.pending_status:

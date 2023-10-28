@@ -580,7 +580,7 @@ class PUTEventCheckinSerializer(serializers.ModelSerializer):
         # if "attended_at" not in data and self.instance.attended_at is None:
         #     new_data['attended_at'] = timezone.now()
 
-        if 'attended_at' in data and self.instance.attended_at is None:
+        if 'attended_at' in validated_data and self.instance.attended_at is None:
             tasks_activity.add_activity.delay(self.instance.attendee,
                                               'event_checkin_assisted',
                                               related_type='events.EventCheckin',

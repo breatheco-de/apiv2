@@ -1,9 +1,7 @@
 from collections import OrderedDict
 import logging
-import serpy
 from breathecode.admissions.actions import ImportCohortTimeSlots
 from django.db.models import Q
-from breathecode.assignments.models import Task
 from breathecode.utils import ValidationException, localize_query, serializers, serpy
 from django.contrib.auth.models import User
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy

@@ -44,7 +44,6 @@ class SendSurveyTestSuite(FeedbackTestCase):
                                  cohort_user_kwargs=cohort_user_kwargs,
                                  cohort_kwargs=cohort_kwargs) for _ in range(0, 3)
         ]
-        academies = [(models[key]['cohort'].academy.name, key + 1) for key in range(0, 3)]
         _cohorts = [(models[key]['cohort'].certificate.name, key + 1) for key in range(0, 3)]
         self.assertEqual(send_cohort_bulk_survey(None, request, Cohort.objects.all()), None)
         expected = [{
@@ -88,7 +87,6 @@ class SendSurveyTestSuite(FeedbackTestCase):
                                  cohort_kwargs=cohort_kwargs,
                                  cohort_user_kwargs=cohort_user_kwargs) for _ in range(0, 3)
         ]
-        academies = [(models[key]['cohort'].academy.name, key + 1) for key in range(0, 3)]
         cohorts = Cohort.objects.all()
         self.assertEqual(send_cohort_bulk_survey(None, request, cohorts), None)
         _cohorts = [(models[key]['cohort'].certificate.name, key + 1) for key in range(0, 3)]
@@ -126,14 +124,12 @@ class SendSurveyTestSuite(FeedbackTestCase):
 
         cohort_kwargs = {'language': 'en'}
         cohort_user_kwargs = {'role': 'STUDENT', 'educational_status': 'POSTPONED'}
-        models = [
+        for _ in range(0, 3):
             self.generate_models(user=True,
                                  cohort_user=True,
                                  profile_academy=True,
                                  cohort_kwargs=cohort_kwargs,
-                                 cohort_user_kwargs=cohort_user_kwargs) for _ in range(0, 3)
-        ]
-        academies = [(models[key]['cohort'].academy.name, key + 1) for key in range(0, 3)]
+                                 cohort_user_kwargs=cohort_user_kwargs)
 
         self.assertEqual(send_cohort_bulk_survey(None, request, Cohort.objects.all()), None)
         expected = []
@@ -153,14 +149,12 @@ class SendSurveyTestSuite(FeedbackTestCase):
 
         cohort_kwargs = {'language': 'en'}
         cohort_user_kwargs = {'role': 'STUDENT', 'educational_status': 'SUSPENDED'}
-        models = [
+        for _ in range(0, 3):
             self.generate_models(user=True,
                                  cohort_user=True,
                                  profile_academy=True,
                                  cohort_kwargs=cohort_kwargs,
-                                 cohort_user_kwargs=cohort_user_kwargs) for _ in range(0, 3)
-        ]
-        academies = [(models[key]['cohort'].academy.name, key + 1) for key in range(0, 3)]
+                                 cohort_user_kwargs=cohort_user_kwargs)
 
         self.assertEqual(send_cohort_bulk_survey(None, request, Cohort.objects.all()), None)
         expected = []
@@ -180,14 +174,12 @@ class SendSurveyTestSuite(FeedbackTestCase):
 
         cohort_kwargs = {'language': 'en'}
         cohort_user_kwargs = {'role': 'STUDENT', 'educational_status': 'DROPPED'}
-        models = [
+        for _ in range(0, 3):
             self.generate_models(user=True,
                                  cohort_user=True,
                                  profile_academy=True,
                                  cohort_kwargs=cohort_kwargs,
-                                 cohort_user_kwargs=cohort_user_kwargs) for _ in range(0, 3)
-        ]
-        academies = [(models[key]['cohort'].academy.name, key + 1) for key in range(0, 3)]
+                                 cohort_user_kwargs=cohort_user_kwargs)
 
         self.assertEqual(send_cohort_bulk_survey(None, request, Cohort.objects.all()), None)
         expected = []

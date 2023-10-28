@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django import forms
 from .utils.hook_manager import HookManager
-from .models import Device, SlackTeam, SlackChannel, SlackUser, UserProxy, CohortProxy, SlackTeam, SlackUserTeam
+from .models import Device, SlackTeam, SlackChannel, SlackUser, UserProxy, CohortProxy, SlackUserTeam
 from .actions import sync_slack_team_channel, send_slack
 from .tasks import async_slack_team_users
 from breathecode.admissions.admin import CohortAdmin

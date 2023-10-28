@@ -36,7 +36,6 @@ def test_link(url, test_pattern=None):
 
     try:
         r = requests.get(url, headers=headers, timeout=2)
-        content_type = r.headers['content-type']
         length = 0
         if 'content-length' in r.headers:
             length = r.headers['content-length']
@@ -67,7 +66,6 @@ def get_website_text(endp):
 
     res = test_link(endp.url, endp.test_pattern)
     status_code = res['status_code']
-    status_text = res['status_text']
     payload = res['payload']
 
     endp.last_check = timezone.now()
@@ -419,7 +417,7 @@ def add_stripe_webhook(context: dict) -> StripeEvent:
         )
         event.save()
 
-    except Exception as e:
+    except Exception:
         raise ValidationException('Invalid stripe webhook payload',
                                   code=400,
                                   slug='invalid-stripe-webhook-payload')

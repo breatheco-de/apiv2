@@ -160,7 +160,7 @@ def send_question(user, cohort=None):
 
 
 def answer_survey(user, data):
-    answer = Answer.objects.create(**{**data, 'user': user})
+    Answer.objects.create(**{**data, 'user': user})
 
 
 def get_student_answer_avg(user_id, cohort_id=None, academy_id=None):

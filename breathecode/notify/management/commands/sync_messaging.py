@@ -39,22 +39,11 @@ class Command(BaseCommand):
         func(options)
 
     def slack_users(self, options):
-
-        limit = False
-        total = 0
-        if 'limit' in options and options['limit']:
-            limit = options['limit']
-
         teams = SlackTeam.objects.all()
         for team in teams:
             async_slack_team_users.delay(team.id)
 
     def slack_channels(self, options):
-
-        limit = False
-        total = 0
-        if 'limit' in options and options['limit']:
-            limit = options['limit']
 
         teams = SlackTeam.objects.all()
         for team in teams:

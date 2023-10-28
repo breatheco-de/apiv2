@@ -7,7 +7,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework import status
 from django.db.models import Q
 from rest_framework.decorators import api_view, permission_classes
-from .actions import sync_user_issues, generate_freelancer_bill, generate_project_invoice
+from .actions import generate_freelancer_bill, generate_project_invoice
 from .models import (Bill, Freelancer, Issue, BILL_STATUS, AcademyFreelanceProject, FreelanceProjectMember,
                      ProjectInvoice)
 from rest_framework.views import APIView
@@ -17,6 +17,7 @@ from breathecode.utils.decorators import capable_of
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from django.http import HttpResponse
+from rest_framework import serializers
 
 
 @private_view()
@@ -427,6 +428,8 @@ class SingleBillView(APIView):
 # Create your views here.
 @api_view(['GET'])
 def sync_user_issues(request):
+    from .actions import sync_user_issues
+
     tags = sync_user_issues()
     return Response(tags, status=status.HTTP_200_OK)
 

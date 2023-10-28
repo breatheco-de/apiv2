@@ -302,13 +302,13 @@ def pull_github_lesson(github, asset, override_meta=False):
     org_name, repo_name, branch_name = asset.get_repo_meta()
     repo = github.get_repo(f'{org_name}/{repo_name}')
 
-    file_name = os.path.basename(asset.readme_url)
+    os.path.basename(asset.readme_url)
 
     if branch_name is None:
         raise Exception('Lesson URL must include branch name after blob')
 
     result = re.search(r'\/blob\/([\w\d_\-]+)\/(.+)', asset.readme_url)
-    branch, file_path = result.groups()
+    _, file_path = result.groups()
     logger.debug(f'Fetching readme: {file_path}')
 
     blob_file = get_blob_content(repo, file_path, branch=branch_name)
@@ -727,13 +727,13 @@ def pull_quiz_asset(github, asset):
     org_name, repo_name, branch_name = asset.get_repo_meta()
     repo = github.get_repo(f'{org_name}/{repo_name}')
 
-    file_name = os.path.basename(asset.readme_url)
+    os.path.basename(asset.readme_url)
 
     if branch_name is None:
         raise Exception('Quiz URL must include branch name after blob')
 
     result = re.search(r'\/blob\/([\w\d_\-]+)\/(.+)', asset.readme_url)
-    branch, file_path = result.groups()
+    _, file_path = result.groups()
     logger.debug(f'Fetching quiz json: {file_path}')
 
     encoded_config = get_blob_content(repo, file_path, branch=branch_name).content

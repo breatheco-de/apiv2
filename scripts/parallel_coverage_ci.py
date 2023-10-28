@@ -2,13 +2,24 @@
 
 import os
 import random
+import subprocess
 import sys
+import shutil
+import webbrowser
 from pathlib import Path
+import argparse
 
 
 def python_module_to_dir(module: str) -> str:
     parsed_dir = '/'.join(module.split('.'))
     return Path(f'./{parsed_dir}').resolve()
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Run pytest with coverage and optional seed.')
+    parser.add_argument('--seed', type=int, help='Seed for randomness')
+    parser.add_argument('pytest_args', nargs='*', help='Arguments to pass to pytest')
+    return parser.parse_args()
 
 
 def help_command():
@@ -22,13 +33,20 @@ def help_command():
 
 
 if __name__ == '__main__':
+    args = parse_arguments()
+
+    if args.seed is None:
+        seed = random.randint(0, 4294967295)
+    else:
+        seed = args.seed
+
     module = 'breathecode'
 
-    if len(sys.argv) > 1:
-        module = sys.argv[1]
+    if args.pytest_args:
+        module = args.pytest_args[0]
 
-        if module == '--help' or module == '-h':
-            help_command()
+    if module == '--help' or module == '-h':
+        help_command()
 
     dir = python_module_to_dir(module)
 
@@ -37,17 +55,18 @@ if __name__ == '__main__':
     if os.path.exists(xml_path):
         os.remove(xml_path)
 
-    os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+    command = (f'pytest {dir} --disable-pytest-warnings {" ".join(args.pytest_args[1:])} '
+               f'--cov={module} --cov-report xml -n auto --durations=1')
 
-    # prefix = 'export DATABASE_URL=sqlite:///:memory: '
+    env = os.environ.copy()
+    env['RANDOM_SEED'] = str(seed)
 
-    # this fix a problem caused by the geniuses at pytest-xdist
-    seed = random.randint(0, 4294967295)
-    command = f'pytest {dir} --disable-pytest-warnings --cov={module} --cov-report xml -n auto --durations=1'
+    exit_code = subprocess.run(command, env=env, shell=True).returncode
 
-    # unix like support
-    exit_code = os.system(f'export RANDOM={seed}; {command}')
+    print(command)
+    print()
+    print(f'Seed {seed} used, you can provide it locally to reproduce random errors')
 
-    # python don't return 256
+    # python doesn't return 256
     if exit_code:
         sys.exit(1)

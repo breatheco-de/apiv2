@@ -7,9 +7,9 @@ from django.shortcuts import redirect
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
-from breathecode.notify.actions import get_template_content
 from breathecode.provisioning import tasks
-from breathecode.provisioning.serializers import (GetProvisioningUserConsumptionSerializer,
+from breathecode.provisioning.serializers import (GetProvisioningBillSerializer,
+                                                  GetProvisioningUserConsumptionSerializer,
                                                   ProvisioningBillSerializer, ProvisioningBillHTMLSerializer,
                                                   ProvisioningUserConsumptionHTMLResumeSerializer,
                                                   GetProvisioningBillSmallSerializer)
@@ -21,7 +21,7 @@ from breathecode.utils.io.file import count_csv_rows
 from breathecode.utils.views import private_view, render_message
 from breathecode.utils import cut_csv
 from .actions import get_provisioning_vendor
-from .models import BILL_STATUS, ProvisioningBill, ProvisioningProfile, ProvisioningUserConsumption
+from .models import BILL_STATUS, ProvisioningBill, ProvisioningUserConsumption
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
@@ -31,7 +31,6 @@ import pandas as pd
 from django.shortcuts import render
 from rest_framework_csv.renderers import CSVRenderer
 from rest_framework.renderers import JSONRenderer
-from django.http import HttpResponse
 from urllib.parse import urlencode, urlparse, urlunparse, parse_qs
 from dateutil.relativedelta import relativedelta
 
@@ -51,9 +50,9 @@ def redirect_new_container(request, token):
 
     academy_id = cu.cohort.academy.id
     pa = ProfileAcademy.objects.filter(user=user, academy__id=academy_id).first()
-    if pa is None: return render_message(request, f"You don't seem to belong to academy {academy.name}")
+    if pa is None:
+        return render_message(request, f"You don't seem to belong to academy {cu.cohot.academy.name}")
 
-    all_profiles = ProvisioningProfile.objects.filter(academy__id=academy_id)
     vendor = None
     try:
         vendor = get_provisioning_vendor(user, pa, cu.cohort)
@@ -85,9 +84,9 @@ def redirect_workspaces(request, token):
 
     academy_id = cu.cohort.academy.id
     pa = ProfileAcademy.objects.filter(user=user, academy__id=academy_id).first()
-    if pa is None: return render_message(request, f"You don't seem to belong to academy {academy.name}")
+    if pa is None:
+        return render_message(request, f"You don't seem to belong to academy {cu.cohort.academy.name}")
 
-    all_profiles = ProvisioningProfile.objects.filter(academy__id=academy_id)
     vendor = None
     try:
         vendor = get_provisioning_vendor(user, pa, cu.cohort)

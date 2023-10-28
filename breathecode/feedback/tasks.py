@@ -2,7 +2,6 @@ from datetime import timedelta
 import os
 from breathecode.authenticate.models import Token
 from breathecode.utils import ValidationException
-from breathecode.utils import getLogger
 from celery import shared_task, Task
 from django.utils import timezone
 from breathecode.notify import actions as notify_actions
@@ -12,7 +11,6 @@ from breathecode.admissions.models import CohortUser, Cohort
 from django.contrib.auth.models import User
 from .models import Survey, Answer
 from breathecode.mentorship.models import MentorshipSession
-from django.utils import timezone
 from . import actions
 
 # Get an instance of a logger
@@ -172,7 +170,7 @@ def send_cohort_survey(self, user_id, survey_id):
         return False
 
     #TODO:test function below
-    answers = generate_user_cohort_survey_answers(user, survey, status='SENT')
+    generate_user_cohort_survey_answers(user, survey, status='SENT')
 
     has_slackuser = hasattr(user, 'slackuser')
     if not user.email and not has_slackuser:
@@ -329,13 +327,12 @@ def send_mentorship_session_survey(self, session_id):
                     slug='answer-with-status-answered')
         return False
 
-    has_slackuser = hasattr(session.mentee, 'slackuser')
     if not session.mentee.email:
         message = f'Author not have email, this survey cannot be send by {session.mentee.id}'
         logger.info(message, slug='mentee-without-email')
         return False
 
-    token, created = Token.get_or_create(session.mentee, token_type='temporal', hours_length=48)
+    token, _ = Token.get_or_create(session.mentee, token_type='temporal', hours_length=48)
 
     # lazyload api url in test environment
     api_url = API_URL if ENV != 'test' else os.getenv('API_URL', '')

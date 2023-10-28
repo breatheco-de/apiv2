@@ -8,7 +8,7 @@ from breathecode.commons.tasks import mark_task_as_cancelled
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 # this fix a problem caused by the geniuses at pytest-xdist
-random.seed(os.getenv('RANDOM'))
+random.seed(os.getenv('RANDOM_SEED'))
 
 param_names = 'task_module,task_name,get_call_args_list'
 

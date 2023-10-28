@@ -11,7 +11,6 @@ from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import CredentialsFacebook
 from breathecode.services.activecampaign import ACOldClient, ActiveCampaign, ActiveCampaignClient
 from breathecode.utils.validation_exception import ValidationException
-from breathecode.marketing.models import Tag
 from breathecode.utils import getLogger
 import numpy as np
 
@@ -101,7 +100,6 @@ def validate_email(email, lang):
     }
     """
 
-    result = {}
     resp = requests.get(
         f'https://apilayer.net/api/check?access_key={MAILBOX_LAYER_KEY}&email={email}&smtp=1&format=1',
         timeout=2)

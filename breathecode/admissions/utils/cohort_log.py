@@ -119,7 +119,7 @@ class CohortLog(object):
         try:
             self.days[day - 1] = CohortDayLog(**payload)
             logger.debug(f'Replaced cohort {self.cohort.slug} log for day {day}')
-        except IndexError as e:
+        except IndexError:
             raise Exception(f'Error adding day {str(day-1)} log to cohort')
 
     def save(self):

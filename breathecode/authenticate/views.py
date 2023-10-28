@@ -25,7 +25,6 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.schemas.openapi import AutoSchema
 from rest_framework.views import APIView
-from breathecode.authenticate.actions import get_user_language
 
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, CohortUser, Syllabus
@@ -178,7 +177,7 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
 
                 syllabus = Syllabus.objects.filter(**args).get()
 
-            except Exception as e:
+            except Exception:
                 raise ValidationException(
                     translation(lang,
                                 en='The syllabus does not exist',
@@ -226,7 +225,7 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
 
                 syllabus = Syllabus.objects.filter(**args).get()
 
-            except Exception as e:
+            except Exception:
                 raise ValidationException(
                     translation(lang,
                                 en='The syllabus does not exist',
@@ -916,7 +915,7 @@ def get_github_token(request, token=None):
     scope = request.query_params.get('scope', 'user repo read:org admin:org')
     try:
         scope = base64.b64decode(scope.encode('utf-8')).decode('utf-8')
-    except Exception as e:
+    except Exception:
         pass
 
     params = {
@@ -958,7 +957,7 @@ def save_github_token(request):
     # the url may or may not be encoded
     try:
         url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
-    except Exception as e:
+    except Exception:
         pass
 
     code = request.query_params.get('code', None)
@@ -1125,7 +1124,7 @@ def get_slack_token(request):
     # the url may or may not be encoded
     try:
         url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
-    except Exception as e:
+    except Exception:
         pass
 
     user_id = request.query_params.get('user', None)
@@ -1267,7 +1266,7 @@ def get_facebook_token(request):
     # the url may or may not be encoded
     try:
         url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
-    except Exception as e:
+    except Exception:
         pass
 
     user_id = request.query_params.get('user', None)
@@ -1316,7 +1315,6 @@ def save_facebook_token(request):
     if error:
         raise APIException('Facebook: ' + error_description)
 
-    original_payload = request.query_params.get('state', None)
     payload = request.query_params.get('state', None)
     if payload is None:
         raise ValidationError('No payload specified')
@@ -1684,7 +1682,6 @@ def render_invite(request, token, member_id=None):
 
 @private_view()
 def render_academy_invite(request, token):
-    callback_url = request.GET.get('callback', '')
     accepting = request.GET.get('accepting', '')
     rejecting = request.GET.get('rejecting', '')
     if accepting.strip() != '':
@@ -1727,7 +1724,7 @@ def login_html_view(request):
             # the url may or may not be encoded
             try:
                 url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
-            except Exception as e:
+            except Exception:
                 pass
 
             email = request.POST.get('email', None)
@@ -1784,7 +1781,7 @@ def get_google_token(request, token=None):
 
     try:
         url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
-    except Exception as e:
+    except Exception:
         pass
 
     token = Token.get_valid(
@@ -2013,6 +2010,7 @@ class AcademyAuthSettingsView(APIView, GenerateLookupsMixin):
 
     @capable_of('get_academy_auth_settings')
     def get(self, request, academy_id):
+        lang = get_user_language(request)
 
         settings = AcademyAuthSettings.objects.filter(academy_id=academy_id).first()
         if settings is None:

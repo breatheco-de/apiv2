@@ -530,7 +530,6 @@ class AcademyService(models.Model):
         return super().save(*args, **kwargs)
 
 
-DRAFT = 'DRAFT'
 ACTIVE = 'ACTIVE'
 UNLISTED = 'UNLISTED'
 DELETED = 'DELETED'

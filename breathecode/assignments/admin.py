@@ -4,7 +4,7 @@ from django.contrib.auth.admin import UserAdmin
 from breathecode.authenticate.models import Token
 from django.utils.html import format_html
 from .models import Task, UserAttachment, UserProxy, CohortProxy, FinalProject
-from .actions import sync_student_tasks, sync_cohort_tasks
+from .actions import sync_student_tasks
 # Register your models here.
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ def sync_tasks(modeladmin, request, queryset):
         try:
             Task.objects.filter(user_id=u.id).delete()
             sync_student_tasks(u)
-        except Exception as e:
+        except Exception:
             logger.exception(f'There was a problem syncronizing tassks for student {u.email}')
 
 
@@ -30,12 +30,13 @@ class UserAdmin(UserAdmin):
 
 #FIXME: this maybe is a deadcode
 def sync_cohort_tasks(modeladmin, request, queryset):
+    from .actions import sync_cohort_tasks
 
     for c in queryset:
         try:
             Task.objects.filter(cohort__id=c.id).delete()
             sync_cohort_tasks(c)
-        except Exception as e:
+        except Exception:
             pass
 
 
@@ -47,7 +48,7 @@ def delete_cohort_tasks(modeladmin, request, queryset):
     for c in queryset:
         try:
             Task.objects.filter(cohort__id=c.id).delete()
-        except Exception as e:
+        except Exception:
             pass
 
 

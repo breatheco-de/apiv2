@@ -12,7 +12,7 @@ from breathecode.authenticate.actions import get_user_language
 from .models import (Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory,
                      AssetKeyword, AssetComment, SEOReport, OriginalityScan, ContentVariable)
 
-from .actions import (AssetThumbnailGenerator, test_asset, pull_from_github, test_asset, push_to_github,
+from .actions import (AssetThumbnailGenerator, test_asset, pull_from_github, push_to_github,
                       clean_asset_readme, scan_asset_originality)
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.notify.actions import send_email_message

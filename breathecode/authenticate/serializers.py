@@ -6,7 +6,6 @@ import random
 import os
 import urllib.parse
 import breathecode.notify.actions as notify_actions
-from django.utils import timezone
 from django.contrib.auth.models import User
 
 from breathecode.utils.i18n import translation
@@ -619,7 +618,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                 event = Event.objects.filter(**args).get()
                 data['event_slug'] = event.slug
 
-            except Exception as e:
+            except Exception:
                 raise ValidationException(translation(lang,
                                                       en='Unable to find the given Event',
                                                       es='Imposible encontrar el Evento dado',
@@ -638,7 +637,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                 asset = Asset.objects.filter(**args).get()
                 data['asset_slug'] = asset.slug
 
-            except Exception as e:
+            except Exception:
                 raise ValidationException(translation(lang,
                                                       en='Unable to find the given Asset',
                                                       es='Imposible encontrar el Asset dado',
@@ -1367,7 +1366,6 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         self.cohort = cohort
         self.syllabus = syllabus
-        now = str(timezone.now())
 
         if not self.instance:
             data['token'] = hashlib.sha512((data['email']).encode('UTF-8') + os.urandom(64)).hexdigest()
@@ -1384,7 +1382,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 event = Event.objects.filter(**args).get()
                 data['event_slug'] = event.slug
 
-            except Exception as e:
+            except Exception:
                 raise ValidationException(translation(lang,
                                                       en='Unable to find the given Event',
                                                       es='Imposible encontrar el Evento dado',
@@ -1403,7 +1401,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 asset = Asset.objects.filter(**args).get()
                 data['asset_slug'] = asset.slug
 
-            except Exception as e:
+            except Exception:
                 raise ValidationException(translation(lang,
                                                       en='Unable to find the given Asset',
                                                       es='Imposible encontrar el Asset dado',

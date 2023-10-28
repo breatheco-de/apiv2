@@ -173,10 +173,12 @@ class AbstractHook(models.Model):
         Serialize the object down to Python primitives.
         By default it uses Django's built in serializer.
         """
+        from .utils.hook_manager import HookManager
+
         if getattr(instance, 'serialize_hook', None) and callable(instance.serialize_hook):
             return instance.serialize_hook(hook=self)
         if getattr(settings, 'HOOK_SERIALIZER', None):
-            serializer = get_module(settings.HOOK_SERIALIZER)
+            serializer = HookManager.get_module(settings.HOOK_SERIALIZER)
             return serializer(instance, hook=self)
         # if no user defined serializers, fallback to the django builtin!
         data = serializers.serialize('python', [instance])[0]

@@ -18,7 +18,7 @@ from rest_framework.test import APIClient
 os.environ['ENV'] = 'test'
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 
-FAKE = Faker()
+_fake = Faker()
 pytest_plugins = ('celery.contrib.pytest', )
 urlopen = HTTPConnectionPool.urlopen
 
@@ -97,6 +97,16 @@ def clear_cache():
 
     wrapper()
     yield wrapper
+
+
+@pytest.fixture(autouse=True, scope='module')
+def random_seed():
+    seed = os.getenv('RANDOM_SEED')
+    if seed:
+        seed = int(seed)
+
+    random.seed(seed)
+    yield seed
 
 
 @pytest.fixture
@@ -212,6 +222,7 @@ def random_image(fake):
     os.remove(filename)
 
 
-@pytest.fixture(scope='session')
-def fake():
-    return FAKE
+@pytest.fixture(autouse=True, scope='module')
+def fake(random_seed):
+    Faker.seed(random_seed)
+    return _fake

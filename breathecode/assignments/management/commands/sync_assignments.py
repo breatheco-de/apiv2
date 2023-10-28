@@ -82,5 +82,5 @@ class Command(BaseCommand):
                 total += 1
                 try:
                     sync_student_tasks(user)
-                except Exception as e:
+                except Exception:
                     self.stdout.write(self.style.NOTICE(f'Error synching student stasks for {user.email}'))

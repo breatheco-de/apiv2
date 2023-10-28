@@ -131,19 +131,6 @@ class GETServiceTinySerializer(serpy.Serializer):
     duration = serpy.Field()
 
 
-class GETServiceSmallSerializer(serpy.Serializer):
-    id = serpy.Field()
-    slug = serpy.Field()
-    name = serpy.Field()
-    status = serpy.Field()
-    duration = serpy.Field()
-    max_duration = serpy.Field()
-    missed_meeting_duration = serpy.Field()
-    language = serpy.Field()
-    allow_mentee_to_extend = serpy.Field()
-    allow_mentors_to_extend = serpy.Field()
-
-
 class GETMentorPublicTinySerializer(serpy.Serializer):
     user = GetUserPublicTinySerializer()
 
@@ -558,7 +545,6 @@ class MentorSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         lang = data.get('lang', 'en')
-        academy_id = data['academy'].id if 'academy' in data else 0
         user = data['user']
         profile_academy = ProfileAcademy.objects.filter(user__id=data['user'].id,
                                                         academy__id=data['academy'].id).first()
@@ -912,12 +898,12 @@ class CalendlyOrganizationSerializer(serializers.ModelSerializer):
         organization = None
 
         try:
-            res = cal.subscribe(org.uri, org.hash)
+            cal.subscribe(org.uri, org.hash)
         except Exception as e:
             raise ValidationException('Error while creating calendly organization: ' + str(e))
 
         try:
-            subscriptions = cal.get_subscriptions(org.uri)
+            cal.get_subscriptions(org.uri)
         except Exception as e:
             raise ValidationException('Error retrieving organization subscriptions: ' + str(e))
 

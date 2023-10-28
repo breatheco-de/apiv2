@@ -36,7 +36,6 @@ from .serializers import (EventBigSerializer, EventJoinSmallSerializer, EventPub
                           OrganizationSerializer, EventbriteWebhookSerializer, OrganizerSmallSerializer,
                           EventCheckinSmallSerializer, PUTEventCheckinSerializer, POSTEventCheckinSerializer,
                           AcademyEventSmallSerializer)
-from rest_framework.response import Response
 from rest_framework.views import APIView
 # from django.http import HttpResponse
 from rest_framework.response import Response
@@ -45,7 +44,6 @@ from rest_framework.decorators import renderer_classes
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.eventbrite import Eventbrite
 from .tasks import async_eventbrite_webhook
-from breathecode.utils import ValidationException
 from breathecode.utils import response_207
 from icalendar import Calendar as iCalendar, Event as iEvent, vCalAddress, vText
 
@@ -729,7 +727,6 @@ class EventTypeVisibilitySettingView(APIView):
 
     @capable_of('crud_event_type')
     def post(self, request, event_type_slug, academy_id=None):
-        handler = self.extensions(request)
         lang = get_user_language(request)
 
         academy = Academy.objects.filter(id=academy_id).first()

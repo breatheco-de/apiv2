@@ -10,6 +10,7 @@ from .actions import get_template_content
 from .models import Hook
 from .tasks import async_slack_action, async_slack_command
 from .serializers import HookSerializer
+from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +89,7 @@ def get_sample_data(request, hook_id=None):
         items = items.filter(service_id__in=service_id.split(','))
 
     like = request.GET.get('like', None)
+
     if like is not None:
         items = items.filter(Q(event__icontains=like) | Q(target__icontains=like))
 
@@ -118,12 +120,10 @@ class HooksView(APIView, GenerateLookupsMixin):
 
         event = request.GET.get('event', None)
         if event is not None:
-            filtered = True
             items = items.filter(event__in=event.split(','))
 
         service_id = request.GET.get('service_id', None)
         if service_id is not None:
-            filtered = True
             items = items.filter(service_id__in=service_id.split(','))
 
         like = request.GET.get('like', None)

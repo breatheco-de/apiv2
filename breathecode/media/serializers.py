@@ -59,18 +59,6 @@ class GetResolutionSerializer(serializers.ModelSerializer):
         fields = ('id', 'hash', 'width', 'height', 'hits')
 
 
-class MediaSerializer(serializers.ModelSerializer):
-    url = serializers.CharField(read_only=True, required=False)
-    name = serializers.CharField(required=False)
-    mime = serializers.CharField(read_only=True, required=False)
-    hits = serializers.IntegerField(read_only=True, required=False)
-    hash = serializers.CharField(read_only=True, required=False)
-
-    class Meta:
-        model = Media
-        exclude = ()
-
-
 class MediaListSerializer(serializers.ListSerializer):
 
     def update(self, instance, validated_data):

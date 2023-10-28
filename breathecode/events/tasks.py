@@ -24,7 +24,7 @@ def persist_organization_events(self, args):
 
     logger.debug('Starting persist_organization_events')
     org = Organization.objects.get(id=args['org_id'])
-    result = sync_org_events(org)
+    sync_org_events(org)
     return True
 
 
@@ -76,7 +76,7 @@ def async_export_event_to_eventbrite(self, event_id: int):
 
     try:
         export_event_to_eventbrite(event, event.organization)
-    except Exception as e:
+    except Exception:
         logger.exception(f'The {event_id} export was failed')
 
 

@@ -1,3 +1,4 @@
+from datetime import datetime
 from django.utils import timezone
 from django.http import HttpResponse
 from breathecode.admissions.models import CohortUser, Academy
@@ -315,16 +316,16 @@ class SurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 @permission_classes([AllowAny])
 def get_review_platform(request, platform_slug=None):
 
-    rp = ReviewPlatform.objects.all()
+    items = ReviewPlatform.objects.all()
     if platform_slug is not None:
-        rp = cu.filter(slug=platform_slug).first()
-        if rp is not None:
+        items = items.filter(slug=platform_slug).first()
+        if items is not None:
             serializer = ReviewPlatformSerializer(items, many=False)
             return Response(serializer.data)
         else:
             raise ValidationException('Review platform not found', slug='reivew_platform_not_found', code=404)
     else:
-        serializer = ReviewPlatformSerializer(rp, many=True)
+        serializer = ReviewPlatformSerializer(items, many=True)
         return Response(serializer.data)
 
 
@@ -371,12 +372,12 @@ class ReviewView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         start = request.GET.get('start', None)
         if start is not None:
-            start_date = datetime.datetime.strptime(start, '%Y-%m-%d').date()
+            start_date = datetime.strptime(start, '%Y-%m-%d').date()
             lookup['created_at__gte'] = start_date
 
         end = request.GET.get('end', None)
         if end is not None:
-            end_date = datetime.datetime.strptime(end, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end, '%Y-%m-%d').date()
             lookup['created_at__lte'] = end_date
 
         if 'status' in self.request.GET:

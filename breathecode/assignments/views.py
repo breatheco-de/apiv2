@@ -142,10 +142,6 @@ class FinalProjectScreenshotView(APIView):
 
         files = request.data.getlist('file')
         names = request.data.getlist('name')
-        result = {
-            'data': [],
-            'instance': [],
-        }
 
         file = request.data.get('file')
         slugs = []

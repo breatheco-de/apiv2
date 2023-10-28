@@ -1,4 +1,5 @@
-from rest_framework.serializers import *  # noqa: F405
+from rest_framework.serializers import *  # noqa: F401 F405
+from rest_framework.serializers import ModelSerializer
 
 
 class ModelSerializer(ModelSerializer):

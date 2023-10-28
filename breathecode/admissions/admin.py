@@ -161,21 +161,21 @@ sync_tasks.short_description = 'Sync Tasks'
 
 
 def mark_as_ended(modeladmin, request, queryset):
-    issues = queryset.update(stage='ENDED')
+    queryset.update(stage='ENDED')
 
 
 mark_as_ended.short_description = 'Mark as ENDED'
 
 
 def mark_as_started(modeladmin, request, queryset):
-    issues = queryset.update(stage='STARTED')
+    queryset.update(stage='STARTED')
 
 
 mark_as_started.short_description = 'Mark as STARTED'
 
 
 def mark_as_innactive(modeladmin, request, queryset):
-    issues = queryset.update(stage='INACTIVE')
+    queryset.update(stage='INACTIVE')
 
 
 mark_as_innactive.short_description = 'Mark as INACTIVE'

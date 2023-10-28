@@ -130,10 +130,10 @@ def process_stripe_webhook(request):
 
         event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
 
-    except ValueError as e:
+    except ValueError:
         raise ValidationException('Invalid payload', code=400, slug='invalid-payload')
 
-    except stripe.error.SignatureVerificationError as e:
+    except stripe.error.SignatureVerificationError:
         raise ValidationException('Not allowed', code=403, slug='not-allowed')
 
     if event := add_stripe_webhook(event):

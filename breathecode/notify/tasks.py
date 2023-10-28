@@ -76,7 +76,7 @@ def async_slack_action(post_data):
             logger.error('Error processing slack action')
             return False
 
-    except Exception as e:
+    except Exception:
         logger.exception('Error processing slack action')
         return False
 
@@ -94,7 +94,7 @@ def async_slack_command(post_data):
             logger.error('Error processing slack command')
             return False
 
-    except Exception as e:
+    except Exception:
         logger.exception('Error processing slack command')
         return False
 
