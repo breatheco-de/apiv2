@@ -1,5 +1,4 @@
 import logging
-from django import forms
 from django.db import models
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort

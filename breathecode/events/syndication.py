@@ -1,6 +1,5 @@
 import os
 from django.contrib.syndication.views import Feed
-from django.urls import reverse
 from django.utils import timezone
 from .models import Event  # Assuming Event is the name of your model
 

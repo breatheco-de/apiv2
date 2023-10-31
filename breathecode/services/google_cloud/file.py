@@ -1,4 +1,4 @@
-import logging, os
+import logging
 from io import StringIO, BytesIO, TextIOWrapper, BufferedReader
 from typing import Optional, overload
 from google.cloud.storage import Bucket, Blob

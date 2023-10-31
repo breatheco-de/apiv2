@@ -9,4 +9,4 @@ class FeedbackConfig(AppConfig):
 
     def ready(self):
         logger.debug('Loading feedback.receivers')
-        from . import receivers
+        from . import receivers  # noqa: F401

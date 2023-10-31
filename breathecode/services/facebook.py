@@ -10,10 +10,18 @@ class Facebook:
     def __init__(self, token):
         self.token = token
 
-    def get(self, action_name, request_data={}):
+    def get(self, action_name, request_data=None):
+
+        if request_data is None:
+            request_data = {}
+
         return self._call('GET', action_name, params=request_data)
 
-    def post(self, action_name, request_data={}):
+    def post(self, action_name, request_data=None):
+
+        if request_data is None:
+            request_data = {}
+
         return self._call('POST', action_name, json=request_data)
 
     def _call(self, method_name, action_name, params=None, json=None):

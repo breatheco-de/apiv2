@@ -32,17 +32,17 @@ class CohortDayLog(object):
         if teacher_comments is not None and not isinstance(teacher_comments, str):
             raise Exception(f'Invalid teacher comments value {str(teacher_comments)}')
         if not isinstance(attendance_ids, list):
-            raise Exception(f'Invalid attendance list, it must be an array of integer ids')
+            raise Exception('Invalid attendance list, it must be an array of integer ids')
         if not isinstance(unattendance_ids, list):
-            raise Exception(f'Invalid unattendance list, it must be an array of integer ids')
+            raise Exception('Invalid unattendance list, it must be an array of integer ids')
         if updated_at is None:
             updated_at = timezone.now()
 
         if has_duplicates(attendance_ids):
-            raise Exception(f'Attendance list has duplicate user ids')
+            raise Exception('Attendance list has duplicate user ids')
 
         if has_duplicates(unattendance_ids):
-            raise Exception(f'Unattendance list has duplicate user ids')
+            raise Exception('Unattendance list has duplicate user ids')
 
         self.current_module = current_module
         self.teacher_comments = teacher_comments
@@ -100,7 +100,7 @@ class CohortLog(object):
             else:
                 self.days = [*self.days, CohortDayLog.empty()]
 
-    def logDay(self, payload, day=None):
+    def log_day(self, payload, day=None):
 
         if not isinstance(payload, dict):
             raise Exception('Entry log of cohort day must be a dictionary')
@@ -119,7 +119,7 @@ class CohortLog(object):
         try:
             self.days[day - 1] = CohortDayLog(**payload)
             logger.debug(f'Replaced cohort {self.cohort.slug} log for day {day}')
-        except IndexError as e:
+        except IndexError:
             raise Exception(f'Error adding day {str(day-1)} log to cohort')
 
     def save(self):

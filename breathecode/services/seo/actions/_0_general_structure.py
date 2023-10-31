@@ -1,6 +1,4 @@
 import logging
-from django.contrib.auth.models import User
-from django.utils import timezone
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
@@ -13,7 +11,7 @@ def general_structure(client, report):
 
     readme = asset.get_readme(parse=True)
     if 'html' not in readme:
-        report.fatal(f'Asset with {asset_slug} readme cannot be parse into an HTML')
+        report.fatal(f'Asset with {asset.slug} readme cannot be parse into an HTML')
         return False
 
     h1s = BeautifulSoup(readme['html'], features='html.parser').find_all('h1')
@@ -23,7 +21,7 @@ def general_structure(client, report):
 
     h2s = BeautifulSoup(readme['html'], features='html.parser').find_all('h2')
     if len(h2s) == 0:
-        report.bad(-20, f'Include at least one h2 heading in the article')
+        report.bad(-20, 'Include at least one h2 heading in the article')
 
 
 general_structure.description = """

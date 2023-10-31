@@ -1,11 +1,8 @@
-from django.shortcuts import render
 from django.utils import timezone
 from django.http import HttpResponse
 from breathecode.utils import ValidationException
 from .models import Assessment, UserAssessment, AssessmentThreshold
-from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from .serializers import GetAssessmentBigSerializer, GetAssessmentSerializer, GetAssessmentThresholdSerializer
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes

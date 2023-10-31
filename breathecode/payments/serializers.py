@@ -1,10 +1,8 @@
 import logging
-from breathecode.admissions.models import Cohort
 from breathecode.payments.models import AcademyService, Plan, PlanOfferTranslation, Service, ServiceItem, ServiceItemFeature
 from django.db.models.query_utils import Q
 from rest_framework.exceptions import ValidationError
 from breathecode.utils import serializers, serpy
-from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -38,12 +36,6 @@ class GetAcademySmallSerializer(serpy.Serializer):
 
 
 class GetCohortSerializer(serpy.Serializer):
-    id = serpy.Field()
-    name = serpy.Field()
-    slug = serpy.Field()
-
-
-class GetMentorshipServiceSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
     slug = serpy.Field()
@@ -83,52 +75,9 @@ class GetServiceSerializer(serpy.Serializer):
     owner = GetAcademySmallSerializer(many=False)
     private = serpy.Field()
     groups = serpy.MethodField()
-    cohorts = serpy.MethodField()
-    mentorship_services = serpy.MethodField()
-    cohorts = serpy.MethodField()
 
     def get_groups(self, obj):
         return GetGroupSerializer(obj.groups.all(), many=True).data
-
-    def get_cohorts(self, obj):
-        return GetCohortSerializer(obj.cohorts.all(), many=True).data
-
-    def get_mentorship_services(self, obj):
-        return GetMentorshipServiceSerializer(obj.mentorship_services.all(), many=True).data
-
-    def get_cohorts(self, obj):
-        utc_now = timezone.now()
-        kwargs = {}
-        if 'academy' in self.context and self.context['academy_id'] and (isinstance(
-                self.context['academy_id'], int) or self.context['academy_id'].isnumeric()):
-            kwargs['academy__id'] = int(self.context['academy'])
-
-        elif 'academy' in self.context and self.context['academy_id']:
-            kwargs['academy__slug'] = self.context['academy']
-
-        cohorts = Cohort.objects.none()
-
-        service = obj
-        #FIXME: this is not defined
-        payment_service_schedulers = PaymentServiceScheduler.objects.filter(service=service)
-
-        for schedule in payment_service_schedulers:
-            all = schedule.cohorts.filter(remote_available=True,
-                                          academy__main_currency__isnull=False,
-                                          academy__available_as_saas=True,
-                                          **kwargs).exclude(Q(stage='DELETED') | Q(stage='ENDED'))
-
-            never_ends = all.filter(never_ends=True)
-            upcoming = all.filter(
-                never_ends=False,
-                kickoff_date__gt=utc_now).exclude(Q(stage='FINAL_PROJECT') | Q(stage='STARTED'))
-
-            cohorts |= never_ends
-            cohorts |= upcoming
-
-        cohorts = cohorts.distinct()
-
-        return GetCohortSerializer(cohorts, many=True).data
 
 
 class GetServiceItemSerializer(serpy.Serializer):

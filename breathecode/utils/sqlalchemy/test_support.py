@@ -1,6 +1,5 @@
 import os
 import sys
-from sqlalchemy.ext.declarative import declarative_base
 import inspect
 
 __all__ = ['test_support']

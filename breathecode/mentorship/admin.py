@@ -162,10 +162,10 @@ class MentorAdmin(admin.ModelAdmin):
         }
 
         if obj.online_meeting_url is None:
-            return format_html(f"<span class='badge bg-error'> Missing Meeting URL</span>")
+            return format_html("<span class='badge bg-error'> Missing Meeting URL</span>")
 
         if obj.booking_url is None:
-            return format_html(f"<span class='badge bg-error'> Missing Booking URL</span>")
+            return format_html("<span class='badge bg-error'> Missing Booking URL</span>")
 
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 
@@ -178,11 +178,11 @@ class MentorAdmin(admin.ModelAdmin):
 
 
 def avoid_billing_this_session(modeladmin, request, queryset):
-    sessions = queryset.update(allow_billing=False)
+    queryset.update(allow_billing=False)
 
 
 def allow_billing_this_session(modeladmin, request, queryset):
-    sessions = queryset.update(allow_billing=True)
+    queryset.update(allow_billing=True)
 
 
 class BilledFilter(SimpleListFilter):
@@ -279,14 +279,14 @@ def subscribe_to_webhooks(modeladmin, request, queryset):
     entries = queryset.all()
     for org in entries:
         cal = Calendly(token=org.access_token)
-        data = cal.subscribe(org.uri, org.hash)
+        cal.subscribe(org.uri, org.hash)
 
 
 def unsubscribe_to_all_webhooks(modeladmin, request, queryset):
     entries = queryset.all()
     for org in entries:
         cal = Calendly(token=org.access_token)
-        data = cal.unsubscribe_all(org.uri)
+        cal.unsubscribe_all(org.uri)
 
 
 def get_subscription_webhooks(modeladmin, request, queryset):

@@ -2,6 +2,9 @@
 """
 Remind cohort status update after starting date
 """
+
+# flake8: noqa: F821
+
 from breathecode.utils import ScriptNotification
 from breathecode.admissions.models import Cohort
 from django.utils import timezone

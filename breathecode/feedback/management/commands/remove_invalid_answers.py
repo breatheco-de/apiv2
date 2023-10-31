@@ -1,5 +1,5 @@
-from django.core.management.base import BaseCommand, CommandError
-from breathecode.admissions.models import Academy, Cohort, CohortUser
+from django.core.management.base import BaseCommand
+from breathecode.admissions.models import CohortUser
 from breathecode.feedback.models import Answer, Survey
 
 

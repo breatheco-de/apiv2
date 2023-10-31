@@ -19,8 +19,7 @@ def get_user_label(self):
 User.add_to_class('__str__', get_user_label)
 
 __all__ = [
-    'UserAdmissions', 'Country', 'City', 'Academy', 'Certificate', 'AcademyCertificate', 'Syllabus', 'Cohort',
-    'CohortUser', 'CertificateTimeSlot', 'CohortTimeSlot'
+    'UserAdmissions', 'Country', 'City', 'Academy', 'Syllabus', 'Cohort', 'CohortUser', 'CohortTimeSlot'
 ]
 
 

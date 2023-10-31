@@ -1,7 +1,7 @@
 import requests, os, logging
 
 from breathecode.utils.validation_exception import ValidationException
-from .models import Task, User
+from .models import Task
 from breathecode.admissions.models import CohortUser
 
 logger = logging.getLogger(__name__)
@@ -124,7 +124,7 @@ def sync_cohort_tasks(cohort):
         try:
             tasks = sync_student_tasks(cu.user, cohort=cohort)
             synchronized = synchronized + tasks
-        except:
+        except Exception:
             continue
 
     return synchronized

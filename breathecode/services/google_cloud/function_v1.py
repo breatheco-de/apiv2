@@ -27,7 +27,7 @@ class FunctionV1:
         self.service_url = f'{region}-{project_id}.cloudfunctions.net/{name}'
         self.method = method
 
-    def call(self, data=None, params={}, timeout=2) -> requests.models.Response:
+    def call(self, data=None, params=None, timeout=2) -> requests.models.Response:
         """Call a Google Cloud Function.
 
             Args:
@@ -36,6 +36,9 @@ class FunctionV1:
             Returns:
                 Response: Google Cloud Function response.
         """
+
+        if params is None:
+            params = {}
 
         auth_req = GCRequest()
         token = id_token.fetch_id_token(auth_req, 'https://' + self.service_url)

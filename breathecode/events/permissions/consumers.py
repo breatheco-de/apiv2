@@ -1,18 +1,13 @@
-from datetime import timedelta
 import logging
 from django.db.models import Q
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.events.actions import get_my_event_types
-from breathecode.events.models import Event, EventType, LiveClass
-from breathecode.mentorship.models import MentorshipService
-from breathecode.payments.models import Consumable
+from breathecode.events.models import Event, LiveClass
 from breathecode.utils.decorators import PermissionContextType
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
 from django.utils import timezone
-
-from .flags import api
 
 logger = logging.getLogger(__name__)
 

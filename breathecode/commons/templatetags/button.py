@@ -5,7 +5,7 @@ register = template.Library()
 
 
 @register.inclusion_tag('button.html')
-def button(*, type='button', href='#', onclick='', className='', value):
+def button(*, type='button', href='#', onclick='', className='', value):  # noqa: N803
     return {
         'type': type,
         'href': href,

@@ -2,6 +2,9 @@
 """
 Checks if ending date has passed and cohort status is not ended
 """
+
+# flake8: noqa: F821
+
 from breathecode.utils import ScriptNotification
 from breathecode.admissions.models import Cohort
 from django.utils import timezone

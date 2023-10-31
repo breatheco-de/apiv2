@@ -9,4 +9,4 @@ class RegistryConfig(AppConfig):
 
     def ready(self):
         logger.debug('Loading provisioning.receivers')
-        from . import receivers
+        from . import receivers  # noqa: F401

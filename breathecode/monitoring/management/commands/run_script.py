@@ -1,9 +1,4 @@
-import os, requests, sys, pytz, datetime
-from django.utils import timezone
-from django.db.models.expressions import RawSQL
-from django.core.management.base import BaseCommand, CommandError
-from django.db import models as DM
-from django.db.models import Q, F
+from django.core.management.base import BaseCommand
 from breathecode.admissions.models import Academy
 from ...actions import run_script
 from ...models import MonitorScript, Application

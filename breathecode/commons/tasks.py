@@ -1,7 +1,7 @@
 import importlib
 import logging
 from celery import shared_task
-from datetime import datetime, timedelta
+from datetime import timedelta
 from breathecode.commons.models import TaskManager
 from django.utils import timezone
 from breathecode.utils import CACHE_DESCRIPTORS

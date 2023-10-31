@@ -209,6 +209,10 @@ class AuthenticateTestSuite(AuthTestCase):
                              'process_message': '',
                              'process_status': 'PENDING',
                              'syllabus_id': None,
+                             'city': None,
+                             'country': None,
+                             'latitude': None,
+                             'longitude': None,
                          }, {
                              'user_id': 1,
                              'academy_id': 1,
@@ -231,6 +235,10 @@ class AuthenticateTestSuite(AuthTestCase):
                              'process_message': '',
                              'process_status': 'PENDING',
                              'syllabus_id': None,
+                             'city': None,
+                             'country': None,
+                             'latitude': None,
+                             'longitude': None,
                          }])
 
     @patch('breathecode.authenticate.signals.invite_status_updated.send', MagicMock())

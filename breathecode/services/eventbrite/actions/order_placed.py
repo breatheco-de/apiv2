@@ -90,7 +90,7 @@ def order_placed(self, webhook, payload: dict):
     if automation_id:
         add_to_active_campaign(contact, academy_id, automation_id)
     else:
-        message = f"Automation for order_placed doesn't exist"
+        message = "Automation for order_placed doesn't exist"
         logger.debug(message)
         raise Exception(message)
 

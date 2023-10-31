@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.utils.urls import replace_query_param, remove_query_param
 
@@ -38,7 +38,10 @@ class HeaderLimitOffsetPagination(LimitOffsetPagination):
 
         return string.replace('%2C', ',')
 
-    def get_paginated_response(self, data, count=None, cache=None, cache_kwargs={}):
+    def get_paginated_response(self, data, count=None, cache=None, cache_kwargs=None):
+        if cache_kwargs is None:
+            cache_kwargs = {}
+
         if count:
             self.count = count
 

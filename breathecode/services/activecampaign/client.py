@@ -42,9 +42,6 @@ class ActiveCampaign:
         self.headers = {'Authorization': f'Bearer {token}'}
 
     def execute_action(self, webhook_id: int, acp_ids: dict):
-        # wonderful way to fix one poor mocking system
-        import requests
-
         # prevent circular dependency import between thousand modules previuosly loaded and cached
         from breathecode.marketing.models import ActiveCampaignWebhook
 
@@ -180,7 +177,7 @@ class ActiveCampaign:
             'Accept': 'application/json',
         }
         resp = requests.post(f'{self.host}/api/3/contactTags', headers=headers, json=body, timeout=2)
-        logger.debug(f'Add tag to contact')
+        logger.debug('Add tag to contact')
 
         # can return status 200 if the contact have has been tagged, this case is not a error
         if resp.status_code < 400:
@@ -188,7 +185,7 @@ class ActiveCampaign:
             if data and 'contactTag' in data:
                 return data['contactTag']
             else:
-                raise Exception(f'Bad response format from ActiveCampaign when adding a new tag to contact')
+                raise Exception('Bad response format from ActiveCampaign when adding a new tag to contact')
         else:
             logger.error(resp.json())
             raise Exception(f'Failed to add tag to contact {contact_id} with status={resp.status_code}')
@@ -206,7 +203,7 @@ class ActiveCampaign:
         logger.info(f'Creating tag `{body["tag"]["tag"]}` on active campaign')
 
         if resp.status_code == 201:
-            logger.info(f'Tag created successfully')
+            logger.info('Tag created successfully')
             body = resp.json()
 
             if 'tag' in body:
@@ -360,7 +357,7 @@ class Contacts(object):
         return self.client._get('contact_delete', aditional_data=[('id', id)])
 
 
-class AC_Old_Client(object):
+class ACOldClient(object):
 
     def __init__(self, url, apikey):
 

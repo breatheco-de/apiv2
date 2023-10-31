@@ -1,6 +1,4 @@
-from django.contrib import admin
-from django.urls import include, path
-from rest_framework.authtoken import views
+from django.urls import path
 
 from .views import (AcademyBillView, AcademyInvoiceMemberView, AcademyProjectInvoiceView,
                     AcademyProjectMemberView, AcademyProjectView, BillView, SingleBillView, SingleInvoiceView,

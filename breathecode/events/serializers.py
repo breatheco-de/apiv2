@@ -476,8 +476,8 @@ class EventSerializer(serializers.ModelSerializer):
         if online_event == True and (live_stream_url is None or live_stream_url == ''):
             raise ValidationException(
                 translation(lang,
-                            en=f'live_stream_url cannot be empty if the event is online.',
-                            es=f'Si el evento es online, entonces live_stream_url no puede estar vacío.',
+                            en='live_stream_url cannot be empty if the event is online.',
+                            es='Si el evento es online, entonces live_stream_url no puede estar vacío.',
                             slug='live-stream-url-empty'))
 
         existing_events = Event.objects.filter(slug=slug)
@@ -507,7 +507,7 @@ class EventSerializer(serializers.ModelSerializer):
         # hard-code the organizer to the academy organizer
         try:
             validated_data['organizer'] = validated_data['academy'].organizer
-        except:
+        except Exception:
             pass
 
         return super().create(validated_data)
@@ -517,7 +517,7 @@ class EventSerializer(serializers.ModelSerializer):
         # hard-code the organizer to the academy organizer
         try:
             validated_data['organizer'] = validated_data['academy'].organizer
-        except:
+        except Exception:
             pass
 
         return super().update(instance, validated_data)
@@ -580,7 +580,7 @@ class PUTEventCheckinSerializer(serializers.ModelSerializer):
         # if "attended_at" not in data and self.instance.attended_at is None:
         #     new_data['attended_at'] = timezone.now()
 
-        if 'attended_at' in data and self.instance.attended_at is None:
+        if 'attended_at' in validated_data and self.instance.attended_at is None:
             tasks_activity.add_activity.delay(self.instance.attendee,
                                               'event_checkin_assisted',
                                               related_type='events.EventCheckin',

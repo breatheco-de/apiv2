@@ -1,7 +1,5 @@
 import logging
 from celery import shared_task, Task
-from django.db.models import F
-from datetime import datetime
 from breathecode.monitoring.decorators import WebhookTask
 from .actions import (sync_single_issue, update_status_based_on_github_action, generate_freelancer_bill)
 

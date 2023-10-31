@@ -5,20 +5,20 @@ from django.shortcuts import redirect, render
 from django.db.models import Q, Count
 from django.http import HttpResponse
 from django.core.validators import URLValidator
-from .tasks import async_pull_from_github, async_create_asset_thumbnail_legacy
+from .tasks import async_pull_from_github
 from breathecode.services.seo import SEOAnalyzer
 from breathecode.utils.i18n import translation
 from breathecode.authenticate.actions import get_user_language
 from .models import (Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory,
                      AssetKeyword, AssetComment, SEOReport, OriginalityScan, ContentVariable)
 
-from .actions import (AssetThumbnailGenerator, test_asset, pull_from_github, test_asset, push_to_github,
+from .actions import (AssetThumbnailGenerator, test_asset, pull_from_github, push_to_github,
                       clean_asset_readme, scan_asset_originality)
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import ProfileAcademy
-from .caches import (AssetCache, AssetCommentCache, KeywordCache, KeywordClusterCache, TechnologyCache,
-                     CategoryCache, ContentVariableCache)
+from .caches import (AssetCache, AssetCommentCache, KeywordCache, TechnologyCache, CategoryCache,
+                     ContentVariableCache)
 
 from rest_framework.permissions import AllowAny
 from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerializer, AssetTechnologySerializer,
@@ -90,7 +90,7 @@ def render_preview_html(request, asset_slug):
         return render_message(request, f'Asset with slug {asset_slug} not found')
 
     if asset.asset_type == 'QUIZ':
-        return render_message(request, f'Quiz cannot be previewed')
+        return render_message(request, 'Quiz cannot be previewed')
 
     readme = asset.get_readme(parse=True)
     return render(
@@ -118,7 +118,7 @@ def get_technologies(request):
             param = int(param)
 
             lookup['sort_priority__exact'] = param
-        except Exception as e:
+        except Exception:
             raise ValidationException(
                 translation(lang,
                             en='The parameter must be an integer nothing else',
@@ -170,7 +170,7 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
 
                 lookup['sort_priority__iexact'] = param
 
-            except Exception as e:
+            except Exception:
                 raise ValidationException(
                     translation(lang,
                                 en='The parameter must be an integer',
@@ -278,7 +278,7 @@ def get_translations(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def handle_test_asset(request):
-    report = test_asset(request.data)
+    test_asset(request.data)
     return Response({'status': 'ok'})
 
 
@@ -359,7 +359,7 @@ def get_config(request, asset_slug):
                                           slug='config_not_found')
 
         return Response(response.json())
-    except Exception as e:
+    except Exception:
         data = {
             'MESSAGE':
             f'learn.json or bc.json not found or invalid for for: \n {asset.url}',
@@ -552,7 +552,7 @@ class AssetView(APIView, GenerateLookupsMixin):
             if 'academy' in self.request.GET and self.request.GET.get('academy') not in ['null', '']:
                 param = self.request.GET.get('academy')
                 lookup['academy__in'] = [int(p) for p in param.split(',')]
-        except:
+        except Exception:
             raise ValidationException(translation(lang,
                                                   en='The academy filter value should be an integer',
                                                   es='El valor del filtro de academy debería ser un entero',
@@ -626,7 +626,7 @@ class AcademyAssetActionView(APIView):
             elif action_slug == 'push':
                 if asset.asset_type not in ['ARTICLE', 'LESSON']:
                     raise ValidationException(
-                        f'Only lessons and articles and be pushed to github, please update the Github repository yourself and come back to pull the changes from here'
+                        'Only lessons and articles and be pushed to github, please update the Github repository yourself and come back to pull the changes from here'
                     )
 
                 push_to_github(asset.slug, author=request.user)
@@ -636,7 +636,7 @@ class AcademyAssetActionView(APIView):
             elif action_slug == 'originality':
 
                 if asset.asset_type not in ['ARTICLE', 'LESSON']:
-                    raise ValidationException(f'Only lessons and articles can be scanned for originality')
+                    raise ValidationException('Only lessons and articles can be scanned for originality')
                 scan_asset_originality(asset)
 
         except Exception as e:
@@ -657,12 +657,12 @@ class AcademyAssetActionView(APIView):
             raise ValidationException(f'Invalid action {action_slug}')
 
         if not request.data['assets']:
-            raise ValidationException(f'Assets not found in the body of the request.')
+            raise ValidationException('Assets not found in the body of the request.')
 
         assets = request.data['assets']
 
         if len(assets) < 1:
-            raise ValidationException(f'The list of Assets is empty.')
+            raise ValidationException('The list of Assets is empty.')
 
         invalid_assets = []
 
@@ -684,7 +684,7 @@ class AcademyAssetActionView(APIView):
                 elif action_slug == 'push':
                     if asset.asset_type not in ['ARTICLE', 'LESSON']:
                         raise ValidationException(
-                            f'Only lessons and articles and be pushed to github, please update the Github repository yourself and come back to pull the changes from here'
+                            'Only lessons and articles and be pushed to github, please update the Github repository yourself and come back to pull the changes from here'
                         )
 
                     push_to_github(asset.slug, author=request.user)
@@ -747,7 +747,7 @@ class AcademyAssetOriginalityView(APIView, GenerateLookupsMixin):
 
         scans = scans.order_by('-created_at')
 
-        reports = handler.queryset(scans)
+        scans = handler.queryset(scans)
         serializer = OriginalityScanSerializer(scans, many=True)
         return handler.response(serializer.data)
 
@@ -763,7 +763,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
         member = ProfileAcademy.objects.filter(user=request.user, academy__id=academy_id).first()
         if member is None:
-            raise ValidationException(f"You don't belong to this academy", status.HTTP_400_BAD_REQUEST)
+            raise ValidationException("You don't belong to this academy", status.HTTP_400_BAD_REQUEST)
 
         handler = self.extensions(request)
         cache = handler.cache.get()
@@ -940,7 +940,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
                     slug__in=data['all_translations']).values_list('pk', flat=True)
 
             if 'id' not in data:
-                raise ValidationException(f'Cannot determine asset id', slug='without-id')
+                raise ValidationException('Cannot determine asset id', slug='without-id')
 
             instance = Asset.objects.filter(id=data['id'], academy__id=academy_id).first()
             if not instance:
@@ -1351,7 +1351,7 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
             raise ValidationException('This cluster does not exist for this academy', 404)
 
         data = {**request.data}
-        remove_academy = data.pop('academy', False)
+        data.pop('academy', False)
 
         serializer = PostKeywordClusterSerializer(cluster,
                                                   data=data,

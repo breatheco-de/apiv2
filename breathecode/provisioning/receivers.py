@@ -1,9 +1,7 @@
-import logging, json, os
+import logging
 from typing import Type
 from django.dispatch import receiver
-from breathecode.admissions.signals import student_edu_status_updated
 from breathecode.monitoring.models import StripeEvent
-from django.db.models.signals import post_delete, post_save, pre_delete
 from breathecode.monitoring import signals as monitoring_signals
 
 from breathecode.provisioning.models import ProvisioningBill
@@ -19,7 +17,7 @@ def bill_was_paid(sender: Type[StripeEvent], instance: StripeEvent, **kwargs):
                 ProvisioningBill.objects.filter(stripe_id=instance.data['payment_link']).update(
                     status='PAID', paid_at=instance.created_at)
 
-        except:
+        except Exception:
             instance.status_texts['provisioning.bill_was_paid'] = 'Invalid context'
             instance.status = 'ERROR'
             instance.save()

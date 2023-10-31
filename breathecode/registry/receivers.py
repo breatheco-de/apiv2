@@ -1,6 +1,6 @@
-import logging, json, os
+import logging, os
 from django.dispatch import receiver
-from django.db.models.signals import post_delete, post_save
+from django.db.models.signals import post_delete
 from .models import Asset, AssetAlias, AssetImage
 from .tasks import (async_regenerate_asset_readme, async_delete_asset_images, async_remove_img_from_cloud,
                     async_synchonize_repository_content, async_create_asset_thumbnail_legacy,
@@ -25,7 +25,7 @@ def post_asset_slug_modified(sender, instance: Asset, **kwargs):
         instance.lang = 'us'
 
     # create a new slug alias but keep the old one for redirection purposes
-    alias = AssetAlias.objects.create(slug=instance.slug, asset=instance)
+    AssetAlias.objects.create(slug=instance.slug, asset=instance)
 
     # add the asset as the first translation
     a = Asset.objects.get(id=instance.id)
