@@ -21,23 +21,20 @@ def get_urls_from_html(html_content):
 
 def test_url(url, allow_relative=False, allow_hash=True):
     if url is None or url == '':
-        raise Exception(f'Empty url')
+        raise Exception('Empty url')
 
     if not allow_hash and '#' == url[0:1]:
-        raise Exception(f'Not allowed hash url: ' + url)
-    else:
-        return True
+        raise Exception('Not allowed hash url: ' + url)
 
-    #FIXME: the code is under this line is unaccessible
+    if not allow_relative and ('../' == url[0:3] or './' == url[0:2]):
+        raise Exception('Not allowed relative url: ' + url)
 
-    if not allow_relative and '../' == url[0:3] or './' == url[0:2]:
-        raise Exception(f'Not allowed relative url: ' + url)
-    else:
-        return True
+    return True
 
-    response = requests.head(url, allow_redirects=False, timeout=2)
-    if response.status_code not in [200, 302, 301, 307]:
-        raise Exception(f'Invalid URL with code {response.status_code}: ' + url)
+    #FIXME: the code is under this line is unaccessible, want you remove it?
+    # response = requests.head(url, allow_redirects=False, timeout=2)
+    # if response.status_code not in [200, 302, 301, 307]:
+    #     raise Exception(f'Invalid URL with code {response.status_code}: ' + url)
 
 
 class AssetException(Exception):
@@ -161,7 +158,7 @@ class OriginalityWrapper():
 
         headers = {'X-OAI-API-KEY': self.token}
         response = requests.request(method=method,
-                                    url=f'https://api.originality.ai/api/v1/' + url,
+                                    url='https://api.originality.ai/api/v1/' + url,
                                     data=body,
                                     headers=headers,
                                     timeout=2)

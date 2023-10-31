@@ -86,17 +86,6 @@ class Command(BaseCommand):
         paused = tasks.filter(status='PAUSED').count()
         aborted = tasks.filter(status='ABORTED').count()
 
-        message = '\n'.join([
-            'Daily report:',
-            f'- {error_number} failed tasks.',
-            f'- {done} completed tasks.',
-            f'- {cancelled} canceled tasks.',
-            f'- {reversed} reversed tasks.',
-            f'- {paused} paused tasks.',
-            f'- {aborted} aborted tasks.',
-            '',
-        ])
-
         module_names = list({x.task_module for x in errors})
         report = {}
 

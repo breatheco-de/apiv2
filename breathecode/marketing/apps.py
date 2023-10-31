@@ -5,4 +5,4 @@ class MarketingConfig(AppConfig):
     name = 'breathecode.marketing'
 
     def ready(self):
-        from . import receivers
+        from . import receivers  # noqa: F401

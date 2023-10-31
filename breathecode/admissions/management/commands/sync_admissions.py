@@ -55,43 +55,6 @@ class Command(BaseCommand):
             else:
                 self.stdout.write(self.style.NOTICE(f'Academy {aca.slug} skipped'))
 
-    def syllabus(self, options):
-
-        response = requests.get(f'{HOST_ASSETS}/syllabus/all', timeout=2)
-        syllabus = response.json()
-
-        for syl in syllabus:
-            certificate_slug, version = syl['slug'].split('.')
-            cert = SyllabusSchedule.objects.filter(slug=certificate_slug).first()
-            if cert is None:
-                self.stdout.write(
-                    self.style.NOTICE(
-                        f'Certificate slug {certificate_slug} not found: skipping syllabus {certificate_slug}.{version}'
-                    ))
-                continue
-
-            if version[1:].isnumeric() == False:
-                self.stdout.write(self.style.NOTICE(f'Ignoring syllabus invalid version {version}'))
-                continue
-            #remove letter "v" at the beginning of version number
-            version = version[1:]
-            _syl = Syllabus.objects.filter(version=version, certificate=cert).first()
-            if _syl is None:
-
-                response = requests.get(f'{HOST_ASSETS}/syllabus/{certificate_slug}?v={version}', timeout=2)
-
-                _syl = Syllabus(
-                    version=version,
-                    certificate=cert,
-                    json=response.text,
-                    private=False,
-                )
-
-                _syl.save()
-                self.stdout.write(self.style.SUCCESS(f'Syllabus {certificate_slug}{version} added'))
-            else:
-                self.stdout.write(self.style.NOTICE(f'Syllabus {certificate_slug}{version} skipped'))
-
     def certificates(self, options):
 
         response = requests.get(f'{HOST}/profiles/', timeout=2)
@@ -128,7 +91,9 @@ class Command(BaseCommand):
                         f'Certificate slug {certificate_slug} not found: skipping syllabus {certificate_slug}.{version}'
                     ))
                 continue
+
             #remove letter "v" at the beginning of version number
+            #FIXME: this will fail until the version 10
             version = version[1:]
             if not version.isnumeric():
                 self.stdout.write(self.style.NOTICE(f'Syllabus version {version} must be number: skipping'))
@@ -146,7 +111,7 @@ class Command(BaseCommand):
                 _syl.save()
                 self.stdout.write(self.style.SUCCESS(f'Syllabus {certificate_slug}{version} added'))
             else:
-                self.stdout.write(self.style.NOTICE(f'Certificate {certificate_slug}{version} skipped'))
+                self.stdout.write(self.style.NOTICE(f'Syllabus {certificate_slug}{version} skipped'))
 
     def cohorts(self, options):
 

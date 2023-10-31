@@ -1,6 +1,6 @@
 import csv
 from django.http import StreamingHttpResponse
-from django.contrib import admin, messages
+from django.contrib import messages
 from django.utils.safestring import mark_safe
 
 __all__ = ['AdminExportCsvMixin']
@@ -41,5 +41,5 @@ class AdminExportCsvMixin:
         messages.add_message(
             request, messages.INFO,
             mark_safe(
-                f'Data is being downloaded, <a href="/admin/monitoring/csvdownload/">you can check your download here.</a>'
+                'Data is being downloaded, <a href="/admin/monitoring/csvdownload/">you can check your download here.</a>'
             ))

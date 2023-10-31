@@ -13,19 +13,10 @@ def validate_language_code(value: str | None) -> None:
         )
 
     if value and value[:2].isupper():
-        raise ValidationError(
-            _('%(value)s the first two letters needs to be lowercase'),
-            params={'value': value},
-        )
+        raise ValidationError(f'{value} the first two letters needs to be lowercase')
 
     if value and not is_short and value[2] != '-':
-        raise ValidationError(
-            _('%(value)s the third letter needs to be a dash'),
-            params={'value': value},
-        )
+        raise ValidationError(f'{value} the third letter needs to be a dash')
 
     if value and not is_short and value[3:].islower():
-        raise ValidationError(
-            _('%(value)s the last two letters needs to be uppercase'),
-            params={'value': value},
-        )
+        raise ValidationError(f'{value} the last two letters needs to be uppercase')

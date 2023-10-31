@@ -1,8 +1,6 @@
-from django.contrib import admin
-from django.urls import path, include
+from django.urls import path
 from .views import (get_specialties, get_badges, get_certificate, CertificateView, CertificateCohortView,
                     CertificateAcademyView, LayoutView, CertificateMeView)
-from rest_framework.authtoken import views
 
 app_name = 'certificate'
 urlpatterns = [

@@ -1,7 +1,6 @@
 import logging
-from django.contrib.auth.models import User
 from django.utils import timezone
-from breathecode.marketing.models import FormEntry, AcademyAlias
+from breathecode.marketing.models import AcademyAlias
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +13,8 @@ status = {
 }
 
 
-def deal_update(AC, webhook, payload: dict, acp_ids):
+#FIXME: it's unused
+def deal_update(ac_cls, webhook, payload: dict, acp_ids):
     # prevent circular dependency import between thousand modules previuosly loaded and cached
     from breathecode.marketing.models import FormEntry
 
@@ -53,12 +53,12 @@ def deal_update(AC, webhook, payload: dict, acp_ids):
         entry.ac_deal_currency_code = payload['deal[currency]']
 
     # lets get the custom fields and use them to update some local fields
-    logger.debug(f'looking for deal on activecampaign api')
-    deal_custom_fields = AC.get_deal_customfields(entry.ac_deal_id)
+    logger.debug('looking for deal on activecampaign api')
+    deal_custom_fields = ac_cls.get_deal_customfields(entry.ac_deal_id)
 
-    entry = update_expected_cohort(AC, entry, acp_ids, deal_custom_fields)
-    entry = update_location(AC, entry, acp_ids, deal_custom_fields)
-    entry = update_course(AC, entry, acp_ids, deal_custom_fields)
+    entry = update_expected_cohort(ac_cls, entry, acp_ids, deal_custom_fields)
+    entry = update_location(ac_cls, entry, acp_ids, deal_custom_fields)
+    entry = update_course(ac_cls, entry, acp_ids, deal_custom_fields)
 
     entry.custom_fields = deal_custom_fields
     entry.save()
@@ -71,7 +71,7 @@ def deal_update(AC, webhook, payload: dict, acp_ids):
     return True
 
 
-def update_course(AC, entry, acp_ids, deal_custom_fields):
+def update_course(ac_cls, entry, acp_ids, deal_custom_fields):
     deal_ids = acp_ids['deal']
 
     if deal_ids['utm_course'] in deal_custom_fields:
@@ -82,7 +82,7 @@ def update_course(AC, entry, acp_ids, deal_custom_fields):
     return entry
 
 
-def update_location(AC, entry, acp_ids, deal_custom_fields):
+def update_location(ac_cls, entry, acp_ids, deal_custom_fields):
     deal_ids = acp_ids['deal']
 
     if deal_ids['utm_location'] in deal_custom_fields:
@@ -97,15 +97,14 @@ def update_location(AC, entry, acp_ids, deal_custom_fields):
     return entry
 
 
-def update_expected_cohort(AC, entry, acp_ids, deal_custom_fields):
+def update_expected_cohort(ac_cls, entry, acp_ids, deal_custom_fields):
     deal_ids = acp_ids['deal']
 
     if entry.academy is not None:
-        ac_academy = entry.academy.activecampaignacademy
         if deal_ids['expected_cohort'] in deal_custom_fields:
             entry.ac_expected_cohort = deal_custom_fields[deal_ids['expected_cohort']]
         if deal_ids['expected_cohort_date'] in deal_custom_fields:
             entry.ac_expected_cohort_date = deal_custom_fields[deal_ids['expected_cohort_date']]
     else:
-        logger.debug(f'No academy for EntryForm, ignoring deal custom fields')
+        logger.debug('No academy for EntryForm, ignoring deal custom fields')
     return entry

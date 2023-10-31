@@ -1,7 +1,4 @@
-import os, requests, sys, pytz
-from datetime import datetime
-from django.db.models import Q
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from ...actions import sync_organization_members
 from ...models import AcademyAuthSettings
 

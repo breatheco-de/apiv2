@@ -1,11 +1,6 @@
-import os, requests, sys, pytz
-from datetime import datetime
-from django.db.models import Q
-from django.core.management.base import BaseCommand, CommandError
-from django.contrib.auth.models import User
-from ...actions import sync_organization_members
-from ...models import AcademyAuthSettings, GithubAcademyUser
-from breathecode.admissions.models import Cohort, CohortUser
+from django.core.management.base import BaseCommand
+from ...models import GithubAcademyUser
+from breathecode.admissions.models import CohortUser
 
 
 class Command(BaseCommand):
@@ -56,5 +51,5 @@ class Command(BaseCommand):
                 github_user.storage_action = 'DELETE'
                 github_user.storage_status = 'PENDING'
                 github_user.save()
-                print(f'Schedule the following github user for deletion in Academy ' +
+                print('Schedule the following github user for deletion in Academy ' +
                       github_user.academy.name + '. User: ' + github_user.user.email)

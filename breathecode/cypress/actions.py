@@ -1,8 +1,6 @@
-import asyncio
 import importlib
 import inspect
 import logging
-import os
 
 from django.contrib.auth.models import User
 from django.db.models import Model
@@ -40,26 +38,26 @@ def clean():
         models = []
 
         for x in dir(module):
-            CurrentModel = getattr(module, x)
-            if not inspect.isclass(CurrentModel):
+            model_cls = getattr(module, x)
+            if not inspect.isclass(model_cls):
                 continue
 
-            if not issubclass(CurrentModel, Model):
+            if not issubclass(model_cls, Model):
                 continue
 
-            if (hasattr(CurrentModel, 'Meta') and hasattr(CurrentModel.Meta, 'abstract')):
+            if (hasattr(model_cls, 'Meta') and hasattr(model_cls.Meta, 'abstract')):
                 continue
 
-            models.append(CurrentModel)
+            models.append(model_cls)
 
-        for CurrentModel in models:
-            model_name = CurrentModel.__name__
+        for model_cls in models:
+            model_name = model_cls.__name__
 
             if model_name in cleaned:
                 continue
 
             logger.info(f'{model_name} was cleaned')
-            CurrentModel.objects.all().delete()
+            model_cls.objects.all().delete()
             cleaned.append(model_name)
 
 
@@ -115,8 +113,8 @@ def get_model(model_name):
 
 
 def clean_model(model_name):
-    Model = get_model(model_name)
-    Model.objects.all().delete()
+    model_cls = get_model(model_name)
+    model_cls.objects.all().delete()
 
 
 def generate_model(data):
@@ -125,8 +123,8 @@ def generate_model(data):
 
     try:
         model_name = data.pop('$model')
-        Model = get_model(model_name)
-        element = mixer.blend(Model, **data)
+        model_cls = get_model(model_name)
+        element = mixer.blend(model_cls, **data)
         pk = element.pk
 
     except Exception as e:

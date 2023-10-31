@@ -29,7 +29,17 @@ def to_snake_case(name):
     return re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
 
 
-def optimize_queryset(queryset, to_one=[], to_many=[], custom=[], fields=None, info=None):
+def optimize_queryset(queryset, to_one=None, to_many=None, custom=None, fields=None, info=None):
+
+    if to_one is None:
+        to_one = []
+
+    if to_many is None:
+        to_many = []
+
+    if custom is None:
+        custom = []
+
     selected_related = []
     prefetch_related = []
     only = []
@@ -201,7 +211,7 @@ class Admissions(graphene.ObjectType):
                 latitude, longitude = coordinates.split(',')
                 latitude = float(latitude)
                 longitude = float(longitude)
-            except:
+            except Exception:
                 raise GraphQLError('Bad coordinates, the format is latitude,longitude',
                                    slug='bad-coordinates')
 

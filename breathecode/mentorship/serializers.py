@@ -3,7 +3,6 @@ from breathecode.payments.models import Consumable
 from breathecode.utils import ValidationException
 from .models import MentorshipSession, MentorshipService, MentorProfile, MentorshipBill, CalendlyOrganization
 import breathecode.mentorship.actions as actions
-from breathecode.admissions.models import CohortUser
 from .actions import generate_mentor_bill
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
@@ -130,19 +129,6 @@ class GETServiceTinySerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
     duration = serpy.Field()
-
-
-class GETServiceSmallSerializer(serpy.Serializer):
-    id = serpy.Field()
-    slug = serpy.Field()
-    name = serpy.Field()
-    status = serpy.Field()
-    duration = serpy.Field()
-    max_duration = serpy.Field()
-    missed_meeting_duration = serpy.Field()
-    language = serpy.Field()
-    allow_mentee_to_extend = serpy.Field()
-    allow_mentors_to_extend = serpy.Field()
 
 
 class GETMentorPublicTinySerializer(serpy.Serializer):
@@ -425,7 +411,7 @@ class BillSessionSerializer(serpy.Serializer):
         else:
             message += f'Started on {obj.started_at.strftime("%m/%d/%Y at %H:%M:%S")}. <br />'
             if obj.mentor_joined_at is None:
-                message += f'The mentor never joined'
+                message += 'The mentor never joined'
             elif obj.mentor_joined_at > obj.started_at:
                 message += f'The mentor joined {duration_to_str(obj.mentor_joined_at - obj.started_at)} before. <br />'
             elif obj.started_at > obj.mentor_joined_at:
@@ -439,9 +425,9 @@ class BillSessionSerializer(serpy.Serializer):
 
                     message += f'With extra time of {duration_to_str(extra_time)}. <br />'
                 else:
-                    message += f'No extra time detected <br />'
+                    message += 'No extra time detected <br />'
             else:
-                message += f'The mentorship has not ended yet. <br />'
+                message += 'The mentorship has not ended yet. <br />'
                 if obj.ends_at is not None:
                     message += f'But it was supposed to end after {duration_to_str(obj.ends_at - obj.started_at)} <br />'
 
@@ -460,7 +446,7 @@ class BillSessionSerializer(serpy.Serializer):
             return 'Ended before it started'
 
         if (end_date - obj.started_at).days > 1:
-            return f'Many days'
+            return 'Many days'
 
         return duration_to_str(obj.ended_at - obj.started_at)
 
@@ -476,7 +462,7 @@ class BillSessionSerializer(serpy.Serializer):
             return None
 
         if (obj.ended_at - obj.started_at).days > 1:
-            return f'Many days of extra time, probably it was never closed'
+            return 'Many days of extra time, probably it was never closed'
 
         if obj.service is None:
             return 'Please setup service for this session'
@@ -559,7 +545,6 @@ class MentorSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         lang = data.get('lang', 'en')
-        academy_id = data['academy'].id if 'academy' in data else 0
         user = data['user']
         profile_academy = ProfileAcademy.objects.filter(user__id=data['user'].id,
                                                         academy__id=data['academy'].id).first()
@@ -817,9 +802,10 @@ class SessionSerializer(SessionPUTSerializer):
                 slug='mentor-mentee-same-person'),
                                       code=400)
 
-        calendlyOrganization = CalendlyOrganization.objects.filter(academy=self.context['academy_id']).first()
-        if calendlyOrganization is not None:
-            max_sessions = calendlyOrganization.max_concurrent_sessions
+        calendly_organization = CalendlyOrganization.objects.filter(
+            academy=self.context['academy_id']).first()
+        if calendly_organization is not None:
+            max_sessions = calendly_organization.max_concurrent_sessions
             if max_sessions is not None and max_sessions > 0:
                 total_service_mentorships = MentorshipSession.objects.filter(
                     academy=self.context['academy_id'], status='PENDING', mentee=mentee,
@@ -912,12 +898,12 @@ class CalendlyOrganizationSerializer(serializers.ModelSerializer):
         organization = None
 
         try:
-            res = cal.subscribe(org.uri, org.hash)
+            cal.subscribe(org.uri, org.hash)
         except Exception as e:
             raise ValidationException('Error while creating calendly organization: ' + str(e))
 
         try:
-            subscriptions = cal.get_subscriptions(org.uri)
+            cal.get_subscriptions(org.uri)
         except Exception as e:
             raise ValidationException('Error retrieving organization subscriptions: ' + str(e))
 

@@ -1,4 +1,5 @@
-from rest_framework.serializers import *
+from rest_framework.serializers import *  # noqa: F401 F405
+from rest_framework.serializers import ModelSerializer
 
 
 class ModelSerializer(ModelSerializer):
@@ -20,7 +21,7 @@ class ModelSerializer(ModelSerializer):
             try:
                 if data[attr] and isinstance(data[attr], str):
                     data[attr] = data[attr].upper()
-            except:
+            except Exception:
                 ...
 
         return data

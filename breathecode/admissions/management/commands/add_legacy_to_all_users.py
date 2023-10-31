@@ -1,4 +1,4 @@
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User, Group
 
 
@@ -12,4 +12,4 @@ class Command(BaseCommand):
                 if legacy_group not in user.groups.all():
                     user.groups.add(legacy_group)
         except Exception:
-            self.stderr.write(f'Failed to add the Legacy group to all users')
+            self.stderr.write('Failed to add the Legacy group to all users')

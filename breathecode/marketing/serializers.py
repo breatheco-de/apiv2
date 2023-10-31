@@ -1,4 +1,4 @@
-import serpy, logging, hashlib, re
+import serpy, logging, re
 from django.utils import timezone
 from datetime import timedelta
 from .models import CourseTranslation, FormEntry, AcademyAlias, ShortLink, Tag, ActiveCampaignAcademy, Automation
@@ -465,7 +465,7 @@ class ShortLinkSerializer(serializers.ModelSerializer):
             if days_ago < utc_now and (self.instance.destination != data['destination']
                                        or self.instance.slug != data['slug']):
                 raise ValidationException(
-                    f'You cannot update or delete short links that have been created more than 1 day ago, create a new link instead',
+                    'You cannot update or delete short links that have been created more than 1 day ago, create a new link instead',
                     slug='update-days-ago')
 
         return {**data, 'academy': academy}

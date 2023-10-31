@@ -2,18 +2,20 @@ from datetime import datetime
 import pytz
 import re
 import random
-from typing import Optional, TypedDict
+from typing import TypedDict
 from django.utils import timezone
 from breathecode.authenticate.models import (AcademyAuthSettings, CredentialsGithub, GithubAcademyUser,
                                              GithubAcademyUserLog, ProfileAcademy)
 from breathecode.payments.models import Currency
+from breathecode.registry.models import Asset
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils import getLogger
 from breathecode.services.github import Github
 from breathecode.utils.i18n import translation
-from breathecode.admissions.models import Academy, Cohort, CohortUser
-from .models import (ProvisioningUserConsumption, ProvisioningConsumptionEvent, ProvisioningConsumptionKind,
-                     ProvisioningPrice, ProvisioningBill, ProvisioningProfile, ProvisioningVendor)
+from breathecode.admissions.models import Academy, CohortUser
+from .models import (ProvisioningContainer, ProvisioningUserConsumption, ProvisioningConsumptionEvent,
+                     ProvisioningConsumptionKind, ProvisioningPrice, ProvisioningBill, ProvisioningProfile,
+                     ProvisioningVendor)
 from django.db.models import QuerySet, Q
 from dateutil.relativedelta import relativedelta
 
@@ -71,7 +73,6 @@ def get_provisioning_vendor(user_id, profile_academy, cohort):
         return p_profile.vendor
 
     raise Exception(
-        request,
         "We couldn't find any provisioning vendors for you, your cohort or your academy. Please speak with your program manager."
     )
 
@@ -107,12 +108,13 @@ def create_container(user, task, fresh=False, lang='en'):
                 es='No se han encontrado credentials para github, por favor conecta tu cuenta de github',
                 slug='no-github-credentials'))
 
-    gb = Github(token=credentials.token, host=provisioning_academy.vendor.api_url)
+    #FIXME: the code belog have variables that are not defined, so, it never worked, uncomment it if you want to fix it
+    # gb = Github(token=credentials.token, host=provisioning_academy.vendor.api_url)
 
-    asset = Asset.objects.filter(slug=task.associated_slug).first()
-    org_name, repo_name, branch_name = asset.get_repo_meta()
+    # asset = Asset.objects.filter(slug=task.associated_slug).first()
+    # _, repo_name, _ = asset.get_repo_meta()
 
-    machines = gb.get_machines_types(repo_name)
+    # machines = gb.get_machines_types(repo_name)
 
 
 def iso_to_datetime(iso: str) -> datetime:
@@ -275,7 +277,7 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
         context['provisioning_vendors']['Codespaces'] = provisioning_vendor
 
     if not provisioning_vendor:
-        errors.append(f'Provisioning vendor Codespaces not found')
+        errors.append('Provisioning vendor Codespaces not found')
 
     for academy in academies:
         ls = context['logs'].get((field['Username'], academy.id), None)
@@ -441,7 +443,7 @@ def add_gitpod_activity(context: ActivityContext, field: dict, position: int):
         context['provisioning_vendors']['Gitpod'] = provisioning_vendor
 
     if not provisioning_vendor:
-        errors.append(f'Provisioning vendor Gitpod not found')
+        errors.append('Provisioning vendor Gitpod not found')
 
     if academies:
         for academy in academies:

@@ -2,6 +2,9 @@
 """
 Alert when there are Tags without tag_type
 """
+
+# flake8: noqa: F821
+
 from breathecode.marketing.models import Tag
 from breathecode.utils import ScriptNotification
 

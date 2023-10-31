@@ -1,6 +1,5 @@
 import logging
 from django.dispatch import receiver
-from django.db.models import Avg
 from breathecode.authenticate.signals import invite_status_updated
 from breathecode.authenticate.models import UserInvite
 from breathecode.mentorship.models import MentorshipSession
@@ -16,8 +15,7 @@ from breathecode.registry.serializers import AssetHookSerializer
 from breathecode.events.models import EventCheckin, Event
 from breathecode.events.signals import new_event_attendee, new_event_order, event_status_updated
 from breathecode.events.serializers import EventHookSerializer, EventHookCheckinSerializer
-from breathecode.admissions.models import CohortUser, Cohort
-from breathecode.admissions.signals import cohort_log_saved
+from breathecode.admissions.models import CohortUser
 from breathecode.admissions.serializers import CohortUserHookSerializer
 from .tasks import send_mentorship_starting_notification
 from .utils.hook_manager import HookManager

@@ -1,5 +1,6 @@
 from breathecode.services.slack import client
 
+token = '12345'
 api = client.Slack(token)
 data = api.get('users.list', {'limit': 300})
 

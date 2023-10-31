@@ -1,7 +1,7 @@
 import re
 import os
 from typing import Any, Optional
-from celery import shared_task, Task
+from celery import Task
 from django.utils import timezone
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
@@ -9,7 +9,6 @@ from breathecode.events.models import Event
 from breathecode.services.activecampaign import ActiveCampaign
 from breathecode.monitoring.actions import test_link
 from breathecode.utils import getLogger
-from breathecode.utils.validation_exception import ValidationException
 from .models import AcademyAlias, FormEntry, ShortLink, ActiveCampaignWebhook, ActiveCampaignAcademy, Tag, Downloadable
 from breathecode.monitoring.models import CSVUpload
 from .serializers import (PostFormEntrySerializer)
@@ -95,7 +94,7 @@ def async_activecampaign_webhook(webhook_id, **_: Any):
             client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
             client.execute_action(webhook_id, acp_ids)
         except Exception as e:
-            logger.debug(f'ActiveCampaign Webhook Exception')
+            logger.debug('ActiveCampaign Webhook Exception')
             raise e
 
     else:
@@ -108,7 +107,7 @@ def async_activecampaign_webhook(webhook_id, **_: Any):
         logger.debug(message)
         raise Exception(message)
 
-    logger.debug(f'ActiveCampaign webook status: ok')
+    logger.debug('ActiveCampaign webook status: ok')
 
 
 @task()
@@ -168,7 +167,7 @@ def add_event_tags_to_student(event_id: int,
         raise AbortTask(f'Event {event_id} not found')
 
     if not event.academy:
-        raise AbortTask(f'Impossible to determine the academy')
+        raise AbortTask('Impossible to determine the academy')
 
     academy = event.academy
 
@@ -372,9 +371,9 @@ def create_form_entry(csv_upload_id, **item):
         error_message += f'{message}, '
         logger.error(message)
 
-    EMAIL_PATTERN = r'(?:[a-z0-9!#$%&\'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&\'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])'
+    email_pattern = r'(?:[a-z0-9!#$%&\'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&\'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])'
 
-    if form_entry.email and not re.findall(EMAIL_PATTERN, form_entry.email, re.IGNORECASE):
+    if form_entry.email and not re.findall(email_pattern, form_entry.email, re.IGNORECASE):
         message = 'email has incorrect format'
         error_message += f'{message}, '
         logger.error(message)

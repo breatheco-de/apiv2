@@ -2,10 +2,12 @@
 """
 Alert when there are Form Entries with status = PENDING
 """
+
+# flake8: noqa: F821
+
 from breathecode.marketing.models import FormEntry
 from django.db.models import Q
 from breathecode.utils import ScriptNotification
-from breathecode.admissions.models import Academy
 from breathecode.utils.datetime_integer import from_now
 
 pending_leads = FormEntry.objects.filter(
