@@ -48,7 +48,7 @@ def persist_single_lead(form_data, **_: Any):
 
         raise e
 
-    if entry is not None and entry != False and not is_test_env:
+    if entry is not None and entry != False and not is_test_env and form_data.city is None:
         save_get_geolocal(entry, form_data)
 
     return True
