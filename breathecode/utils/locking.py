@@ -34,7 +34,7 @@ import ssl
 
 logger = getLogger(__name__)
 ENV = os.getenv('ENV', '')
-
+redis_client = None
 
 class LockManager(models.Manager):
 
@@ -43,9 +43,10 @@ class LockManager(models.Manager):
 
         instance, created = None, False
 
-        if False and ENV != 'test':
+        if ENV != 'test':
 
-            redis_client = get_redis()
+            if redis_client is None:
+                redis_client = get_redis()
 
             # Dynamically retrieve the class name and create a unique lock key based on the kwargs
             class_name = self.model.__name__
