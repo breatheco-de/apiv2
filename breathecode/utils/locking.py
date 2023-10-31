@@ -43,7 +43,7 @@ class LockManager(models.Manager):
 
         instance, created = None, False
 
-        if lock and ENV != 'test':
+        if False and ENV != 'test':
 
             redis_client = get_redis()
 
