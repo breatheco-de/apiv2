@@ -15,5 +15,6 @@ def clean_cache(key):
         try:
             cache.clear()
 
-        except Exception:
+        except Exception as e:
+            logger.exception("Redis failed cleaning cache")
             clean_task.apply_async(args=[key], countdown=5, priority=10)
