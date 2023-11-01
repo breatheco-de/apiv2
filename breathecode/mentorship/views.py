@@ -717,10 +717,10 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
     @capable_of('read_mentorship_mentor')
     def get(self, request, mentor_id=None, academy_id=None):
         handler = self.extensions(request)
-        cache = handler.cache.get()
 
+        cache = handler.cache.get()
         if cache is not None:
-            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
+            return cache
 
         if mentor_id is not None:
             mentor = MentorProfile.objects.filter(id=mentor_id, services__academy__id=academy_id).first()
