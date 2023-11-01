@@ -1,6 +1,5 @@
 import random
 import pytest
-from breathecode.tests.mixins.legacy import LegacyAPITestCase
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 

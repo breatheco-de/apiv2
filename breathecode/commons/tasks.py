@@ -1,10 +1,12 @@
 import importlib
 import logging
+from typing import Any
 from celery import shared_task
 from datetime import timedelta
 from breathecode.commons.models import TaskManager
 from django.utils import timezone
 from breathecode.utils import CACHE_DESCRIPTORS
+from breathecode.utils.decorators.task import AbortTask, RetryTask, task
 
 logger = logging.getLogger(__name__)
 
@@ -134,16 +136,29 @@ def mark_task_as_pending(task_manager_id, *, attempts=0, force=False, last_run=N
     logger.info(f'TaskManager {task_manager_id} is being marked as PENDING')
 
 
-@shared_task(bind=False)
-def clean_task(key, attempts=0):
-    if attempts == 10:
-        logger.error(f'clean_task {key} failed 10 times')
-        return
+MODULES = {}
 
-    cache = CACHE_DESCRIPTORS[key]
+
+@task(bind=False, priority=10)
+def clean_task(key: str, **_: Any):
+    unpack = key.split('.')
+    model = unpack[-1]
+    module = '.'.join(unpack[:-1])
+
+    if module not in MODULES:
+        MODULES[module] = importlib.import_module(module)
+
+    module = MODULES[module]
+    model_cls = getattr(module, model)
+
+    if model_cls not in CACHE_DESCRIPTORS:
+        raise AbortTask(f'Cache not implemented for {model_cls.__name__}, skipping')
+
+    cache = CACHE_DESCRIPTORS[model_cls]
 
     try:
         cache.clear()
+        logger.info(f'Cache cleaned for {key}')
 
     except Exception:
-        clean_task.async_apply(args=(key, attempts + 1), countdown=5, priority=10)
+        raise RetryTask(f'Could not clean the cache {key}')
