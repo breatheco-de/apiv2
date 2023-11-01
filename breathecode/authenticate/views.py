@@ -1732,7 +1732,7 @@ def login_html_view(request):
 
             user = None
             if email and password:
-                user = User.objects.filter(Q(email=email) | Q(username=email)).first()
+                user = User.objects.filter(Q(email=email.lower()) | Q(username=email)).first()
                 if not user:
                     msg = 'Unable to log in with provided credentials.'
                     raise Exception(msg)

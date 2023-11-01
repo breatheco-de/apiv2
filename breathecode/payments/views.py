@@ -1567,10 +1567,12 @@ class PayView(APIView):
                 if amount == 0 and not available_free and available_for_free_trial and not bag.plans.filter(
                         plan_offer_from__id__gte=1).exists():
                     raise ValidationException(
-                        translation(lang,
-                                    en='The plan was chosen is not ready too be sold',
-                                    es='El plan elegido no esta listo para ser vendido',
-                                    slug='the-plan-was-chosen-is-not-ready-too-be-sold'))
+                        translation(
+                            lang,
+                            en='The plan was chosen does not have a pricing setup, it\'s not ready to be sold',
+                            es=
+                            'El plan elegido no tiene una configuracion de precios, no esta listo para venderse',
+                            slug='the-plan-was-chosen-is-not-ready-too-be-sold'))
 
                 if amount >= 0.50:
                     s = Stripe()

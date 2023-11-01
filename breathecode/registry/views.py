@@ -766,9 +766,9 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
             raise ValidationException("You don't belong to this academy", status.HTTP_400_BAD_REQUEST)
 
         handler = self.extensions(request)
-        cache = handler.cache.get()
-        if cache is not None:
-            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
+        # cache = handler.cache.get()
+        # if cache is not None:
+        #     return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 
         if asset_slug is not None:
             asset = Asset.get_by_slug(asset_slug, request)
