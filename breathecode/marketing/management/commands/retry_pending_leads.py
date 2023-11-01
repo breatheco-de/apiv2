@@ -1,7 +1,6 @@
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from ...tasks import persist_single_lead
 from ...models import FormEntry
-from django.contrib.auth.models import User
 
 
 class Command(BaseCommand):
@@ -11,4 +10,4 @@ class Command(BaseCommand):
 
         entries = FormEntry.objects.filter(storage_status='PENDING')
         for entry in entries:
-            persist_single_lead.delay(entry.toFormData())
+            persist_single_lead.delay(entry.to_form_data())

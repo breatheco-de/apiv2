@@ -1,8 +1,7 @@
-import re, uuid, hashlib
+import uuid, hashlib
 import secrets
 from django.db import models
 from datetime import timedelta
-from django.utils import timezone
 from django.contrib.auth.models import User
 
 from breathecode.authenticate.models import UserInvite
@@ -11,7 +10,6 @@ from breathecode.admissions.models import Academy, Cohort
 from django.core.validators import RegexValidator
 from breathecode.admissions.models import Syllabus
 from breathecode.utils.validators.language import validate_language_code
-from django import forms
 
 __all__ = [
     'ActiveCampaignAcademy', 'AcademyAlias', 'Automation', 'Tag', 'Contact', 'FormEntry', 'ShortLink',
@@ -574,7 +572,7 @@ class FormEntry(models.Model):
 
         return None
 
-    def toFormData(self):
+    def to_form_data(self):
         _entry = {
             'id': self.id,
             'first_name': self.first_name,
@@ -861,7 +859,7 @@ class CourseTranslation(models.Model):
         course_modules = self.course_modules or []
         for course_module in course_modules:
             if course_module['name'] is None or course_module['name'] == '':
-                raise Exception(f'The module does not have a name.')
+                raise Exception('The module does not have a name.')
             if course_module['slug'] is None or course_module['slug'] == '':
                 raise Exception(f'The module {course_module["name"]} does not have a slug.')
             if course_module['description'] is None or course_module['description'] == '':

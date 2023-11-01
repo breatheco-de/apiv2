@@ -1,10 +1,5 @@
-import os, requests, sys, pytz
-from datetime import datetime
-from django.db.models import Q
-from django.core.management.base import BaseCommand, CommandError
-from breathecode.admissions.models import CohortUser
-from ...actions import delete_tokens
-from ...models import GithubAcademyUserLog, GithubAcademyUser, Role, User
+from django.core.management.base import BaseCommand
+from ...models import GithubAcademyUserLog, User
 
 
 class Command(BaseCommand):

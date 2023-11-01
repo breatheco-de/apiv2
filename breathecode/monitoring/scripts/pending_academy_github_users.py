@@ -2,6 +2,9 @@
 """
 Reminder for sending surveys to each cohort every 4 weeks
 """
+
+# flake8: noqa: F821
+
 from breathecode.authenticate.models import GithubAcademyUser
 from breathecode.utils import ScriptNotification
 

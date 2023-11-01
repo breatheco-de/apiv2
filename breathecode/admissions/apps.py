@@ -5,4 +5,4 @@ class AcademyConfig(AppConfig):
     name = 'breathecode.admissions'
 
     def ready(self):
-        from . import receivers
+        from . import receivers  # noqa: F401

@@ -162,6 +162,8 @@ class AbstractAsset(models.Model):
                                            default=MONTH,
                                            help_text='Trial duration unit (e.g. DAY, WEEK, MONTH or YEAR)')
 
+    icon_url = models.URLField(blank=True, null=True, default=None)
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -232,6 +234,8 @@ class AbstractServiceItem(models.Model):
                                  db_index=True,
                                  help_text='Unit type (e.g. UNIT))')
     how_many = models.IntegerField(default=-1, help_text='How many units of this service can be used')
+    sort_priority = models.IntegerField(
+        default=1, help_text='(e.g. 1, 2, 3, ...) It is going to be used to sort the items on the frontend')
 
     class Meta:
         abstract = True
@@ -530,7 +534,6 @@ class AcademyService(models.Model):
         return super().save(*args, **kwargs)
 
 
-DRAFT = 'DRAFT'
 ACTIVE = 'ACTIVE'
 UNLISTED = 'UNLISTED'
 DELETED = 'DELETED'
@@ -1121,7 +1124,10 @@ class Consumable(AbstractServiceItem):
              lang: str = 'en',
              service: Optional[Service | str | int] = None,
              permission: Optional[Permission | str | int] = None,
-             extra: dict = {}) -> QuerySet[Consumable]:
+             extra: dict = None) -> QuerySet[Consumable]:
+
+        if extra is None:
+            extra = {}
 
         param = {}
         utc_now = timezone.now()
@@ -1181,7 +1187,11 @@ class Consumable(AbstractServiceItem):
             lang: str = 'en',
             service: Optional[Service | str | int] = None,
             permission: Optional[Permission | str | int] = None,
-            extra: dict = {}) -> Consumable | None:
+            extra: Optional[dict] = None) -> Consumable | None:
+
+        if extra is None:
+            extra = {}
+
         return cls.list(user=user, lang=lang, service=service, permission=permission, extra=extra).first()
 
     def clean(self) -> None:

@@ -1,6 +1,3 @@
-import ast
-from datetime import datetime
-from functools import cache
 import re
 from typing import Optional, Type
 from dateutil.relativedelta import relativedelta
@@ -11,10 +8,9 @@ from django.core.handlers.wsgi import WSGIRequest
 from pytz import UTC
 from django.contrib.auth.models import User
 
-from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
+from breathecode.admissions.models import Cohort, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.authenticate.models import UserSetting
-from breathecode.utils.attr_dict import AttrDict
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
 from rest_framework.request import Request
@@ -588,7 +584,7 @@ def filter_consumables(request: WSGIRequest,
     if ids := request.GET.get(key):
         try:
             ids = [int(x) for x in ids.split(',')]
-        except:
+        except Exception:
             raise ValidationException(f'{key} param must be integer')
 
         query_key = custom_query_key or key

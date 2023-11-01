@@ -64,7 +64,10 @@ class CacheExtension(ExtensionBase):
     def _can_modify_response(self) -> bool:
         return True
 
-    def _apply_response_mutation(self, data: list[dict] | dict, headers: dict = {}):
+    def _apply_response_mutation(self, data: list[dict] | dict, headers: Optional[dict] = None):
+        if headers is None:
+            headers = {}
+
         params = self._get_params()
 
         try:

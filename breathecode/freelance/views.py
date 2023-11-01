@@ -1,26 +1,23 @@
 from datetime import datetime
-from django.shortcuts import render
 from rest_framework.response import Response
 from .serializers import (BillSerializer, SmallIssueSerializer, BigBillSerializer,
-                          SmallFreelancerMemberSerializer, SmallProjectSerializer, BigProjectSerializer,
-                          BigInvoiceSerializer, SmallBillSerializer)
+                          SmallFreelancerMemberSerializer, BigProjectSerializer, BigInvoiceSerializer,
+                          SmallBillSerializer)
 from rest_framework.permissions import AllowAny
 from rest_framework import status
-from django.utils import timezone
 from django.db.models import Q
 from rest_framework.decorators import api_view, permission_classes
-from .actions import sync_user_issues, generate_freelancer_bill, generate_project_invoice
+from .actions import generate_freelancer_bill, generate_project_invoice
 from .models import (Bill, Freelancer, Issue, BILL_STATUS, AcademyFreelanceProject, FreelanceProjectMember,
                      ProjectInvoice)
-from .tasks import async_repository_issue_github
 from rest_framework.views import APIView
 from breathecode.utils.views import private_view
 from breathecode.notify.actions import get_template_content
 from breathecode.utils.decorators import capable_of
 from breathecode.utils.validation_exception import ValidationException
-from breathecode.admissions.models import Academy
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from django.http import HttpResponse
+from rest_framework import serializers
 
 
 @private_view()
@@ -99,12 +96,12 @@ class BillView(APIView):
         lookup = {}
 
         if 'freelancer' in self.request.GET:
-            userId = self.request.GET.get('freelancer')
-            lookup['freelancer__id'] = userId
+            user_id = self.request.GET.get('freelancer')
+            lookup['freelancer__id'] = user_id
 
         if 'user' in self.request.GET:
-            userId = self.request.GET.get('user')
-            lookup['freelancer__user__id'] = userId
+            user_id = self.request.GET.get('user')
+            lookup['freelancer__user__id'] = user_id
 
         if 'status' in self.request.GET:
             status = self.request.GET.get('status')
@@ -184,14 +181,14 @@ class AcademyBillView(APIView):
     def put(self, request, bill_id=None, academy_id=None):
         # Bulk Action to Modify Status
         if bill_id is None:
-            billStatus = request.data['status']
+            bill_status = request.data['status']
             bills = request.data['bills']
 
-            if billStatus is None or billStatus == '':
+            if bill_status is None or bill_status == '':
                 raise ValidationException('Status not found in the body of the request', code=404)
 
-            if billStatus not in ['DUE', 'APPROVED', 'PAID', 'IGNORED']:
-                raise ValidationException(f'Status provided ({billStatus}) is not a valid status', code=404)
+            if bill_status not in ['DUE', 'APPROVED', 'PAID', 'IGNORED']:
+                raise ValidationException(f'Status provided ({bill_status}) is not a valid status', code=404)
 
             if bills is None or len(bills) == 0:
                 raise ValidationException('Bills not found in the body of the request', code=404)
@@ -200,11 +197,11 @@ class AcademyBillView(APIView):
                 item = Bill.objects.filter(id=bill, academy__id=academy_id).first()
                 if item is None:
                     raise ValidationException('Bill not found for this academy', code=404)
-                item.status = billStatus
+                item.status = bill_status
                 item.save()
                 bill = item
 
-            return Response(f"Bills' status successfully updated to {billStatus}",
+            return Response(f"Bills' status successfully updated to {bill_status}",
                             status=status.HTTP_201_CREATED)
 
         item = Bill.objects.filter(id=bill_id, academy__id=academy_id).first()
@@ -431,6 +428,8 @@ class SingleBillView(APIView):
 # Create your views here.
 @api_view(['GET'])
 def sync_user_issues(request):
+    from .actions import sync_user_issues
+
     tags = sync_user_issues()
     return Response(tags, status=status.HTTP_200_OK)
 
@@ -443,8 +442,8 @@ def get_issues(request):
     lookup = {}
 
     if 'freelancer' in request.GET:
-        userId = request.GET.get('freelancer')
-        lookup['freelancer__id'] = userId
+        user_id = request.GET.get('freelancer')
+        lookup['freelancer__id'] = user_id
 
     if 'bill' in request.GET:
         _id = request.GET.get('bill')

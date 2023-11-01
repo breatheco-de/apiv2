@@ -3,7 +3,6 @@ from breathecode.services.calendly import Calendly
 from celery import shared_task, Task
 
 from .models import CalendlyOrganization, CalendlyWebhook
-from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -30,12 +29,12 @@ def async_calendly_webhook(self, calendly_webhook_id):
             client = Calendly(organization.access_token)
             client.execute_action(calendly_webhook_id)
         except Exception as e:
-            logger.debug(f'Calendly webhook exception')
+            logger.debug('Calendly webhook exception')
             logger.debug(str(e))
             status = 'error'
 
     else:
-        message = f"Calendly Organization {organization_id} doesn\'t exist"
+        message = f"Calendly Organization {organization.id} doesn\'t exist"
 
         webhook.status = 'ERROR'
         webhook.status_text = message

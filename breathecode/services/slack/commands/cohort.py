@@ -7,11 +7,8 @@ Possible parameters for this command:
 - text: Content of the slack channel
 
 """
-import os
-
 from breathecode.admissions.models import Cohort, CohortUser
 from ..decorator import command
-from ..utils import to_string
 from ..exceptions import SlackException
 
 
@@ -29,7 +26,7 @@ def render_cohort(channel_id, academies):
     cohort = Cohort.objects.filter(slackchannel__slack_id=channel_id, academy__id__in=[academies]).first()
     if cohort is None:
         raise SlackException(
-            f'Cohort was not found as slack channel, make sure the channel name matches the cohort slug',
+            'Cohort was not found as slack channel, make sure the channel name matches the cohort slug',
             slug='cohort-not-found')
 
     teachers = CohortUser.objects.filter(cohort=cohort,

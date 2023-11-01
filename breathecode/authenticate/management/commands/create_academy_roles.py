@@ -1,9 +1,5 @@
-import os, requests, sys, pytz
 from typing import TypedDict
-from datetime import datetime
-from django.core.management.base import BaseCommand, CommandError
-
-from ...actions import delete_tokens
+from django.core.management.base import BaseCommand
 from ...models import Capability, Role
 
 CAPABILITIES = [

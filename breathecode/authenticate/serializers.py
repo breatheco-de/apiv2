@@ -6,7 +6,6 @@ import random
 import os
 import urllib.parse
 import breathecode.notify.actions as notify_actions
-from django.utils import timezone
 from django.contrib.auth.models import User
 
 from breathecode.utils.i18n import translation
@@ -14,12 +13,11 @@ from .models import (CredentialsGithub, ProfileAcademy, Role, UserInvite, Profil
                      GithubAcademyUser, AcademyAuthSettings, UserSetting)
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.utils import ValidationException
-from breathecode.admissions.models import Academy, Cohort, Syllabus
+from breathecode.admissions.models import Academy, Cohort
 from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from django.db.models import Q
 from django.contrib.auth.models import Permission
-from breathecode.mentorship.models import MentorProfile
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
 import breathecode.activity.tasks as tasks_activity
@@ -620,7 +618,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                 event = Event.objects.filter(**args).get()
                 data['event_slug'] = event.slug
 
-            except Exception as e:
+            except Exception:
                 raise ValidationException(translation(lang,
                                                       en='Unable to find the given Event',
                                                       es='Imposible encontrar el Evento dado',
@@ -639,7 +637,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                 asset = Asset.objects.filter(**args).get()
                 data['asset_slug'] = asset.slug
 
-            except Exception as e:
+            except Exception:
                 raise ValidationException(translation(lang,
                                                       en='Unable to find the given Asset',
                                                       es='Imposible encontrar el Asset dado',
@@ -1238,7 +1236,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 plan = Plan.objects.filter(**kwargs).get()
                 extra['plans'] = plan
 
-            except:
+            except Exception:
                 raise ValidationException(
                     translation(lang, en='Plan not found', es='Plan no encontrado', slug='plan-not-found'))
 
@@ -1254,7 +1252,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 course = Course.objects.filter(**kwargs).get()
                 extra['courses'] = course
 
-            except:
+            except Exception:
                 raise ValidationException(
                     translation(lang,
                                 en='Course not found',
@@ -1377,7 +1375,6 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         self.cohort = cohort
         self.syllabus = syllabus
-        now = str(timezone.now())
 
         if not self.instance:
             data['token'] = hashlib.sha512((data['email']).encode('UTF-8') + os.urandom(64)).hexdigest()
@@ -1394,7 +1391,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 event = Event.objects.filter(**args).get()
                 data['event_slug'] = event.slug
 
-            except Exception as e:
+            except Exception:
                 raise ValidationException(translation(lang,
                                                       en='Unable to find the given Event',
                                                       es='Imposible encontrar el Evento dado',
@@ -1413,7 +1410,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 asset = Asset.objects.filter(**args).get()
                 data['asset_slug'] = asset.slug
 
-            except Exception as e:
+            except Exception:
                 raise ValidationException(translation(lang,
                                                       en='Unable to find the given Asset',
                                                       es='Imposible encontrar el Asset dado',

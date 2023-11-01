@@ -2,12 +2,14 @@
 """
 Alert which Gitpod users will be deleted soon
 """
+
+# flake8: noqa: F821
+
 import datetime
 from breathecode.authenticate.models import GitpodUser
 from django.db.models import Q
 from django.utils import timezone
 from breathecode.utils import ScriptNotification
-from breathecode.admissions.models import Academy
 from breathecode.utils.datetime_integer import from_now
 
 in_three_days = timezone.now() + datetime.timedelta(days=3)

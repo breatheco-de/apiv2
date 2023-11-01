@@ -1,7 +1,4 @@
-from django.core.management.base import BaseCommand, CommandError
-from ...tasks import persist_single_lead
-from ...models import FormEntry
-from django.contrib.auth.models import User
+from django.core.management.base import BaseCommand
 from django.db import connection
 
 

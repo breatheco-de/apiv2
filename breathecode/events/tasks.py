@@ -1,6 +1,5 @@
 import logging
 from breathecode.admissions.models import CohortTimeSlot
-from breathecode.events.actions import fix_datetime_weekday
 from breathecode.services.eventbrite import Eventbrite
 from celery import shared_task, Task
 
@@ -25,7 +24,7 @@ def persist_organization_events(self, args):
 
     logger.debug('Starting persist_organization_events')
     org = Organization.objects.get(id=args['org_id'])
-    result = sync_org_events(org)
+    sync_org_events(org)
     return True
 
 
@@ -43,7 +42,7 @@ def async_eventbrite_webhook(self, eventbrite_webhook_id):
             client = Eventbrite(organization.eventbrite_key)
             client.execute_action(eventbrite_webhook_id)
         except Exception as e:
-            logger.debug(f'Eventbrite exception')
+            logger.debug('Eventbrite exception')
             logger.debug(str(e))
             status = 'error'
 
@@ -77,7 +76,7 @@ def async_export_event_to_eventbrite(self, event_id: int):
 
     try:
         export_event_to_eventbrite(event, event.organization)
-    except Exception as e:
+    except Exception:
         logger.exception(f'The {event_id} export was failed')
 
 

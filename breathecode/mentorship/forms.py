@@ -1,7 +1,5 @@
-from django.contrib.auth.models import User
 from django import forms
 from .models import MENTORSHIP_STATUS
-from rest_framework.exceptions import ValidationError, NotFound
 
 
 class CloseMentoringSessionForm(forms.Form):

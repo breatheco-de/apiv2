@@ -1,10 +1,8 @@
-from email.mime import base
 import hashlib, timeago, logging
 import re
 from rest_framework.permissions import AllowAny
 from django.shortcuts import render
 from django.utils import timezone
-from django.db.models import Q
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import HttpResponse, HttpResponseRedirect
@@ -12,7 +10,7 @@ from breathecode.mentorship.caches import MentorProfileCache
 from breathecode.services.calendly import Calendly
 from breathecode.authenticate.models import Token
 from breathecode.authenticate.models import ProfileAcademy
-from breathecode.authenticate.actions import get_user_language, get_user_settings, server_id
+from breathecode.authenticate.actions import get_user_language
 from breathecode.utils.i18n import translation
 
 from breathecode.mentorship.exceptions import ExtendSessionException
@@ -38,7 +36,6 @@ from .serializers import (
     MentorUpdateSerializer,
     SessionPUTSerializer,
     SessionSerializer,
-    GETSessionBigSerializer,
     SessionBigSerializer,
     ServicePOSTSerializer,
     GETMentorBigSerializer,
@@ -121,7 +118,7 @@ def forward_booking_url(request, mentor_slug, token):
     request.session['academy'] = GetAcademySmallSerializer(mentor.academy).data
 
     if mentor.status not in ['ACTIVE', 'UNLISTED']:
-        return render_message(request, f'This mentor is not active')
+        return render_message(request, 'This mentor is not active')
 
     try:
         actions.mentor_is_ready(mentor)
@@ -130,7 +127,7 @@ def forward_booking_url(request, mentor_slug, token):
         logger.exception(e)
         return render_message(
             request,
-            f'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.')
+            'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.')
 
     booking_url = mentor.booking_url
     if '?' not in booking_url:
@@ -159,7 +156,7 @@ def forward_booking_url_by_service(request, mentor_slug, token):
     request.session['academy'] = GetAcademySmallSerializer(mentor.academy).data
 
     if mentor.status not in ['ACTIVE', 'UNLISTED']:
-        return render_message(request, f'This mentor is not active')
+        return render_message(request, 'This mentor is not active')
 
     try:
         actions.mentor_is_ready(mentor)
@@ -168,7 +165,7 @@ def forward_booking_url_by_service(request, mentor_slug, token):
         logger.exception(e)
         return render_message(
             request,
-            f'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.')
+            'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.')
 
     booking_url = mentor.booking_url
     if '?' not in booking_url:
@@ -196,11 +193,11 @@ def pick_mentorship_service(request, token, mentor_slug):
         logger.exception(e)
         return render_message(
             request,
-            f'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.')
+            'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.')
 
     services = mentor.services.all()
     if not services:
-        return render_message(request, f'This mentor is not available on any service')
+        return render_message(request, 'This mentor is not available on any service')
 
     return render(request, 'pick_service.html', {
         'token': token.key,
@@ -334,15 +331,15 @@ class ForwardMeetUrl:
         self.request.session['academy'] = GetAcademySmallSerializer(mentor.academy).data
 
         if mentor.status not in ['ACTIVE', 'UNLISTED']:
-            return render_message(self.request, f'This mentor is not active at the moment', status=400)
+            return render_message(self.request, 'This mentor is not active at the moment', status=400)
 
         try:
             actions.mentor_is_ready(mentor)
 
-        except:
+        except Exception:
             return render_message(
                 self.request,
-                f'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.',
+                'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.',
                 status=400)
 
         is_token_of_mentee = mentor.user.id != self.token.user.id
@@ -491,7 +488,7 @@ def end_mentoring_session(request, session_id, token):
                         'baseUrl': request.get_full_path(),
                     })
             else:
-                return render_message(request, f'There was a problem ending the mentoring session')
+                return render_message(request, 'There was a problem ending the mentoring session')
 
     elif request.method == 'GET':
         session = MentorshipSession.objects.filter(id=session_id).first()
@@ -1202,7 +1199,7 @@ class BillView(APIView, HeaderLimitOffsetPagination):
     def put(self, request, bill_id=None, academy_id=None):
         many = isinstance(request.data, list)
         if many and bill_id:
-            raise ValidationException(f'Avoid using bulk mode passing id in the url',
+            raise ValidationException('Avoid using bulk mode passing id in the url',
                                       code=404,
                                       slug='bulk-mode-and-bill-id')
 
@@ -1219,7 +1216,7 @@ class BillView(APIView, HeaderLimitOffsetPagination):
 
                 if elem.status == 'RECALCULATE' and 'status' in obj and obj['status'] != 'RECALCULATE':
                     raise ValidationException(
-                        f'This bill must be regenerated before you can update its status',
+                        'This bill must be regenerated before you can update its status',
                         code=400,
                         slug='trying-edit-status-to-dirty-bill')
 
@@ -1239,7 +1236,7 @@ class BillView(APIView, HeaderLimitOffsetPagination):
 
             if bill.status == 'RECALCULATE' and 'status' in request.data and request.data[
                     'status'] != 'RECALCULATE':
-                raise ValidationException(f'This bill must be regenerated before you can update its status',
+                raise ValidationException('This bill must be regenerated before you can update its status',
                                           code=400,
                                           slug='trying-edit-status-to-dirty-bill')
 
@@ -1251,7 +1248,7 @@ class BillView(APIView, HeaderLimitOffsetPagination):
                                                      'academy_id': academy_id
                                                  })
         if serializer.is_valid():
-            mentor = serializer.save()
+            serializer.save()
             _serializer = GETBillSmallSerializer(bill, many=many)
             return Response(_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -1,7 +1,5 @@
-import re
 from datetime import datetime, timedelta
 from django.utils import timezone
-from breathecode.utils.datetime_integer import DatetimeInteger
 
 
 def days_ago_to_date(findings, string_date):
@@ -14,7 +12,6 @@ def today():
 
 
 def change_format_to_date(findings, string_date):
-    job_id_fecth = findings
     dtz = datetime.strptime(string_date, '%B %d, %Y')
 
     return timezone.make_aware(dtz)

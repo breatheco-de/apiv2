@@ -1,8 +1,6 @@
 import logging
 from django.contrib import admin
-from django.contrib import messages
 from .models import Platform, ZyteProject, Spider, Job, Employer, Position, PositionAlias, CareerTag, Location, LocationAlias
-from .actions import fetch_sync_all_data, run_spider, get_was_published_date_from_string
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +45,7 @@ def get_was_published_date_from_string_admin(modeladmin, request, queryset):
     try:
         for job in jobs:
             get_was_published_date_from_string(job)
-        messages.success(request, f'The publication date was successfully parsed')
+        messages.success(request, 'The publication date was successfully parsed')
     except Exception as e:
         logger.error(f'There was an error retriving the jobs {str(e)}')
         messages.error(request, f'There was an error retriving the jobs {str(e)}')

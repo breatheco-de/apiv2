@@ -34,7 +34,7 @@ for line in lines:
         else:
             content += f'{key}={value}\n'
 
-    except:
+    except Exception:
         content += '\n'
 
 with open(env_path, 'w') as file:

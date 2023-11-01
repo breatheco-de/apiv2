@@ -1,10 +1,7 @@
 import os
-import json
 from django.core.management.base import BaseCommand
 from django.db.models import Q
-from pathlib import Path
-from breathecode.admissions.models import (Academy, Cohort, SyllabusSchedule, Syllabus, SyllabusVersion,
-                                           SyllabusScheduleTimeSlot)
+from breathecode.admissions.models import (Cohort, SyllabusSchedule, SyllabusScheduleTimeSlot)
 
 
 def db_backup_bucket():

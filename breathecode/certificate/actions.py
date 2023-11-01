@@ -5,9 +5,9 @@ import hashlib
 import requests, os, logging
 from django.utils import timezone
 from urllib.parse import urlencode
-from breathecode.admissions.models import SyllabusVersion, Cohort, CohortUser, FULLY_PAID, UP_TO_DATE
+from breathecode.admissions.models import CohortUser, FULLY_PAID, UP_TO_DATE
 from breathecode.assignments.models import Task
-from breathecode.utils import ValidationException, APIException
+from breathecode.utils import ValidationException
 from .models import ERROR, PERSISTED, Specialty, UserSpecialty, LayoutDesign
 from ..services.google_cloud import Storage
 
@@ -143,7 +143,7 @@ def generate_certificate(user, cohort=None, layout=None):
 
         if not cohort.never_ends and cohort.stage != 'ENDED':
             raise ValidationException(
-                f"The student cohort stage has to be 'ENDED' before you can issue any certificates",
+                "The student cohort stage has to be 'ENDED' before you can issue any certificates",
                 slug='cohort-without-status-ended')
 
         if not uspe.issued_at:

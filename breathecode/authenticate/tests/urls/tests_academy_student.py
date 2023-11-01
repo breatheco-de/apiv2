@@ -41,6 +41,10 @@ def generate_user_invite(data: dict) -> dict:
         'process_message': '',
         'process_status': 'PENDING',
         'user_id': None,
+        'city': None,
+        'country': None,
+        'latitude': None,
+        'longitude': None,
         **data,
     }
 
@@ -1379,6 +1383,10 @@ class StudentPostTestSuite(AuthTestCase):
                 'role_id': 'student',
                 'token': TOKEN,
                 'syllabus_id': None,
+                'city': None,
+                'country': None,
+                'latitude': None,
+                'longitude': None,
             }),
         ])
         self.assertEqual(actions.send_email_message.call_args_list, [

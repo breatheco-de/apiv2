@@ -2,12 +2,10 @@
 """
 Reminder for sending surveys to each cohort every 4 weeks
 """
+# flake8: noqa: F821
+
 from breathecode.provisioning.models import ProvisioningBill, ProvisioningUserConsumption
 from breathecode.utils import ScriptNotification
-from breathecode.feedback.models import Survey
-from breathecode.admissions.models import Cohort, Academy
-from datetime import datetime, timedelta
-from django.utils import timezone
 from django.db.models import Q
 
 bills = ProvisioningBill.objects.filter(academy__id=academy.id, status='ERROR')

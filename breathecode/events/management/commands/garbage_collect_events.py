@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
-from django.core.management.base import BaseCommand, CommandError
-from breathecode.admissions.models import Academy
+from django.core.management.base import BaseCommand
 from ...models import EventbriteWebhook
 
 

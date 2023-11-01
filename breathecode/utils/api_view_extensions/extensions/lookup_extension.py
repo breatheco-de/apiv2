@@ -239,14 +239,17 @@ class LookupExtension(ExtensionBase):
     def __init__(self, **kwargs) -> None:
         ...
 
-    def _build_lookup(
-        self,
-        lang: str,
-        lookup: dict[str, Callable[[str, str, str, Optional[str]], Q]],
-        querystring: dict[str, Any],
-        custom_fields: dict = dict(),
-        overwrite: dict = dict()
-    ) -> tuple[tuple, dict]:
+    def _build_lookup(self,
+                      lang: str,
+                      lookup: dict[str, Callable[[str, str, str, Optional[str]], Q]],
+                      querystring: dict[str, Any],
+                      custom_fields: Optional[dict] = None,
+                      overwrite: Optional[dict] = None) -> tuple[tuple, dict]:
+        if custom_fields is None:
+            custom_fields = {}
+
+        if overwrite is None:
+            overwrite = {}
 
         query = Q()
         lookup = lookup.copy()
@@ -285,7 +288,12 @@ class LookupExtension(ExtensionBase):
     def _fixer(self, querystring: dict[str, str], fix) -> dict[str, str]:
         return querystring
 
-    def build(self, lang: str, overwrite: dict = dict(), **kwargs: dict | tuple) -> tuple[tuple, dict]:
+    def build(self,
+              lang: str,
+              overwrite: Optional[dict] = None,
+              **kwargs: dict | tuple) -> tuple[tuple, dict]:
+        if overwrite is None:
+            overwrite = {}
 
         # foreign
         ids = kwargs.get('ids', tuple())

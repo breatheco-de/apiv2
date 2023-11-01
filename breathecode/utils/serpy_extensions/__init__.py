@@ -1,1 +1,1 @@
-from .serpy_extensions import *
+from .serpy_extensions import *  # noqa: F401

@@ -16,7 +16,7 @@ def create_from_asset(asset):
 
     if asset.assessment is not None and asset.assessment.asset_set.count() > 1:
         associated_assets = ','.join(asset.assessment.asset_set.all())
-        raise ValidationException(f'Assessment has more then one asset associated, please choose only one: ' +
+        raise ValidationException('Assessment has more then one asset associated, please choose only one: ' +
                                   associated_assets)
 
     if asset.assessment is None:
@@ -34,7 +34,7 @@ def create_from_asset(asset):
 
     if a.question_set.count() > 0:
         raise ValidationException(
-            f'Assessment already has questions, only empty assessments can by created from an asset')
+            'Assessment already has questions, only empty assessments can by created from an asset')
 
     a.save()
     quiz = asset.config

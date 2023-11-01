@@ -1,4 +1,4 @@
-from django.http import HttpResponse, HttpResponseRedirect, StreamingHttpResponse
+from django.http import HttpResponseRedirect, StreamingHttpResponse
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 import logging, hashlib, os
@@ -6,17 +6,15 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.db.models import Q
 from rest_framework.views import APIView
-from django.contrib.auth.models import AnonymousUser
 from django.contrib import messages
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from breathecode.utils import ValidationException, capable_of, localize_query, GenerateLookupsMixin, num_to_roman, response_207
-from breathecode.admissions.models import Academy, CohortUser, Cohort
+from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin, num_to_roman, response_207
+from breathecode.admissions.models import CohortUser, Cohort
 from breathecode.authenticate.models import Token
 from rest_framework.exceptions import PermissionDenied
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from breathecode.utils import APIException
 from breathecode.utils.service import Service
 from .models import Task, FinalProject, UserAttachment
 from .actions import deliver_task
@@ -144,10 +142,6 @@ class FinalProjectScreenshotView(APIView):
 
         files = request.data.getlist('file')
         names = request.data.getlist('name')
-        result = {
-            'data': [],
-            'instance': [],
-        }
 
         file = request.data.get('file')
         slugs = []

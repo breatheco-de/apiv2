@@ -1,13 +1,10 @@
 import binascii
 import os
-import uuid
 from django.db import models
 from django.contrib.auth.models import User
 from .signals import event_status_updated, new_event_order, new_event_attendee
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, Syllabus
-from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils.validators.language import validate_language_code
-from django.core.exceptions import ValidationError
 from slugify import slugify
 import uuid as uuid_lib
 

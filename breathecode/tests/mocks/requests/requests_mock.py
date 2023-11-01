@@ -5,7 +5,9 @@ from unittest.mock import Mock
 from .response_mock import ResponseMock
 
 
-def request_mock(endpoints=[]):
+def request_mock(endpoints=None):
+    if endpoints is None:
+        endpoints = []
 
     def base(url: str, *args, **kwargs):
         """Requests get mock"""

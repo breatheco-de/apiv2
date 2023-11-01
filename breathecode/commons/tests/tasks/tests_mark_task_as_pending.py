@@ -1,6 +1,6 @@
 from datetime import timedelta
+import os
 import random
-import json
 from unittest.mock import MagicMock, call
 from logging import Logger
 import pytest
@@ -11,6 +11,9 @@ import breathecode.events.tasks as events_tasks
 from django.utils import timezone
 
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
+
+# this fix a problem caused by the geniuses at pytest-xdist
+random.seed(os.getenv('RANDOM_SEED'))
 
 # minutes
 TOLERANCE = random.randint(3, 10)

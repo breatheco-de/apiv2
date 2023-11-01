@@ -2,11 +2,8 @@ from datetime import timedelta
 from typing import Any
 from django.core.management.base import BaseCommand
 
-from breathecode.admissions.models import Cohort, CohortTimeSlot
-from ...models import Event, LiveClass, Organization, EventbriteWebhook
+from ...models import LiveClass
 from django.utils import timezone
-
-from breathecode.events import tasks
 
 
 class Command(BaseCommand):
