@@ -232,6 +232,8 @@ class AbstractServiceItem(models.Model):
                                  db_index=True,
                                  help_text='Unit type (e.g. UNIT))')
     how_many = models.IntegerField(default=-1, help_text='How many units of this service can be used')
+    sort_priority = models.IntegerField(
+        default=1, help_text='(e.g. 1, 2, 3, ...) It is going to be used to sort the items on the frontend')
 
     class Meta:
         abstract = True
