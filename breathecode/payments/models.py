@@ -162,6 +162,8 @@ class AbstractAsset(models.Model):
                                            default=MONTH,
                                            help_text='Trial duration unit (e.g. DAY, WEEK, MONTH or YEAR)')
 
+    icon_url = models.URLField(blank=True, null=True, default=None)
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
