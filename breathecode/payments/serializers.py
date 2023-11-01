@@ -59,6 +59,7 @@ class GetServiceSmallSerializer(serpy.Serializer):
     slug = serpy.Field()
     # description = serpy.Field()
     # owner = GetAcademySmallSerializer(many=False)
+    icon_url = serpy.Field()
     private = serpy.Field()
     groups = serpy.MethodField()
 
