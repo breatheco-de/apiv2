@@ -16,7 +16,7 @@ DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memor
 
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'BACKEND': 'breathecode.settings.CustomMemCache',
         'LOCATION': 'breathecode',
     },
 }

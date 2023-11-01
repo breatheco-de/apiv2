@@ -1,4 +1,5 @@
 import logging
+import os
 from django_redis import get_redis_connection
 from redis.lock import Lock
 from breathecode.utils import Cache
@@ -26,20 +27,29 @@ def clean_cache(model_cls):
 
     # build a descriptor
     if not have_descriptor and is_a_dependency:
-        my_lock = Lock(conn, f'cache:descriptor:{key}', timeout=0.2, blocking_timeout=0.2)
+        if os.getenv('ENV') != 'test':
+            my_lock = Lock(conn, f'cache:descriptor:{key}', timeout=0.2, blocking_timeout=0.2)
 
-        if my_lock.acquire(blocking=True):
-            try:
+            if my_lock.acquire(blocking=True):
 
-                class _(Cache):
-                    model = model_cls
-                    is_dependency = True
+                try:
 
-            finally:
-                my_lock.release()
+                    class _(Cache):
+                        model = model_cls
+                        is_dependency = True
+
+                finally:
+                    my_lock.release()
+
+            else:
+                logger.error(f'Could not acquire lock for {key} on get_or_create, operation timed out.')
+                return
+
         else:
-            logger.error(f'Could not acquire lock for {key} on get_or_create, operation timed out.')
-            return
+
+            class _(Cache):
+                model = model_cls
+                is_dependency = True
 
     key = model_cls.__module__ + '.' + model_cls.__name__
     clean_task.apply_async(args=[key], countdown=0, priority=10)
