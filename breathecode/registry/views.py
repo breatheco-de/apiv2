@@ -762,9 +762,9 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
     def get(self, request, asset_slug=None, academy_id=None):
         handler = self.extensions(request)
 
-        cache = handler.cache.get()
-        if cache is not None:
-            return cache
+        # cache = handler.cache.get()
+        # if cache is not None:
+        #     return cache
 
         member = ProfileAcademy.objects.filter(user=request.user, academy__id=academy_id).first()
         if member is None:
