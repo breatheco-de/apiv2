@@ -58,6 +58,7 @@ def get_serializer(service_item, service, service_item_features=[], data={}):
             'private': service.private,
             'slug': service.slug,
             'title': service.title,
+            'icon_url': service.icon_url,
         },
         'unit_type': service_item.unit_type,
         'sort_priority': service_item.sort_priority,

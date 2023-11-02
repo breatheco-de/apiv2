@@ -67,7 +67,7 @@ class CacheMeta(type):
 
 def serializer(obj):
     if isinstance(obj, datetime):
-        return obj.isoformat()
+        return obj.isoformat().replace('+00:00', 'Z')
 
     if isinstance(obj, timedelta):
         return str(obj.total_seconds())

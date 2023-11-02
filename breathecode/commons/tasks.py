@@ -141,9 +141,6 @@ MODULES = {}
 
 @task(bind=False, priority=10)
 def clean_task(key: str, **_: Any):
-    print()
-    print()
-    print('clean_task', clean_task)
     unpack = key.split('.')
     model = unpack[-1]
     module = '.'.join(unpack[:-1])

@@ -15,39 +15,37 @@ def to_snake_case(name):
     return re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
 
 
-class TestLead(LegacyAPITestCase):
+def test_post_save__cohort(db, bc, enable_signals):
+    enable_signals()
+    cache.clear()
 
-    def test_post_save__cohort(self, enable_signals):
-        enable_signals()
-        cache.clear()
+    models = ['Cohort', 'Event']
 
-        models = ['Cohort', 'Event']
+    for model in models:
+        cases = [[], [{'x': 1}], [{'x': 1}, {'x': 2}]]
+        attr = to_snake_case(model)
+        lookups = {attr: 1}
 
-        for model in models:
-            cases = [[], [{'x': 1}], [{'x': 1}, {'x': 2}]]
-            attr = to_snake_case(model)
-            lookups = {attr: 1}
+        for expected in cases:
 
-            for expected in cases:
+            json_data = json.dumps(expected)
 
-                json_data = json.dumps(expected)
+            x = bc.database.create(**lookups)
 
-                x = self.bc.database.create(**lookups)
+            cache.set(
+                f'{model}__keys', f'["{model}__", "{model}__sort=slug&slug=100%2C101%2C110%2C111", '
+                f'"{model}__id=1", "{model}__id=2"]')
 
-                cache.set(
-                    f'{model}__keys', f'["{model}__", "{model}__sort=slug&slug=100%2C101%2C110%2C111", '
-                    f'"{model}__id=1", "{model}__id=2"]')
+            cache.set(f'{model}__', json_data)
+            cache.set(f'{model}__sort=slug&slug=100%2C101%2C110%2C111', json_data)
+            cache.set(f'{model}__id=1', json_data)
+            cache.set(f'{model}__id=2', json_data)
 
-                cache.set(f'{model}__', json_data)
-                cache.set(f'{model}__sort=slug&slug=100%2C101%2C110%2C111', json_data)
-                cache.set(f'{model}__id=1', json_data)
-                cache.set(f'{model}__id=2', json_data)
+            getattr(x, attr).delete()
 
-                getattr(x, attr).delete()
+            CACHE[model].keys() == []
 
-                self.assertEqual(CACHE[model].keys(), [])
-
-                self.assertEqual(cache.get(f'{model}__'), None)
-                self.assertEqual(cache.get(f'{model}__sort=slug&slug=100%2C101%2C110%2C111'), None)
-                self.assertEqual(cache.get(f'{model}__id=1'), None)
-                self.assertEqual(cache.get(f'{model}__id=2'), None)
+            cache.get(f'{model}__') == None
+            cache.get(f'{model}__sort=slug&slug=100%2C101%2C110%2C111') == None
+            cache.get(f'{model}__id=1') == None
+            cache.get(f'{model}__id=2') == None
