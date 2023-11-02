@@ -388,23 +388,31 @@ if IS_TEST_ENV:
     import fnmatch
 
     class CustomMemCache(LocMemCache):
-        _keys = []
+        _keys = set()
 
         def delete_pattern(self, pattern):
             keys_to_delete = fnmatch.filter(self._cache.keys(), pattern)
             for key in keys_to_delete:
                 self.delete(key)
 
-            self._keys = [x for x in self._keys if x not in keys_to_delete]
+            self._keys = {x for x in self._keys if x not in keys_to_delete}
+
+        def delete(self, key, *args, **kwargs):
+            self._keys.remove(key)
+            return super().delete(key, *args, **kwargs)
 
         def keys(self, filter):
             if filter:
-                return fnmatch.filter(self._cache.keys(), filter)
+                return sorted(fnmatch.filter(self._keys, filter))
 
-            return self._keys
+            return sorted(list(self._keys))
+
+        def clear(self):
+            self._keys = set()
+            return super().clear()
 
         def set(self, key, *args, **kwargs):
-            self._keys.append(key)
+            self._keys.add(key)
             return super().set(key, *args, **kwargs)
 
     CACHES['default'] = {

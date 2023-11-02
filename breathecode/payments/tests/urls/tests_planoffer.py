@@ -42,6 +42,7 @@ def service_item_serializer(self, service_item, service, groups=[], permissions=
     return {
         'how_many': service_item.how_many,
         'unit_type': service_item.unit_type,
+        'sort_priority': service_item.sort_priority,
         'service': service_serializer(service, groups, permissions),
     }
 

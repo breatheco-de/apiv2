@@ -65,7 +65,10 @@ class PaginationExtension(ExtensionBase):
         self._limit = self._get_limit()
         return queryset[self._offset:self._offset + self._limit]
 
-    def _apply_response_mutation(self, data: list[dict] | dict, headers: Optional[dict] = None):
+    def _apply_response_mutation(self,
+                                 data: list[dict] | dict,
+                                 headers: Optional[dict] = None,
+                                 format='application/json'):
         if headers is None:
             headers = {}
 

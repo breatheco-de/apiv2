@@ -12,7 +12,6 @@ __all__ = ['clean_cache']
 
 
 def clean_cache(model_cls):
-    ...
     from .tasks import clean_task
 
     have_descriptor = model_cls in CACHE_DESCRIPTORS.keys()
@@ -22,12 +21,12 @@ def clean_cache(model_cls):
         logger.warn(f'Cache not implemented for {model_cls.__name__}, skipping')
         return
 
-    conn = get_redis_connection('default')
     key = model_cls.__module__ + '.' + model_cls.__name__
 
     # build a descriptor
     if not have_descriptor and is_a_dependency:
         if os.getenv('ENV') != 'test':
+            conn = get_redis_connection('default')
             my_lock = Lock(conn, f'cache:descriptor:{key}', timeout=0.2, blocking_timeout=0.2)
 
             if my_lock.acquire(blocking=True):

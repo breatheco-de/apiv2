@@ -73,6 +73,7 @@ def service_item_serializer(service_item, service, cohorts=[], data={}):
     return {
         'how_many': service_item.how_many,
         'unit_type': service_item.unit_type,
+        'sort_priority': service_item.sort_priority,
         'service': service_serializer(service, cohorts),
         **data,
     }

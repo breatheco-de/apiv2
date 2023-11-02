@@ -60,6 +60,7 @@ def get_serializer(service_item, service, service_item_features=[], data={}):
             'title': service.title,
         },
         'unit_type': service_item.unit_type,
+        'sort_priority': service_item.sort_priority,
         **data,
     }
 

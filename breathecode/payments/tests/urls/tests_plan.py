@@ -27,6 +27,7 @@ def service_item_serializer(service_item, service):
             'title': service.title,
         },
         'unit_type': service_item.unit_type,
+        'sort_priority': service_item.sort_priority,
     }
 
 
