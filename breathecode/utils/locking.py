@@ -33,9 +33,6 @@ from breathecode.setup import get_redis
 
 logger = getLogger(__name__)
 ENV = os.getenv('ENV', '')
-
-logger = getLogger(__name__)
-
 redis_client = None
 
 
