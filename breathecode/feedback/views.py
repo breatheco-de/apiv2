@@ -78,7 +78,7 @@ class GetAnswerView(APIView):
 
         cache = handler.cache.get()
         if cache is not None:
-            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
+            return cache
 
         items = Answer.objects.filter(academy__id=academy_id)
         lookup = {}

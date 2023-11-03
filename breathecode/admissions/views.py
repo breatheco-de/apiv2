@@ -1,3 +1,4 @@
+import hashlib
 import logging
 
 import pytz
@@ -84,11 +85,11 @@ class AcademyTeacherView(APIView, GenerateLookupsMixin):
 
     @capable_of('read_member')
     def get(self, request, academy_id):
-
         handler = self.extensions(request)
+
         cache = handler.cache.get()
         if cache is not None:
-            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
+            return cache
 
         items = ProfileAcademy.objects.filter(academy__id=academy_id,
                                               role__slug__in=['teacher', 'assistant'
@@ -168,7 +169,7 @@ class PublicCohortView(APIView):
 
         cache = handler.cache.get()
         if cache is not None:
-            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
+            return cache
 
         items = Cohort.objects.filter(private=False).select_related('syllabus_version__syllabus')
 
@@ -295,7 +296,7 @@ class UserMeView(APIView):
 
         cache = handler.cache.get()
         if cache is not None:
-            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
+            return cache
 
         try:
             if isinstance(request.user, AnonymousUser):
@@ -362,7 +363,7 @@ class CohortUserView(APIView, GenerateLookupsMixin):
 
         # cache = handler.cache.get()
         # if cache is not None:
-        #     return Response(cache, status=status.HTTP_200_OK)
+        #     return cache
 
         items = CohortUser.objects.all()
 
@@ -566,7 +567,7 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
 
         # cache = handler.cache.get()
         # if cache is not None:
-        #     return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
+        #     return cache
 
         if user_id is not None:
             item = CohortUser.objects.filter(cohort__academy__id=academy_id,
@@ -1088,7 +1089,7 @@ class CohortMeView(APIView, GenerateLookupsMixin):
 
         cache = handler.cache.get()
         if cache is not None:
-            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
+            return cache
 
         if cohort_id is not None:
             if cohort_id.isnumeric():
@@ -1143,7 +1144,7 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
 
         # cache = handler.cache.get()
         # if cache is not None:
-        #     return Response(cache, status=status.HTTP_200_OK)
+        #     return cache
 
         if cohort_id is not None:
             item = None
@@ -1588,7 +1589,7 @@ class SyllabusVersionView(APIView):
 
         cache = handler.cache.get()
         if cache is not None:
-            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
+            return cache
 
         if academy_id is None:
             raise ValidationException('Missing academy id', slug='missing-academy-id')
@@ -1751,7 +1752,7 @@ class PublicCohortUserView(APIView, GenerateLookupsMixin):
 
         cache = handler.cache.get()
         if cache is not None:
-            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
+            return cache
 
         items = CohortUser.objects.all()
 

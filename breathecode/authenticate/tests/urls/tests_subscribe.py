@@ -135,6 +135,7 @@ def put_serializer(user_invite, cohort=None, syllabus=None, user=None, plans=[],
         'latitude': None,
         'longitude': None,
         'conversion_info': None,
+        'status': user_invite.status,
         **data,
     }
 
@@ -192,6 +193,7 @@ class SubscribeTestSuite(AuthTestCase):
             'access_token': access_token,
             'user': 1,
             **data,
+            'status': 'ACCEPTED',
         })
 
         self.assertEqual(json, expected)
@@ -442,6 +444,7 @@ class SubscribeTestSuite(AuthTestCase):
             'access_token': access_token,
             'user': 1,
             **data,
+            'status': 'ACCEPTED',
         })
 
         self.assertEqual(json, expected)
@@ -622,6 +625,7 @@ class SubscribeTestSuite(AuthTestCase):
                                        'access_token': access_token,
                                        'user': 1,
                                        **data,
+                                       'status': 'ACCEPTED',
                                    })
 
         self.assertEqual(json, expected)
@@ -764,6 +768,7 @@ class SubscribeTestSuite(AuthTestCase):
                                        'access_token': access_token,
                                        'user': 1,
                                        **data,
+                                       'status': 'ACCEPTED',
                                    })
 
         self.assertEqual(json, expected)
@@ -849,6 +854,7 @@ class SubscribeTestSuite(AuthTestCase):
                                        'access_token': access_token,
                                        'user': 1,
                                        **data,
+                                       'status': 'ACCEPTED',
                                    })
 
         self.assertEqual(json, expected)
@@ -981,12 +987,14 @@ class SubscribeTestSuite(AuthTestCase):
         del data['course']
 
         json = response.json()
-        expected = post_serializer(plans=[], data={
-            'id': 1,
-            'access_token': None,
-            'user': None,
-            **data,
-        })
+        expected = post_serializer(plans=[],
+                                   data={
+                                       'id': 1,
+                                       'access_token': None,
+                                       'user': None,
+                                       **data,
+                                       'status': 'WAITING_LIST',
+                                   })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -1048,12 +1056,14 @@ class SubscribeTestSuite(AuthTestCase):
         del data['course']
 
         json = response.json()
-        expected = post_serializer(plans=[], data={
-            'id': 2,
-            'access_token': None,
-            'user': None,
-            **data,
-        })
+        expected = post_serializer(plans=[],
+                                   data={
+                                       'id': 2,
+                                       'access_token': None,
+                                       'user': None,
+                                       **data,
+                                       'status': 'WAITING_LIST',
+                                   })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -1122,6 +1132,7 @@ class SubscribeTestSuite(AuthTestCase):
                                        'access_token': None,
                                        'user': None,
                                        **data,
+                                       'status': 'WAITING_LIST',
                                    })
 
         self.assertEqual(json, expected)
@@ -1195,6 +1206,7 @@ class SubscribeTestSuite(AuthTestCase):
                                        'cohort': 1,
                                        'user': 1,
                                        **data,
+                                       'status': 'ACCEPTED',
                                    })
 
         self.assertEqual(json, expected)
@@ -1296,6 +1308,7 @@ class SubscribeTestSuite(AuthTestCase):
                                        'syllabus': 1,
                                        'user': 1,
                                        **data,
+                                       'status': 'ACCEPTED',
                                    })
 
         self.assertEqual(json, expected)
@@ -1423,6 +1436,7 @@ class SubscribeTestSuite(AuthTestCase):
                                       'access_token': access_token,
                                       'user': 1,
                                       **data,
+                                      'status': 'ACCEPTED',
                                   })
 
         self.assertEqual(json, expected)
@@ -1599,6 +1613,7 @@ class SubscribeTestSuite(AuthTestCase):
                                       'access_token': access_token,
                                       'user': 1,
                                       **data,
+                                      'status': 'ACCEPTED',
                                   })
 
         self.assertEqual(json, expected)
@@ -1706,6 +1721,7 @@ class SubscribeTestSuite(AuthTestCase):
                                       'access_token': access_token,
                                       'user': 1,
                                       **data,
+                                      'status': 'ACCEPTED',
                                   })
 
         self.assertEqual(json, expected)
@@ -1814,6 +1830,7 @@ class SubscribeTestSuite(AuthTestCase):
                                       'id': 1,
                                       'access_token': access_token,
                                       **data,
+                                      'status': 'ACCEPTED',
                                   })
 
         self.assertEqual(json, expected)
@@ -1968,6 +1985,7 @@ class SubscribeTestSuite(AuthTestCase):
                                       'access_token': access_token,
                                       'user': 1,
                                       **data,
+                                      'status': 'ACCEPTED',
                                   })
 
         self.assertEqual(json, expected)
@@ -2080,6 +2098,7 @@ class SubscribeTestSuite(AuthTestCase):
                                       'access_token': access_token,
                                       'user': 1,
                                       **data,
+                                      'status': 'ACCEPTED',
                                   })
 
         self.assertEqual(json, expected)
@@ -2194,6 +2213,7 @@ class SubscribeTestSuite(AuthTestCase):
                                       'id': 1,
                                       'access_token': access_token,
                                       **data,
+                                      'status': 'ACCEPTED',
                                   })
 
         self.assertEqual(json, expected)
@@ -2442,6 +2462,7 @@ class SubscribeTestSuite(AuthTestCase):
                                       'access_token': access_token,
                                       'user': 1,
                                       **data,
+                                      'status': 'ACCEPTED',
                                   })
 
         self.assertEqual(json, expected)
@@ -2589,6 +2610,7 @@ class SubscribeTestSuite(AuthTestCase):
                                        'access_token': access_token,
                                        'user': 1,
                                        **data,
+                                       'status': 'ACCEPTED',
                                    })
 
         self.assertEqual(json, expected)
@@ -2682,6 +2704,7 @@ class SubscribeTestSuite(AuthTestCase):
                                        'access_token': access_token,
                                        'user': 1,
                                        **data,
+                                       'status': 'ACCEPTED',
                                    })
 
         self.assertEqual(json, expected)
@@ -2831,12 +2854,14 @@ class SubscribeTestSuite(AuthTestCase):
         del data['course']
 
         json = response.json()
-        expected = post_serializer(plans=[], data={
-            'id': 1,
-            'access_token': None,
-            'user': None,
-            **data,
-        })
+        expected = post_serializer(plans=[],
+                                   data={
+                                       'id': 1,
+                                       'access_token': None,
+                                       'user': None,
+                                       **data,
+                                       'status': 'WAITING_LIST',
+                                   })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
