@@ -268,7 +268,7 @@ class TestPayments(LegacyAPITestCase):
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
     @patch('breathecode.payments.signals.grant_service_permissions.send', MagicMock())
     def test_consumption_session_is_done(self, enable_signals):
-        enable_signals()
+        enable_signals('breathecode.payments.signals.reimburse_service_units')
 
         mentorship_session = {'status': random.choice(['FAILED', 'IGNORED'])}
         how_many_consumables = random.randint(1, 10)
@@ -378,7 +378,12 @@ class TestPayments(LegacyAPITestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
     def test_consumable_wasted(self, enable_signals):
-        enable_signals()
+        enable_signals(
+            'breathecode.payments.signals.consume_service',
+            'breathecode.payments.signals.grant_service_permissions',
+            'breathecode.payments.signals.lose_service_permissions',
+            'breathecode.payments.signals.reimburse_service_units',  #
+        )
 
         mentorship_session = {'status': random.choice(['FAILED', 'IGNORED'])}
         how_many_consumables = 0

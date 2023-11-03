@@ -11,6 +11,15 @@ logger = logging.getLogger(__name__)
 __all__ = ['clean_cache']
 
 
+def is_test():
+    """Get the environment. It fix a error caused by pytest or python"""
+    env = os.getenv('ENV')
+    if env is None and 'ENV' in os.environ:
+        env = os.environ['ENV']
+
+    return env == 'test'
+
+
 def clean_cache(model_cls):
     from .tasks import clean_task
 
@@ -25,7 +34,7 @@ def clean_cache(model_cls):
 
     # build a descriptor
     if not have_descriptor and is_a_dependency:
-        if os.getenv('ENV') != 'test':
+        if is_test() is False:
             conn = get_redis_connection('default')
             my_lock = Lock(conn, f'cache:descriptor:{key}', timeout=0.2, blocking_timeout=0.2)
 
@@ -33,7 +42,7 @@ def clean_cache(model_cls):
 
                 try:
 
-                    class _(Cache):
+                    class DepCache(Cache):
                         model = model_cls
                         is_dependency = True
 
@@ -46,7 +55,7 @@ def clean_cache(model_cls):
 
         else:
 
-            class _(Cache):
+            class DepCache(Cache):
                 model = model_cls
                 is_dependency = True
 

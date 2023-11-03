@@ -391,7 +391,7 @@ if IS_TEST_ENV:
         _keys = set()
 
         def delete_pattern(self, pattern):
-            keys_to_delete = fnmatch.filter(self._cache.keys(), pattern)
+            keys_to_delete = fnmatch.filter(self._keys, pattern)
             for key in keys_to_delete:
                 self.delete(key)
 
@@ -401,7 +401,7 @@ if IS_TEST_ENV:
             self._keys.remove(key)
             return super().delete(key, *args, **kwargs)
 
-        def keys(self, filter):
+        def keys(self, filter=None):
             if filter:
                 return sorted(fnmatch.filter(self._keys, filter))
 

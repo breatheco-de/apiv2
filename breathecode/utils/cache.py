@@ -76,7 +76,7 @@ def serializer(obj):
 
 
 class Cache(metaclass=CacheMeta):
-    version_prefix: str = ''
+    _version_prefix: str = ''
     model: models.Model
 
     one_to_one: list[models.Model]
@@ -93,29 +93,41 @@ class Cache(metaclass=CacheMeta):
         sorted_kwargs = sorted(kwargs.items())
 
         qs = urllib.parse.urlencode(sorted_kwargs)
-        return f'{cls.version_prefix}{key}__{qs}'
+        return f'{cls._version_prefix}{key}__{qs}'
 
     @classmethod
-    def clear(cls, cleaned: Optional[set] = None, deep=0):
-        if cleaned is None:
-            cleaned = set()
+    def clear(cls, deep=0, max_deep=None) -> set | None:
+        if max_deep is None:
+            max_deep = cls.max_deep
 
-        model_name = cls.model.__name__
-        cleaned.add(cls.model)
+        resolved = set()
 
-        cache.delete_pattern(f'{cls.version_prefix}{model_name}*')
+        resolved.add(cls)
 
-        if deep >= cls.max_deep:
-            return
+        if deep >= max_deep:
+            return set()
 
         for x in cls.one_to_one | cls.many_to_one | cls.many_to_many:
-            if x.__name__ not in cleaned and x in CACHE_DESCRIPTORS:
-                CACHE_DESCRIPTORS[x].clear(cleaned, deep + 1)
+            # lazy load the dependency to can clean it
+            if x not in CACHE_DESCRIPTORS and x in CACHE_DEPENDENCIES:
+
+                class DepCache(Cache):
+                    model = x
+                    is_dependency = True
+
+            if x in CACHE_DESCRIPTORS:
+                resolved |= CACHE_DESCRIPTORS[x].clear(deep + 1, max_deep)
+
+        if deep != 0:
+            return resolved
+
+        for descriptor in resolved:
+            cache.delete_pattern(f'{cls._version_prefix}{descriptor.model.__name__}__*')
 
     @classmethod
     def keys(cls):
         key = cls.model.__name__
-        return cache.keys(f'{cls.version_prefix}{key}__*')
+        return cache.keys(f'{cls._version_prefix}{key}__*')
 
     @classmethod
     def get(cls, data) -> dict:
@@ -130,7 +142,20 @@ class Cache(metaclass=CacheMeta):
         mime = 'application/json'
         headers = {}
 
-        for s in data[:30].decode('utf-8'):
+        # parse a fixed amount of bytes to get the mime type
+        try:
+            head = data[:30].decode('utf-8')
+
+        # if the data cannot be decoded as utf-8, it means that a section was compressed
+        except Exception as e:
+            try:
+                head = data[:e.start].decode('utf-8')
+
+            # if the data cannot be decoded as utf-8, it means that it does not have a header
+            except Exception:
+                head = ''
+
+        for s in head:
             if s in ['{', '[']:
                 break
 
@@ -154,8 +179,17 @@ class Cache(metaclass=CacheMeta):
         return data[starts:], mime, headers
 
     @classmethod
-    def set(cls, data: str | dict | list[dict], format='application/json', timeout=-1, **kwargs) -> str:
-        key = cls._generate_key(**kwargs)
+    def set(cls,
+            data: str | dict | list[dict],
+            format: str = 'application/json',
+            timeout: int = -1,
+            params: Optional[dict] = None) -> str:
+        """Set a key value pair on the cache in bytes, it reminds the format and compress the data if needed."""
+
+        if params is None:
+            params = {}
+
+        key = cls._generate_key(**params)
         res = {
             'headers': {
                 'Content-Type': format,

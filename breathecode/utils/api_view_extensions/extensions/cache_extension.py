@@ -84,7 +84,7 @@ class CacheExtension(ExtensionBase):
         params = self._get_params()
 
         try:
-            res = self._cache.set(data, format=format, **params)
+            res = self._cache.set(data, format=format, params=params)
             data = res['data']
             headers = {
                 **headers,
