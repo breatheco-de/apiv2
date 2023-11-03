@@ -155,6 +155,8 @@ class Cache(metaclass=CacheMeta):
             except Exception:
                 head = ''
 
+            headers['Content-Encoding'] = 'br'
+
         for s in head:
             if s in ['{', '[']:
                 break
