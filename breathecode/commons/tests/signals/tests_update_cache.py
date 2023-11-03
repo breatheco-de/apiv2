@@ -346,7 +346,9 @@ def test_get_cache__with_meta(cache_cls: Cache, value, params, key, headers):
         [],
         {},
         '',
-        {},
+        {
+            'Content-Encoding': 'br',
+        },
     ),
     (
         [
@@ -358,7 +360,9 @@ def test_get_cache__with_meta(cache_cls: Cache, value, params, key, headers):
             'x': 1
         },
         'x=1',
-        {},
+        {
+            'Content-Encoding': 'br',
+        },
     ),
     (
         [
@@ -374,7 +378,9 @@ def test_get_cache__with_meta(cache_cls: Cache, value, params, key, headers):
             'y': 2
         },
         'x=1&y=2',
-        {},
+        {
+            'Content-Encoding': 'br',
+        },
     ),
 ])
 def test_get_cache_compressed__no_meta(cache_cls: Cache, value, params, key, headers):
@@ -393,7 +399,9 @@ def test_get_cache_compressed__no_meta(cache_cls: Cache, value, params, key, hea
         [],
         {},
         '',
-        {},
+        {
+            'Content-Encoding': 'br',
+        },
     ),
     (
         [
@@ -405,7 +413,9 @@ def test_get_cache_compressed__no_meta(cache_cls: Cache, value, params, key, hea
             'x': 1
         },
         'x=1',
-        {},
+        {
+            'Content-Encoding': 'br',
+        },
     ),
     (
         [
@@ -421,7 +431,9 @@ def test_get_cache_compressed__no_meta(cache_cls: Cache, value, params, key, hea
             'y': 2
         },
         'x=1&y=2',
-        {},
+        {
+            'Content-Encoding': 'br',
+        },
     ),
 ])
 def test_get_cache_compressed__with_meta(cache_cls: Cache, value, params, key, headers):
