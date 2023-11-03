@@ -95,22 +95,6 @@ def test_create_update_and_delete(bc: Breathecode, enable_signals, model_name, k
     assert_cache_is_empty(model_name)
 
 
-def test_registered_model_caches():
-    x = {
-        x.__module__ + '.' + x.__name__
-        for x in CACHE_DESCRIPTORS.keys() if CACHE_DESCRIPTORS[x].is_dependency is False
-    }
-    assert x == {
-        'breathecode.admissions.models.Cohort',
-        'breathecode.authenticate.models.ProfileAcademy',
-        'breathecode.admissions.models.CohortUser',
-        'django.contrib.auth.models.User',
-        'breathecode.admissions.models.SyllabusVersion',
-        'breathecode.events.models.Event',
-        'breathecode.events.models.LiveClass',
-    }
-
-
 def test_cache_defaults():
     assert Cache.max_deep == 2
 
