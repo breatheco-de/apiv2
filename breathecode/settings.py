@@ -155,7 +155,7 @@ MIDDLEWARE += [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     #'breathecode.utils.admin_timezone.TimezoneMiddleware',
-    'django.middleware.http.ConditionalGetMiddleware',
+    # 'django.middleware.http.ConditionalGetMiddleware',
 ]
 
 DISABLE_SERVER_SIDE_CURSORS = True  # required when using pgbouncer's pool_mode=transaction
