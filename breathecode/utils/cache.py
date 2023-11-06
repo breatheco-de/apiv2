@@ -194,6 +194,7 @@ class Cache(metaclass=CacheMeta):
             print('mime1')
             unpack = mime.decode('utf-8').split(':')
             mime = unpack[0]
+            print('unpack', unpack)
             if unpack == 2:
                 print('mime2')
                 headers['Content-Encoding'] = unpack[1]
