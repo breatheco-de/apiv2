@@ -189,14 +189,16 @@ class Cache(metaclass=CacheMeta):
 
         print('mime', mime, type(mime))
         print('starts', starts)
-        print('headers', headers)
 
         if isinstance(mime, bytes):
+            print('mime1')
             unpack = mime.decode('utf-8').split(':')
             mime = unpack[0]
             if unpack == 2:
+                print('mime2')
                 headers['Content-Encoding'] = unpack[1]
 
+        print('headers', headers)
         return data[starts:], mime, headers
 
     @classmethod
