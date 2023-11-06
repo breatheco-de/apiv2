@@ -1,4 +1,6 @@
+import functools
 import logging
+import os
 from typing import Optional
 from breathecode.utils.api_view_extensions.extension_base import ExtensionBase
 from breathecode.utils.api_view_extensions.priorities.response_order import ResponseOrder
@@ -9,6 +11,13 @@ from rest_framework import status
 __all__ = ['CacheExtension']
 
 logger = logging.getLogger(__name__)
+
+ENABLE_LIST_OPTIONS = ['true', '1', 'yes', 'y']
+
+
+@functools.lru_cache(maxsize=1)
+def is_cache_enabled():
+    return os.getenv('CACHE', '1').lower() in ENABLE_LIST_OPTIONS
 
 
 class CacheExtension(ExtensionBase):
@@ -47,8 +56,12 @@ class CacheExtension(ExtensionBase):
         return {**self._request.GET.dict(), **self._request.parser_context['kwargs'], **extends}
 
     def get(self) -> dict:
+        if not is_cache_enabled():
+            logger.debug('Cache has been disabled')
+            return None
+
         # allow requests to disable cache with querystring "cache" variable
-        cache_is_active = self._request.GET.get('cache', 'true').lower() in ['true', '1', 'yes']
+        cache_is_active = self._request.GET.get('cache', 'true').lower() in ENABLE_LIST_OPTIONS
         if not cache_is_active:
             logger.debug('Cache has been forced to disable')
             return None
@@ -59,6 +72,15 @@ class CacheExtension(ExtensionBase):
 
             if res is None:
                 return None
+
+            print('-------------------')
+            print('-------------------')
+            print('-------------------')
+            print('-------------------')
+            print('-------------------')
+            print('GET CACHE')
+            print('params', params)
+            print('res', res)
 
             data, mime, headers = res
             response = HttpResponse(data, content_type=mime, status=status.HTTP_200_OK, headers=headers)
@@ -81,6 +103,10 @@ class CacheExtension(ExtensionBase):
         if headers is None:
             headers = {}
 
+        if not is_cache_enabled():
+            logger.debug('Cache has been disabled')
+            return (data, headers)
+
         params = self._get_params()
 
         try:
@@ -90,6 +116,15 @@ class CacheExtension(ExtensionBase):
                 **headers,
                 **res['headers'],
             }
+
+            print('-------------------')
+            print('-------------------')
+            print('-------------------')
+            print('-------------------')
+            print('-------------------')
+            print('SET CACHE')
+            print('params', params)
+            print('res', res)
 
         except Exception:
             logger.exception('Error while trying to set the cache')

@@ -1,4 +1,6 @@
 from __future__ import annotations
+import functools
+import os
 from typing import Optional
 import urllib.parse, json
 from django.core.cache import cache
@@ -14,6 +16,13 @@ from django.db.models.fields.related_descriptors import (ReverseManyToOneDescrip
 __all__ = ['Cache', 'CACHE_DESCRIPTORS', 'CACHE_DEPENDENCIES']
 CACHE_DESCRIPTORS: dict[models.Model, Cache] = {}
 CACHE_DEPENDENCIES: set[models.Model] = set()
+
+ENABLE_LIST_OPTIONS = ['true', '1', 'yes', 'y']
+
+
+@functools.lru_cache(maxsize=1)
+def is_compression_enabled():
+    return os.getenv('COMPRESSION', '1').lower() in ENABLE_LIST_OPTIONS
 
 
 class CacheMeta(type):
@@ -203,7 +212,7 @@ class Cache(metaclass=CacheMeta):
             data = json.dumps(data, default=serializer).encode('utf-8')
 
             # 10KB
-            if sys.getsizeof(data) / 1024 > 10:
+            if sys.getsizeof(data) / 1024 > 10 and is_compression_enabled():
                 data = brotli.compress(data)
                 res['data'] = data
                 res['headers']['Content-Encoding'] = 'br'
@@ -219,7 +228,7 @@ class Cache(metaclass=CacheMeta):
             data = data.encode('utf-8')
 
             # 10KB
-            if sys.getsizeof(data) / 1024 > 10:
+            if sys.getsizeof(data) / 1024 > 10 and is_compression_enabled():
                 data = brotli.compress(data)
                 res['data'] = data
                 res['headers']['Content-Encoding'] = 'br'
@@ -235,7 +244,7 @@ class Cache(metaclass=CacheMeta):
             data = data.encode('utf-8')
 
             # 10KB
-            if sys.getsizeof(data) / 1024 > 10:
+            if sys.getsizeof(data) / 1024 > 10 and is_compression_enabled():
                 data = brotli.compress(data)
                 res['data'] = data
                 res['headers']['Content-Encoding'] = 'br'
