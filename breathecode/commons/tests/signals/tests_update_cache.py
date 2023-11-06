@@ -205,7 +205,15 @@ def test_model_cache__many_to_many(cache_cls, value):
     ),
 ])
 def test_set_cache(cache_cls: Cache, value, params, key):
-    cache_cls.set(value, params=params)
+    res = cache_cls.set(value, params=params)
+
+    serialized = json.dumps(value).encode('utf-8')
+    assert res == {
+        'data': serialized,
+        'headers': {
+            'Content-Type': 'application/json',
+        },
+    }
 
     k = f'{cache_cls.model.__name__}__{key}'
     assert cache.keys() == [k]
@@ -251,13 +259,22 @@ def test_set_cache(cache_cls: Cache, value, params, key):
 def test_set_cache_compressed(monkeypatch, cache_cls: Cache, value, params, key):
     monkeypatch.setattr('sys.getsizeof', lambda _: (random.randint(10, 1000) * 1024) + 1)
 
-    cache_cls.set(value, params=params)
+    res = cache_cls.set(value, params=params)
+
+    serialized = brotli.compress(json.dumps(value).encode('utf-8'))
+    assert res == {
+        'data': serialized,
+        'headers': {
+            'Content-Encoding': 'br',
+            'Content-Type': 'application/json',
+        },
+    }
 
     k = f'{cache_cls.model.__name__}__{key}'
     assert cache.keys() == [k]
     assert cache_cls.keys() == [k]
 
-    assert cache.get(k) == b'application/json:br    ' + brotli.compress(json.dumps(value).encode('utf-8'))
+    assert cache.get(k) == b'application/json:br    ' + serialized
 
 
 @pytest.mark.parametrize('cache_cls', [CohortCache, EventCache])
