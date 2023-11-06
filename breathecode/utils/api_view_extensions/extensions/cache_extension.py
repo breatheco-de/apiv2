@@ -73,15 +73,6 @@ class CacheExtension(ExtensionBase):
             if res is None:
                 return None
 
-            print('-------------------')
-            print('-------------------')
-            print('-------------------')
-            print('-------------------')
-            print('-------------------')
-            print('GET CACHE')
-            print('params', params)
-            print('res', res)
-
             data, mime, headers = res
             response = HttpResponse(data, content_type=mime, status=status.HTTP_200_OK, headers=headers)
             return response
@@ -116,15 +107,6 @@ class CacheExtension(ExtensionBase):
                 **headers,
                 **res['headers'],
             }
-
-            print('-------------------')
-            print('-------------------')
-            print('-------------------')
-            print('-------------------')
-            print('-------------------')
-            print('SET CACHE')
-            print('params', params)
-            print('res', res)
 
         except Exception:
             logger.exception('Error while trying to set the cache')

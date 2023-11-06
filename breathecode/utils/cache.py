@@ -151,9 +151,6 @@ class Cache(metaclass=CacheMeta):
         mime = 'application/json'
         headers = {}
 
-        print('REDIS GET')
-        print('data', data)
-
         # parse a fixed amount of bytes to get the mime type
         try:
             head = data[:30].decode('utf-8')
@@ -169,8 +166,6 @@ class Cache(metaclass=CacheMeta):
 
             headers['Content-Encoding'] = 'br'
 
-        print('head', head)
-
         for s in head:
             if s in ['{', '[']:
                 break
@@ -183,23 +178,15 @@ class Cache(metaclass=CacheMeta):
             starts += 1
 
             if spaces == 4:
-                print('spaces was four')
                 mime = data[:starts - 4]
                 break
 
-        print('mime', mime, type(mime))
-        print('starts', starts)
-
         if isinstance(mime, bytes):
-            print('mime1')
             unpack = mime.decode('utf-8').split(':')
             mime = unpack[0]
-            print('unpack', unpack)
             if len(unpack) == 2:
-                print('mime2')
                 headers['Content-Encoding'] = unpack[1]
 
-        print('headers', headers)
         return data[starts:], mime, headers
 
     @classmethod
