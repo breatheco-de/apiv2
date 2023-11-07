@@ -2,11 +2,13 @@
 """
 Looks for events published without tags
 """
-import os
+
+# flake8: noqa: F821
+
 from breathecode.events.models import Event
 from breathecode.utils import ScriptNotification
 from django.utils import timezone
-from breathecode.utils.datetime_integer import duration_to_str, from_now
+from breathecode.utils.datetime_integer import from_now
 
 published_without_tags = Event.objects.filter(status='ACTIVE',
                                               academy__id=academy.id,
@@ -17,7 +19,7 @@ total = published_without_tags.count()
 if total > 0:
     msg = ''
     for event in published_without_tags:
-        msg += f'- <a href="{ADMIN_URL}/events/event/{event.id}?location={academy.slug}">{event.title}</a> added {from_now(event.created_at)} ago. \n'
+        msg += f'- <a href="{ADMIN_URL}/events/event/{event.id}?location={academy.slug}">{event.title}</a> added {from_now(event.created_at)} ago. \n'  # noqa: F821
 
     raise ScriptNotification(f'There are {total} published events without tags \n\n' + msg,
                              status='CRITICAL',

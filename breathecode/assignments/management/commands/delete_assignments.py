@@ -1,6 +1,5 @@
-import os, requests, sys, pytz
-from datetime import datetime
-from django.core.management.base import BaseCommand, CommandError
+import os
+from django.core.management.base import BaseCommand
 from ...models import Task
 
 HOST = os.environ.get('OLD_BREATHECODE_API')

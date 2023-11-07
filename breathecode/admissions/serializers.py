@@ -1,12 +1,7 @@
 from collections import OrderedDict
 import logging
-from typing_extensions import Required
-from django.http import QueryDict
-import serpy
-from traitlets import Instance
 from breathecode.admissions.actions import ImportCohortTimeSlots
 from django.db.models import Q
-from breathecode.assignments.models import Task
 from breathecode.utils import ValidationException, localize_query, serializers, serpy
 from django.contrib.auth.models import User
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
@@ -790,7 +785,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         cohorts = localize_query(cohorts, request).first()
 
         if not cohorts:
-            logger.debug(f'Cohort not be found in related academies')
+            logger.debug('Cohort not be found in related academies')
             raise ValidationException('Specified cohort not be found')
 
         prohibited_stages = ['INACTIVE', 'DELETED', 'ENDED']
@@ -858,8 +853,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
             if 'days' in task.cohort.syllabus_version.__dict__['json']:
                 for day in task.cohort.syllabus_version.__dict__['json']['days']:
                     for assignment in day['assignments']:
-                        if 'mandatory' not in assignment or ('mandatory' in assignment
-                                                             and assignment['mandatory'] == True):
+                        if 'mandatory' not in assignment or ('mandatory' in assignment and assignment['mandatory'] == True):
                             mandatory_slugs.append(assignment['slug'])
 
         has_tasks = Task.objects.filter(associated_slug__in=mandatory_slugs).exclude(

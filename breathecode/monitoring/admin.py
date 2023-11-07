@@ -50,7 +50,7 @@ class ApplicationAdmin(admin.ModelAdmin):
         }
         now = timezone.now()
         if obj.paused_until is not None and obj.paused_until > now:
-            return format_html(f"<span class='badge bc-warning'> ⏸ PAUSED</span>")
+            return format_html("<span class='badge bc-warning'> ⏸ PAUSED</span>")
 
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 
@@ -93,7 +93,7 @@ class EndpointAdmin(admin.ModelAdmin):
         }
         now = timezone.now()
         if obj.paused_until is not None and obj.paused_until > now:
-            return format_html(f"<span class='badge bc-warning'> ⏸ PAUSED</span>")
+            return format_html("<span class='badge bc-warning'> ⏸ PAUSED</span>")
 
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 
@@ -147,7 +147,7 @@ class MonitorScriptAdmin(admin.ModelAdmin):
         }
         now = timezone.now()
         if obj.paused_until is not None and obj.paused_until > now:
-            return format_html(f"<span class='badge bc-warning'> ⏸ PAUSED</span>")
+            return format_html("<span class='badge bc-warning'> ⏸ PAUSED</span>")
 
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 

@@ -1,11 +1,10 @@
-import re, hashlib, datetime, binascii, os
+import hashlib, binascii, os
 from django.utils import timezone
 from breathecode.admissions.models import Academy, Syllabus
 from django.contrib.auth.models import User
 from django.db import models
 from datetime import timedelta
 import breathecode.mentorship.signals as signals
-from slugify import slugify
 from breathecode.notify.models import SlackChannel
 from breathecode.utils.validators.language import validate_language_code
 # settings customizable for each academy

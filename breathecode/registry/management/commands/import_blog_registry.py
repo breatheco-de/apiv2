@@ -1,8 +1,7 @@
-import os, requests, logging, frontmatter
+import requests, logging, frontmatter
 from django.contrib.auth.models import User
-from django.core.management.base import BaseCommand, CommandError
-from ...actions import pull_from_github
-from ...tasks import async_pull_from_github, async_regenerate_asset_readme
+from django.core.management.base import BaseCommand
+from ...tasks import async_regenerate_asset_readme
 from ...models import Asset, AssetCategory
 from breathecode.admissions.models import Academy
 
@@ -62,7 +61,7 @@ class Command(BaseCommand):
         try:
             all_posts = resp.json()
             logger.debug(f'Found {len(all_posts)} posts to import...')
-        except requests.exceptions.JSONDecodeError as e:
+        except requests.exceptions.JSONDecodeError:
             logger.error('Error decoding json: {}'.format(resp.text))
 
         owner = User.objects.filter(id=1).first()

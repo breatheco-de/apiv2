@@ -68,7 +68,7 @@ def get_root_schema_view(elements, extend=None):
                 for key2 in result['paths'][key]:
                     result['paths'][key][key2]['security'] = [{'ApiKeyAuth': []}]
 
-        setattr(Cache, 'openapi', result)
+        Cache.openapi = result
 
         return Response(result)
 

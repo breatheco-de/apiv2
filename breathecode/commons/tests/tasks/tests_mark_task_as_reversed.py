@@ -1,4 +1,5 @@
 from datetime import timedelta
+import os
 import random
 import importlib
 
@@ -11,6 +12,9 @@ from breathecode.commons.tasks import mark_task_as_reversed
 from django.utils import timezone
 
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
+
+# this fix a problem caused by the geniuses at pytest-xdist
+random.seed(os.getenv('RANDOM_SEED'))
 
 # minutes
 TOLERANCE = random.randint(3, 10)
@@ -118,7 +122,7 @@ def test_not_found(bc: Breathecode):
 
 # When: TaskManager without reverse function
 # Then: the task execution is resheduled
-@pytest.mark.parametrize(param_names, params)
+@pytest.mark.parametrize(param_names, sorted(params))
 def test_no_reverse_function(bc: Breathecode, arrange, task_module, task_name):
 
     model = arrange({
@@ -146,7 +150,7 @@ def test_no_reverse_function(bc: Breathecode, arrange, task_module, task_name):
 
 # When: TaskManager with reverse function
 # Then: the task is reverse
-@pytest.mark.parametrize(param_names, params)
+@pytest.mark.parametrize(param_names, sorted(params))
 def test_reversed(bc: Breathecode, arrange, task_module, task_name):
 
     model = arrange({
@@ -185,8 +189,8 @@ def test_reversed(bc: Breathecode, arrange, task_module, task_name):
 
 # When: TaskManager last_run is less than the tolerance
 # Then: mark_task_as_pending is rescheduled
-@pytest.mark.parametrize('delta', TOLERATED_DELTA)
-@pytest.mark.parametrize(param_names, random.choices(params, k=1))
+@pytest.mark.parametrize('delta', sorted(TOLERATED_DELTA))
+@pytest.mark.parametrize(param_names, sorted(random.choices(params, k=1)))
 def test_task_last_run_less_than_the_tolerance(bc: Breathecode, arrange, task_module, task_name, delta,
                                                utc_now):
 
@@ -225,8 +229,8 @@ def test_task_last_run_less_than_the_tolerance(bc: Breathecode, arrange, task_mo
 
 # When: TaskManager last_run is less than the tolerance, force is True
 # Then: it's rescheduled, the tolerance is ignored
-@pytest.mark.parametrize('delta', TOLERATED_DELTA)
-@pytest.mark.parametrize(param_names, random.choices(params, k=1))
+@pytest.mark.parametrize('delta', sorted(TOLERATED_DELTA))
+@pytest.mark.parametrize(param_names, sorted(random.choices(params, k=1)))
 def test_task_last_run_less_than_the_tolerance__force_true(bc: Breathecode, arrange, task_module, task_name,
                                                            delta):
 
@@ -262,9 +266,9 @@ def test_task_last_run_less_than_the_tolerance__force_true(bc: Breathecode, arra
 
 # When: TaskManager last_run is less than the tolerance, attempts is greater than 10
 # Then: it's rescheduled because the task was not ended and it's not running
-@pytest.mark.parametrize('attempts', [x for x in range(11, 16)])
-@pytest.mark.parametrize('delta', TOLERATED_DELTA)
-@pytest.mark.parametrize(param_names, random.choices(params, k=1))
+@pytest.mark.parametrize('attempts', sorted([x for x in range(11, 16)]))
+@pytest.mark.parametrize('delta', sorted(TOLERATED_DELTA))
+@pytest.mark.parametrize(param_names, sorted(random.choices(params, k=1)))
 def test_task_last_run_less_than_the_tolerance__attempts_gt_10(bc: Breathecode, arrange, task_module,
                                                                task_name, delta, attempts):
 
@@ -300,8 +304,9 @@ def test_task_last_run_less_than_the_tolerance__attempts_gt_10(bc: Breathecode, 
 
 # When: TaskManager last_run is greater than the tolerance
 # Then: mark_task_as_pending is rescheduled
-@pytest.mark.parametrize('delta', NO_TOLERATED_DELTA)
-@pytest.mark.parametrize(param_names, random.choices(params, k=1))
+# @pytest.mark.randomized
+@pytest.mark.parametrize('delta', sorted(NO_TOLERATED_DELTA))
+@pytest.mark.parametrize(param_names, sorted(random.choices(params, k=1)))
 def test_task_last_run_greater_than_the_tolerance(bc: Breathecode, arrange, task_module, task_name, delta):
 
     model = arrange({

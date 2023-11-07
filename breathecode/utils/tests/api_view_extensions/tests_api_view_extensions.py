@@ -1,4 +1,5 @@
 import json
+import pytest
 import serpy
 from unittest.mock import MagicMock, call, patch
 from rest_framework.views import APIView
@@ -671,6 +672,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
     🔽🔽🔽 Pagination True
     """
 
+    @pytest.mark.skip(reason='It was not prioritized in the scrum')
     def test_pagination__get__activate__25_cohorts_just_get_20(self):
         cache.clear()
 

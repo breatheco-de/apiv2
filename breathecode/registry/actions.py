@@ -1,25 +1,19 @@
 import logging, json, os, re, pathlib, base64, hashlib, requests
 from typing import Optional
 from breathecode.media.models import Media, MediaResolution
-from breathecode.media.views import media_gallery_bucket
 from breathecode.utils.views import set_query_parameter
-from breathecode.utils.validation_exception import ValidationException
 from breathecode.services.google_cloud.storage import Storage
 from django.db.models import Q
-from django.contrib.auth.models import User
 from django.utils import timezone
 from django.template.loader import get_template
-from urllib.parse import urlparse, urlencode
-from slugify import slugify
-from breathecode.utils import APIException
-from breathecode.assessment.models import Assessment
+from urllib.parse import urlencode
 from breathecode.assessment.actions import create_from_asset
 from breathecode.authenticate.models import CredentialsGithub
-from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog, ASSET_STATUS, AssetImage, OriginalityScan, ContentVariable
+from .models import Asset, AssetTechnology, AssetErrorLog, ASSET_STATUS, OriginalityScan, ContentVariable
 from .serializers import AssetBigSerializer
 from .utils import (LessonValidator, ExerciseValidator, QuizValidator, AssetException, ProjectValidator,
                     ArticleValidator, OriginalityWrapper)
-from github import Github, GithubException
+from github import Github
 from breathecode.registry import tasks
 
 logger = logging.getLogger(__name__)
@@ -308,13 +302,13 @@ def pull_github_lesson(github, asset, override_meta=False):
     org_name, repo_name, branch_name = asset.get_repo_meta()
     repo = github.get_repo(f'{org_name}/{repo_name}')
 
-    file_name = os.path.basename(asset.readme_url)
+    os.path.basename(asset.readme_url)
 
     if branch_name is None:
         raise Exception('Lesson URL must include branch name after blob')
 
     result = re.search(r'\/blob\/([\w\d_\-]+)\/(.+)', asset.readme_url)
-    branch, file_path = result.groups()
+    _, file_path = result.groups()
     logger.debug(f'Fetching readme: {file_path}')
 
     blob_file = get_blob_content(repo, file_path, branch=branch_name)
@@ -457,17 +451,17 @@ def clean_readme_hide_comments(asset):
         raise Exception('Readme with to many <!-- hide -> comments')
 
     replaced = ''
-    startIndex = 0
+    start_index = 0
     while len(findings) > 1:
         opening_comment = findings.pop(0)
-        endIndex = opening_comment.start()
+        end_index = opening_comment.start()
 
-        replaced += content[startIndex:endIndex]
+        replaced += content[start_index:end_index]
 
         closing_comment = findings.pop(0)
-        startIndex = closing_comment.end()
+        start_index = closing_comment.end()
 
-    replaced += content[startIndex:]
+    replaced += content[start_index:]
     asset.set_readme(replaced)
     return asset
 
@@ -578,7 +572,7 @@ class AssetThumbnailGenerator:
 
         preview_url = self.asset.get_preview_generation_url()
         if preview_url is None:
-            raise Exception(f'Not able to retrieve a preview generation url')
+            raise Exception('Not able to retrieve a preview generation url')
 
         filename = self.asset.get_thumbnail_name()
         url = set_query_parameter(preview_url, 'slug', self.asset.slug)
@@ -633,22 +627,22 @@ def pull_learnpack_asset(github, asset, override_meta):
     readme_file = None
     try:
         readme_file = repo.get_contents(f'README{lang}.md')
-    except:
+    except Exception:
         raise Exception(f'Translation on README{lang}.md not found')
 
     learn_file = None
     try:
         learn_file = repo.get_contents('learn.json')
-    except:
+    except Exception:
         try:
             learn_file = repo.get_contents('.learn/learn.json')
-        except:
+        except Exception:
             try:
                 learn_file = repo.get_contents('bc.json')
-            except:
+            except Exception:
                 try:
                     learn_file = repo.get_contents('.learn/bc.json')
-                except:
+                except Exception:
                     raise Exception('No configuration learn.json or bc.json file was found')
 
     base64_readme = str(readme_file.content)
@@ -678,7 +672,7 @@ def pull_learnpack_asset(github, asset, override_meta):
         if 'preview' in config:
             asset.preview = config['preview']
         else:
-            raise Exception(f'Missing preview URL')
+            raise Exception('Missing preview URL')
 
         if 'video-id' in config:
             asset.solution_video_url = get_video_url(str(config['video-id']))
@@ -733,13 +727,13 @@ def pull_quiz_asset(github, asset):
     org_name, repo_name, branch_name = asset.get_repo_meta()
     repo = github.get_repo(f'{org_name}/{repo_name}')
 
-    file_name = os.path.basename(asset.readme_url)
+    os.path.basename(asset.readme_url)
 
     if branch_name is None:
         raise Exception('Quiz URL must include branch name after blob')
 
     result = re.search(r'\/blob\/([\w\d_\-]+)\/(.+)', asset.readme_url)
-    branch, file_path = result.groups()
+    _, file_path = result.groups()
     logger.debug(f'Fetching quiz json: {file_path}')
 
     encoded_config = get_blob_content(repo, file_path, branch=branch_name).content
@@ -793,7 +787,7 @@ def scan_asset_originality(asset):
     try:
         credentials = asset.academy.credentialsoriginality
     except Exception as e:
-        scan.status_text = f'Error retriving originality credentials for academy: ' + str(e)
+        scan.status_text = 'Error retriving originality credentials for academy: ' + str(e)
         scan.status = 'ERROR'
         scan.save()
         raise Exception(scan.status_text)
@@ -819,7 +813,7 @@ def scan_asset_originality(asset):
             raise Exception('Error receiving originality API response payload')
 
     except Exception as e:
-        scan.status_text = f'Error scanning originality for asset: ' + str(e)
+        scan.status_text = 'Error scanning originality for asset: ' + str(e)
         scan.status = 'ERROR'
         scan.save()
         raise Exception(scan.status_text)

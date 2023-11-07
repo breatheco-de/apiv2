@@ -1,24 +1,18 @@
 import logging, re, html
 from django.contrib import admin, messages
 from django.utils.html import format_html
-from django.contrib.auth.models import User
 from django.db.models import Q
-from django.forms import model_to_dict
 from django import forms
-from django.contrib.auth.admin import UserAdmin
-from breathecode.admissions.admin import CohortAdmin
-from breathecode.assessment.models import Assessment
 from breathecode.utils.admin import change_field
 from breathecode.services.seo import SEOAnalyzer
 
 from .models import (Asset, AssetTechnology, AssetAlias, AssetErrorLog, KeywordCluster, AssetCategory,
                      AssetKeyword, AssetComment, SEOReport, AssetImage, OriginalityScan,
                      CredentialsOriginality, SyllabusVersionProxy, ContentVariable)
-from .tasks import (async_pull_from_github, async_test_asset, async_execute_seo_report,
-                    async_regenerate_asset_readme, async_download_readme_images, async_remove_img_from_cloud,
-                    async_upload_image_to_bucket)
-from .actions import (pull_from_github, get_user_from_github_username, test_asset, AssetThumbnailGenerator,
-                      scan_asset_originality, add_syllabus_translations, clean_asset_readme)
+from .tasks import (async_pull_from_github, async_test_asset, async_download_readme_images,
+                    async_remove_img_from_cloud, async_upload_image_to_bucket)
+from .actions import (get_user_from_github_username, AssetThumbnailGenerator, scan_asset_originality,
+                      add_syllabus_translations, clean_asset_readme)
 
 logger = logging.getLogger(__name__)
 lang_flags = {
@@ -33,28 +27,28 @@ lang_flags = {
 
 
 def add_gitpod(modeladmin, request, queryset):
-    assets = queryset.update(gitpod=True)
+    queryset.update(gitpod=True)
 
 
 add_gitpod.short_description = 'Add GITPOD flag (to open on gitpod)'
 
 
 def remove_gitpod(modeladmin, request, queryset):
-    assets = queryset.update(gitpod=False)
+    queryset.update(gitpod=False)
 
 
 remove_gitpod.short_description = 'Remove GITPOD flag'
 
 
 def make_external(modeladmin, request, queryset):
-    result = queryset.update(external=True)
+    queryset.update(external=True)
 
 
 make_external.short_description = 'Make it an EXTERNAL resource (new window)'
 
 
 def make_internal(modeladmin, request, queryset):
-    result = queryset.update(external=False)
+    queryset.update(external=False)
 
 
 make_internal.short_description = 'Make it an INTERNAL resource (same window)'
@@ -569,21 +563,21 @@ def make_alias(modeladmin, request, queryset):
                     request, f'Slug {e.path} already exists for a different asset {alias.asset.asset_type}')
 
 
-def change_status_FIXED_including_similar(modeladmin, request, queryset):
+def change_status_fixed_including_similar(modeladmin, request, queryset):
     errors = queryset.all()
     for e in errors:
         AssetErrorLog.objects.filter(slug=e.slug, asset_type=e.asset_type, path=e.path,
                                      asset=e.asset).update(status='FIXED')
 
 
-def change_status_ERROR_including_similar(modeladmin, request, queryset):
+def change_status_error_including_similar(modeladmin, request, queryset):
     errors = queryset.all()
     for e in errors:
         AssetErrorLog.objects.filter(slug=e.slug, asset_type=e.asset_type, path=e.path,
                                      asset=e.asset).update(status='ERROR')
 
 
-def change_status_IGNORED_including_similar(modeladmin, request, queryset):
+def change_status_ignored_including_similar(modeladmin, request, queryset):
     errors = queryset.all()
     for e in errors:
         AssetErrorLog.objects.filter(slug=e.slug, asset_type=e.asset_type, path=e.path,
@@ -597,8 +591,8 @@ class AssetErrorLogAdmin(admin.ModelAdmin):
     raw_id_fields = ['user', 'asset']
     list_filter = ['status', 'slug', 'asset_type']
     actions = [
-        make_alias, change_status_FIXED_including_similar, change_status_ERROR_including_similar,
-        change_status_IGNORED_including_similar
+        make_alias, change_status_fixed_including_similar, change_status_error_including_similar,
+        change_status_ignored_including_similar
     ]
 
     def current_status(self, obj):

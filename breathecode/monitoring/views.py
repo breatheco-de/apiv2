@@ -1,15 +1,10 @@
-import os, requests, logging
-from io import BytesIO, StringIO
-from django.shortcuts import render
-from django.utils import timezone
+import os, logging
 import stripe
 from .signals import github_webhook
-from .models import Application, Endpoint, CSVDownload, CSVUpload, RepositorySubscription, RepositoryWebhook
+from .models import CSVDownload, CSVUpload, RepositorySubscription, RepositoryWebhook
 from rest_framework.permissions import AllowAny
 from .serializers import CSVDownloadSmallSerializer, CSVUploadSmallSerializer
-from django.http import HttpResponseRedirect, HttpResponse
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
 from breathecode.utils import ValidationException
 from rest_framework import status
@@ -135,10 +130,10 @@ def process_stripe_webhook(request):
 
         event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
 
-    except ValueError as e:
+    except ValueError:
         raise ValidationException('Invalid payload', code=400, slug='invalid-payload')
 
-    except stripe.error.SignatureVerificationError as e:
+    except stripe.error.SignatureVerificationError:
         raise ValidationException('Not allowed', code=403, slug='not-allowed')
 
     if event := add_stripe_webhook(event):

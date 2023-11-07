@@ -113,10 +113,10 @@ def extend_session(session: MentorshipSession, duration_in_minutes=None, exp_in_
     daily = DailyClient()
 
     if duration_in_minutes is not None and session.ends_at:
-        room = daily.extend_room(name=session.name, exp_in_seconds=duration_in_minutes * 3600)
+        daily.extend_room(name=session.name, exp_in_seconds=duration_in_minutes * 3600)
         session.ends_at = session.ends_at + timedelta(minutes=duration_in_minutes)
     elif exp_in_epoch is not None:
-        room = daily.extend_room(name=session.name, exp_in_epoch=exp_in_epoch)
+        daily.extend_room(name=session.name, exp_in_epoch=exp_in_epoch)
         session.ends_at = datetime.datetime.fromtimestamp(exp_in_epoch, tz)
 
     session.save()
@@ -165,7 +165,7 @@ def get_accounted_time(_session):
                                                'accounted for the bill.')
             else:
                 response['accounted_duration'] = timedelta(seconds=0)
-                response['status_message'] += f'No time will be included on the bill.'
+                response['status_message'] += 'No time will be included on the bill.'
             return response
 
         elif session.started_at is not None:
@@ -243,7 +243,7 @@ def get_accounted_time(_session):
 
         else:
             response['accounted_duration'] = timedelta(seconds=0)
-            response['status_message'] = f'No one joined this session, nothing will be accounted for.'
+            response['status_message'] = 'No one joined this session, nothing will be accounted for.'
             return response
 
     _duration = get_duration(_session)

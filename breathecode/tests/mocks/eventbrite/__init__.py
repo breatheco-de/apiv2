@@ -3,7 +3,7 @@ Google Cloud Storage Mocks
 """
 from unittest.mock import MagicMock
 from .requests_mock import request_mock
-from .constants import *
+from .constants.order import EVENTBRITE_ORDER_URL  # noqa: F401
 
 EVENTBRITE_PATH = {
     'get': 'requests.get',

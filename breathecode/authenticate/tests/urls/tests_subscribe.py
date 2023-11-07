@@ -109,6 +109,11 @@ def post_serializer(plans=[], data={}):
         'last_name': '',
         'phone': '',
         'plans': [plan_serializer(plan) for plan in plans],
+        'city': None,
+        'country': None,
+        'latitude': None,
+        'longitude': None,
+        'conversion_info': None,
         **data,
     }
 
@@ -125,6 +130,11 @@ def put_serializer(user_invite, cohort=None, syllabus=None, user=None, plans=[],
         'phone': user_invite.phone,
         'user': user.id if user else None,
         'plans': [plan_serializer(plan) for plan in plans],
+        'city': None,
+        'country': None,
+        'latitude': None,
+        'longitude': None,
+        'conversion_info': None,
         **data,
     }
 
@@ -205,6 +215,10 @@ class SubscribeTestSuite(AuthTestCase):
                              'process_message': '',
                              'process_status': 'DONE',
                              'syllabus_id': None,
+                             'city': None,
+                             'country': None,
+                             'latitude': None,
+                             'longitude': None,
                              **data,
                          }])
 
@@ -451,6 +465,10 @@ class SubscribeTestSuite(AuthTestCase):
                 'process_message': '',
                 'process_status': 'DONE',
                 'syllabus_id': None,
+                'city': None,
+                'country': None,
+                'latitude': None,
+                'longitude': None,
                 **data,
             }
         ])
@@ -551,6 +569,10 @@ class SubscribeTestSuite(AuthTestCase):
                 'process_status': 'PENDING',
                 'token': hashlib.sha512(('pokemon@potato.io').encode('UTF-8') + b).hexdigest(),
                 'syllabus_id': None,
+                'city': None,
+                'country': None,
+                'latitude': None,
+                'longitude': None,
                 **data,
             }
         ])
@@ -623,6 +645,10 @@ class SubscribeTestSuite(AuthTestCase):
                 'process_message': '',
                 'process_status': 'DONE',
                 'syllabus_id': None,
+                'city': None,
+                'country': None,
+                'latitude': None,
+                'longitude': None,
                 **data,
             }
         ])
@@ -750,6 +776,10 @@ class SubscribeTestSuite(AuthTestCase):
                     'status': 'ACCEPTED',
                     'academy_id': 1,
                     'user_id': 1,
+                    'city': None,
+                    'country': None,
+                    'latitude': None,
+                    'longitude': None,
                     **data,
                 }),
         ])
@@ -833,6 +863,10 @@ class SubscribeTestSuite(AuthTestCase):
                     'status': 'ACCEPTED',
                     'academy_id': 1,
                     'user_id': 1,
+                    'city': None,
+                    'country': None,
+                    'latitude': None,
+                    'longitude': None,
                     **data,
                 }),
         ])
@@ -965,6 +999,10 @@ class SubscribeTestSuite(AuthTestCase):
                     'process_status': 'PENDING',
                     'status': 'WAITING_LIST',
                     'academy_id': 1,
+                    'city': None,
+                    'country': None,
+                    'latitude': None,
+                    'longitude': None,
                     **data,
                 }),
         ])
@@ -1029,6 +1067,10 @@ class SubscribeTestSuite(AuthTestCase):
                     'process_status': 'PENDING',
                     'status': 'WAITING_LIST',
                     'academy_id': 1,
+                    'city': None,
+                    'country': None,
+                    'latitude': None,
+                    'longitude': None,
                     **data,
                     'id': 2,
                 }),
@@ -1094,6 +1136,10 @@ class SubscribeTestSuite(AuthTestCase):
                     'process_status': 'PENDING',
                     'status': 'WAITING_LIST',
                     'academy_id': None,
+                    'city': None,
+                    'country': None,
+                    'latitude': None,
+                    'longitude': None,
                     **data,
                     'id': 2,
                 }),
@@ -1166,6 +1212,10 @@ class SubscribeTestSuite(AuthTestCase):
                     'academy_id': 1,
                     'cohort_id': 1,
                     'user_id': 1,
+                    'city': None,
+                    'country': None,
+                    'latitude': None,
+                    'longitude': None,
                     **data,
                     'id': 2,
                 }),
@@ -1263,6 +1313,10 @@ class SubscribeTestSuite(AuthTestCase):
                     'academy_id': None,
                     'syllabus_id': 1,
                     'user_id': 1,
+                    'city': None,
+                    'country': None,
+                    'latitude': None,
+                    'longitude': None,
                     **data,
                     'id': 2,
                 }),
@@ -1394,6 +1448,10 @@ class SubscribeTestSuite(AuthTestCase):
                              'process_status': 'DONE',
                              'token': token,
                              'syllabus_id': None,
+                             'city': None,
+                             'country': None,
+                             'latitude': None,
+                             'longitude': None,
                              **data,
                          }])
 
@@ -1490,6 +1548,10 @@ class SubscribeTestSuite(AuthTestCase):
                              'last_name': None,
                              'phone': '',
                              'syllabus_id': None,
+                             'city': None,
+                             'country': None,
+                             'latitude': None,
+                             'longitude': None,
                          }])
 
         self.assertEqual(self.bc.database.list_of('marketing.Course'), [])
@@ -1564,6 +1626,10 @@ class SubscribeTestSuite(AuthTestCase):
                              'process_status': 'DONE',
                              'token': token,
                              'syllabus_id': None,
+                             'city': None,
+                             'country': None,
+                             'latitude': None,
+                             'longitude': None,
                              **data,
                          }])
 
@@ -1667,6 +1733,10 @@ class SubscribeTestSuite(AuthTestCase):
                              'process_status': 'DONE',
                              'token': token,
                              'syllabus_id': None,
+                             'city': None,
+                             'country': None,
+                             'latitude': None,
+                             'longitude': None,
                              **data,
                          }])
 
@@ -1771,6 +1841,10 @@ class SubscribeTestSuite(AuthTestCase):
                              'process_status': 'DONE',
                              'token': token,
                              'syllabus_id': None,
+                             'city': None,
+                             'country': None,
+                             'latitude': None,
+                             'longitude': None,
                              **data,
                          }])
 
@@ -1841,6 +1915,10 @@ class SubscribeTestSuite(AuthTestCase):
                              'last_name': None,
                              'phone': '',
                              'syllabus_id': None,
+                             'city': None,
+                             'country': None,
+                             'latitude': None,
+                             'longitude': None,
                          }])
 
         self.assertEqual(self.bc.database.list_of('marketing.Course'), [])
@@ -1916,6 +1994,10 @@ class SubscribeTestSuite(AuthTestCase):
                 'process_status': 'DONE',
                 'token': token,
                 'syllabus_id': 1,
+                'city': None,
+                'country': None,
+                'latitude': None,
+                'longitude': None,
                 **data,
             },
         ])
@@ -2025,6 +2107,10 @@ class SubscribeTestSuite(AuthTestCase):
                              'process_status': 'DONE',
                              'token': token,
                              'syllabus_id': 1,
+                             'city': None,
+                             'country': None,
+                             'latitude': None,
+                             'longitude': None,
                              **data,
                          }])
 
@@ -2135,6 +2221,10 @@ class SubscribeTestSuite(AuthTestCase):
                              'process_status': 'DONE',
                              'token': token,
                              'syllabus_id': 1,
+                             'city': None,
+                             'country': None,
+                             'latitude': None,
+                             'longitude': None,
                              **data,
                          }])
 
@@ -2211,6 +2301,10 @@ class SubscribeTestSuite(AuthTestCase):
                              'process_status': 'PENDING',
                              'token': token,
                              'syllabus_id': None,
+                             'city': None,
+                             'country': None,
+                             'latitude': None,
+                             'longitude': None,
                          }])
 
         self.assertEqual(self.bc.database.list_of('marketing.Course'), [])
@@ -2289,6 +2383,10 @@ class SubscribeTestSuite(AuthTestCase):
             'process_status': 'PENDING',
             'token': token,
             'syllabus_id': None,
+            'city': None,
+            'country': None,
+            'latitude': None,
+            'longitude': None,
             **data,
         }])
 
@@ -2367,6 +2465,10 @@ class SubscribeTestSuite(AuthTestCase):
             'process_status': 'DONE',
             'token': token,
             'syllabus_id': None,
+            'city': None,
+            'country': None,
+            'latitude': None,
+            'longitude': None,
             **data,
         }])
 
@@ -2499,6 +2601,10 @@ class SubscribeTestSuite(AuthTestCase):
                     'status': 'ACCEPTED',
                     'academy_id': 1,
                     'user_id': 1,
+                    'city': None,
+                    'country': None,
+                    'latitude': None,
+                    'longitude': None,
                     **data,
                 }),
         ])
@@ -2590,6 +2696,10 @@ class SubscribeTestSuite(AuthTestCase):
                     'status': 'ACCEPTED',
                     'academy_id': 1,
                     'user_id': 1,
+                    'city': None,
+                    'country': None,
+                    'latitude': None,
+                    'longitude': None,
                     **data,
                 }),
         ])
@@ -2733,13 +2843,18 @@ class SubscribeTestSuite(AuthTestCase):
 
         data['syllabus_id'] = data.pop('syllabus')
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
-            user_invite_db_item(data={
-                'token': token,
-                'process_status': 'PENDING',
-                'status': 'WAITING_LIST',
-                'academy_id': 1,
-                **data,
-            }),
+            user_invite_db_item(
+                data={
+                    'token': token,
+                    'process_status': 'PENDING',
+                    'status': 'WAITING_LIST',
+                    'academy_id': 1,
+                    'city': None,
+                    'country': None,
+                    'latitude': None,
+                    'longitude': None,
+                    **data,
+                }),
         ])
 
         del data['phone']

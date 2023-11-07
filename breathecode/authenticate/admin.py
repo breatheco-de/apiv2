@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 def clean_all_tokens(modeladmin, request, queryset):
     user_ids = queryset.values_list('id', flat=True)
-    count = delete_tokens(users=user_ids, status='all')
+    delete_tokens(users=user_ids, status='all')
 
 
 clean_all_tokens.short_description = 'Delete all tokens'
@@ -31,7 +31,7 @@ clean_all_tokens.short_description = 'Delete all tokens'
 
 def clean_expired_tokens(modeladmin, request, queryset):
     user_ids = queryset.values_list('id', flat=True)
-    count = delete_tokens(users=user_ids, status='expired')
+    delete_tokens(users=user_ids, status='expired')
 
 
 clean_expired_tokens.short_description = 'Delete EXPIRED tokens'
@@ -100,9 +100,9 @@ def accept_all_users_from_waiting_list(modeladmin, request, queryset: QuerySet[U
 class UserInviteAdmin(admin.ModelAdmin):
     search_fields = ['email', 'first_name', 'last_name', 'user__email']
     raw_id_fields = ['user', 'author', 'cohort']
-    list_filter = ['academy', 'role', 'status', 'is_email_validated', 'process_status']
+    list_filter = ['academy', 'status', 'is_email_validated', 'process_status', 'role', 'country']
     list_display = ('email', 'is_email_validated', 'first_name', 'last_name', 'status', 'academy', 'token',
-                    'created_at', 'invite_url')
+                    'created_at', 'invite_url', 'country')
     actions = [accept_selected_users_from_waiting_list, accept_all_users_from_waiting_list]
 
     def invite_url(self, obj):
@@ -128,7 +128,7 @@ class UserAdmin(UserAdmin):
 
     def get_queryset(self, request):
 
-        self.github_callback = f'https://4geeks.com'
+        self.github_callback = 'https://4geeks.com'
         self.github_callback = str(base64.urlsafe_b64encode(self.github_callback.encode('utf-8')), 'utf-8')
         return super(UserAdmin, self).get_queryset(request)
 
@@ -159,7 +159,7 @@ class ProfileAcademyAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
 
-        self.slack_callback = f'https://4geeks.com'
+        self.slack_callback = 'https://4geeks.com'
         self.slack_callback = str(base64.urlsafe_b64encode(self.slack_callback.encode('utf-8')), 'utf-8')
         return super(ProfileAcademyAdmin, self).get_queryset(request)
 
@@ -211,7 +211,7 @@ class UserSettingAdmin(admin.ModelAdmin):
 def generate_token(modeladmin, request, queryset):
     academies = queryset.all()
     for a in academies:
-        token = generate_academy_token(a.id)
+        generate_academy_token(a.id)
 
 
 generate_token.short_description = 'Generate academy token'
@@ -220,7 +220,7 @@ generate_token.short_description = 'Generate academy token'
 def reset_token(modeladmin, request, queryset):
     academies = queryset.all()
     for a in academies:
-        token = generate_academy_token(a.id, force=True)
+        generate_academy_token(a.id, force=True)
 
 
 reset_token.short_description = 'RESET academy token'
@@ -239,13 +239,6 @@ class AcademyAdmin(admin.ModelAdmin):
 class DeviceIdAdmin(admin.ModelAdmin):
     list_display = ('name', 'key')
     search_fields = ['name']
-
-
-def async_recalculate_expiration(modeladmin, request, queryset):
-    queryset.update(expires_at=None)
-    gp_users = queryset.all()
-    for gpu in gp_users:
-        gpu = async_set_gitpod_user_expiration.delay(gpu.id)
 
 
 def recalculate_expiration(modeladmin, request, queryset):
@@ -276,7 +269,7 @@ def extend_expiration_2_weeks(modeladmin, request, queryset):
         gpu.expires_at = gpu.expires_at + datetime.timedelta(days=17)
         gpu.delete_status = gpu.delete_status + '. The expiration date was extend for 2 weeks days'
         gpu.save()
-        messages.add_message(request, messages.INFO, f'Success: Expiration was successfully extended')
+        messages.add_message(request, messages.INFO, 'Success: Expiration was successfully extended')
 
 
 def extend_expiration_4_months(modeladmin, request, queryset):
@@ -285,7 +278,7 @@ def extend_expiration_4_months(modeladmin, request, queryset):
         gpu.expires_at = gpu.expires_at + datetime.timedelta(days=120)
         gpu.delete_status = gpu.delete_status + '. The expiration date was extend for 4 months'
         gpu.save()
-        messages.add_message(request, messages.INFO, f'Success: Expiration was successfully extended')
+        messages.add_message(request, messages.INFO, 'Success: Expiration was successfully extended')
 
 
 def mark_as_expired(modeladmin, request, queryset):
@@ -294,7 +287,7 @@ def mark_as_expired(modeladmin, request, queryset):
         gpu.expires_at = timezone.now()
         gpu.delete_status = gpu.delete_status + '. The user was expired by force.'
         gpu.save()
-        messages.add_message(request, messages.INFO, f'Success: Gitpod user was expired')
+        messages.add_message(request, messages.INFO, 'Success: Gitpod user was expired')
 
 
 @admin.register(GitpodUser)
@@ -310,9 +303,9 @@ class GitpodUserAdmin(admin.ModelAdmin):
         now = timezone.now()
 
         if obj.expires_at is None:
-            return format_html(f"<span class='badge bg-warning'>NEVER</span>")
+            return format_html("<span class='badge bg-warning'>NEVER</span>")
         elif now > obj.expires_at:
-            return format_html(f"<span class='badge bg-error'>EXPIRED</span>")
+            return format_html("<span class='badge bg-error'>EXPIRED</span>")
         elif now > (obj.expires_at + datetime.timedelta(days=3)):
             return format_html(
                 f"<span class='badge bg-warning'>In {from_now(obj.expires_at, include_days=True)}</span>")
@@ -434,7 +427,7 @@ class AcademyAuthSettingsAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
 
-        self.github_callback = f'https://4geeks.com'
+        self.github_callback = 'https://4geeks.com'
         self.github_callback = str(base64.urlsafe_b64encode(self.github_callback.encode('utf-8')), 'utf-8')
         return super(AcademyAuthSettingsAdmin, self).get_queryset(request)
 
@@ -442,13 +435,12 @@ class AcademyAuthSettingsAdmin(admin.ModelAdmin):
         if obj.github_error_log is not None and len(obj.github_error_log) > 0:
             return format_html(f"<span class='badge bg-error'>{len(obj.github_error_log)} errors</span>")
         else:
-            return format_html(f"<span class='badge bg-success'>No errors</span>")
+            return format_html("<span class='badge bg-success'>No errors</span>")
 
     def authenticate(self, obj):
-        now = timezone.now()
         settings = AcademyAuthSettings.objects.get(id=obj.id)
         if settings.github_owner is None:
-            return format_html(f'no owner')
+            return format_html('no owner')
 
         scopes = str(base64.urlsafe_b64encode(b'user repo admin:org'), 'utf-8')
         return format_html(

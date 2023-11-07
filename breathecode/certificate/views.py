@@ -13,7 +13,7 @@ from rest_framework.response import Response
 from rest_framework import status, serializers
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
-from .tasks import take_screenshot, generate_one_certificate
+from .tasks import generate_one_certificate
 from .actions import generate_certificate
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 
@@ -187,7 +187,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
 
         try:
             ids = lookups['id__in']
-        except:
+        except Exception:
             raise ValidationException('User specialties ids were not provided', 404, slug='missing_ids')
 
         if lookups and (user_id or cohort_id):

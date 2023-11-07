@@ -1,10 +1,8 @@
-import json
 from django.contrib import admin, messages
 from .models import (Freelancer, Issue, Bill, AcademyFreelanceProject, FreelanceProjectMember, ProjectInvoice)
 from django.utils.html import format_html
 from . import actions
 from breathecode.utils.admin import change_field
-from .tasks import async_repository_issue_github
 # Register your models here.
 
 
@@ -65,12 +63,12 @@ class FreelancerAdmin(admin.ModelAdmin):
 
     def github(self, obj):
         if obj.github_user is None:
-            return format_html(f"<span class='badge bg-error'> Missing github connection</span>")
+            return format_html("<span class='badge bg-error'> Missing github connection</span>")
 
         if obj.price_per_hour == 0 or obj.price_per_hour is None:
-            return format_html(f"<span class='badge bg-error'> Missing rate per hour</span>")
+            return format_html("<span class='badge bg-error'> Missing rate per hour</span>")
 
-        return format_html(f"<span class='badge bg-success'>Connected to Github</span>")
+        return format_html("<span class='badge bg-success'>Connected to Github</span>")
 
 
 def resync_single_issue(modeladmin, request, queryset):

@@ -1,5 +1,5 @@
 from breathecode.utils import getLogger
-from celery import shared_task, Task
+from celery import Task
 from breathecode.admissions.models import CohortUser
 from breathecode.utils.decorators.task import task
 
@@ -23,7 +23,7 @@ def take_screenshot(self, certificate_id, **_):
     try:
         certificate_screenshot(certificate_id)
         return True
-    except:
+    except Exception:
         return False
 
 
@@ -35,7 +35,7 @@ def remove_screenshot(self, certificate_id, **_):
 
     try:
         remove_certificate_screenshot(certificate_id)
-    except:
+    except Exception:
         return False
 
     return True
@@ -51,7 +51,7 @@ def reset_screenshot(self, certificate_id, **_):
         # just in case, wait for cetificate to save
         remove_certificate_screenshot(certificate_id)
         certificate_screenshot(certificate_id)
-    except:
+    except Exception:
         return False
 
     return True

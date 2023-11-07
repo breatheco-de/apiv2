@@ -9,9 +9,8 @@ from .models import FormEntry, Tag, Automation, ActiveCampaignAcademy, AcademyAl
 from rest_framework.exceptions import APIException
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import CredentialsFacebook
-from breathecode.services.activecampaign import AC_Old_Client, ActiveCampaign, ActiveCampaignClient
+from breathecode.services.activecampaign import ACOldClient, ActiveCampaign, ActiveCampaignClient
 from breathecode.utils.validation_exception import ValidationException
-from breathecode.marketing.models import Tag
 from breathecode.utils import getLogger
 import numpy as np
 
@@ -101,7 +100,6 @@ def validate_email(email, lang):
     }
     """
 
-    result = {}
     resp = requests.get(
         f'https://apilayer.net/api/check?access_key={MAILBOX_LAYER_KEY}&email={email}&smtp=1&format=1',
         timeout=2)
@@ -210,7 +208,7 @@ def add_to_active_campaign(contact, academy_id: int, automation_id: int):
     logger.info('ready to send contact with following details')
     logger.info(contact)
 
-    old_client = AC_Old_Client(ac_url, ac_key)
+    old_client = ACOldClient(ac_url, ac_key)
     response = old_client.contacts.create_contact(contact)
     contact_id = response['subscriber_id']
 
@@ -261,7 +259,7 @@ def register_new_lead(form_entry=None):
     try:
         if alias is not None:
             ac_academy = alias.academy.activecampaignacademy
-    except:
+    except Exception:
         pass
 
     if ac_academy is None:
@@ -368,7 +366,7 @@ def register_new_lead(form_entry=None):
         return entry
 
     logger.info('ready to send contact with following details: ' + str(contact))
-    old_client = AC_Old_Client(ac_academy.ac_url, ac_academy.ac_key)
+    old_client = ACOldClient(ac_academy.ac_url, ac_academy.ac_key)
     response = old_client.contacts.create_contact(contact)
     contact_id = response['subscriber_id']
 
@@ -490,7 +488,7 @@ def sync_automations(ac_academy):
 def save_get_geolocal(contact, form_entry=None):
 
     if 'latitude' not in form_entry or 'longitude' not in form_entry:
-        form_entry = contact.toFormData()
+        form_entry = contact.to_form_data()
 
     if 'latitude' not in form_entry or 'longitude' not in form_entry:
         return False
@@ -553,18 +551,18 @@ def get_facebook_lead_info(lead_id, academy_id=None):
         logger.debug('Facebook responded with 200')
         data = resp.json()
         if 'field_data' in data:
-            lead.utm_campaign == data['ad_id']
-            lead.utm_medium == data['ad_id']
-            lead.utm_source == 'facebook'
+            lead.utm_campaign = data['ad_id']
+            lead.utm_medium = data['ad_id']
+            lead.utm_source = 'facebook'
             for field in data['field_data']:
                 if field['name'] == 'first_name' or field['name'] == 'full_name':
-                    lead.first_name == field['values']
+                    lead.first_name = field['values']
                 elif field['name'] == 'last_name':
-                    lead.last_name == field['values']
+                    lead.last_name = field['values']
                 elif field['name'] == 'email':
-                    lead.email == field['values']
+                    lead.email = field['values']
                 elif field['name'] == 'phone':
-                    lead.phone == field['values']
+                    lead.phone = field['values']
             lead.save()
         else:
             logger.fatal('No information about the lead')
@@ -658,7 +656,7 @@ def delete_tag(tag, include_other_academies=False):
 
             return True
 
-    except:
+    except Exception:
         logger.exception(f'There was an error deleting tag for {tag.slug}')
         return False
 

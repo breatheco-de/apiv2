@@ -14,13 +14,25 @@ class Github:
         if host is not None:
             self.HOST = host
 
-    def get(self, action_name, request_data={}):
+    def get(self, action_name, request_data=None):
+
+        if request_data is None:
+            request_data = {}
+
         return self._call('GET', action_name, params=request_data)
 
-    def post(self, action_name, request_data={}):
+    def post(self, action_name, request_data=None):
+
+        if request_data is None:
+            request_data = {}
+
         return self._call('POST', action_name, json=request_data)
 
-    def delete(self, action_name, request_data={}):
+    def delete(self, action_name, request_data=None):
+
+        if request_data is None:
+            request_data = {}
+
         return self._call('DELETE', action_name, params=request_data)
 
     def _call(self, method_name, action_name, params=None, json=None):
@@ -59,7 +71,7 @@ class Github:
                 error = resp.json()
                 error_message = error['message']
                 logger.debug(error)
-            except:
+            except Exception:
                 pass
 
             raise Exception(
@@ -84,7 +96,11 @@ class Github:
 
         return results
 
-    def invite_org_member(self, email, role='direct_member', team_ids=[]):
+    def invite_org_member(self, email, role='direct_member', team_ids=None):
+
+        if team_ids is None:
+            team_ids = []
+
         return self.post(f'/orgs/{self.org}/invitations',
                          request_data={
                              'email': email,

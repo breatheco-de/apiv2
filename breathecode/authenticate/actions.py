@@ -7,7 +7,7 @@ import random
 import re
 import secrets
 import string
-from typing import Any, Optional
+from typing import Optional
 import urllib.parse
 from random import randint
 from django.core.handlers.wsgi import WSGIRequest
@@ -189,7 +189,7 @@ def set_gitpod_user_expiration(gitpoduser_id):
             if last_cohort is not None:
                 gitpod_user.academy = last_cohort.cohort.academy
                 gitpod_user.target_cohort = last_cohort.cohort
-                gitpod_user.delete_status = f'It will be deleted soon because no active cohort was found, the last one it had active was ' + last_cohort.cohort.name
+                gitpod_user.delete_status = 'It will be deleted soon because no active cohort was found, the last one it had active was ' + last_cohort.cohort.name
 
     if (gitpod_user.user is None or gitpod_user.expires_at is None) and gitpod_user.delete_status == '':
         gitpod_user.expires_at = timezone.now() + datetime.timedelta(days=3)
@@ -280,7 +280,7 @@ def get_user_settings(user_id: int) -> UserSetting:
 
     try:
         settings, created = UserSetting.objects.get_or_create(user_id=user_id)
-    except Exception as e:
+    except Exception:
         # race condition
         settings, created = UserSetting.objects.get_or_create(user_id=user_id)
 
@@ -296,7 +296,7 @@ def get_user_settings(user_id: int) -> UserSetting:
             settings.lang = lead.browser_lang
             settings.save()
             created = False
-        except:
+        except Exception:
             ...
 
     # if created and (contact := Contact.objects.filter(author__id=user_id,
@@ -375,7 +375,7 @@ def add_to_organization(cohort_id, user_id):
 
         if github_user.storage_status == 'SYNCHED' and github_user.storage_action == 'ADD':
             # user already added
-            github_user.log(f'User was already added')
+            github_user.log('User was already added')
             return True
 
         github_user.storage_status = 'PENDING'
@@ -453,7 +453,10 @@ def delete_from_github(github_user):
         return False
 
 
-def sync_organization_members(academy_id, only_status=[]):
+def sync_organization_members(academy_id, only_status=None):
+
+    if only_status is None:
+        only_status = []
 
     now = timezone.now()
 
@@ -476,8 +479,8 @@ def sync_organization_members(academy_id, only_status=[]):
     credentials = CredentialsGithub.objects.filter(user=settings.github_owner).first()
     if settings.github_owner is None or credentials is None:
         raise ValidationException(translation(
-            en=f'Organization has no owner or it has no github credentials',
-            es=f'La organizacion no tiene dueño o no este tiene credenciales para github'),
+            en='Organization has no owner or it has no github credentials',
+            es='La organizacion no tiene dueño o no este tiene credenciales para github'),
                                   slug='invalid-owner')
 
     # print('Procesing following slugs', academy_slugs)
@@ -533,7 +536,7 @@ def sync_organization_members(academy_id, only_status=[]):
                     raise e
                 _member.storage_status = 'SYNCHED'
                 _member.log(f'Sent invitation to {github.email}')
-                _member.storage_action == 'INVITE'
+                _member.storage_action = 'INVITE'
                 _member.storage_synch_at = now
                 _member.save()
 
@@ -741,11 +744,17 @@ def get_signature(app: App,
                   user_id: Optional[int] = None,
                   *,
                   method: str = 'get',
-                  params: dict = {},
+                  params: Optional[dict] = None,
                   body: Optional[dict] = None,
-                  headers: dict = {},
+                  headers: Optional[dict] = None,
                   reverse: bool = False):
     now = timezone.now().isoformat()
+
+    if headers is None:
+        headers = {}
+
+    if params is None:
+        params = {}
 
     payload = {
         'timestamp': now,
@@ -908,8 +917,12 @@ def get_app(pk: str | int) -> App:
     return app
 
 
-def accept_invite_action(data={}, token=None, lang='en'):
+def accept_invite_action(data=None, token=None, lang='en'):
     from breathecode.payments.models import Invoice, Bag, Plan
+    from breathecode.payments import tasks as payments_tasks
+
+    if data is None:
+        data = {}
 
     password1 = data.get('password', None)
     password2 = data.get('repeat_password', None)
@@ -1013,7 +1026,7 @@ def accept_invite_action(data={}, token=None, lang='en'):
                               currency=bag.academy.main_currency)
             invoice.save()
 
-            payment_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=True)
+            payments_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=True)
 
     invite.status = 'ACCEPTED'
     invite.is_email_validated = True

@@ -2,9 +2,11 @@
 """
 Checks for cohort users with status active on ended cohort
 """
+
+# flake8: noqa: F821
+
 from breathecode.utils import ScriptNotification
 from breathecode.admissions.models import CohortUser
-from django.utils import timezone
 
 active_user_on_ended_cohort = CohortUser.objects.filter(
     cohort__stage='ENDED', educational_status='ACTIVE',

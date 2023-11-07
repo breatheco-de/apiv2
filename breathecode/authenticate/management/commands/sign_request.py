@@ -17,7 +17,7 @@ class Command(BaseCommand):
         parser.add_argument('headers', nargs='?', type=str)
 
     def handle(self, *args, **options):
-        from ...models import App, User
+        from ...models import App
         from ...actions import get_signature
 
         if not options['app']:

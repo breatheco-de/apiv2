@@ -1,4 +1,4 @@
-import os, base64
+import base64
 from breathecode.authenticate.models import Token
 from urllib.parse import urlencode, parse_qs, urlsplit, urlunsplit
 from django.shortcuts import render
@@ -27,7 +27,10 @@ def set_query_parameter(url, param_name, param_value=''):
     return urlunsplit((scheme, netloc, path, new_query_string, fragment))
 
 
-def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', data={}, status=None):
+def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', data=None, status=None):
+    if data is None:
+        data = {}
+
     _data = {'MESSAGE': msg, 'BUTTON': btn_label, 'BUTTON_TARGET': btn_target, 'LINK': btn_url}
 
     return render(r, 'message.html', {**_data, **data}, status=status)
@@ -54,10 +57,10 @@ def private_view(permission=None, auth_url='/v1/auth/view/login'):
             try:
 
                 if token is None and valid_token is None:
-                    raise PermissionDenied(f'Please login before you can access this view')
+                    raise PermissionDenied('Please login before you can access this view')
 
                 if valid_token is None:
-                    raise PermissionDenied(f'You don\'t have access to this view')
+                    raise PermissionDenied('You don\'t have access to this view')
 
                 if permission is not None and not validate_permission(valid_token.user, permission):
                     raise PermissionDenied(f'You don\'t have permission {permission} to access this view')

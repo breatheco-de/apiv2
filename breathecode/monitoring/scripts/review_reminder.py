@@ -2,10 +2,12 @@
 """
 Checks for recent graduates with NPS > 7 and reminds about asking for reviews
 """
+
+# flake8: noqa: F821
+
 from breathecode.utils import ScriptNotification
-from breathecode.feedback.models import Survey, Review
-from breathecode.admissions.models import Cohort, Academy
-from datetime import datetime, timedelta
+from breathecode.feedback.models import Review
+from datetime import timedelta
 from django.utils import timezone
 
 

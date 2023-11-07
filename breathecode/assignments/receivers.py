@@ -16,8 +16,8 @@ def process_syllabus_asset_slug_updated(sender, **kwargs):
     to_slug = kwargs.pop('to_slug', None)
     asset_type = kwargs.pop('asset_type', None)
 
-    tasks = Task.objects.filter(associated_slug=from_slug,
-                                task_type=asset_type.upper()).update(associated_slug=to_slug)
+    Task.objects.filter(associated_slug=from_slug,
+                        task_type=asset_type.upper()).update(associated_slug=to_slug)
     logger.debug(
         f'{asset_type} slug {from_slug} was replaced with {to_slug} on all the syllabus, as a sideeffect we are replacing the slug also on the student tasks'
     )

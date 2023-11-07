@@ -138,7 +138,6 @@ class Command(BaseCommand):
         for certificate in self.certificates:
             syllabus_versions = [x for x in self.syllabus if certificate['id'] == x['certificate_id']]
             kwargs = {}
-            academies = {}
             if syllabus_versions:
                 kwargs = {
                     'academy_owner': None,

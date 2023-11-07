@@ -1,5 +1,4 @@
 from datetime import timedelta
-from django.http import HttpResponse
 
 from django.utils import timezone
 from rest_framework import status
@@ -30,7 +29,6 @@ from breathecode.payments.serializers import (
 from breathecode.payments.services.stripe import Stripe
 from breathecode.utils import APIViewExtensions
 from breathecode.utils.decorators.capable_of import capable_of
-from breathecode.utils.generate_lookups_mixin import GenerateLookupsMixin
 from breathecode.utils.i18n import translation
 from breathecode.utils.payment_exception import PaymentException
 from breathecode.utils.shorteners import C
@@ -285,8 +283,9 @@ class AcademyCohortSetCohortView(APIView):
                                                   slug='cohort-not-found'),
                                       code=404)
 
-        raise ValidationException(C(f'This invite don\'t have email, contact to admin',
-                                    slug=f'without-email'))
+        raise ValidationException(C('This invite don\'t have email, contact to admin', slug='without-email'))
+
+        #FIXME: this endpoint does not work yet
         data = []
         for item in items:
             if item in cohort_set.cohorts.all():
@@ -462,7 +461,6 @@ class AcademyAcademyServiceView(APIView):
     @capable_of('crud_academyservice')
     def post(self, request, academy_id=None):
         data = request.data
-        lang = get_user_language(request)
 
         data['academy'] = academy_id
 
@@ -897,7 +895,7 @@ class AcademySubscriptionView(APIView):
                                                       slug='not-found'),
                                           code=404)
 
-            serializer = GetSubscriptionSerializer(items, many=True)
+            serializer = GetSubscriptionSerializer(item, many=False)
             return handler.response(serializer.data)
 
         items = Subscription.objects.filter(Q(valid_until__gte=now) | Q(valid_until=None))
@@ -940,7 +938,7 @@ class MeInvoiceView(APIView):
                                                       slug='not-found'),
                                           code=404)
 
-            serializer = GetInvoiceSerializer(items, many=True)
+            serializer = GetInvoiceSerializer(item, many=True)
             return handler.response(serializer.data)
 
         items = Invoice.objects.filter(user=request.user)
@@ -972,7 +970,7 @@ class AcademyInvoiceView(APIView):
                                                       slug='not-found'),
                                           code=404)
 
-            serializer = GetInvoiceSerializer(items, many=True)
+            serializer = GetInvoiceSerializer(item, many=False)
             return handler.response(serializer.data)
 
         items = Invoice.objects.filter(user=request.user, academy__id=academy_id)
@@ -1542,7 +1540,7 @@ class PayView(APIView):
                             how_many_months=bag.how_many_installments).first()
                         amount = option.monthly_price
                         bag.monthly_price = amount
-                    except:
+                    except Exception:
                         raise ValidationException(translation(
                             lang,
                             en='Bag bad configured, related to financing option',
@@ -1569,10 +1567,12 @@ class PayView(APIView):
                 if amount == 0 and not available_free and available_for_free_trial and not bag.plans.filter(
                         plan_offer_from__id__gte=1).exists():
                     raise ValidationException(
-                        translation(lang,
-                                    en='The plan was chosen is not ready too be sold',
-                                    es='El plan elegido no esta listo para ser vendido',
-                                    slug='the-plan-was-chosen-is-not-ready-too-be-sold'))
+                        translation(
+                            lang,
+                            en='The plan was chosen does not have a pricing setup, it\'s not ready to be sold',
+                            es=
+                            'El plan elegido no tiene una configuracion de precios, no esta listo para venderse',
+                            slug='the-plan-was-chosen-is-not-ready-too-be-sold'))
 
                 if amount >= 0.50:
                     s = Stripe()

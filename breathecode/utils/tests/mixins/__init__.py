@@ -1,4 +1,4 @@
 """
 Admissions mixins
 """
-from .utils_test_case import UtilsTestCase
+from .utils_test_case import *  # noqa: F401

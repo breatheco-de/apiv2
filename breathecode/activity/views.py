@@ -485,8 +485,6 @@ class StudentActivityView(APIView, HeaderLimitOffsetPagination):
     @capable_of('crud_activity')
     def post(self, request, student_id=None, academy_id=None):
 
-        user = User.objects.filter(id=student_id)
-
         data = request.data
         if isinstance(data, list) == False:
             data = [data]

@@ -26,13 +26,16 @@ class FunctionV2:
         self.service_url = url
         self.method = method
 
-    def call(self, data=None, params={}, timeout=2) -> requests.models.Response:
+    def call(self, data=None, params=None, timeout=2) -> requests.models.Response:
         """
         Call a Google Cloud Function, return a `requests.models.Response` object.
 
         Keywords arguments:
         - data (`dict`): Arguments of Google Cloud Function.
         """
+
+        if params is None:
+            params = {}
 
         auth_req = GCRequest()
         token = id_token.fetch_id_token(auth_req, self.service_url)

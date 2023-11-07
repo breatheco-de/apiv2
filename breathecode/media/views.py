@@ -7,7 +7,7 @@ from breathecode.media.models import Media, Category, MediaResolution
 from breathecode.utils import GenerateLookupsMixin, num_to_roman
 from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
-from breathecode.utils import ValidationException, capable_of, HeaderLimitOffsetPagination
+from breathecode.utils import ValidationException, capable_of
 from rest_framework.response import Response
 from rest_framework.parsers import FileUploadParser, MultiPartParser
 from rest_framework import status

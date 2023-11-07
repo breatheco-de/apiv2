@@ -17,7 +17,7 @@ from slugify import slugify
 from breathecode.authenticate.exceptions import (BadArguments, InvalidTokenType, TokenNotFound,
                                                  TryToGetOrCreateAOneTimeToken)
 from breathecode.utils.validators import validate_language_code
-from .signals import invite_status_updated, academy_invite_accepted
+from .signals import academy_invite_accepted
 from breathecode.admissions.models import Academy, Cohort
 
 from breathecode.authenticate import signals
@@ -806,7 +806,7 @@ class Token(rest_framework.authtoken.models.Token):
         super().save(*args, **kwargs)
 
     @staticmethod
-    def delete_expired_tokens(utc_now: datetime = timezone.now()) -> None:
+    def delete_expired_tokens() -> None:
         """Delete expired tokens"""
         utc_now = timezone.now()
         Token.objects.filter(expires_at__lt=utc_now).delete()
@@ -816,7 +816,7 @@ class Token(rest_framework.authtoken.models.Token):
         utc_now = timezone.now()
         kwargs['token_type'] = token_type
 
-        cls.delete_expired_tokens(utc_now)
+        cls.delete_expired_tokens()
 
         if token_type not in TOKEN_TYPE:
             raise InvalidTokenType(f'Invalid token_type, correct values are {", ".join(TOKEN_TYPE)}')
@@ -856,7 +856,7 @@ class Token(rest_framework.authtoken.models.Token):
     @classmethod
     def get_valid(cls, token: str):
         utc_now = timezone.now()
-        cls.delete_expired_tokens(utc_now)
+        cls.delete_expired_tokens()
 
         # find among any non-expired token
         return Token.objects.filter(key=token).filter(Q(expires_at__gt=utc_now)

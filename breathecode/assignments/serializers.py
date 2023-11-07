@@ -1,7 +1,6 @@
 import serpy, logging, os
 from rest_framework import serializers
 from .models import Task, FinalProject, UserAttachment
-from rest_framework.exceptions import ValidationError
 from breathecode.utils import ValidationException
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import ProfileAcademy, Token
@@ -166,7 +165,6 @@ class PUTTaskSerializer(serializers.ModelSerializer):
         exclude = ('user', )
 
     def validate(self, data):
-        user = self.context['request'].user
 
         if self.instance.user.id != self.context['request'].user.id:
             if 'task_status' in data and data['task_status'] != self.instance.task_status:

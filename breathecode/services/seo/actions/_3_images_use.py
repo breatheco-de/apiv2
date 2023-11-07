@@ -1,7 +1,4 @@
 import logging
-from urllib.parse import urlparse
-from django.contrib.auth.models import User
-from django.utils import timezone
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
@@ -14,7 +11,7 @@ def images_use(client, report):
 
     readme = asset.get_readme(parse=True)
     if 'html' not in readme:
-        logger.fatal(f'Asset with {asset_slug} readme cannot be parse into an HTML')
+        logger.fatal(f'Asset with {asset.slug} readme cannot be parse into an HTML')
         return False
 
     images = BeautifulSoup(readme['html'], features='html.parser').find_all('img')
@@ -24,7 +21,7 @@ def images_use(client, report):
             report.bad(-10, f'No alt found for image with source "{image.attrs["src"]}"')
 
     if len(images) == 0:
-        report.bad(-5, f'Article must have at least one image, diagram or graphic')
+        report.bad(-5, 'Article must have at least one image, diagram or graphic')
 
     #report.good('No errors found on keyword density')
 

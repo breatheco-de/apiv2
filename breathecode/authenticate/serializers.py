@@ -6,7 +6,6 @@ import random
 import os
 import urllib.parse
 import breathecode.notify.actions as notify_actions
-from django.utils import timezone
 from django.contrib.auth.models import User
 
 from breathecode.utils.i18n import translation
@@ -14,12 +13,11 @@ from .models import (CredentialsGithub, ProfileAcademy, Role, UserInvite, Profil
                      GithubAcademyUser, AcademyAuthSettings, UserSetting)
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.utils import ValidationException
-from breathecode.admissions.models import Academy, Cohort, Syllabus
+from breathecode.admissions.models import Academy, Cohort
 from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from django.db.models import Q
 from django.contrib.auth.models import Permission
-from breathecode.mentorship.models import MentorProfile
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
 from breathecode.marketing.actions import validate_email
@@ -621,7 +619,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                 event = Event.objects.filter(**args).get()
                 data['event_slug'] = event.slug
 
-            except Exception as e:
+            except Exception:
                 raise ValidationException(translation(lang,
                                                       en='Unable to find the given Event',
                                                       es='Imposible encontrar el Evento dado',
@@ -640,7 +638,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                 asset = Asset.objects.filter(**args).get()
                 data['asset_slug'] = asset.slug
 
-            except Exception as e:
+            except Exception:
                 raise ValidationException(translation(lang,
                                                       en='Unable to find the given Asset',
                                                       es='Imposible encontrar el Asset dado',
@@ -1201,19 +1199,24 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
     access_token = serializers.SerializerMethodField()
     plans = serializers.SerializerMethodField()
     plan = serializers.ReadOnlyField()
+    status = serializers.ReadOnlyField()
     user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
 
     class Meta:
         model = UserInvite
         fields = ('id', 'email', 'first_name', 'last_name', 'phone', 'cohort', 'syllabus', 'access_token',
-                  'plan', 'plans', 'user', 'conversion_info', 'country', 'city', 'latitude', 'longitude')
+                  'plan', 'plans', 'user', 'country', 'city', 'latitude', 'longitude', 'status',
+                  'conversion_info')
 
     def validate(self, data: dict[str, str]):
         from breathecode.payments.models import Plan
         from breathecode.marketing.models import Course
 
-        lang = self.context.get('lang', 'en')
+        country = data['country'] if 'country' in data else None
+        city = data['city'] if 'city' in data else None
+        forbidden_countries = ['spain']
 
+        lang = self.context.get('lang', 'en')
         if 'email' not in data:
             raise ValidationException(
                 translation(lang, en='Email is required', es='El email es requerido', slug='without-email'))
@@ -1236,7 +1239,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 plan = Plan.objects.filter(**kwargs).get()
                 extra['plans'] = plan
 
-            except:
+            except Exception:
                 raise ValidationException(
                     translation(lang, en='Plan not found', es='Plan no encontrado', slug='plan-not-found'))
 
@@ -1252,7 +1255,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 course = Course.objects.filter(**kwargs).get()
                 extra['courses'] = course
 
-            except:
+            except Exception:
                 raise ValidationException(
                     translation(lang,
                                 en='Course not found',
@@ -1334,7 +1337,11 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                             es='El syllabus no pertenece al curso',
                             slug='syllabus-not-belong-to-course'))
 
-        if plan and plan.has_waiting_list == True:
+        if country is not None and country.lower() in forbidden_countries:
+            data['status'] = 'WAITING_LIST'
+            data['process_status'] = 'PENDING'
+
+        elif plan and plan.has_waiting_list == True:
             data['status'] = 'WAITING_LIST'
             data['process_status'] = 'PENDING'
 
@@ -1371,7 +1378,6 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         self.cohort = cohort
         self.syllabus = syllabus
-        now = str(timezone.now())
 
         if not self.instance:
             data['token'] = hashlib.sha512((data['email']).encode('UTF-8') + os.urandom(64)).hexdigest()
@@ -1388,7 +1394,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 event = Event.objects.filter(**args).get()
                 data['event_slug'] = event.slug
 
-            except Exception as e:
+            except Exception:
                 raise ValidationException(translation(lang,
                                                       en='Unable to find the given Event',
                                                       es='Imposible encontrar el Evento dado',
@@ -1407,7 +1413,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 asset = Asset.objects.filter(**args).get()
                 data['asset_slug'] = asset.slug
 
-            except Exception as e:
+            except Exception:
                 raise ValidationException(translation(lang,
                                                       en='Unable to find the given Asset',
                                                       es='Imposible encontrar el Asset dado',
@@ -1448,11 +1454,11 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         if self.course:
             self.course.invites.add(instance)
 
-        if self.user:
-            tasks_activity.add_activity.delay(self.user.id,
-                                              'invite_created',
-                                              related_type='auth.UserInvite',
-                                              related_id=instance.id)
+        # if self.user:
+        #     tasks_activity.add_activity.delay(self.user.id,
+        #                                       'invite_created',
+        #                                       related_type='auth.UserInvite',
+        #                                       related_id=instance.id)
 
         return instance
 

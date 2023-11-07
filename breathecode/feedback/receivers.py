@@ -1,6 +1,5 @@
 import logging
 from django.dispatch import receiver
-from django.db.models import Avg
 from datetime import timedelta
 from .signals import survey_answered
 from breathecode.admissions.signals import student_edu_status_updated

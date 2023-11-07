@@ -1,10 +1,9 @@
 import logging
-import os
 
 import pytz
 from django.contrib.auth.models import AnonymousUser, User
 from django.db.models import FloatField, Max, Q, Value
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -19,14 +18,12 @@ from breathecode.admissions.caches import (CohortCache, CohortUserCache, Syllabu
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.utils.i18n import translation
-from .permissions.consumers import cohort_by_url_param
 from breathecode.utils import (APIViewExtensions, DatetimeInteger, GenerateLookupsMixin,
                                HeaderLimitOffsetPagination, ValidationException, capable_of, localize_query)
-from breathecode.utils.decorators import has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 
 from .actions import find_asset_on_json, test_syllabus, update_asset_on_json
-from .models import (ACTIVE, DELETED, STUDENT, Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus,
+from .models import (DELETED, STUDENT, Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus,
                      SyllabusSchedule, SyllabusScheduleTimeSlot, SyllabusVersion)
 from .serializers import (
     AcademyReportSerializer, AcademySerializer, CohortPUTSerializer, CohortSerializer,
@@ -214,7 +211,7 @@ class PublicCohortView(APIView):
                 latitude, longitude = coordinates.split(',')
                 latitude = float(latitude)
                 longitude = float(longitude)
-            except:
+            except Exception:
                 raise ValidationException('Bad coordinates, the format is latitude,longitude',
                                           slug='bad-coordinates')
 
@@ -408,12 +405,12 @@ class CohortUserView(APIView, GenerateLookupsMixin):
 
             try:
                 data['user'] = int(data['user'])
-            except:
+            except Exception:
                 ...
 
             try:
                 data['cohort'] = int(data['cohort'])
-            except:
+            except Exception:
                 ...
 
             if 'user' not in data or 'cohort' not in data:
@@ -473,13 +470,13 @@ class CohortUserView(APIView, GenerateLookupsMixin):
                 try:
                     user = int(user)
                     data['user'] = user
-                except:
+                except Exception:
                     raise ValidationException('invalid user_id', code=400)
 
                 try:
                     cohort = int(cohort)
                     data['cohort'] = cohort
-                except:
+                except Exception:
                     raise ValidationException('invalid cohort_id', code=400)
 
             if instance := CohortUser.objects.filter(cohort__id=cohort, user__id=user).first():
@@ -488,7 +485,7 @@ class CohortUserView(APIView, GenerateLookupsMixin):
                 data['user'] = instance.user.id
                 return data, instance
 
-            message = f'Cannot determine CohortUser'
+            message = 'Cannot determine CohortUser'
 
             if many:
                 message += f" in index {validate_data.__dict__['index']}"
@@ -567,9 +564,9 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
 
         handler = self.extensions(request)
 
-        cache = handler.cache.get()
-        if cache is not None:
-            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
+        # cache = handler.cache.get()
+        # if cache is not None:
+        #     return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
 
         if user_id is not None:
             item = CohortUser.objects.filter(cohort__academy__id=academy_id,
@@ -710,13 +707,13 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
                 try:
                     user = int(user)
                     data['user'] = user
-                except:
+                except Exception:
                     raise ValidationException('invalid user_id', code=400)
 
                 try:
                     cohort = int(cohort)
                     data['cohort'] = cohort
-                except:
+                except Exception:
                     raise ValidationException('invalid cohort_id', code=400)
 
             if instance := CohortUser.objects.filter(cohort__id=cohort, user__id=user).first():
@@ -725,7 +722,7 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
                 data['user'] = instance.user.id
                 return data, instance
 
-            message = f'Cannot determine CohortUser'
+            message = 'Cannot determine CohortUser'
 
             if many:
                 message += f" in index {validate_data.__dict__['index']}"
@@ -1248,7 +1245,7 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
         # only from this academy
         cohort = localize_query(cohort, request).first()
         if cohort is None:
-            logger.debug(f'Cohort not be found in related academies')
+            logger.debug('Cohort not be found in related academies')
             raise ValidationException('Specified cohort not be found')
 
         data = {}
@@ -1380,18 +1377,18 @@ class AcademySyllabusScheduleView(APIView, HeaderLimitOffsetPagination, Generate
     @capable_of('crud_certificate')
     def post(self, request, academy_id=None):
         if 'syllabus' not in request.data:
-            raise ValidationException(f'Missing syllabus in the request', slug='missing-syllabus-in-request')
+            raise ValidationException('Missing syllabus in the request', slug='missing-syllabus-in-request')
 
         syllabus = Syllabus.objects.filter(id=request.data['syllabus']).exists()
         if not syllabus:
-            raise ValidationException(f'Syllabus not found', code=404, slug='syllabus-not-found')
+            raise ValidationException('Syllabus not found', code=404, slug='syllabus-not-found')
 
         if 'academy' not in request.data:
-            raise ValidationException(f'Missing academy in the request', slug='missing-academy-in-request')
+            raise ValidationException('Missing academy in the request', slug='missing-academy-in-request')
 
         academy = Academy.objects.filter(id=request.data['academy']).exists()
         if not academy:
-            raise ValidationException(f'Academy not found', code=404, slug='academy-not-found')
+            raise ValidationException('Academy not found', code=404, slug='academy-not-found')
 
         serializer = SyllabusScheduleSerializer(data=request.data)
 
@@ -1404,10 +1401,10 @@ class AcademySyllabusScheduleView(APIView, HeaderLimitOffsetPagination, Generate
     def put(self, request, certificate_id=None, academy_id=None):
         schedule = SyllabusSchedule.objects.filter(id=certificate_id).first()
         if not schedule:
-            raise ValidationException(f'Schedule not found', code=404, slug='specialty-mode-not-found')
+            raise ValidationException('Schedule not found', code=404, slug='specialty-mode-not-found')
 
         if schedule.academy.id != int(academy_id):
-            raise ValidationException(f'You can\'t edit a schedule of other academy',
+            raise ValidationException('You can\'t edit a schedule of other academy',
                                       code=404,
                                       slug='syllabus-schedule-of-other-academy')
 
@@ -1415,7 +1412,7 @@ class AcademySyllabusScheduleView(APIView, HeaderLimitOffsetPagination, Generate
                 Q(academy_owner__id=academy_id) | Q(private=False),
                 id=request.data['syllabus'],
         ).exists():
-            raise ValidationException(f'Syllabus not found', code=404, slug='syllabus-not-found')
+            raise ValidationException('Syllabus not found', code=404, slug='syllabus-not-found')
 
         serializer = SyllabusSchedulePUTSerializer(schedule, data=request.data)
 
@@ -1642,18 +1639,18 @@ class SyllabusVersionView(APIView):
                                                    academy_owner__id=academy_id).first()
 
             if not syllabus:
-                raise ValidationException(f'Syllabus not found for this academy',
+                raise ValidationException('Syllabus not found for this academy',
                                           code=404,
                                           slug='syllabus-not-found')
 
         if not syllabus and 'syllabus' not in request.data:
-            raise ValidationException(f'Missing syllabus in the request', slug='missing-syllabus-in-request')
+            raise ValidationException('Missing syllabus in the request', slug='missing-syllabus-in-request')
 
         if not syllabus:
             syllabus = Syllabus.objects.filter(id=request.data['syllabus']).first()
 
         if not syllabus:
-            raise ValidationException(f'Syllabus not found for this academy',
+            raise ValidationException('Syllabus not found for this academy',
                                       code=404,
                                       slug='syllabus-not-found')
 
@@ -1823,7 +1820,7 @@ class AcademyCohortHistoryView(APIView):
                 del payload['day']
 
             cohort_log = CohortLog(item)
-            cohort_log.logDay(payload, day)
+            cohort_log.log_day(payload, day)
             cohort_log.save()
         except Exception as e:
             if day is None:

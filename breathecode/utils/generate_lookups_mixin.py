@@ -33,14 +33,27 @@ class GenerateLookupsMixin(APIException):
 
     def generate_lookups(self,
                          request: WSGIRequest,
-                         fields=[],
-                         relationships=[],
-                         many_fields=[],
-                         many_relationships=[]):
+                         fields=None,
+                         relationships=None,
+                         many_fields=None,
+                         many_relationships=None):
         """
         This method get the variables through of querystring, returns one list
         ready to be used by the filter method
         """
+
+        if fields is None:
+            fields = []
+
+        if relationships is None:
+            relationships = []
+
+        if many_fields is None:
+            many_fields = []
+
+        if many_relationships is None:
+            many_relationships = []
+
         kwargs = {}
         founds = (self.__bulk_generator__(request, fields) +
                   self.__bulk_generator__(request, many_fields, many=True) +

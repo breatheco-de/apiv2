@@ -5,11 +5,11 @@ __all__ = ['NDB']
 
 class NDB:
 
-    def __init__(self, Model):
+    def __init__(self, model):
         from google.cloud import ndb
         resolve_credentials()
         self.client = ndb.Client()
-        self.Model = Model
+        self.Model = model
 
     def fetch(self, query, **kwargs):
         from google.cloud import ndb

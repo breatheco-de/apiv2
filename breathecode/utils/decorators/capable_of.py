@@ -85,8 +85,8 @@ def get_academy_from_capability(kwargs, request, capability):
 
     academy = capable.first().academy
     if academy.status == 'DELETED':
-        raise PermissionDenied(f'This academy is deleted')
+        raise PermissionDenied('This academy is deleted')
     if request.get_full_path() != '/v1/admissions/academy/activate' and academy.status == 'INACTIVE':
-        raise PermissionDenied(f'This academy is not active')
+        raise PermissionDenied('This academy is not active')
 
     return academy_id

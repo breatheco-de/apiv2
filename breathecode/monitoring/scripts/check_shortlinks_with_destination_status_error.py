@@ -5,6 +5,9 @@ Alert when there are Marketing ShortLinks with destination_status=error or not_f
 The email notification must include the list of shortlinks that are failing, each of them with the destination_status, destination_status_text and
 when was the last time it was clicked (Ex.g: 2 days ago) and the link to click it that opens the destination.
 """
+
+# flake8: noqa: F821
+
 import datetime
 from breathecode.marketing.models import ShortLink
 from breathecode.utils import ScriptNotification

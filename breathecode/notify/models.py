@@ -1,11 +1,10 @@
-import requests
 from django.db import models
 from collections import OrderedDict
 from django.core import serializers
 from django.conf import settings
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
-from rest_framework.exceptions import ParseError, PermissionDenied, ValidationError
+from rest_framework.exceptions import ValidationError
 
 __all__ = [
     'UserProxy', 'CohortProxy', 'Device', 'SlackTeam', 'SlackUser', 'SlackUserTeam', 'SlackChannel', 'Hook'
@@ -174,10 +173,12 @@ class AbstractHook(models.Model):
         Serialize the object down to Python primitives.
         By default it uses Django's built in serializer.
         """
+        from .utils.hook_manager import HookManager
+
         if getattr(instance, 'serialize_hook', None) and callable(instance.serialize_hook):
             return instance.serialize_hook(hook=self)
         if getattr(settings, 'HOOK_SERIALIZER', None):
-            serializer = get_module(settings.HOOK_SERIALIZER)
+            serializer = HookManager.get_module(settings.HOOK_SERIALIZER)
             return serializer(instance, hook=self)
         # if no user defined serializers, fallback to the django builtin!
         data = serializers.serialize('python', [instance])[0]
