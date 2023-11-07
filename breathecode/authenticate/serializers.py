@@ -1225,6 +1225,27 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         email_validation = validate_email(data['email'], lang)
 
+        email_quality = float(email_validation['quality_score'])
+        data['email_quality'] = email_quality
+        split_email = data['email'].split('@')
+
+        email_status = {
+            'email': data['email'],
+            'did_you_mean': '',
+            'user': split_email[0],
+            'domain': split_email[1],
+            'format_valid': email_validation['is_valid_format']['value'],
+            'mx_found': email_validation['is_mx_found']['value'],
+            'smtp_check': email_validation['is_smtp_valid']['value'],
+            'catch_all': email_validation['is_catchall_email']['value'],
+            'role': email_validation['is_role_email']['value'],
+            'disposable': email_validation['is_disposable_email']['value'],
+            'free': email_validation['is_free_email']['value'],
+            'score': email_quality
+        }
+
+        data['email_status'] = email_status
+
         extra = {}
 
         plan = None

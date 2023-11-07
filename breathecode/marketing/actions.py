@@ -101,21 +101,17 @@ def validate_email(email, lang):
     """
 
     resp = requests.get(
-        f'https://apilayer.net/api/check?access_key={MAILBOX_LAYER_KEY}&email={email}&smtp=1&format=1',
-        timeout=2)
+        f'https://emailvalidation.abstractapi.com/v1/?api_key={MAILBOX_LAYER_KEY}&email={email}', timeout=2)
     data = resp.json()
 
-    if 'success' in data and data['success'] == False:
-        if data['error']['code'] >= 100 and data['error']['code'] < 200:
-            raise Exception(data['error']['type'])
-        else:
-            raise ValidationException(
-                translation(lang,
-                            en='Error while validating email address',
-                            es='Se ha producido un error validando tu dirección de correo electrónico',
-                            slug='email-validation-error'))
+    if 'error' in data:
+        raise ValidationException(
+            translation(lang,
+                        en='Error while validating email address',
+                        es='Se ha producido un error validando tu dirección de correo electrónico',
+                        slug='email-validation-error'))
 
-    if 'disposable' in data and data['disposable'] == True:
+    if 'is_disposable_email' in data and data['is_disposable_email']['value'] == True:
         raise ValidationException(
             translation(
                 lang,
@@ -125,8 +121,8 @@ def validate_email(email, lang):
                 'Parece que estás utilizando un proveedor de correos electronicos temporales. Por favor cambia tu dirección de correo electrónico.',
                 slug='disposable-email'))
 
-    if (('mx_found' in data and data['mx_found'] == False)
-            or ('smtp_check' in data and data['smtp_check'] == False)):
+    if (('is_mx_found' in data and data['is_mx_found']['value'] == False)
+            or ('is_smtp_valid' in data and data['is_smtp_valid']['value'] == False)):
         raise ValidationException(
             translation(
                 lang,
@@ -135,7 +131,7 @@ def validate_email(email, lang):
                 'El correo electrónico que haz especificado parece inválido, por favor corrige tu correo electronico',
                 slug='invalid-email'))
 
-    if 'score' in data and data['score'] < 0.60:
+    if 'quality_score' in data and float(data['quality_score']) < 0.60:
         raise ValidationException(translation(
             lang,
             en=
