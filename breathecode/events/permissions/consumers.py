@@ -53,6 +53,7 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
     context['consumables'] = context['consumables'].filter(event_type_set__event_types=event_type)
 
     is_host = event.host_user == request.user
+    is_free_for_all = event.free_for_all
     is_free_for_bootcamps = (event.free_for_bootcamps) or (event.free_for_bootcamps is None
                                                            and event_type.free_for_bootcamps)
 
@@ -61,7 +62,8 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
         | Q(cohort__available_as_saas=None, cohort__academy__available_as_saas=False),
         user=request.user).exists()
 
-    if not is_host and (not is_free_for_bootcamps or not user_with_available_as_saas_false):
+    if not is_host and not is_free_for_all and (not is_free_for_bootcamps
+                                                or not user_with_available_as_saas_false):
         context['will_consume'] = True
 
     utc_now = timezone.now()
