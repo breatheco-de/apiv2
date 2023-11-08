@@ -23,14 +23,14 @@ from enum import Enum
 
 # keeps this sorted by priority
 class TaskPriority(Enum):
-    CACHE = 0  # cache
     BACKGROUND = 0  # anything without importance
     NOTIFICATION = 1  # non realtime notifications
     MONITORING = 2  # monitoring tasks
     ACTIVITY = 2  # user activity
-    OAUTH_CREDENTIALS = 2  # oauth tasks
-    BILL = 3  # postpaid billing
+    BILL = 2  # postpaid billing
+    CACHE = 3  # cache
     MARKETING = 4  # marketing purposes
+    OAUTH_CREDENTIALS = 5  # oauth tasks
     DEFAULT = 5  # default priority
     TASK_MANAGER = 6  # task manager
     ACADEMY = 7  # anything that the academy can see

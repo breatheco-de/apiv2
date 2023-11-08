@@ -25,6 +25,9 @@ def is_compression_enabled():
     return os.getenv('COMPRESSION', '1').lower() in ENABLE_LIST_OPTIONS
 
 
+IS_DJANGO_REDIS = hasattr(cache, 'delete_pattern')
+
+
 class CacheMeta(type):
 
     def __init__(cls: Cache, name, bases, clsdict):
@@ -129,20 +132,27 @@ class Cache(metaclass=CacheMeta):
         if deep != 0:
             return resolved
 
-        # for descriptor in resolved:
-        #     cache.delete_pattern(f'{cls._version_prefix}{descriptor.model.__name__}__*', itersize=100_000)
-
-        # pattern = '|'.join(
-        #     [f'{cls._version_prefix}{descriptor.model.__name__}__*' for descriptor in resolved])
-        # cache.delete_pattern(pattern, itersize=100_000)
         cache.delete_pattern(
             [f'{cls._version_prefix}{descriptor.model.__name__}__*' for descriptor in resolved],
             itersize=100_000)
 
-        # iter_keys = cache.iter_keys(f'{cls._version_prefix}{cls.model.__name__}__*')
+        keys = [f'{cls._version_prefix}{descriptor.model.__name__}__keys' for descriptor in resolved]
+        keys = [x or set() for x in cache.get_many(keys).values()]
+
+        to_delete = set()
+        for key in keys:
+            if not key:
+                continue
+
+            to_delete |= key
+
+        cache.delete_many(to_delete)
 
     @classmethod
     def keys(cls):
+        if IS_DJANGO_REDIS:
+            return cache.keys(f'{cls._version_prefix}{cls.model.__name__}__keys') or set()
+
         key = cls.model.__name__
         return cache.keys(f'{cls._version_prefix}{key}__*')
 
@@ -271,5 +281,13 @@ class Cache(metaclass=CacheMeta):
         # encode the response to avoid serialization on get requests
         else:
             cache.set(key, data, timeout)
+
+        # key management
+        if IS_DJANGO_REDIS:
+            keys = cache.get(f'{cls._version_prefix}{cls.model.__name__}__keys') or set()
+            keys.add(key)
+
+            cache.set(f'{cls._version_prefix}{cls.model.__name__}__keys', keys)
+            return res
 
         return res
