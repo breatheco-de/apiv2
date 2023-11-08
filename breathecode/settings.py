@@ -393,15 +393,6 @@ class CustomRedisClient(DefaultClient):
             count = 0
             pipeline = client.pipeline()
 
-            for x in patterns:
-                print('--------')
-                print('--------')
-                print('--------')
-                print('--------')
-                print('--------')
-                print(type(x))
-                print(x)
-
             for key in itertools.chain(*[client.scan_iter(match=x, count=itersize) for x in patterns]):
                 pipeline.delete(key)
                 count += 1
