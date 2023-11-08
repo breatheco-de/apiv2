@@ -887,11 +887,19 @@ class EventMeCheckinView(APIView):
 
         event = Event.objects.filter(event_type__in=items, id=event_id).first()
         if event is None:
-            raise ValidationException(translation(lang,
-                                                  en='Event not found or you dont have access',
-                                                  es='Evento no encontrado o no tienes acceso',
-                                                  slug='event-not-found'),
-                                      code=404)
+            event = Event.objects.filter(id=event_id).first()
+            if event is None or event.event_type is None:
+                raise ValidationException(translation(lang,
+                                                    en="This event was not found, or your current plan does not include access to it.",
+                                                    es='El evento no se ha encontrado o tu plan no te permite asistir a este evento',
+                                                    slug='event-not-found'),
+                                        code=404)
+            else:
+                raise ValidationException(translation(lang,
+                                                    en='Tu plan no te permite tener acceso a eventos de este tipo: '+event.event_type.name,
+                                                    es='Your current plan does not include access to this type of events: '+event.event_type.name,
+                                                    slug='event-not-found'),
+                                        code=404)
 
         serializer = POSTEventCheckinSerializer(data={
             **request.data, 'email': request.user.email,
