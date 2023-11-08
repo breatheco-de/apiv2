@@ -46,7 +46,8 @@ class AssetTechnology(models.Model):
                             null=True,
                             help_text='Leave blank if will be shown in all languages')
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, default=None, blank=True, null=True)
-    is_deprecated = models.BooleanField(default=False)
+    is_deprecated = models.BooleanField(
+        default=True, help_text='If False, the frontend will generate a landing for this technology.')
     featured_asset = models.ForeignKey('Asset',
                                        on_delete=models.SET_NULL,
                                        default=None,
