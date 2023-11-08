@@ -9,7 +9,7 @@ from .models import CalendlyOrganization, CalendlyWebhook
 logger = logging.getLogger(__name__)
 
 
-@shared_task(bind=True, priority=TaskPriority.STUDENT)
+@shared_task(bind=True, priority=TaskPriority.STUDENT.value)
 def async_calendly_webhook(self, calendly_webhook_id):
     logger.debug('Starting async_calendly_webhook')
     status = 'ok'

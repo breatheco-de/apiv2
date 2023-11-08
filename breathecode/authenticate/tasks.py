@@ -11,23 +11,23 @@ API_URL = os.getenv('API_URL', '')
 logger = logging.getLogger(__name__)
 
 
-@shared_task(priority=TaskPriority.ACADEMY)
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_set_gitpod_user_expiration(gitpoduser_id):
     logger.debug(f'Recalculate gitpoduser expiration for {gitpoduser_id}')
     return set_gitpod_user_expiration(gitpoduser_id) is not None
 
 
-@shared_task(priority=TaskPriority.ACADEMY)
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_add_to_organization(cohort_id, user_id):
     return add_to_organization(cohort_id, user_id)
 
 
-@shared_task(priority=TaskPriority.ACADEMY)
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_remove_from_organization(cohort_id, user_id, force=False):
     return remove_from_organization(cohort_id, user_id, force=force)
 
 
-@shared_task(priority=TaskPriority.NOTIFICATION)
+@shared_task(priority=TaskPriority.NOTIFICATION.value)
 def async_accept_user_from_waiting_list(user_invite_id: int) -> None:
     from .models import UserInvite
 
@@ -71,7 +71,7 @@ def async_accept_user_from_waiting_list(user_invite_id: int) -> None:
         })
 
 
-@task(priority=TaskPriority.OAUTH_CREDENTIALS)
+@task(priority=TaskPriority.OAUTH_CREDENTIALS.value)
 def destroy_legacy_key(legacy_key_id):
     from .models import LegacyKey
 

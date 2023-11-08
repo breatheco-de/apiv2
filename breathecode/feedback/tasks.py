@@ -136,7 +136,7 @@ def api_url():
     return os.getenv('API_URL', '')
 
 
-@shared_task(bind=True, priority=TaskPriority.NOTIFICATION)
+@shared_task(bind=True, priority=TaskPriority.NOTIFICATION.value)
 def send_cohort_survey(self, user_id, survey_id):
     logger.info('Starting send_cohort_survey')
     survey = Survey.objects.filter(id=survey_id).first()
@@ -189,7 +189,7 @@ def send_cohort_survey(self, user_id, survey_id):
         notify_actions.send_slack('nps_survey', user.slackuser, survey.cohort.academy.slackteam, data=data)
 
 
-@shared_task(bind=True, priority=TaskPriority.ACADEMY)
+@shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
 def process_student_graduation(self, cohort_id, user_id):
     from .actions import create_user_graduation_reviews
 
@@ -207,7 +207,7 @@ def process_student_graduation(self, cohort_id, user_id):
     return True
 
 
-@shared_task(bind=True, priority=TaskPriority.ACADEMY)
+@shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
 def recalculate_survey_scores(self, survey_id):
     logger.info('Starting recalculate_survey_score')
 
@@ -221,7 +221,7 @@ def recalculate_survey_scores(self, survey_id):
     survey.save()
 
 
-@shared_task(bind=True, priority=TaskPriority.ACADEMY)
+@shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
 def process_answer_received(self, answer_id):
     """
     This task will be called every time a single NPS answer is received
@@ -277,7 +277,7 @@ def process_answer_received(self, answer_id):
     return True
 
 
-@shared_task(bind=True, priority=TaskPriority.NOTIFICATION)
+@shared_task(bind=True, priority=TaskPriority.NOTIFICATION.value)
 def send_mentorship_session_survey(self, session_id):
     logger.info('Starting send_mentorship_session_survey')
     session = MentorshipSession.objects.filter(id=session_id).first()

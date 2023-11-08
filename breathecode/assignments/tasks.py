@@ -15,7 +15,7 @@ from .models import Task
 logger = logging.getLogger(__name__)
 
 
-@shared_task(bind=True, priority=TaskPriority.NOTIFICATION)
+@shared_task(bind=True, priority=TaskPriority.NOTIFICATION.value)
 def student_task_notification(self, task_id):
     """Notify if the task was change"""
     logger.info('Starting student_task_notification')
@@ -35,7 +35,7 @@ def student_task_notification(self, task_id):
     })
 
 
-@shared_task(bind=True, priority=TaskPriority.NOTIFICATION)
+@shared_task(bind=True, priority=TaskPriority.NOTIFICATION.value)
 def teacher_task_notification(self, task_id):
     """Notify if the task was change"""
     logger.info('Starting teacher_task_notification')
@@ -67,7 +67,7 @@ def teacher_task_notification(self, task_id):
     })
 
 
-@shared_task(bind=False, priority=TaskPriority.ACADEMY)
+@shared_task(bind=False, priority=TaskPriority.ACADEMY.value)
 def set_cohort_user_assignments(task_id: int):
     logger.info('Executing set_cohort_user_assignments')
 

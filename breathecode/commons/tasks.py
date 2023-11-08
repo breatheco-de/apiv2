@@ -14,7 +14,7 @@ TOLERANCE = 10
 
 
 # do not use our own task decorator
-@shared_task(bind=False, priority=TaskPriority.TASK_MANAGER)
+@shared_task(bind=False, priority=TaskPriority.TASK_MANAGER.value)
 def mark_task_as_cancelled(task_manager_id):
     logger.info(f'Running mark_task_as_cancelled for {task_manager_id}')
 
@@ -34,7 +34,7 @@ def mark_task_as_cancelled(task_manager_id):
 
 
 # do not use our own task decorator
-@shared_task(bind=False, priority=TaskPriority.TASK_MANAGER)
+@shared_task(bind=False, priority=TaskPriority.TASK_MANAGER.value)
 def mark_task_as_reversed(task_manager_id, *, attempts=0, force=False):
     logger.info(f'Running mark_task_as_reversed for {task_manager_id}')
 
@@ -70,7 +70,7 @@ def mark_task_as_reversed(task_manager_id, *, attempts=0, force=False):
 
 
 # do not use our own task decorator
-@shared_task(bind=False, priority=TaskPriority.TASK_MANAGER)
+@shared_task(bind=False, priority=TaskPriority.TASK_MANAGER.value)
 def mark_task_as_paused(task_manager_id):
     logger.info(f'Running mark_task_as_paused for {task_manager_id}')
 
@@ -90,7 +90,7 @@ def mark_task_as_paused(task_manager_id):
 
 
 # do not use our own task decorator
-@shared_task(bind=False, priority=TaskPriority.TASK_MANAGER)
+@shared_task(bind=False, priority=TaskPriority.TASK_MANAGER.value)
 def mark_task_as_pending(task_manager_id, *, attempts=0, force=False, last_run=None):
     logger.info(f'Running mark_task_as_pending for {task_manager_id}')
 
@@ -139,7 +139,7 @@ def mark_task_as_pending(task_manager_id, *, attempts=0, force=False, last_run=N
 MODULES = {}
 
 
-@task(bind=False, priority=TaskPriority.CACHE)
+@task(bind=False, priority=TaskPriority.CACHE.value)
 def clean_task(key: str, **_: Any):
     # make sure all the modules are loaded
     from breathecode.admissions import caches as _
@@ -174,4 +174,9 @@ def clean_task(key: str, **_: Any):
         raise RetryTask(f'Could not clean the cache {key}')
 
 
+# """
+# from breathecode.commons.tasks import clean_task
+# from django.utils import timezone
+# a=timezone.now();clean_task.apply_async(args=['breathecode.admissions.models.Cohort'], countdown=0);b=timezone.now(); print('res', b-a)
 # a=timezone.now();clean_task('breathecode.admissions.models.Cohort');b=timezone.now(); print('res', b-a)
+# """

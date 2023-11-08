@@ -23,7 +23,7 @@ ISO_STRING_PATTERN = re.compile(
 )
 
 
-@shared_task(bind=True, priority=TaskPriority.ACADEMY)
+@shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
 def get_attendancy_log(self, cohort_id: int):
     logger.info('Executing get_attendancy_log')
     cohort = Cohort.objects.filter(id=cohort_id).first()
@@ -97,7 +97,7 @@ def get_attendancy_log(self, cohort_id: int):
         get_attendancy_log_per_cohort_user.delay(cohort_user.id)
 
 
-@shared_task(bind=False, priority=TaskPriority.ACADEMY)
+@shared_task(bind=False, priority=TaskPriority.ACADEMY.value)
 def get_attendancy_log_per_cohort_user(cohort_user_id: int):
     logger.info('Executing get_attendancy_log_per_cohort_user')
     cohort_user = CohortUser.objects.filter(id=cohort_user_id).first()
@@ -140,7 +140,7 @@ def get_attendancy_log_per_cohort_user(cohort_user_id: int):
     logger.info('History log saved')
 
 
-@task(priority=TaskPriority.BACKGROUND)
+@task(priority=TaskPriority.BACKGROUND.value)
 def add_activity(user_id: int,
                  kind: str,
                  related_type: Optional[str] = None,

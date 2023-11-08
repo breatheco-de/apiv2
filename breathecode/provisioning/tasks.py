@@ -37,7 +37,7 @@ PANDAS_ROWS_LIMIT = 100
 DELETE_LIMIT = 10000
 
 
-@task(priority=TaskPriority.BILL)
+@task(priority=TaskPriority.BILL.value)
 def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
     logger.info(f'Starting calculate_bill_amounts for hash {hash}')
 
@@ -142,7 +142,7 @@ def reverse_upload(hash: str, **_: Any):
     ProvisioningBill.objects.filter(hash=hash).delete()
 
 
-@task(reverse=reverse_upload, priority=TaskPriority.BILL)
+@task(reverse=reverse_upload, priority=TaskPriority.BILL.value)
 def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: int = 0, **_: Any):
     logger.info(f'Starting upload for hash {hash}')
 
@@ -235,7 +235,7 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
         calculate_bill_amounts.delay(hash)
 
 
-@task(priority=TaskPriority.BACKGROUND)
+@task(priority=TaskPriority.BACKGROUND.value)
 def archive_provisioning_bill(bill_id: int, **_: Any):
     logger.info(f'Starting archive_provisioning_bills for bill id {bill_id}')
 

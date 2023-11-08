@@ -9,7 +9,7 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
-@shared_task(bind=True, priority=TaskPriority.BACKGROUND)
+@shared_task(bind=True, priority=TaskPriority.BACKGROUND.value)
 def async_run_spider(self, args):
     from .actions import run_spider
 
@@ -25,7 +25,7 @@ def async_run_spider(self, args):
         spider.save()
 
 
-@shared_task(bind=True, priority=TaskPriority.BACKGROUND)
+@shared_task(bind=True, priority=TaskPriority.BACKGROUND.value)
 def async_fetch_sync_all_data(self, args):
     from .actions import fetch_sync_all_data
 

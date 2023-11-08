@@ -15,7 +15,7 @@ API_URL = os.getenv('API_URL', '')
 logger = logging.getLogger(__name__)
 
 
-@shared_task(priority=TaskPriority.ACADEMY)
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_test_syllabus(syllabus_slug, syllabus_version) -> None:
     logger.debug('Process async_test_syllabus')
 
@@ -48,7 +48,7 @@ def async_test_syllabus(syllabus_slug, syllabus_version) -> None:
             })
 
 
-@task(priority=TaskPriority.STUDENT)
+@task(priority=TaskPriority.STUDENT.value)
 def build_cohort_user(cohort_id: int, user_id: int, role: str = 'STUDENT', **_: Any) -> None:
     logger.info(f'Starting build_cohort_user for cohort {cohort_id} and user {user_id}')
 
@@ -104,7 +104,7 @@ def build_cohort_user(cohort_id: int, user_id: int, role: str = 'STUDENT', **_: 
         logger.info('ProfileAcademy added')
 
 
-@task(priority=TaskPriority.STUDENT)
+@task(priority=TaskPriority.STUDENT.value)
 def build_profile_academy(academy_id: int, user_id: int, role: str = 'student', **_: Any) -> None:
     logger.info(f'Starting build_profile_academy for cohort {academy_id} and user {user_id}')
 

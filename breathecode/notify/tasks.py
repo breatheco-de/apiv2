@@ -21,13 +21,13 @@ def get_api_url():
 logger = logging.getLogger(__name__)
 
 
-@shared_task(priority=TaskPriority.REALTIME)
+@shared_task(priority=TaskPriority.REALTIME.value)
 def async_slack_team_channel(team_id):
     logger.debug('Starting async_slack_team_channel')
     return sync_slack_team_channel(team_id)
 
 
-@shared_task(priority=TaskPriority.REALTIME)
+@shared_task(priority=TaskPriority.REALTIME.value)
 def send_mentorship_starting_notification(session_id):
     logger.debug('Starting send_mentorship_starting_notification')
 
@@ -50,13 +50,13 @@ def send_mentorship_starting_notification(session_id):
     return True
 
 
-@shared_task(priority=TaskPriority.REALTIME)
+@shared_task(priority=TaskPriority.REALTIME.value)
 def async_slack_team_users(team_id):
     logger.debug('Starting async_slack_team_users')
     return sync_slack_team_users(team_id)
 
 
-@shared_task(priority=TaskPriority.REALTIME)
+@shared_task(priority=TaskPriority.REALTIME.value)
 def async_slack_action(post_data):
     logger.debug('Starting async_slack_action')
     try:
@@ -74,7 +74,7 @@ def async_slack_action(post_data):
         return False
 
 
-@shared_task(priority=TaskPriority.REALTIME)
+@shared_task(priority=TaskPriority.REALTIME.value)
 def async_slack_command(post_data):
     logger.debug('Starting async_slack_command')
     try:
@@ -92,7 +92,7 @@ def async_slack_command(post_data):
         return False
 
 
-@task(priority=TaskPriority.DEFAULT)
+@task(priority=TaskPriority.DEFAULT.value)
 def async_deliver_hook(target, payload, hook_id=None, **kwargs):
     """
     target:     the url to receive the payload.

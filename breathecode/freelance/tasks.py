@@ -7,7 +7,7 @@ from .actions import (sync_single_issue, update_status_based_on_github_action, g
 logger = logging.getLogger(__name__)
 
 
-@shared_task(bind=True, base=WebhookTask, priority=TaskPriority.BILL)
+@shared_task(bind=True, base=WebhookTask, priority=TaskPriority.BILL.value)
 def async_repository_issue_github(self, webhook):
 
     logger.debug('async_repository_issue_github')

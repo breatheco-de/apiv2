@@ -26,7 +26,7 @@ def get_app_url():
     return os.getenv('APP_URL', '')
 
 
-@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT)
+@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def renew_consumables(self, scheduler_id: int, **_: Any):
     """Renew consumables."""
 
@@ -161,7 +161,7 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     logger.info(f'The scheduler {scheduler.id} was renewed')
 
 
-@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT)
+@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def renew_subscription_consumables(self, subscription_id: int, **_: Any):
     """Renew consumables belongs to a subscription."""
 
@@ -184,7 +184,7 @@ def renew_subscription_consumables(self, subscription_id: int, **_: Any):
         renew_consumables.delay(scheduler.id)
 
 
-@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT)
+@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def renew_plan_financing_consumables(self, plan_financing_id: int, **_: Any):
     """Renew consumables belongs to a plan financing."""
 
@@ -233,7 +233,7 @@ def fallback_charge_subscription(self, subscription_id: int, exception: Exceptio
 @task(bind=True,
       transaction=True,
       fallback=fallback_charge_subscription,
-      priority=TaskPriority.WEB_SERVICE_PAYMENT)
+      priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def charge_subscription(self, subscription_id: int, **_: Any):
     """Renews a subscription."""
 
@@ -344,7 +344,7 @@ def fallback_charge_plan_financing(self, plan_financing_id: int, exception: Exce
 @task(bind=True,
       transaction=True,
       fallback=fallback_charge_plan_financing,
-      priority=TaskPriority.WEB_SERVICE_PAYMENT)
+      priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def charge_plan_financing(self, plan_financing_id: int, **_: Any):
     """Renew a plan financing."""
 
@@ -429,7 +429,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
     renew_plan_financing_consumables.delay(plan_financing.id)
 
 
-@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT)
+@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def build_service_stock_scheduler_from_subscription(self,
                                                     subscription_id: int,
                                                     user_id: Optional[int] = None,
@@ -504,7 +504,7 @@ def build_service_stock_scheduler_from_subscription(self,
     renew_subscription_consumables.delay(subscription.id)
 
 
-@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT)
+@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def build_service_stock_scheduler_from_plan_financing(self,
                                                       plan_financing_id: int,
                                                       user_id: Optional[int] = None,
@@ -563,7 +563,7 @@ def build_service_stock_scheduler_from_plan_financing(self,
     renew_plan_financing_consumables.delay(plan_financing.id)
 
 
-@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT)
+@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def build_subscription(self, bag_id: int, invoice_id: int, start_date: Optional[datetime] = None, **_: Any):
     logger.info(f'Starting build_subscription for bag {bag_id}')
 
@@ -622,7 +622,7 @@ def build_subscription(self, bag_id: int, invoice_id: int, start_date: Optional[
     logger.info(f'Subscription was created with id {subscription.id}')
 
 
-@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT)
+@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def build_plan_financing(self, bag_id: int, invoice_id: int, is_free: bool = False, **_: Any):
     logger.info(f'Starting build_plan_financing for bag {bag_id}')
 
@@ -687,7 +687,7 @@ def build_plan_financing(self, bag_id: int, invoice_id: int, is_free: bool = Fal
     logger.info(f'PlanFinancing was created with id {financing.id}')
 
 
-@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT)
+@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def build_free_subscription(self, bag_id: int, invoice_id: int, **_: Any):
     logger.info(f'Starting build_free_subscription for bag {bag_id}')
 
@@ -769,7 +769,7 @@ def build_free_subscription(self, bag_id: int, invoice_id: int, **_: Any):
     bag.save()
 
 
-@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT)
+@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def end_the_consumption_session(self, consumption_session_id: int, how_many: float = 1.0, **_: Any):
     logger.info(f'Starting end_the_consumption_session for ConsumptionSession {consumption_session_id}')
 
@@ -790,7 +790,7 @@ def end_the_consumption_session(self, consumption_session_id: int, how_many: flo
 
 # TODO: this task is not being used, if you will use this task, you need to take in consideration
 # you need fix the logic about the consumable valid until, maybe this must be removed
-@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT)
+@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def build_consumables_from_bag(bag_id: int, **_: Any):
     logger.info(f'Starting build_consumables_from_bag for bag {bag_id}')
 
@@ -830,7 +830,7 @@ def build_consumables_from_bag(bag_id: int, **_: Any):
     bag.save()
 
 
-@task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT)
+@task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def refund_mentoring_session(session_id: int, **_: Any):
     from breathecode.mentorship.models import MentorshipSession
 
@@ -865,7 +865,7 @@ def refund_mentoring_session(session_id: int, **_: Any):
     consumption_session.save()
 
 
-@task(bind=False, priority=TaskPriority.ACADEMY)
+@task(bind=False, priority=TaskPriority.ACADEMY.value)
 def add_cohort_set_to_subscription(subscription_id: int, cohort_set_id: int, **_: Any):
     logger.info(
         f'Starting add_cohort_set_to_subscription for subscription {subscription_id} cohort_set {cohort_set_id}'

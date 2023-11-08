@@ -11,7 +11,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-@shared_task(bind=True, priority=TaskPriority.MONITORING)
+@shared_task(bind=True, priority=TaskPriority.MONITORING.value)
 def test_endpoint(self, endpoint_id):
     logger.debug('Starting monitor_app')
     endpoint = Endpoint.objects.get(id=endpoint_id)
@@ -46,7 +46,7 @@ def test_endpoint(self, endpoint_id):
                 })
 
 
-@shared_task(bind=True, priority=TaskPriority.MONITORING)
+@shared_task(bind=True, priority=TaskPriority.MONITORING.value)
 def monitor_app(self, app_id):
     logger.debug('Starting monitor_app')
     endpoints = Endpoint.objects.filter(application__id=app_id).values_list('id', flat=True)
@@ -54,7 +54,7 @@ def monitor_app(self, app_id):
         test_endpoint.delay(endpoint_id)
 
 
-@shared_task(bind=True, priority=TaskPriority.MONITORING)
+@shared_task(bind=True, priority=TaskPriority.MONITORING.value)
 def execute_scripts(self, script_id):
     script = MonitorScript.objects.get(id=script_id)
     logger.debug(f'Starting execute_scripts for {script.script_slug}')
@@ -105,7 +105,7 @@ def execute_scripts(self, script_id):
     return True
 
 
-@shared_task(bind=True, priority=TaskPriority.MARKETING)
+@shared_task(bind=True, priority=TaskPriority.MARKETING.value)
 def async_download_csv(self, module, model_name, ids_to_download):
     logger.debug('Starting to download csv for ')
     return download_csv(module, model_name, ids_to_download)

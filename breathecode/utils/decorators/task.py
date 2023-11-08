@@ -18,6 +18,8 @@ RETRY_AFTER = timedelta(seconds=5)
 
 from enum import Enum
 
+# unused: activity, TWO_FACTOR_AUTH
+
 
 # keeps this sorted by priority
 class TaskPriority(Enum):

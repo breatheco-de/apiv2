@@ -18,7 +18,7 @@ logger = getLogger(__name__)
 is_test_env = os.getenv('ENV') == 'test'
 
 
-@task(priority=TaskPriority.MARKETING)
+@task(priority=TaskPriority.MARKETING.value)
 def persist_single_lead(form_data, **_: Any):
     logger.info('Starting persist_single_lead')
 
@@ -46,7 +46,7 @@ def persist_single_lead(form_data, **_: Any):
     return True
 
 
-@task(priority=TaskPriority.MARKETING)
+@task(priority=TaskPriority.MARKETING.value)
 def update_link_viewcount(slug, **_: Any):
     logger.info('Starting update_link_viewcount')
 
@@ -72,7 +72,7 @@ def update_link_viewcount(slug, **_: Any):
         sl.save()
 
 
-@task(priority=TaskPriority.REALTIME)
+@task(priority=TaskPriority.REALTIME.value)
 def async_activecampaign_webhook(webhook_id, **_: Any):
     logger.info('Starting async_activecampaign_webhook')
 
@@ -102,7 +102,7 @@ def async_activecampaign_webhook(webhook_id, **_: Any):
     logger.debug('ActiveCampaign webook status: ok')
 
 
-@task(priority=TaskPriority.MARKETING)
+@task(priority=TaskPriority.MARKETING.value)
 def add_cohort_task_to_student(user_id, cohort_id, academy_id, **_: Any):
     logger.info('Task add_cohort_task_to_student started')
 
@@ -135,7 +135,7 @@ def add_cohort_task_to_student(user_id, cohort_id, academy_id, **_: Any):
     client.add_tag_to_contact(contact['id'], tag.acp_id)
 
 
-@task(priority=TaskPriority.MARKETING)
+@task(priority=TaskPriority.MARKETING.value)
 def add_event_tags_to_student(event_id: int,
                               user_id: Optional[int] = None,
                               email: Optional[str] = None,
@@ -182,7 +182,7 @@ def add_event_tags_to_student(event_id: int,
         client.add_tag_to_contact(contact['id'], tag.acp_id)
 
 
-@task(priority=TaskPriority.MARKETING)
+@task(priority=TaskPriority.MARKETING.value)
 def add_cohort_slug_as_acp_tag(cohort_id: int, academy_id: int, **_: Any) -> None:
     logger.info('Task add_cohort_slug_as_acp_tag started')
 
@@ -208,7 +208,7 @@ def add_cohort_slug_as_acp_tag(cohort_id: int, academy_id: int, **_: Any) -> Non
     tag.save()
 
 
-@task(priority=TaskPriority.MARKETING)
+@task(priority=TaskPriority.MARKETING.value)
 def add_event_slug_as_acp_tag(event_id: int, academy_id: int, force=False, **_: Any) -> None:
     logger.info('Task add_event_slug_as_acp_tag started')
 
@@ -251,7 +251,7 @@ def add_event_slug_as_acp_tag(event_id: int, academy_id: int, force=False, **_: 
     tag.save()
 
 
-@task(priority=TaskPriority.MARKETING)
+@task(priority=TaskPriority.MARKETING.value)
 def add_downloadable_slug_as_acp_tag(downloadable_id: int, academy_id: int, **_: Any) -> None:
     logger.info('Task add_downloadable_slug_as_acp_tag started')
 
@@ -294,7 +294,7 @@ def add_downloadable_slug_as_acp_tag(downloadable_id: int, academy_id: int, **_:
         raise e
 
 
-@task(priority=TaskPriority.MARKETING)
+@task(priority=TaskPriority.MARKETING.value)
 def create_form_entry(csv_upload_id, **item):
     # remove the task manager parameters
     item.pop('pop', None)
