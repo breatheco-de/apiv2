@@ -1,7 +1,42 @@
+import os
 from breathecode.admissions.models import Academy
 from django.db import models
+from django.contrib.auth.models import User
 
 __all__ = ['Category', 'Media', 'MediaResolution']
+
+CREATED = 'CREATED'
+PENDING = 'PENDING'
+JOINING = 'JOINING'
+CLAIMED = 'CLAIMED'
+ERROR = 'ERROR'
+UPLOAD_STATUSES = (
+    (CREATED, 'Created'),
+    (PENDING, 'Pending'),
+    (JOINING, 'Joining'),
+    (CLAIMED, 'Claimed'),
+    (ERROR, 'Error'),
+)
+
+
+class FileUpload(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    name = models.CharField(max_length=255)
+    hash = models.CharField(max_length=64)
+    total_chunks = models.PositiveIntegerField()
+    uploaded_chunks = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=15, choices=UPLOAD_STATUSES, default=PENDING)
+    chunk_size = models.PositiveIntegerField(default=1024 * int(os.getenv('CHUNK_SIZE', 100)))
+    size_limit = models.PositiveIntegerField(null=True, blank=True)
+    size = models.PositiveIntegerField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+
+class FileChunkUploadFailed(models.Model):
+    file = models.ForeignKey(FileUpload, on_delete=models.CASCADE)
+    chunk_number = models.PositiveIntegerField()
 
 
 class Category(models.Model):
