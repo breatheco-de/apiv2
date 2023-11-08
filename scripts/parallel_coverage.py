@@ -59,6 +59,7 @@ if __name__ == '__main__':
                f'--cov={module} --cov-report html -n auto --nomigrations --durations=1')
 
     env = os.environ.copy()
+    env['ENV'] = 'test'
     env['RANDOM_SEED'] = str(seed)
 
     exit_code = subprocess.run(command, env=env, shell=True).returncode

@@ -34,6 +34,7 @@ def format_consumable_item(data={}):
         'unit_type': 'UNIT',
         'user_id': 0,
         'valid_until': None,
+        'sort_priority': 1,
         **data,
     }
 

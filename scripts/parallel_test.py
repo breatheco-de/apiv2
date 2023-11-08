@@ -27,6 +27,7 @@ if __name__ == '__main__':
     command = f'pytest {pytest_args} --disable-pytest-warnings -n auto --nomigrations --durations=1'
 
     env = os.environ.copy()
+    env['ENV'] = 'test'
     env['RANDOM_SEED'] = str(seed)
 
     exit_code = subprocess.run(command, env=env, shell=True).returncode

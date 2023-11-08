@@ -34,6 +34,7 @@ def service_serializer(service, groups=[], permissions=[]):
         'private': service.private,
         'slug': service.slug,
         'title': service.title,
+        'icon_url': service.icon_url,
         'groups': [group_serializer(group, permissions) for group in groups],
     }
 
@@ -42,6 +43,7 @@ def service_item_serializer(self, service_item, service, groups=[], permissions=
     return {
         'how_many': service_item.how_many,
         'unit_type': service_item.unit_type,
+        'sort_priority': service_item.sort_priority,
         'service': service_serializer(service, groups, permissions),
     }
 

@@ -28,6 +28,7 @@ def consumable_item(data={}):
         'unit_type': 'UNIT',
         'user_id': 0,
         'valid_until': UTC_NOW,
+        'sort_priority': 1,
         **data,
     }
 

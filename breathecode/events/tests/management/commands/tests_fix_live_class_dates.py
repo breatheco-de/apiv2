@@ -21,8 +21,7 @@ class TestSyncOrgVenues(LegacyAPITestCase):
     @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
     @patch.object(sys.stdout, 'write', MagicMock())
     @patch.object(sys.stderr, 'write', MagicMock())
-    def test_0_live_classes(self, enable_signals):
-        enable_signals()
+    def test_0_live_classes(self):
 
         command = Command()
         command.handle()
@@ -42,8 +41,7 @@ class TestSyncOrgVenues(LegacyAPITestCase):
     @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
     @patch.object(sys.stdout, 'write', MagicMock())
     @patch.object(sys.stderr, 'write', MagicMock())
-    def test_2_cohorts__in_the_past(self, enable_signals):
-        enable_signals()
+    def test_2_cohorts__in_the_past(self):
 
         cohorts = [{'never_ends': False, 'ending_date': UTC_NOW - DELTA} for _ in range(2)]
         model = self.bc.database.create(cohort=cohorts)
@@ -69,8 +67,7 @@ class TestSyncOrgVenues(LegacyAPITestCase):
     @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
     @patch.object(sys.stdout, 'write', MagicMock())
     @patch.object(sys.stderr, 'write', MagicMock())
-    def test_2_cohorts__in_the_future(self, enable_signals):
-        enable_signals()
+    def test_2_cohorts__in_the_future(self):
 
         cohorts = [{'never_ends': False, 'ending_date': UTC_NOW + DELTA} for _ in range(2)]
         model = self.bc.database.create(cohort=cohorts)
@@ -96,8 +93,7 @@ class TestSyncOrgVenues(LegacyAPITestCase):
     @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
     @patch.object(sys.stdout, 'write', MagicMock())
     @patch.object(sys.stderr, 'write', MagicMock())
-    def test_2_live_classes(self, enable_signals):
-        enable_signals()
+    def test_2_live_classes(self):
 
         live_classes = [{
             'cohort_time_slot_id': n,
