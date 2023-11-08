@@ -132,21 +132,23 @@ class Cache(metaclass=CacheMeta):
         if deep != 0:
             return resolved
 
+        if IS_DJANGO_REDIS:
+            keys = [f'{cls._version_prefix}{descriptor.model.__name__}__keys' for descriptor in resolved]
+            keys = [x or set() for x in cache.get_many(keys).values()]
+
+            to_delete = set()
+            for key in keys:
+                if not key:
+                    continue
+
+                to_delete |= key
+
+            cache.delete_many(to_delete)
+            return
+
         cache.delete_pattern(
             [f'{cls._version_prefix}{descriptor.model.__name__}__*' for descriptor in resolved],
             itersize=100_000)
-
-        keys = [f'{cls._version_prefix}{descriptor.model.__name__}__keys' for descriptor in resolved]
-        keys = [x or set() for x in cache.get_many(keys).values()]
-
-        to_delete = set()
-        for key in keys:
-            if not key:
-                continue
-
-            to_delete |= key
-
-        cache.delete_many(to_delete)
 
     @classmethod
     def keys(cls):
