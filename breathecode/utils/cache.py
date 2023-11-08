@@ -133,15 +133,17 @@ class Cache(metaclass=CacheMeta):
             return resolved
 
         if IS_DJANGO_REDIS:
-            keys = [f'{cls._version_prefix}{descriptor.model.__name__}__keys' for descriptor in resolved]
-            keys = [x or set() for x in cache.get_many(keys).values()]
+            keys = {f'{cls._version_prefix}{descriptor.model.__name__}__keys' for descriptor in resolved}
+            sets = [x or set() for x in cache.get_many(keys).values()]
 
             to_delete = set()
-            for key in keys:
+            for key in sets:
                 if not key:
                     continue
 
                 to_delete |= key
+
+            to_delete |= keys
 
             cache.delete_many(to_delete)
             return
