@@ -10,6 +10,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 
 import os
 from pathlib import Path
+from typing import Optional
 # TODO: decouple file storage from django
 # from time import time
 import django_heroku
@@ -20,6 +21,14 @@ from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
 
 from breathecode.setup import configure_redis
+
+from django_redis.client import DefaultClient
+from redis import Redis
+from redis.exceptions import ConnectionError, ResponseError, TimeoutError
+import socket
+import itertools
+
+redis_client_exceptions = (TimeoutError, ResponseError, ConnectionError, socket.timeout)
 
 # TODO: decouple file storage from django
 # from django.utils.http import http_date
@@ -352,9 +361,50 @@ CACHES = {
 DJANGO_REDIS_LOG_IGNORED_EXCEPTIONS = True
 DJANGO_REDIS_IGNORE_EXCEPTIONS = True
 
+
+class CustomRedisClient(DefaultClient):
+
+    def delete_pattern(
+        self,
+        pattern: str,
+        version: Optional[int] = None,
+        prefix: Optional[str] = None,
+        client: Optional[Redis] = None,
+        itersize: Optional[int] = None,
+    ) -> int:
+        """
+        Remove all keys matching pattern.
+        """
+
+        if isinstance(pattern, str):
+            return super().delete_pattern(pattern,
+                                          version=version,
+                                          prefix=prefix,
+                                          client=client,
+                                          itersize=itersize)
+
+        if client is None:
+            client = self.get_client(write=True)
+
+        patterns = [self.make_pattern(x, version=version, prefix=prefix) for x in pattern]
+
+        try:
+            count = 0
+            pipeline = client.pipeline()
+
+            for key in itertools.chain(*[client.scan_iter(match=x, count=itersize) for x in patterns]):
+                pipeline.delete(key)
+                count += 1
+            pipeline.execute()
+
+            return count
+        except redis_client_exceptions as e:
+            raise ConnectionInterrupted(connection=client) from e
+
+
 if IS_REDIS_WITH_SSL_ON_HEROKU:
     CACHES['default']['OPTIONS'] = {
-        'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        'CLIENT_CLASS': 'breathecode.settings.CustomRedisClient',
         'SOCKET_CONNECT_TIMEOUT': 0.2,  # seconds
         'SOCKET_TIMEOUT': 0.2,  # seconds
         'PICKLE_VERSION': -1,
@@ -368,7 +418,7 @@ if IS_REDIS_WITH_SSL_ON_HEROKU:
 elif IS_REDIS_WITH_SSL:
     redis_ca_cert_path, redis_user_cert_path, redis_user_private_key_path = configure_redis()
     CACHES['default']['OPTIONS'] = {
-        'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        'CLIENT_CLASS': 'breathecode.settings.CustomRedisClient',
         'SOCKET_CONNECT_TIMEOUT': 0.2,  # seconds
         'SOCKET_TIMEOUT': 0.2,  # seconds
         'PICKLE_VERSION': -1,

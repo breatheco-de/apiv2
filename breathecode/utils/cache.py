@@ -132,9 +132,14 @@ class Cache(metaclass=CacheMeta):
         # for descriptor in resolved:
         #     cache.delete_pattern(f'{cls._version_prefix}{descriptor.model.__name__}__*', itersize=100_000)
 
-        pattern = '|'.join(
-            [f'{cls._version_prefix}{descriptor.model.__name__}__*' for descriptor in resolved])
-        cache.delete_pattern(pattern, itersize=100_000)
+        # pattern = '|'.join(
+        #     [f'{cls._version_prefix}{descriptor.model.__name__}__*' for descriptor in resolved])
+        # cache.delete_pattern(pattern, itersize=100_000)
+        cache.delete_pattern(
+            [f'{cls._version_prefix}{descriptor.model.__name__}__*' for descriptor in resolved],
+            itersize=100_000)
+
+        # iter_keys = cache.iter_keys(f'{cls._version_prefix}{cls.model.__name__}__*')
 
     @classmethod
     def keys(cls):
