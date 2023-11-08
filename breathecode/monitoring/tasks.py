@@ -1,5 +1,7 @@
 from django.utils import timezone
-from celery import shared_task, Task
+from celery import shared_task
+
+from breathecode.utils.decorators.task import TaskPriority
 from .actions import run_script, run_endpoint_diagnostic, download_csv
 from .models import MonitorScript, Endpoint
 from breathecode.notify.actions import send_email_message, send_slack_raw
@@ -9,14 +11,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class BaseTaskWithRetry(Task):
-    autoretry_for = (Exception, )
-    #                                           seconds
-    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
-    retry_backoff = True
-
-
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@shared_task(bind=True, priority=TaskPriority.MONITORING)
 def test_endpoint(self, endpoint_id):
     logger.debug('Starting monitor_app')
     endpoint = Endpoint.objects.get(id=endpoint_id)
@@ -51,7 +46,7 @@ def test_endpoint(self, endpoint_id):
                 })
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@shared_task(bind=True, priority=TaskPriority.MONITORING)
 def monitor_app(self, app_id):
     logger.debug('Starting monitor_app')
     endpoints = Endpoint.objects.filter(application__id=app_id).values_list('id', flat=True)
@@ -59,7 +54,7 @@ def monitor_app(self, app_id):
         test_endpoint.delay(endpoint_id)
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@shared_task(bind=True, priority=TaskPriority.MONITORING)
 def execute_scripts(self, script_id):
     script = MonitorScript.objects.get(id=script_id)
     logger.debug(f'Starting execute_scripts for {script.script_slug}')
@@ -110,7 +105,7 @@ def execute_scripts(self, script_id):
     return True
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@shared_task(bind=True, priority=TaskPriority.MARKETING)
 def async_download_csv(self, module, model_name, ids_to_download):
     logger.debug('Starting to download csv for ')
     return download_csv(module, model_name, ids_to_download)

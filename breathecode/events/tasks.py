@@ -1,9 +1,10 @@
 import logging
 from breathecode.admissions.models import CohortTimeSlot
 from breathecode.services.eventbrite import Eventbrite
-from celery import shared_task, Task
+from celery import shared_task
 
 from breathecode.utils.datetime_integer import DatetimeInteger
+from breathecode.utils.decorators.task import TaskPriority
 from .models import Event, LiveClass, Organization, EventbriteWebhook
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
@@ -11,14 +12,7 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
-class BaseTaskWithRetry(Task):
-    autoretry_for = (Exception, )
-    #                                           seconds
-    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
-    retry_backoff = True
-
-
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@shared_task(bind=True, priority=TaskPriority.ACADEMY)
 def persist_organization_events(self, args):
     from .actions import sync_org_events
 
@@ -28,7 +22,7 @@ def persist_organization_events(self, args):
     return True
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@shared_task(bind=True, priority=TaskPriority.ACADEMY)
 def async_eventbrite_webhook(self, eventbrite_webhook_id):
     logger.debug('Starting async_eventbrite_webhook')
     status = 'ok'
@@ -59,7 +53,7 @@ def async_eventbrite_webhook(self, eventbrite_webhook_id):
     logger.debug(f'Eventbrite status: {status}')
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@shared_task(bind=True, priority=TaskPriority.ACADEMY)
 def async_export_event_to_eventbrite(self, event_id: int):
     from .actions import export_event_to_eventbrite
 
@@ -80,7 +74,7 @@ def async_export_event_to_eventbrite(self, event_id: int):
         logger.exception(f'The {event_id} export was failed')
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@shared_task(bind=True, priority=TaskPriority.ACADEMY)
 def build_live_classes_from_timeslot(self, timeslot_id: int):
     logger.info(f'Starting build_live_classes_from_timeslot with id {timeslot_id}')
 
@@ -147,7 +141,7 @@ def build_live_classes_from_timeslot(self, timeslot_id: int):
     live_classes.delete()
 
 
-@shared_task(bind=False, base=BaseTaskWithRetry)
+@shared_task(bind=False, priority=TaskPriority.FIXER)
 def fix_live_class_dates(timeslot_id: int):
     logger.info(f'Starting fix_live_class_dates with id {timeslot_id}')
 

@@ -1,8 +1,8 @@
 import logging, os
-from celery import shared_task, Task
+from celery import shared_task
 from django.contrib.auth.models import User
 
-from breathecode.utils.decorators.task import task
+from breathecode.utils.decorators.task import TaskPriority, task
 from .actions import set_gitpod_user_expiration, add_to_organization, remove_from_organization
 from breathecode.notify import actions as notify_actions
 
@@ -11,30 +11,23 @@ API_URL = os.getenv('API_URL', '')
 logger = logging.getLogger(__name__)
 
 
-class BaseTaskWithRetry(Task):
-    autoretry_for = (Exception, )
-    #                                           seconds
-    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
-    retry_backoff = True
-
-
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY)
 def async_set_gitpod_user_expiration(gitpoduser_id):
     logger.debug(f'Recalculate gitpoduser expiration for {gitpoduser_id}')
     return set_gitpod_user_expiration(gitpoduser_id) is not None
 
 
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY)
 def async_add_to_organization(cohort_id, user_id):
     return add_to_organization(cohort_id, user_id)
 
 
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY)
 def async_remove_from_organization(cohort_id, user_id, force=False):
     return remove_from_organization(cohort_id, user_id, force=force)
 
 
-@shared_task
+@shared_task(priority=TaskPriority.NOTIFICATION)
 def async_accept_user_from_waiting_list(user_invite_id: int) -> None:
     from .models import UserInvite
 
@@ -78,7 +71,7 @@ def async_accept_user_from_waiting_list(user_invite_id: int) -> None:
         })
 
 
-@task()
+@task(priority=TaskPriority.OAUTH_CREDENTIALS)
 def destroy_legacy_key(legacy_key_id):
     from .models import LegacyKey
 
