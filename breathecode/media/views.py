@@ -1,9 +1,16 @@
 # from breathecode.media.schemas import MediaSchema
+import base64
+import json
+import msgpack
+from breathecode.authenticate.actions import get_user_language
+from breathecode.authenticate.models import ProfileAcademy
 from breathecode.media.schemas import FileSchema, MediaSchema
 import os, hashlib, requests, logging, datetime
 from breathecode.services.google_cloud import FunctionV1
 from django.shortcuts import redirect
-from breathecode.media.models import Media, Category, MediaResolution
+from breathecode.media.models import FileChunkUploadFailed, FileUpload, Media, Category, MediaResolution
+from breathecode.services.google_cloud.function_v2 import FunctionV2
+from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils import GenerateLookupsMixin, num_to_roman
 from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
@@ -13,12 +20,15 @@ from rest_framework.parsers import FileUploadParser, MultiPartParser
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from django.http import StreamingHttpResponse
-from django.db.models import Q
+from django.db.models import Q, F
 from breathecode.media.serializers import (GetMediaSerializer, MediaSerializer, MediaPUTSerializer,
                                            GetCategorySerializer, CategorySerializer, GetResolutionSerializer)
 from slugify import slugify
 
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from breathecode.utils.i18n import translation
+from django.utils import timezone
+from django.db.models import Sum
 
 logger = logging.getLogger(__name__)
 MIME_ALLOW = [
@@ -33,6 +43,14 @@ def media_gallery_bucket():
 
 def google_project_id():
     return os.getenv('GOOGLE_PROJECT_ID', '')
+
+
+def upload_bucket():
+    return os.getenv('UPLOAD_BUCKET')
+
+
+def get_transfer_file_url():
+    return os.getenv('GCLOUD_TRANSFER_FILE', '')
 
 
 class MediaView(ViewSet, GenerateLookupsMixin):
@@ -361,6 +379,7 @@ class CategoryView(ViewSet):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
+# DEPRECATED, use ChunkedUploadView instead
 class UploadView(APIView):
     """
     put:
@@ -460,7 +479,6 @@ class UploadView(APIView):
 
             result['data'].append(data)
 
-        from django.db.models import Q
         query = None
         datas_with_id = [x for x in result['data'] if 'id' in x]
         for x in datas_with_id:
@@ -652,3 +670,244 @@ class ResolutionView(ViewSet):
             file.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class ChunkedUploadView(APIView):
+
+    def get_hash(self):
+        # 4,294,967,296 combinations
+        data = os.urandom(4)
+        return hashlib.md5(data).hexdigest()
+
+    def get_user_limit(self):
+        return 1024 * os.getenv('USER_UPLOAD_LIMIT', 1024 * 20)
+
+    def get_user_quota(self):
+        return 1024 * os.getenv('USER_UPLOAD_QUOTA', 1024 * 100)
+
+    def create_file(self):
+        request = self.request
+
+        if not (size := request.data.get('size')) or isinstance(size, int) or size < 1:
+            raise ValidationException(
+                translation(self.lang,
+                            en='size must be a positive integer',
+                            es='size debe ser un entero positivo',
+                            slug='bad-size'))
+
+        capable = ProfileAcademy.objects.filter(user=request.user.id,
+                                                role__capabilities__slug='crud_media').count()
+
+        utc_now = timezone.now()
+        utc_now = utc_now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        quota = FileUpload.objects.filter(user=request.user.id,
+                                          created_at__gte=utc_now).aggregate(Sum('size'))['size__sum']
+        if not capable and quota and quota + size > self.get_user_quota():
+            raise ValidationException(translation(self.lang,
+                                                  en='You have reached your daily upload quota',
+                                                  es='Has alcanzado tu cuota de carga diaria',
+                                                  slug='quota-exceeded'),
+                                      slug='quota-exceeded')
+
+        FileUpload.objects.create(total_chunks=total_chunks, hash=h, size_limit=upload_limit)
+
+        if not (total_chunks := request.data.get('total_chunks')) or not isinstance(total_chunks,
+                                                                                    int) or total_chunks < 1:
+            raise ValidationException(translation(self.lang,
+                                                  en='total_chunks must be a positive integer',
+                                                  es='total_chunks debe ser un entero positivo',
+                                                  slug='bad-total-chunks'),
+                                      silent=True,
+                                      slug='bad-total-chunks')
+
+        h = self.get_hash()
+        while FileUpload.objects.filter(hash=h).count():
+            h = self.get_hash()
+
+        upload_limit = None
+
+        if not capable:
+            upload_limit = self.get_user_limit()
+
+        file = FileUpload.objects.create(total_chunks=total_chunks, hash=h, size_limit=upload_limit)
+
+        return Response({
+            'id': file.id,
+            'status': 'CREATED',
+            'chunk_size': self.max_chunk_size,
+        },
+                        status=status.HTTP_201_CREATED)
+
+    def upload_chunk(self):
+        request = self.request
+
+        if not (chunk := request.data.get('chunk')):
+            raise ValidationException(translation(self.lang,
+                                                  en='chunk is required',
+                                                  es='chunk es requerido',
+                                                  slug='chunk-required'),
+                                      silent=True,
+                                      slug='chunk-required')
+
+        if chunk.size > self.max_chunk_size:
+            raise ValidationException(translation(self.lang,
+                                                  en='chunk size exceeded',
+                                                  es='tamaño de chunk excedido',
+                                                  slug='chunk-size-exceeded'),
+                                      silent=True,
+                                      slug='chunk-size-exceeded')
+
+        if not (chunk_number := request.data.get('chunk_number')):
+            raise ValidationException(translation(self.lang,
+                                                  en='chunk_number is required',
+                                                  es='chunk_number es requerido',
+                                                  slug='chunk-number-required'),
+                                      silent=True,
+                                      slug='chunk-number-required')
+
+        file_upload = FileUpload.objects.filter(id=self.file_id).first()
+        if not file_upload:
+            raise ValidationException(
+                translation(self.lang, en='File not found', es='Archivo no encontrado',
+                            slug='file-not-found'))
+
+        chunk_filename = f'{file_upload.hash}.{chunk_number}'
+
+        try:
+            storage = Storage()
+            cloud_file = storage.file(upload_bucket(), chunk_filename)
+            cloud_file.upload(chunk, content_type=chunk.content_type)
+
+            # it's for reattemps
+            FileChunkUploadFailed.objects.filter(file=file_upload, chunk_number=chunk_number).delete()
+
+        except Exception:
+            FileChunkUploadFailed.objects.get_or_create(file=file_upload, chunk_number=chunk_number)
+            return Response({
+                'id': file_upload.id,
+                'status': 'ERROR',
+            }, status=status.HTTP_201_CREATED)
+
+        file_upload.uploaded_chunks = F('uploaded_chunks') + 1
+        file_upload.status = 'PENDING'
+        file_upload.save()
+
+        return Response({
+            'id': file_upload.id,
+            'status': 'PENDING',
+        }, status=status.HTTP_201_CREATED)
+
+    def put(self, request):
+        self.lang = 'en'
+        self.file_id = request.data.get('id')
+        self.max_chunk_size = 1024 * int(os.getenv('CHUNK_SIZE', 100))
+
+        if not self.file_id:
+            return self.create_file()
+
+        return self.upload_chunk()
+
+
+class JoinChunksView(APIView):
+
+    def put(self, request):
+        file_id = request.data['file_id']
+        try:
+            uploaded_file = FileUpload.objects.get(id=file_id)
+        except FileUpload.DoesNotExist:
+            return Response({'detail': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Now, you can save additional metadata about the file if needed
+        uploaded_file.save()
+
+        return Response({'status': 'JOINING'}, status=status.HTTP_200_OK)
+
+
+class MediaClaimView(APIView):
+
+    @capable_of('crud_media')
+    def put(self, request, academy_id=None):
+        from ..services.google_cloud import Storage
+
+        lang = get_user_language(request)
+
+        file_id = request.data['file_id']
+        file_upload = FileUpload.objects.filter(id=file_id).first()
+
+        if not file_upload:
+            return Response({'detail': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        storage = Storage()
+        cloud_file = storage.file(f'{file_upload.hash}.meta', hash)
+        file = cloud_file.download()
+        file = json.loads(file)
+
+        hash = file['hash']
+        mime = file['mime']
+
+        params = {
+            'sourceBucket': upload_bucket(),
+            'destinationBucket': media_gallery_bucket(),
+        }
+
+        func = FunctionV2(get_transfer_file_url())
+        res = func.call({'filename': hash, 'bucket': get_transfer_file_url()}, params=params, timeout=28)
+        data = msgpack.loads(res.content)
+
+        ###
+
+        # files validation below
+        if mime not in MIME_ALLOW:
+            raise ValidationException(
+                f'You can upload only files on the following formats: {",".join(MIME_ALLOW)}')
+
+        slug = slugify(file_upload.name)
+
+        slug_number = Media.objects.filter(slug__startswith=slug).exclude(hash=hash).count() + 1
+        if slug_number > 1:
+            while True:
+                roman_number = num_to_roman(slug_number, lower=True)
+                slug = f'{slug}-{roman_number}'
+
+                if not Media.objects.filter(slug=slug).exclude(hash=hash).exists():
+                    break
+
+                slug_number += 1
+
+        new_media = Media()
+
+        media = Media.objects.filter(hash=hash, academy__id=academy_id).first()
+        if media:
+            raise ValidationException('Media already exists', code=409, slug='media-already-exists')
+
+        if media:
+
+            url = Media.objects.filter(hash=hash).values_list('url', flat=True).first()
+            if url:
+                data['url'] = url
+
+        else:
+            url = Media.objects.filter(hash=hash).values_list('url', flat=True).first()
+            if url:
+                data['url'] = url
+
+            else:
+                # upload file section
+                storage = Storage()
+                cloud_file = storage.file(media_gallery_bucket(), hash)
+                # cloud_file.upload(file, content_type=file.content_type)
+                data['url'] = cloud_file.url()
+                data['thumbnail'] = data['url'] + '-thumbnail'
+
+        new_media.hash = hash
+        new_media.slug = slug
+        new_media.mime = mime
+        new_media.name = name
+
+        # fields = ('id', 'url', 'thumbnail', 'hash', 'hits', 'slug', 'mime', 'name', 'categories', 'academy')
+
+        serializer = GetMediaSerializer(media, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # return Response({'status': 'JOINING'}, status=status.HTTP_200_OK)
