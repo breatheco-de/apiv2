@@ -1,5 +1,7 @@
 import logging
 from celery import shared_task, Task
+
+from breathecode.utils.decorators.task import TaskPriority
 from .models import Spider
 
 from django.utils import timezone
@@ -7,14 +9,7 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
-class BaseTaskWithRetry(Task):
-    autoretry_for = (Exception, )
-
-    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
-    retry_backoff = True
-
-
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@shared_task(bind=True, priority=TaskPriority.BACKGROUND)
 def async_run_spider(self, args):
     from .actions import run_spider
 
@@ -30,7 +25,7 @@ def async_run_spider(self, args):
         spider.save()
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@shared_task(bind=True, priority=TaskPriority.BACKGROUND)
 def async_fetch_sync_all_data(self, args):
     from .actions import fetch_sync_all_data
 

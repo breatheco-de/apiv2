@@ -10,11 +10,34 @@ from django.db import transaction
 from django.utils import timezone
 import copy
 
-__all__ = ['task', 'AbortTask', 'RetryTask', 'RETRIES_LIMIT']
+__all__ = ['task', 'AbortTask', 'RetryTask', 'RETRIES_LIMIT', 'TaskPriority']
 
 logger = logging.getLogger(__name__)
 RETRIES_LIMIT = 10
 RETRY_AFTER = timedelta(seconds=5)
+
+from enum import Enum
+
+
+# keeps this sorted by priority
+class TaskPriority(Enum):
+    CACHE = 0  # cache
+    BACKGROUND = 0  # anything without importance
+    NOTIFICATION = 1  # non realtime notifications
+    MONITORING = 2  # monitoring tasks
+    ACTIVITY = 2  # user activity
+    OAUTH_CREDENTIALS = 2  # oauth tasks
+    BILL = 3  # postpaid billing
+    MARKETING = 4  # marketing purposes
+    DEFAULT = 5  # default priority
+    TASK_MANAGER = 6  # task manager
+    ACADEMY = 7  # anything that the academy can see
+    CERTIFICATE = 8  # issuance of certificates
+    STUDENT = 9  # anything that the student can see
+    TWO_FACTOR_AUTH = 9  # 2fa
+    REALTIME = 9  # schedule as soon as possible
+    WEB_SERVICE_PAYMENT = 10  # payment in the web
+    FIXER = 10  # fixes
 
 
 class AbortTask(Exception):

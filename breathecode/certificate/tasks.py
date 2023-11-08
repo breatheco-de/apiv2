@@ -1,20 +1,12 @@
 from breathecode.utils import getLogger
-from celery import Task
 from breathecode.admissions.models import CohortUser
-from breathecode.utils.decorators.task import task
+from breathecode.utils.decorators.task import TaskPriority, task
 
 # Get an instance of a logger
 logger = getLogger(__name__)
 
 
-class BaseTaskWithRetry(Task):
-    autoretry_for = (Exception, )
-    #                                           seconds
-    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
-    retry_backoff = True
-
-
-@task(bind=True, base=BaseTaskWithRetry)
+@task(bind=True, priority=TaskPriority.CERTIFICATE)
 def take_screenshot(self, certificate_id, **_):
     logger.debug('Starting take_screenshot')
     # unittest.mock.patch is poor applying mocks
@@ -27,7 +19,7 @@ def take_screenshot(self, certificate_id, **_):
         return False
 
 
-@task(bind=True, base=BaseTaskWithRetry)
+@task(bind=True, priority=TaskPriority.CERTIFICATE)
 def remove_screenshot(self, certificate_id, **_):
     from .actions import remove_certificate_screenshot
 
@@ -41,7 +33,7 @@ def remove_screenshot(self, certificate_id, **_):
     return True
 
 
-@task(bind=True, base=BaseTaskWithRetry)
+@task(bind=True, priority=TaskPriority.CERTIFICATE)
 def reset_screenshot(self, certificate_id, **_):
     logger.debug('Starting reset_screenshot')
     # unittest.mock.patch is poor applying mocks
@@ -57,7 +49,7 @@ def reset_screenshot(self, certificate_id, **_):
     return True
 
 
-@task(bind=True, base=BaseTaskWithRetry)
+@task(bind=True, priority=TaskPriority.CERTIFICATE)
 def generate_cohort_certificates(self, cohort_id, **_):
     logger.debug('Starting generate_cohort_certificates')
     from .actions import generate_certificate
@@ -72,7 +64,7 @@ def generate_cohort_certificates(self, cohort_id, **_):
             logger.exception(f'Error generating certificate for {str(cu.user.id)} cohort {str(cu.cohort.id)}')
 
 
-@task(bind=True, base=BaseTaskWithRetry)
+@task(bind=True, priority=TaskPriority.CERTIFICATE)
 def generate_one_certificate(self, cohort_id, user_id, layout, **_):
     logger.info('Starting generate_cohort_certificates', slug='starting-generating-certificate')
     from .actions import generate_certificate

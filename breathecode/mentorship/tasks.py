@@ -1,20 +1,15 @@
 import logging
 from breathecode.services.calendly import Calendly
-from celery import shared_task, Task
+from celery import shared_task
+
+from breathecode.utils.decorators.task import TaskPriority
 
 from .models import CalendlyOrganization, CalendlyWebhook
 
 logger = logging.getLogger(__name__)
 
 
-class BaseTaskWithRetry(Task):
-    autoretry_for = (Exception, )
-    #                                           seconds
-    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
-    retry_backoff = True
-
-
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@shared_task(bind=True, priority=TaskPriority.STUDENT)
 def async_calendly_webhook(self, calendly_webhook_id):
     logger.debug('Starting async_calendly_webhook')
     status = 'ok'
