@@ -110,7 +110,6 @@ class Cache(metaclass=CacheMeta):
             max_deep = cls.max_deep
 
         resolved = set()
-
         resolved.add(cls)
 
         if deep >= max_deep:
@@ -130,8 +129,12 @@ class Cache(metaclass=CacheMeta):
         if deep != 0:
             return resolved
 
-        for descriptor in resolved:
-            cache.delete_pattern(f'{cls._version_prefix}{descriptor.model.__name__}__*')
+        # for descriptor in resolved:
+        #     cache.delete_pattern(f'{cls._version_prefix}{descriptor.model.__name__}__*', itersize=100_000)
+
+        pattern = '|'.join(
+            [f'{cls._version_prefix}{descriptor.model.__name__}__*' for descriptor in resolved])
+        cache.delete_pattern(pattern, itersize=100_000)
 
     @classmethod
     def keys(cls):
