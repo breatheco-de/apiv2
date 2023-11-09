@@ -103,6 +103,8 @@ def validate_email(email, lang):
     resp = requests.get(
         f'https://emailvalidation.abstractapi.com/v1/?api_key={MAILBOX_LAYER_KEY}&email={email}', timeout=10)
     data = resp.json()
+    print('dataa')
+    print(data)
 
     if 'error' in data:
         raise ValidationException(
