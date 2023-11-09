@@ -17,7 +17,7 @@ import numpy as np
 logger = getLogger(__name__)
 
 GOOGLE_CLOUD_KEY = os.getenv('GOOGLE_CLOUD_KEY')
-MAILBOX_LAYER_KEY = os.getenv('MAILBOX_LAYER_KEY')
+MAIL_ABSTRACT_KEY = os.getenv('MAIL_ABSTRACT_KEY')
 
 
 def get_save_leads():
@@ -101,7 +101,7 @@ def validate_email(email, lang):
     """
 
     resp = requests.get(
-        f'https://emailvalidation.abstractapi.com/v1/?api_key={MAILBOX_LAYER_KEY}&email={email}', timeout=10)
+        f'https://emailvalidation.abstractapi.com/v1/?api_key={MAIL_ABSTRACT_KEY}&email={email}', timeout=10)
     data = resp.json()
 
     if 'error' in data:
