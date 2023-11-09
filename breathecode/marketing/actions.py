@@ -101,7 +101,7 @@ def validate_email(email, lang):
     """
 
     resp = requests.get(
-        f'https://emailvalidation.abstractapi.com/v1/?api_key={MAILBOX_LAYER_KEY}&email={email}', timeout=2)
+        f'https://emailvalidation.abstractapi.com/v1/?api_key={MAILBOX_LAYER_KEY}&email={email}', timeout=10)
     data = resp.json()
 
     if 'error' in data:
@@ -141,7 +141,25 @@ def validate_email(email, lang):
             slug='invalid-email'),
                                   data=data)
 
-    return data
+    email_quality = float(data['quality_score'])
+    data['email_quality'] = email_quality
+    split_email = email.split('@')
+
+    email_status = {
+        'email': email,
+        'user': split_email[0],
+        'domain': split_email[1],
+        'format_valid': data['is_valid_format']['value'],
+        'mx_found': data['is_mx_found']['value'],
+        'smtp_check': data['is_smtp_valid']['value'],
+        'catch_all': data['is_catchall_email']['value'],
+        'role': data['is_role_email']['value'],
+        'disposable': data['is_disposable_email']['value'],
+        'free': data['is_free_email']['value'],
+        'score': email_quality
+    }
+
+    return email_status
 
 
 def set_optional(contact, key, data, custom_key=None):
