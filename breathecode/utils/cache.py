@@ -132,33 +132,23 @@ class Cache(metaclass=CacheMeta):
         if deep != 0:
             return resolved
 
-        if IS_DJANGO_REDIS:
-            keys = {f'{cls._version_prefix}{descriptor.model.__name__}__keys' for descriptor in resolved}
-            sets = [x or set() for x in cache.get_many(keys).values()]
+        keys = {f'{cls._version_prefix}{descriptor.model.__name__}__keys' for descriptor in resolved}
+        sets = [x or set() for x in cache.get_many(keys).values()]
 
-            to_delete = set()
-            for key in sets:
-                if not key:
-                    continue
+        to_delete = set()
+        for key in sets:
+            if not key:
+                continue
 
-                to_delete |= key
+            to_delete |= key
 
-            to_delete |= keys
+        to_delete |= keys
 
-            cache.delete_many(to_delete)
-            return
-
-        cache.delete_pattern(
-            [f'{cls._version_prefix}{descriptor.model.__name__}__*' for descriptor in resolved],
-            itersize=100_000)
+        cache.delete_many(to_delete)
 
     @classmethod
     def keys(cls):
-        if IS_DJANGO_REDIS:
-            return cache.keys(f'{cls._version_prefix}{cls.model.__name__}__keys') or set()
-
-        key = cls.model.__name__
-        return cache.keys(f'{cls._version_prefix}{key}__*')
+        return cache.get(f'{cls._version_prefix}{cls.model.__name__}__keys') or set()
 
     @classmethod
     def get(cls, data) -> dict:
@@ -286,12 +276,8 @@ class Cache(metaclass=CacheMeta):
         else:
             cache.set(key, data, timeout)
 
-        # key management
-        if IS_DJANGO_REDIS:
-            keys = cache.get(f'{cls._version_prefix}{cls.model.__name__}__keys') or set()
-            keys.add(key)
+        keys = cache.get(f'{cls._version_prefix}{cls.model.__name__}__keys') or set()
+        keys.add(key)
 
-            cache.set(f'{cls._version_prefix}{cls.model.__name__}__keys', keys)
-            return res
-
+        cache.set(f'{cls._version_prefix}{cls.model.__name__}__keys', keys)
         return res

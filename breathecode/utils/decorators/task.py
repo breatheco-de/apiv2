@@ -18,10 +18,9 @@ RETRY_AFTER = timedelta(seconds=5)
 
 from enum import Enum
 
-# unused: activity, TWO_FACTOR_AUTH
-
 
 # keeps this sorted by priority
+# unused: ACTIVITY, TWO_FACTOR_AUTH
 class TaskPriority(Enum):
     BACKGROUND = 0  # anything without importance
     NOTIFICATION = 1  # non realtime notifications
