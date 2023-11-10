@@ -125,7 +125,7 @@ def get_technologies(request):
                             es='El parametró debera ser un entero y nada mas ',
                             slug='integer-not-found'))
 
-    if 'is_deprecated' in self.request.GET and self.request.GET.get('is_deprecated') == 'true':
+    if 'is_deprecated' in request.GET and request.GET.get('is_deprecated') == 'true':
         lookup['is_deprecated'] = True
     else:
         lookup['is_deprecated'] = False
@@ -205,7 +205,7 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
         if asset_type := request.GET.get('asset_type'):
             lookup['featured_asset__asset_type__in'] = asset_type.split(',')
 
-        if 'is_deprecated' in self.request.GET and self.request.GET.get('is_deprecated') == 'true':
+        if 'is_deprecated' in request.GET and request.GET.get('is_deprecated') == 'true':
             lookup['is_deprecated'] = True
         else:
             lookup['is_deprecated'] = False
