@@ -46,21 +46,27 @@ class AssetTechnology(models.Model):
                             null=True,
                             help_text='Leave blank if will be shown in all languages')
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, default=None, blank=True, null=True)
-    is_deprecated = models.BooleanField(default=False)
+    is_deprecated = models.BooleanField(
+        default=True, help_text='If False, the frontend will generate a landing for this technology.')
     featured_asset = models.ForeignKey('Asset',
                                        on_delete=models.SET_NULL,
                                        default=None,
                                        blank=True,
                                        null=True)
-    visibility = models.CharField(max_length=20, choices=VISIBILITY, default=PUBLIC)
+    visibility = models.CharField(max_length=20,
+                                  choices=VISIBILITY,
+                                  default=PUBLIC,
+                                  help_text='Only public techs will be returned by default')
 
     description = models.TextField(null=True, blank=True, default=None)
     icon_url = models.URLField(null=True, blank=True, default=None, help_text='Image icon to show on website')
-    sort_priority = models.IntegerField(null=False,
-                                        choices=SORT_PRIORITY,
-                                        blank=False,
-                                        default=3,
-                                        help_text='Priority to sort technology (1, 2, or 3)')
+    sort_priority = models.IntegerField(
+        null=False,
+        choices=SORT_PRIORITY,
+        blank=False,
+        default=3,
+        help_text='Priority to sort technology (1, 2, or 3): One is more important and goes first than three.'
+    )
 
     def __str__(self):
         return self.title
@@ -79,13 +85,13 @@ class AssetTechnology(models.Model):
 
         return technology
 
+    def clean(self):
+        self.validate()
+
     def validate(self):
         if self.is_deprecated and self.parent is None:
             raise Exception(
                 'You cannot mark a technology as deprecated if it doesn\'t have a parent technology')
-
-    def clean(self):
-        self.validate()
 
 
 class AssetCategory(models.Model):
