@@ -125,6 +125,11 @@ def get_technologies(request):
                             es='El parametró debera ser un entero y nada mas ',
                             slug='integer-not-found'))
 
+    if 'is_deprecated' in self.request.GET and self.request.GET.get('is_deprecated') == 'true':
+        lookup['is_deprecated'] = True
+    else:
+        lookup['is_deprecated'] = False
+
     tech = AssetTechnology.objects.filter(parent__isnull=True, **lookup).order_by('sort_priority')
 
     serializer = AssetTechnologySerializer(tech, many=True)
@@ -199,6 +204,11 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
 
         if asset_type := request.GET.get('asset_type'):
             lookup['featured_asset__asset_type__in'] = asset_type.split(',')
+
+        if 'is_deprecated' in self.request.GET and self.request.GET.get('is_deprecated') == 'true':
+            lookup['is_deprecated'] = True
+        else:
+            lookup['is_deprecated'] = False
 
         items = items.filter(**lookup).order_by('sort_priority')
         items = handler.queryset(items)
@@ -547,11 +557,6 @@ class AssetView(APIView, GenerateLookupsMixin):
             lookup['visibility__in'] = [p.upper() for p in param.split(',')]
         else:
             lookup['visibility'] = 'PUBLIC'
-
-        if 'is_deprecated' in self.request.GET and self.request.GET.get('is_deprecated') == 'true':
-            lookup['is_deprecated'] = True
-        else:
-            lookup['is_deprecated'] = False
 
         try:
             if 'academy' in self.request.GET and self.request.GET.get('academy') not in ['null', '']:
