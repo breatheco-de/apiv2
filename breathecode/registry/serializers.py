@@ -300,7 +300,7 @@ class AssetAndTechnologySerializer(AssetSerializer):
 
     def get_technologies(self, obj):
         techs = AssetTechnology.objects.filter(
-            id__in=obj.technologies.filter(visibility='PUBLIC', is_deprecated=False))
+            id__in=obj.technologies.filter(visibility__in=['PUBLIC','UNLISTED'], is_deprecated=False))
         return ParentAssetTechnologySerializer(techs, many=True).data
 
 
