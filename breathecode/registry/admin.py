@@ -499,7 +499,7 @@ def mark_technologies_as_deprecated(modeladmin, request, queryset):
     technologies = queryset.all()
     for technology in technologies:
         if technology.parent is not None or technology.asset_set.count() < 3:
-            AssetTechnology.objects.filter(slug=technology.slug).update(is_deprecated=True)
+            AssetTechnology.objects.filter(slug=technology.slug).update(visibility='UNLISTED')
 
 
 @admin.register(AssetTechnology)
