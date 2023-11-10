@@ -14,13 +14,6 @@ API_URL = os.getenv('API_URL', '')
 logger = logging.getLogger(__name__)
 
 
-class BaseTaskWithRetry(Task):
-    autoretry_for = (Exception, )
-    #                                           seconds
-    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
-    retry_backoff = True
-
-
 @task(bind=True)
 def async_validate_email_invite(self, invite_id):
     logger.debug(f'Validating email for invite {invite_id}')
