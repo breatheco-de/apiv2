@@ -126,9 +126,9 @@ def get_technologies(request):
                             slug='integer-not-found'))
 
     if 'is_deprecated' in request.GET and request.GET.get('is_deprecated') == 'true':
-            lookup['is_deprecated'] = True
-        else:
-            lookup['is_deprecated'] = False
+        lookup['is_deprecated'] = True
+    else:
+        lookup['is_deprecated'] = False
 
     tech = AssetTechnology.objects.filter(parent__isnull=True, **lookup).order_by('sort_priority')
 
