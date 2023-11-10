@@ -548,11 +548,6 @@ class AssetView(APIView, GenerateLookupsMixin):
         else:
             lookup['visibility'] = 'PUBLIC'
 
-        if 'is_deprecated' in self.request.GET and self.request.GET.get('is_deprecated') == 'true':
-            lookup['is_deprecated'] = True
-        else:
-            lookup['is_deprecated'] = False
-
         try:
             if 'academy' in self.request.GET and self.request.GET.get('academy') not in ['null', '']:
                 param = self.request.GET.get('academy')
