@@ -79,13 +79,13 @@ class AssetTechnology(models.Model):
 
         return technology
 
+    def clean(self):
+        self.validate()
+
     def validate(self):
         if self.is_deprecated and self.parent is None:
             raise Exception(
                 'You cannot mark a technology as deprecated if it doesn\'t have a parent technology')
-
-    def clean(self):
-        self.validate()
 
 
 class AssetCategory(models.Model):
