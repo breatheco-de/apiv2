@@ -65,6 +65,7 @@ def service_serializer(service, cohorts=[], data={}):
         'private': service.private,
         'slug': service.slug,
         'title': service.title,
+        'icon_url': service.icon_url,
         **data,
     }
 
@@ -73,6 +74,7 @@ def service_item_serializer(service_item, service, cohorts=[], data={}):
     return {
         'how_many': service_item.how_many,
         'unit_type': service_item.unit_type,
+        'sort_priority': service_item.sort_priority,
         'service': service_serializer(service, cohorts),
         **data,
     }

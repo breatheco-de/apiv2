@@ -1,7 +1,6 @@
 import re
 import os
 from typing import Any, Optional
-from celery import Task
 from django.utils import timezone
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
@@ -13,20 +12,13 @@ from .models import AcademyAlias, FormEntry, ShortLink, ActiveCampaignWebhook, A
 from breathecode.monitoring.models import CSVUpload
 from .serializers import (PostFormEntrySerializer)
 from .actions import register_new_lead, save_get_geolocal, acp_ids, bind_formentry_with_webhook
-from breathecode.utils.decorators.task import AbortTask, RetryTask, task
+from breathecode.utils.decorators.task import AbortTask, RetryTask, TaskPriority, task
 
 logger = getLogger(__name__)
 is_test_env = os.getenv('ENV') == 'test'
 
 
-class BaseTaskWithRetry(Task):
-    autoretry_for = (Exception, )
-    #                                           seconds
-    retry_kwargs = {'max_retries': 1, 'countdown': 60 * 5}
-    retry_backoff = True
-
-
-@task()
+@task(priority=TaskPriority.MARKETING.value)
 def persist_single_lead(form_data, **_: Any):
     logger.info('Starting persist_single_lead')
 
@@ -48,13 +40,13 @@ def persist_single_lead(form_data, **_: Any):
 
         raise e
 
-    if entry is not None and entry != False and not is_test_env and form_data.city is None:
+    if entry is not None and entry != False and not is_test_env and ("city" not in form_data or form_data['city'] is None):
         save_get_geolocal(entry, form_data)
 
     return True
 
 
-@task()
+@task(priority=TaskPriority.MARKETING.value)
 def update_link_viewcount(slug, **_: Any):
     logger.info('Starting update_link_viewcount')
 
@@ -80,7 +72,7 @@ def update_link_viewcount(slug, **_: Any):
         sl.save()
 
 
-@task()
+@task(priority=TaskPriority.REALTIME.value)
 def async_activecampaign_webhook(webhook_id, **_: Any):
     logger.info('Starting async_activecampaign_webhook')
 
@@ -110,7 +102,7 @@ def async_activecampaign_webhook(webhook_id, **_: Any):
     logger.debug('ActiveCampaign webook status: ok')
 
 
-@task()
+@task(priority=TaskPriority.MARKETING.value)
 def add_cohort_task_to_student(user_id, cohort_id, academy_id, **_: Any):
     logger.info('Task add_cohort_task_to_student started')
 
@@ -143,7 +135,7 @@ def add_cohort_task_to_student(user_id, cohort_id, academy_id, **_: Any):
     client.add_tag_to_contact(contact['id'], tag.acp_id)
 
 
-@task()
+@task(priority=TaskPriority.MARKETING.value)
 def add_event_tags_to_student(event_id: int,
                               user_id: Optional[int] = None,
                               email: Optional[str] = None,
@@ -190,7 +182,7 @@ def add_event_tags_to_student(event_id: int,
         client.add_tag_to_contact(contact['id'], tag.acp_id)
 
 
-@task()
+@task(priority=TaskPriority.MARKETING.value)
 def add_cohort_slug_as_acp_tag(cohort_id: int, academy_id: int, **_: Any) -> None:
     logger.info('Task add_cohort_slug_as_acp_tag started')
 
@@ -216,7 +208,7 @@ def add_cohort_slug_as_acp_tag(cohort_id: int, academy_id: int, **_: Any) -> Non
     tag.save()
 
 
-@task()
+@task(priority=TaskPriority.MARKETING.value)
 def add_event_slug_as_acp_tag(event_id: int, academy_id: int, force=False, **_: Any) -> None:
     logger.info('Task add_event_slug_as_acp_tag started')
 
@@ -259,7 +251,7 @@ def add_event_slug_as_acp_tag(event_id: int, academy_id: int, force=False, **_: 
     tag.save()
 
 
-@task()
+@task(priority=TaskPriority.MARKETING.value)
 def add_downloadable_slug_as_acp_tag(downloadable_id: int, academy_id: int, **_: Any) -> None:
     logger.info('Task add_downloadable_slug_as_acp_tag started')
 
@@ -302,7 +294,7 @@ def add_downloadable_slug_as_acp_tag(downloadable_id: int, academy_id: int, **_:
         raise e
 
 
-@task()
+@task(priority=TaskPriority.MARKETING.value)
 def create_form_entry(csv_upload_id, **item):
     # remove the task manager parameters
     item.pop('pop', None)

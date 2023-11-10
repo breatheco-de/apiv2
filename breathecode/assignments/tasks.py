@@ -2,11 +2,12 @@ import os
 import logging
 import re
 
-from celery import shared_task, Task as CeleryTask
+from celery import shared_task
 from breathecode.admissions.models import CohortUser
 
 from breathecode.assignments.actions import task_is_valid_for_notifications, NOTIFICATION_STRINGS
 import breathecode.notify.actions as actions
+from breathecode.utils.decorators.task import TaskPriority
 from breathecode.utils.service import Service
 from .models import Task
 
@@ -14,14 +15,7 @@ from .models import Task
 logger = logging.getLogger(__name__)
 
 
-class BaseTaskWithRetry(CeleryTask):
-    autoretry_for = (Exception, )
-    #                                              seconds
-    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
-    retry_backoff = True
-
-
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@shared_task(bind=True, priority=TaskPriority.NOTIFICATION.value)
 def student_task_notification(self, task_id):
     """Notify if the task was change"""
     logger.info('Starting student_task_notification')
@@ -41,7 +35,7 @@ def student_task_notification(self, task_id):
     })
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@shared_task(bind=True, priority=TaskPriority.NOTIFICATION.value)
 def teacher_task_notification(self, task_id):
     """Notify if the task was change"""
     logger.info('Starting teacher_task_notification')
@@ -73,7 +67,7 @@ def teacher_task_notification(self, task_id):
     })
 
 
-@shared_task(bind=False, base=BaseTaskWithRetry)
+@shared_task(bind=False, priority=TaskPriority.ACADEMY.value)
 def set_cohort_user_assignments(task_id: int):
     logger.info('Executing set_cohort_user_assignments')
 

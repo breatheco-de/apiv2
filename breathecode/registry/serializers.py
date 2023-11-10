@@ -292,6 +292,7 @@ class ParentAssetTechnologySerializer(serpy.Serializer):
     description = serpy.Field()
     icon_url = serpy.Field()
     is_deprecated = serpy.Field()
+    visibility = serpy.Field()
 
 
 class AssetAndTechnologySerializer(AssetSerializer):
@@ -299,7 +300,8 @@ class AssetAndTechnologySerializer(AssetSerializer):
     technologies = serpy.MethodField()
 
     def get_technologies(self, obj):
-        techs = AssetTechnology.objects.filter(id__in=obj.technologies.all())
+        techs = AssetTechnology.objects.filter(
+            id__in=obj.technologies.filter(visibility__in=['PUBLIC','UNLISTED'], is_deprecated=False))
         return ParentAssetTechnologySerializer(techs, many=True).data
 
 

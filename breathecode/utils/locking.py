@@ -35,6 +35,7 @@ logger = getLogger(__name__)
 ENV = os.getenv('ENV', '')
 redis_client = None
 
+
 class LockManager(models.Manager):
 
     def get_or_create(self, lock=False, **kwargs):

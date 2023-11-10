@@ -180,7 +180,7 @@ class EventMeView(APIView):
 
         cache = handler.cache.get()
         if cache is not None:
-            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
+            return cache
 
         items = get_my_event_types(request.user)
         lang = get_user_language(request)
@@ -232,7 +232,7 @@ class MeLiveClassView(APIView):
 
         cache = handler.cache.get()
         if cache is not None:
-            return HttpResponse('{}', content_type='application/json', status=status.HTTP_200_OK)
+            return cache
 
         lang = get_user_language(request)
 
@@ -416,7 +416,7 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
 
         cache = handler.cache.get()
         if cache is not None:
-            return HttpResponse(cache, content_type='application/json', status=status.HTTP_200_OK)
+            return cache
 
         if event_id is not None:
             single_event = Event.objects.filter(id=event_id, academy__id=academy_id).first()
@@ -860,11 +860,20 @@ class EventMeCheckinView(APIView):
 
         event = Event.objects.filter(event_type__in=items, id=event_id).first()
         if event is None:
-            raise ValidationException(translation(lang,
-                                                  en='Event not found or you dont have access',
-                                                  es='Evento no encontrado o no tienes acceso',
-                                                  slug='event-not-found'),
-                                      code=404)
+            event = Event.objects.filter(id=event_id).first()
+            if event is None or event.event_type is None:
+                raise ValidationException(translation(lang,
+                                                    en="This event was not found, or your current plan does not include access to it.",
+                                                    es='El evento no se ha encontrado o tu plan no te permite asistir a este evento',
+                                                    slug='event-not-found'),
+                                        code=404)
+            else:
+                raise ValidationException(translation(lang,
+                                                    en='Tu plan no te permite tener acceso a eventos de este tipo: '+event.event_type.name,
+                                                    es='Your current plan does not include access to this type of events: '+event.event_type.name,
+                                                    slug='event-not-found'),
+                                        code=404)
+              
 
         serializer = PUTEventCheckinSerializer(event, request.data)
         if serializer.is_valid():
@@ -878,11 +887,19 @@ class EventMeCheckinView(APIView):
 
         event = Event.objects.filter(event_type__in=items, id=event_id).first()
         if event is None:
-            raise ValidationException(translation(lang,
-                                                  en='Event not found or you dont have access',
-                                                  es='Evento no encontrado o no tienes acceso',
-                                                  slug='event-not-found'),
-                                      code=404)
+            event = Event.objects.filter(id=event_id).first()
+            if event is None or event.event_type is None:
+                raise ValidationException(translation(lang,
+                                                    en="This event was not found, or your current plan does not include access to it.",
+                                                    es='El evento no se ha encontrado o tu plan no te permite asistir a este evento',
+                                                    slug='event-not-found'),
+                                        code=404)
+            else:
+                raise ValidationException(translation(lang,
+                                                    en='Tu plan no te permite tener acceso a eventos de este tipo: '+event.event_type.name,
+                                                    es='Your current plan does not include access to this type of events: '+event.event_type.name,
+                                                    slug='event-not-found'),
+                                        code=404)
 
         serializer = POSTEventCheckinSerializer(data={
             **request.data, 'email': request.user.email,

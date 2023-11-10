@@ -69,12 +69,10 @@ class APIViewExtensionHandlers:
 
         return queryset
 
-    def response(self, data: dict | list[dict]):
+    def response(self, data: dict | list[dict], format='application/json'):
         """Get the response of endpoint"""
 
         headers = {}
-
-        is_json = isinstance(data, dict) or isinstance(data, list)
 
         # The extension can decide if act or not
         extensions_allowed = [
@@ -83,13 +81,10 @@ class APIViewExtensionHandlers:
 
         extensions = sorted(extensions_allowed, key=lambda x: x._get_order_of_response())
         for extension in extensions:
-            data, headers = extension._apply_response_mutation(data, headers)
+            data, headers = extension._apply_response_mutation(data, headers, format)
 
-        if is_json and isinstance(data, str):
-            return HttpResponse(data,
-                                content_type='application/json',
-                                status=status.HTTP_200_OK,
-                                headers=headers)
+        if isinstance(data, str) or isinstance(data, bytes):
+            return HttpResponse(data, status=status.HTTP_200_OK, headers=headers)
 
         return Response(data, status=status.HTTP_200_OK, headers=headers)
 

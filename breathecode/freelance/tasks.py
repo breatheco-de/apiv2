@@ -1,19 +1,13 @@
 import logging
-from celery import shared_task, Task
+from celery import shared_task
 from breathecode.monitoring.decorators import WebhookTask
+from breathecode.utils.decorators.task import TaskPriority
 from .actions import (sync_single_issue, update_status_based_on_github_action, generate_freelancer_bill)
 
 logger = logging.getLogger(__name__)
 
 
-class BaseTaskWithRetry(Task):
-    autoretry_for = (Exception, )
-    #                                           seconds
-    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
-    retry_backoff = True
-
-
-@shared_task(bind=True, base=WebhookTask)
+@shared_task(bind=True, base=WebhookTask, priority=TaskPriority.BILL.value)
 def async_repository_issue_github(self, webhook):
 
     logger.debug('async_repository_issue_github')

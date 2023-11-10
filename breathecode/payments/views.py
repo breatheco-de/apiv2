@@ -1053,7 +1053,7 @@ class PlanOfferView(APIView):
 
         # cache = handler.cache.get()
         # if cache is not None:
-        #     return Response(cache, status=status.HTTP_200_OK)
+        #     return cache
 
         lang = get_user_language(request)
         utc_now = timezone.now()

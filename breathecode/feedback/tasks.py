@@ -2,9 +2,10 @@ from datetime import timedelta
 import os
 from breathecode.authenticate.models import Token
 from breathecode.utils import ValidationException
-from celery import shared_task, Task
+from celery import shared_task
 from django.utils import timezone
 from breathecode.notify import actions as notify_actions
+from breathecode.utils.decorators.task import TaskPriority
 from .utils import strings
 from breathecode.utils import getLogger
 from breathecode.admissions.models import CohortUser, Cohort
@@ -19,13 +20,6 @@ logger = getLogger(__name__)
 ADMIN_URL = os.getenv('ADMIN_URL', '')
 API_URL = os.getenv('API_URL', '')
 ENV = os.getenv('ENV', '')
-
-
-class BaseTaskWithRetry(Task):
-    autoretry_for = (Exception, )
-    #                                           seconds
-    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
-    retry_backoff = True
 
 
 def build_question(answer):
@@ -84,7 +78,7 @@ def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
     if cohort_teacher.count() == 0:
         raise ValidationException('This cohort must have a teacher assigned to be able to survey it', 400)
 
-    def new_answer(answer):
+    def new_answer(answer: Answer):
         question = build_question(answer)
         answer.title = question['title']
         answer.lowest = question['lowest']
@@ -142,7 +136,7 @@ def api_url():
     return os.getenv('API_URL', '')
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@shared_task(bind=True, priority=TaskPriority.NOTIFICATION.value)
 def send_cohort_survey(self, user_id, survey_id):
     logger.info('Starting send_cohort_survey')
     survey = Survey.objects.filter(id=survey_id).first()
@@ -195,7 +189,7 @@ def send_cohort_survey(self, user_id, survey_id):
         notify_actions.send_slack('nps_survey', user.slackuser, survey.cohort.academy.slackteam, data=data)
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
 def process_student_graduation(self, cohort_id, user_id):
     from .actions import create_user_graduation_reviews
 
@@ -213,7 +207,7 @@ def process_student_graduation(self, cohort_id, user_id):
     return True
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
 def recalculate_survey_scores(self, survey_id):
     logger.info('Starting recalculate_survey_score')
 
@@ -227,7 +221,7 @@ def recalculate_survey_scores(self, survey_id):
     survey.save()
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
 def process_answer_received(self, answer_id):
     """
     This task will be called every time a single NPS answer is received
@@ -283,7 +277,7 @@ def process_answer_received(self, answer_id):
     return True
 
 
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@shared_task(bind=True, priority=TaskPriority.NOTIFICATION.value)
 def send_mentorship_session_survey(self, session_id):
     logger.info('Starting send_mentorship_session_survey')
     session = MentorshipSession.objects.filter(id=session_id).first()

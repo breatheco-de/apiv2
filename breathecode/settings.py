@@ -8,8 +8,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
+from datetime import datetime
 import os
 from pathlib import Path
+from typing import TypedDict
 # TODO: decouple file storage from django
 # from time import time
 import django_heroku
@@ -117,30 +119,7 @@ REST_FRAMEWORK = {
     ),
 }
 
-MIDDLEWARE = []
-
-if ENVIRONMENT != 'production':
-    import resource
-
-    class MemoryUsageMiddleware:
-
-        def __init__(self, get_response):
-            self.get_response = get_response
-
-        def __call__(self, request):
-            start_mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-            response = self.get_response(request)
-            end_mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-            delta_mem = end_mem - start_mem
-            print(f'Memory usage for this request: {delta_mem} KB')
-            response['X-Memory-Usage'] = f'{delta_mem} KB'
-            return response
-
-    MIDDLEWARE += [
-        'breathecode.settings.MemoryUsageMiddleware',
-    ]
-
-MIDDLEWARE += [
+MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -155,6 +134,7 @@ MIDDLEWARE += [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     #'breathecode.utils.admin_timezone.TimezoneMiddleware',
+    # 'django.middleware.http.ConditionalGetMiddleware',
 ]
 
 DISABLE_SERVER_SIDE_CURSORS = True  # required when using pgbouncer's pool_mode=transaction
@@ -333,7 +313,7 @@ if REDIS_URL == '' or REDIS_URL == 'redis://localhost:6379':
     REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
 
     # support for heroku redis addon
-    if REDIS_URL.startswith('redis://'):
+    if REDIS_URL.startswith('rediss://'):
         IS_REDIS_WITH_SSL_ON_HEROKU = True
 
 else:
@@ -348,30 +328,92 @@ CACHES = {
     }
 }
 
+DJANGO_REDIS_LOG_IGNORED_EXCEPTIONS = True
+DJANGO_REDIS_IGNORE_EXCEPTIONS = True
+
 if IS_REDIS_WITH_SSL_ON_HEROKU:
     CACHES['default']['OPTIONS'] = {
         'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        'SOCKET_CONNECT_TIMEOUT': 0.2,  # seconds
+        'SOCKET_TIMEOUT': 0.2,  # seconds
+        'PICKLE_VERSION': -1,
+        # "IGNORE_EXCEPTIONS": True,
         'CONNECTION_POOL_KWARGS': {
             'ssl_cert_reqs': None,
+            'max_connections': int(os.getenv('REDIS_MAX_CONNECTIONS', 500)),
+            'retry_on_timeout': False,
         },
     }
 elif IS_REDIS_WITH_SSL:
     redis_ca_cert_path, redis_user_cert_path, redis_user_private_key_path = configure_redis()
     CACHES['default']['OPTIONS'] = {
         'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        'SOCKET_CONNECT_TIMEOUT': 0.2,  # seconds
+        'SOCKET_TIMEOUT': 0.2,  # seconds
+        'PICKLE_VERSION': -1,
+        # "IGNORE_EXCEPTIONS": True,
         'CONNECTION_POOL_KWARGS': {
             'ssl_cert_reqs': 'required',
             'ssl_ca_certs': redis_ca_cert_path,
             'ssl_certfile': redis_user_cert_path,
             'ssl_keyfile': redis_user_private_key_path,
+            'max_connections': int(os.getenv('REDIS_MAX_CONNECTIONS', 500)),
+            'retry_on_timeout': False,
         }
     }
 
 if IS_TEST_ENV:
+    from django.core.cache.backends.locmem import LocMemCache
+    import fnmatch
+
+    class Key(TypedDict):
+        key: str
+        value: str
+        valid_until: datetime
+
+    # TODO: support timeout
+    class CustomMemCache(LocMemCache):
+        _cache = {}
+
+        def delete_many(self, patterns):
+            for pattern in patterns:
+                self.delete(pattern)
+
+        def delete(self, key, *args, **kwargs):
+            if key in self._cache.keys():
+                del self._cache[key]
+
+        def keys(self, filter=None):
+            if filter:
+                return sorted(fnmatch.filter(self._cache.keys(), filter))
+
+            return sorted(self._cache.keys())
+
+        def clear(self):
+            self._cache = {}
+
+        # TODO: timeout not implemented yet
+        def set(self, key, value, *args, timeout=None, **kwargs):
+            if value is None:
+                self._cache[key] = None
+                return
+
+            self._cache[key] = {
+                'key': key,
+                'value': value,
+                'valid_until': timeout,
+            }
+
+        def get(self, key, *args, **kwargs):
+            if key not in self._cache.keys():
+                return None
+
+            return self._cache[key]['value']
+
     CACHES['default'] = {
         **CACHES['default'],
         'LOCATION': 'breathecode',
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'BACKEND': 'breathecode.settings.CustomMemCache',
     }
 
 # overwrite the redis url with the new one

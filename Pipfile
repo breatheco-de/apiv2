@@ -4,7 +4,7 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [scripts]
-start="python manage.py runserver 0.0.0.0:8000"
+start="python manage.py runserver 0.0.0.0:8001"
 format="pre-commit run --all-files"
 migrate="python manage.py migrate"
 makemigrations="python manage.py makemigrations"
@@ -70,7 +70,6 @@ pyfcm = "*"
 twilio = "*"
 google-cloud-storage = "*"
 celery = "*"
-redis = "*"
 eventbrite = "*"
 pillow = "*"
 django-redis = "*"
@@ -120,3 +119,5 @@ sqlalchemy = "<2.0"
 pytest-env = "*"
 premailer = "*"
 google-cloud-bigquery = "*"
+redis = {extras = ["hiredis"], version = "*"}
+brotli = "*"

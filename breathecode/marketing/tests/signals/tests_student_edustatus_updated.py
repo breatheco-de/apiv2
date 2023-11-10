@@ -15,7 +15,7 @@ class TestLead(LegacyAPITestCase):
     @patch('breathecode.marketing.tasks.add_cohort_task_to_student.delay', MagicMock())
     @patch('logging.Logger.warn', MagicMock())
     def test_cohort_saved__create__without_educational_status_active(self, enable_signals):
-        enable_signals()
+        enable_signals('breathecode.admissions.signals.student_edu_status_updated')
 
         from breathecode.marketing.tasks import add_cohort_task_to_student
         import logging
@@ -50,7 +50,7 @@ class TestLead(LegacyAPITestCase):
     @patch('breathecode.marketing.tasks.add_cohort_task_to_student.delay', MagicMock())
     @patch('logging.Logger.warn', MagicMock())
     def test_cohort_saved__create__with_educational_status_active(self, enable_signals):
-        enable_signals()
+        enable_signals('breathecode.admissions.signals.student_edu_status_updated')
 
         from breathecode.marketing.tasks import add_cohort_task_to_student
         import logging

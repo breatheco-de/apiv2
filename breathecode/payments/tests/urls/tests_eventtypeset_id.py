@@ -34,6 +34,7 @@ def service_serializer(service):
         'private': service.private,
         'slug': service.slug,
         'title': service.title,
+        'icon_url': service.icon_url,
     }
 
 
