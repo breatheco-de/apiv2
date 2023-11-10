@@ -517,7 +517,7 @@ def mark_technologies_as_deprecated(modeladmin, request, queryset):
 @admin.register(AssetTechnology)
 class AssetTechnologyAdmin(admin.ModelAdmin):
     search_fields = ['title', 'slug']
-    list_display = ('id', 'get_slug', 'title', 'parent', 'featured_asset', 'description', 'is_deprecated')
+    list_display = ('id', 'get_slug', 'title', 'parent', 'featured_asset', 'description', 'visibility', 'is_deprecated')
     list_filter = (ParentFilter, VisibilityFilter, IsDeprecatedFilter)
     raw_id_fields = ['parent', 'featured_asset']
 
