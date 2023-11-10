@@ -292,6 +292,7 @@ class ParentAssetTechnologySerializer(serpy.Serializer):
     description = serpy.Field()
     icon_url = serpy.Field()
     is_deprecated = serpy.Field()
+    visibility = serpy.Field()
 
 
 class AssetAndTechnologySerializer(AssetSerializer):
