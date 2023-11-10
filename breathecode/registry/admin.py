@@ -516,7 +516,7 @@ class VisibilityFilter(admin.SimpleListFilter):
             return queryset.filter(visibility='PRIVATE')
 
 
-def mark_technologies_as_deprecated(modeladmin, request, queryset):
+def mark_technologies_as_unlisted(modeladmin, request, queryset):
     technologies = queryset.all()
     for technology in technologies:
         if technology.parent is not None or technology.asset_set.count() < 3:
@@ -531,7 +531,7 @@ class AssetTechnologyAdmin(admin.ModelAdmin):
     list_filter = (ParentFilter, VisibilityFilter, IsDeprecatedFilter)
     raw_id_fields = ['parent', 'featured_asset']
 
-    actions = (merge_technologies, slug_to_lower_case, mark_technologies_as_deprecated)
+    actions = (merge_technologies, slug_to_lower_case, mark_technologies_as_unlisted)
 
     def get_slug(self, obj):
         parent = ''
