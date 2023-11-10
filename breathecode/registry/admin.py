@@ -494,6 +494,7 @@ class IsDeprecatedFilter(admin.SimpleListFilter):
         if self.value() == 'false':
             return queryset.filter(is_deprecated=False)
 
+
 class VisibilityFilter(admin.SimpleListFilter):
 
     title = 'Visibility'
@@ -505,7 +506,15 @@ class VisibilityFilter(admin.SimpleListFilter):
         return (('PUBLIC', 'Public'), ('UNLISTED', 'Unlisted'), ('PRIVATE', 'Private'))
 
     def queryset(self, request, queryset):
-        return queryset.filter(visibility=self.value())
+        if self.value() == 'PUBLIC':
+            return queryset.filter(visibility='PUBLIC')
+
+        if self.value() == 'UNLISTED':
+            return queryset.filter(visibility='UNLISTED')
+
+        if self.value() == 'PRIVATE':
+            return queryset.filter(visibility='PRIVATE')
+
 
 def mark_technologies_as_deprecated(modeladmin, request, queryset):
     technologies = queryset.all()
@@ -517,7 +526,8 @@ def mark_technologies_as_deprecated(modeladmin, request, queryset):
 @admin.register(AssetTechnology)
 class AssetTechnologyAdmin(admin.ModelAdmin):
     search_fields = ['title', 'slug']
-    list_display = ('id', 'get_slug', 'title', 'parent', 'featured_asset', 'description', 'visibility', 'is_deprecated')
+    list_display = ('id', 'get_slug', 'title', 'parent', 'featured_asset', 'description', 'visibility',
+                    'is_deprecated')
     list_filter = (ParentFilter, VisibilityFilter, IsDeprecatedFilter)
     raw_id_fields = ['parent', 'featured_asset']
 

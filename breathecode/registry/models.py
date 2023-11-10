@@ -46,17 +46,20 @@ class AssetTechnology(models.Model):
                             null=True,
                             help_text='Leave blank if will be shown in all languages')
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, default=None, blank=True, null=True)
-    is_deprecated = models.BooleanField(
-        default=True, help_text='If True, the technology will be programmatically deleted.')
+    is_deprecated = models.BooleanField(default=False,
+                                        help_text='If True, the technology will be programmatically deleted.')
     featured_asset = models.ForeignKey('Asset',
                                        on_delete=models.SET_NULL,
                                        default=None,
                                        blank=True,
                                        null=True)
-    visibility = models.CharField(max_length=20,
-                                  choices=VISIBILITY,
-                                  default=PUBLIC,
-                                  help_text='If public, the front-end will generate a landing page. If unlisted, it won\'t have a landing page but will be shown in assets. If private, it won\'t be shown anywhere of the front-end.')
+    visibility = models.CharField(
+        max_length=20,
+        choices=VISIBILITY,
+        default=UNLISTED,
+        help_text=
+        'If public, the front-end will generate a landing page. If unlisted, it won\'t have a landing page but will be shown in assets. If private, it won\'t be shown anywhere of the front-end.'
+    )
 
     description = models.TextField(null=True, blank=True, default=None)
     icon_url = models.URLField(null=True, blank=True, default=None, help_text='Image icon to show on website')
