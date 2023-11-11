@@ -1,6 +1,9 @@
 import logging, os
 from celery import shared_task
 from django.contrib.auth.models import User
+from breathecode.authenticate.models import UserInvite
+from breathecode.marketing.actions import validate_email
+from breathecode.utils.decorators import task, RetryTask
 
 from breathecode.utils.decorators.task import TaskPriority, task
 from .actions import set_gitpod_user_expiration, add_to_organization, remove_from_organization
@@ -9,6 +12,27 @@ from breathecode.notify import actions as notify_actions
 API_URL = os.getenv('API_URL', '')
 
 logger = logging.getLogger(__name__)
+
+
+@task(bind=True)
+def async_validate_email_invite(self, invite_id):
+    logger.debug(f'Validating email for invite {invite_id}')
+    user_invite = UserInvite.objects.filter(id=invite_id).first()
+
+    if user_invite is None:
+        logger.error(f'UserInvite {invite_id} not found')
+        return
+
+    try:
+        email_status = validate_email(user_invite.email, 'en')
+    except:
+        raise RetryTask(f'Retrying email validation for invite {invite_id}')
+
+    user_invite.email_quality = email_status['score']
+    user_invite.email_status = email_status
+    user_invite.save()
+
+    return True
 
 
 @shared_task(priority=TaskPriority.ACADEMY.value)

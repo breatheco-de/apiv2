@@ -133,7 +133,7 @@ def validate_email(email, lang):
                 'El correo electrónico que haz especificado parece inválido, por favor corrige tu correo electronico',
                 slug='invalid-email'))
 
-    if 'quality_score' in data and float(data['quality_score']) < 0.60:
+    if 'quality_score' in data and float(data['quality_score']) <= 0.60:
         raise ValidationException(translation(
             lang,
             en=
