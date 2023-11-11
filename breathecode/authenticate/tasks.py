@@ -20,12 +20,19 @@ def async_validate_email_invite(self, invite_id):
     user_invite = UserInvite.objects.filter(id=invite_id).first()
 
     if user_invite is None:
-        logger.error(f'UserInvite {invite_id} not found')
-        return
+        raise AbortTask(f'UserInvite {invite_id} not found')
 
     try:
         email_status = validate_email(user_invite.email, 'en')
-    except:
+        if email_status['score'] <= 0.60:
+            user_invite.process_status = 'ERROR'
+            user_invite.process_message = 'Your email is invalid'
+            
+    except ValidationException as e:
+        user_invite.process_status = "ERROR"
+        user_invite.process_message = str(e)
+        
+    except Exception:
         raise RetryTask(f'Retrying email validation for invite {invite_id}')
 
     user_invite.email_quality = email_status['score']
