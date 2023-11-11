@@ -8,7 +8,6 @@ from django.urls.base import reverse_lazy
 import pytest
 from rest_framework import status
 from breathecode.services.datetime_to_iso_format import datetime_to_iso_format
-from breathecode.tests.mixins.legacy import LegacyAPITestCase
 import breathecode.activity.tasks as activity_tasks
 from rest_framework.test import APIClient
 
@@ -289,23 +288,16 @@ def test_answer_id_put_with_all_valid_scores(bc: Breathecode, client: APIClient,
 def test_answer_id_put_twice_same_score(bc: Breathecode, client: APIClient):
     """Test /answer/:id without auth"""
     answer_kwargs = {'status': 'SENT', 'score': 3}
-    print(11, activity_tasks.add_activity)
-    print(11, activity_tasks.add_activity.delay)
-    print(11, survey_answered.send)
     model = bc.database.create(user=1, answer=True, answer_kwargs=answer_kwargs)
     client.force_authenticate(model.user)
 
-    print(11)
     db = bc.format.to_dict(model.answer)
-    print(11)
     url = reverse_lazy('feedback:user_me_answer_id', kwargs={'answer_id': model['answer'].id})
     data = {
         'comment': 'They killed kenny',
         'score': 3,
     }
-    print(11)
     client.put(url, data)
-    print(11)
     response = client.put(url, data)
     json = response.json()
 

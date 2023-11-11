@@ -245,6 +245,7 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
                                                      })
         if serializer.is_valid():
             serializer.save()
+            print(serializer.data)
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

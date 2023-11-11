@@ -1,8 +1,9 @@
 import importlib
 import os
 import random
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch, call
 import pytest
+import requests
 from scripts.utils.environment import reset_environment, test_environment
 from breathecode.utils.exceptions import TestError
 import numpy as np
@@ -250,12 +251,51 @@ def no_http_requests(monkeypatch):
         ]
 
         for host, port, path in allow:
+            print(self, method, url, args, kwargs)
             if host == self.host and port == self.port and (path == url or path == None):
                 return urlopen(self, method, url, *args, **kwargs)
 
         raise TestError(f'Avoid make a real request to {method} {self.scheme}://{self.host}{url}')
 
     monkeypatch.setattr('urllib3.connectionpool.HTTPConnectionPool.urlopen', urlopen_mock)
+
+
+@pytest.fixture()
+def patch_request(monkeypatch):
+
+    def patcher(conf=[]):
+
+        def wrapper(*args, **kwargs):
+            raises = True
+
+            for c in conf:
+                if args == c[0].args and kwargs == c[0].kwargs:
+                    raises = False
+                    break
+
+            if raises:
+                raise TestError(f'Avoiding to make a real request to {args} {kwargs}')
+
+            mock = MagicMock()
+
+            if len(c) > 2:
+                mock.json.return_value = c[1]
+                mock.status_code = c[2]
+            elif len(c) > 1:
+                mock.json.return_value = c[1]
+                mock.status_code = 200
+            else:
+                mock.json.return_value = None
+                mock.status_code = 204
+
+            return mock
+
+        mock = MagicMock()
+        monkeypatch.setattr('requests.api.request', wrapper)
+
+        return mock
+
+    yield patcher
 
 
 @pytest.fixture(autouse=True)

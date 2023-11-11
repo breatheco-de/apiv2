@@ -238,6 +238,7 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
     academies = []
 
     if github_academy_user_log is None:
+        # make a function that calculate the user activity in the academies by percentage
         github_academy_user_log = GithubAcademyUserLog.objects.filter(
             Q(valid_until__isnull=True)
             | Q(valid_until__gte=context['limit'] - relativedelta(months=1, weeks=1)),
