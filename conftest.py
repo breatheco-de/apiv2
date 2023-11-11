@@ -263,7 +263,9 @@ def no_http_requests(monkeypatch):
 @pytest.fixture()
 def patch_request(monkeypatch):
 
-    def patcher(conf=[]):
+    def patcher(conf=None):
+        if not conf:
+            conf = []
 
         def wrapper(*args, **kwargs):
             raises = True
