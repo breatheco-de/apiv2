@@ -71,6 +71,7 @@ def get_serializer_technology(technology, data={}):
         'description': technology.description,
         'icon_url': technology.icon_url,
         'is_deprecated': technology.is_deprecated,
+        'visibility': technology.visibility,
         **data,
     }
 
