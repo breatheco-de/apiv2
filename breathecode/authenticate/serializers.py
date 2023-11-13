@@ -1478,7 +1478,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         if obj.status != 'ACCEPTED':
             return None
 
-        tasks_authenticate.validate_email.delay(obj.id)
+        tasks_authenticate.async_validate_email_invite.delay(obj.id)
 
         if not self.user:
             self.user = User(email=obj.email,
