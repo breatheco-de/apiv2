@@ -4,7 +4,7 @@ from celery import shared_task, Task
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils import timezone
 
-from breathecode.utils.decorators import task, AbortTask
+from breathecode.utils.decorators import task, AbortTask, TaskPriority
 from .actions import sync_slack_team_channel, sync_slack_team_users
 from breathecode.services.slack.client import Slack
 from breathecode.mentorship.models import MentorshipSession
@@ -21,20 +21,13 @@ def get_api_url():
 logger = logging.getLogger(__name__)
 
 
-class BaseTaskWithRetry(Task):
-    autoretry_for = (Exception, )
-    #                                           seconds
-    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
-    retry_backoff = True
-
-
-@shared_task
+@shared_task(priority=TaskPriority.REALTIME.value)
 def async_slack_team_channel(team_id):
     logger.debug('Starting async_slack_team_channel')
     return sync_slack_team_channel(team_id)
 
 
-@shared_task
+@shared_task(priority=TaskPriority.REALTIME.value)
 def send_mentorship_starting_notification(session_id):
     logger.debug('Starting send_mentorship_starting_notification')
 
@@ -57,13 +50,13 @@ def send_mentorship_starting_notification(session_id):
     return True
 
 
-@shared_task
+@shared_task(priority=TaskPriority.REALTIME.value)
 def async_slack_team_users(team_id):
     logger.debug('Starting async_slack_team_users')
     return sync_slack_team_users(team_id)
 
 
-@shared_task
+@shared_task(priority=TaskPriority.REALTIME.value)
 def async_slack_action(post_data):
     logger.debug('Starting async_slack_action')
     try:
@@ -81,7 +74,7 @@ def async_slack_action(post_data):
         return False
 
 
-@shared_task
+@shared_task(priority=TaskPriority.REALTIME.value)
 def async_slack_command(post_data):
     logger.debug('Starting async_slack_command')
     try:
@@ -99,7 +92,7 @@ def async_slack_command(post_data):
         return False
 
 
-@task()
+@task(priority=TaskPriority.DEFAULT.value)
 def async_deliver_hook(target, payload, hook_id=None, **kwargs):
     """
     target:     the url to receive the payload.

@@ -22,3 +22,10 @@ app.conf.update(BROKER_URL=REDIS_URL, CELERY_RESULT_BACKEND=REDIS_URL, namespace
 
 # Load task modules from all registered Django app configs.
 app.autodiscover_tasks()
+app.conf.broker_transport_options = {
+    'priority_steps': list(range(11)),
+    'sep': ':',
+    'queue_order_strategy': 'priority',
+}
+
+app.conf.task_default_priority = 5  # Default priority value

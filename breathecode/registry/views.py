@@ -500,7 +500,7 @@ class AssetView(APIView, GenerateLookupsMixin):
             asset = Asset.get_by_slug(asset_slug, request)
             if asset is None:
                 raise ValidationException(f'Asset {asset_slug} not found', status.HTTP_404_NOT_FOUND)
-
+                
             serializer = AssetBigAndTechnologySerializer(asset)
             return handler.response(serializer.data)
 

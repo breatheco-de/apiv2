@@ -1,9 +1,9 @@
 import logging, os
 from typing import Any
-from celery import shared_task, Task
+from celery import shared_task
 
 from breathecode.authenticate.models import ProfileAcademy, Role
-from breathecode.utils.decorators.task import AbortTask, task
+from breathecode.utils.decorators.task import AbortTask, TaskPriority, task
 from .models import Academy, Cohort, CohortUser, SyllabusVersion
 from .actions import test_syllabus
 from django.utils import timezone
@@ -15,14 +15,7 @@ API_URL = os.getenv('API_URL', '')
 logger = logging.getLogger(__name__)
 
 
-class BaseTaskWithRetry(Task):
-    autoretry_for = (Exception, )
-    #                                           seconds
-    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
-    retry_backoff = True
-
-
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_test_syllabus(syllabus_slug, syllabus_version) -> None:
     logger.debug('Process async_test_syllabus')
 
@@ -55,7 +48,7 @@ def async_test_syllabus(syllabus_slug, syllabus_version) -> None:
             })
 
 
-@task()
+@task(priority=TaskPriority.STUDENT.value)
 def build_cohort_user(cohort_id: int, user_id: int, role: str = 'STUDENT', **_: Any) -> None:
     logger.info(f'Starting build_cohort_user for cohort {cohort_id} and user {user_id}')
 
@@ -111,7 +104,7 @@ def build_cohort_user(cohort_id: int, user_id: int, role: str = 'STUDENT', **_: 
         logger.info('ProfileAcademy added')
 
 
-@task()
+@task(priority=TaskPriority.STUDENT.value)
 def build_profile_academy(academy_id: int, user_id: int, role: str = 'student', **_: Any) -> None:
     logger.info(f'Starting build_profile_academy for cohort {academy_id} and user {user_id}')
 

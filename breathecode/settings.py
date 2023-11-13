@@ -8,8 +8,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
+from datetime import datetime
 import os
 from pathlib import Path
+from typing import TypedDict
 # TODO: decouple file storage from django
 # from time import time
 import django_heroku
@@ -117,30 +119,7 @@ REST_FRAMEWORK = {
     ),
 }
 
-MIDDLEWARE = []
-
-if ENVIRONMENT != 'production':
-    import resource
-
-    class MemoryUsageMiddleware:
-
-        def __init__(self, get_response):
-            self.get_response = get_response
-
-        def __call__(self, request):
-            start_mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-            response = self.get_response(request)
-            end_mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-            delta_mem = end_mem - start_mem
-            print(f'Memory usage for this request: {delta_mem} KB')
-            response['X-Memory-Usage'] = f'{delta_mem} KB'
-            return response
-
-    MIDDLEWARE += [
-        'breathecode.settings.MemoryUsageMiddleware',
-    ]
-
-MIDDLEWARE += [
+MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -387,33 +366,49 @@ if IS_TEST_ENV:
     from django.core.cache.backends.locmem import LocMemCache
     import fnmatch
 
+    class Key(TypedDict):
+        key: str
+        value: str
+        valid_until: datetime
+
+    # TODO: support timeout
     class CustomMemCache(LocMemCache):
-        _keys = set()
+        _cache = {}
 
-        def delete_pattern(self, pattern):
-            keys_to_delete = fnmatch.filter(self._keys, pattern)
-            for key in keys_to_delete:
-                self.delete(key)
-
-            self._keys = {x for x in self._keys if x not in keys_to_delete}
+        def delete_many(self, patterns):
+            for pattern in patterns:
+                self.delete(pattern)
 
         def delete(self, key, *args, **kwargs):
-            self._keys.remove(key)
-            return super().delete(key, *args, **kwargs)
+            if key in self._cache.keys():
+                del self._cache[key]
 
         def keys(self, filter=None):
             if filter:
-                return sorted(fnmatch.filter(self._keys, filter))
+                return sorted(fnmatch.filter(self._cache.keys(), filter))
 
-            return sorted(list(self._keys))
+            return sorted(self._cache.keys())
 
         def clear(self):
-            self._keys = set()
-            return super().clear()
+            self._cache = {}
 
-        def set(self, key, *args, **kwargs):
-            self._keys.add(key)
-            return super().set(key, *args, **kwargs)
+        # TODO: timeout not implemented yet
+        def set(self, key, value, *args, timeout=None, **kwargs):
+            if value is None:
+                self._cache[key] = None
+                return
+
+            self._cache[key] = {
+                'key': key,
+                'value': value,
+                'valid_until': timeout,
+            }
+
+        def get(self, key, *args, **kwargs):
+            if key not in self._cache.keys():
+                return None
+
+            return self._cache[key]['value']
 
     CACHES['default'] = {
         **CACHES['default'],

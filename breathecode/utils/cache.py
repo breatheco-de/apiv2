@@ -25,6 +25,9 @@ def is_compression_enabled():
     return os.getenv('COMPRESSION', '1').lower() in ENABLE_LIST_OPTIONS
 
 
+IS_DJANGO_REDIS = hasattr(cache, 'delete_pattern')
+
+
 class CacheMeta(type):
 
     def __init__(cls: Cache, name, bases, clsdict):
@@ -110,7 +113,6 @@ class Cache(metaclass=CacheMeta):
             max_deep = cls.max_deep
 
         resolved = set()
-
         resolved.add(cls)
 
         if deep >= max_deep:
@@ -130,13 +132,23 @@ class Cache(metaclass=CacheMeta):
         if deep != 0:
             return resolved
 
-        for descriptor in resolved:
-            cache.delete_pattern(f'{cls._version_prefix}{descriptor.model.__name__}__*')
+        keys = {f'{cls._version_prefix}{descriptor.model.__name__}__keys' for descriptor in resolved}
+        sets = [x or set() for x in cache.get_many(keys).values()]
+
+        to_delete = set()
+        for key in sets:
+            if not key:
+                continue
+
+            to_delete |= key
+
+        to_delete |= keys
+
+        cache.delete_many(to_delete)
 
     @classmethod
     def keys(cls):
-        key = cls.model.__name__
-        return cache.keys(f'{cls._version_prefix}{key}__*')
+        return cache.get(f'{cls._version_prefix}{cls.model.__name__}__keys') or set()
 
     @classmethod
     def get(cls, data) -> dict:
@@ -264,4 +276,8 @@ class Cache(metaclass=CacheMeta):
         else:
             cache.set(key, data, timeout)
 
+        keys = cache.get(f'{cls._version_prefix}{cls.model.__name__}__keys') or set()
+        keys.add(key)
+
+        cache.set(f'{cls._version_prefix}{cls.model.__name__}__keys', keys)
         return res

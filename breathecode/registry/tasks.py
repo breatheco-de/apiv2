@@ -5,7 +5,7 @@ import time
 import re
 import pathlib
 from typing import Optional
-from celery import shared_task, Task
+from celery import shared_task
 from breathecode.services.seo import SEOAnalyzer
 from django.utils import timezone
 from bs4 import BeautifulSoup
@@ -15,6 +15,7 @@ from breathecode.media.models import Media, MediaResolution
 from breathecode.media.views import media_gallery_bucket
 from breathecode.services.google_cloud import FunctionV1
 from breathecode.services.google_cloud.storage import Storage
+from breathecode.utils.decorators.task import TaskPriority
 from breathecode.utils.views import set_query_parameter
 from breathecode.monitoring.decorators import WebhookTask
 from .models import Asset, AssetImage
@@ -42,21 +43,14 @@ def is_remote_image(_str):
     return True
 
 
-class BaseTaskWithRetry(Task):
-    autoretry_for = (Exception, )
-    #                                           seconds
-    retry_kwargs = {'max_retries': 2, 'countdown': 60 * 10}
-    retry_backoff = True
-
-
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_pull_from_github(asset_slug, user_id=None, override_meta=False):
     logger.debug(f'Synching asset {asset_slug} with data found on github')
     sync_status = pull_from_github(asset_slug, override_meta=override_meta)
     return sync_status != 'ERROR'
 
 
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_test_asset(asset_slug):
     a = Asset.objects.filter(slug=asset_slug).first()
     if a is None:
@@ -71,7 +65,7 @@ def async_test_asset(asset_slug):
     return False
 
 
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_regenerate_asset_readme(asset_slug):
     a = Asset.objects.filter(slug=asset_slug).first()
     if a is None:
@@ -87,7 +81,7 @@ def async_regenerate_asset_readme(asset_slug):
     return a.cleaning_status == 'OK'
 
 
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_execute_seo_report(asset_slug):
     a = Asset.objects.filter(slug=asset_slug).first()
     if a is None:
@@ -102,7 +96,7 @@ def async_execute_seo_report(asset_slug):
     return False
 
 
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_create_asset_thumbnail_legacy(asset_slug: str):
     from breathecode.registry.actions import AssetThumbnailGenerator
     asset = Asset.objects.filter(slug=asset_slug).first()
@@ -115,7 +109,7 @@ def async_create_asset_thumbnail_legacy(asset_slug: str):
     return True
 
 
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_create_asset_thumbnail(asset_slug: str):
 
     asset = Asset.objects.filter(slug=asset_slug).first()
@@ -229,7 +223,7 @@ def async_create_asset_thumbnail(asset_slug: str):
     logger.warn(f'Media was save with {hash} for academy {asset.academy}')
 
 
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_download_readme_images(asset_slug):
     logger.debug(f'Downloading images for asset {asset_slug}')
 
@@ -292,7 +286,7 @@ def async_download_readme_images(asset_slug):
     return True
 
 
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_delete_asset_images(asset_slug):
 
     asset = Asset.get_by_slug(asset_slug)
@@ -314,7 +308,7 @@ def async_delete_asset_images(asset_slug):
     return True
 
 
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_update_frontend_asset_cache(asset):
     try:
         if os.getenv('ENV', '') != 'production':
@@ -327,7 +321,7 @@ def async_update_frontend_asset_cache(asset):
         logger.error(str(e))
 
 
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_remove_img_from_cloud(id):
 
     logger.info('async_remove_img_from_cloud')
@@ -348,7 +342,7 @@ def async_remove_img_from_cloud(id):
     return True
 
 
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_upload_image_to_bucket(id):
 
     img = AssetImage.objects.filter(id=id).first()
@@ -372,7 +366,7 @@ def async_upload_image_to_bucket(id):
     return img.download_status
 
 
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_download_single_readme_image(asset_slug, link):
 
     asset = Asset.get_by_slug(asset_slug)
@@ -406,7 +400,7 @@ def async_download_single_readme_image(asset_slug, link):
     return img.download_status
 
 
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_resize_asset_thumbnail(media_id: int, width: Optional[int] = 0, height: Optional[int] = 0):
     media = Media.objects.filter(id=media_id).first()
     if media is None:
@@ -441,7 +435,7 @@ def async_resize_asset_thumbnail(media_id: int, width: Optional[int] = 0, height
     resolution.save()
 
 
-@shared_task(bind=True, base=WebhookTask)
+@shared_task(bind=True, base=WebhookTask, priority=TaskPriority.ACADEMY.value)
 def async_synchonize_repository_content(self, webhook):
 
     logger.debug('async_synchonize_repository_content')
@@ -479,7 +473,7 @@ def async_synchonize_repository_content(self, webhook):
     return webhook
 
 
-@shared_task
+@shared_task(priority=TaskPriority.BACKGROUND.value)
 def async_add_syllabus_translations(syllabus_slug, version):
 
     syllabus_version = SyllabusVersion.objects.filter(syllabus__slug=syllabus_slug, version=version).first()

@@ -185,7 +185,7 @@ class Check:
         if not isinstance(query, QuerySet):
             self._parent.fail('The first argument is not a QuerySet')
 
-        self._parent.assertEqual([x.pk for x in query], pks)
+        assert [x.pk for x in query] == pks
 
     def list_with_pks(self, query: Any, pks: list[int]) -> None:
         """
