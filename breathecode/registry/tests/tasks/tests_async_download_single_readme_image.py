@@ -43,9 +43,8 @@ class TestRegistry(LegacyAPITestCase):
         model = self.bc.database.create(asset={'slug': 'fake_slug'}, asset_image=asset_image)
 
         bc = self.bc.format.to_dict(model.asset_image)
-        result = async_download_single_readme_image('fake_slug', 'https://www.f.com')
+        async_download_single_readme_image.delay('fake_slug', 'https://www.f.com')
 
-        self.assertEqual(result, False)
         self.bc.database.list_of('registry.AssetImage'), [{
             **bc, 'download_details':
             f'Skipping image download for {original_url} in asset fake_slug, invalid mime application/json',
@@ -83,13 +82,12 @@ class TestRegistry(LegacyAPITestCase):
     def test__with_download_status_no_asset_image(self):
         model = self.bc.database.create(asset={'slug': 'fake_slug'})
 
-        result = async_download_single_readme_image('fake_slug', original_url)
+        async_download_single_readme_image.delay('fake_slug', original_url)
         #The content is static in the decorator, so the hash is always the same
         hash = '5186bd77843e507d2c6f568d282c56b06622b2fc7d6ae6a109c97ee1fc3cdebc'
 
         readme = self.bc.database.get_model('registry.asset').objects.first().get_readme()['decoded']
 
-        self.assertEqual(result, 'OK')
         self.assertEqual('https://xyz/hardcoded_url' in readme, False)
         self.assertEqual(self.bc.database.list_of('registry.AssetImage'), [{
             'id': 1,
@@ -146,13 +144,12 @@ class TestRegistry(LegacyAPITestCase):
         readme_raw = model['asset'].readme_raw
 
         asset = self.bc.format.to_dict(model.asset)
-        result = async_download_single_readme_image('fake_slug', 'https://www.f.com')
+        async_download_single_readme_image.delay('fake_slug', 'https://www.f.com')
         #The content is static in the decorator, so the hash is always the same
         hash = '5186bd77843e507d2c6f568d282c56b06622b2fc7d6ae6a109c97ee1fc3cdebc'
 
         readme = self.bc.database.get_model('registry.asset').objects.first().get_readme()['decoded']
         asset_image = self.bc.database.get_model('registry.AssetImage').objects.first()
-        self.assertEqual(result, 'OK')
         self.bc.database.list_of('registry.Asset'), [{
             **asset,
             'readme_raw': readme_raw,
@@ -215,13 +212,12 @@ class TestRegistry(LegacyAPITestCase):
         #store the original readme_raw to verify it does not get modified
         readme_raw = model['asset'].readme_raw
 
-        result = async_download_single_readme_image('fake_slug', 'https://www.f.com')
+        async_download_single_readme_image.delay('fake_slug', 'https://www.f.com')
         #The content is static in the decorator, so the hash is always the same
         hash = '5186bd77843e507d2c6f568d282c56b06622b2fc7d6ae6a109c97ee1fc3cdebc'
 
         readme = self.bc.database.get_model('registry.asset').objects.first().get_readme()['decoded']
         asset_image = self.bc.database.get_model('registry.AssetImage').objects.first()
-        self.assertEqual(result, 'OK')
         self.assertEqual(readme.count('https://xyz/hardcoded_url'), 3)
         self.assertEqual(start_of_readme in readme, True)
         self.assertEqual('https://www.f.com' not in readme, True)
@@ -263,10 +259,9 @@ class TestRegistry(LegacyAPITestCase):
         #store the original readme_raw to verify it does not get modified
         readme_raw = model['asset'].readme_raw
 
-        result = async_download_single_readme_image('fake_slug', 'https://www.f.com')
+        async_download_single_readme_image.delay('fake_slug', 'https://www.f.com')
 
         readme = self.bc.database.get_model('registry.asset').objects.first().get_readme()['decoded']
 
-        self.assertEqual(result, 'OK')
         self.assertEqual(readme_raw, self.bc.database.get_model('registry.asset').objects.first().readme_raw)
         self.assertEqual(fake_readme, readme)

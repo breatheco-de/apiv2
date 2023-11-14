@@ -51,8 +51,8 @@ class RegistryTestSuite(RegistryTestCase):
         async_create_asset_thumbnail.delay('slug')
 
         self.assertEqual(self.bc.database.list_of('media.Media'), [])
-        self.assertEqual(Logger.warn.call_args_list, [])
-        self.assertEqual(Logger.error.call_args_list, [call('Asset with slug slug not found')])
+        self.assertEqual(Logger.warn.call_args_list, [call('Asset with slug slug not found')])
+        self.assertEqual(Logger.error.call_args_list, [call('Asset with slug slug not found', exc_info=True)])
 
     """
     🔽🔽🔽 With Asset, bad Function response
@@ -72,8 +72,10 @@ class RegistryTestSuite(RegistryTestCase):
         self.assertEqual(self.bc.database.list_of('media.Media'), [])
         self.assertEqual(Logger.warn.call_args_list, [])
         self.assertEqual(Logger.error.call_args_list, [
-            call('Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` '
-                 'returns status code 400'),
+            call(
+                'Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` '
+                'returns status code 400',
+                exc_info=True),
         ])
         self.assertEqual(
             str(FunctionV1.__init__.call_args_list),
@@ -182,10 +184,10 @@ class RegistryTestSuite(RegistryTestCase):
         self.assertEqual(self.bc.database.list_of('media.Media'), [
             self.bc.format.to_dict(model.media),
         ])
-        self.assertEqual(Logger.warn.call_args_list, [
-            call('Not able to retrieve a preview generation'),
+        self.assertEqual(Logger.warn.call_args_list, [])
+        self.assertEqual(Logger.error.call_args_list, [
+            call('Not able to retrieve a preview generation', exc_info=True),
         ])
-        self.assertEqual(Logger.error.call_args_list, [])
         self.assertEqual(
             str(FunctionV1.__init__.call_args_list),
             str([call(region='us-central1', project_id='labor-day-story', name='screenshots', method='GET')]))
@@ -223,24 +225,14 @@ class RegistryTestSuite(RegistryTestCase):
             self.bc.format.to_dict(model.media),
         ])
 
-        self.assertEqual(Logger.warn.call_args_list, [
-            call(f'Media with hash {hash} already exists, skipping'),
+        self.assertEqual(Logger.warn.call_args_list, [])
+        self.assertEqual(Logger.error.call_args_list, [
+            call(f'Media with hash {hash} already exists, skipping', exc_info=True),
         ])
-        self.assertEqual(Logger.error.call_args_list, [])
         self.assertEqual(
             str(FunctionV1.__init__.call_args_list),
             str([call(region='us-central1', project_id='labor-day-story', name='screenshots', method='GET')]))
 
-        print(FunctionV1.call.call_args_list)
-        print([
-            call(params={
-                'url': f'{model.asset_category.preview_generation_url}?slug={model.asset.slug}',
-                'name': f'learn-to-code-{model.asset.slug}.png',
-                'dimension': '1200x630',
-                'delay': 1000,
-            },
-                 timeout=8)
-        ])
         self.assertEqual(
             str(FunctionV1.call.call_args_list),
             str([
@@ -288,8 +280,9 @@ class RegistryTestSuite(RegistryTestCase):
                 'slug': f'{model.asset.academy.slug}-{model.asset.category.slug}-{model.asset.slug}',
             }
         ])
-        self.assertEqual(Logger.warn.call_args_list, [
-            call(f'Media was save with {hash} for academy {model.academy[0]}'),
+        self.assertEqual(Logger.warn.call_args_list, [])
+        self.assertEqual(Logger.error.call_args_list, [
+            call(f'Media was save with {hash} for academy {model.academy[0]}', exc_info=True),
         ])
         self.assertEqual(
             str(FunctionV1.__init__.call_args_list),

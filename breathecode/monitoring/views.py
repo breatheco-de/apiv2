@@ -1,5 +1,8 @@
 import os, logging
 import stripe
+
+from breathecode.authenticate.actions import get_user_language
+from breathecode.utils.i18n import translation
 from .signals import github_webhook
 from .models import CSVDownload, CSVUpload, RepositorySubscription, RepositoryWebhook
 from rest_framework.permissions import AllowAny
@@ -11,6 +14,7 @@ from rest_framework import status
 from django.http import StreamingHttpResponse
 from .actions import add_github_webhook, add_stripe_webhook
 from breathecode.monitoring import signals
+from circuitbreaker import CircuitBreakerError
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +38,7 @@ def get_apps(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_download(request, download_id=None):
+    lang = get_user_language(request)
 
     # if request.user.is_staff == False:
     #     raise ValidationException("You are not authorized to review this download",
@@ -47,9 +52,23 @@ def get_download(request, download_id=None):
         raw = request.GET.get('raw', '')
         if raw == 'true':
             from ..services.google_cloud import Storage
-            storage = Storage()
-            cloud_file = storage.file(os.getenv('DOWNLOADS_BUCKET', None), download.name)
-            buffer = cloud_file.stream_download()
+
+            try:
+                storage = Storage()
+                cloud_file = storage.file(os.getenv('DOWNLOADS_BUCKET', None), download.name)
+                buffer = cloud_file.stream_download()
+
+            except CircuitBreakerError:
+                raise ValidationException(translation(
+                    lang,
+                    en='The circuit breaker is open due to an error, please try again later',
+                    es='El circuit breaker está abierto debido a un error, por favor intente más tarde',
+                    slug='circuit-breaker-open'),
+                                          slug='circuit-breaker-open',
+                                          data={'service': 'Google Cloud Storage'},
+                                          silent=True,
+                                          code=503)
+
             return StreamingHttpResponse(
                 buffer.all(),
                 content_type='text/csv',

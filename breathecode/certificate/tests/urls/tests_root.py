@@ -52,7 +52,7 @@ class CertificateTestSuite(CertificateTestCase):
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
-    def test_certificate_re_attemps_without_capability(self):
+    def test_certificate_re_attempts_without_capability(self):
         """Test /root with auth"""
         """ No capability for the request"""
         self.headers(academy=1)
@@ -81,7 +81,7 @@ class CertificateTestSuite(CertificateTestCase):
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
-    def test_certificate_re_attemps_without_cohort_user(self):
+    def test_certificate_re_attempts_without_cohort_user(self):
         """Test /root with auth"""
         """ No cohort_user for the request"""
         self.headers(academy=1)
@@ -112,7 +112,7 @@ class CertificateTestSuite(CertificateTestCase):
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
-    def test_certificate_re_attemps_without_user_specialty(self):
+    def test_certificate_re_attempts_without_user_specialty(self):
         """Test /root with auth"""
         """ No user_specialty for the request"""
         self.headers(academy=1)
@@ -145,7 +145,7 @@ class CertificateTestSuite(CertificateTestCase):
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
-    def test_certificate_re_attemps(self):
+    def test_certificate_re_attempts(self):
         """Test /root with auth"""
         """ Good Request """
         self.headers(academy=1)
@@ -314,7 +314,7 @@ class CertificateTestSuite(CertificateTestCase):
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
-    def test_certificate_re_attemps_two_certificates(self):
+    def test_certificate_re_attempts_two_certificates(self):
         """Test /root with auth"""
         """ Good Request """
         self.headers(academy=1)

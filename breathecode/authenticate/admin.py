@@ -387,7 +387,7 @@ class GithubAcademyUserAdmin(admin.ModelAdmin):
 @admin.register(GithubAcademyUserLog)
 class GithubAcademyUserLogAdmin(admin.ModelAdmin):
     list_display = ('academy_user', 'academy_name', 'storage_status', 'storage_action', 'created_at',
-                    'updated_at')
+                    'valid_until', 'updated_at')
     search_fields = [
         'academy_user__username', 'academy_user__user__email', 'academy_user__user__first_name',
         'academy_user__user__last_name'

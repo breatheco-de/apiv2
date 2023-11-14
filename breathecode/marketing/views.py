@@ -51,6 +51,7 @@ from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
 import breathecode.marketing.tasks as tasks
 import pandas as pd
+from circuitbreaker import CircuitBreakerError
 
 logger = logging.getLogger(__name__)
 MIME_ALLOW = 'text/csv'
@@ -961,7 +962,7 @@ class UploadView(APIView):
 
     # upload was separated because in one moment I think that the serializer
     # not should get many create and update operations together
-    def upload(self, file, academy_id=None, update=False):
+    def upload(self, file, lang, academy_id=None, update=False):
         from ..services.google_cloud import Storage
 
         if not file:
@@ -991,16 +992,28 @@ class UploadView(APIView):
         data = {'file_name': file.name, 'status': 'PENDING', 'message': 'Despues'}
 
         # upload file section
-        storage = Storage()
-        cloud_file = storage.file(os.getenv('DOWNLOADS_BUCKET', None), file_name)
-        cloud_file.upload(file, content_type=file.content_type)
+        try:
+            storage = Storage()
+            cloud_file = storage.file(os.getenv('DOWNLOADS_BUCKET', None), file_name)
+            cloud_file.upload(file, content_type=file.content_type)
 
-        csv_upload = CSVUpload()
-        csv_upload.url = cloud_file.url()
-        csv_upload.name = file.name
-        csv_upload.hash = file_name
-        csv_upload.academy_id = academy_id
-        csv_upload.save()
+            csv_upload = CSVUpload()
+            csv_upload.url = cloud_file.url()
+            csv_upload.name = file.name
+            csv_upload.hash = file_name
+            csv_upload.academy_id = academy_id
+            csv_upload.save()
+
+        except CircuitBreakerError:
+            raise ValidationException(translation(
+                lang,
+                en='The circuit breaker is open due to an error, please try again later',
+                es='El circuit breaker está abierto debido a un error, por favor intente más tarde',
+                slug='circuit-breaker-open'),
+                                      slug='circuit-breaker-open',
+                                      data={'service': 'Google Cloud Storage'},
+                                      silent=True,
+                                      code=503)
 
         for num in range(len(df)):
             value = df.iloc[num]
@@ -1012,10 +1025,11 @@ class UploadView(APIView):
 
     @capable_of('crud_media')
     def put(self, request, academy_id=None):
+        lang = get_user_language(request)
         files = request.data.getlist('file')
         result = []
         for file in files:
-            upload = self.upload(file, academy_id, update=True)
+            upload = self.upload(file, lang, academy_id, update=True)
             result.append(upload)
         return Response(result, status=status.HTTP_200_OK)
 
