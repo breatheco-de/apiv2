@@ -21,6 +21,7 @@ from django.contrib.auth.models import Permission
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
 import breathecode.activity.tasks as tasks_activity
+import breathecode.authenticate.tasks as tasks_authenticate
 from breathecode.marketing.actions import validate_email
 
 logger = logging.getLogger(__name__)
@@ -1477,10 +1478,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         if obj.status != 'ACCEPTED':
             return None
 
-        email_status = validate_email(obj.email, lang)
-        obj.email_quality = email_status['score']
-        obj.email_status = email_status
-        obj.save()
+        tasks_authenticate.async_validate_email_invite.delay(obj.id)
 
         if not self.user:
             self.user = User(email=obj.email,
