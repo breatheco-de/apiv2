@@ -34,8 +34,6 @@ def async_validate_email_invite(self, invite_id, task_manager_id):
     except ValidationException as e:
         user_invite.process_status = 'ERROR'
         user_invite.process_message = str(e)
-        user_invite.email_quality = email_status['score']
-        user_invite.email_status = email_status
 
     except Exception:
         raise RetryTask(f'Retrying email validation for invite {invite_id}')
