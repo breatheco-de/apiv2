@@ -33,6 +33,7 @@ from rest_framework_csv.renderers import CSVRenderer
 from rest_framework.renderers import JSONRenderer
 from urllib.parse import urlencode, urlparse, urlunparse, parse_qs
 from dateutil.relativedelta import relativedelta
+from circuitbreaker import CircuitBreakerError
 
 
 @private_view()
@@ -253,11 +254,23 @@ class UploadView(APIView):
                     slug='csv-from-unknown-source'))
 
         # upload file section
-        storage = Storage()
-        cloud_file = storage.file(os.getenv('PROVISIONING_BUCKET', None), hash)
-        created = not cloud_file.exists()
-        if created:
-            cloud_file.upload(file, content_type=file.content_type)
+        try:
+            storage = Storage()
+            cloud_file = storage.file(os.getenv('PROVISIONING_BUCKET', None), hash)
+            created = not cloud_file.exists()
+            if created:
+                cloud_file.upload(file, content_type=file.content_type)
+
+        except CircuitBreakerError:
+            raise ValidationException(translation(
+                lang,
+                en='The circuit breaker is open due to an error, please try again later',
+                es='El circuit breaker está abierto debido a un error, por favor intente más tarde',
+                slug='circuit-breaker-open'),
+                                      slug='circuit-breaker-open',
+                                      data={'service': 'Google Cloud Storage'},
+                                      silent=True,
+                                      code=503)
 
         tasks.upload.delay(hash, total_pages=math.ceil(count_csv_rows(file) / tasks.PANDAS_ROWS_LIMIT))
 

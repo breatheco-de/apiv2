@@ -5,7 +5,7 @@ import time
 import re
 import pathlib
 from typing import Optional
-from celery import shared_task, Task
+from celery import shared_task
 from breathecode.services.seo import SEOAnalyzer
 from django.utils import timezone
 from bs4 import BeautifulSoup
@@ -15,9 +15,11 @@ from breathecode.media.models import Media, MediaResolution
 from breathecode.media.views import media_gallery_bucket
 from breathecode.services.google_cloud import FunctionV1
 from breathecode.services.google_cloud.storage import Storage
+from breathecode.utils.decorators.task import AbortTask, RetryTask, TaskPriority, task
 from breathecode.utils.views import set_query_parameter
 from breathecode.monitoring.decorators import WebhookTask
 from .models import Asset, AssetImage
+from circuitbreaker import CircuitBreakerError
 from .actions import (pull_from_github, screenshots_bucket, test_asset, clean_asset_readme,
                       upload_image_to_bucket, asset_images_bucket, add_syllabus_translations)
 
@@ -42,21 +44,14 @@ def is_remote_image(_str):
     return True
 
 
-class BaseTaskWithRetry(Task):
-    autoretry_for = (Exception, )
-    #                                           seconds
-    retry_kwargs = {'max_retries': 2, 'countdown': 60 * 10}
-    retry_backoff = True
-
-
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_pull_from_github(asset_slug, user_id=None, override_meta=False):
     logger.debug(f'Synching asset {asset_slug} with data found on github')
     sync_status = pull_from_github(asset_slug, override_meta=override_meta)
     return sync_status != 'ERROR'
 
 
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_test_asset(asset_slug):
     a = Asset.objects.filter(slug=asset_slug).first()
     if a is None:
@@ -70,8 +65,19 @@ def async_test_asset(asset_slug):
 
     return False
 
+@shared_task(priority=TaskPriority.ACADEMY.value)
+def async_update_frontend_asset_cache(asset_slug):
+    try:
+        if os.getenv('ENV', '') != 'production':
+            return
 
-@shared_task
+        logger.info('async_update_frontend_asset_cache')
+        url = os.getenv('APP_URL', '') + f'/api/asset/{asset_slug}'
+        requests.put(url=url)
+    except Exception as e:
+        logger.error(str(e))
+
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_regenerate_asset_readme(asset_slug):
     a = Asset.objects.filter(slug=asset_slug).first()
     if a is None:
@@ -83,11 +89,12 @@ def async_regenerate_asset_readme(asset_slug):
     clean_asset_readme(a)
 
     async_download_readme_images.delay(a.slug)
+    async_update_frontend_asset_cache.delay(a.slug)
 
     return a.cleaning_status == 'OK'
 
 
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_execute_seo_report(asset_slug):
     a = Asset.objects.filter(slug=asset_slug).first()
     if a is None:
@@ -102,8 +109,8 @@ def async_execute_seo_report(asset_slug):
     return False
 
 
-@shared_task
-def async_create_asset_thumbnail_legacy(asset_slug: str):
+@task(priority=TaskPriority.ACADEMY.value)
+def async_create_asset_thumbnail_legacy(asset_slug: str, **_):
     from breathecode.registry.actions import AssetThumbnailGenerator
     asset = Asset.objects.filter(slug=asset_slug).first()
     if asset is None:
@@ -115,20 +122,18 @@ def async_create_asset_thumbnail_legacy(asset_slug: str):
     return True
 
 
-@shared_task
-def async_create_asset_thumbnail(asset_slug: str):
+@task(priority=TaskPriority.ACADEMY.value)
+def async_create_asset_thumbnail(asset_slug: str, **_):
 
     asset = Asset.objects.filter(slug=asset_slug).first()
     if asset is None:
-        logger.error(f'Asset with slug {asset_slug} not found')
-        return
+        raise RetryTask(f'Asset with slug {asset_slug} not found')
 
     func = FunctionV1(region='us-central1', project_id=google_project_id(), name='screenshots', method='GET')
 
     preview_url = asset.get_preview_generation_url()
     if preview_url is None:
-        logger.warn('Not able to retrieve a preview generation')
-        return False
+        raise AbortTask('Not able to retrieve a preview generation')
 
     name = asset.get_thumbnail_name()
     url = set_query_parameter(preview_url, 'slug', asset_slug)
@@ -146,13 +151,11 @@ def async_create_asset_thumbnail(asset_slug: str):
             timeout=8)
 
     except Exception as e:
-        logger.error('Error calling service to generate thumbnail screenshot: ' + str(e))
-        return False
+        raise AbortTask('Error calling service to generate thumbnail screenshot: ' + str(e))
 
     if response.status_code >= 400:
-        logger.error('Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` '
-                     f'returns status code {response.status_code}')
-        return False
+        raise AbortTask('Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` '
+                        f'returns status code {response.status_code}')
 
     json = response.json()
     json = json[0]
@@ -184,8 +187,7 @@ def async_create_asset_thumbnail(asset_slug: str):
             asset.preview = media.url
             asset.save()
 
-        logger.warn(f'Media with hash {hash} already exists, skipping')
-        return
+        raise AbortTask(f'Media with hash {hash} already exists, skipping')
 
     # file already exists for another academy
     media = Media.objects.filter(hash=hash).first()
@@ -205,8 +207,7 @@ def async_create_asset_thumbnail(asset_slug: str):
             asset.preview = media.url
             asset.save()
 
-        logger.warn(f'Media was save with {hash} for academy {asset.academy}')
-        return
+        raise AbortTask(f'Media was save with {hash} for academy {asset.academy}')
 
     # if media does not exist too, keep the screenshots with other name
     cloud_file.rename(hash)
@@ -229,7 +230,7 @@ def async_create_asset_thumbnail(asset_slug: str):
     logger.warn(f'Media was save with {hash} for academy {asset.academy}')
 
 
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_download_readme_images(asset_slug):
     logger.debug(f'Downloading images for asset {asset_slug}')
 
@@ -292,12 +293,12 @@ def async_download_readme_images(asset_slug):
     return True
 
 
-@shared_task
-def async_delete_asset_images(asset_slug):
+@task(priority=TaskPriority.ACADEMY.value)
+def async_delete_asset_images(asset_slug, **_):
 
     asset = Asset.get_by_slug(asset_slug)
     if asset is None:
-        raise Exception(f'Asset with slug {asset_slug} not found')
+        raise RetryTask(f'Asset with slug {asset_slug} not found')
 
     storage = Storage()
     for img in asset.images.all():
@@ -314,27 +315,14 @@ def async_delete_asset_images(asset_slug):
     return True
 
 
-@shared_task
-def async_update_frontend_asset_cache(asset):
-    try:
-        if os.getenv('ENV', '') != 'production':
-            return
-
-        logger.info('async_update_frontend_asset_cache')
-        url = os.getenv('APP_URL', '') + f'/api/asset/{asset.slug}'
-        requests.put(url=url)
-    except Exception as e:
-        logger.error(str(e))
-
-
-@shared_task
-def async_remove_img_from_cloud(id):
+@task(priority=TaskPriority.ACADEMY.value)
+def async_remove_img_from_cloud(id, **_):
 
     logger.info('async_remove_img_from_cloud')
 
     img = AssetImage.objects.filter(id=id).first()
     if img is None:
-        raise Exception(f'Image with id {id} not found')
+        raise RetryTask(f'Image with id {id} not found')
 
     img_name = img.name
 
@@ -348,8 +336,8 @@ def async_remove_img_from_cloud(id):
     return True
 
 
-@shared_task
-def async_upload_image_to_bucket(id):
+@task(priority=TaskPriority.ACADEMY.value)
+def async_upload_image_to_bucket(id, **_):
 
     img = AssetImage.objects.filter(id=id).first()
     if img is None:
@@ -362,22 +350,25 @@ def async_upload_image_to_bucket(id):
 
     try:
         img = upload_image_to_bucket(img, asset)
+
+    except CircuitBreakerError as e:
+        raise e
+
     except Exception as e:
         img.download_details = str(e)
         img.download_status = 'ERROR'
-        logger.error(str(e))
-        return False
+        raise e
 
     img.save()
     return img.download_status
 
 
-@shared_task
-def async_download_single_readme_image(asset_slug, link):
+@task(priority=TaskPriority.ACADEMY.value)
+def async_download_single_readme_image(asset_slug, link, **_):
 
     asset = Asset.get_by_slug(asset_slug)
     if asset is None:
-        raise Exception(f'Asset with slug {asset_slug} not found')
+        raise RetryTask(f'Asset with slug {asset_slug} not found')
 
     img = AssetImage.objects.filter(Q(original_url=link) | Q(bucket_url=link)).first()
     if img is None:
@@ -392,12 +383,15 @@ def async_download_single_readme_image(asset_slug, link):
 
         try:
             img = upload_image_to_bucket(img, asset)
+
+        except CircuitBreakerError as e:
+            raise e
+
         except Exception as e:
             img.download_details = str(e)
             img.download_status = 'ERROR'
             img.save()
-            logger.error(str(e))
-            return False
+            raise e
 
     img.save()
     readme = asset.get_readme()
@@ -406,7 +400,7 @@ def async_download_single_readme_image(asset_slug, link):
     return img.download_status
 
 
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_resize_asset_thumbnail(media_id: int, width: Optional[int] = 0, height: Optional[int] = 0):
     media = Media.objects.filter(id=media_id).first()
     if media is None:
@@ -441,7 +435,7 @@ def async_resize_asset_thumbnail(media_id: int, width: Optional[int] = 0, height
     resolution.save()
 
 
-@shared_task(bind=True, base=WebhookTask)
+@shared_task(bind=True, base=WebhookTask, priority=TaskPriority.ACADEMY.value)
 def async_synchonize_repository_content(self, webhook):
 
     logger.debug('async_synchonize_repository_content')
@@ -479,7 +473,7 @@ def async_synchonize_repository_content(self, webhook):
     return webhook
 
 
-@shared_task
+@shared_task(priority=TaskPriority.BACKGROUND.value)
 def async_add_syllabus_translations(syllabus_slug, version):
 
     syllabus_version = SyllabusVersion.objects.filter(syllabus__slug=syllabus_slug, version=version).first()

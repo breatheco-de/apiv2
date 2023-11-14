@@ -1,8 +1,12 @@
 import logging, os
-from celery import shared_task, Task
+from celery import shared_task
 from django.contrib.auth.models import User
+from breathecode.authenticate.models import UserInvite
+from breathecode.marketing.actions import validate_email
+from breathecode.utils.decorators import task, RetryTask
 
-from breathecode.utils.decorators.task import task
+from breathecode.utils.decorators.task import AbortTask, TaskPriority, task
+from breathecode.utils.validation_exception import ValidationException
 from .actions import set_gitpod_user_expiration, add_to_organization, remove_from_organization
 from breathecode.notify import actions as notify_actions
 
@@ -11,30 +15,53 @@ API_URL = os.getenv('API_URL', '')
 logger = logging.getLogger(__name__)
 
 
-class BaseTaskWithRetry(Task):
-    autoretry_for = (Exception, )
-    #                                           seconds
-    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
-    retry_backoff = True
+@task(bind=True)
+def async_validate_email_invite(self, invite_id, task_manager_id):
+    logger.debug(f'Validating email for invite {invite_id}')
+    user_invite = UserInvite.objects.filter(id=invite_id).first()
+
+    if user_invite is None:
+        raise AbortTask(f'UserInvite {invite_id} not found')
+
+    try:
+        email_status = validate_email(user_invite.email, 'en')
+        if email_status['score'] <= 0.60:
+            user_invite.status = 'REJECTED'
+            user_invite.process_status = 'ERROR'
+            user_invite.process_message = 'Your email is invalid'
+        user_invite.email_quality = email_status['score']
+        user_invite.email_status = email_status
+
+    except ValidationException as e:
+        user_invite.status = 'REJECTED'
+        user_invite.process_status = 'ERROR'
+        user_invite.process_message = str(e)
+
+    except Exception:
+        raise RetryTask(f'Retrying email validation for invite {invite_id}')
+
+    user_invite.save()
+
+    return True
 
 
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_set_gitpod_user_expiration(gitpoduser_id):
     logger.debug(f'Recalculate gitpoduser expiration for {gitpoduser_id}')
     return set_gitpod_user_expiration(gitpoduser_id) is not None
 
 
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_add_to_organization(cohort_id, user_id):
     return add_to_organization(cohort_id, user_id)
 
 
-@shared_task
+@shared_task(priority=TaskPriority.ACADEMY.value)
 def async_remove_from_organization(cohort_id, user_id, force=False):
     return remove_from_organization(cohort_id, user_id, force=force)
 
 
-@shared_task
+@shared_task(priority=TaskPriority.NOTIFICATION.value)
 def async_accept_user_from_waiting_list(user_invite_id: int) -> None:
     from .models import UserInvite
 
@@ -78,7 +105,7 @@ def async_accept_user_from_waiting_list(user_invite_id: int) -> None:
         })
 
 
-@task()
+@task(priority=TaskPriority.OAUTH_CREDENTIALS.value)
 def destroy_legacy_key(legacy_key_id):
     from .models import LegacyKey
 

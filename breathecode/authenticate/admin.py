@@ -16,6 +16,7 @@ from breathecode.utils.admin import change_field
 from django.contrib.admin import SimpleListFilter
 from breathecode.utils.datetime_integer import from_now
 from django.db.models import QuerySet, Q
+import breathecode.marketing.actions as marketing_actions
 from . import tasks
 
 logger = logging.getLogger(__name__)
@@ -97,6 +98,14 @@ def accept_all_users_from_waiting_list(modeladmin, request, queryset: QuerySet[U
         tasks.async_accept_user_from_waiting_list.delay(x.id)
 
 
+def validate_email(modeladmin, request, queryset: QuerySet[UserInvite]):
+    for x in queryset:
+        email_status = marketing_actions.validate_email(x.email, 'en')
+        x.email_quality = email_status['score']
+        x.email_status = email_status
+        x.save()
+
+
 @admin.register(UserInvite)
 class UserInviteAdmin(admin.ModelAdmin):
     search_fields = ['email', 'first_name', 'last_name', 'user__email']
@@ -104,7 +113,7 @@ class UserInviteAdmin(admin.ModelAdmin):
     list_filter = ['academy', 'status', 'is_email_validated', 'process_status', 'role', 'country']
     list_display = ('email', 'is_email_validated', 'first_name', 'last_name', 'status', 'academy', 'token',
                     'created_at', 'invite_url', 'country')
-    actions = [accept_selected_users_from_waiting_list, accept_all_users_from_waiting_list]
+    actions = [accept_selected_users_from_waiting_list, accept_all_users_from_waiting_list, validate_email]
 
     def invite_url(self, obj):
         params = {'callback': 'https://4geeks.com'}
@@ -378,7 +387,7 @@ class GithubAcademyUserAdmin(admin.ModelAdmin):
 @admin.register(GithubAcademyUserLog)
 class GithubAcademyUserLogAdmin(admin.ModelAdmin):
     list_display = ('academy_user', 'academy_name', 'storage_status', 'storage_action', 'created_at',
-                    'updated_at')
+                    'valid_until', 'updated_at')
     search_fields = [
         'academy_user__username', 'academy_user__user__email', 'academy_user__user__first_name',
         'academy_user__user__last_name'

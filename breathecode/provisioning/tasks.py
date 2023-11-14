@@ -5,11 +5,11 @@ import math
 import os
 from typing import Any
 from dateutil.relativedelta import relativedelta
+import pytz
 
-from celery import Task
 import pandas as pd
 from breathecode.payments.services.stripe import Stripe
-from breathecode.utils.decorators import task, AbortTask, RetryTask
+from breathecode.utils.decorators import task, AbortTask, RetryTask, TaskPriority
 
 from breathecode.provisioning import actions
 from breathecode.provisioning.models import ProvisioningBill, ProvisioningConsumptionEvent, ProvisioningUserConsumption
@@ -29,13 +29,6 @@ def get_stripe_price_id():
     return os.getenv('STRIPE_PRICE_ID', None)
 
 
-class BaseTaskWithRetry(Task):
-    autoretry_for = (Exception, )
-    #                                           seconds
-    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
-    retry_backoff = True
-
-
 MONTHS = [
     'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October',
     'November', 'December'
@@ -45,7 +38,7 @@ PANDAS_ROWS_LIMIT = 100
 DELETE_LIMIT = 10000
 
 
-@task()
+@task(priority=TaskPriority.BILL.value)
 def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
     logger.info(f'Starting calculate_bill_amounts for hash {hash}')
 
@@ -101,8 +94,6 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
 
     month = MONTHS[int(first[1]) - 1]
 
-    import pytz
-
     first = datetime(int(first[0]), int(first[1]), int(first[2]), 0, 0, 0, 0, pytz.UTC)
     last = datetime(int(last[0]), int(last[1]), int(last[2]))
 
@@ -150,7 +141,7 @@ def reverse_upload(hash: str, **_: Any):
     ProvisioningBill.objects.filter(hash=hash).delete()
 
 
-@task(reverse=reverse_upload)
+@task(reverse=reverse_upload, priority=TaskPriority.BILL.value)
 def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: int = 0, **_: Any):
     logger.info(f'Starting upload for hash {hash}')
 
@@ -243,7 +234,7 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
         calculate_bill_amounts.delay(hash)
 
 
-@task()
+@task(priority=TaskPriority.BACKGROUND.value)
 def archive_provisioning_bill(bill_id: int, **_: Any):
     logger.info(f'Starting archive_provisioning_bills for bill id {bill_id}')
 

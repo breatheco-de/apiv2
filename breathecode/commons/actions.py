@@ -60,4 +60,4 @@ def clean_cache(model_cls):
                 is_dependency = True
 
     key = model_cls.__module__ + '.' + model_cls.__name__
-    clean_task.apply_async(args=[key], countdown=0, priority=10)
+    clean_task.apply_async(args=[key], countdown=0)

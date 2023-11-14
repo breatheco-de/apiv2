@@ -235,7 +235,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
                         code=404,
                         slug='student-not-found-in-cohort')
         else:
-            raise ValidationException('You did not send anything to reattemps')
+            raise ValidationException('You did not send anything to reattempts')
 
         certs = []
         for cu in cohort_users:

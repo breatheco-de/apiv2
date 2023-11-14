@@ -425,6 +425,8 @@ class AuthenticateTestSuite(AuthTestCase):
             'country': None,
             'latitude': None,
             'longitude': None,
+            'email_quality': None,
+            'email_status': None,
         }])
 
     def test_resend_invite_recently(self):

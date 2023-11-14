@@ -21,6 +21,8 @@ from django.contrib.auth.models import Permission
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
 import breathecode.activity.tasks as tasks_activity
+import breathecode.authenticate.tasks as tasks_authenticate
+from breathecode.marketing.actions import validate_email
 
 logger = logging.getLogger(__name__)
 
@@ -1457,6 +1459,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         #                                       related_type='auth.UserInvite',
         #                                       related_id=instance.id)
 
+        tasks_authenticate.async_validate_email_invite.delay(instance.id)
         return instance
 
     def update(self, *args, **kwargs):

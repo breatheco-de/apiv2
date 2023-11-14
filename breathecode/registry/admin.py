@@ -10,7 +10,7 @@ from .models import (Asset, AssetTechnology, AssetAlias, AssetErrorLog, KeywordC
                      AssetKeyword, AssetComment, SEOReport, AssetImage, OriginalityScan,
                      CredentialsOriginality, SyllabusVersionProxy, ContentVariable)
 from .tasks import (async_pull_from_github, async_test_asset, async_download_readme_images,
-                    async_remove_img_from_cloud, async_upload_image_to_bucket)
+                    async_remove_img_from_cloud, async_upload_image_to_bucket, async_update_frontend_asset_cache)
 from .actions import (get_user_from_github_username, AssetThumbnailGenerator, scan_asset_originality,
                       add_syllabus_translations, clean_asset_readme)
 
@@ -215,6 +215,15 @@ def download_and_replace_images(modeladmin, request, queryset):
         except Exception as e:
             messages.error(request, a.slug + ': ' + str(e))
 
+def reset_4geeks_com_cache(modeladmin, request, queryset):
+    assets = queryset.all()
+    for a in assets:
+        try:
+            async_update_frontend_asset_cache.delay(a.slug)
+            messages.success(request, message='Assets cache on 4Geeks.com will be updated soon')
+        except Exception as e:
+            messages.error(request, a.slug + ': ' + str(e))
+
 
 class AssessmentFilter(admin.SimpleListFilter):
 
@@ -349,6 +358,7 @@ class AssetAdmin(admin.ModelAdmin):
         async_regenerate_readme,
         async_generate_thumbnail,
         download_and_replace_images,
+        reset_4geeks_com_cache,
     ] + change_field(['DRAFT', 'NOT_STARTED', 'PUBLISHED', 'OPTIMIZED'], name='status') + change_field(
         ['us', 'es'], name='lang')
 

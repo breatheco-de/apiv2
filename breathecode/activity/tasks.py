@@ -3,12 +3,12 @@ import logging, os
 import re
 from typing import Optional
 from uuid import uuid4
-from celery import shared_task, Task
+from celery import shared_task
 from breathecode.activity import actions
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.admissions.utils.cohort_log import CohortDayLog
 from breathecode.services.google_cloud.big_query import BigQuery
-from breathecode.utils.decorators import task, AbortTask
+from breathecode.utils.decorators import task, AbortTask, TaskPriority
 from .models import StudentActivity
 from breathecode.utils import NDB
 from django.utils import timezone
@@ -23,13 +23,7 @@ ISO_STRING_PATTERN = re.compile(
 )
 
 
-class BaseTaskWithRetry(Task):
-    autoretry_for = (Exception, )
-    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
-    retry_backoff = True
-
-
-@shared_task(bind=True, base=BaseTaskWithRetry)
+@shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
 def get_attendancy_log(self, cohort_id: int):
     logger.info('Executing get_attendancy_log')
     cohort = Cohort.objects.filter(id=cohort_id).first()
@@ -103,7 +97,7 @@ def get_attendancy_log(self, cohort_id: int):
         get_attendancy_log_per_cohort_user.delay(cohort_user.id)
 
 
-@shared_task(bind=False, base=BaseTaskWithRetry)
+@shared_task(bind=False, priority=TaskPriority.ACADEMY.value)
 def get_attendancy_log_per_cohort_user(cohort_user_id: int):
     logger.info('Executing get_attendancy_log_per_cohort_user')
     cohort_user = CohortUser.objects.filter(id=cohort_user_id).first()
@@ -146,7 +140,7 @@ def get_attendancy_log_per_cohort_user(cohort_user_id: int):
     logger.info('History log saved')
 
 
-@task()
+@task(priority=TaskPriority.BACKGROUND.value)
 def add_activity(user_id: int,
                  kind: str,
                  related_type: Optional[str] = None,
