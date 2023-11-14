@@ -18,12 +18,11 @@ class Command(BaseCommand):
                     valid_until__isnull=True, academy_user__user=user,
                     academy_user__academy=academy).order_by('created_at')
 
-                if last := logs.last():
-                    last.valid_until = None
-                    last.save()
-
                 prev = None
                 for log in logs:
+                    log.valid_until = None
+                    log.save()
+
                     if prev:
                         prev.valid_until = log.created_at
                         prev.save()
