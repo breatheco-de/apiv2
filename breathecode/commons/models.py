@@ -23,7 +23,7 @@ TASK_STATUS = (
 class TaskManager(models.Model):
     current_page = models.IntegerField(default=0, blank=True, null=True)
     total_pages = models.IntegerField(default=0, blank=True, null=True)
-    attemps = models.IntegerField(default=1)
+    attempts = models.IntegerField(default=1)
 
     task_module = models.CharField(max_length=200)
     task_name = models.CharField(max_length=200)

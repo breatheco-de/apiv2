@@ -15,6 +15,7 @@ from breathecode.notify.utils.hook_manager import HookManagerClass
 from django.utils import timezone
 from django.core.cache import cache
 from rest_framework.test import APIClient
+from django.dispatch.dispatcher import Signal
 from django.db.models.signals import (pre_init, post_init, pre_save, post_save, pre_delete, post_delete,
                                       m2m_changed, pre_migrate, post_migrate)
 
@@ -138,18 +139,28 @@ def enable_hook_manager(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
-def dont_wait_for_rescheduling_tasks(monkeypatch):
+def dont_wait_for_rescheduling_tasks():
     """
     Don't wait for rescheduling tasks by default. You can re-enable it within a test by calling the provided wrapper.
     """
 
     with patch('breathecode.utils.decorators.task.RETRIES_LIMIT', 2):
-        with patch('breathecode.utils.decorators.task.Task.reattemp_settings',
+        with patch('breathecode.utils.decorators.task.Task.reattempt_settings',
                    lambda *args, **kwargs: dict()):
+            with patch('breathecode.utils.decorators.task.Task.circuit_breaker_settings',
+                       lambda *args, **kwargs: dict()):
+                yield
+
+
+@pytest.fixture(autouse=True)
+def dont_close_the_circuit():
+    """
+    Don't allow the circuit be closed.
+    """
+
+    with patch('circuitbreaker.CircuitBreaker._failure_count', 0, create=True):
+        with patch('circuitbreaker.CircuitBreaker.FAILURE_THRESHOLD', 10000000, create=True):
             yield
-
-
-from django.dispatch.dispatcher import Signal
 
 
 @pytest.fixture(scope='session')
@@ -251,7 +262,6 @@ def no_http_requests(monkeypatch):
         ]
 
         for host, port, path in allow:
-            print(self, method, url, args, kwargs)
             if host == self.host and port == self.port and (path == url or path == None):
                 return urlopen(self, method, url, *args, **kwargs)
 

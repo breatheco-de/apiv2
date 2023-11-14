@@ -1,4 +1,6 @@
 from __future__ import annotations
+import brotli
+import sys
 import functools
 import os
 from typing import Optional
@@ -6,8 +8,7 @@ import urllib.parse, json
 from django.core.cache import cache
 from datetime import datetime, timedelta
 from django.db import models
-import brotli
-import sys
+from circuitbreaker import circuit
 
 from django.db.models.fields.related_descriptors import (ReverseManyToOneDescriptor, ManyToManyDescriptor,
                                                          ForwardManyToOneDescriptor,
@@ -108,6 +109,7 @@ class Cache(metaclass=CacheMeta):
         return f'{cls._version_prefix}{key}__{qs}'
 
     @classmethod
+    @circuit
     def clear(cls, deep=0, max_deep=None) -> set | None:
         if max_deep is None:
             max_deep = cls.max_deep
@@ -147,10 +149,12 @@ class Cache(metaclass=CacheMeta):
         cache.delete_many(to_delete)
 
     @classmethod
+    @circuit
     def keys(cls):
         return cache.get(f'{cls._version_prefix}{cls.model.__name__}__keys') or set()
 
     @classmethod
+    @circuit
     def get(cls, data) -> dict:
         key = cls._generate_key(**data)
         data = cache.get(key)
@@ -202,6 +206,7 @@ class Cache(metaclass=CacheMeta):
         return data[starts:], mime, headers
 
     @classmethod
+    @circuit
     def set(cls,
             data: str | dict | list[dict],
             format: str = 'application/json',

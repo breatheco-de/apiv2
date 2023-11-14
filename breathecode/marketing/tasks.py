@@ -300,7 +300,7 @@ def create_form_entry(csv_upload_id, **item):
     # remove the task manager parameters
     item.pop('pop', None)
     item.pop('total_pages', None)
-    item.pop('attemps', None)
+    item.pop('attempts', None)
     item.pop('task_manager_id', None)
 
     logger.info('Create form entry started')

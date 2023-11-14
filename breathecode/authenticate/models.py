@@ -692,9 +692,7 @@ class GithubAcademyUser(models.Model):
         exit_op = super().save(*args, **kwargs)
 
         if has_mutated and self.storage_status == 'SYNCHED':
-            prev = GithubAcademyUserLog.objects.filter(
-                academy_user=self, storage_status=self.storage_status,
-                storage_action=self.storage_action).order_by('-created_at').first()
+            prev = GithubAcademyUserLog.objects.filter(academy_user=self).order_by('-created_at').first()
 
             user_log = GithubAcademyUserLog(
                 academy_user=self,

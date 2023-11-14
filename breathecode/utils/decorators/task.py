@@ -8,6 +8,7 @@ from breathecode.utils.exceptions import ProgrammingError
 import celery
 from django.db import transaction
 from django.utils import timezone
+from circuitbreaker import CircuitBreakerError
 import copy
 
 __all__ = ['task', 'AbortTask', 'RetryTask', 'RETRIES_LIMIT', 'TaskPriority']
@@ -42,12 +43,12 @@ class TaskPriority(Enum):
 
 
 class AbortTask(Exception):
-    """Abort task due to it doesn't meet the requirements, it will not be reattemped."""
+    """Abort task due to it doesn't meet the requirements, it will not be reattempted."""
     pass
 
 
 class RetryTask(Exception):
-    """Retry task due to it doesn't meet the requirements for a syncronization issue like a not found, it will be reattemped."""
+    """Retry task due to it doesn't meet the requirements for a synchronization issue like a not found, it will be reattempted."""
     pass
 
 
@@ -102,18 +103,33 @@ class Task(object):
 
         return module_name, function_name
 
-    def reattemp_settings(self) -> dict[str, datetime]:
+    def reattempt_settings(self) -> dict[str, datetime]:
         """
-        Return a dict with the settings to reattemp the task.
+        Return a dict with the settings to reattempt the task.
         """
+
         return {'eta': timezone.now() + RETRY_AFTER}
 
-    def reattemp(self, task_module: str, task_name: str, attemps: int, args: tuple[Any], kwargs: dict[str,
-                                                                                                      Any]):
+    def reattempt(self, task_module: str, task_name: str, attempts: int, args: tuple[Any], kwargs: dict[str,
+                                                                                                        Any]):
         module = importlib.import_module(task_module)
         x = getattr(module, task_name, None)
 
-        x.apply_async(args=args, kwargs={**kwargs, 'attemps': attemps}, **self.reattemp_settings())
+        x.apply_async(args=args, kwargs={**kwargs, 'attempts': attempts}, **self.reattempt_settings())
+
+    def circuit_breaker_settings(self, e: CircuitBreakerError) -> dict[str, datetime]:
+        """
+        Return a dict with the settings to reattempt the task.
+        """
+
+        return {'eta': timezone.now() + e._circuit_breaker.RECOVERY_TIMEOUT}
+
+    def manage_circuit_breaker(self, e: CircuitBreakerError, task_module: str, task_name: str, attempts: int,
+                               args: tuple[Any], kwargs: dict[str, Any]):
+        module = importlib.import_module(task_module)
+        x = getattr(module, task_name, None)
+
+        x.apply_async(args=args, kwargs={**kwargs, 'attempts': attempts}, **self.circuit_breaker_settings(e))
 
     def __call__(self, function):
         from breathecode.commons.models import TaskManager
@@ -130,7 +146,7 @@ class Task(object):
 
             page = kwargs.get('page', 0)
             total_pages = kwargs.get('total_pages', 1)
-            attemps = kwargs.get('attemps', None)
+            attempts = kwargs.get('attempts', None)
             task_manager_id = kwargs.get('task_manager_id', None)
             last_run = timezone.now()
 
@@ -143,7 +159,7 @@ class Task(object):
                 created = True
                 x = TaskManager.objects.create(task_module=task_module,
                                                task_name=task_name,
-                                               attemps=1,
+                                               attempts=1,
                                                reverse_module=reverse_module,
                                                reverse_name=reverse_name,
                                                arguments=arguments,
@@ -158,8 +174,8 @@ class Task(object):
                 x.current_page = page + 1
                 x.last_run = last_run
 
-                if attemps:
-                    x.attemps = attemps + 1
+                if attempts:
+                    x.attempts = attempts + 1
 
                 x.save()
 
@@ -178,10 +194,11 @@ class Task(object):
 
                         res = function(*args, **kwargs)
 
-                    except RetryTask as e:
+                    except CircuitBreakerError as e:
                         x.status_message = str(e)[:255]
 
-                        if x.attemps >= RETRIES_LIMIT:
+                        #TODO: things in this implementation
+                        if x.attempts >= RETRIES_LIMIT:
                             logger.exception(str(e))
                             x.status = 'ERROR'
                             x.save()
@@ -190,10 +207,28 @@ class Task(object):
                             logger.warn(str(e))
                             x.save()
 
-                            self.reattemp(x.task_module, x.task_name, x.attemps, arguments['args'],
-                                          arguments['kwargs'])
+                            self.manage_circuit_breaker(e, x.task_module, x.task_name, x.attempts,
+                                                        arguments['args'], arguments['kwargs'])
 
-                        # it don't raise anything to manage the reattems with the task manager
+                        # it don't raise anything to manage the reattempts with the task manager
+                        return
+
+                    except RetryTask as e:
+                        x.status_message = str(e)[:255]
+
+                        if x.attempts >= RETRIES_LIMIT:
+                            logger.exception(str(e))
+                            x.status = 'ERROR'
+                            x.save()
+
+                        else:
+                            logger.warn(str(e))
+                            x.save()
+
+                            self.reattempt(x.task_module, x.task_name, x.attempts, arguments['args'],
+                                           arguments['kwargs'])
+
+                        # it don't raise anything to manage the reattempts with the task manager
                         return
 
                     except AbortTask as e:
@@ -230,10 +265,11 @@ class Task(object):
                 try:
                     res = function(*args, **kwargs)
 
-                except RetryTask as e:
+                except CircuitBreakerError as e:
                     x.status_message = str(e)[:255]
 
-                    if x.attemps >= RETRIES_LIMIT:
+                    #TODO: things in this implementation
+                    if x.attempts >= RETRIES_LIMIT:
                         logger.exception(str(e))
                         x.status = 'ERROR'
                         x.save()
@@ -242,8 +278,26 @@ class Task(object):
                         logger.warn(str(e))
                         x.save()
 
-                        self.reattemp(x.task_module, x.task_name, x.attemps, arguments['args'],
-                                      arguments['kwargs'])
+                        self.manage_circuit_breaker(e, x.task_module, x.task_name, x.attempts,
+                                                    arguments['args'], arguments['kwargs'])
+
+                    # it don't raise anything to manage the reattempt with the task manager
+                    return
+
+                except RetryTask as e:
+                    x.status_message = str(e)[:255]
+
+                    if x.attempts >= RETRIES_LIMIT:
+                        logger.exception(str(e))
+                        x.status = 'ERROR'
+                        x.save()
+
+                    else:
+                        logger.warn(str(e))
+                        x.save()
+
+                        self.reattempt(x.task_module, x.task_name, x.attempts, arguments['args'],
+                                       arguments['kwargs'])
 
                     # it don't raise anything to manage the reattems with the task manager
                     return
