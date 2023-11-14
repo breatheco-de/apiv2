@@ -5,7 +5,8 @@ from breathecode.authenticate.models import UserInvite
 from breathecode.marketing.actions import validate_email
 from breathecode.utils.decorators import task, RetryTask
 
-from breathecode.utils.decorators.task import TaskPriority, task
+from breathecode.utils.decorators.task import AbortTask, TaskPriority, task
+from breathecode.utils.validation_exception import ValidationException
 from .actions import set_gitpod_user_expiration, add_to_organization, remove_from_organization
 from breathecode.notify import actions as notify_actions
 
@@ -27,11 +28,11 @@ def async_validate_email_invite(self, invite_id, task_manager_id):
         if email_status['score'] <= 0.60:
             user_invite.process_status = 'ERROR'
             user_invite.process_message = 'Your email is invalid'
-            
+
     except ValidationException as e:
-        user_invite.process_status = "ERROR"
+        user_invite.process_status = 'ERROR'
         user_invite.process_message = str(e)
-        
+
     except Exception:
         raise RetryTask(f'Retrying email validation for invite {invite_id}')
 

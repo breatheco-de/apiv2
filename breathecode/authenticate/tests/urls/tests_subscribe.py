@@ -150,7 +150,7 @@ def put_serializer(user_invite, cohort=None, syllabus=None, user=None, plans=[],
     }
 
 
-b = os.urandom(64)
+b = os.urandom(16)
 
 
 @pytest.fixture(autouse=True)
@@ -254,20 +254,8 @@ def test_task__post__without_user_invite(bc: Breathecode, client: APIClient, val
                 'country': None,
                 'latitude': None,
                 'longitude': None,
-                'email_quality': validation_res['quality_score'],
-                'email_status': {
-                    'catch_all': validation_res['is_catchall_email']['value'],
-                    'disposable': validation_res['is_disposable_email']['value'],
-                    'domain': 'potato.io',
-                    'email': 'pokemon@potato.io',
-                    'format_valid': validation_res['is_valid_format']['value'],
-                    'free': validation_res['is_free_email']['value'],
-                    'mx_found': validation_res['is_mx_found']['value'],
-                    'role': validation_res['is_role_email']['value'],
-                    'smtp_check': validation_res['is_smtp_valid']['value'],
-                    'score': validation_res['quality_score'],
-                    'user': 'pokemon'
-                },
+                'email_quality': None,
+                'email_status': None,
                 **data,
             }),
     ]
@@ -520,20 +508,8 @@ def test_task__post__with_user_invite(bc: Breathecode, client: APIClient, valida
                 'country': None,
                 'latitude': None,
                 'longitude': None,
-                'email_quality': validation_res['quality_score'],
-                'email_status': {
-                    'catch_all': validation_res['is_catchall_email']['value'],
-                    'disposable': validation_res['is_disposable_email']['value'],
-                    'domain': 'potato.io',
-                    'email': 'pokemon@potato.io',
-                    'format_valid': validation_res['is_valid_format']['value'],
-                    'free': validation_res['is_free_email']['value'],
-                    'mx_found': validation_res['is_mx_found']['value'],
-                    'role': validation_res['is_role_email']['value'],
-                    'smtp_check': validation_res['is_smtp_valid']['value'],
-                    'score': validation_res['quality_score'],
-                    'user': 'pokemon'
-                },
+                'email_quality': None,
+                'email_status': None,
                 **data,
             }),
     ]
@@ -630,8 +606,20 @@ def test_task__post__does_not_get_in_waiting_list_using_a_plan(bc: Breathecode, 
                 'country': None,
                 'latitude': None,
                 'longitude': None,
-                'email_quality': None,
-                'email_status': None,
+                'email_quality': validation_res['quality_score'],
+                'email_status': {
+                    'catch_all': validation_res['is_catchall_email']['value'],
+                    'disposable': validation_res['is_disposable_email']['value'],
+                    'domain': 'potato.io',
+                    'email': 'pokemon@potato.io',
+                    'format_valid': validation_res['is_valid_format']['value'],
+                    'free': validation_res['is_free_email']['value'],
+                    'mx_found': validation_res['is_mx_found']['value'],
+                    'role': validation_res['is_role_email']['value'],
+                    'smtp_check': validation_res['is_smtp_valid']['value'],
+                    'score': validation_res['quality_score'],
+                    'user': 'pokemon'
+                },
                 **data,
             }),
     ]
@@ -701,20 +689,8 @@ def test_task__post__get_in_waiting_list_using_a_plan(bc: Breathecode, client: A
                 'country': None,
                 'latitude': None,
                 'longitude': None,
-                'email_quality': validation_res['quality_score'],
-                'email_status': {
-                    'catch_all': validation_res['is_catchall_email']['value'],
-                    'disposable': validation_res['is_disposable_email']['value'],
-                    'domain': 'potato.io',
-                    'email': 'pokemon@potato.io',
-                    'format_valid': validation_res['is_valid_format']['value'],
-                    'free': validation_res['is_free_email']['value'],
-                    'mx_found': validation_res['is_mx_found']['value'],
-                    'role': validation_res['is_role_email']['value'],
-                    'smtp_check': validation_res['is_smtp_valid']['value'],
-                    'score': validation_res['quality_score'],
-                    'user': 'pokemon'
-                },
+                'email_quality': None,
+                'email_status': None,
                 **data,
             }),
     ]
@@ -849,20 +825,8 @@ def test__post__course_without_syllabus(bc: Breathecode, client: APIClient, vali
                 'country': None,
                 'latitude': None,
                 'longitude': None,
-                'email_quality': validation_res['quality_score'],
-                'email_status': {
-                    'catch_all': validation_res['is_catchall_email']['value'],
-                    'disposable': validation_res['is_disposable_email']['value'],
-                    'domain': 'potato.io',
-                    'email': 'pokemon@potato.io',
-                    'format_valid': validation_res['is_valid_format']['value'],
-                    'free': validation_res['is_free_email']['value'],
-                    'mx_found': validation_res['is_mx_found']['value'],
-                    'role': validation_res['is_role_email']['value'],
-                    'smtp_check': validation_res['is_smtp_valid']['value'],
-                    'score': validation_res['quality_score'],
-                    'user': 'pokemon'
-                },
+                'email_quality': None,
+                'email_status': None,
                 **data,
             }),
     ]
@@ -948,20 +912,8 @@ def test__post__course_and_syllabus(bc: Breathecode, client: APIClient, validati
             'status': 'ACCEPTED',
             'user_id': 1,
             'token': token,
-            'email_quality': validation_res['quality_score'],
-            'email_status': {
-                'catch_all': validation_res['is_catchall_email']['value'],
-                'disposable': validation_res['is_disposable_email']['value'],
-                'domain': 'potato.io',
-                'email': 'pokemon@potato.io',
-                'format_valid': validation_res['is_valid_format']['value'],
-                'free': validation_res['is_free_email']['value'],
-                'mx_found': validation_res['is_mx_found']['value'],
-                'role': validation_res['is_role_email']['value'],
-                'smtp_check': validation_res['is_smtp_valid']['value'],
-                'score': validation_res['quality_score'],
-                'user': 'pokemon'
-            },
+            'email_quality': None,
+            'email_status': None,
             **data,
         })
     ]
@@ -1314,20 +1266,8 @@ def test__post__with_other_invite__cohort__waiting_list(bc: Breathecode, client:
             'user_id': 1,
             'token': token,
             'cohort_id': 1,
-            'email_quality': validation_res['quality_score'],
-            'email_status': {
-                'catch_all': validation_res['is_catchall_email']['value'],
-                'disposable': validation_res['is_disposable_email']['value'],
-                'domain': 'potato.io',
-                'email': 'pokemon@potato.io',
-                'format_valid': validation_res['is_valid_format']['value'],
-                'free': validation_res['is_free_email']['value'],
-                'mx_found': validation_res['is_mx_found']['value'],
-                'role': validation_res['is_role_email']['value'],
-                'smtp_check': validation_res['is_smtp_valid']['value'],
-                'score': validation_res['quality_score'],
-                'user': 'pokemon'
-            },
+            'email_quality': None,
+            'email_status': None,
             **data,
         })
     ]
@@ -1423,20 +1363,8 @@ def test__post__with_other_invite__syllabus__waiting_list(bc: Breathecode, clien
             'user_id': 1,
             'token': token,
             'syllabus_id': 1,
-            'email_quality': validation_res['quality_score'],
-            'email_status': {
-                'catch_all': validation_res['is_catchall_email']['value'],
-                'disposable': validation_res['is_disposable_email']['value'],
-                'domain': 'potato.io',
-                'email': 'pokemon@potato.io',
-                'format_valid': validation_res['is_valid_format']['value'],
-                'free': validation_res['is_free_email']['value'],
-                'mx_found': validation_res['is_mx_found']['value'],
-                'role': validation_res['is_role_email']['value'],
-                'smtp_check': validation_res['is_smtp_valid']['value'],
-                'score': validation_res['quality_score'],
-                'user': 'pokemon'
-            },
+            'email_quality': None,
+            'email_status': None,
             **data,
         })
     ]
@@ -1556,20 +1484,8 @@ def test_task__put__with_user_invite__cohort_as_none(bc: Breathecode, client: AP
             'status': 'ACCEPTED',
             'user_id': 1,
             'token': token,
-            'email_quality': validation_res['quality_score'],
-            'email_status': {
-                'catch_all': validation_res['is_catchall_email']['value'],
-                'disposable': validation_res['is_disposable_email']['value'],
-                'domain': 'potato.io',
-                'email': 'pokemon@potato.io',
-                'format_valid': validation_res['is_valid_format']['value'],
-                'free': validation_res['is_free_email']['value'],
-                'mx_found': validation_res['is_mx_found']['value'],
-                'role': validation_res['is_role_email']['value'],
-                'smtp_check': validation_res['is_smtp_valid']['value'],
-                'score': validation_res['quality_score'],
-                'user': 'pokemon'
-            },
+            'email_quality': None,
+            'email_status': None,
             **data,
         })
     ]
@@ -1712,20 +1628,8 @@ def test_task__put__with_user_invite__cohort_found(bc: Breathecode, client: APIC
             'user_id': 1,
             'token': token,
             'cohort_id': 1,
-            'email_quality': validation_res['quality_score'],
-            'email_status': {
-                'catch_all': validation_res['is_catchall_email']['value'],
-                'disposable': validation_res['is_disposable_email']['value'],
-                'domain': 'potato.io',
-                'email': 'pokemon@potato.io',
-                'format_valid': validation_res['is_valid_format']['value'],
-                'free': validation_res['is_free_email']['value'],
-                'mx_found': validation_res['is_mx_found']['value'],
-                'role': validation_res['is_role_email']['value'],
-                'smtp_check': validation_res['is_smtp_valid']['value'],
-                'score': validation_res['quality_score'],
-                'user': 'pokemon'
-            },
+            'email_quality': None,
+            'email_status': None,
             **data,
         })
     ]
@@ -1820,20 +1724,8 @@ def test_task__put__with_user_invite__cohort_found__academy_available_as_saas__u
             'user_id': 1,
             'token': token,
             'cohort_id': 1,
-            'email_quality': validation_res['quality_score'],
-            'email_status': {
-                'catch_all': validation_res['is_catchall_email']['value'],
-                'disposable': validation_res['is_disposable_email']['value'],
-                'domain': 'potato.io',
-                'email': 'pokemon@potato.io',
-                'format_valid': validation_res['is_valid_format']['value'],
-                'free': validation_res['is_free_email']['value'],
-                'mx_found': validation_res['is_mx_found']['value'],
-                'role': validation_res['is_role_email']['value'],
-                'smtp_check': validation_res['is_smtp_valid']['value'],
-                'score': validation_res['quality_score'],
-                'user': 'pokemon'
-            },
+            'email_quality': None,
+            'email_status': None,
             **data,
         })
     ]
@@ -1930,20 +1822,8 @@ def test_task__put__with_user_invite__cohort_found__academy_available_as_saas__u
             'token': token,
             'author_id': 1,
             'cohort_id': 1,
-            'email_quality': validation_res['quality_score'],
-            'email_status': {
-                'catch_all': validation_res['is_catchall_email']['value'],
-                'disposable': validation_res['is_disposable_email']['value'],
-                'domain': 'potato.io',
-                'email': 'pokemon@potato.io',
-                'format_valid': validation_res['is_valid_format']['value'],
-                'free': validation_res['is_free_email']['value'],
-                'mx_found': validation_res['is_mx_found']['value'],
-                'role': validation_res['is_role_email']['value'],
-                'smtp_check': validation_res['is_smtp_valid']['value'],
-                'score': validation_res['quality_score'],
-                'user': 'pokemon'
-            },
+            'email_quality': None,
+            'email_status': None,
             **data,
         })
     ]
@@ -2063,20 +1943,8 @@ def test_task__put__with_user_invite__syllabus_found(bc: Breathecode, client: AP
             'syllabus_id': 1,
             'user_id': 1,
             'token': token,
-            'email_quality': validation_res['quality_score'],
-            'email_status': {
-                'catch_all': validation_res['is_catchall_email']['value'],
-                'disposable': validation_res['is_disposable_email']['value'],
-                'domain': 'potato.io',
-                'email': 'pokemon@potato.io',
-                'format_valid': validation_res['is_valid_format']['value'],
-                'free': validation_res['is_free_email']['value'],
-                'mx_found': validation_res['is_mx_found']['value'],
-                'role': validation_res['is_role_email']['value'],
-                'smtp_check': validation_res['is_smtp_valid']['value'],
-                'score': validation_res['quality_score'],
-                'user': 'pokemon'
-            },
+            'email_quality': None,
+            'email_status': None,
             **data,
         })
     ]
@@ -2172,20 +2040,8 @@ def test_task__put__with_user_invite__syllabus_found__academy_available_as_saas_
             'syllabus_id': 1,
             'user_id': 1,
             'token': token,
-            'email_quality': validation_res['quality_score'],
-            'email_status': {
-                'catch_all': validation_res['is_catchall_email']['value'],
-                'disposable': validation_res['is_disposable_email']['value'],
-                'domain': 'potato.io',
-                'email': 'pokemon@potato.io',
-                'format_valid': validation_res['is_valid_format']['value'],
-                'free': validation_res['is_free_email']['value'],
-                'mx_found': validation_res['is_mx_found']['value'],
-                'role': validation_res['is_role_email']['value'],
-                'smtp_check': validation_res['is_smtp_valid']['value'],
-                'score': validation_res['quality_score'],
-                'user': 'pokemon'
-            },
+            'email_quality': None,
+            'email_status': None,
             **data,
         })
     ]
@@ -2288,20 +2144,8 @@ def test_task__put__with_user_invite__syllabus_found__academy_available_as_saas_
             'syllabus_id': 1,
             'user_id': 1,
             'token': token,
-            'email_quality': validation_res['quality_score'],
-            'email_status': {
-                'catch_all': validation_res['is_catchall_email']['value'],
-                'disposable': validation_res['is_disposable_email']['value'],
-                'domain': 'potato.io',
-                'email': 'pokemon@potato.io',
-                'format_valid': validation_res['is_valid_format']['value'],
-                'free': validation_res['is_free_email']['value'],
-                'mx_found': validation_res['is_mx_found']['value'],
-                'role': validation_res['is_role_email']['value'],
-                'smtp_check': validation_res['is_smtp_valid']['value'],
-                'score': validation_res['quality_score'],
-                'user': 'pokemon'
-            },
+            'email_quality': None,
+            'email_status': None,
             **data,
         })
     ]
@@ -2514,20 +2358,8 @@ def test_task__put__plan_has_not_waiting_list(bc: Breathecode, client: APIClient
             'country': None,
             'latitude': None,
             'longitude': None,
-            'email_quality': validation_res['quality_score'],
-            'email_status': {
-                'catch_all': validation_res['is_catchall_email']['value'],
-                'disposable': validation_res['is_disposable_email']['value'],
-                'domain': 'potato.io',
-                'email': 'pokemon@potato.io',
-                'format_valid': validation_res['is_valid_format']['value'],
-                'free': validation_res['is_free_email']['value'],
-                'mx_found': validation_res['is_mx_found']['value'],
-                'role': validation_res['is_role_email']['value'],
-                'smtp_check': validation_res['is_smtp_valid']['value'],
-                'score': validation_res['quality_score'],
-                'user': 'pokemon'
-            },
+            'email_quality': None,
+            'email_status': None,
             **data,
         },
     ]
@@ -2667,20 +2499,8 @@ def test__put__course_without_syllabus(bc: Breathecode, client: APIClient, valid
                 'country': None,
                 'latitude': None,
                 'longitude': None,
-                'email_quality': validation_res['quality_score'],
-                'email_status': {
-                    'catch_all': validation_res['is_catchall_email']['value'],
-                    'disposable': validation_res['is_disposable_email']['value'],
-                    'domain': 'potato.io',
-                    'email': 'pokemon@potato.io',
-                    'format_valid': validation_res['is_valid_format']['value'],
-                    'free': validation_res['is_free_email']['value'],
-                    'mx_found': validation_res['is_mx_found']['value'],
-                    'role': validation_res['is_role_email']['value'],
-                    'smtp_check': validation_res['is_smtp_valid']['value'],
-                    'score': validation_res['quality_score'],
-                    'user': 'pokemon'
-                },
+                'email_quality': None,
+                'email_status': None,
                 **data,
             }),
     ]
@@ -2777,20 +2597,8 @@ def test__put__course_and_syllabus(bc: Breathecode, client: APIClient, validatio
                 'country': None,
                 'latitude': None,
                 'longitude': None,
-                'email_quality': validation_res['quality_score'],
-                'email_status': {
-                    'catch_all': validation_res['is_catchall_email']['value'],
-                    'disposable': validation_res['is_disposable_email']['value'],
-                    'domain': 'potato.io',
-                    'email': 'pokemon@potato.io',
-                    'format_valid': validation_res['is_valid_format']['value'],
-                    'free': validation_res['is_free_email']['value'],
-                    'mx_found': validation_res['is_mx_found']['value'],
-                    'role': validation_res['is_role_email']['value'],
-                    'smtp_check': validation_res['is_smtp_valid']['value'],
-                    'score': validation_res['quality_score'],
-                    'user': 'pokemon'
-                },
+                'email_quality': None,
+                'email_status': None,
                 **data,
             }),
     ]

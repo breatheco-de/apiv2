@@ -1459,6 +1459,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         #                                       related_type='auth.UserInvite',
         #                                       related_id=instance.id)
 
+        tasks_authenticate.async_validate_email_invite.delay(instance.id)
         return instance
 
     def update(self, *args, **kwargs):
@@ -1477,8 +1478,6 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         if obj.status != 'ACCEPTED':
             return None
-
-        tasks_authenticate.async_validate_email_invite.delay(obj.id)
 
         if not self.user:
             self.user = User(email=obj.email,
