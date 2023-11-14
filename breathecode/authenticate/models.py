@@ -664,7 +664,7 @@ class GithubAcademyUser(models.Model):
         if self.user is None:
             return str(self.id) + ' ' + str(self.username)
         else:
-            return str(self.user) + ' ' + str(self.username)
+            return str(self.user.email) + ' ' + str(self.username)
 
     @staticmethod
     def create_log(msg):
