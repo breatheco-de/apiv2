@@ -12,6 +12,10 @@ pytestmark = pytest.mark.usefixtures('db')
 
 
 def get_serializer(asset, data={}):
+    asset_translations = {}
+    for translation in asset.all_translations.all():
+        asset_translations[translation.lang or 'null'] = translation.slug
+
     return {
         'id':
         asset.id,
@@ -54,7 +58,8 @@ def get_serializer(asset, data={}):
         'NOT_STARTED',
         'url':
         None,
-        'translations': {},
+        'translations':
+        asset_translations,
         'technologies': [tech.slug for tech in asset.technologies.all()] if asset.technologies else [],
         'seo_keywords':
         [seo_keyword.slug for seo_keyword in asset.seo_keywords.all()] if asset.seo_keywords else [],

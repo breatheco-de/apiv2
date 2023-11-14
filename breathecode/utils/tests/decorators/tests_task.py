@@ -208,8 +208,7 @@ def test_no_task_manager__it_got_an_exception__no_transaction__no_fallback(bc: B
 
     kwargs['MUST_RAISE_EXCEPTION'] = True
 
-    with pytest.raises(Exception, match='Unexpected error'):
-        task(*args, **kwargs)
+    task.delay(*args, **kwargs)
 
     assert bc.database.list_of('commons.TaskManager') == [
         db_item({
@@ -306,8 +305,7 @@ def test_no_task_manager__it_got_an_exception__with_transaction__no_fallback(bc:
 
     kwargs['MUST_RAISE_EXCEPTION'] = True
 
-    with pytest.raises(Exception, match='Unexpected error'):
-        task(*args, **kwargs)
+    task.delay(*args, **kwargs)
 
     assert bc.database.list_of('commons.TaskManager') == [
         db_item({

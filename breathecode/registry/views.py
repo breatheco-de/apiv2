@@ -38,6 +38,7 @@ from rest_framework.views import APIView
 from rest_framework import status
 from django.http import HttpResponseRedirect
 from django.views.decorators.clickjacking import xframe_options_exempt
+from circuitbreaker import CircuitBreakerError
 
 logger = logging.getLogger(__name__)
 
@@ -404,6 +405,7 @@ class AssetThumbnailView(APIView):
     # this method will force to reset the thumbnail
     @capable_of('crud_asset')
     def post(self, request, asset_slug, academy_id):
+        lang = get_user_language(request)
 
         width = int(request.GET.get('width', '0'))
         height = int(request.GET.get('height', '0'))
@@ -417,7 +419,19 @@ class AssetThumbnailView(APIView):
         generator = AssetThumbnailGenerator(asset, width, height)
 
         # wait one second
-        asset = generator.create(delay=1500)
+        try:
+            asset = generator.create(delay=1500)
+
+        except CircuitBreakerError:
+            raise ValidationException(translation(
+                lang,
+                en='The circuit breaker is open due to an error, please try again later',
+                es='El circuit breaker está abierto debido a un error, por favor intente más tarde',
+                slug='circuit-breaker-open'),
+                                      slug='circuit-breaker-open',
+                                      data={'service': 'Google Cloud Storage'},
+                                      silent=True,
+                                      code=503)
 
         serializer = AcademyAssetSerializer(asset)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -460,6 +474,7 @@ class AcademyContentVariableView(APIView):
     # this method will force to reset the thumbnail
     @capable_of('crud_asset')
     def post(self, request, asset_slug, academy_id):
+        lang = get_user_language(request)
 
         width = int(request.GET.get('width', '0'))
         height = int(request.GET.get('height', '0'))
@@ -473,7 +488,19 @@ class AcademyContentVariableView(APIView):
         generator = AssetThumbnailGenerator(asset, width, height)
 
         # wait one second
-        asset = generator.create(delay=1500)
+        try:
+            asset = generator.create(delay=1500)
+
+        except CircuitBreakerError:
+            raise ValidationException(translation(
+                lang,
+                en='The circuit breaker is open due to an error, please try again later',
+                es='El circuit breaker está abierto debido a un error, por favor intente más tarde',
+                slug='circuit-breaker-open'),
+                                      slug='circuit-breaker-open',
+                                      data={'service': 'Google Cloud Storage'},
+                                      silent=True,
+                                      code=503)
 
         serializer = AcademyAssetSerializer(asset)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -768,9 +795,9 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
     def get(self, request, asset_slug=None, academy_id=None):
         handler = self.extensions(request)
 
-        # cache = handler.cache.get()
-        # if cache is not None:
-        #     return cache
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
 
         member = ProfileAcademy.objects.filter(user=request.user, academy__id=academy_id).first()
         if member is None:

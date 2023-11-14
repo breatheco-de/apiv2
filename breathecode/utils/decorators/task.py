@@ -259,7 +259,7 @@ class Task(object):
                         return self.fallback(*args, **kwargs, exception=exception)
 
                     # behavior by default
-                    raise exception
+                    return
 
             else:
                 try:
@@ -323,8 +323,7 @@ class Task(object):
                     if self.fallback:
                         return self.fallback(*args, **kwargs, exception=e)
 
-                    # behavior by default
-                    raise e
+                    return
 
             if x.total_pages == x.current_page:
                 x.status = 'DONE'
