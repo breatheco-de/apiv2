@@ -167,6 +167,6 @@ class BigQuery(metaclass=BigQueryMeta):
                 query = query[:-5]
 
         if by:
-            query += ' group by ' + ', '.join(by)
+            query += ' GROUP BY ' + ', '.join(by)
 
         return query
