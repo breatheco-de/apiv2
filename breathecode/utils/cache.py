@@ -19,6 +19,7 @@ CACHE_DESCRIPTORS: dict[models.Model, Cache] = {}
 CACHE_DEPENDENCIES: set[models.Model] = set()
 
 ENABLE_LIST_OPTIONS = ['true', '1', 'yes', 'y']
+IS_DJANGO_REDIS = hasattr(cache, 'delete_pattern')
 
 
 @functools.lru_cache(maxsize=1)
@@ -26,7 +27,17 @@ def is_compression_enabled():
     return os.getenv('COMPRESSION', '1').lower() in ENABLE_LIST_OPTIONS
 
 
-IS_DJANGO_REDIS = hasattr(cache, 'delete_pattern')
+@functools.lru_cache(maxsize=1)
+def min_compression_size():
+    return int(os.getenv('MIN_COMPRESSION_SIZE', '10'))
+
+
+def must_compress(data):
+    size = min_compression_size()
+    if size == 0:
+        return True
+
+    return sys.getsizeof(data) / 1024 > size
 
 
 class CacheMeta(type):
@@ -228,8 +239,8 @@ class Cache(metaclass=CacheMeta):
         if format == 'application/json':
             data = json.dumps(data, default=serializer).encode('utf-8')
 
-            # 10KB
-            if sys.getsizeof(data) / 1024 > 10 and is_compression_enabled():
+            # in kilobytes
+            if must_compress(data) and is_compression_enabled():
                 data = brotli.compress(data)
                 res['data'] = data
                 res['headers']['Content-Encoding'] = 'br'
@@ -244,8 +255,8 @@ class Cache(metaclass=CacheMeta):
         elif format == 'text/html':
             data = data.encode('utf-8')
 
-            # 10KB
-            if sys.getsizeof(data) / 1024 > 10 and is_compression_enabled():
+            # in kilobytes
+            if must_compress(data) and is_compression_enabled():
                 data = brotli.compress(data)
                 res['data'] = data
                 res['headers']['Content-Encoding'] = 'br'
@@ -260,8 +271,8 @@ class Cache(metaclass=CacheMeta):
         elif format == 'text/plain':
             data = data.encode('utf-8')
 
-            # 10KB
-            if sys.getsizeof(data) / 1024 > 10 and is_compression_enabled():
+            # in kilobytes
+            if must_compress(data) and is_compression_enabled():
                 data = brotli.compress(data)
                 res['data'] = data
                 res['headers']['Content-Encoding'] = 'br'

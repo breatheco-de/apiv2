@@ -20,6 +20,11 @@ def is_cache_enabled():
     return os.getenv('CACHE', '1').lower() in ENABLE_LIST_OPTIONS
 
 
+@functools.lru_cache(maxsize=1)
+def user_timeout():
+    return 60 * int(os.getenv('USER_CACHE_MINUTES', 60 * 4))
+
+
 class CacheExtension(ExtensionBase):
 
     _cache: Cache
@@ -100,8 +105,12 @@ class CacheExtension(ExtensionBase):
 
         params = self._get_params()
 
+        timeout = None
+        if self._cache_per_user:
+            timeout = user_timeout()
+
         try:
-            res = self._cache.set(data, format=format, params=params)
+            res = self._cache.set(data, format=format, params=params, timeout=timeout)
             data = res['data']
             headers = {
                 **headers,
