@@ -1,6 +1,5 @@
-import serpy
 from breathecode.payments.models import Consumable
-from breathecode.utils import ValidationException
+from breathecode.utils import ValidationException, serpy
 from .models import MentorshipSession, MentorshipService, MentorProfile, MentorshipBill, CalendlyOrganization
 import breathecode.mentorship.actions as actions
 from .actions import generate_mentor_bill

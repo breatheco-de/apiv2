@@ -1,11 +1,11 @@
 import re
-import serpy
 
 from breathecode.utils.i18n import translation
 from .models import ProvisioningBill, ProvisioningContainer
 
 from rest_framework import serializers
 from breathecode.utils.validation_exception import ValidationException
+from breathecode.utils import serpy
 
 
 class AcademySerializer(serpy.Serializer):

@@ -1,4 +1,3 @@
-import serpy
 from slugify import slugify
 
 from .models import (Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology, KeywordCluster,
@@ -9,6 +8,7 @@ from breathecode.admissions.models import Academy
 from rest_framework import serializers
 from rest_framework import status
 from breathecode.utils.validation_exception import ValidationException
+from breathecode.utils import serpy
 
 
 class ProfileSerializer(serpy.Serializer):

@@ -2,7 +2,7 @@ from breathecode.admissions.models import Academy
 from .models import Media, Category, MediaResolution
 from slugify import slugify
 from rest_framework import serializers
-import serpy
+from breathecode.utils import serpy
 
 
 class GetAcademySerializer(serpy.Serializer):

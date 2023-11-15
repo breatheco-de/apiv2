@@ -139,6 +139,19 @@ def enable_hook_manager(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def disable_newrelic_prints(monkeypatch):
+    """
+    Disable NewRelic prints.
+    """
+
+    monkeypatch.setattr('newrelic.core.agent._logger.info', lambda *args, **kwargs: None)
+    monkeypatch.setattr('newrelic.core.agent._logger.warn', lambda *args, **kwargs: None)
+    monkeypatch.setattr('newrelic.core.agent._logger.error', lambda *args, **kwargs: None)
+
+    yield
+
+
+@pytest.fixture(autouse=True)
 def dont_wait_for_rescheduling_tasks():
     """
     Don't wait for rescheduling tasks by default. You can re-enable it within a test by calling the provided wrapper.
