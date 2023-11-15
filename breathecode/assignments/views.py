@@ -344,9 +344,9 @@ class CohortTaskView(APIView, GenerateLookupsMixin):
     def get(self, request, cohort_id, academy_id):
         handler = self.extensions(request)
 
-        # cache = handler.cache.get()
-        # if cache is not None:
-        #     return cache
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
 
         items = Task.objects.all()
         lookup = {}
@@ -554,9 +554,9 @@ class TaskMeView(APIView):
     def get(self, request, task_id=None, user_id=None):
         handler = self.extensions(request)
 
-        # cache = handler.cache.get()
-        # if cache is not None:
-        #     return cache
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
 
         if not user_id:
             user_id = request.user.id
