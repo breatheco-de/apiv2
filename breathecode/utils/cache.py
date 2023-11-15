@@ -1,4 +1,6 @@
 from __future__ import annotations
+import brotli
+import sys
 import functools
 import os
 from typing import Optional
@@ -6,8 +8,7 @@ import urllib.parse, json
 from django.core.cache import cache
 from datetime import datetime, timedelta
 from django.db import models
-import brotli
-import sys
+from circuitbreaker import circuit
 
 from django.db.models.fields.related_descriptors import (ReverseManyToOneDescriptor, ManyToManyDescriptor,
                                                          ForwardManyToOneDescriptor,
@@ -108,6 +109,7 @@ class Cache(metaclass=CacheMeta):
         return f'{cls._version_prefix}{key}__{qs}'
 
     @classmethod
+    @circuit
     def clear(cls, deep=0, max_deep=None) -> set | None:
         if max_deep is None:
             max_deep = cls.max_deep
@@ -132,35 +134,27 @@ class Cache(metaclass=CacheMeta):
         if deep != 0:
             return resolved
 
-        if IS_DJANGO_REDIS:
-            keys = {f'{cls._version_prefix}{descriptor.model.__name__}__keys' for descriptor in resolved}
-            sets = [x or set() for x in cache.get_many(keys).values()]
+        keys = {f'{cls._version_prefix}{descriptor.model.__name__}__keys' for descriptor in resolved}
+        sets = [x or set() for x in cache.get_many(keys).values()]
 
-            to_delete = set()
-            for key in sets:
-                if not key:
-                    continue
+        to_delete = set()
+        for key in sets:
+            if not key:
+                continue
 
-                to_delete |= key
+            to_delete |= key
 
-            to_delete |= keys
+        to_delete |= keys
 
-            cache.delete_many(to_delete)
-            return
-
-        cache.delete_pattern(
-            [f'{cls._version_prefix}{descriptor.model.__name__}__*' for descriptor in resolved],
-            itersize=100_000)
+        cache.delete_many(to_delete)
 
     @classmethod
+    @circuit
     def keys(cls):
-        if IS_DJANGO_REDIS:
-            return cache.keys(f'{cls._version_prefix}{cls.model.__name__}__keys') or set()
-
-        key = cls.model.__name__
-        return cache.keys(f'{cls._version_prefix}{key}__*')
+        return cache.get(f'{cls._version_prefix}{cls.model.__name__}__keys') or set()
 
     @classmethod
+    @circuit
     def get(cls, data) -> dict:
         key = cls._generate_key(**data)
         data = cache.get(key)
@@ -212,6 +206,7 @@ class Cache(metaclass=CacheMeta):
         return data[starts:], mime, headers
 
     @classmethod
+    @circuit
     def set(cls,
             data: str | dict | list[dict],
             format: str = 'application/json',
@@ -286,12 +281,8 @@ class Cache(metaclass=CacheMeta):
         else:
             cache.set(key, data, timeout)
 
-        # key management
-        if IS_DJANGO_REDIS:
-            keys = cache.get(f'{cls._version_prefix}{cls.model.__name__}__keys') or set()
-            keys.add(key)
+        keys = cache.get(f'{cls._version_prefix}{cls.model.__name__}__keys') or set()
+        keys.add(key)
 
-            cache.set(f'{cls._version_prefix}{cls.model.__name__}__keys', keys)
-            return res
-
+        cache.set(f'{cls._version_prefix}{cls.model.__name__}__keys', keys)
         return res

@@ -12,11 +12,7 @@ def take_screenshot(self, certificate_id, **_):
     # unittest.mock.patch is poor applying mocks
     from .actions import certificate_screenshot
 
-    try:
-        certificate_screenshot(certificate_id)
-        return True
-    except Exception:
-        return False
+    certificate_screenshot(certificate_id)
 
 
 @task(bind=True, priority=TaskPriority.CERTIFICATE.value)
@@ -39,14 +35,9 @@ def reset_screenshot(self, certificate_id, **_):
     # unittest.mock.patch is poor applying mocks
     from .actions import certificate_screenshot, remove_certificate_screenshot
 
-    try:
-        # just in case, wait for cetificate to save
-        remove_certificate_screenshot(certificate_id)
-        certificate_screenshot(certificate_id)
-    except Exception:
-        return False
-
-    return True
+    # just in case, wait for certificate to save
+    remove_certificate_screenshot(certificate_id)
+    certificate_screenshot(certificate_id)
 
 
 @task(bind=True, priority=TaskPriority.CERTIFICATE.value)

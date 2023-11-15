@@ -172,18 +172,3 @@ def clean_task(key: str, **_: Any):
 
     except Exception:
         raise RetryTask(f'Could not clean the cache {key}')
-
-
-# from django_redis.cache import RedisCache
-# from django_redis.client import DefaultClient
-# """
-# from django.core.cache import cache
-# from breathecode.commons.tasks import clean_task
-# from django.utils import timezone
-# cache.keys('Cohort__*')
-# cache.keys('Cohort__*|CohortUser__*')
-# a=timezone.now();clean_task.apply_async(args=['breathecode.admissions.models.Cohort'], countdown=0);b=timezone.now(); print('res', b-a)
-# cache.keys('Cohort__*')
-# cache.keys('Cohort__*|CohortUser__*')
-# a=timezone.now();clean_task('breathecode.admissions.models.Cohort');b=timezone.now(); print('res', b-a)
-# """

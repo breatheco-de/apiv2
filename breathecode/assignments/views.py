@@ -29,6 +29,7 @@ import breathecode.assignments.tasks as tasks
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils.i18n import translation
 import breathecode.activity.tasks as tasks_activity
+from circuitbreaker import CircuitBreakerError
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +141,8 @@ class FinalProjectScreenshotView(APIView):
     def upload(self, request, update=False):
         from ..services.google_cloud import Storage
 
+        lang = get_user_language(request)
+
         files = request.data.getlist('file')
         names = request.data.getlist('name')
 
@@ -166,10 +169,22 @@ class FinalProjectScreenshotView(APIView):
             }
 
             # upload file section
-            storage = Storage()
-            cloud_file = storage.file(USER_ASSIGNMENTS_BUCKET, hash)
-            cloud_file.upload(file, content_type=file.content_type)
-            data['url'] = cloud_file.url()
+            try:
+                storage = Storage()
+                cloud_file = storage.file(USER_ASSIGNMENTS_BUCKET, hash)
+                cloud_file.upload(file, content_type=file.content_type)
+                data['url'] = cloud_file.url()
+
+            except CircuitBreakerError:
+                raise ValidationException(translation(
+                    lang,
+                    en='The circuit breaker is open due to an error, please try again later',
+                    es='El circuit breaker está abierto debido a un error, por favor intente más tarde',
+                    slug='circuit-breaker-open'),
+                                          slug='circuit-breaker-open',
+                                          data={'service': 'Google Cloud Storage'},
+                                          silent=True,
+                                          code=503)
 
         return data
 
@@ -329,9 +344,9 @@ class CohortTaskView(APIView, GenerateLookupsMixin):
     def get(self, request, cohort_id, academy_id):
         handler = self.extensions(request)
 
-        # cache = handler.cache.get()
-        # if cache is not None:
-        #     return cache
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
 
         items = Task.objects.all()
         lookup = {}
@@ -405,6 +420,8 @@ class TaskMeAttachmentView(APIView):
     def upload(self, request, update=False, mime_allow=None):
         from ..services.google_cloud import Storage
 
+        lang = get_user_language(request)
+
         files = request.data.getlist('file')
         names = request.data.getlist('name')
         result = {
@@ -471,10 +488,22 @@ class TaskMeAttachmentView(APIView):
 
             else:
                 # upload file section
-                storage = Storage()
-                cloud_file = storage.file(USER_ASSIGNMENTS_BUCKET, hash)
-                cloud_file.upload(file, content_type=file.content_type)
-                data['url'] = cloud_file.url()
+                try:
+                    storage = Storage()
+                    cloud_file = storage.file(USER_ASSIGNMENTS_BUCKET, hash)
+                    cloud_file.upload(file, content_type=file.content_type)
+                    data['url'] = cloud_file.url()
+
+                except CircuitBreakerError:
+                    raise ValidationException(translation(
+                        lang,
+                        en='The circuit breaker is open due to an error, please try again later',
+                        es='El circuit breaker está abierto debido a un error, por favor intente más tarde',
+                        slug='circuit-breaker-open'),
+                                              slug='circuit-breaker-open',
+                                              data={'service': 'Google Cloud Storage'},
+                                              silent=True,
+                                              code=503)
 
             result['data'].append(data)
 
@@ -525,9 +554,9 @@ class TaskMeView(APIView):
     def get(self, request, task_id=None, user_id=None):
         handler = self.extensions(request)
 
-        # cache = handler.cache.get()
-        # if cache is not None:
-        #     return cache
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
 
         if not user_id:
             user_id = request.user.id

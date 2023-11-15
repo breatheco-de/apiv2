@@ -1,14 +1,48 @@
 import logging, os
 from celery import shared_task
 from django.contrib.auth.models import User
+from breathecode.authenticate.models import UserInvite
+from breathecode.marketing.actions import validate_email
+from breathecode.utils.decorators import task, RetryTask
 
-from breathecode.utils.decorators.task import TaskPriority, task
+from breathecode.utils.decorators.task import AbortTask, TaskPriority, task
+from breathecode.utils.validation_exception import ValidationException
 from .actions import set_gitpod_user_expiration, add_to_organization, remove_from_organization
 from breathecode.notify import actions as notify_actions
 
 API_URL = os.getenv('API_URL', '')
 
 logger = logging.getLogger(__name__)
+
+
+@task(bind=True)
+def async_validate_email_invite(self, invite_id, task_manager_id):
+    logger.debug(f'Validating email for invite {invite_id}')
+    user_invite = UserInvite.objects.filter(id=invite_id).first()
+
+    if user_invite is None:
+        raise AbortTask(f'UserInvite {invite_id} not found')
+
+    try:
+        email_status = validate_email(user_invite.email, 'en')
+        if email_status['score'] <= 0.60:
+            user_invite.status = 'REJECTED'
+            user_invite.process_status = 'ERROR'
+            user_invite.process_message = 'Your email is invalid'
+        user_invite.email_quality = email_status['score']
+        user_invite.email_status = email_status
+
+    except ValidationException as e:
+        user_invite.status = 'REJECTED'
+        user_invite.process_status = 'ERROR'
+        user_invite.process_message = str(e)
+
+    except Exception:
+        raise RetryTask(f'Retrying email validation for invite {invite_id}')
+
+    user_invite.save()
+
+    return True
 
 
 @shared_task(priority=TaskPriority.ACADEMY.value)

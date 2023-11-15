@@ -12,14 +12,10 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
 
     @patch('breathecode.certificate.actions.certificate_screenshot', MagicMock())
     def test_take_screenshot__call_take_screenshot_properly(self):
-        result = take_screenshot(1)
-
-        self.assertTrue(result)
+        take_screenshot(1)
         self.assertEqual(actions.certificate_screenshot.call_args_list, [call(1)])
 
     @patch('breathecode.certificate.actions.certificate_screenshot', MagicMock(side_effect=Exception()))
     def test_take_screenshot__take_screenshot_raise_a_exception(self):
-        result = take_screenshot(1)
-
-        self.assertFalse(result)
+        take_screenshot(1)
         self.assertEqual(actions.certificate_screenshot.call_args_list, [call(1)])

@@ -862,18 +862,20 @@ class EventMeCheckinView(APIView):
         if event is None:
             event = Event.objects.filter(id=event_id).first()
             if event is None or event.event_type is None:
-                raise ValidationException(translation(lang,
-                                                    en="This event was not found, or your current plan does not include access to it.",
-                                                    es='El evento no se ha encontrado o tu plan no te permite asistir a este evento',
-                                                    slug='event-not-found'),
-                                        code=404)
+                raise ValidationException(translation(
+                    lang,
+                    en='This event was not found, or your current plan does not include access to it.',
+                    es='El evento no se ha encontrado o tu plan no te permite asistir a este evento',
+                    slug='event-not-found'),
+                                          code=404)
             else:
-                raise ValidationException(translation(lang,
-                                                    en='Tu plan no te permite tener acceso a eventos de este tipo: '+event.event_type.name,
-                                                    es='Your current plan does not include access to this type of events: '+event.event_type.name,
-                                                    slug='event-not-found'),
-                                        code=404)
-              
+                raise ValidationException(translation(
+                    lang,
+                    en='Tu plan no te permite tener acceso a eventos de este tipo: ' + event.event_type.name,
+                    es='Your current plan does not include access to this type of events: ' +
+                    event.event_type.name,
+                    slug='event-not-found'),
+                                          code=404)
 
         serializer = PUTEventCheckinSerializer(event, request.data)
         if serializer.is_valid():
@@ -889,17 +891,20 @@ class EventMeCheckinView(APIView):
         if event is None:
             event = Event.objects.filter(id=event_id).first()
             if event is None or event.event_type is None:
-                raise ValidationException(translation(lang,
-                                                    en="This event was not found, or your current plan does not include access to it.",
-                                                    es='El evento no se ha encontrado o tu plan no te permite asistir a este evento',
-                                                    slug='event-not-found'),
-                                        code=404)
+                raise ValidationException(translation(
+                    lang,
+                    en='This event was not found, or your current plan does not include access to it.',
+                    es='El evento no se ha encontrado o tu plan no te permite asistir a este evento',
+                    slug='event-not-found'),
+                                          code=404)
             else:
-                raise ValidationException(translation(lang,
-                                                    en='Tu plan no te permite tener acceso a eventos de este tipo: '+event.event_type.name,
-                                                    es='Your current plan does not include access to this type of events: '+event.event_type.name,
-                                                    slug='event-not-found'),
-                                        code=404)
+                raise ValidationException(translation(
+                    lang,
+                    en='Tu plan no te permite tener acceso a eventos de este tipo: ' + event.event_type.name,
+                    es='Your current plan does not include access to this type of events: ' +
+                    event.event_type.name,
+                    slug='event-not-found'),
+                                          code=404)
 
         serializer = POSTEventCheckinSerializer(data={
             **request.data, 'email': request.user.email,

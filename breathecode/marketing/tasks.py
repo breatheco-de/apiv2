@@ -40,7 +40,8 @@ def persist_single_lead(form_data, **_: Any):
 
         raise e
 
-    if entry is not None and entry != False and not is_test_env and form_data.city is None:
+    if entry is not None and entry != False and not is_test_env and ('city' not in form_data
+                                                                     or form_data['city'] is None):
         save_get_geolocal(entry, form_data)
 
     return True
@@ -299,7 +300,7 @@ def create_form_entry(csv_upload_id, **item):
     # remove the task manager parameters
     item.pop('pop', None)
     item.pop('total_pages', None)
-    item.pop('attemps', None)
+    item.pop('attempts', None)
     item.pop('task_manager_id', None)
 
     logger.info('Create form entry started')

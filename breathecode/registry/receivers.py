@@ -31,18 +31,18 @@ def post_asset_slug_modified(sender, instance: Asset, **kwargs):
     a = Asset.objects.get(id=instance.id)
     a.all_translations.add(instance)
     instance.save()
-    async_update_frontend_asset_cache(instance)
+    async_update_frontend_asset_cache(instance.slug)
 
 
 @receiver(asset_title_modified, sender=Asset)
 def asset_title_was_updated(sender, instance, **kwargs):
 
-    async_update_frontend_asset_cache(instance)
-
     # ignore unpublished assets
     if instance.status != 'PUBLISHED':
         return False
 
+    async_update_frontend_asset_cache(instance.slug)
+  
     bucket_name = os.getenv('SCREENSHOTS_BUCKET', None)
     if bucket_name is None or bucket_name == '':
         return False
@@ -68,8 +68,6 @@ def asset_title_was_updated(sender, instance, **kwargs):
 def post_asset_readme_modified(sender, instance: Asset, **kwargs):
     logger.debug('Cleaning asset raw readme')
     async_regenerate_asset_readme.delay(instance.slug)
-    async_update_frontend_asset_cache(instance)
-
 
 @receiver(post_delete, sender=Asset)
 def post_asset_deleted(sender, instance: Asset, **kwargs):

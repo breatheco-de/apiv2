@@ -361,9 +361,9 @@ class CohortUserView(APIView, GenerateLookupsMixin):
 
         handler = self.extensions(request)
 
-        # cache = handler.cache.get()
-        # if cache is not None:
-        #     return cache
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
 
         items = CohortUser.objects.all()
 
@@ -565,9 +565,9 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
 
         handler = self.extensions(request)
 
-        # cache = handler.cache.get()
-        # if cache is not None:
-        #     return cache
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
 
         if user_id is not None:
             item = CohortUser.objects.filter(cohort__academy__id=academy_id,
@@ -1142,9 +1142,9 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
     def get(self, request, cohort_id=None, academy_id=None):
         handler = self.extensions(request)
 
-        # cache = handler.cache.get()
-        # if cache is not None:
-        #     return cache
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
 
         if cohort_id is not None:
             item = None

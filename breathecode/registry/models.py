@@ -46,21 +46,30 @@ class AssetTechnology(models.Model):
                             null=True,
                             help_text='Leave blank if will be shown in all languages')
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, default=None, blank=True, null=True)
-    is_deprecated = models.BooleanField(default=False)
+    is_deprecated = models.BooleanField(default=False,
+                                        help_text='If True, the technology will be programmatically deleted.')
     featured_asset = models.ForeignKey('Asset',
                                        on_delete=models.SET_NULL,
                                        default=None,
                                        blank=True,
                                        null=True)
-    visibility = models.CharField(max_length=20, choices=VISIBILITY, default=PUBLIC)
+    visibility = models.CharField(
+        max_length=20,
+        choices=VISIBILITY,
+        default=UNLISTED,
+        help_text=
+        'If public, the front-end will generate a landing page. If unlisted, it won\'t have a landing page but will be shown in assets. If private, it won\'t be shown anywhere of the front-end.'
+    )
 
     description = models.TextField(null=True, blank=True, default=None)
     icon_url = models.URLField(null=True, blank=True, default=None, help_text='Image icon to show on website')
-    sort_priority = models.IntegerField(null=False,
-                                        choices=SORT_PRIORITY,
-                                        blank=False,
-                                        default=3,
-                                        help_text='Priority to sort technology (1, 2, or 3)')
+    sort_priority = models.IntegerField(
+        null=False,
+        choices=SORT_PRIORITY,
+        blank=False,
+        default=3,
+        help_text='Priority to sort technology (1, 2, or 3): One is more important and goes first than three.'
+    )
 
     def __str__(self):
         return self.title

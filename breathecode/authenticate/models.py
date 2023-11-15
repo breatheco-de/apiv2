@@ -478,6 +478,9 @@ class UserInvite(models.Model):
                                        null=True,
                                        help_text='UTMs and other conversion information.')
 
+    email_quality = models.FloatField(default=None, blank=True, null=True)
+    email_status = models.JSONField(default=None, blank=True, null=True)
+
     def __str__(self):
         return f'Invite for {self.email}'
 
@@ -661,7 +664,7 @@ class GithubAcademyUser(models.Model):
         if self.user is None:
             return str(self.id) + ' ' + str(self.username)
         else:
-            return str(self.user) + ' ' + str(self.username)
+            return str(self.user.email) + ' ' + str(self.username)
 
     @staticmethod
     def create_log(msg):
@@ -689,9 +692,7 @@ class GithubAcademyUser(models.Model):
         exit_op = super().save(*args, **kwargs)
 
         if has_mutated and self.storage_status == 'SYNCHED':
-            prev = GithubAcademyUserLog.objects.filter(
-                academy_user=self, storage_status=self.storage_status,
-                storage_action=self.storage_action).order_by('-created_at').first()
+            prev = GithubAcademyUserLog.objects.filter(academy_user=self).order_by('-created_at').first()
 
             user_log = GithubAcademyUserLog(
                 academy_user=self,
