@@ -31,6 +31,93 @@ class BigQueryMeta(type):
             pass
 
 
+class BigQuerySet():
+
+    def __init__(self):
+        self.query = {}
+        self.agg = []
+        self.group = None
+
+    def set_query(self, *args, **kwargs):
+        self.query.update(kwargs)
+
+    def order_by(self, *name):
+        self.group = name
+
+    def aggregate(self, *args):
+        self.agg += args
+
+    def build(self, table, *, fields=[], **kwargs):
+        if fields:
+            query = f'SELECT {", ".join(fields)} FROM {table}'
+
+        else:
+            query = f'SELECT * FROM {table}'
+
+        exact = []
+        gt = []
+        gte = []
+        lt = []
+        lte = []
+        by = []
+
+        for key in kwargs:
+            if key.endswith('__gt'):
+                gt.append({'k': key.replace('__gt', ''), 'v': kwargs[key]})
+
+            elif key.endswith('__gte'):
+                gte.append({'k': key.replace('__gte', ''), 'v': kwargs[key]})
+
+            elif key.endswith('__lt'):
+                lt.append({'k': key.replace('__lt', ''), 'v': kwargs[key]})
+
+            elif key.endswith('__lte'):
+                lte.append({'k': key.replace('__lte', ''), 'v': kwargs[key]})
+
+            elif key.endswith('__by'):
+                lte.append({'k': key.replace('__by', ''), 'v': kwargs[key]})
+
+            else:
+                exact.append({'k': key, 'v': kwargs[key]})
+
+        if gt or gte or lt or lte or exact:
+            query += ' WHERE '
+
+            for o in gt:
+                query += f'{o["k"]} > {o["v"]} AND '
+
+            for o in gte:
+                query += f'{o["k"]} >= {o["v"]} AND '
+
+            for o in lt:
+                query += f'{o["k"]} < {o["v"]} AND '
+
+            for o in lte:
+                query += f'{o["k"]} <= {o["v"]} AND '
+
+            for o in exact:
+                query += f'{o["k"]} = {o["v"]} AND '
+
+            if query.endswith(' AND '):
+                query = query[:-5]
+
+        if self.group:
+            query += ' GROUP BY ' + ', '.join(self.group)
+
+        if self.agg:
+            return
+        """
+        {"grouping_functions": [{
+            "AVG": "salary", -> salary__avg
+        }{
+            "AVG": "edad", -> edad__avg
+        },]}
+
+        """
+
+        return query
+
+
 class BigQuery(metaclass=BigQueryMeta):
 
     @staticmethod
@@ -168,5 +255,13 @@ class BigQuery(metaclass=BigQueryMeta):
 
         if by:
             query += ' GROUP BY ' + ', '.join(by)
+        """
+        {"grouping_functions": [{
+            "AVG": "salary", -> salary__avg
+        }{
+            "AVG": "edad", -> edad__avg
+        },]}
+
+        """
 
         return query
