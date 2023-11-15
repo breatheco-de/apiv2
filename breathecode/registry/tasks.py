@@ -65,6 +65,17 @@ def async_test_asset(asset_slug):
 
     return False
 
+@shared_task(priority=TaskPriority.ACADEMY.value)
+def async_update_frontend_asset_cache(asset_slug):
+    try:
+        if os.getenv('ENV', '') != 'production':
+            return
+
+        logger.info('async_update_frontend_asset_cache')
+        url = os.getenv('APP_URL', '') + f'/api/asset/{asset_slug}'
+        requests.put(url=url)
+    except Exception as e:
+        logger.error(str(e))
 
 @shared_task(priority=TaskPriority.ACADEMY.value)
 def async_regenerate_asset_readme(asset_slug):
@@ -78,6 +89,7 @@ def async_regenerate_asset_readme(asset_slug):
     clean_asset_readme(a)
 
     async_download_readme_images.delay(a.slug)
+    async_update_frontend_asset_cache.delay(a.slug)
 
     return a.cleaning_status == 'OK'
 
@@ -301,19 +313,6 @@ def async_delete_asset_images(asset_slug, **_):
         logger.info(f'Image {img.name} was deleted')
 
     return True
-
-
-@shared_task(priority=TaskPriority.ACADEMY.value)
-def async_update_frontend_asset_cache(asset):
-    try:
-        if os.getenv('ENV', '') != 'production':
-            return
-
-        logger.info('async_update_frontend_asset_cache')
-        url = os.getenv('APP_URL', '') + f'/api/asset/{asset.slug}'
-        requests.put(url=url)
-    except Exception as e:
-        logger.error(str(e))
 
 
 @task(priority=TaskPriority.ACADEMY.value)
