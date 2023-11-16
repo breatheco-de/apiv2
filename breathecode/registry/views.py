@@ -30,7 +30,7 @@ from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerialize
                           AssetKeywordBigSerializer, PUTCategorySerializer, POSTCategorySerializer,
                           KeywordClusterMidSerializer, SEOReportSerializer, OriginalityScanSerializer,
                           VariableSmallSerializer, AssetAndTechnologySerializer,
-                          AssetBigAndTechnologySerializer)
+                          AssetBigAndTechnologySerializer, AssetBigAndTechnologyPublishedSerializer)
 from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
 from breathecode.utils.views import render_message
 from rest_framework.response import Response
@@ -529,7 +529,7 @@ class AssetView(APIView, GenerateLookupsMixin):
             if asset is None:
                 raise ValidationException(f'Asset {asset_slug} not found', status.HTTP_404_NOT_FOUND)
 
-            serializer = AssetBigAndTechnologySerializer(asset)
+            serializer = AssetBigAndTechnologyPublishedSerializer(asset)
             return handler.response(serializer.data)
 
         items = Asset.objects.all()
