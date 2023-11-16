@@ -1204,7 +1204,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         model = UserInvite
         fields = ('id', 'email', 'first_name', 'last_name', 'phone', 'cohort', 'syllabus', 'access_token',
                   'plan', 'plans', 'user', 'country', 'city', 'latitude', 'longitude', 'status',
-                  'conversion_info')
+                  'conversion_info', 'asset_slug', 'event_slug')
 
     def validate(self, data: dict[str, str]):
         from breathecode.payments.models import Plan

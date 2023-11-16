@@ -124,6 +124,8 @@ def post_serializer(plans=[], data={}):
         'latitude': None,
         'longitude': None,
         'conversion_info': None,
+        'asset_slug': None,
+        'event_slug': None,
         **data,
     }
 
@@ -145,6 +147,8 @@ def put_serializer(user_invite, cohort=None, syllabus=None, user=None, plans=[],
         'latitude': None,
         'longitude': None,
         'conversion_info': None,
+        'asset_slug': None,
+        'event_slug': None,
         'status': user_invite.status,
         **data,
     }
