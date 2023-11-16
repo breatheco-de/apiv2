@@ -396,7 +396,7 @@ class ACOldClient(object):
                                     self._base_url + '/admin/api.php',
                                     params=params,
                                     data=data,
-                                    timeout=2)
+                                    timeout=3)
 
         if response.status_code >= 200 and response.status_code < 400:
             data = response.json()
