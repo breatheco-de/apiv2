@@ -576,11 +576,8 @@ class AssetView(APIView, GenerateLookupsMixin):
                 param = 'us'
             lookup['lang'] = param
 
-        if 'visibility' in self.request.GET:
-            param = self.request.GET.get('visibility')
-            lookup['visibility__in'] = [p.upper() for p in param.split(',')]
-        else:
-            lookup['visibility'] = 'PUBLIC'
+        if 'status' not in self.request.GET:
+            lookup['status__in'] = ['PUBLISHED']
 
         try:
             if 'academy' in self.request.GET and self.request.GET.get('academy') not in ['null', '']:

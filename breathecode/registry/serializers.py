@@ -300,9 +300,9 @@ class AssetBigAndTechnologySerializer(AssetBigSerializer):
     technologies = serpy.MethodField()
 
     def get_technologies(self, obj):
-        techs = AssetTechnology.objects.filter(
-            id__in=obj.technologies.filter(is_deprecated=False))
+        techs = AssetTechnology.objects.filter(id__in=obj.technologies.filter(is_deprecated=False))
         return ParentAssetTechnologySerializer(techs, many=True).data
+
 
 # Remove anything not published or visible, this serializer will be using for public API
 # the admin.4geeks.com will use another one
@@ -313,7 +313,7 @@ class AssetBigAndTechnologyPublishedSerializer(AssetBigSerializer):
 
     def get_translations(self, obj):
         result = {}
-        for t in obj.all_translations.filter(status='PUBLISHED', visibility__in=['PUBLIC', 'UNLISTED']):
+        for t in obj.all_translations.filter(status='PUBLISHED'):
             result[t.lang] = t.slug
         return result
 

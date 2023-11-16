@@ -358,18 +358,21 @@ class Asset(models.Model):
     duration = models.IntegerField(null=True, blank=True, default=None, help_text='In hours')
 
     difficulty = models.CharField(max_length=20, choices=DIFFICULTY, default=None, null=True, blank=True)
+
+    # NOT RELATED TO SEO, VISIBILITY IS INTERNAL, other academies won't see it!!!!
     visibility = models.CharField(
         max_length=20,
         choices=VISIBILITY,
         default=PUBLIC,
-        help_text='It won\'t be shown on the website unleast the status is published',
+        help_text=
+        'This is an internal property. It won\'t be shown internally to other academies unless is public',
         db_index=True)
     asset_type = models.CharField(max_length=20, choices=TYPE, db_index=True)
 
     status = models.CharField(max_length=20,
                               choices=ASSET_STATUS,
                               default=NOT_STARTED,
-                              help_text='Related to the publishing of the asset',
+                              help_text='It won\'t be shown on the website until the status is published',
                               db_index=True)
     sync_status = models.CharField(max_length=20,
                                    choices=ASSET_SYNC_STATUS,
