@@ -2,6 +2,7 @@ import re
 import os
 from typing import Any, Optional
 from django.utils import timezone
+from requests.exceptions import Timeout
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.events.models import Event
@@ -25,13 +26,20 @@ def persist_single_lead(form_data, **_: Any):
     entry = None
     try:
         entry = register_new_lead(form_data)
-
+    except Timeout as e:
+        if 'id' in form_data:
+            entry = FormEntry.objects.filter(id=form_data['id']).first()
+            if entry is not None:
+                entry.storage_status_text = str(e)
+                entry.storage_status = 'PENDING'
+                entry.save()
+                raise RetryTask(f'Timeout processing lead for form_entry {str(entry.id)}')
+    
     except Exception as e:
         if not form_data:
             return
 
         if 'id' in form_data:
-
             entry = FormEntry.objects.filter(id=form_data['id']).first()
             if entry is not None:
                 entry.storage_status_text = str(e)
