@@ -106,14 +106,6 @@ class BigQuerySet():
 
         if self.agg:
             return
-        """
-        {"grouping_functions": [{
-            "AVG": "salary", -> salary__avg
-        }{
-            "AVG": "edad", -> edad__avg
-        },]}
-
-        """
 
         return query
 
