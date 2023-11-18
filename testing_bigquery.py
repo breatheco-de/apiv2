@@ -1,7 +1,20 @@
 from google.cloud import bigquery
+import datetime
 
 
 class Sum():
+
+    def __init__(self, param):
+        self._constructor_args = ((param, ), )
+
+
+class Count():
+
+    def __init__(self, param):
+        self._constructor_args = ((param, ), )
+
+
+class Avg():
 
     def __init__(self, param):
         self._constructor_args = ((param, ), )
@@ -50,11 +63,25 @@ class BigQuerySet():
         elif key[-3:] == '.gt':
             key = key[:-3]
             operand = '>'
+        elif key[-3:] == '.lt':
+            key = key[:-3]
+            operand = '<'
+        if key[-4:] == '.lte':
+            key = key[:-4]
+            operand = '<='
         return key, operand, '__' + key.replace('.', '__')
 
     def get_type(self, elem):
         if isinstance(elem, int):
             return 'INT64'
+        if isinstance(elem, float):
+            return 'FLOAT64'
+        if isinstance(elem, bool):
+            return 'BOOL'
+        if isinstance(elem, str):
+            return 'STRING'
+        if isinstance(elem, datetime):
+            return 'DATETIME'
 
     def get_params(self):
         if not self.query:
@@ -84,6 +111,14 @@ class BigQuerySet():
             operation = 'SUM'
             attribute = agg._constructor_args[0][0]
 
+        if isinstance(agg, Count):
+            operation = 'COUNT'
+            attribute = agg._constructor_args[0][0]
+
+        if isinstance(agg, Avg):
+            operation = 'AVG'
+            attribute = agg._constructor_args[0][0]
+
         return operation, attribute
 
     def sql(self, aggs=[]):
@@ -111,7 +146,7 @@ class BigQuerySet():
 
 attribute = BigQuerySet('konoha')
 
-result = attribute.filter(id=1, age=4, name__gte=8, subtable__chakra__gt=7)
+result = attribute.filter(id=1, age=4, date__gte=8, subtable__chakra__gt=7, start__lte=6, end__lt=19)
 print(result.sql())
 print(result.get_params())
 print(result.aggregate(Sum('age')))
