@@ -34,6 +34,7 @@ class BigQuerySet():
 
     def order_by(self, *name):
         self.group = name
+        return self
 
     def aggregate(self, *args):
         sql = self.sql(args)
@@ -122,16 +123,29 @@ class BigQuerySet():
         return operation, attribute
 
     def sql(self, aggs=[]):
+        query_fields = []
+        if self.fields:
+            query_fields += self.fields
         if aggs:
-            query = f'SELECT '
             for agg in aggs:
                 operation, attribute = self.aggregation_parser(agg)
-                query += f'{operation}({attribute}) AS {attribute}, '
-            query = query[:-2]
-            query += f' FROM {self.table} '
-        elif self.fields:
-            query = f'SELECT {", ".join(self.fields)} FROM {self.table}'
+                query_fields.append(f'{operation}({attribute}) AS {attribute}')
 
+        # if aggs:
+        #     query = f'SELECT '
+        #     for agg in aggs:
+        #         operation, attribute = self.aggregation_parser(agg)
+        #         query += f'{operation}({attribute}) AS {attribute}, '
+        #     query = query[:-2]
+        #     query += f' FROM {self.table} '
+        # elif self.fields:
+        #     query = f'SELECT {", ".join(self.fields)} FROM {self.table}'
+
+        # else:
+        #     query = f'SELECT * FROM {self.table} '
+
+        if len(query_fields) > 0:
+            query = f'SELECT {", ".join(query_fields)} FROM {self.table} '
         else:
             query = f'SELECT * FROM {self.table} '
 
@@ -141,12 +155,19 @@ class BigQuerySet():
                 key, operand, var_name = self.attribute_parser(key)
                 query += f'{key} {operand} @{var_name} AND '
             query = query[:-5]
+
+        if self.group:
+            group_by = ', '.join(self.group)
+            query += f' GROUP BY {group_by}'
+
         return query
 
 
 attribute = BigQuerySet('konoha')
 
 result = attribute.filter(id=1, age=4, date__gte=8, subtable__chakra__gt=7, start__lte=6, end__lt=19)
+result = attribute.select('name', 'hokage')
+result = attribute.order_by('name', 'location')
 print(result.sql())
 print(result.get_params())
 print(result.aggregate(Sum('age')))
