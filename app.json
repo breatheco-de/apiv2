@@ -7,6 +7,9 @@
   "buildpacks": [
     {
       "url": "heroku/python"
+    },
+    {
+      "url": "heroku/pgbouncer"
     }
   ],
   "environments": {
