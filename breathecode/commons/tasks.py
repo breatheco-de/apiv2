@@ -142,14 +142,14 @@ MODULES = {}
 @task(bind=False, priority=TaskPriority.CACHE.value)
 def clean_task(key: str, **_: Any):
     # make sure all the modules are loaded
-    from breathecode.admissions import caches as _
-    from breathecode.assignments import caches as _
-    from breathecode.events import caches as _
-    from breathecode.feedback import caches as _
-    from breathecode.marketing import caches as _
-    from breathecode.mentorship import caches as _
-    from breathecode.payments import caches as _
-    from breathecode.registry import caches as _
+    from breathecode.admissions import caches as _  # noqa: F811, F401
+    from breathecode.assignments import caches as _  # noqa: F811, F401
+    from breathecode.events import caches as _  # noqa: F811, F401
+    from breathecode.feedback import caches as _  # noqa: F811, F401
+    from breathecode.marketing import caches as _  # noqa: F811, F401
+    from breathecode.mentorship import caches as _  # noqa: F811, F401
+    from breathecode.payments import caches as _  # noqa: F811, F401
+    from breathecode.registry import caches as _  # noqa: F811, F401
 
     unpack = key.split('.')
     model = unpack[-1]

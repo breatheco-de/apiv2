@@ -1211,7 +1211,6 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         from breathecode.marketing.models import Course
 
         country = data['country'] if 'country' in data else None
-        city = data['city'] if 'city' in data else None
         forbidden_countries = ['spain']
 
         lang = self.context.get('lang', 'en')

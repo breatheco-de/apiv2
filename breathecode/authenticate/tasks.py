@@ -3,9 +3,8 @@ from celery import shared_task
 from django.contrib.auth.models import User
 from breathecode.authenticate.models import UserInvite
 from breathecode.marketing.actions import validate_email
-from breathecode.utils.decorators import task, RetryTask
 
-from breathecode.utils.decorators.task import AbortTask, TaskPriority, task
+from breathecode.utils.decorators.task import AbortTask, TaskPriority, task, RetryTask
 from breathecode.utils.validation_exception import ValidationException
 from .actions import set_gitpod_user_expiration, add_to_organization, remove_from_organization
 from breathecode.notify import actions as notify_actions

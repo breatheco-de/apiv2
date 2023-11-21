@@ -65,6 +65,7 @@ def async_test_asset(asset_slug):
 
     return False
 
+
 @shared_task(priority=TaskPriority.ACADEMY.value)
 def async_update_frontend_asset_cache(asset_slug):
     try:
@@ -76,6 +77,7 @@ def async_update_frontend_asset_cache(asset_slug):
         requests.put(url=url)
     except Exception as e:
         logger.error(str(e))
+
 
 @shared_task(priority=TaskPriority.ACADEMY.value)
 def async_regenerate_asset_readme(asset_slug):
@@ -345,11 +347,11 @@ def async_upload_image_to_bucket(id, **_):
 
     img.download_status = 'PENDING'
     # FIXME: undefined variable
-    img.download_details = f'Downloading {link}'
+    img.download_details = f'Downloading {img.original_url}'
     img.save()
 
     try:
-        img = upload_image_to_bucket(img, asset)
+        img = upload_image_to_bucket(img)
 
     except CircuitBreakerError as e:
         raise e
