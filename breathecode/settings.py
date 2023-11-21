@@ -134,6 +134,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     #'breathecode.utils.admin_timezone.TimezoneMiddleware',
+    'breathecode.middlewares.CompressResponseMiddleware',
     'django.middleware.http.ConditionalGetMiddleware',
 ]
 

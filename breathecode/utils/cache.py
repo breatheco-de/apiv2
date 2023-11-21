@@ -236,6 +236,7 @@ class Cache(metaclass=CacheMeta):
             data: str | dict | list[dict],
             format: str = 'application/json',
             timeout: int = -1,
+            encoding: Optional[str] = None,
             params: Optional[dict] = None) -> str:
         """Set a key value pair on the cache in bytes, it reminds the format and compress the data if needed."""
 
@@ -261,12 +262,19 @@ class Cache(metaclass=CacheMeta):
 
                 data = b'application/json:gzip    ' + data
 
-            elif compress:
+            elif compress and encoding == 'br':
                 data = brotli.compress(data)
                 res['data'] = data
                 res['headers']['Content-Encoding'] = 'br'
 
                 data = b'application/json:br    ' + data
+
+            elif compress and encoding == 'gzip':
+                data = gzip.compress(data)
+                res['data'] = data
+                res['headers']['Content-Encoding'] = 'gzip'
+
+                data = b'application/json:gzip    ' + data
 
             else:
                 res['data'] = data
@@ -284,12 +292,19 @@ class Cache(metaclass=CacheMeta):
 
                 data = b'text/html:gzip    ' + data
 
-            if compress:
+            if compress and encoding == 'br':
                 data = brotli.compress(data)
                 res['data'] = data
                 res['headers']['Content-Encoding'] = 'br'
 
                 data = b'text/html:br    ' + data
+
+            if compress and encoding == 'gzip':
+                data = gzip.compress(data)
+                res['data'] = data
+                res['headers']['Content-Encoding'] = 'gzip'
+
+                data = b'text/html:gzip    ' + data
 
             else:
                 res['data'] = data
@@ -307,12 +322,19 @@ class Cache(metaclass=CacheMeta):
 
                 data = b'text/plain:gzip    ' + data
 
-            if compress:
+            if compress and encoding == 'br':
                 data = brotli.compress(data)
                 res['data'] = data
                 res['headers']['Content-Encoding'] = 'br'
 
                 data = b'text/plain:br    ' + data
+
+            if compress and encoding == 'gzip':
+                data = gzip.compress(data)
+                res['data'] = data
+                res['headers']['Content-Encoding'] = 'gzip'
+
+                data = b'text/plain:gzip    ' + data
 
             else:
                 res['data'] = data
