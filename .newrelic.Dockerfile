@@ -48,3 +48,4 @@ RUN newrelic-infra
 
 RUN newrelic profile configure --accountId $NEW_RELIC_ACCOUNT_ID --apiKey $NEW_RELIC_API_KEY && \
     /usr/bin/newrelic install -n logs-integration
+#
