@@ -67,7 +67,7 @@ class CompressResponseMiddleware(MiddlewareMixin):
         if response.content:
             accept_encoding = request.META.get('HTTP_ACCEPT_ENCODING', '')
 
-            dont_force_gzip = use_gzip()
+            dont_force_gzip = not use_gzip()
 
             # sort by compression ratio and speed
             if 'zstd' in accept_encoding and dont_force_gzip:
