@@ -266,7 +266,7 @@ def test_set_cache(cache_cls: Cache, value, params, key):
 def test_set_cache_compressed(monkeypatch, cache_cls: Cache, value, params, key):
     monkeypatch.setattr('sys.getsizeof', lambda _: (random.randint(10, 1000) * 1024) + 1)
 
-    res = cache_cls.set(value, params=params)
+    res = cache_cls.set(value, params=params, encoding='br')
 
     serialized = brotli.compress(json.dumps(value).encode('utf-8'))
     assert res == {
@@ -319,11 +319,12 @@ def test_set_cache_compressed(monkeypatch, cache_cls: Cache, value, params, key)
         'x=1&y=2',
     ),
 ])
-def test_set_cache_compressed__gzip(monkeypatch, cache_cls: Cache, value, params, key):
+@pytest.mark.parametrize('use_gzip,encoding', [(True, 'br'), (False, 'gzip'), (True, 'gzip')])
+def test_set_cache_compressed__gzip(monkeypatch, cache_cls: Cache, value, params, key, use_gzip, encoding):
     monkeypatch.setattr('sys.getsizeof', lambda _: (random.randint(10, 1000) * 1024) + 1)
-    monkeypatch.setattr('breathecode.utils.cache.use_gzip', lambda: True)
+    monkeypatch.setattr('breathecode.utils.cache.use_gzip', lambda: use_gzip)
 
-    res = cache_cls.set(value, params=params)
+    res = cache_cls.set(value, params=params, encoding=encoding)
 
     serialized = gzip.compress(json.dumps(value).encode('utf-8'))
     assert res == {

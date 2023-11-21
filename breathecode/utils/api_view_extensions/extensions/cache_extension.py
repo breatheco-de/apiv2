@@ -30,9 +30,11 @@ class CacheExtension(ExtensionBase):
     _cache: Cache
     _cache_per_user: bool
     _cache_prefix: str
+    _encoding: Optional[str]
 
     def __init__(self, cache: Cache, **kwargs) -> None:
         self._cache = cache()
+        self._encoding = None
 
     def _optional_dependencies(self, cache_per_user: bool = False, cache_prefix: str = '', **kwargs):
         self._cache_per_user = cache_per_user
@@ -51,6 +53,16 @@ class CacheExtension(ExtensionBase):
 
         if lang := self._request.META.get('HTTP_ACCEPT_LANGUAGE'):
             extends['request.headers.accept-language'] = lang
+
+        # including the encoding in the params allow to support compression encoding
+        encoding = self._request.META.get('HTTP_ACCEPT_ENCODING')
+        if 'br' in encoding:
+            extends['request.headers.accept-encoding'] = 'br'
+            self._encoding = 'br'
+
+        elif 'gzip' in encoding:
+            extends['request.headers.accept-encoding'] = 'gzip'
+            self._encoding = 'gzip'
 
         if accept := self._request.META.get('HTTP_ACCEPT'):
             extends['request.headers.accept'] = accept
@@ -110,7 +122,11 @@ class CacheExtension(ExtensionBase):
             timeout = user_timeout()
 
         try:
-            res = self._cache.set(data, format=format, params=params, timeout=timeout)
+            res = self._cache.set(data,
+                                  format=format,
+                                  params=params,
+                                  timeout=timeout,
+                                  encoding=self._encoding)
             data = res['data']
             headers = {
                 **headers,
