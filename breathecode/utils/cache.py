@@ -1,4 +1,5 @@
 from __future__ import annotations
+import gzip
 import brotli
 import sys
 import functools
@@ -30,6 +31,11 @@ def is_compression_enabled():
 @functools.lru_cache(maxsize=1)
 def min_compression_size():
     return int(os.getenv('MIN_COMPRESSION_SIZE', '10'))
+
+
+@functools.lru_cache(maxsize=1)
+def use_gzip():
+    return os.getenv('USE_GZIP', '0').lower() in ENABLE_LIST_OPTIONS
 
 
 def must_compress(data):
@@ -180,7 +186,7 @@ class Cache(metaclass=CacheMeta):
 
         # parse a fixed amount of bytes to get the mime type
         try:
-            head = data[:30].decode('utf-8')
+            head = data[:32].decode('utf-8')
 
         # if the data cannot be decoded as utf-8, it means that a section was compressed
         except Exception as e:
@@ -191,9 +197,14 @@ class Cache(metaclass=CacheMeta):
             except Exception:
                 head = ''
 
-            headers['Content-Encoding'] = 'br'
+            if use_gzip():
+                headers['Content-Encoding'] = 'gzip'
+
+            else:
+                headers['Content-Encoding'] = 'br'
 
         for s in head:
+            # maybe this cannot process the html cases yet
             if s in ['{', '[']:
                 break
 
@@ -213,6 +224,9 @@ class Cache(metaclass=CacheMeta):
             mime = unpack[0]
             if len(unpack) == 2:
                 headers['Content-Encoding'] = unpack[1]
+
+        elif starts != 0 and mime[starts - 1] not in ['{', '[', '<']:
+            starts = 0
 
         return data[starts:], mime, headers
 
@@ -240,7 +254,14 @@ class Cache(metaclass=CacheMeta):
             data = json.dumps(data, default=serializer).encode('utf-8')
 
             # in kilobytes
-            if must_compress(data) and is_compression_enabled():
+            if (compress := (must_compress(data) and is_compression_enabled())) and use_gzip():
+                data = gzip.compress(data)
+                res['data'] = data
+                res['headers']['Content-Encoding'] = 'gzip'
+
+                data = b'application/json:gzip    ' + data
+
+            elif compress:
                 data = brotli.compress(data)
                 res['data'] = data
                 res['headers']['Content-Encoding'] = 'br'
@@ -256,7 +277,14 @@ class Cache(metaclass=CacheMeta):
             data = data.encode('utf-8')
 
             # in kilobytes
-            if must_compress(data) and is_compression_enabled():
+            if (compress := (must_compress(data) and is_compression_enabled())) and use_gzip():
+                data = gzip.compress(data)
+                res['data'] = data
+                res['headers']['Content-Encoding'] = 'gzip'
+
+                data = b'text/html:gzip    ' + data
+
+            if compress:
                 data = brotli.compress(data)
                 res['data'] = data
                 res['headers']['Content-Encoding'] = 'br'
@@ -272,7 +300,14 @@ class Cache(metaclass=CacheMeta):
             data = data.encode('utf-8')
 
             # in kilobytes
-            if must_compress(data) and is_compression_enabled():
+            if (compress := (must_compress(data) and is_compression_enabled())) and use_gzip():
+                data = gzip.compress(data)
+                res['data'] = data
+                res['headers']['Content-Encoding'] = 'gzip'
+
+                data = b'text/plain:gzip    ' + data
+
+            if compress:
                 data = brotli.compress(data)
                 res['data'] = data
                 res['headers']['Content-Encoding'] = 'br'
