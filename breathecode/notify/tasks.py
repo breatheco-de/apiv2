@@ -1,6 +1,6 @@
 from datetime import datetime
 import logging, os, requests, json
-from celery import shared_task, Task
+from celery import shared_task
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils import timezone
 

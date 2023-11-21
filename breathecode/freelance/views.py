@@ -463,9 +463,13 @@ def get_issues(request):
 @api_view(['GET'])
 def get_latest_bill(request, user_id=None):
     freelancer = Freelancer.objects.filter(user__id=user_id).first()
+    reviewer = None
+
+    if freelancer is None:
+        reviewer = Bill.objects.filter(reviewer__id=user_id).first()
 
     if freelancer is None or reviewer is None:
         raise serializers.ValidationError('Freelancer or reviewer not found', code=404)
 
-    open_bills = generate_freelancer_bill(freelancer)
+    open_bills = generate_freelancer_bill(freelancer or reviewer.freelancer)
     return Response(open_bills, status=status.HTTP_200_OK)

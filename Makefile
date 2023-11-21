@@ -5,6 +5,26 @@ PROJECT_ID := test
 
 # docker image for BigQuery emulator
 BQ_EMULATOR_IMAGE := ghcr.io/goccy/bigquery-emulator:latest
+NEW_RELIC_METADATA_COMMIT := $(shell git rev-parse HEAD)
+
+new-relic:
+	@echo ${NEW_RELIC_LICENSE_KEY}
+	@echo "license_key: ${NEW_RELIC_LICENSE_KEY}" | tee -a /etc/newrelic-infra.yml
+	newrelic-infra
+
+release:
+	@export CORALOGIX_SUBSYSTEM=web; \
+		export NEW_RELIC_METADATA_COMMIT=${NEW_RELIC_METADATA_COMMIT}; \
+		# newrelic-admin run-program bin/start-pgbouncer-stunnel \
+		gunicorn breathecode.wsgi --timeout 29 --workers ${WEB_WORKERS} \
+		--worker-connections ${WEB_WORKER_CONNECTION} --worker-class ${WEB_WORKER_CLASS}
+
+web:
+	@export CORALOGIX_SUBSYSTEM=web; \
+		export NEW_RELIC_METADATA_COMMIT=${NEW_RELIC_METADATA_COMMIT}; \
+		# newrelic-admin run-program bin/start-pgbouncer-stunnel \
+		gunicorn breathecode.wsgi --timeout 29 --workers ${WEB_WORKERS} \
+		--worker-connections ${WEB_WORKER_CONNECTION} --worker-class ${WEB_WORKER_CLASS}
 
 # target to run the test, it does not work yet, maybe it must be removed
 test:

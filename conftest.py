@@ -1,9 +1,8 @@
 import importlib
 import os
 import random
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 import pytest
-import requests
 from scripts.utils.environment import reset_environment, test_environment
 from breathecode.utils.exceptions import TestError
 import numpy as np
