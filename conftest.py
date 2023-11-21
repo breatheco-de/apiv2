@@ -328,6 +328,11 @@ def clean_environment():
     test_environment()
 
 
+@pytest.fixture(autouse=True)
+def disable_new_relic(monkeypatch):
+    monkeypatch.setattr('newrelic.core.agent.Agent._atexit_shutdown', lambda *args, **kwargs: None)
+
+
 @pytest.fixture()
 def random_image(fake):
 
