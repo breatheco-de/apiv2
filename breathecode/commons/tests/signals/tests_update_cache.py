@@ -473,7 +473,7 @@ def test_get_cache_compressed__no_meta(cache_cls: Cache, value, params, key, hea
     serialized = brotli.compress(v)
     cache.set(k, serialized)
 
-    assert cache_cls.get(params) == (serialized, 'application/json', headers)
+    assert cache_cls.get(params, encoding='br') == (serialized, 'application/json', headers)
 
 
 @pytest.mark.parametrize('cache_cls', [CohortCache, EventCache])

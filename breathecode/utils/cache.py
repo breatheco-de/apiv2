@@ -14,6 +14,7 @@ from circuitbreaker import circuit
 from django.db.models.fields.related_descriptors import (ReverseManyToOneDescriptor, ManyToManyDescriptor,
                                                          ForwardManyToOneDescriptor,
                                                          ReverseOneToOneDescriptor, ForwardOneToOneDescriptor)
+import zstandard
 
 __all__ = ['Cache', 'CACHE_DESCRIPTORS', 'CACHE_DEPENDENCIES']
 CACHE_DESCRIPTORS: dict[models.Model, Cache] = {}
@@ -172,7 +173,7 @@ class Cache(metaclass=CacheMeta):
 
     @classmethod
     @circuit
-    def get(cls, data) -> dict:
+    def get(cls, data, encoding: Optional[str] = None) -> dict:
         key = cls._generate_key(**data)
         data = cache.get(key)
 
@@ -186,7 +187,7 @@ class Cache(metaclass=CacheMeta):
 
         # parse a fixed amount of bytes to get the mime type
         try:
-            head = data[:32].decode('utf-8')
+            head = data[:35].decode('utf-8')
 
         # if the data cannot be decoded as utf-8, it means that a section was compressed
         except Exception as e:
@@ -200,7 +201,10 @@ class Cache(metaclass=CacheMeta):
             if use_gzip():
                 headers['Content-Encoding'] = 'gzip'
 
-            else:
+            elif encoding in ['br', 'zstd', 'deflate', 'gzip']:
+                headers['Content-Encoding'] = encoding
+
+            elif encoding != None:
                 headers['Content-Encoding'] = 'br'
 
         for s in head:
@@ -269,6 +273,21 @@ class Cache(metaclass=CacheMeta):
 
                 data = b'application/json:br    ' + data
 
+            # faster option, it should be the standard in the future
+            elif compress and encoding == 'zstd':
+                data = zstandard.compress(data)
+                res['data'] = data
+                res['headers']['Content-Encoding'] = 'zstd'
+
+                data = b'application/json:zstd    ' + data
+
+            elif compress and encoding == 'deflate':
+                data = zstandard.compress(data)
+                res['data'] = data
+                res['headers']['Content-Encoding'] = 'deflate'
+
+                data = b'application/json:deflate    ' + data
+
             elif compress and encoding == 'gzip':
                 data = gzip.compress(data)
                 res['data'] = data
@@ -292,14 +311,29 @@ class Cache(metaclass=CacheMeta):
 
                 data = b'text/html:gzip    ' + data
 
-            if compress and encoding == 'br':
+            elif compress and encoding == 'br':
                 data = brotli.compress(data)
                 res['data'] = data
                 res['headers']['Content-Encoding'] = 'br'
 
                 data = b'text/html:br    ' + data
 
-            if compress and encoding == 'gzip':
+            # faster option, it should be the standard in the future
+            elif compress and encoding == 'zstd':
+                data = zstandard.compress(data)
+                res['data'] = data
+                res['headers']['Content-Encoding'] = 'zstd'
+
+                data = b'text/html:zstd    ' + data
+
+            elif compress and encoding == 'deflate':
+                data = zstandard.compress(data)
+                res['data'] = data
+                res['headers']['Content-Encoding'] = 'deflate'
+
+                data = b'text/html:deflate    ' + data
+
+            elif compress and encoding == 'gzip':
                 data = gzip.compress(data)
                 res['data'] = data
                 res['headers']['Content-Encoding'] = 'gzip'
@@ -322,14 +356,29 @@ class Cache(metaclass=CacheMeta):
 
                 data = b'text/plain:gzip    ' + data
 
-            if compress and encoding == 'br':
+            elif compress and encoding == 'br':
                 data = brotli.compress(data)
                 res['data'] = data
                 res['headers']['Content-Encoding'] = 'br'
 
                 data = b'text/plain:br    ' + data
 
-            if compress and encoding == 'gzip':
+            # faster option, it should be the standard in the future
+            elif compress and encoding == 'zstd':
+                data = zstandard.compress(data)
+                res['data'] = data
+                res['headers']['Content-Encoding'] = 'zstd'
+
+                data = b'text/plain:zstd    ' + data
+
+            elif compress and encoding == 'deflate':
+                data = zstandard.compress(data)
+                res['data'] = data
+                res['headers']['Content-Encoding'] = 'deflate'
+
+                data = b'text/plain:deflate    ' + data
+
+            elif compress and encoding == 'gzip':
                 data = gzip.compress(data)
                 res['data'] = data
                 res['headers']['Content-Encoding'] = 'gzip'

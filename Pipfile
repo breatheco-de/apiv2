@@ -123,3 +123,4 @@ redis = {extras = ["hiredis"], version = "*"}
 brotli = "*"
 circuitbreaker = "*"
 kombu = "*"
+zstandard = "*"

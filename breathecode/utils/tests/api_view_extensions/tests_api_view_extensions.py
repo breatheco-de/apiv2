@@ -856,6 +856,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         request = APIRequestFactory()
         request = request.get('/the-beans-should-not-have-sugar')
+        request.META['HTTP_ACCEPT_ENCODING'] = 'gzip, deflate, br'
 
         view = PaginateFalseTestView.as_view()
 
