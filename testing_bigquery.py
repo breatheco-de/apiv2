@@ -166,9 +166,9 @@ class BigQuerySet():
         #     query = f'SELECT * FROM {self.table} '
 
         if len(query_fields) > 0:
-            query = f"""SELECT {", ".join(query_fields)} FROM `4geeks-dev.{self.table}` """
+            query = f"""SELECT {", ".join(query_fields)} FROM `breathecode-197918.4geeks_dev.{self.table}` """
         else:
-            query = f"""SELECT * FROM `4geeks-dev.{self.table}` """
+            query = f"""SELECT * FROM `breathecode-197918.4geeks_dev.{self.table}` """
 
         if self.query:
             query += 'WHERE '
