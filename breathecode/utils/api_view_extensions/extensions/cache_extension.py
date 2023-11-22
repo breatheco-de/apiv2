@@ -110,17 +110,7 @@ class CacheExtension(ExtensionBase):
             if res is None:
                 return None
 
-            data, mime, headers = res
-            print('data', data)
-            print('mime', mime)
-            print('headers', headers)
-
-            # if isinstance(data, list) or isinstance(data, dict):
-            #     response = Response(data, status=status.HTTP_200_OK, headers=headers)
-
-            # # bytes
-            # else:
-            #     response = HttpResponse(data, status=status.HTTP_200_OK, headers=headers)
+            data, headers = res
 
             response = HttpResponse(data, status=status.HTTP_200_OK, headers=headers)
             return response

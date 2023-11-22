@@ -3,10 +3,13 @@ import gzip
 import os
 import sys
 import zlib
+import brotli
 from django.utils.deprecation import MiddlewareMixin
 import zstandard
 
-IS_TEST = os.getenv('ENV', '') not in ['production', 'staging', 'development']
+ENV = os.getenv('ENV', '')
+IS_TEST = ENV not in ['production', 'staging', 'development']
+IS_DEV = ENV != 'production'
 ENABLE_LIST_OPTIONS = ['true', '1', 'yes', 'y']
 
 
@@ -66,6 +69,9 @@ class CompressResponseMiddleware(MiddlewareMixin):
         if response.content:
             accept_encoding = request.META.get('HTTP_ACCEPT_ENCODING', '')
 
+            # chrome have a bug when all zstd flags are enabled, deflate is not decoded in this case
+            is_deflate_default = 'zstd' not in accept_encoding
+
             dont_force_gzip = not use_gzip()
 
             # sort by compression ratio and speed
@@ -73,10 +79,15 @@ class CompressResponseMiddleware(MiddlewareMixin):
                 self._compress(response, 'zstd', zstandard.compress)
 
             # default to deflate
-            if ('deflate' in accept_encoding or '*' in accept_encoding) and dont_force_gzip:
+            if ('deflate' in accept_encoding or
+                (is_deflate_default and '*' in accept_encoding)) and dont_force_gzip:
                 self._compress(response, 'deflate', zlib.compress)
 
-            elif 'gzip' in accept_encoding:
+            elif 'gzip' in accept_encoding or (is_deflate_default is False and '*' in accept_encoding):
                 self._compress(response, 'gzip', gzip.compress)
+
+            elif IS_DEV and 'br' in accept_encoding and 'PostmanRuntime' in request.META.get(
+                    'HTTP_USER_AGENT', ''):
+                self._compress(response, 'br', brotli.compress)
 
         return response

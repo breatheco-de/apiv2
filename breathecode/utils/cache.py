@@ -227,7 +227,10 @@ class Cache(metaclass=CacheMeta):
         elif starts != 0 and mime[starts - 1] not in ['{', '[', '<']:
             starts = 0
 
-        return data[starts:], mime, headers
+        if mime:
+            headers['Content-Type'] = mime
+
+        return data[starts:], headers
 
     @classmethod
     @circuit
@@ -243,9 +246,8 @@ class Cache(metaclass=CacheMeta):
 
         headers = data.get('headers', {})
         content = data.get('content', None)
-        mime = data.get('mime', 'application/json')
 
-        return content, mime, headers
+        return content, headers
 
     @classmethod
     @circuit

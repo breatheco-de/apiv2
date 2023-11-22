@@ -94,8 +94,6 @@ class TestView(APIView):
         items = handler.queryset(items)
         serializer = GetCohortSerializer(items, many=True)
 
-        print(1, serializer.data)
-
         return handler.response(serializer.data)
 
 
@@ -1095,8 +1093,6 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
             },
             'content': serialize_cache_value(expected),
         }
-        print(res)
-        print(cache.get(key2))
         self.assertEqual(cache.get(key1), res)
         self.assertEqual(cache.get(key2), json_data)
 
