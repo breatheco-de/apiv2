@@ -46,7 +46,7 @@ class CompressResponseMiddleware(MiddlewareMixin):
             response.streaming_content = compressed_content
 
         response['Content-Encoding'] = encoding
-        response['Content-Length'] = str(len(compressed_content))
+        # response['Content-Length'] = str(len(compressed_content))
 
     def _must_compress(self, response):
         self._has_content = hasattr(response, 'content')
