@@ -269,6 +269,110 @@ def test_task__post__without_user_invite(bc: Breathecode, client: APIClient, val
 
 
 # """
+# 🔽🔽🔽 Post without UserInvite with Asset slug
+# """
+
+
+@patch('django.utils.timezone.now', MagicMock(return_value=now))
+def test_task__post__without_user_invite_with_asset_slug(bc: Breathecode, client: APIClient, validation_res):
+    url = reverse_lazy('authenticate:subscribe')
+    data = {
+        'email': 'pokemon@potato.io',
+        'first_name': 'lord',
+        'last_name': 'valdomero',
+        'phone': '+123123123',
+        'asset_slug': 'pokemon_exercise',
+    }
+
+    access_token = bc.random.string(lower=True, upper=True, number=True, size=40)
+    with patch('binascii.hexlify', MagicMock(return_value=bytes(access_token, 'utf-8'))):
+        response = client.post(url, data, format='json')
+
+    json = response.json()
+    expected = post_serializer(data={
+        'id': 1,
+        'access_token': access_token,
+        'user': 1,
+        **data,
+        'status': 'ACCEPTED',
+    })
+
+    assert json == expected
+    assert response.status_code == status.HTTP_201_CREATED
+    assert bc.database.list_of('authenticate.UserInvite') == [
+        user_invite_db_item(
+            data={
+                'token': hashlib.sha512(('pokemon@potato.io').encode('UTF-8') + b).hexdigest(),
+                'process_status': 'DONE',
+                'status': 'ACCEPTED',
+                'user_id': 1,
+                'city': None,
+                'country': None,
+                'latitude': None,
+                'longitude': None,
+                'email_quality': None,
+                'email_status': None,
+                **data,
+            }),
+    ]
+
+    assert bc.database.list_of('marketing.Course') == []
+    assert bc.database.list_of('payments.Plan') == []
+
+
+# """
+# 🔽🔽🔽 Post without UserInvite with Event slug
+# """
+
+
+@patch('django.utils.timezone.now', MagicMock(return_value=now))
+def test_task__post__without_user_invite_with_event_slug(bc: Breathecode, client: APIClient, validation_res):
+    url = reverse_lazy('authenticate:subscribe')
+    data = {
+        'email': 'pokemon@potato.io',
+        'first_name': 'lord',
+        'last_name': 'valdomero',
+        'phone': '+123123123',
+        'event_slug': 'pokemon_event',
+    }
+
+    access_token = bc.random.string(lower=True, upper=True, number=True, size=40)
+    with patch('binascii.hexlify', MagicMock(return_value=bytes(access_token, 'utf-8'))):
+        response = client.post(url, data, format='json')
+
+    json = response.json()
+    expected = post_serializer(data={
+        'id': 1,
+        'access_token': access_token,
+        'user': 1,
+        **data,
+        'status': 'ACCEPTED',
+    })
+
+    assert json == expected
+    assert response.status_code == status.HTTP_201_CREATED
+    assert bc.database.list_of('authenticate.UserInvite') == [
+        user_invite_db_item(
+            data={
+                'token': hashlib.sha512(('pokemon@potato.io').encode('UTF-8') + b).hexdigest(),
+                'process_status': 'DONE',
+                'status': 'ACCEPTED',
+                'user_id': 1,
+                'city': None,
+                'country': None,
+                'latitude': None,
+                'longitude': None,
+                'email_quality': None,
+                'email_status': None,
+                **data,
+            }),
+    ]
+
+    assert bc.database.list_of('marketing.Course') == []
+    assert bc.database.list_of('payments.Plan') == []
+
+
+# """
 # 🔽🔽🔽 Post with UserInvite
 # """
 
