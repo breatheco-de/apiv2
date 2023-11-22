@@ -1,4 +1,4 @@
-import serpy, logging, re
+import logging, re
 from django.utils import timezone
 from datetime import timedelta
 from .models import CourseTranslation, FormEntry, AcademyAlias, ShortLink, Tag, ActiveCampaignAcademy, Automation
@@ -8,6 +8,7 @@ from rest_framework import serializers
 from breathecode.utils.integer_to_base import to_base
 from breathecode.utils.validation_exception import ValidationException
 from django.db.models.query_utils import Q
+from breathecode.utils import serpy
 
 logger = logging.getLogger(__name__)
 

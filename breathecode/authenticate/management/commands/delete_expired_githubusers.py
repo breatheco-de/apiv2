@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
-from ...models import GithubAcademyUser
+from ...models import AcademyAuthSettings, GithubAcademyUser
 from breathecode.admissions.models import CohortUser
+from breathecode.services.github import Github
 
 
 class Command(BaseCommand):
@@ -11,14 +12,22 @@ class Command(BaseCommand):
         self.delete_from_github_org()
 
     def delete_from_github_org(self):
+        academies: dict[str, Github] = {}
         deleted_users = GithubAcademyUser.objects.filter(storage_action='DELETE', storage_status='SYNCHED')
         for github in deleted_users:
+            if github.academy.id not in academies:
+                settings = AcademyAuthSettings.objects.filter(academy__id=github.academy.id).first()
+                academies[github.academy.id] = Github(org=settings.github_username,
+                                                      token=settings.github_owner.credentialsgithub.token)
+
+            gb = academies[github.academy.id]
+
             try:
                 gb.delete_org_member(github.username)
-                _member.log('Successfully deleted in github organization')
+                github.log('Successfully deleted in github organization')
                 print('Deleted github user: ' + github.username)
             except Exception as e:
-                _member.log('Error calling github API while deleting member from org: ' + str(e))
+                github.log('Error calling github API while deleting member from org: ' + str(e))
                 print('Error deleting github user: ' + github.username)
 
     def is_user_active_in_other_cohorts(self, user, current_cohort, academy):

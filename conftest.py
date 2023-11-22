@@ -1,9 +1,8 @@
 import importlib
 import os
 import random
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 import pytest
-import requests
 from scripts.utils.environment import reset_environment, test_environment
 from breathecode.utils.exceptions import TestError
 import numpy as np
@@ -136,6 +135,19 @@ def enable_hook_manager(monkeypatch):
         monkeypatch.setattr(HookManagerClass, 'process_model_event', original_process_model_event)
 
     yield enable
+
+
+@pytest.fixture(autouse=True)
+def disable_newrelic_prints(monkeypatch):
+    """
+    Disable NewRelic prints.
+    """
+
+    monkeypatch.setattr('newrelic.core.agent._logger.info', lambda *args, **kwargs: None)
+    monkeypatch.setattr('newrelic.core.agent._logger.warn', lambda *args, **kwargs: None)
+    monkeypatch.setattr('newrelic.core.agent._logger.error', lambda *args, **kwargs: None)
+
+    yield
 
 
 @pytest.fixture(autouse=True)
@@ -314,6 +326,11 @@ def patch_request(monkeypatch):
 def clean_environment():
     reset_environment()
     test_environment()
+
+
+@pytest.fixture(autouse=True)
+def disable_new_relic(monkeypatch):
+    monkeypatch.setattr('newrelic.core.agent.Agent._atexit_shutdown', lambda *args, **kwargs: None)
 
 
 @pytest.fixture()

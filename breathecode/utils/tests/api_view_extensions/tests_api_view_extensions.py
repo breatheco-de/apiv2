@@ -19,6 +19,17 @@ import brotli
 cohort_cache = CohortCache()
 
 
+def serialize_cache_object(data, headers={}):
+    res = {
+        'headers': {
+            'Content-Type': 'application/json',
+            **headers,
+        },
+        'content': json.dumps(data).encode('utf-8'),
+    }
+    return res
+
+
 class GetCohortSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
@@ -351,7 +362,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             slug = self.bc.fake.slug()
             model = self.bc.database.create(cohort={'slug': slug})
 
-            json_data = json.dumps(case).encode('utf-8')
+            json_data = serialize_cache_object(case)
             cache.set('Cohort__', json_data)
             cache.set('Cohort__keys', {'Cohort__'})
 
@@ -372,8 +383,15 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(cohort_cache.keys(), {'Cohort__', key})
-            self.assertEqual(cache.get('Cohort__'), serialize_cache_value(case))
-            self.assertEqual(cache.get(key), b'application/json    ' + serialize_cache_value(expected))
+            self.assertEqual(cache.get('Cohort__'), serialize_cache_object(case))
+
+            res = {
+                'headers': {
+                    'Content-Type': 'application/json',
+                },
+                'content': serialize_cache_value(expected),
+            }
+            self.assertEqual(cache.get(key), res)
 
     def test_cache__get__with_cache_case_of_root_and_current__passing_arguments(self):
         cases = [[], [{'x': 1}], [{'x': 1}, {'x': 2}]]
@@ -452,7 +470,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             slug = self.bc.fake.slug()
             model = self.bc.database.create(cohort={'slug': slug})
 
-            json_data = json.dumps(case).encode('utf-8')
+            json_data = serialize_cache_object(case)
             cache.set('Cohort__', json_data)
             cache.set('Cohort__keys', {'Cohort__'})
 
@@ -474,8 +492,15 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(cohort_cache.keys(), {'Cohort__', key})
-            self.assertEqual(cache.get('Cohort__'), serialize_cache_value(case))
-            self.assertEqual(cache.get(key), b'application/json    ' + serialize_cache_value(expected))
+            self.assertEqual(cache.get('Cohort__'), serialize_cache_object(case))
+
+            res = {
+                'headers': {
+                    'Content-Type': 'application/json',
+                },
+                'content': serialize_cache_value(expected),
+            }
+            self.assertEqual(cache.get(key), res)
 
     def test_cache_per_user__get__with_cache_case_of_root_and_current__passing_arguments(self):
         cases = [[], [{'x': 1}], [{'x': 1}, {'x': 2}]]
@@ -559,7 +584,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             slug = self.bc.fake.slug()
             model = self.bc.database.create(cohort={'slug': slug}, user=1)
 
-            json_data = json.dumps(case).encode('utf-8')
+            json_data = serialize_cache_object(case)
             cache.set('Cohort__', json_data)
             cache.set('Cohort__keys', {'Cohort__'})
 
@@ -582,8 +607,15 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(cohort_cache.keys(), {'Cohort__', key})
-            self.assertEqual(cache.get('Cohort__'), serialize_cache_value(case))
-            self.assertEqual(cache.get(key), b'application/json    ' + serialize_cache_value(expected))
+            self.assertEqual(cache.get('Cohort__'), serialize_cache_object(case))
+
+            res = {
+                'headers': {
+                    'Content-Type': 'application/json',
+                },
+                'content': serialize_cache_value(expected),
+            }
+            self.assertEqual(cache.get(key), res)
 
     def test_cache_per_user__get__auth__with_cache_case_of_root_and_current__passing_arguments(self):
         cases = [[], [{'x': 1}], [{'x': 1}, {'x': 2}]]
@@ -595,8 +627,8 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             self.bc.database.delete('admissions.Cohort')
             model = self.bc.database.create(cohort={'slug': slug}, user=1)
 
-            json_data_root = json.dumps(case).encode('utf-8')
-            json_data_query = json.dumps(case + case).encode('utf-8')
+            json_data_root = serialize_cache_object(case)
+            json_data_query = serialize_cache_object(case + case)
             cache.set('Cohort__', json_data_root)
 
             key = 'Cohort__' + urllib.parse.urlencode(
@@ -666,7 +698,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             slug = self.bc.fake.slug()
             model = self.bc.database.create(cohort={'slug': slug})
 
-            json_data = json.dumps(case).encode('utf-8')
+            json_data = serialize_cache_object(case)
             cache.set('Cohort__', json_data)
             cache.set('Cohort__keys', {'Cohort__'})
 
@@ -691,8 +723,15 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
                 'Cohort__',
                 key,
             })
-            self.assertEqual(cache.get('Cohort__'), serialize_cache_value(case))
-            self.assertEqual(cache.get(key), b'application/json    ' + serialize_cache_value(expected))
+            self.assertEqual(cache.get('Cohort__'), serialize_cache_object(case))
+
+            res = {
+                'headers': {
+                    'Content-Type': 'application/json',
+                },
+                'content': serialize_cache_value(expected),
+            }
+            self.assertEqual(cache.get(key), res)
 
     def test_cache_with_prefix__get__with_cache_case_of_root_and_current__passing_arguments(self):
         cases = [[], [{'x': 1}], [{'x': 1}, {'x': 2}]]
@@ -856,6 +895,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         request = APIRequestFactory()
         request = request.get('/the-beans-should-not-have-sugar')
+        request.META['HTTP_ACCEPT_ENCODING'] = 'gzip, deflate, br'
 
         view = PaginateFalseTestView.as_view()
 
@@ -983,7 +1023,14 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
             '/the-beans-should-not-have-sugar/1',
         })
         self.assertEqual(cohort_cache.keys(), {key})
-        self.assertEqual(cache.get(key), b'application/json    ' + serialize_cache_value(expected))
+
+        res = {
+            'headers': {
+                'Content-Type': 'application/json',
+            },
+            'content': serialize_cache_value(expected),
+        }
+        self.assertEqual(cache.get(key), res)
 
     def test_cache__get__with_cache(self):
         cache.clear()
@@ -1017,7 +1064,7 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
         slug = self.bc.fake.slug()
         model = self.bc.database.create(cohort={'slug': slug})
 
-        json_data = json.dumps(case).encode('utf-8')
+        json_data = serialize_cache_object(case)
         key1 = 'Cohort__id=1&' + urllib.parse.urlencode({
             'request.path': '/the-beans-should-not-have-sugar/1',
         })
@@ -1038,9 +1085,16 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(cohort_cache.keys(), {'Cohort__', key1, key2})
-        self.assertEqual(cache.get('Cohort__'), serialize_cache_value(case))
-        self.assertEqual(cache.get(key1), b'application/json    ' + serialize_cache_value(expected))
-        self.assertEqual(cache.get(key2), serialize_cache_value(case))
+        self.assertEqual(cache.get('Cohort__'), serialize_cache_object(case))
+
+        res = {
+            'headers': {
+                'Content-Type': 'application/json',
+            },
+            'content': serialize_cache_value(expected),
+        }
+        self.assertEqual(cache.get(key1), res)
+        self.assertEqual(cache.get(key2), json_data)
 
     def test_cache__get__with_cache_case_of_root_and_current(self):
         cases = [({'x': 1}, {'y': 1}), ({'x': 2}, {'y': 2}), ({'x': 3}, {'y': 3})]

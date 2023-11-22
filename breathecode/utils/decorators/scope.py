@@ -140,7 +140,7 @@ def signature_schema(request, required_scopes, authorization: str, use_signature
     public_key, private_key = key
 
     if require_an_agreement:
-        required_app_scopes, optional_app_scopes = get_user_scopes(authorization['App'], payload['sub'])
+        required_app_scopes, optional_app_scopes = get_user_scopes(authorization['App'])
         all_scopes = required_app_scopes + optional_app_scopes
 
         for s in required_scopes:

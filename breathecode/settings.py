@@ -134,6 +134,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     #'breathecode.utils.admin_timezone.TimezoneMiddleware',
+    'breathecode.middlewares.CompressResponseMiddleware',
     'django.middleware.http.ConditionalGetMiddleware',
 ]
 
@@ -319,7 +320,7 @@ if REDIS_URL == '' or REDIS_URL == 'redis://localhost:6379':
 else:
     IS_REDIS_WITH_SSL = True
 
-CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 60 * 24))
+CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('GLOBAL_CACHE_MINUTES', 60 * 24))
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
