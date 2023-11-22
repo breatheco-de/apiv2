@@ -1,5 +1,17 @@
 from google.cloud import bigquery
+import os
+import django
 import datetime
+
+# Set the DJANGO_SETTINGS_MODULE environment variable to your project's settings module
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'breathecode.settings')
+
+# Manually initialize Django
+django.setup()
+
+from breathecode.services.google_cloud.big_query import BigQuery
+
+client = None
 
 
 class Sum():
@@ -41,8 +53,17 @@ class BigQuerySet():
         print(sql)
         params, kwparams = self.get_params()
 
+        client, project_id, dataset = BigQuery.client()
+        # print('params')
+        # print(params)
+        # print('kwparams')
+        # print(kwparams)
+        print('EPALEEE')
+        print(sql[0:1])
+        print(sql[1:44])
         query_job = client.query(sql, *params, **kwparams)
-        return query_job.results()
+        # print(dir(query_job))
+        return query_job.result()
 
     def build(self):
         sql = self.sql()
@@ -95,7 +116,7 @@ class BigQuerySet():
             key, operand, var_name = self.attribute_parser(key)
             query_params.append(bigquery.ScalarQueryParameter(var_name, self.get_type(val), val))
 
-        job_config = bigquery.QueryJobConfig(destination=f'breathecode.4geeks-dev.konoha',
+        job_config = bigquery.QueryJobConfig(destination=f'breathecode-197918.4geeks_dev.konoha',
                                              query_parameters=query_params)
         kwparams['job_config'] = job_config
 
@@ -145,9 +166,9 @@ class BigQuerySet():
         #     query = f'SELECT * FROM {self.table} '
 
         if len(query_fields) > 0:
-            query = f'SELECT {", ".join(query_fields)} FROM {self.table} '
+            query = f"""SELECT {", ".join(query_fields)} FROM `4geeks-dev.{self.table}` """
         else:
-            query = f'SELECT * FROM {self.table} '
+            query = f"""SELECT * FROM `4geeks-dev.{self.table}` """
 
         if self.query:
             query += 'WHERE '
@@ -165,7 +186,7 @@ class BigQuerySet():
 
 attribute = BigQuerySet('konoha')
 
-result = attribute.filter(id=1, age=4, date__gte=8, subtable__chakra__gt=7, start__lte=6, end__lt=19)
+result = attribute.filter(id=1, age=4, date__gte=8, subtable__chakra__gt=7, start__lte=6, chakra__lt=19)
 result = attribute.select('name', 'hokage')
 result = attribute.order_by('name', 'location')
 print(result.sql())
