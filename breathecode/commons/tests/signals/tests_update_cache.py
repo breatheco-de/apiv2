@@ -215,7 +215,7 @@ def test_set_cache(cache_cls: Cache, value, params, key):
 
     serialized = json.dumps(value).encode('utf-8')
     assert res == {
-        'data': serialized,
+        'content': serialized,
         'headers': {
             'Content-Type': 'application/json',
         },
@@ -226,7 +226,7 @@ def test_set_cache(cache_cls: Cache, value, params, key):
     assert sorted(cache.keys()) == sorted([keys, k])
     assert cache_cls.keys() == {k}
 
-    assert cache.get(k) == b'application/json    ' + json.dumps(value).encode('utf-8')
+    assert cache.get(k) == res
 
 
 @pytest.mark.parametrize('cache_cls', [CohortCache, EventCache])
@@ -270,7 +270,7 @@ def test_set_cache_compressed(monkeypatch, cache_cls: Cache, value, params, key)
 
     serialized = brotli.compress(json.dumps(value).encode('utf-8'))
     assert res == {
-        'data': serialized,
+        'content': serialized,
         'headers': {
             'Content-Encoding': 'br',
             'Content-Type': 'application/json',
@@ -282,7 +282,7 @@ def test_set_cache_compressed(monkeypatch, cache_cls: Cache, value, params, key)
     assert sorted(cache.keys()) == sorted([k, keys])
     assert cache_cls.keys() == {k}
 
-    assert cache.get(k) == b'application/json:br    ' + serialized
+    assert cache.get(k) == res
 
 
 @pytest.mark.parametrize('cache_cls', [CohortCache, EventCache])
@@ -327,8 +327,9 @@ def test_set_cache_compressed__gzip(monkeypatch, cache_cls: Cache, value, params
     res = cache_cls.set(value, params=params, encoding=encoding)
 
     serialized = gzip.compress(json.dumps(value).encode('utf-8'))
+    print(res)
     assert res == {
-        'data': serialized,
+        'content': serialized,
         'headers': {
             'Content-Encoding': 'gzip',
             'Content-Type': 'application/json',
@@ -340,7 +341,7 @@ def test_set_cache_compressed__gzip(monkeypatch, cache_cls: Cache, value, params
     assert sorted(cache.keys()) == sorted([k, keys])
     assert cache_cls.keys() == {k}
 
-    assert cache.get(k) == b'application/json:gzip    ' + serialized
+    assert cache.get(k) == res
 
 
 @pytest.mark.parametrize('cache_cls', [CohortCache, EventCache])

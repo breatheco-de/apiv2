@@ -7,6 +7,7 @@ from breathecode.utils.api_view_extensions.priorities.response_order import Resp
 from breathecode.utils.cache import Cache
 from django.http import HttpResponse
 from rest_framework import status
+from rest_framework.response import Response
 
 __all__ = ['CacheExtension']
 
@@ -110,7 +111,18 @@ class CacheExtension(ExtensionBase):
                 return None
 
             data, mime, headers = res
-            response = HttpResponse(data, content_type=mime, status=status.HTTP_200_OK, headers=headers)
+            print('data', data)
+            print('mime', mime)
+            print('headers', headers)
+
+            # if isinstance(data, list) or isinstance(data, dict):
+            #     response = Response(data, status=status.HTTP_200_OK, headers=headers)
+
+            # # bytes
+            # else:
+            #     response = HttpResponse(data, status=status.HTTP_200_OK, headers=headers)
+
+            response = HttpResponse(data, status=status.HTTP_200_OK, headers=headers)
             return response
 
         except Exception:
@@ -146,7 +158,7 @@ class CacheExtension(ExtensionBase):
                                   params=params,
                                   timeout=timeout,
                                   encoding=self._encoding)
-            data = res['data']
+            data = res['content']
             headers = {
                 **headers,
                 **res['headers'],

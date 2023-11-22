@@ -1,5 +1,6 @@
 from __future__ import annotations
 import gzip
+import zlib
 import brotli
 import sys
 import functools
@@ -171,15 +172,9 @@ class Cache(metaclass=CacheMeta):
     def keys(cls):
         return cache.get(f'{cls._version_prefix}{cls.model.__name__}__keys') or set()
 
+    # DEPRECATED: 11/10/2021, remove this in december 2023, it was here to handle the old cache values
     @classmethod
-    @circuit
-    def get(cls, data, encoding: Optional[str] = None) -> dict:
-        key = cls._generate_key(**data)
-        data = cache.get(key)
-
-        if data is None:
-            return None
-
+    def _legacy_get(cls, data, encoding: Optional[str] = None) -> dict:
         spaces = 0
         starts = 0
         mime = 'application/json'
@@ -236,6 +231,24 @@ class Cache(metaclass=CacheMeta):
 
     @classmethod
     @circuit
+    def get(cls, data, encoding: Optional[str] = None) -> dict:
+        key = cls._generate_key(**data)
+        data = cache.get(key)
+
+        if data is None:
+            return None
+
+        if isinstance(data, str) or isinstance(data, bytes):
+            return cls._legacy_get(data, encoding)
+
+        headers = data.get('headers', {})
+        content = data.get('content', None)
+        mime = data.get('mime', 'application/json')
+
+        return content, mime, headers
+
+    @classmethod
+    @circuit
     def set(cls,
             data: str | dict | list[dict],
             format: str = 'application/json',
@@ -252,151 +265,51 @@ class Cache(metaclass=CacheMeta):
             'headers': {
                 'Content-Type': format,
             },
+            'content': None,
         }
 
         # serialize the data to avoid serialization on get requests
         if format == 'application/json':
             data = json.dumps(data, default=serializer).encode('utf-8')
 
-            # in kilobytes
-            if (compress := (must_compress(data) and is_compression_enabled())) and use_gzip():
-                data = gzip.compress(data)
-                res['data'] = data
-                res['headers']['Content-Encoding'] = 'gzip'
-
-                data = b'application/json:gzip    ' + data
-
-            elif compress and encoding == 'br':
-                data = brotli.compress(data)
-                res['data'] = data
-                res['headers']['Content-Encoding'] = 'br'
-
-                data = b'application/json:br    ' + data
-
-            # faster option, it should be the standard in the future
-            elif compress and encoding == 'zstd':
-                data = zstandard.compress(data)
-                res['data'] = data
-                res['headers']['Content-Encoding'] = 'zstd'
-
-                data = b'application/json:zstd    ' + data
-
-            elif compress and encoding == 'deflate':
-                data = zstandard.compress(data)
-                res['data'] = data
-                res['headers']['Content-Encoding'] = 'deflate'
-
-                data = b'application/json:deflate    ' + data
-
-            elif compress and encoding == 'gzip':
-                data = gzip.compress(data)
-                res['data'] = data
-                res['headers']['Content-Encoding'] = 'gzip'
-
-                data = b'application/json:gzip    ' + data
-
-            else:
-                res['data'] = data
-
-                data = b'application/json    ' + data
-
-        elif format == 'text/html':
+        elif isinstance(data, str):
             data = data.encode('utf-8')
 
-            # in kilobytes
-            if (compress := (must_compress(data) and is_compression_enabled())) and use_gzip():
-                data = gzip.compress(data)
-                res['data'] = data
-                res['headers']['Content-Encoding'] = 'gzip'
+        else:
+            data = data
 
-                data = b'text/html:gzip    ' + data
+        # in kilobytes
+        if (compress := (must_compress(data) and is_compression_enabled())) and use_gzip():
+            res['content'] = gzip.compress(data)
+            res['headers']['Content-Encoding'] = 'gzip'
 
-            elif compress and encoding == 'br':
-                data = brotli.compress(data)
-                res['data'] = data
-                res['headers']['Content-Encoding'] = 'br'
+        elif compress and encoding == 'br':
+            res['content'] = brotli.compress(data)
+            res['headers']['Content-Encoding'] = 'br'
 
-                data = b'text/html:br    ' + data
+        # faster option, it should be the standard in the future
+        elif compress and encoding == 'zstd':
+            res['content'] = zstandard.compress(data)
+            res['headers']['Content-Encoding'] = 'zstd'
 
-            # faster option, it should be the standard in the future
-            elif compress and encoding == 'zstd':
-                data = zstandard.compress(data)
-                res['data'] = data
-                res['headers']['Content-Encoding'] = 'zstd'
+        elif compress and encoding == 'deflate':
+            res['content'] = zlib.compress(data)
+            res['headers']['Content-Encoding'] = 'deflate'
 
-                data = b'text/html:zstd    ' + data
+        elif compress and encoding == 'gzip':
+            res['content'] = gzip.compress(data)
+            res['headers']['Content-Encoding'] = 'gzip'
 
-            elif compress and encoding == 'deflate':
-                data = zstandard.compress(data)
-                res['data'] = data
-                res['headers']['Content-Encoding'] = 'deflate'
-
-                data = b'text/html:deflate    ' + data
-
-            elif compress and encoding == 'gzip':
-                data = gzip.compress(data)
-                res['data'] = data
-                res['headers']['Content-Encoding'] = 'gzip'
-
-                data = b'text/html:gzip    ' + data
-
-            else:
-                res['data'] = data
-
-                data = b'text/html    ' + data
-
-        elif format == 'text/plain':
-            data = data.encode('utf-8')
-
-            # in kilobytes
-            if (compress := (must_compress(data) and is_compression_enabled())) and use_gzip():
-                data = gzip.compress(data)
-                res['data'] = data
-                res['headers']['Content-Encoding'] = 'gzip'
-
-                data = b'text/plain:gzip    ' + data
-
-            elif compress and encoding == 'br':
-                data = brotli.compress(data)
-                res['data'] = data
-                res['headers']['Content-Encoding'] = 'br'
-
-                data = b'text/plain:br    ' + data
-
-            # faster option, it should be the standard in the future
-            elif compress and encoding == 'zstd':
-                data = zstandard.compress(data)
-                res['data'] = data
-                res['headers']['Content-Encoding'] = 'zstd'
-
-                data = b'text/plain:zstd    ' + data
-
-            elif compress and encoding == 'deflate':
-                data = zstandard.compress(data)
-                res['data'] = data
-                res['headers']['Content-Encoding'] = 'deflate'
-
-                data = b'text/plain:deflate    ' + data
-
-            elif compress and encoding == 'gzip':
-                data = gzip.compress(data)
-                res['data'] = data
-                res['headers']['Content-Encoding'] = 'gzip'
-
-                data = b'text/plain:gzip    ' + data
-
-            else:
-                res['data'] = data
-
-                data = b'text/plain    ' + data
+        else:
+            res['content'] = data
 
         # encode the response to avoid serialization on get requests
         if timeout == -1:
-            cache.set(key, data)
+            cache.set(key, res)
 
         # encode the response to avoid serialization on get requests
         else:
-            cache.set(key, data, timeout)
+            cache.set(key, res, timeout)
 
         keys = cache.get(f'{cls._version_prefix}{cls.model.__name__}__keys') or set()
         keys.add(key)
