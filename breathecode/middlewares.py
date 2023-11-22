@@ -1,6 +1,5 @@
 import functools
 import gzip
-from io import BytesIO
 import os
 import sys
 import zlib
