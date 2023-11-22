@@ -7,7 +7,7 @@ For more information on this file, see
 https://docs.djangoproject.com/en/3.0/howto/deployment/wsgi/
 """
 
-# keeps this adobe
+# keeps this above
 import newrelic.agent
 
 newrelic.agent.initialize()
