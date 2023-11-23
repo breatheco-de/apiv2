@@ -1007,5 +1007,5 @@ class AnswerIdTestSuite(MarketingTestCase):
                      'field[18,0]': model['academy'].slug,
                      'field[2,0]': 'asdasd',
                  },
-                 timeout=2),
+                 timeout=3),
         ])
