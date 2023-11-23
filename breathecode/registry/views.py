@@ -30,7 +30,7 @@ from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerialize
                           AssetKeywordBigSerializer, PUTCategorySerializer, POSTCategorySerializer,
                           KeywordClusterMidSerializer, SEOReportSerializer, OriginalityScanSerializer,
                           VariableSmallSerializer, AssetAndTechnologySerializer,
-                          AssetBigAndTechnologySerializer)
+                          AssetBigAndTechnologySerializer, AssetBigAndTechnologyPublishedSerializer)
 from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
 from breathecode.utils.views import render_message
 from rest_framework.response import Response
@@ -529,7 +529,7 @@ class AssetView(APIView, GenerateLookupsMixin):
             if asset is None:
                 raise ValidationException(f'Asset {asset_slug} not found', status.HTTP_404_NOT_FOUND)
 
-            serializer = AssetBigAndTechnologySerializer(asset)
+            serializer = AssetBigAndTechnologyPublishedSerializer(asset)
             return handler.response(serializer.data)
 
         items = Asset.objects.all()
@@ -576,11 +576,8 @@ class AssetView(APIView, GenerateLookupsMixin):
                 param = 'us'
             lookup['lang'] = param
 
-        if 'visibility' in self.request.GET:
-            param = self.request.GET.get('visibility')
-            lookup['visibility__in'] = [p.upper() for p in param.split(',')]
-        else:
-            lookup['visibility'] = 'PUBLIC'
+        if 'status' not in self.request.GET:
+            lookup['status__in'] = ['PUBLISHED']
 
         try:
             if 'academy' in self.request.GET and self.request.GET.get('academy') not in ['null', '']:
