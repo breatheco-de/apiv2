@@ -401,6 +401,14 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                                                      last_name=item.last_name)
                     profile_academy.save()
 
+                if new_status.upper() == 'ACCEPTED' and User.objects.filter(email=item.email).count() == 0:
+                    user = User()
+                    user.email = item.email
+                    user.username = item.email
+                    user.first_name = item.first_name
+                    user.last_name = item.last_name
+                    user.save()
+
                 serializer = UserInviteSerializer(item)
                 if serializer.is_valid():
                     tasks_activity.add_activity.delay(request.user.id,
