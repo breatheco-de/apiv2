@@ -62,14 +62,9 @@ class BigQuerySet():
 
         query_job = client.query(sql, *params, **kwparams)
 
-        return next(query_job.result())
+        return query_job.result()
 
     def build(self):
-        # sql = "SELECT name from `breathecode-197918.4geeks_dev.konoha`"
-        # print(sql)
-        # client = bigquery.Client()
-        # query = client.query(sql)
-        # return query.result()
 
         sql = self.sql()
 
@@ -134,8 +129,9 @@ class BigQuerySet():
         print('query_params')
         print(query_params)
 
-        job_config = bigquery.QueryJobConfig(destination=f'breathecode-197918.4geeks_dev.konoha',
-                                             query_parameters=query_params)
+        job_config = bigquery.QueryJobConfig(
+            #  destination=f'breathecode-197918.4geeks_dev.konoha',
+            query_parameters=query_params)
         # job_config.write_disposition = bigquery.WriteDisposition.WRITE_TRUNCATE
         kwparams['job_config'] = job_config
 
@@ -209,14 +205,14 @@ class BigQuerySet():
 
 result = BigQuerySet('konoha')
 
-# result = result.filter(n=1)
+result = result.filter(n=1)
 result = result.select('name')
 # result = result.order_by('name')
-# result = result.group_by('name')
+result = result.group_by('name')
 # print(result.get_params())
-result = result.build()
+# result = result.build()
 
-# result = result.aggregate(Sum('n'))
+result = result.aggregate(Sum('n'))
 
 print(result)
 # print("result['sum__n']")
