@@ -433,11 +433,11 @@ class UserInvite(models.Model):
                                  blank=True)
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, null=True, default=None, blank=True)
     role = models.ForeignKey(Role, on_delete=models.CASCADE, null=True, default=None, blank=True)
-    event_slug = models.SlugField(max_length=40,
+    event_slug = models.SlugField(max_length=120,
                                   blank=True,
                                   null=True,
                                   help_text='If set, the user signed up because of an Event')
-    asset_slug = models.SlugField(max_length=40,
+    asset_slug = models.SlugField(max_length=60,
                                   blank=True,
                                   null=True,
                                   help_text='If set, the user signed up because of an Asset')
