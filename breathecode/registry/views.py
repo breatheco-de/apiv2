@@ -30,7 +30,7 @@ from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerialize
                           AssetKeywordBigSerializer, PUTCategorySerializer, POSTCategorySerializer,
                           KeywordClusterMidSerializer, SEOReportSerializer, OriginalityScanSerializer,
                           VariableSmallSerializer, AssetAndTechnologySerializer,
-                          AssetBigAndTechnologySerializer, AssetBigAndTechnologyPublishedSerializer)
+                          AssetBigAndTechnologyPublishedSerializer)
 from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
 from breathecode.utils.views import render_message
 from rest_framework.response import Response

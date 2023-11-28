@@ -1,5 +1,4 @@
 from datetime import timedelta
-from celery import group
 from django.core.management.base import BaseCommand
 from ...models import PlanFinancing, ServiceStockScheduler, Subscription
 from django.utils import timezone

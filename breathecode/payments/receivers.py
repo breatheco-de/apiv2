@@ -7,11 +7,11 @@ from django.utils import timezone
 
 from breathecode.mentorship.models import MentorshipSession
 
-from .models import Consumable, Plan, PlanFinancing, PlanServiceItemHandler, ServiceStockScheduler, Subscription
+from .models import Consumable, Plan
 from .signals import (consume_service, grant_service_permissions, lose_service_permissions,
                       reimburse_service_units)
 from breathecode.mentorship.signals import mentorship_session_status
-from breathecode.payments import actions, tasks
+from breathecode.payments import tasks
 from django.db.models.signals import m2m_changed
 from .signals import update_plan_m2m_service_items
 
