@@ -6,16 +6,20 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.signals import post_delete, post_save, pre_delete
 from breathecode.admissions.signals import student_edu_status_updated
 from breathecode.admissions.models import CohortUser
+from breathecode.authenticate.signals import invite_status_updated
+from breathecode.authenticate.models import UserInvite
 from django.dispatch import receiver
 from .tasks import async_remove_from_organization, async_add_to_organization
 from breathecode.authenticate.models import AppOptionalScope, AppRequiredScope, AppUserAgreement, ProfileAcademy
 from breathecode.mentorship.models import MentorProfile
 
+from breathecode.authenticate import tasks
+
 logger = logging.getLogger(__name__)
 
 
 @receiver(post_save)
-def set_user_group(sender, instance, created: bool, **kwargs):
+def set_user_group(sender, instance, created: bool, **_):
     group = None
     groups = None
 
@@ -50,7 +54,7 @@ def set_user_group(sender, instance, created: bool, **kwargs):
 
 
 @receiver(post_delete)
-def unset_user_group(sender, instance, **kwargs):
+def unset_user_group(sender, instance, **_):
     should_be_deleted = False
     group = None
     groups = None
@@ -80,7 +84,7 @@ def unset_user_group(sender, instance, **kwargs):
 
 
 @receiver(pre_delete, sender=CohortUser)
-def post_delete_cohort_user(sender, instance, **kwargs):
+def post_delete_cohort_user(sender, instance, **_):
 
     # never ending cohorts cannot be in synch with github
     if instance.cohort.never_ends:
@@ -94,7 +98,7 @@ def post_delete_cohort_user(sender, instance, **kwargs):
 
 
 @receiver(student_edu_status_updated, sender=CohortUser)
-def post_save_cohort_user(sender, instance, **kwargs):
+def post_save_cohort_user(sender, instance, **_):
 
     logger.debug('User educational status updated to: ' + str(instance.educational_status))
     if instance.educational_status == 'ACTIVE':
@@ -109,7 +113,7 @@ def post_save_cohort_user(sender, instance, **kwargs):
 
 
 @receiver(post_save, sender=AppRequiredScope)
-def increment_on_update_required_scope(sender: Type[AppRequiredScope], instance: AppRequiredScope, **kwargs):
+def increment_on_update_required_scope(sender: Type[AppRequiredScope], instance: AppRequiredScope, **_):
     if AppUserAgreement.objects.filter(app=instance.app,
                                        agreement_version=instance.app.agreement_version).exists():
         instance.app.agreement_version += 1
@@ -117,7 +121,7 @@ def increment_on_update_required_scope(sender: Type[AppRequiredScope], instance:
 
 
 @receiver(post_save, sender=AppOptionalScope)
-def increment_on_update_optional_scope(sender: Type[AppOptionalScope], instance: AppOptionalScope, **kwargs):
+def increment_on_update_optional_scope(sender: Type[AppOptionalScope], instance: AppOptionalScope, **_):
     if AppUserAgreement.objects.filter(app=instance.app,
                                        agreement_version=instance.app.agreement_version).exists():
         instance.app.agreement_version += 1
@@ -125,7 +129,7 @@ def increment_on_update_optional_scope(sender: Type[AppOptionalScope], instance:
 
 
 @receiver(pre_delete, sender=AppRequiredScope)
-def increment_on_delete_required_scope(sender: Type[AppRequiredScope], instance: AppRequiredScope, **kwargs):
+def increment_on_delete_required_scope(sender: Type[AppRequiredScope], instance: AppRequiredScope, **_):
     if AppUserAgreement.objects.filter(app=instance.app,
                                        agreement_version=instance.app.agreement_version).exists():
         instance.app.agreement_version += 1
@@ -133,8 +137,15 @@ def increment_on_delete_required_scope(sender: Type[AppRequiredScope], instance:
 
 
 @receiver(pre_delete, sender=AppOptionalScope)
-def increment_on_delete_optional_scope(sender: Type[AppOptionalScope], instance: AppOptionalScope, **kwargs):
+def increment_on_delete_optional_scope(sender: Type[AppOptionalScope], instance: AppOptionalScope, **_):
     if AppUserAgreement.objects.filter(app=instance.app,
                                        agreement_version=instance.app.agreement_version).exists():
         instance.app.agreement_version += 1
         instance.app.save()
+
+
+@receiver(invite_status_updated, sender=UserInvite)
+def handle_invite_accepted(sender: Type[UserInvite], instance: UserInvite, **_):
+    if instance.status == 'ACCEPTED' and not instance.user and User.objects.filter(
+            email=instance.email).exists() is False:
+        tasks.create_user_from_invite.apply_async(args=[instance.id], countdown=3600)
