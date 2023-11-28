@@ -611,7 +611,7 @@ class AssetView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('exclude_category')
             items = items.exclude(category__slug__in=[p for p in param.split(',') if p])
 
-        items = items.filter(query, **lookup, visibility='PUBLIC')
+        items = items.filter(query, **lookup, visibility='PUBLIC').distinct()
         items = handler.queryset(items)
 
         if 'big' in self.request.GET:
