@@ -174,6 +174,12 @@ class Event(models.Model):
     uuid = models.UUIDField(default=uuid_lib.uuid4, editable=False, unique=True)
     description = models.TextField(max_length=2000, blank=True, default=None, null=True)
     excerpt = models.TextField(max_length=500, blank=True, default=None, null=True)
+    related_asset = models.SlugField(
+        max_length=200,
+        blank=True,
+        default=None,
+        null=True,
+        help_text='Is the event is about a project, this field will have the asset slug of that project.')
     title = models.CharField(max_length=255, blank=True, default=None, null=True)
     lang = models.CharField(max_length=5,
                             blank=True,

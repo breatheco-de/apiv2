@@ -76,10 +76,7 @@ class EventTypeSmallSerializer(serpy.Serializer):
     name = serpy.Field()
 
 
-class EventTypeSerializer(serpy.Serializer):
-    id = serpy.Field()
-    slug = serpy.Field()
-    name = serpy.Field()
+class EventTypeSerializer(EventTypeSmallSerializer):
     description = serpy.Field()
     lang = serpy.Field()
     academy = AcademySerializer(required=False)
@@ -110,15 +107,9 @@ class EventTypeVisibilitySettingSerializer(serpy.Serializer):
     academy = AcademySmallSerializer(required=False)
 
 
-class EventTypeBigSerializer(serpy.Serializer):
-    id = serpy.Field()
-    slug = serpy.Field()
-    name = serpy.Field()
-    description = serpy.Field()
-    lang = serpy.Field()
+class EventTypeBigSerializer(EventTypeSerializer):
     icon_url = serpy.Field()
     allow_shared_creation = serpy.Field()
-    academy = AcademySerializer(required=False)
     visibility_settings = serpy.MethodField()
 
     def get_visibility_settings(self, obj):
@@ -137,22 +128,18 @@ class VenueSerializer(serpy.Serializer):
     updated_at = serpy.Field()
 
 
-class OrganizationBigSerializer(serpy.Serializer):
-    id = serpy.Field()
-    eventbrite_id = serpy.Field()
-    eventbrite_key = serpy.Field()
-    name = serpy.Field()
-    sync_status = serpy.Field()
-    sync_desc = serpy.Field()
-    updated_at = serpy.Field()
-    created_at = serpy.Field()
-
-
 class OrganizationSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
     sync_status = serpy.Field()
     sync_desc = serpy.Field()
+
+
+class OrganizationBigSerializer(OrganizationSmallSerializer):
+    eventbrite_id = serpy.Field()
+    eventbrite_key = serpy.Field()
+    updated_at = serpy.Field()
+    created_at = serpy.Field()
 
 
 class OrganizerSmallSerializer(serpy.Serializer):
@@ -174,21 +161,16 @@ class EventTinySerializer(serpy.Serializer):
     event_type = EventTypeSmallSerializer(required=False)
 
 
-class EventSmallSerializer(serpy.Serializer):
-    id = serpy.Field()
+class EventSmallSerializer(EventTinySerializer):
     slug = serpy.Field()
     excerpt = serpy.Field()
-    title = serpy.Field()
     lang = serpy.Field()
     url = serpy.Field()
     banner = serpy.Field()
     description = serpy.Field()
     capacity = serpy.Field()
-    starting_at = serpy.Field()
-    ending_at = serpy.Field()
     status = serpy.Field()
     host = serpy.Field()
-    event_type = EventTypeSmallSerializer(required=False)
     online_event = serpy.Field()
     venue = VenueSerializer(required=False)
     academy = AcademySerializer(required=False)
@@ -196,62 +178,13 @@ class EventSmallSerializer(serpy.Serializer):
     eventbrite_sync_status = serpy.Field()
     eventbrite_sync_description = serpy.Field()
     tags = serpy.Field()
+    related_asset = serpy.Field()
     host_user = UserSerializer(required=False)
     author = UserSerializer(required=False)
 
 
-class EventJoinSmallSerializer(serpy.Serializer):
-    id = serpy.Field()
-    slug = serpy.Field()
-    excerpt = serpy.Field()
-    title = serpy.Field()
-    lang = serpy.Field()
-    url = serpy.Field()
-    banner = serpy.Field()
-    description = serpy.Field()
-    capacity = serpy.Field()
-    starting_at = serpy.Field()
-    ending_at = serpy.Field()
-    status = serpy.Field()
-    host = serpy.Field()
-    event_type = EventTypeSmallSerializer(required=False)
-    online_event = serpy.Field()
+class EventJoinSmallSerializer(EventSmallSerializer):
     live_stream_url = serpy.Field()
-    venue = VenueSerializer(required=False)
-    academy = AcademySerializer(required=False)
-    sync_with_eventbrite = serpy.Field()
-    eventbrite_sync_status = serpy.Field()
-    eventbrite_sync_description = serpy.Field()
-    tags = serpy.Field()
-    host_user = UserSerializer(required=False)
-    author = UserSerializer(required=False)
-
-
-class EventHookSerializer(serpy.Serializer):
-    id = serpy.Field()
-    slug = serpy.Field()
-    excerpt = serpy.Field()
-    title = serpy.Field()
-    lang = serpy.Field()
-    url = serpy.Field()
-    banner = serpy.Field()
-    description = serpy.Field()
-    capacity = serpy.Field()
-    starting_at = serpy.Field()
-    ending_at = serpy.Field()
-    status = serpy.Field()
-    host = serpy.Field()
-    event_type = EventTypeSmallSerializer(required=False)
-    online_event = serpy.Field()
-    venue = VenueSerializer(required=False)
-    academy = AcademySerializer(required=False)
-    sync_with_eventbrite = serpy.Field()
-    eventbrite_sync_status = serpy.Field()
-    eventbrite_sync_description = serpy.Field()
-    live_stream_url = serpy.Field()
-    tags = serpy.Field()
-    host_user = UserSerializer(required=False)
-    author = UserSerializer(required=False)
 
 
 class LiveClassJoinSerializer(serpy.Serializer):
@@ -295,64 +228,24 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
     tags = serpy.Field()
 
 
-class EventPublicBigSerializer(serpy.Serializer):
-    id = serpy.Field()
-    slug = serpy.Field()
-    description = serpy.Field()
-    excerpt = serpy.Field()
-    title = serpy.Field()
-    lang = serpy.Field()
+class EventPublicBigSerializer(EventSmallSerializer):
     currency = serpy.Field()
-    banner = serpy.Field()
-    capacity = serpy.Field()
-    starting_at = serpy.Field()
-    ending_at = serpy.Field()
-    host = serpy.Field()
-    academy = AcademySerializer(required=False)
     host_user = UserBigSerializer(required=False)
-    online_event = serpy.Field()
     free_for_bootcamps = serpy.Field()
-    venue = VenueSerializer(required=False)
-    event_type = EventTypeBigSerializer(required=False)
-    status = serpy.Field()
     published_at = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
 
 
-class EventBigSerializer(serpy.Serializer):
-    id = serpy.Field()
-    slug = serpy.Field()
-    description = serpy.Field()
-    excerpt = serpy.Field()
-    title = serpy.Field()
-    lang = serpy.Field()
-    currency = serpy.Field()
-    tags = serpy.Field()
-    url = serpy.Field()
-    banner = serpy.Field()
-    capacity = serpy.Field()
-    starting_at = serpy.Field()
-    ending_at = serpy.Field()
-    host = serpy.Field()
-    academy = AcademySerializer(required=False)
+class EventBigSerializer(EventPublicBigSerializer):
+    live_stream_url = serpy.Field()
     organization = OrganizationSmallSerializer(required=False)
-    author = UserSerializer(required=False)
     host_user = UserBigSerializer(required=False)
-    online_event = serpy.Field()
-    venue = VenueSerializer(required=False)
     event_type = EventTypeBigSerializer(required=False)
     eventbrite_id = serpy.Field()
     eventbrite_url = serpy.Field()
     eventbrite_organizer_id = serpy.Field()
-    status = serpy.Field()
     eventbrite_status = serpy.Field()
-    sync_with_eventbrite = serpy.Field()
-    eventbrite_sync_status = serpy.Field()
-    eventbrite_sync_description = serpy.Field()
-    published_at = serpy.Field()
-    created_at = serpy.Field()
-    updated_at = serpy.Field()
 
 
 class AcademyEventSmallSerializer(serpy.Serializer):
