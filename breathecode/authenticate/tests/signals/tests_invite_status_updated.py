@@ -53,6 +53,6 @@ def test_the_requirements_are_met(bc: Breathecode, fake):
     assert bc.database.list_of('authenticate.UserInvite') == bc.format.to_dict(model.user_invite)
     assert bc.database.list_of('auth.User') == []
     assert tasks.create_user_from_invite.apply_async.call_args_list == [
-        call(args=[1], countdown=3600),
-        call(args=[2], countdown=3600),
+        call(args=[1], countdown=60),
+        call(args=[2], countdown=60),
     ]

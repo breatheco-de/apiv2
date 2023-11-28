@@ -148,4 +148,4 @@ def increment_on_delete_optional_scope(sender: Type[AppOptionalScope], instance:
 def handle_invite_accepted(sender: Type[UserInvite], instance: UserInvite, **_):
     if instance.status == 'ACCEPTED' and not instance.user and User.objects.filter(
             email=instance.email).exists() is False:
-        tasks.create_user_from_invite.apply_async(args=[instance.id], countdown=3600)
+        tasks.create_user_from_invite.apply_async(args=[instance.id], countdown=60)
