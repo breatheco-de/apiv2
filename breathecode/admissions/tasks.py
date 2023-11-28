@@ -96,7 +96,7 @@ def build_cohort_user(cohort_id: int, user_id: int, role: str = 'STUDENT', **_: 
         logger.info('ProfileAcademy added')
 
     tasks_activity.add_activity.delay(user_id,
-                                      'joined_cohort',
+                                      'join_cohort',
                                       related_type='admissions.CohortUser',
                                       related_id=cohort_user.id)
 
