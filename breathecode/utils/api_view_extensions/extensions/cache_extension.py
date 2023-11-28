@@ -7,7 +7,6 @@ from breathecode.utils.api_view_extensions.priorities.response_order import Resp
 from breathecode.utils.cache import Cache
 from django.http import HttpResponse
 from rest_framework import status
-from rest_framework.response import Response
 
 __all__ = ['CacheExtension']
 
