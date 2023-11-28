@@ -14,3 +14,6 @@ reimburse_service_units = Signal()
 lose_service_permissions = Signal()
 grant_service_permissions = Signal()
 revoke_service_permissions = Signal()
+
+# proxy to m2m_changed in Event.service_items
+update_plan_m2m_service_items = Signal()
