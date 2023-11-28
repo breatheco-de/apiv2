@@ -38,6 +38,7 @@ class BigQuerySet():
         self.query = {}
         self.agg = []
         self.fields = None
+        self.order = None
         self.group = None
         self.table = table
 
@@ -45,6 +46,10 @@ class BigQuerySet():
         self.query.update(kwargs)
 
     def order_by(self, *name):
+        self.order = name
+        return self
+
+    def group_by(self, *name):
         self.group = name
         return self
 
@@ -54,23 +59,27 @@ class BigQuerySet():
         params, kwparams = self.get_params()
 
         client, project_id, dataset = BigQuery.client()
-        # print('params')
-        # print(params)
-        # print('kwparams')
-        # print(kwparams)
-        print('EPALEEE')
-        print(sql[0:1])
-        print(sql[1:44])
+
         query_job = client.query(sql, *params, **kwparams)
-        # print(dir(query_job))
-        return query_job.result()
+
+        return next(query_job.result())
 
     def build(self):
+        # sql = "SELECT name from `breathecode-197918.4geeks_dev.konoha`"
+        # print(sql)
+        # client = bigquery.Client()
+        # query = client.query(sql)
+        # return query.result()
+
         sql = self.sql()
+
+        print(sql)
         params, kwparams = self.get_params()
 
+        client, project_id, dataset = BigQuery.client()
+
         query_job = client.query(sql, *params, **kwparams)
-        return query_job.results()
+        return query_job.result()
 
     def filter(self, *args, **kwargs):
         self.set_query(*args, **kwargs)
@@ -91,7 +100,7 @@ class BigQuerySet():
         if key[-4:] == '.lte':
             key = key[:-4]
             operand = '<='
-        return key, operand, '__' + key.replace('.', '__')
+        return key, operand, 'x__' + key.replace('.', '__')
 
     def get_type(self, elem):
         if isinstance(elem, int):
@@ -114,10 +123,20 @@ class BigQuerySet():
 
         for key, val in self.query.items():
             key, operand, var_name = self.attribute_parser(key)
+            print('key')
+            print(key)
+            print('operand')
+            print(operand)
+            print('var_name')
+            print(var_name)
             query_params.append(bigquery.ScalarQueryParameter(var_name, self.get_type(val), val))
+
+        print('query_params')
+        print(query_params)
 
         job_config = bigquery.QueryJobConfig(destination=f'breathecode-197918.4geeks_dev.konoha',
                                              query_parameters=query_params)
+        # job_config.write_disposition = bigquery.WriteDisposition.WRITE_TRUNCATE
         kwparams['job_config'] = job_config
 
         return params, kwparams
@@ -150,7 +169,7 @@ class BigQuerySet():
         if aggs:
             for agg in aggs:
                 operation, attribute = self.aggregation_parser(agg)
-                query_fields.append(f'{operation}({attribute}) AS {attribute}')
+                query_fields.append(f'{operation}({attribute}) AS {operation.lower()}__{attribute}')
 
         # if aggs:
         #     query = f'SELECT '
@@ -181,14 +200,28 @@ class BigQuerySet():
             group_by = ', '.join(self.group)
             query += f' GROUP BY {group_by}'
 
+        if self.order:
+            order_by = ', '.join(self.order)
+            query += f' ORDER BY {order_by} DESC'
+
         return query
 
 
-attribute = BigQuerySet('konoha')
+result = BigQuerySet('konoha')
 
-result = attribute.filter(id=1, age=4, date__gte=8, subtable__chakra__gt=7, start__lte=6, chakra__lt=19)
-result = attribute.select('name', 'hokage')
-result = attribute.order_by('name', 'location')
-print(result.sql())
-print(result.get_params())
-print(result.aggregate(Sum('age')))
+# result = result.filter(n=1)
+result = result.select('name')
+# result = result.order_by('name')
+# result = result.group_by('name')
+# print(result.get_params())
+result = result.build()
+
+# result = result.aggregate(Sum('n'))
+
+print(result)
+# print("result['sum__n']")
+# print(result['sum__n'])
+for r in result:
+    print('r')
+    print(r)
+# print(result.aggregate(Sum('n')))
