@@ -12,7 +12,7 @@ jobs:
     if: >-
         github.repository == 'breatheco-de/apiv2' &&
         github.event_name == 'push' &&
-        github.ref == 'refs/heads/master'
+        github.ref == 'refs/heads/main'
 
     steps:
 
