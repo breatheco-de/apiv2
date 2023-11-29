@@ -260,6 +260,10 @@ class Event(models.Model):
     def __str__(self):
         return self.title or 'No title'
 
+    def clean(self, *args, **kwargs):
+        if self.free_for_all == True:
+            self.free_for_bootcamps = True
+
     def save(self, *args, **kwargs):
         from .signals import event_saved
 

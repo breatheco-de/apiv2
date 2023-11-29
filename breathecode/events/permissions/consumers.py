@@ -54,8 +54,8 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
 
     is_host = event.host_user == request.user
     is_free_for_all = event.free_for_all
-    is_free_for_bootcamps = (event.free_for_bootcamps) or (event.free_for_bootcamps is None
-                                                           and event_type.free_for_bootcamps)
+    is_free_for_bootcamps = is_free_for_all or (
+        (event.free_for_bootcamps) or (event.free_for_bootcamps is None and event_type.free_for_bootcamps))
 
     user_with_available_as_saas_false = CohortUser.objects.filter(
         Q(cohort__available_as_saas=False)
