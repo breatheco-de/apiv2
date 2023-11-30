@@ -49,7 +49,7 @@ def bigquery_client_mock(self, n=1, user_id=1, kind=None):
             SELECT *
             FROM `{project_id}.{dataset}.activity`
             WHERE user_id = @user_id
-                OR meta.academy = @academy_id
+                AND meta.academy = @academy_id
                 {'AND kind = @kind' if kind else ''}
             ORDER BY id DESC
             LIMIT @limit

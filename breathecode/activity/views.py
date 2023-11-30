@@ -600,7 +600,7 @@ class V2AcademyActivityView(APIView):
                 FROM `{project_id}.{dataset}.activity`
                 WHERE id = @activity_id
                     AND user_id = @user_id
-                    OR meta.academy = @academy_id
+                    AND meta.academy = @academy_id
                 ORDER BY id DESC
                 LIMIT 1
             """
@@ -634,7 +634,7 @@ class V2AcademyActivityView(APIView):
             SELECT *
             FROM `{project_id}.{dataset}.activity`
             WHERE user_id = @user_id
-                OR meta.academy = @academy_id
+                AND meta.academy = @academy_id
                 {'AND kind = @kind' if kind else ''}
             ORDER BY id DESC
             LIMIT @limit
