@@ -184,6 +184,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'eventbrite_sync_description': '2021-11-23 09:10:58.295264+00:00',
             'host_user_id': None,
             'free_for_bootcamps': True,
+            'free_for_all': False,
             'uuid': uuid,
         }
 
@@ -265,6 +266,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'eventbrite_sync_description': '2021-11-23 09:10:58.295264+00:00',
             'host_user_id': None,
             'free_for_bootcamps': True,
+            'free_for_all': False,
             'uuid': uuid,
         }
 

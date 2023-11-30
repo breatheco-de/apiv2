@@ -653,6 +653,7 @@ class AcademyEventTestSuite(EventTestCase):
             'tags': ','.join([x.slug for x in model.tag]),
             'currency': 'USD',
             'free_for_bootcamps': True,
+            'free_for_all': False,
             'uuid': str(uuid),
         })
 
@@ -676,6 +677,7 @@ class AcademyEventTestSuite(EventTestCase):
                     'sync_with_eventbrite': False,
                     'currency': 'USD',
                     'free_for_bootcamps': True,
+                    'free_for_all': False,
                     'uuid': uuid,
                 }),
         ])
@@ -770,6 +772,7 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_sync_status': 'PENDING',
             'currency': 'USD',
             'free_for_bootcamps': True,
+            'free_for_all': False,
             'sync_with_eventbrite': False,
             'uuid': str(uuid),
         })
@@ -799,6 +802,7 @@ class AcademyEventTestSuite(EventTestCase):
                     'currency': 'USD',
                     'tags': ','.join([x.slug for x in model.tag]),
                     'free_for_bootcamps': True,
+                    'free_for_all': False,
                     'uuid': uuid,
                 }),
         ])
@@ -849,6 +853,7 @@ class AcademyEventTestSuite(EventTestCase):
             'currency': 'USD',
             'tags': ','.join([x.slug for x in model.tag]),
             'free_for_bootcamps': True,
+            'free_for_all': False,
             'uuid': str(uuid),
         })
 
@@ -873,6 +878,7 @@ class AcademyEventTestSuite(EventTestCase):
                     'currency': 'USD',
                     'tags': ','.join([x.slug for x in model.tag]),
                     'free_for_bootcamps': True,
+                    'free_for_all': False,
                     'uuid': uuid,
                 }),
         ])
@@ -952,6 +958,7 @@ class AcademyEventTestSuite(EventTestCase):
             'currency': 'USD',
             'tags': ','.join([x.slug for x in model.tag]),
             'free_for_bootcamps': True,
+            'free_for_all': False,
             'uuid': str(uuid),
         })
 
@@ -975,6 +982,7 @@ class AcademyEventTestSuite(EventTestCase):
                     'currency': 'USD',
                     'tags': ','.join([x.slug for x in model.tag]),
                     'free_for_bootcamps': True,
+                    'free_for_all': False,
                     'uuid': uuid,
                 }),
         ])
@@ -1036,6 +1044,7 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_sync_status': 'PENDING',
             'currency': 'USD',
             'free_for_bootcamps': True,
+            'free_for_all': False,
             'uuid': str(uuid),
         })
 
@@ -1059,6 +1068,7 @@ class AcademyEventTestSuite(EventTestCase):
                     'currency': 'USD',
                     'tags': data['tags'],
                     'free_for_bootcamps': True,
+                    'free_for_all': False,
                     'uuid': uuid,
                 }),
         ])
@@ -1124,6 +1134,7 @@ class AcademyEventTestSuite(EventTestCase):
             'tags': ','.join([x.slug for x in model.tag]),
             'currency': 'USD',
             'free_for_bootcamps': True,
+            'free_for_all': False,
             'uuid': str(uuid),
         })
 
@@ -1149,6 +1160,7 @@ class AcademyEventTestSuite(EventTestCase):
                     'lang': model.event_type.lang,
                     'currency': 'USD',
                     'free_for_bootcamps': True,
+                    'free_for_all': False,
                     'uuid': uuid,
                 }),
         ])
