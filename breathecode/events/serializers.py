@@ -279,6 +279,7 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     excerpt = serpy.Field()
+    capacity = serpy.Field()
     title = serpy.Field()
     lang = serpy.Field()
     url = serpy.Field()

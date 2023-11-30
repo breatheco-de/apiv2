@@ -36,6 +36,7 @@ def post_serializer(data={}):
         'id': 0,
         'lang': None,
         'online_event': False,
+        'ended_at': None,
         'organization': 0,
         'published_at': None,
         'status': 'DRAFT',
@@ -80,6 +81,7 @@ def event_table(data={}):
         'eventbrite_sync_description': None,
         'eventbrite_sync_status': '',
         'title': None,
+        'ended_at': None,
         'url': '',
         'venue_id': None,
         'live_stream_url': None,
@@ -165,6 +167,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'capacity': model['event'].capacity,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
@@ -229,6 +232,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'capacity': model['event'].capacity,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
@@ -293,6 +297,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'capacity': model['event'].capacity,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
@@ -340,6 +345,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'capacity': model['event'].capacity,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
