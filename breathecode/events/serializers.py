@@ -317,7 +317,7 @@ class EventHookCheckinSerializer(serpy.Serializer):
     created_at = serpy.Field()
     attended_at = serpy.Field()
     attendee = UserSerializer(required=False)
-    event = EventHookSerializer()
+    event = EventJoinSmallSerializer()
 
 
 class EventSerializer(serializers.ModelSerializer):
