@@ -51,7 +51,7 @@ def bigquery_client_mock(self, user_id=1):
                 FROM `{project_id}.{dataset}.activity`
                 WHERE id = @activity_id
                     AND user_id = @user_id
-                    AND meta.academy = @academy_id
+                    OR meta.academy = @academy_id
                 ORDER BY id DESC
                 LIMIT 1
             """
