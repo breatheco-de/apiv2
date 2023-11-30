@@ -167,6 +167,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'capacity': model['event'].capacity,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
@@ -231,6 +232,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'capacity': model['event'].capacity,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
@@ -295,6 +297,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'capacity': model['event'].capacity,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
@@ -342,6 +345,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'capacity': model['event'].capacity,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
