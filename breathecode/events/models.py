@@ -209,7 +209,13 @@ class Event(models.Model):
     )
 
     starting_at = models.DateTimeField(blank=False)
-    ending_at = models.DateTimeField(blank=False)
+    ending_at = models.DateTimeField(
+        blank=False, help_text='This field contains the value of when the event is supposed to be finished.')
+    ended_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text='This field contains the value of when the event actually finished.')
 
     host = models.CharField(max_length=100,
                             blank=True,
