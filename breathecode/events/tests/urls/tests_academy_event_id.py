@@ -528,6 +528,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             'ended_at': None,
             'host_user': 1,
             'free_for_bootcamps': True,
+            'free_for_all': False,
             'uuid': str(uuid),
             **data,
         }
@@ -719,6 +720,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             'lang': None,
             'slug': None,
             'online_event': False,
+            'free_for_all': False,
             'organization': 1,
             'published_at': None,
             'status': 'DRAFT',
@@ -733,6 +735,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             'live_stream_url': None,
             'host_user': 1,
             'free_for_bootcamps': True,
+            'free_for_all': False,
             'uuid': str(uuid),
             **data,
         }
@@ -829,6 +832,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             'live_stream_url': None,
             'host_user': 1,
             'free_for_bootcamps': True,
+            'free_for_all': False,
             'uuid': str(uuid),
             **data,
         }
