@@ -2,9 +2,8 @@
 Test /answer/:id
 """
 import os
-from unittest.mock import Base, MagicMock, call, patch
+from unittest.mock import MagicMock, call, patch
 from breathecode.marketing.tasks import add_event_tags_to_student
-from breathecode.tests.mocks import apply_requests_request_mock
 from breathecode.tests.mocks.requests import apply_requests_get_mock, apply_requests_post_mock
 from ..mixins import MarketingTestCase
 
@@ -31,6 +30,7 @@ ADD_TAG_TO_CONTACT_PATH = ('breathecode.services.activecampaign.client.ActiveCam
 
 GET_CONTACT_BY_EMAIL_EXCEPTION = 'Random exception in get_contact_by_email'
 ADD_TAG_TO_CONTACT_EXCEPTION = 'Random exception in add_tag_to_contact'
+NEW_RELIC_LOG = 'New Relic Python Agent (9.1.2)'
 
 
 class AnswerIdTestSuite(MarketingTestCase):

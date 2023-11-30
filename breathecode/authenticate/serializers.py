@@ -1,6 +1,5 @@
 import hashlib
 from django.db import IntegrityError
-import serpy
 import logging
 import random
 import os
@@ -12,7 +11,7 @@ from breathecode.utils.i18n import translation
 from .models import (CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile, Token, GitpodUser,
                      GithubAcademyUser, AcademyAuthSettings, UserSetting)
 from breathecode.authenticate.actions import get_user_settings
-from breathecode.utils import ValidationException
+from breathecode.utils import ValidationException, serpy
 from breathecode.admissions.models import Academy, Cohort
 from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
@@ -20,9 +19,7 @@ from django.db.models import Q
 from django.contrib.auth.models import Permission
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
-import breathecode.activity.tasks as tasks_activity
 import breathecode.authenticate.tasks as tasks_authenticate
-from breathecode.marketing.actions import validate_email
 
 logger = logging.getLogger(__name__)
 
@@ -1207,14 +1204,13 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         model = UserInvite
         fields = ('id', 'email', 'first_name', 'last_name', 'phone', 'cohort', 'syllabus', 'access_token',
                   'plan', 'plans', 'user', 'country', 'city', 'latitude', 'longitude', 'status',
-                  'conversion_info')
+                  'conversion_info', 'asset_slug', 'event_slug')
 
     def validate(self, data: dict[str, str]):
         from breathecode.payments.models import Plan
         from breathecode.marketing.models import Course
 
         country = data['country'] if 'country' in data else None
-        city = data['city'] if 'city' in data else None
         forbidden_countries = ['spain']
 
         lang = self.context.get('lang', 'en')

@@ -14,27 +14,6 @@ class OldBreathecodeMixin():
     old_breathecode_host = 'https://old.hardcoded.breathecode.url'
     OLD_BREATHECODE_TYPES = ['create_contact', 'contact_automations']
 
-    def __create_contact_call__(self, model):
-        event = model['event']
-        data = {
-            'email': model['user'].email,
-            'first_name': model['user'].first_name,
-            'last_name': model['user'].last_name,
-            'field[18,0]': model['academy'].slug,
-            'field[59,0]': SOURCE,
-            'field[33,0]': CAMPAIGN,
-        }
-
-        if event and event.lang:
-            data['field[16,0]'] = event.lang
-
-        return call('POST',
-                    f'{self.old_breathecode_host}/admin/api.php',
-                    params=[('api_action', 'contact_sync'),
-                            ('api_key', model['active_campaign_academy'].ac_key), ('api_output', 'json')],
-                    data=data,
-                    timeout=2)
-
     def __contact_automations_call__(self, model):
         return call('POST',
                     f'{self.old_breathecode_host}/api/3/contactAutomations',
@@ -47,7 +26,7 @@ class OldBreathecodeMixin():
                         'contact': 1,
                         'automation': model['automation'].acp_id,
                     }},
-                    timeout=2)
+                    timeout=3)
 
     def reset_old_breathecode_calls(self):
         mock = requests.request
@@ -65,4 +44,7 @@ class OldBreathecodeMixin():
 
             calls.append(method(model))
 
-        self.assertEqual(mock.call_args_list, calls)
+        assert len(mock.call_args_list) == len(calls)
+        for n in range(len(calls)):
+            # assert mock.call_args_list[n] == calls[n]
+            assert self.assertEqual(mock.call_args_list[n], calls[n])

@@ -9,7 +9,7 @@ from django.template.loader import get_template
 from urllib.parse import urlencode
 from breathecode.assessment.actions import create_from_asset
 from breathecode.authenticate.models import CredentialsGithub
-from .models import Asset, AssetTechnology, AssetErrorLog, ASSET_STATUS, OriginalityScan, ContentVariable
+from .models import Asset, AssetImage, AssetTechnology, AssetErrorLog, ASSET_STATUS, OriginalityScan, ContentVariable
 from .serializers import AssetBigSerializer
 from .utils import (LessonValidator, ExerciseValidator, QuizValidator, AssetException, ProjectValidator,
                     ArticleValidator, OriginalityWrapper)
@@ -261,7 +261,7 @@ def set_blob_content(repo, path_name, content, file_name, branch='main'):
     return repo.update_file(file[0].path, f'Update {file_name}', content, file[0].sha)
 
 
-def push_github_asset(github, asset):
+def push_github_asset(github, asset: Asset):
 
     logger.debug(f'Sync pull_github_lesson {asset.slug}')
 
@@ -292,7 +292,7 @@ def push_github_asset(github, asset):
     return asset
 
 
-def pull_github_lesson(github, asset, override_meta=False):
+def pull_github_lesson(github, asset: Asset, override_meta=False):
 
     logger.debug(f'Sync pull_github_lesson {asset.slug}')
 
@@ -351,7 +351,7 @@ def pull_github_lesson(github, asset, override_meta=False):
     return asset
 
 
-def clean_asset_readme(asset):
+def clean_asset_readme(asset: Asset):
     if asset.readme_raw is None or asset.readme_raw == '':
         return asset
 
@@ -375,7 +375,7 @@ def clean_asset_readme(asset):
     return asset
 
 
-def clean_content_variables(asset):
+def clean_content_variables(asset: Asset):
     logger.debug(f'Clearning content variables for readme for asset {asset.slug}')
     readme = asset.get_readme()
     pattern = r'{%\s+([^\s%]+)\s+%}'  # This regex pattern matches {% variable_name %} or {% variable_name:"default_value" %}
@@ -416,7 +416,7 @@ def clean_content_variables(asset):
     return asset
 
 
-def clean_readme_relative_paths(asset):
+def clean_readme_relative_paths(asset: Asset):
     readme = asset.get_readme()
     base_url = os.path.dirname(asset.readme_url)
     relative_urls = list(re.finditer(r'((?:\.\.?\/)+[^)"\']+)', readme['decoded']))
@@ -438,7 +438,7 @@ def clean_readme_relative_paths(asset):
     return asset
 
 
-def clean_readme_hide_comments(asset):
+def clean_readme_hide_comments(asset: Asset):
     logger.debug(f'Clearning readme for asset {asset.slug}')
     readme = asset.get_readme()
     regex = r'<!--\s*(:?end)?hide\s*-->'
@@ -466,7 +466,7 @@ def clean_readme_hide_comments(asset):
     return asset
 
 
-def clean_h1s(asset):
+def clean_h1s(asset: Asset):
     logger.debug(f'Clearning first heading 1 for {asset.slug}')
     readme = asset.get_readme()
     content = readme['decoded'].strip()
@@ -608,7 +608,7 @@ class AssetThumbnailGenerator:
         return self.asset
 
 
-def pull_learnpack_asset(github, asset, override_meta):
+def pull_learnpack_asset(github, asset: Asset, override_meta):
 
     if asset.readme_url is None:
         raise Exception('Missing Readme URL for asset ' + asset.slug + '.')
@@ -717,7 +717,7 @@ def pull_learnpack_asset(github, asset, override_meta):
     return asset
 
 
-def pull_quiz_asset(github, asset):
+def pull_quiz_asset(github, asset: Asset):
 
     logger.debug(f'Sync pull_quiz_asset {asset.slug}')
 
@@ -745,7 +745,7 @@ def pull_quiz_asset(github, asset):
     return asset
 
 
-def test_asset(asset):
+def test_asset(asset: Asset):
     try:
         validator = None
         if asset.asset_type == 'LESSON':
@@ -781,7 +781,7 @@ def test_asset(asset):
         return False
 
 
-def scan_asset_originality(asset):
+def scan_asset_originality(asset: Asset):
 
     scan = OriginalityScan(asset=asset)
     try:
@@ -822,7 +822,7 @@ def scan_asset_originality(asset):
     scan.save()
 
 
-def upload_image_to_bucket(img, asset):
+def upload_image_to_bucket(img: AssetImage, asset=None):
 
     from ..services.google_cloud import Storage
 
@@ -835,12 +835,12 @@ def upload_image_to_bucket(img, asset):
 
     r = requests.get(link, stream=True, timeout=2)
     if r.status_code != 200:
-        raise Exception(f'Error downloading image from asset {asset.slug}: {link}')
+        raise Exception(f'Error downloading image from asset image {img.name}: {link}')
 
     found_mime = [mime for mime in allowed_mimes() if r.headers['content-type'] in mime]
     if len(found_mime) == 0:
         raise Exception(
-            f"Skipping image download for {link} in asset {asset.slug}, invalid mime {r.headers['content-type']}"
+            f"Skipping image download for {link} in asset image {img.name}, invalid mime {r.headers['content-type']}"
         )
 
     img.hash = hashlib.sha256(r.content).hexdigest()
@@ -858,7 +858,8 @@ def upload_image_to_bucket(img, asset):
     img.download_status = 'OK'
     img.save()
 
-    img.assets.add(asset)
+    if asset:
+        img.assets.add(asset)
 
     return img
 

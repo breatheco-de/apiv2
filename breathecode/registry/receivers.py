@@ -42,7 +42,7 @@ def asset_title_was_updated(sender, instance, **kwargs):
         return False
 
     async_update_frontend_asset_cache(instance.slug)
-  
+
     bucket_name = os.getenv('SCREENSHOTS_BUCKET', None)
     if bucket_name is None or bucket_name == '':
         return False
@@ -68,6 +68,7 @@ def asset_title_was_updated(sender, instance, **kwargs):
 def post_asset_readme_modified(sender, instance: Asset, **kwargs):
     logger.debug('Cleaning asset raw readme')
     async_regenerate_asset_readme.delay(instance.slug)
+
 
 @receiver(post_delete, sender=Asset)
 def post_asset_deleted(sender, instance: Asset, **kwargs):

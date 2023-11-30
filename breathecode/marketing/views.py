@@ -5,7 +5,6 @@ from datetime import timedelta
 from rest_framework_csv.renderers import CSVRenderer
 from breathecode.authenticate.actions import get_user_language
 from breathecode.monitoring.models import CSVUpload
-from breathecode.notify.actions import send_email_message
 from breathecode.renderers import PlainTextRenderer
 from breathecode.marketing.caches import CourseCache
 from rest_framework.decorators import renderer_classes
@@ -213,7 +212,7 @@ def validate_email_from_app(request):
         return Response(payload, status=status.HTTP_200_OK)
     except ValidationException as e:
         raise e
-    except Exception as e:
+    except Exception:
 
         raise ValidationException(
             translation(lang,
