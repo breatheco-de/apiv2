@@ -1,6 +1,6 @@
 from .models import Bill
 from rest_framework import serializers
-import serpy
+from breathecode.utils import serpy
 
 
 class AcademySerializer(serpy.Serializer):

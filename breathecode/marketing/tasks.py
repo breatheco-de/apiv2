@@ -2,6 +2,7 @@ import re
 import os
 from typing import Any, Optional
 from django.utils import timezone
+from requests.exceptions import Timeout
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.events.models import Event
@@ -25,13 +26,20 @@ def persist_single_lead(form_data, **_: Any):
     entry = None
     try:
         entry = register_new_lead(form_data)
+    except Timeout as e:
+        if 'id' in form_data:
+            entry = FormEntry.objects.filter(id=form_data['id']).first()
+            if entry is not None:
+                entry.storage_status_text = str(e)
+                entry.storage_status = 'PENDING'
+                entry.save()
+                raise RetryTask(f'Timeout processing lead for form_entry {str(entry.id)}')
 
     except Exception as e:
         if not form_data:
             return
 
         if 'id' in form_data:
-
             entry = FormEntry.objects.filter(id=form_data['id']).first()
             if entry is not None:
                 entry.storage_status_text = str(e)
@@ -40,7 +48,8 @@ def persist_single_lead(form_data, **_: Any):
 
         raise e
 
-    if entry is not None and entry != False and not is_test_env and form_data.city is None:
+    if entry is not None and entry != False and not is_test_env and ('city' not in form_data
+                                                                     or form_data['city'] is None):
         save_get_geolocal(entry, form_data)
 
     return True
@@ -299,7 +308,7 @@ def create_form_entry(csv_upload_id, **item):
     # remove the task manager parameters
     item.pop('pop', None)
     item.pop('total_pages', None)
-    item.pop('attemps', None)
+    item.pop('attempts', None)
     item.pop('task_manager_id', None)
 
     logger.info('Create form entry started')

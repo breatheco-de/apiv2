@@ -12,6 +12,10 @@ pytestmark = pytest.mark.usefixtures('db')
 
 
 def get_serializer(asset, data={}):
+    asset_translations = {}
+    for translation in asset.all_translations.all():
+        asset_translations[translation.lang or 'null'] = translation.slug
+
     return {
         'id':
         asset.id,
@@ -31,30 +35,31 @@ def get_serializer(asset, data={}):
         'difficulty':
         asset.difficulty,
         'duration':
-        None,
+        asset.duration,
         'external':
-        False,
+        asset.external,
         'gitpod':
-        False,
+        asset.gitpod,
         'graded':
-        False,
+        asset.graded,
         'intro_video_url':
-        None,
+        asset.intro_video_url,
         'lang':
         asset.lang,
         'preview':
-        None,
+        asset.preview,
         'published_at':
-        None,
+        asset.published_at,
         'readme_url':
-        None,
+        asset.readme_url,
         'solution_video_url':
-        None,
+        asset.solution_video_url,
         'status':
-        'NOT_STARTED',
+        asset.status,
         'url':
-        None,
-        'translations': {},
+        asset.url,
+        'translations':
+        asset_translations,
         'technologies': [tech.slug for tech in asset.technologies.all()] if asset.technologies else [],
         'seo_keywords':
         [seo_keyword.slug for seo_keyword in asset.seo_keywords.all()] if asset.seo_keywords else [],
@@ -71,6 +76,7 @@ def get_serializer_technology(technology, data={}):
         'description': technology.description,
         'icon_url': technology.icon_url,
         'is_deprecated': technology.is_deprecated,
+        'visibility': technology.visibility,
         **data,
     }
 
@@ -87,7 +93,7 @@ def test_with_no_assets(bc: Breathecode, client):
 
 def test_one_asset(bc: Breathecode, client):
 
-    model = bc.database.create(asset=1)
+    model = bc.database.create(asset={'status': 'PUBLISHED'})
 
     url = reverse_lazy('registry:asset')
     response = client.get(url)
@@ -101,7 +107,7 @@ def test_one_asset(bc: Breathecode, client):
 
 def test_many_assets(bc: Breathecode, client):
 
-    model = bc.database.create(asset=3)
+    model = bc.database.create(asset=(3, {'status': 'PUBLISHED'}))
 
     url = reverse_lazy('registry:asset')
     response = client.get(url)
@@ -116,7 +122,11 @@ def test_many_assets(bc: Breathecode, client):
 def test_assets_technologies_expand(bc: Breathecode, client):
 
     technology = {'slug': 'learn-react', 'title': 'Learn React'}
-    model = bc.database.create(asset_technology=(1, technology), asset=(3, {'technologies': 1}))
+    model = bc.database.create(asset_technology=(1, technology),
+                               asset=(3, {
+                                   'technologies': 1,
+                                   'status': 'PUBLISHED',
+                               }))
 
     url = reverse_lazy('registry:asset') + f'?expand=technologies'
     response = client.get(url)
@@ -133,7 +143,16 @@ def test_assets_technologies_expand(bc: Breathecode, client):
 
 def test_assets_with_slug(bc: Breathecode, client):
 
-    assets = [{'slug': 'randy'}, {'slug': 'jackson'}]
+    assets = [
+        {
+            'slug': 'randy',
+            'status': 'PUBLISHED',
+        },
+        {
+            'slug': 'jackson',
+            'status': 'PUBLISHED',
+        },
+    ]
     model = bc.database.create(asset=assets)
 
     url = reverse_lazy('registry:asset') + '?slug=randy'
@@ -148,7 +167,16 @@ def test_assets_with_slug(bc: Breathecode, client):
 
 def test_assets_with_lang(bc: Breathecode, client):
 
-    assets = [{'lang': 'us'}, {'lang': 'es'}]
+    assets = [
+        {
+            'lang': 'us',
+            'status': 'PUBLISHED',
+        },
+        {
+            'lang': 'es',
+            'status': 'PUBLISHED',
+        },
+    ]
     model = bc.database.create(asset=assets)
 
     url = reverse_lazy('registry:asset') + '?language=en'
@@ -161,16 +189,29 @@ def test_assets_with_lang(bc: Breathecode, client):
     assert bc.database.list_of('registry.Asset') == bc.format.to_dict(model.asset)
 
 
-def test_assets_with_visibility(bc: Breathecode, client):
+def test_assets__hidden_all_non_visibilities(bc: Breathecode, client):
 
-    assets = [{'visibility': 'PUBLIC'}, {'visibility': 'PRIVATE'}]
+    assets = [
+        {
+            'visibility': 'PUBLIC',
+            'status': 'PUBLISHED',
+        },
+        {
+            'visibility': 'PRIVATE',
+            'status': 'PUBLISHED',
+        },
+        {
+            'visibility': 'UNLISTED',
+            'status': 'PUBLISHED',
+        },
+    ]
     model = bc.database.create(asset=assets)
 
-    url = reverse_lazy('registry:asset') + '?visibility=PRIVATE'
+    url = reverse_lazy('registry:asset')
     response = client.get(url)
     json = response.json()
 
-    expected = [get_serializer(model.asset[1])]
+    expected = [get_serializer(model.asset[0])]
 
     assert json == expected
     assert bc.database.list_of('registry.Asset') == bc.format.to_dict(model.asset)
@@ -194,7 +235,16 @@ def test_assets_with_bad_academy(bc: Breathecode, client):
 def test_assets_with_academy(bc: Breathecode, client):
 
     academies = bc.database.create(academy=2)
-    assets = [{'academy': academies.academy[0]}, {'academy': academies.academy[1]}]
+    assets = [
+        {
+            'academy': academies.academy[0],
+            'status': 'PUBLISHED',
+        },
+        {
+            'academy': academies.academy[1],
+            'status': 'PUBLISHED',
+        },
+    ]
     model = bc.database.create(asset=assets)
 
     url = reverse_lazy('registry:asset') + '?academy=2'
@@ -212,9 +262,11 @@ def test_assets_with_category(bc: Breathecode, client):
     categories = [{'slug': 'how-to'}, {'slug': 'como'}]
     model_categories = bc.database.create(asset_category=categories)
     assets = [{
-        'category': model_categories.asset_category[0]
+        'category': model_categories.asset_category[0],
+        'status': 'PUBLISHED',
     }, {
-        'category': model_categories.asset_category[1]
+        'category': model_categories.asset_category[1],
+        'status': 'PUBLISHED',
     }]
     model = bc.database.create(asset=assets)
 
@@ -232,7 +284,16 @@ def test_assets_with_category(bc: Breathecode, client):
        MagicMock(wraps=lookup_extension.compile_lookup))
 def test_lookup_extension(bc: Breathecode, client):
 
-    assets = [{'asset_type': 'LESSON'}, {'asset_type': 'PROJECT'}]
+    assets = [
+        {
+            'asset_type': 'LESSON',
+            'status': 'PUBLISHED',
+        },
+        {
+            'asset_type': 'PROJECT',
+            'status': 'PUBLISHED',
+        },
+    ]
     model = bc.database.create(asset=assets)
 
     args, kwargs = bc.format.call('en',

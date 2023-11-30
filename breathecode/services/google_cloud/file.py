@@ -2,6 +2,7 @@ import logging
 from io import StringIO, BytesIO, TextIOWrapper, BufferedReader
 from typing import Optional, overload
 from google.cloud.storage import Bucket, Blob
+from circuitbreaker import circuit
 
 logger = logging.getLogger(__name__)
 
@@ -17,13 +18,20 @@ class File:
     def __init__(self, bucket: Bucket, file_name: str):
         self.file_name = file_name
         self.bucket = bucket
-        self.blob = bucket.get_blob(file_name)
+        self.blob = self._get_blob()
 
+    @circuit
+    def _get_blob(self) -> Blob:
+        """Get Blob from Bucket"""
+        return self.bucket.get_blob(self.file_name)
+
+    @circuit
     def delete(self):
         """Delete Blob from Bucket"""
         if self.blob:
             self.blob.delete()
 
+    @circuit
     def upload(self, content, public: bool = False, content_type: str = 'text/plain') -> None:
         """Upload Blob from Bucket"""
         self.blob = self.bucket.blob(self.file_name)
@@ -37,11 +45,13 @@ class File:
         if public:
             self.blob.make_public()
 
+    @circuit
     def exists(self) -> bool:
         """Check if Blob exists in Bucket"""
 
         return self.bucket.blob(self.file_name).exists()
 
+    @circuit
     def url(self) -> str:
         """Delete Blob from Bucket"""
         # TODO Private url
@@ -63,6 +73,7 @@ class File:
     def download(self) -> bytes:
         ...
 
+    @circuit
     def download(self, file: Optional[BytesIO | StringIO]) -> bytes | None:
         """Delete Blob from Bucket"""
         if self.blob and file:
@@ -71,6 +82,7 @@ class File:
         elif self.blob:
             return self.blob.download_as_string()
 
+    @circuit
     def stream_download(self) -> str:
         """Delete Blob from Bucket"""
 
@@ -94,6 +106,7 @@ class File:
         blob.download_to_file(streamer)
         return streamer
 
+    @circuit
     def rename(self, file_name: str) -> None:
         """Renames a blob."""
 

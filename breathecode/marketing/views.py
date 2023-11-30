@@ -5,7 +5,6 @@ from datetime import timedelta
 from rest_framework_csv.renderers import CSVRenderer
 from breathecode.authenticate.actions import get_user_language
 from breathecode.monitoring.models import CSVUpload
-from breathecode.notify.actions import send_email_message
 from breathecode.renderers import PlainTextRenderer
 from breathecode.marketing.caches import CourseCache
 from rest_framework.decorators import renderer_classes
@@ -51,6 +50,7 @@ from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
 import breathecode.marketing.tasks as tasks
 import pandas as pd
+from circuitbreaker import CircuitBreakerError
 
 logger = logging.getLogger(__name__)
 MIME_ALLOW = 'text/csv'
@@ -198,54 +198,21 @@ def create_lead_from_app(request, app_slug=None):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-def validate_email_from_app(request, app_slug=None):
+def validate_email_from_app(request):
 
     lang = get_user_language(request)
     data = request.data.copy()
 
-    app_id = data['app_id'] if 'app_id' in data else None
-    if app_id is None:
-        app_id = request.GET.get('app_id', None)
-        if app_id is None:
-            raise ValidationException('Invalid app slug and/or id',
-                                      code=400,
-                                      slug='without-app-slug-or-app-id')
-
-    app = LeadGenerationApp.objects.filter(slug=app_slug, app_id=app_id).first()
-    if app is None:
-        raise ValidationException('App not found with those credentials', code=401, slug='without-app-id')
-
     email = data['email'] if 'email' in data else None
     if email is None:
-        raise ValidationException('Please provide an email to validate',
-                                  code=400,
-                                  slug='without-app-slug-or-app-id')
-
-    if app_slug is None:
-        # try get the slug from the encoded app_id
-        decoded_id = parse.unquote(app_id)
-        if ':' not in decoded_id:
-            raise ValidationException('Missing app slug', code=400, slug='without-app-slug-or-app-id')
-        else:
-            app_slug, app_id = decoded_id.split(':')
+        raise ValidationException('Please provide an email to validate', code=400, slug='without-email')
 
     try:
         payload = validate_email(email, lang)
         return Response(payload, status=status.HTTP_200_OK)
     except ValidationException as e:
         raise e
-    except Exception as e:
-
-        app.last_call_status = 'ERROR'
-        app.last_call_log = str(e)
-        app.save()
-
-        send_email_message('message',
-                           to=SYSTEM_EMAIL,
-                           data={
-                               'SUBJECT': 'Email validation API error',
-                               'MESSAGE': f'Error details: {str(e)}',
-                           })
+    except Exception:
 
         raise ValidationException(
             translation(lang,
@@ -994,7 +961,7 @@ class UploadView(APIView):
 
     # upload was separated because in one moment I think that the serializer
     # not should get many create and update operations together
-    def upload(self, file, academy_id=None, update=False):
+    def upload(self, file, lang, academy_id=None, update=False):
         from ..services.google_cloud import Storage
 
         if not file:
@@ -1024,16 +991,28 @@ class UploadView(APIView):
         data = {'file_name': file.name, 'status': 'PENDING', 'message': 'Despues'}
 
         # upload file section
-        storage = Storage()
-        cloud_file = storage.file(os.getenv('DOWNLOADS_BUCKET', None), file_name)
-        cloud_file.upload(file, content_type=file.content_type)
+        try:
+            storage = Storage()
+            cloud_file = storage.file(os.getenv('DOWNLOADS_BUCKET', None), file_name)
+            cloud_file.upload(file, content_type=file.content_type)
 
-        csv_upload = CSVUpload()
-        csv_upload.url = cloud_file.url()
-        csv_upload.name = file.name
-        csv_upload.hash = file_name
-        csv_upload.academy_id = academy_id
-        csv_upload.save()
+            csv_upload = CSVUpload()
+            csv_upload.url = cloud_file.url()
+            csv_upload.name = file.name
+            csv_upload.hash = file_name
+            csv_upload.academy_id = academy_id
+            csv_upload.save()
+
+        except CircuitBreakerError:
+            raise ValidationException(translation(
+                lang,
+                en='The circuit breaker is open due to an error, please try again later',
+                es='El circuit breaker está abierto debido a un error, por favor intente más tarde',
+                slug='circuit-breaker-open'),
+                                      slug='circuit-breaker-open',
+                                      data={'service': 'Google Cloud Storage'},
+                                      silent=True,
+                                      code=503)
 
         for num in range(len(df)):
             value = df.iloc[num]
@@ -1045,10 +1024,11 @@ class UploadView(APIView):
 
     @capable_of('crud_media')
     def put(self, request, academy_id=None):
+        lang = get_user_language(request)
         files = request.data.getlist('file')
         result = []
         for file in files:
-            upload = self.upload(file, academy_id, update=True)
+            upload = self.upload(file, lang, academy_id, update=True)
             result.append(upload)
         return Response(result, status=status.HTTP_200_OK)
 

@@ -46,21 +46,30 @@ class AssetTechnology(models.Model):
                             null=True,
                             help_text='Leave blank if will be shown in all languages')
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, default=None, blank=True, null=True)
-    is_deprecated = models.BooleanField(default=False)
+    is_deprecated = models.BooleanField(default=False,
+                                        help_text='If True, the technology will be programmatically deleted.')
     featured_asset = models.ForeignKey('Asset',
                                        on_delete=models.SET_NULL,
                                        default=None,
                                        blank=True,
                                        null=True)
-    visibility = models.CharField(max_length=20, choices=VISIBILITY, default=PUBLIC)
+    visibility = models.CharField(
+        max_length=20,
+        choices=VISIBILITY,
+        default=UNLISTED,
+        help_text=
+        'If public, the front-end will generate a landing page. If unlisted, it won\'t have a landing page but will be shown in assets. If private, it won\'t be shown anywhere of the front-end.'
+    )
 
     description = models.TextField(null=True, blank=True, default=None)
     icon_url = models.URLField(null=True, blank=True, default=None, help_text='Image icon to show on website')
-    sort_priority = models.IntegerField(null=False,
-                                        choices=SORT_PRIORITY,
-                                        blank=False,
-                                        default=3,
-                                        help_text='Priority to sort technology (1, 2, or 3)')
+    sort_priority = models.IntegerField(
+        null=False,
+        choices=SORT_PRIORITY,
+        blank=False,
+        default=3,
+        help_text='Priority to sort technology (1, 2, or 3): One is more important and goes first than three.'
+    )
 
     def __str__(self):
         return self.title
@@ -79,13 +88,13 @@ class AssetTechnology(models.Model):
 
         return technology
 
+    def clean(self):
+        self.validate()
+
     def validate(self):
         if self.is_deprecated and self.parent is None:
             raise Exception(
                 'You cannot mark a technology as deprecated if it doesn\'t have a parent technology')
-
-    def clean(self):
-        self.validate()
 
 
 class AssetCategory(models.Model):
@@ -349,18 +358,21 @@ class Asset(models.Model):
     duration = models.IntegerField(null=True, blank=True, default=None, help_text='In hours')
 
     difficulty = models.CharField(max_length=20, choices=DIFFICULTY, default=None, null=True, blank=True)
+
+    # NOT RELATED TO SEO, VISIBILITY IS INTERNAL, other academies won't see it!!!!
     visibility = models.CharField(
         max_length=20,
         choices=VISIBILITY,
         default=PUBLIC,
-        help_text='It won\'t be shown on the website unleast the status is published',
+        help_text=
+        'This is an internal property. It won\'t be shown internally to other academies unless is public',
         db_index=True)
     asset_type = models.CharField(max_length=20, choices=TYPE, db_index=True)
 
     status = models.CharField(max_length=20,
                               choices=ASSET_STATUS,
                               default=NOT_STARTED,
-                              help_text='Related to the publishing of the asset',
+                              help_text='It won\'t be shown on the website until the status is published',
                               db_index=True)
     sync_status = models.CharField(max_length=20,
                                    choices=ASSET_SYNC_STATUS,

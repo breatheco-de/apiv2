@@ -10,7 +10,8 @@ from .models import (Asset, AssetTechnology, AssetAlias, AssetErrorLog, KeywordC
                      AssetKeyword, AssetComment, SEOReport, AssetImage, OriginalityScan,
                      CredentialsOriginality, SyllabusVersionProxy, ContentVariable)
 from .tasks import (async_pull_from_github, async_test_asset, async_download_readme_images,
-                    async_remove_img_from_cloud, async_upload_image_to_bucket)
+                    async_remove_img_from_cloud, async_upload_image_to_bucket,
+                    async_update_frontend_asset_cache)
 from .actions import (get_user_from_github_username, AssetThumbnailGenerator, scan_asset_originality,
                       add_syllabus_translations, clean_asset_readme)
 
@@ -216,6 +217,16 @@ def download_and_replace_images(modeladmin, request, queryset):
             messages.error(request, a.slug + ': ' + str(e))
 
 
+def reset_4geeks_com_cache(modeladmin, request, queryset):
+    assets = queryset.all()
+    for a in assets:
+        try:
+            async_update_frontend_asset_cache.delay(a.slug)
+            messages.success(request, message='Assets cache on 4Geeks.com will be updated soon')
+        except Exception as e:
+            messages.error(request, a.slug + ': ' + str(e))
+
+
 class AssessmentFilter(admin.SimpleListFilter):
 
     title = 'Associated Assessment'
@@ -350,6 +361,7 @@ class AssetAdmin(admin.ModelAdmin):
         async_regenerate_readme,
         async_generate_thumbnail,
         download_and_replace_images,
+        reset_4geeks_com_cache,
     ] + change_field(['DRAFT', 'NOT_STARTED', 'PUBLISHED', 'OPTIMIZED'], name='status') + change_field(
         ['us', 'es'], name='lang')
 
@@ -496,21 +508,43 @@ class IsDeprecatedFilter(admin.SimpleListFilter):
             return queryset.filter(is_deprecated=False)
 
 
-def mark_technologies_as_deprecated(modeladmin, request, queryset):
+class VisibilityFilter(admin.SimpleListFilter):
+
+    title = 'Visibility'
+
+    parameter_name = 'visibility'
+
+    def lookups(self, request, model_admin):
+
+        return (('PUBLIC', 'Public'), ('UNLISTED', 'Unlisted'), ('PRIVATE', 'Private'))
+
+    def queryset(self, request, queryset):
+        if self.value() == 'PUBLIC':
+            return queryset.filter(visibility='PUBLIC')
+
+        if self.value() == 'UNLISTED':
+            return queryset.filter(visibility='UNLISTED')
+
+        if self.value() == 'PRIVATE':
+            return queryset.filter(visibility='PRIVATE')
+
+
+def mark_technologies_as_unlisted(modeladmin, request, queryset):
     technologies = queryset.all()
     for technology in technologies:
-        if technology.parent is not None:
-            AssetTechnology.objects.filter(slug=technology.slug).update(is_deprecated=True)
+        if technology.parent is not None or technology.asset_set.count() < 3:
+            AssetTechnology.objects.filter(slug=technology.slug).update(visibility='UNLISTED')
 
 
 @admin.register(AssetTechnology)
 class AssetTechnologyAdmin(admin.ModelAdmin):
     search_fields = ['title', 'slug']
-    list_display = ('id', 'get_slug', 'title', 'parent', 'featured_asset', 'description', 'is_deprecated')
-    list_filter = (ParentFilter, IsDeprecatedFilter)
+    list_display = ('id', 'get_slug', 'title', 'parent', 'featured_asset', 'description', 'visibility',
+                    'is_deprecated')
+    list_filter = (ParentFilter, VisibilityFilter, IsDeprecatedFilter)
     raw_id_fields = ['parent', 'featured_asset']
 
-    actions = (merge_technologies, slug_to_lower_case, mark_technologies_as_deprecated)
+    actions = (merge_technologies, slug_to_lower_case, mark_technologies_as_unlisted)
 
     def get_slug(self, obj):
         parent = ''

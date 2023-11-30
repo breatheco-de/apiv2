@@ -19,6 +19,17 @@ import brotli
 cohort_cache = CohortCache()
 
 
+def serialize_cache_object(data, headers={}):
+    res = {
+        'headers': {
+            'Content-Type': 'application/json',
+            **headers,
+        },
+        'content': json.dumps(data).encode('utf-8'),
+    }
+    return res
+
+
 class GetCohortSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
@@ -215,7 +226,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(cohort_cache.keys(), [key])
+        self.assertEqual(cohort_cache.keys(), {key})
 
     def test_cache__get__without_cache__one_cohort(self):
         cache.clear()
@@ -238,7 +249,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(cohort_cache.keys(), [key])
+        self.assertEqual(cohort_cache.keys(), {key})
 
     def test_cache__get__without_cache__ten_cohorts(self):
         cache.clear()
@@ -261,7 +272,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(cohort_cache.keys(), [key])
+        self.assertEqual(cohort_cache.keys(), {key})
 
     def test_cache__get__without_cache__ten_cohorts__passing_arguments(self):
         cache.clear()
@@ -288,7 +299,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(cohort_cache.keys(), [key])
+        self.assertEqual(cohort_cache.keys(), {key})
 
     def test_cache__get__with_cache(self):
         cache.clear()
@@ -302,6 +313,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
                     'request.path': '/the-beans-should-not-have-sugar',
                 }.items()))
             cache.set(key, json_data)
+            cache.set('Cohort__keys', {key})
 
             request = APIRequestFactory()
             request = request.get('/the-beans-should-not-have-sugar')
@@ -311,7 +323,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(cohort_cache.keys(), [key])
+            self.assertEqual(cohort_cache.keys(), {key})
 
     def test_cache__get__with_cache__passing_arguments(self):
         cache.clear()
@@ -328,6 +340,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
                     'slug': ','.join(params),
                 }.items()))
             cache.set(key, json_data)
+            cache.set('Cohort__keys', {key})
 
             request = APIRequestFactory()
             request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={",".join(params)}')
@@ -337,7 +350,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(cohort_cache.keys(), [key])
+            self.assertEqual(cohort_cache.keys(), {key})
             self.assertEqual(cache.get(key), bytes(str(expected).replace('\'', '"'), encoding='utf-8'))
 
     def test_cache__get__with_cache_but_other_case__passing_arguments(self):
@@ -349,8 +362,9 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             slug = self.bc.fake.slug()
             model = self.bc.database.create(cohort={'slug': slug})
 
-            json_data = json.dumps(case).encode('utf-8')
+            json_data = serialize_cache_object(case)
             cache.set('Cohort__', json_data)
+            cache.set('Cohort__keys', {'Cohort__'})
 
             key = 'Cohort__' + urllib.parse.urlencode(
                 sorted({
@@ -368,9 +382,16 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(cohort_cache.keys(), ['Cohort__', key])
-            self.assertEqual(cache.get('Cohort__'), serialize_cache_value(case))
-            self.assertEqual(cache.get(key), b'application/json    ' + serialize_cache_value(expected))
+            self.assertEqual(cohort_cache.keys(), {'Cohort__', key})
+            self.assertEqual(cache.get('Cohort__'), serialize_cache_object(case))
+
+            res = {
+                'headers': {
+                    'Content-Type': 'application/json',
+                },
+                'content': serialize_cache_value(expected),
+            }
+            self.assertEqual(cache.get(key), res)
 
     def test_cache__get__with_cache_case_of_root_and_current__passing_arguments(self):
         cases = [[], [{'x': 1}], [{'x': 1}, {'x': 2}]]
@@ -393,6 +414,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
                     'slug': slug,
                 }.items()))
             cache.set(key, json_data_query)
+            cache.set('Cohort__keys', {'Cohort__', key})
 
             request = APIRequestFactory()
             request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={slug}')
@@ -403,7 +425,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(cohort_cache.keys(), ['Cohort__', key])
+            self.assertEqual(cohort_cache.keys(), {'Cohort__', key})
             self.assertEqual(cache.get('Cohort__'), json_data_root)
             self.assertEqual(cache.get(key), json_data_query)
 
@@ -426,6 +448,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
                     'slug': ','.join(params),
                 }.items()))
             cache.set(key, json_data)
+            cache.set('Cohort__keys', {key})
 
             request = APIRequestFactory()
             request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={",".join(params)}')
@@ -435,7 +458,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(cohort_cache.keys(), [key])
+            self.assertEqual(cohort_cache.keys(), {key})
             self.assertEqual(cache.get(key), bytes(str(expected).replace('\'', '"'), encoding='utf-8'))
 
     def test_cache_per_user__get__with_cache_but_other_case__passing_arguments(self):
@@ -447,8 +470,9 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             slug = self.bc.fake.slug()
             model = self.bc.database.create(cohort={'slug': slug})
 
-            json_data = json.dumps(case).encode('utf-8')
+            json_data = serialize_cache_object(case)
             cache.set('Cohort__', json_data)
+            cache.set('Cohort__keys', {'Cohort__'})
 
             key = 'Cohort__' + urllib.parse.urlencode(
                 sorted({
@@ -467,9 +491,16 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(cohort_cache.keys(), ['Cohort__', key])
-            self.assertEqual(cache.get('Cohort__'), serialize_cache_value(case))
-            self.assertEqual(cache.get(key), b'application/json    ' + serialize_cache_value(expected))
+            self.assertEqual(cohort_cache.keys(), {'Cohort__', key})
+            self.assertEqual(cache.get('Cohort__'), serialize_cache_object(case))
+
+            res = {
+                'headers': {
+                    'Content-Type': 'application/json',
+                },
+                'content': serialize_cache_value(expected),
+            }
+            self.assertEqual(cache.get(key), res)
 
     def test_cache_per_user__get__with_cache_case_of_root_and_current__passing_arguments(self):
         cases = [[], [{'x': 1}], [{'x': 1}, {'x': 2}]]
@@ -494,6 +525,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
                 }.items()))
 
             cache.set(key, json_data_query)
+            cache.set('Cohort__keys', {'Cohort__', key})
 
             request = APIRequestFactory()
             request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={slug}')
@@ -504,7 +536,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(cohort_cache.keys(), ['Cohort__', key])
+            self.assertEqual(cohort_cache.keys(), {'Cohort__', key})
             self.assertEqual(cache.get('Cohort__'), json_data_root)
             self.assertEqual(cache.get(key), json_data_query)
 
@@ -529,6 +561,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
                     'slug': ','.join(params),
                 }.items()))
             cache.set(key, json_data)
+            cache.set('Cohort__keys', {key})
 
             request = APIRequestFactory()
             request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={",".join(params)}')
@@ -539,7 +572,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(cohort_cache.keys(), [key])
+            self.assertEqual(cohort_cache.keys(), {key})
             self.assertEqual(cache.get(key), bytes(str(expected).replace('\'', '"'), encoding='utf-8'))
 
     def test_cache_per_user__get__auth__with_cache_but_other_case__passing_arguments(self):
@@ -551,8 +584,9 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             slug = self.bc.fake.slug()
             model = self.bc.database.create(cohort={'slug': slug}, user=1)
 
-            json_data = json.dumps(case).encode('utf-8')
+            json_data = serialize_cache_object(case)
             cache.set('Cohort__', json_data)
+            cache.set('Cohort__keys', {'Cohort__'})
 
             key = 'Cohort__' + urllib.parse.urlencode(
                 sorted({
@@ -572,9 +606,16 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(cohort_cache.keys(), ['Cohort__', key])
-            self.assertEqual(cache.get('Cohort__'), serialize_cache_value(case))
-            self.assertEqual(cache.get(key), b'application/json    ' + serialize_cache_value(expected))
+            self.assertEqual(cohort_cache.keys(), {'Cohort__', key})
+            self.assertEqual(cache.get('Cohort__'), serialize_cache_object(case))
+
+            res = {
+                'headers': {
+                    'Content-Type': 'application/json',
+                },
+                'content': serialize_cache_value(expected),
+            }
+            self.assertEqual(cache.get(key), res)
 
     def test_cache_per_user__get__auth__with_cache_case_of_root_and_current__passing_arguments(self):
         cases = [[], [{'x': 1}], [{'x': 1}, {'x': 2}]]
@@ -586,8 +627,8 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             self.bc.database.delete('admissions.Cohort')
             model = self.bc.database.create(cohort={'slug': slug}, user=1)
 
-            json_data_root = json.dumps(case).encode('utf-8')
-            json_data_query = json.dumps(case + case).encode('utf-8')
+            json_data_root = serialize_cache_object(case)
+            json_data_query = serialize_cache_object(case + case)
             cache.set('Cohort__', json_data_root)
 
             key = 'Cohort__' + urllib.parse.urlencode(
@@ -598,6 +639,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
                     'slug': slug,
                 }.items()))
             cache.set(key, json_data_query)
+            cache.set('Cohort__keys', {'Cohort__', key})
 
             request = APIRequestFactory()
             request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={slug}')
@@ -609,7 +651,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(cohort_cache.keys(), ['Cohort__', key])
+            self.assertEqual(cohort_cache.keys(), {'Cohort__', key})
             self.assertEqual(cache.get('Cohort__'), json_data_root)
             self.assertEqual(cache.get(key), json_data_query)
 
@@ -634,6 +676,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
                 }.items()))
 
             cache.set(key, json_data)
+            cache.set('Cohort__keys', {key})
 
             request = APIRequestFactory()
             request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={",".join(params)}')
@@ -643,7 +686,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(cohort_cache.keys(), [key])
+            self.assertEqual(cohort_cache.keys(), {key})
             self.assertEqual(cache.get(key), bytes(str(expected).replace('\'', '"'), encoding='utf-8'))
 
     def test_cache_with_prefix__get__with_cache_but_other_case__passing_arguments(self):
@@ -655,8 +698,9 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             slug = self.bc.fake.slug()
             model = self.bc.database.create(cohort={'slug': slug})
 
-            json_data = json.dumps(case).encode('utf-8')
+            json_data = serialize_cache_object(case)
             cache.set('Cohort__', json_data)
+            cache.set('Cohort__keys', {'Cohort__'})
 
             request = APIRequestFactory()
             request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={slug}')
@@ -675,12 +719,19 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(cohort_cache.keys(), [
+            self.assertEqual(cohort_cache.keys(), {
                 'Cohort__',
                 key,
-            ])
-            self.assertEqual(cache.get('Cohort__'), serialize_cache_value(case))
-            self.assertEqual(cache.get(key), b'application/json    ' + serialize_cache_value(expected))
+            })
+            self.assertEqual(cache.get('Cohort__'), serialize_cache_object(case))
+
+            res = {
+                'headers': {
+                    'Content-Type': 'application/json',
+                },
+                'content': serialize_cache_value(expected),
+            }
+            self.assertEqual(cache.get(key), res)
 
     def test_cache_with_prefix__get__with_cache_case_of_root_and_current__passing_arguments(self):
         cases = [[], [{'x': 1}], [{'x': 1}, {'x': 2}]]
@@ -705,6 +756,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
                 }.items()))
 
             cache.set(key, json_data_query)
+            cache.set('Cohort__keys', {'Cohort__', key})
 
             request = APIRequestFactory()
             request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={slug}')
@@ -715,10 +767,10 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(cohort_cache.keys(), [
+            self.assertEqual(cohort_cache.keys(), {
                 'Cohort__',
                 key,
-            ])
+            })
             self.assertEqual(cache.get('Cohort__'), json_data_root)
             self.assertEqual(cache.get(key), json_data_query)
 
@@ -843,6 +895,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         request = APIRequestFactory()
         request = request.get('/the-beans-should-not-have-sugar')
+        request.META['HTTP_ACCEPT_ENCODING'] = 'gzip, deflate, br'
 
         view = PaginateFalseTestView.as_view()
 
@@ -946,7 +999,7 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-        self.assertEqual(cohort_cache.keys(), [])
+        self.assertEqual(cohort_cache.keys(), set())
 
     def test_cache__get__without_cache__one_cohort(self):
         cache.clear()
@@ -969,8 +1022,15 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
             'request.path':
             '/the-beans-should-not-have-sugar/1',
         })
-        self.assertEqual(cohort_cache.keys(), [key])
-        self.assertEqual(cache.get(key), b'application/json    ' + serialize_cache_value(expected))
+        self.assertEqual(cohort_cache.keys(), {key})
+
+        res = {
+            'headers': {
+                'Content-Type': 'application/json',
+            },
+            'content': serialize_cache_value(expected),
+        }
+        self.assertEqual(cache.get(key), res)
 
     def test_cache__get__with_cache(self):
         cache.clear()
@@ -983,6 +1043,7 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
                 '/the-beans-should-not-have-sugar/1',
             })
             cache.set(key, json_data)
+            cache.set('Cohort__keys', {key})
 
             request = APIRequestFactory()
             request = request.get('/the-beans-should-not-have-sugar/1')
@@ -992,7 +1053,7 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
 
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(cohort_cache.keys(), [key])
+            self.assertEqual(cohort_cache.keys(), {key})
             self.assertEqual(cache.get(key), serialize_cache_value(expected))
 
     def test_cache__get__with_cache_but_other_case(self):
@@ -1003,7 +1064,7 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
         slug = self.bc.fake.slug()
         model = self.bc.database.create(cohort={'slug': slug})
 
-        json_data = json.dumps(case).encode('utf-8')
+        json_data = serialize_cache_object(case)
         key1 = 'Cohort__id=1&' + urllib.parse.urlencode({
             'request.path': '/the-beans-should-not-have-sugar/1',
         })
@@ -1011,8 +1072,8 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
             'request.path': '/the-beans-should-not-have-sugar/1',
         })
         cache.set('Cohort__', json_data)
-        # cache.set(key1, json_data)
         cache.set(key2, json_data)
+        cache.set('Cohort__keys', {'Cohort__', key2})
 
         request = APIRequestFactory()
         request = request.get(f'/the-beans-should-not-have-sugar/1')
@@ -1023,10 +1084,17 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(cohort_cache.keys(), ['Cohort__', key1, key2])
-        self.assertEqual(cache.get('Cohort__'), serialize_cache_value(case))
-        self.assertEqual(cache.get(key1), b'application/json    ' + serialize_cache_value(expected))
-        self.assertEqual(cache.get(key2), serialize_cache_value(case))
+        self.assertEqual(cohort_cache.keys(), {'Cohort__', key1, key2})
+        self.assertEqual(cache.get('Cohort__'), serialize_cache_object(case))
+
+        res = {
+            'headers': {
+                'Content-Type': 'application/json',
+            },
+            'content': serialize_cache_value(expected),
+        }
+        self.assertEqual(cache.get(key1), res)
+        self.assertEqual(cache.get(key2), json_data)
 
     def test_cache__get__with_cache_case_of_root_and_current(self):
         cases = [({'x': 1}, {'y': 1}), ({'x': 2}, {'y': 2}), ({'x': 3}, {'y': 3})]
@@ -1046,6 +1114,7 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
                 '/the-beans-should-not-have-sugar/1',
             })
             cache.set(key, json_data_query)
+            cache.set('Cohort__keys', {'Cohort__', key})
 
             request = APIRequestFactory()
             request = request.get(f'/the-beans-should-not-have-sugar/1')
@@ -1057,11 +1126,11 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
                 'request.path':
                 '/the-beans-should-not-have-sugar/1',
             })
-            self.assertEqual(cohort_cache.keys(), ['Cohort__', key])
+            self.assertEqual(cohort_cache.keys(), {'Cohort__', key})
             expected = case[1]
 
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(cohort_cache.keys(), ['Cohort__', key])
+            self.assertEqual(cohort_cache.keys(), {'Cohort__', key})
             self.assertEqual(cache.get('Cohort__'), json_data_root)
             self.assertEqual(cache.get(key), json_data_query)

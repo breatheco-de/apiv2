@@ -65,6 +65,7 @@ from .serializers import (AppUserSerializer, AuthSerializer, GetGitpodUserSerial
 
 import breathecode.activity.tasks as tasks_activity
 from breathecode.authenticate.actions import get_user_settings
+from circuitbreaker import CircuitBreakerError
 
 logger = logging.getLogger(__name__)
 APP_URL = os.getenv('APP_URL', '')
@@ -399,6 +400,14 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                                                      first_name=item.first_name,
                                                      last_name=item.last_name)
                     profile_academy.save()
+
+                if new_status.upper() == 'ACCEPTED' and User.objects.filter(email=item.email).count() == 0:
+                    user = User()
+                    user.email = item.email
+                    user.username = item.email
+                    user.first_name = item.first_name
+                    user.last_name = item.last_name
+                    user.save()
 
                 serializer = UserInviteSerializer(item)
                 if serializer.is_valid():
@@ -2155,6 +2164,8 @@ class ProfileMePictureView(APIView):
     def put(self, request):
         from ..services.google_cloud import Storage
 
+        lang = get_user_language(request)
+
         profile = Profile.objects.filter(user=request.user).first()
         if not profile:
             profile = Profile(user=request.user)
@@ -2181,14 +2192,26 @@ class ProfileMePictureView(APIView):
         file_bytes = file.read()
         hash = hashlib.sha256(file_bytes).hexdigest()
 
-        storage = Storage()
-        cloud_file = storage.file(get_profile_bucket(), hash)
-        cloud_file_thumbnail = storage.file(get_profile_bucket(), f'{hash}-100x100')
+        try:
+            storage = Storage()
+            cloud_file = storage.file(get_profile_bucket(), hash)
+            cloud_file_thumbnail = storage.file(get_profile_bucket(), f'{hash}-100x100')
 
-        if cloud_file_thumbnail.exists():
-            cloud_file_thumbnail_url = cloud_file_thumbnail.url()
+            if thumb_exists := cloud_file_thumbnail.exists():
+                cloud_file_thumbnail_url = cloud_file_thumbnail.url()
 
-        else:
+        except CircuitBreakerError:
+            raise ValidationException(translation(
+                lang,
+                en='The circuit breaker is open due to an error, please try again later',
+                es='El circuit breaker está abierto debido a un error, por favor intente más tarde',
+                slug='circuit-breaker-open'),
+                                      slug='circuit-breaker-open',
+                                      data={'service': 'Google Cloud Storage'},
+                                      silent=True,
+                                      code=503)
+
+        if not thumb_exists:
             cloud_file.upload(file, content_type=file.content_type)
             func = FunctionV2(get_shape_of_image_url())
 
@@ -2207,10 +2230,22 @@ class ProfileMePictureView(APIView):
                 'bucket': get_profile_bucket(),
             }, timeout=28)
 
-            cloud_file_thumbnail = storage.file(get_profile_bucket(), f'{hash}-100x100')
-            cloud_file_thumbnail_url = cloud_file_thumbnail.url()
+            try:
+                cloud_file_thumbnail = storage.file(get_profile_bucket(), f'{hash}-100x100')
+                cloud_file_thumbnail_url = cloud_file_thumbnail.url()
 
-            cloud_file.delete()
+                cloud_file.delete()
+
+            except CircuitBreakerError:
+                raise ValidationException(translation(
+                    lang,
+                    en='The circuit breaker is open due to an error, please try again later',
+                    es='El circuit breaker está abierto debido a un error, por favor intente más tarde',
+                    slug='circuit-breaker-open'),
+                                          slug='circuit-breaker-open',
+                                          data={'service': 'Google Cloud Storage'},
+                                          silent=True,
+                                          code=503)
 
         previous_avatar_url = profile.avatar_url or ''
         profile.avatar_url = cloud_file_thumbnail_url
@@ -2224,8 +2259,21 @@ class ProfileMePictureView(APIView):
 
                 # remove the file when the last user remove their copy of the same image
                 if not Profile.objects.filter(avatar_url__contains=previous_hash).exists():
-                    cloud_file = storage.file(get_profile_bucket(), f'{hash}-100x100')
-                    cloud_file.delete()
+                    try:
+                        cloud_file = storage.file(get_profile_bucket(), f'{hash}-100x100')
+                        cloud_file.delete()
+
+                    except CircuitBreakerError:
+                        raise ValidationException(translation(
+                            lang,
+                            en='The circuit breaker is open due to an error, please try again later',
+                            es=
+                            'El circuit breaker está abierto debido a un error, por favor intente más tarde',
+                            slug='circuit-breaker-open'),
+                                                  slug='circuit-breaker-open',
+                                                  data={'service': 'Google Cloud Storage'},
+                                                  silent=True,
+                                                  code=503)
 
         serializer = GetProfileSerializer(profile, many=False)
         return Response(serializer.data, status=status.HTTP_200_OK)

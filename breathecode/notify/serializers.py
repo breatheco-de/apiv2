@@ -3,7 +3,7 @@ from .models import Hook
 from breathecode.admissions.models import Academy
 from breathecode.utils.validation_exception import ValidationException
 from rest_framework import serializers
-import serpy
+from breathecode.utils import serpy
 
 
 class UserSerializer(serpy.Serializer):

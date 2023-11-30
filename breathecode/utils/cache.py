@@ -1,4 +1,8 @@
 from __future__ import annotations
+import gzip
+import zlib
+import brotli
+import sys
 import functools
 import os
 from typing import Optional
@@ -6,18 +10,19 @@ import urllib.parse, json
 from django.core.cache import cache
 from datetime import datetime, timedelta
 from django.db import models
-import brotli
-import sys
+from circuitbreaker import circuit
 
 from django.db.models.fields.related_descriptors import (ReverseManyToOneDescriptor, ManyToManyDescriptor,
                                                          ForwardManyToOneDescriptor,
                                                          ReverseOneToOneDescriptor, ForwardOneToOneDescriptor)
+import zstandard
 
 __all__ = ['Cache', 'CACHE_DESCRIPTORS', 'CACHE_DEPENDENCIES']
 CACHE_DESCRIPTORS: dict[models.Model, Cache] = {}
 CACHE_DEPENDENCIES: set[models.Model] = set()
 
 ENABLE_LIST_OPTIONS = ['true', '1', 'yes', 'y']
+IS_DJANGO_REDIS = hasattr(cache, 'delete_pattern')
 
 
 @functools.lru_cache(maxsize=1)
@@ -25,7 +30,22 @@ def is_compression_enabled():
     return os.getenv('COMPRESSION', '1').lower() in ENABLE_LIST_OPTIONS
 
 
-IS_DJANGO_REDIS = hasattr(cache, 'delete_pattern')
+@functools.lru_cache(maxsize=1)
+def min_compression_size():
+    return int(os.getenv('MIN_COMPRESSION_SIZE', '10'))
+
+
+@functools.lru_cache(maxsize=1)
+def use_gzip():
+    return os.getenv('USE_GZIP', '0').lower() in ENABLE_LIST_OPTIONS
+
+
+def must_compress(data):
+    size = min_compression_size()
+    if size == 0:
+        return True
+
+    return sys.getsizeof(data) / 1024 > size
 
 
 class CacheMeta(type):
@@ -108,6 +128,7 @@ class Cache(metaclass=CacheMeta):
         return f'{cls._version_prefix}{key}__{qs}'
 
     @classmethod
+    @circuit
     def clear(cls, deep=0, max_deep=None) -> set | None:
         if max_deep is None:
             max_deep = cls.max_deep
@@ -132,42 +153,28 @@ class Cache(metaclass=CacheMeta):
         if deep != 0:
             return resolved
 
-        if IS_DJANGO_REDIS:
-            keys = {f'{cls._version_prefix}{descriptor.model.__name__}__keys' for descriptor in resolved}
-            sets = [x or set() for x in cache.get_many(keys).values()]
+        keys = {f'{cls._version_prefix}{descriptor.model.__name__}__keys' for descriptor in resolved}
+        sets = [x or set() for x in cache.get_many(keys).values()]
 
-            to_delete = set()
-            for key in sets:
-                if not key:
-                    continue
+        to_delete = set()
+        for key in sets:
+            if not key:
+                continue
 
-                to_delete |= key
+            to_delete |= key
 
-            to_delete |= keys
+        to_delete |= keys
 
-            cache.delete_many(to_delete)
-            return
-
-        cache.delete_pattern(
-            [f'{cls._version_prefix}{descriptor.model.__name__}__*' for descriptor in resolved],
-            itersize=100_000)
+        cache.delete_many(to_delete)
 
     @classmethod
+    @circuit
     def keys(cls):
-        if IS_DJANGO_REDIS:
-            return cache.keys(f'{cls._version_prefix}{cls.model.__name__}__keys') or set()
+        return cache.get(f'{cls._version_prefix}{cls.model.__name__}__keys') or set()
 
-        key = cls.model.__name__
-        return cache.keys(f'{cls._version_prefix}{key}__*')
-
+    # DEPRECATED: 11/10/2021, remove this in december 2023, it was here to handle the old cache values
     @classmethod
-    def get(cls, data) -> dict:
-        key = cls._generate_key(**data)
-        data = cache.get(key)
-
-        if data is None:
-            return None
-
+    def _legacy_get(cls, data, encoding: Optional[str] = None) -> dict:
         spaces = 0
         starts = 0
         mime = 'application/json'
@@ -175,7 +182,7 @@ class Cache(metaclass=CacheMeta):
 
         # parse a fixed amount of bytes to get the mime type
         try:
-            head = data[:30].decode('utf-8')
+            head = data[:35].decode('utf-8')
 
         # if the data cannot be decoded as utf-8, it means that a section was compressed
         except Exception as e:
@@ -186,9 +193,17 @@ class Cache(metaclass=CacheMeta):
             except Exception:
                 head = ''
 
-            headers['Content-Encoding'] = 'br'
+            if use_gzip():
+                headers['Content-Encoding'] = 'gzip'
+
+            elif encoding in ['br', 'zstd', 'deflate', 'gzip']:
+                headers['Content-Encoding'] = encoding
+
+            elif encoding != None:
+                headers['Content-Encoding'] = 'br'
 
         for s in head:
+            # maybe this cannot process the html cases yet
             if s in ['{', '[']:
                 break
 
@@ -209,13 +224,38 @@ class Cache(metaclass=CacheMeta):
             if len(unpack) == 2:
                 headers['Content-Encoding'] = unpack[1]
 
-        return data[starts:], mime, headers
+        elif starts != 0 and mime[starts - 1] not in ['{', '[', '<']:
+            starts = 0
+
+        if mime:
+            headers['Content-Type'] = mime
+
+        return data[starts:], headers
 
     @classmethod
+    @circuit
+    def get(cls, data, encoding: Optional[str] = None) -> dict:
+        key = cls._generate_key(**data)
+        data = cache.get(key)
+
+        if data is None:
+            return None
+
+        if isinstance(data, str) or isinstance(data, bytes):
+            return cls._legacy_get(data, encoding)
+
+        headers = data.get('headers', {})
+        content = data.get('content', None)
+
+        return content, headers
+
+    @classmethod
+    @circuit
     def set(cls,
             data: str | dict | list[dict],
             format: str = 'application/json',
             timeout: int = -1,
+            encoding: Optional[str] = None,
             params: Optional[dict] = None) -> str:
         """Set a key value pair on the cache in bytes, it reminds the format and compress the data if needed."""
 
@@ -227,71 +267,54 @@ class Cache(metaclass=CacheMeta):
             'headers': {
                 'Content-Type': format,
             },
+            'content': None,
         }
 
         # serialize the data to avoid serialization on get requests
         if format == 'application/json':
             data = json.dumps(data, default=serializer).encode('utf-8')
 
-            # 10KB
-            if sys.getsizeof(data) / 1024 > 10 and is_compression_enabled():
-                data = brotli.compress(data)
-                res['data'] = data
-                res['headers']['Content-Encoding'] = 'br'
-
-                data = b'application/json:br    ' + data
-
-            else:
-                res['data'] = data
-
-                data = b'application/json    ' + data
-
-        elif format == 'text/html':
+        elif isinstance(data, str):
             data = data.encode('utf-8')
 
-            # 10KB
-            if sys.getsizeof(data) / 1024 > 10 and is_compression_enabled():
-                data = brotli.compress(data)
-                res['data'] = data
-                res['headers']['Content-Encoding'] = 'br'
+        else:
+            data = data
 
-                data = b'text/html:br    ' + data
+        # in kilobytes
+        if (compress := (must_compress(data) and is_compression_enabled())) and use_gzip():
+            res['content'] = gzip.compress(data)
+            res['headers']['Content-Encoding'] = 'gzip'
 
-            else:
-                res['data'] = data
+        elif compress and encoding == 'br':
+            res['content'] = brotli.compress(data)
+            res['headers']['Content-Encoding'] = 'br'
 
-                data = b'text/html    ' + data
+        # faster option, it should be the standard in the future
+        elif compress and encoding == 'zstd':
+            res['content'] = zstandard.compress(data)
+            res['headers']['Content-Encoding'] = 'zstd'
 
-        elif format == 'text/plain':
-            data = data.encode('utf-8')
+        elif compress and encoding == 'deflate':
+            res['content'] = zlib.compress(data)
+            res['headers']['Content-Encoding'] = 'deflate'
 
-            # 10KB
-            if sys.getsizeof(data) / 1024 > 10 and is_compression_enabled():
-                data = brotli.compress(data)
-                res['data'] = data
-                res['headers']['Content-Encoding'] = 'br'
+        elif compress and encoding == 'gzip':
+            res['content'] = gzip.compress(data)
+            res['headers']['Content-Encoding'] = 'gzip'
 
-                data = b'text/plain:br    ' + data
-
-            else:
-                res['data'] = data
-
-                data = b'text/plain    ' + data
+        else:
+            res['content'] = data
 
         # encode the response to avoid serialization on get requests
         if timeout == -1:
-            cache.set(key, data)
+            cache.set(key, res)
 
         # encode the response to avoid serialization on get requests
         else:
-            cache.set(key, data, timeout)
+            cache.set(key, res, timeout)
 
-        # key management
-        if IS_DJANGO_REDIS:
-            keys = cache.get(f'{cls._version_prefix}{cls.model.__name__}__keys') or set()
-            keys.add(key)
+        keys = cache.get(f'{cls._version_prefix}{cls.model.__name__}__keys') or set()
+        keys.add(key)
 
-            cache.set(f'{cls._version_prefix}{cls.model.__name__}__keys', keys)
-            return res
-
+        cache.set(f'{cls._version_prefix}{cls.model.__name__}__keys', keys)
         return res

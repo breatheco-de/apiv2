@@ -213,6 +213,8 @@ class AuthenticateTestSuite(AuthTestCase):
                              'country': None,
                              'latitude': None,
                              'longitude': None,
+                             'email_quality': None,
+                             'email_status': None,
                          }, {
                              'user_id': 1,
                              'academy_id': 1,
@@ -239,7 +241,13 @@ class AuthenticateTestSuite(AuthTestCase):
                              'country': None,
                              'latitude': None,
                              'longitude': None,
+                             'email_quality': None,
+                             'email_status': None,
                          }])
+
+        self.assertEqual(self.bc.database.list_of('auth.User'), [
+            self.bc.format.to_dict(model1.user),
+        ])
 
     @patch('breathecode.authenticate.signals.invite_status_updated.send', MagicMock())
     def test_user_me_invite_status__to_accepted_invitations_not_matched(self):

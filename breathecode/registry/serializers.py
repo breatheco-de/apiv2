@@ -1,4 +1,3 @@
-import serpy
 from slugify import slugify
 
 from .models import (Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology, KeywordCluster,
@@ -9,6 +8,7 @@ from breathecode.admissions.models import Academy
 from rest_framework import serializers
 from rest_framework import status
 from breathecode.utils.validation_exception import ValidationException
+from breathecode.utils import serpy
 
 
 class ProfileSerializer(serpy.Serializer):
@@ -298,6 +298,35 @@ class ParentAssetTechnologySerializer(serpy.Serializer):
     description = serpy.Field()
     icon_url = serpy.Field()
     is_deprecated = serpy.Field()
+    visibility = serpy.Field()
+
+
+class AssetBigAndTechnologySerializer(AssetBigSerializer):
+
+    technologies = serpy.MethodField()
+
+    def get_technologies(self, obj):
+        techs = AssetTechnology.objects.filter(id__in=obj.technologies.filter(is_deprecated=False))
+        return ParentAssetTechnologySerializer(techs, many=True).data
+
+
+# Remove anything not published or visible, this serializer will be using for public API
+# the admin.4geeks.com will use another one
+class AssetBigAndTechnologyPublishedSerializer(AssetBigSerializer):
+
+    technologies = serpy.MethodField()
+    translations = serpy.MethodField()
+
+    def get_translations(self, obj):
+        result = {}
+        for t in obj.all_translations.filter(status='PUBLISHED'):
+            result[t.lang] = t.slug
+        return result
+
+    def get_technologies(self, obj):
+        techs = AssetTechnology.objects.filter(
+            id__in=obj.technologies.filter(visibility__in=['PUBLIC', 'UNLISTED'], is_deprecated=False))
+        return ParentAssetTechnologySerializer(techs, many=True).data
 
 
 class AssetAndTechnologySerializer(AssetSerializer):
@@ -305,7 +334,8 @@ class AssetAndTechnologySerializer(AssetSerializer):
     technologies = serpy.MethodField()
 
     def get_technologies(self, obj):
-        techs = AssetTechnology.objects.filter(id__in=obj.technologies.all())
+        techs = AssetTechnology.objects.filter(
+            id__in=obj.technologies.filter(visibility__in=['PUBLIC', 'UNLISTED'], is_deprecated=False))
         return ParentAssetTechnologySerializer(techs, many=True).data
 
 

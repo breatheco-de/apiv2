@@ -45,6 +45,8 @@ def generate_user_invite(data: dict) -> dict:
         'country': None,
         'latitude': None,
         'longitude': None,
+        'email_quality': None,
+        'email_status': None,
         **data,
     }
 

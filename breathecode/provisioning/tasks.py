@@ -5,6 +5,7 @@ import math
 import os
 from typing import Any
 from dateutil.relativedelta import relativedelta
+import pytz
 
 import pandas as pd
 from breathecode.payments.services.stripe import Stripe
@@ -92,8 +93,6 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
     last[2] = last[2].split('T')[0]
 
     month = MONTHS[int(first[1]) - 1]
-
-    import pytz
 
     first = datetime(int(first[0]), int(first[1]), int(first[2]), 0, 0, 0, 0, pytz.UTC)
     last = datetime(int(last[0]), int(last[1]), int(last[2]))

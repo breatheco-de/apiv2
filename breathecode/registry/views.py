@@ -29,7 +29,8 @@ from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerialize
                           PostKeywordClusterSerializer, PostKeywordSerializer, PUTKeywordSerializer,
                           AssetKeywordBigSerializer, PUTCategorySerializer, POSTCategorySerializer,
                           KeywordClusterMidSerializer, SEOReportSerializer, OriginalityScanSerializer,
-                          VariableSmallSerializer, AssetAndTechnologySerializer)
+                          VariableSmallSerializer, AssetAndTechnologySerializer,
+                          AssetBigAndTechnologyPublishedSerializer)
 from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
 from breathecode.utils.views import render_message
 from rest_framework.response import Response
@@ -38,6 +39,7 @@ from rest_framework.views import APIView
 from rest_framework import status
 from django.http import HttpResponseRedirect
 from django.views.decorators.clickjacking import xframe_options_exempt
+from circuitbreaker import CircuitBreakerError
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +127,9 @@ def get_technologies(request):
                             es='El parametró debera ser un entero y nada mas ',
                             slug='integer-not-found'))
 
+    if 'is_deprecated' not in request.GET or request.GET.get('is_deprecated').lower() == 'false':
+        lookup['is_deprecated'] = False
+
     tech = AssetTechnology.objects.filter(parent__isnull=True, **lookup).order_by('sort_priority')
 
     serializer = AssetTechnologySerializer(tech, many=True)
@@ -199,6 +204,9 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
 
         if asset_type := request.GET.get('asset_type'):
             lookup['featured_asset__asset_type__in'] = asset_type.split(',')
+
+        if 'is_deprecated' not in request.GET or request.GET.get('is_deprecated').lower() == 'false':
+            lookup['is_deprecated'] = False
 
         items = items.filter(**lookup).order_by('sort_priority')
         items = handler.queryset(items)
@@ -398,6 +406,7 @@ class AssetThumbnailView(APIView):
     # this method will force to reset the thumbnail
     @capable_of('crud_asset')
     def post(self, request, asset_slug, academy_id):
+        lang = get_user_language(request)
 
         width = int(request.GET.get('width', '0'))
         height = int(request.GET.get('height', '0'))
@@ -411,7 +420,19 @@ class AssetThumbnailView(APIView):
         generator = AssetThumbnailGenerator(asset, width, height)
 
         # wait one second
-        asset = generator.create(delay=1500)
+        try:
+            asset = generator.create(delay=1500)
+
+        except CircuitBreakerError:
+            raise ValidationException(translation(
+                lang,
+                en='The circuit breaker is open due to an error, please try again later',
+                es='El circuit breaker está abierto debido a un error, por favor intente más tarde',
+                slug='circuit-breaker-open'),
+                                      slug='circuit-breaker-open',
+                                      data={'service': 'Google Cloud Storage'},
+                                      silent=True,
+                                      code=503)
 
         serializer = AcademyAssetSerializer(asset)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -454,6 +475,7 @@ class AcademyContentVariableView(APIView):
     # this method will force to reset the thumbnail
     @capable_of('crud_asset')
     def post(self, request, asset_slug, academy_id):
+        lang = get_user_language(request)
 
         width = int(request.GET.get('width', '0'))
         height = int(request.GET.get('height', '0'))
@@ -467,7 +489,19 @@ class AcademyContentVariableView(APIView):
         generator = AssetThumbnailGenerator(asset, width, height)
 
         # wait one second
-        asset = generator.create(delay=1500)
+        try:
+            asset = generator.create(delay=1500)
+
+        except CircuitBreakerError:
+            raise ValidationException(translation(
+                lang,
+                en='The circuit breaker is open due to an error, please try again later',
+                es='El circuit breaker está abierto debido a un error, por favor intente más tarde',
+                slug='circuit-breaker-open'),
+                                      slug='circuit-breaker-open',
+                                      data={'service': 'Google Cloud Storage'},
+                                      silent=True,
+                                      code=503)
 
         serializer = AcademyAssetSerializer(asset)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -495,7 +529,7 @@ class AssetView(APIView, GenerateLookupsMixin):
             if asset is None:
                 raise ValidationException(f'Asset {asset_slug} not found', status.HTTP_404_NOT_FOUND)
 
-            serializer = AssetBigSerializer(asset)
+            serializer = AssetBigAndTechnologyPublishedSerializer(asset)
             return handler.response(serializer.data)
 
         items = Asset.objects.all()
@@ -542,11 +576,8 @@ class AssetView(APIView, GenerateLookupsMixin):
                 param = 'us'
             lookup['lang'] = param
 
-        if 'visibility' in self.request.GET:
-            param = self.request.GET.get('visibility')
-            lookup['visibility__in'] = [p.upper() for p in param.split(',')]
-        else:
-            lookup['visibility'] = 'PUBLIC'
+        if 'status' not in self.request.GET:
+            lookup['status__in'] = ['PUBLISHED']
 
         try:
             if 'academy' in self.request.GET and self.request.GET.get('academy') not in ['null', '']:
@@ -580,7 +611,7 @@ class AssetView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('exclude_category')
             items = items.exclude(category__slug__in=[p for p in param.split(',') if p])
 
-        items = items.filter(query, **lookup)
+        items = items.filter(query, **lookup, visibility='PUBLIC').distinct()
         items = handler.queryset(items)
 
         if 'big' in self.request.GET:
@@ -762,9 +793,9 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
     def get(self, request, asset_slug=None, academy_id=None):
         handler = self.extensions(request)
 
-        # cache = handler.cache.get()
-        # if cache is not None:
-        #     return cache
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
 
         member = ProfileAcademy.objects.filter(user=request.user, academy__id=academy_id).first()
         if member is None:

@@ -1,3 +1,4 @@
+import gzip
 import os
 import random
 import re
@@ -49,10 +50,17 @@ def set_cache(model_name, value):
     cache.set(f'{model_name}__sort=slug&slug=100%2C101%2C110%2C111', json_data)
     cache.set(f'{model_name}__id=1', json_data)
     cache.set(f'{model_name}__id=2', json_data)
+    cache.set(
+        f'{model_name}__keys', {
+            f'{model_name}__',
+            f'{model_name}__id=1',
+            f'{model_name}__id=2',
+            f'{model_name}__sort=slug&slug=100%2C101%2C110%2C111',
+        })
 
 
 def assert_cache_is_empty(model_name):
-    assert CACHE[model_name].keys() == []
+    assert CACHE[model_name].keys() == set()
 
     assert cache.get(f'{model_name}__') == None
     assert cache.get(f'{model_name}__sort=slug&slug=100%2C101%2C110%2C111') == None
@@ -80,8 +88,6 @@ def test_create_update_and_delete(bc: Breathecode, enable_signals, model_name, k
     x = getattr(model, attr)
     setattr(x, key, value)
     x.save()
-
-    CACHE[model_name].keys() == []
 
     assert_cache_is_empty(model_name)
 
@@ -209,17 +215,18 @@ def test_set_cache(cache_cls: Cache, value, params, key):
 
     serialized = json.dumps(value).encode('utf-8')
     assert res == {
-        'data': serialized,
+        'content': serialized,
         'headers': {
             'Content-Type': 'application/json',
         },
     }
 
+    keys = f'{cache_cls.model.__name__}__keys'
     k = f'{cache_cls.model.__name__}__{key}'
-    assert cache.keys() == [k]
-    assert cache_cls.keys() == [k]
+    assert sorted(cache.keys()) == sorted([keys, k])
+    assert cache_cls.keys() == {k}
 
-    assert cache.get(k) == b'application/json    ' + json.dumps(value).encode('utf-8')
+    assert cache.get(k) == res
 
 
 @pytest.mark.parametrize('cache_cls', [CohortCache, EventCache])
@@ -259,62 +266,81 @@ def test_set_cache(cache_cls: Cache, value, params, key):
 def test_set_cache_compressed(monkeypatch, cache_cls: Cache, value, params, key):
     monkeypatch.setattr('sys.getsizeof', lambda _: (random.randint(10, 1000) * 1024) + 1)
 
-    res = cache_cls.set(value, params=params)
+    res = cache_cls.set(value, params=params, encoding='br')
 
     serialized = brotli.compress(json.dumps(value).encode('utf-8'))
     assert res == {
-        'data': serialized,
+        'content': serialized,
         'headers': {
             'Content-Encoding': 'br',
             'Content-Type': 'application/json',
         },
     }
 
+    keys = f'{cache_cls.model.__name__}__keys'
     k = f'{cache_cls.model.__name__}__{key}'
-    assert cache.keys() == [k]
-    assert cache_cls.keys() == [k]
+    assert sorted(cache.keys()) == sorted([k, keys])
+    assert cache_cls.keys() == {k}
 
-    assert cache.get(k) == b'application/json:br    ' + serialized
+    assert cache.get(k) == res
 
 
 @pytest.mark.parametrize('cache_cls', [CohortCache, EventCache])
-@pytest.mark.parametrize('value,params,key,headers', [
+@pytest.mark.parametrize('value,params,key', [
     (
         [],
         {},
         '',
-        {},
     ),
     (
-        [{
-            'x': 1
-        }],
+        [
+            {
+                'x': 1
+            },
+        ],
         {
             'x': 1
         },
         'x=1',
-        {},
     ),
     (
-        [{
-            'x': 1
-        }, {
-            'y': 2
-        }],
+        [
+            {
+                'x': 1
+            },
+            {
+                'y': 2
+            },
+        ],
         {
             'x': 1,
             'y': 2
         },
         'x=1&y=2',
-        {},
     ),
 ])
-def test_get_cache__no_meta(cache_cls: Cache, value, params, key, headers):
-    k = f'{cache_cls.model.__name__}__{key}'
-    serialized = json.dumps(value).encode('utf-8')
-    cache.set(k, serialized)
+@pytest.mark.parametrize('use_gzip,encoding', [(True, 'br'), (False, 'gzip'), (True, 'gzip')])
+def test_set_cache_compressed__gzip(monkeypatch, cache_cls: Cache, value, params, key, use_gzip, encoding):
+    monkeypatch.setattr('sys.getsizeof', lambda _: (random.randint(10, 1000) * 1024) + 1)
+    monkeypatch.setattr('breathecode.utils.cache.use_gzip', lambda: use_gzip)
 
-    assert cache_cls.get(params) == (serialized, 'application/json', headers)
+    res = cache_cls.set(value, params=params, encoding=encoding)
+
+    serialized = gzip.compress(json.dumps(value).encode('utf-8'))
+    assert res == {
+        'content': serialized,
+        'headers': {
+            'Content-Encoding': 'gzip',
+            'Content-Type': 'application/json',
+        },
+    }
+
+    keys = f'{cache_cls.model.__name__}__keys'
+    k = f'{cache_cls.model.__name__}__{key}'
+    assert sorted(cache.keys()) == sorted([k, keys])
+    assert cache_cls.keys() == {k}
+
+    assert cache.get(k) == res
 
 
 @pytest.mark.parametrize('cache_cls', [CohortCache, EventCache])
@@ -323,7 +349,9 @@ def test_get_cache__no_meta(cache_cls: Cache, value, params, key, headers):
         [],
         {},
         '',
-        {},
+        {
+            'Content-Type': 'application/json',
+        },
     ),
     (
         [{
@@ -333,7 +361,9 @@ def test_get_cache__no_meta(cache_cls: Cache, value, params, key, headers):
             'x': 1
         },
         'x=1',
-        {},
+        {
+            'Content-Type': 'application/json',
+        },
     ),
     (
         [{
@@ -346,15 +376,21 @@ def test_get_cache__no_meta(cache_cls: Cache, value, params, key, headers):
             'y': 2
         },
         'x=1&y=2',
-        {},
+        {
+            'Content-Type': 'application/json',
+        },
     ),
 ])
 def test_get_cache__with_meta(cache_cls: Cache, value, params, key, headers):
     k = f'{cache_cls.model.__name__}__{key}'
     serialized = json.dumps(value).encode('utf-8')
-    cache.set(k, b'application/json    ' + serialized)
+    res = {
+        'headers': headers,
+        'content': serialized,
+    }
+    cache.set(k, res)
 
-    assert cache_cls.get(params) == (serialized, 'application/json', headers)
+    assert cache_cls.get(params) == (serialized, headers)
 
 
 @pytest.mark.parametrize('cache_cls', [CohortCache, EventCache])
@@ -365,6 +401,7 @@ def test_get_cache__with_meta(cache_cls: Cache, value, params, key, headers):
         '',
         {
             'Content-Encoding': 'br',
+            'Content-Type': 'application/json',
         },
     ),
     (
@@ -379,6 +416,7 @@ def test_get_cache__with_meta(cache_cls: Cache, value, params, key, headers):
         'x=1',
         {
             'Content-Encoding': 'br',
+            'Content-Type': 'application/json',
         },
     ),
     (
@@ -397,59 +435,7 @@ def test_get_cache__with_meta(cache_cls: Cache, value, params, key, headers):
         'x=1&y=2',
         {
             'Content-Encoding': 'br',
-        },
-    ),
-])
-def test_get_cache_compressed__no_meta(cache_cls: Cache, value, params, key, headers):
-
-    k = f'{cache_cls.model.__name__}__{key}'
-    v = json.dumps(value).encode('utf-8')
-    serialized = brotli.compress(v)
-    cache.set(k, serialized)
-
-    assert cache_cls.get(params) == (serialized, 'application/json', headers)
-
-
-@pytest.mark.parametrize('cache_cls', [CohortCache, EventCache])
-@pytest.mark.parametrize('value,params,key,headers', [
-    (
-        [],
-        {},
-        '',
-        {
-            'Content-Encoding': 'br',
-        },
-    ),
-    (
-        [
-            {
-                'x': 1
-            },
-        ],
-        {
-            'x': 1
-        },
-        'x=1',
-        {
-            'Content-Encoding': 'br',
-        },
-    ),
-    (
-        [
-            {
-                'x': 1
-            },
-            {
-                'y': 2
-            },
-        ],
-        {
-            'x': 1,
-            'y': 2
-        },
-        'x=1&y=2',
-        {
-            'Content-Encoding': 'br',
+            'Content-Type': 'application/json',
         },
     ),
 ])
@@ -457,47 +443,114 @@ def test_get_cache_compressed__with_meta(cache_cls: Cache, value, params, key, h
     k = f'{cache_cls.model.__name__}__{key}'
     v = json.dumps(value).encode('utf-8')
     serialized = brotli.compress(v)
-    cache.set(k, b'application/json:br    ' + serialized)
 
-    assert cache_cls.get(params) == (serialized, 'application/json', headers)
+    res = {
+        'headers': headers,
+        'content': serialized,
+    }
+    cache.set(k, res)
+
+    assert cache_cls.get(params) == (serialized, headers)
+
+
+@pytest.mark.parametrize('cache_cls', [CohortCache, EventCache])
+@pytest.mark.parametrize('value,params,key,headers', [
+    (
+        [],
+        {},
+        '',
+        {
+            'Content-Type': 'application/json',
+            'Content-Encoding': 'gzip',
+        },
+    ),
+    (
+        [
+            {
+                'x': 1
+            },
+        ],
+        {
+            'x': 1
+        },
+        'x=1',
+        {
+            'Content-Type': 'application/json',
+            'Content-Encoding': 'gzip',
+        },
+    ),
+    (
+        [
+            {
+                'x': 1
+            },
+            {
+                'y': 2
+            },
+        ],
+        {
+            'x': 1,
+            'y': 2
+        },
+        'x=1&y=2',
+        {
+            'Content-Type': 'application/json',
+            'Content-Encoding': 'gzip',
+        },
+    ),
+])
+def test_get_cache_compressed__with_meta__gzip(monkeypatch, cache_cls: Cache, value, params, key, headers):
+    monkeypatch.setattr('breathecode.utils.cache.use_gzip', lambda: True)
+
+    k = f'{cache_cls.model.__name__}__{key}'
+    v = json.dumps(value).encode('utf-8')
+    serialized = gzip.compress(v)
+
+    res = {
+        'headers': headers,
+        'content': serialized,
+    }
+    cache.set(k, res)
+
+    assert cache_cls.get(params) == (serialized, headers)
 
 
 @pytest.mark.parametrize('cache_cls,calls', [
     (CohortCache, [
-        call('Cohort__*'),
-        call('Answer__*'),
-        call('CohortSetCohort__*'),
-        call('CohortSet__*'),
-        call('CohortTimeSlot__*'),
-        call('CohortUser__*'),
-        call('Course__*'),
-        call('EventTypeVisibilitySetting__*'),
-        call('FinalProject__*'),
-        call('GitpodUser__*'),
-        call('PlanFinancing__*'),
-        call('ProvisioningProfile__*'),
-        call('SyllabusVersion__*'),
-        call('Academy__*'),
-        call('Review__*'),
-        call('SlackChannel__*'),
-        call('SubscriptionServiceItem__*'),
-        call('Subscription__*'),
-        call('Survey__*'),
-        call('SyllabusSchedule__*'),
-        call('Task__*'),
-        call('UserInvite__*'),
-        call('UserSpecialty__*'),
+        'Cohort__',
+        'Answer__',
+        'CohortSetCohort__',
+        'CohortSet__',
+        'CohortTimeSlot__',
+        'CohortUser__',
+        'Course__',
+        'EventTypeVisibilitySetting__',
+        'FinalProject__',
+        'GitpodUser__',
+        'PlanFinancing__',
+        'ProvisioningProfile__',
+        'SyllabusVersion__',
+        'Academy__',
+        'Review__',
+        'SlackChannel__',
+        'SubscriptionServiceItem__',
+        'Subscription__',
+        'Survey__',
+        'SyllabusSchedule__',
+        'Task__',
+        'UserInvite__',
+        'UserSpecialty__',
     ]),
     (EventCache, [
-        call('Event__*'),
-        call('Answer__*'),
-        call('EventCheckin__*'),
-        call('EventType__*'),
-        call('User__*'),
-        call('EventbriteWebhook__*'),
-        call('Organization__*'),
-        call('Academy__*'),
-        call('Venue__*'),
+        'Event__',
+        'Answer__',
+        'EventCheckin__',
+        'EventType__',
+        'User__',
+        'EventbriteWebhook__',
+        'Organization__',
+        'Academy__',
+        'Venue__',
     ]),
 ])
 @pytest.mark.parametrize('value', [
@@ -516,10 +569,23 @@ def test_get_cache_compressed__with_meta(cache_cls: Cache, value, params, key, h
         },
     ],
 ])
-def test_delete_calls(monkeypatch, cache_cls: Cache, calls, value):
-
+def test_delete_calls(faker, monkeypatch, cache_cls: Cache, calls, value):
     mock = MagicMock()
-    monkeypatch.setattr('breathecode.settings.CustomMemCache.delete_pattern', mock)
+    monkeypatch.setattr('breathecode.settings.CustomMemCache.delete_many', mock)
+
+    keys = set()
+    for c in calls:
+        index = f'{c}keys'
+        keys.add(f'{c}keys')
+
+        inner = set()
+
+        for _ in range(0, 3):
+            k = f'{c}{faker.slug()}'
+            keys.add(k)
+            inner.add(k)
+
+        cache.set(index, inner)
 
     k = f'{cache_cls.model.__name__}__'
     serialized = json.dumps(value).encode('utf-8')
@@ -527,4 +593,4 @@ def test_delete_calls(monkeypatch, cache_cls: Cache, calls, value):
 
     cache_cls.clear()
 
-    assert sorted(mock.call_args_list) == sorted(calls)
+    assert sorted(mock.call_args_list) == [call(set(sorted({c for c in keys})))]

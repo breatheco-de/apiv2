@@ -8,9 +8,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
+from datetime import datetime
 import os
 from pathlib import Path
-from typing import Optional
+from typing import TypedDict
 # TODO: decouple file storage from django
 # from time import time
 import django_heroku
@@ -21,15 +22,6 @@ from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
 
 from breathecode.setup import configure_redis
-
-from django_redis.client import DefaultClient
-from redis import Redis
-from django_redis.exceptions import ConnectionInterrupted
-from redis.exceptions import ConnectionError, ResponseError, TimeoutError
-import socket
-import itertools
-
-redis_client_exceptions = (TimeoutError, ResponseError, ConnectionError, socket.timeout)
 
 # TODO: decouple file storage from django
 # from django.utils.http import http_date
@@ -127,30 +119,7 @@ REST_FRAMEWORK = {
     ),
 }
 
-MIDDLEWARE = []
-
-if ENVIRONMENT != 'production':
-    import resource
-
-    class MemoryUsageMiddleware:
-
-        def __init__(self, get_response):
-            self.get_response = get_response
-
-        def __call__(self, request):
-            start_mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-            response = self.get_response(request)
-            end_mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-            delta_mem = end_mem - start_mem
-            print(f'Memory usage for this request: {delta_mem} KB')
-            response['X-Memory-Usage'] = f'{delta_mem} KB'
-            return response
-
-    MIDDLEWARE += [
-        'breathecode.settings.MemoryUsageMiddleware',
-    ]
-
-MIDDLEWARE += [
+MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -165,7 +134,8 @@ MIDDLEWARE += [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     #'breathecode.utils.admin_timezone.TimezoneMiddleware',
-    # 'django.middleware.http.ConditionalGetMiddleware',
+    'breathecode.middlewares.CompressResponseMiddleware',
+    'django.middleware.http.ConditionalGetMiddleware',
 ]
 
 DISABLE_SERVER_SIDE_CURSORS = True  # required when using pgbouncer's pool_mode=transaction
@@ -350,7 +320,7 @@ if REDIS_URL == '' or REDIS_URL == 'redis://localhost:6379':
 else:
     IS_REDIS_WITH_SSL = True
 
-CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 60 * 24))
+CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('GLOBAL_CACHE_MINUTES', 60 * 24))
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
@@ -362,50 +332,9 @@ CACHES = {
 DJANGO_REDIS_LOG_IGNORED_EXCEPTIONS = True
 DJANGO_REDIS_IGNORE_EXCEPTIONS = True
 
-
-class CustomRedisClient(DefaultClient):
-
-    def delete_pattern(
-        self,
-        pattern: str,
-        version: Optional[int] = None,
-        prefix: Optional[str] = None,
-        client: Optional[Redis] = None,
-        itersize: Optional[int] = None,
-    ) -> int:
-        """
-        Remove all keys matching pattern.
-        """
-
-        if isinstance(pattern, str):
-            return super().delete_pattern(pattern,
-                                          version=version,
-                                          prefix=prefix,
-                                          client=client,
-                                          itersize=itersize)
-
-        if client is None:
-            client = self.get_client(write=True)
-
-        patterns = [self.make_pattern(x, version=version, prefix=prefix) for x in pattern]
-
-        try:
-            count = 0
-            pipeline = client.pipeline()
-
-            for key in itertools.chain(*[client.scan_iter(match=x, count=itersize) for x in patterns]):
-                pipeline.delete(key)
-                count += 1
-            pipeline.execute()
-
-            return count
-        except redis_client_exceptions as e:
-            raise ConnectionInterrupted(connection=client) from e
-
-
 if IS_REDIS_WITH_SSL_ON_HEROKU:
     CACHES['default']['OPTIONS'] = {
-        'CLIENT_CLASS': 'breathecode.settings.CustomRedisClient',
+        'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         'SOCKET_CONNECT_TIMEOUT': 0.2,  # seconds
         'SOCKET_TIMEOUT': 0.2,  # seconds
         'PICKLE_VERSION': -1,
@@ -419,7 +348,7 @@ if IS_REDIS_WITH_SSL_ON_HEROKU:
 elif IS_REDIS_WITH_SSL:
     redis_ca_cert_path, redis_user_cert_path, redis_user_private_key_path = configure_redis()
     CACHES['default']['OPTIONS'] = {
-        'CLIENT_CLASS': 'breathecode.settings.CustomRedisClient',
+        'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         'SOCKET_CONNECT_TIMEOUT': 0.2,  # seconds
         'SOCKET_TIMEOUT': 0.2,  # seconds
         'PICKLE_VERSION': -1,
@@ -438,33 +367,49 @@ if IS_TEST_ENV:
     from django.core.cache.backends.locmem import LocMemCache
     import fnmatch
 
+    class Key(TypedDict):
+        key: str
+        value: str
+        valid_until: datetime
+
+    # TODO: support timeout
     class CustomMemCache(LocMemCache):
-        _keys = set()
+        _cache = {}
 
-        def delete_pattern(self, pattern):
-            keys_to_delete = fnmatch.filter(self._keys, pattern)
-            for key in keys_to_delete:
-                self.delete(key)
-
-            self._keys = {x for x in self._keys if x not in keys_to_delete}
+        def delete_many(self, patterns):
+            for pattern in patterns:
+                self.delete(pattern)
 
         def delete(self, key, *args, **kwargs):
-            self._keys.remove(key)
-            return super().delete(key, *args, **kwargs)
+            if key in self._cache.keys():
+                del self._cache[key]
 
         def keys(self, filter=None):
             if filter:
-                return sorted(fnmatch.filter(self._keys, filter))
+                return sorted(fnmatch.filter(self._cache.keys(), filter))
 
-            return sorted(list(self._keys))
+            return sorted(self._cache.keys())
 
         def clear(self):
-            self._keys = set()
-            return super().clear()
+            self._cache = {}
 
-        def set(self, key, *args, **kwargs):
-            self._keys.add(key)
-            return super().set(key, *args, **kwargs)
+        # TODO: timeout not implemented yet
+        def set(self, key, value, *args, timeout=None, **kwargs):
+            if value is None:
+                self._cache[key] = None
+                return
+
+            self._cache[key] = {
+                'key': key,
+                'value': value,
+                'valid_until': timeout,
+            }
+
+        def get(self, key, *args, **kwargs):
+            if key not in self._cache.keys():
+                return None
+
+            return self._cache[key]['value']
 
     CACHES['default'] = {
         **CACHES['default'],

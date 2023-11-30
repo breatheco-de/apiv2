@@ -14,9 +14,9 @@ from breathecode.payments.signals import consume_service
 from breathecode.utils.decorators import task, AbortTask, RetryTask, TaskPriority
 from breathecode.utils.i18n import translation
 
-from .models import (AbstractIOweYou, Bag, CohortSet, Consumable, ConsumptionSession, Invoice, PlanFinancing,
-                     PlanServiceItem, PlanServiceItemHandler, Service, ServiceStockScheduler, Subscription,
-                     SubscriptionServiceItem)
+from .models import (AbstractIOweYou, Bag, CohortSet, Consumable, ConsumptionSession, Invoice, Plan,
+                     PlanFinancing, PlanServiceItem, PlanServiceItemHandler, Service, ServiceStockScheduler,
+                     Subscription, SubscriptionServiceItem)
 from breathecode.payments.signals import reimburse_service_units
 
 logger = logging.getLogger(__name__)
@@ -433,6 +433,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 def build_service_stock_scheduler_from_subscription(self,
                                                     subscription_id: int,
                                                     user_id: Optional[int] = None,
+                                                    update_mode: Optional[bool] = False,
                                                     **_: Any):
     """Build service stock scheduler for a subscription."""
 
@@ -501,7 +502,8 @@ def build_service_stock_scheduler_from_subscription(self,
 
             ServiceStockScheduler.objects.get_or_create(plan_handler=handler)
 
-    renew_subscription_consumables.delay(subscription.id)
+    if not update_mode:
+        renew_subscription_consumables.delay(subscription.id)
 
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
@@ -889,3 +891,74 @@ def add_cohort_set_to_subscription(subscription_id: int, cohort_set_id: int, **_
 
     subscription.selected_cohort_set = cohort_set
     subscription.save()
+
+
+@task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
+def update_subscription_service_stock_schedulers(plan_id: int, subscription_id: int, **_: Any):
+    plan = Plan.objects.filter(id=plan_id).only('id').prefetch_related('service_items').first()
+    subscription = Subscription.objects.filter(plans__id=subscription_id).only('id',
+                                                                               'next_payment_at').first()
+
+    for plan_service_item in PlanServiceItem.objects.filter(plan=plan).prefetch_related('service_item'):
+        service_item = plan_service_item.service_item
+        scheduler = ServiceStockScheduler.objects.filter(
+            plan_handler__subscription__id=subscription_id,
+            plan_handler__handler__plan=plan,
+            plan_handler__handler__service_item__id=service_item.id).first()
+
+        if not scheduler:
+            unit = service_item.renew_at
+            unit_type = service_item.renew_at_unit
+            delta = actions.calculate_relative_delta(unit, unit_type)
+            valid_until = subscription.next_payment_at + delta
+
+            if valid_until > subscription.next_payment_at:
+                valid_until = subscription.next_payment_at
+
+            if subscription.valid_until and valid_until > subscription.valid_until:
+                valid_until = subscription.valid_until
+
+            handler, _ = PlanServiceItemHandler.objects.get_or_create(subscription=subscription,
+                                                                      handler=plan_service_item)
+
+            ServiceStockScheduler.objects.get_or_create(plan_handler=handler)
+
+
+@task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
+def update_plan_financing_service_stock_schedulers(plan_id: int, subscription_id: int, **_: Any):
+    plan = Plan.objects.filter(id=plan_id).only('id').prefetch_related('service_items').first()
+    plan_financing = PlanFinancing.objects.filter(plans__id=subscription_id).only('id',
+                                                                                  'next_payment_at').first()
+
+    for plan_service_item in PlanServiceItem.objects.filter(plan=plan).prefetch_related('service_item'):
+        service_item = plan_service_item.service_item
+        scheduler = ServiceStockScheduler.objects.filter(
+            plan_handler__plan_financing__id=subscription_id,
+            plan_handler__handler__plan=plan,
+            plan_handler__handler__service_item__id=service_item.id).first()
+
+        if not scheduler:
+            unit = service_item.renew_at
+            unit_type = service_item.renew_at_unit
+            delta = actions.calculate_relative_delta(unit, unit_type)
+            valid_until = plan_financing.next_payment_at + delta
+
+            if valid_until > plan_financing.next_payment_at:
+                valid_until = plan_financing.next_payment_at
+
+            if plan_financing.valid_until and valid_until > plan_financing.valid_until:
+                valid_until = plan_financing.valid_until
+
+            handler, _ = PlanServiceItemHandler.objects.get_or_create(plan_financing=plan_financing,
+                                                                      handler=plan_service_item)
+
+            ServiceStockScheduler.objects.get_or_create(plan_handler=handler)
+
+
+@task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
+def update_service_stock_schedulers(plan_id: int, **_: Any):
+    for subscription in Subscription.objects.filter(plans__id=plan_id).only('id'):
+        update_subscription_service_stock_schedulers.delay(plan_id, subscription.id)
+
+    for plan_financing in PlanFinancing.objects.filter(plans__id=plan_id).only('id'):
+        update_plan_financing_service_stock_schedulers.delay(plan_id, plan_financing.id)

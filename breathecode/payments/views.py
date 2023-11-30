@@ -267,35 +267,30 @@ class AcademyCohortSetCohortView(APIView):
                                      },
                                      fix={'lower': 'slug'})
 
+        errors = []
         if not (cohort_set
                 := CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug),
                                             owner__id=academy_id).exclude(status='DELETED').first()):
-            raise ValidationException(translation(lang,
-                                                  en='Plan not found',
-                                                  es='Plan no encontrado',
-                                                  slug='not-found'),
-                                      code=404)
+            errors.append(C(translation(lang, en='Plan not found', es='Plan no encontrado',
+                                        slug='not-found')))
 
         if not (items := Cohort.objects.filter(query)):
-            raise ValidationException(translation(lang,
-                                                  en='Cohort not found',
-                                                  es='Cohort no encontrada',
-                                                  slug='cohort-not-found'),
-                                      code=404)
+            errors.append(
+                C(translation(lang, en='Cohort not found', es='Cohort no encontrada',
+                              slug='cohort-not-found')))
 
-        raise ValidationException(C('This invite don\'t have email, contact to admin', slug='without-email'))
+        if errors:
+            raise ValidationException(errors, code=404)
 
-        #FIXME: this endpoint does not work yet
-        data = []
+        to_add = set()
         for item in items:
-            if item in cohort_set.cohorts.all():
-                data.append({'cohort': item.id, 'cohort_set': cohort_set.id})
-                plan.available_cohorts.add(item)
+            if item not in cohort_set.cohorts.all():
+                to_add.add(item)
 
-            else:
-                ...
+        if to_add:
+            cohort_set.cohorts.add(*to_add)
 
-        return Response({'status': 'ok'}, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+        return Response({'status': 'ok'}, status=status.HTTP_201_CREATED if to_add else status.HTTP_200_OK)
 
 
 class ServiceView(APIView):
@@ -1051,9 +1046,9 @@ class PlanOfferView(APIView):
     def get(self, request):
         handler = self.extensions(request)
 
-        # cache = handler.cache.get()
-        # if cache is not None:
-        #     return cache
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
 
         lang = get_user_language(request)
         utc_now = timezone.now()
