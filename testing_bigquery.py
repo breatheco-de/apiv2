@@ -129,10 +129,7 @@ class BigQuerySet():
         print('query_params')
         print(query_params)
 
-        job_config = bigquery.QueryJobConfig(
-            #  destination=f'breathecode-197918.4geeks_dev.konoha',
-            query_parameters=query_params)
-        # job_config.write_disposition = bigquery.WriteDisposition.WRITE_TRUNCATE
+        job_config = bigquery.QueryJobConfig(query_parameters=query_params)
         kwparams['job_config'] = job_config
 
         return params, kwparams
@@ -167,19 +164,6 @@ class BigQuerySet():
                 operation, attribute = self.aggregation_parser(agg)
                 query_fields.append(f'{operation}({attribute}) AS {operation.lower()}__{attribute}')
 
-        # if aggs:
-        #     query = f'SELECT '
-        #     for agg in aggs:
-        #         operation, attribute = self.aggregation_parser(agg)
-        #         query += f'{operation}({attribute}) AS {attribute}, '
-        #     query = query[:-2]
-        #     query += f' FROM {self.table} '
-        # elif self.fields:
-        #     query = f'SELECT {", ".join(self.fields)} FROM {self.table}'
-
-        # else:
-        #     query = f'SELECT * FROM {self.table} '
-
         if len(query_fields) > 0:
             query = f"""SELECT {", ".join(query_fields)} FROM `breathecode-197918.4geeks_dev.{self.table}` """
         else:
@@ -205,19 +189,23 @@ class BigQuerySet():
 
 result = BigQuerySet('konoha')
 
-result = result.filter(n=1)
-result = result.select('name')
+result = result.filter(extra__c1__gt=7)
+# result = result.select('n')
 # result = result.order_by('name')
-result = result.group_by('name')
+# result = result.group_by('n')
 # print(result.get_params())
-# result = result.build()
+result = result.build()
 
-result = result.aggregate(Sum('n'))
+# result = result.aggregate(Sum('n'))
 
 print(result)
 # print("result['sum__n']")
 # print(result['sum__n'])
+data = []
 for r in result:
     print('r')
     print(r)
+    data.append(dict(r.items()))
+
+print(data)
 # print(result.aggregate(Sum('n')))

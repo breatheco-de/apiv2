@@ -1,3 +1,4 @@
+import json
 from django.contrib.auth.models import User
 from django.db.models import Q
 from google.cloud.ndb.query import OR
@@ -10,7 +11,7 @@ from breathecode.activity.models import StudentActivity
 from breathecode.activity.serializers import ActivitySerializer
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.authenticate.actions import get_user_language
-from breathecode.services.google_cloud.big_query import BigQuery
+from breathecode.services.google_cloud.big_query import BigQuery, BigQuerySet
 from breathecode.utils import (HeaderLimitOffsetPagination, ValidationException, capable_of, getLogger)
 from breathecode.utils.i18n import translation
 
@@ -655,3 +656,37 @@ class V2AcademyActivityView(APIView):
 
         serializer = ActivitySerializer(results, many=True)
         return Response(serializer.data)
+
+
+class V2AcademyActivityReportView(APIView):
+
+    @capable_of('read_activity')
+    def get(self, request, academy_id=None):
+        query = request.GET.get('query', None)
+        if query is None:
+            raise ValidationException('Query json was not provided', slug='query-found')
+
+        query = json.loads(query)
+        result = BigQuerySet('konoha')
+        query = {
+            'filter': {
+                'name': 'Row 2'
+            },
+            # 'fields': ['name'],
+            # 'by': ['name'],
+            # 'order': ['name'],
+            'limit': 50,
+            # 'grouping_function' : {
+            #     'count': ['n']
+            # }
+        }
+        print('query')
+        print(query)
+
+        result = result.json_query(query)
+
+        data = []
+        for r in result:
+            data.append(dict(r.items()))
+
+        return Response(data)

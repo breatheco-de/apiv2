@@ -1,4 +1,5 @@
 import os
+import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -12,7 +13,7 @@ from google.auth.credentials import AnonymousCredentials
 client = None
 engine = None
 
-__all__ = ['BigQuery']
+__all__ = ['BigQuery', 'BigQuerySet', 'Sum', 'Count', 'Avg']
 
 
 def is_test_env():
@@ -29,85 +30,6 @@ class BigQueryMeta(type):
 
         except Exception:
             pass
-
-
-class BigQuerySet():
-
-    def __init__(self):
-        self.query = {}
-        self.agg = []
-        self.group = None
-
-    def set_query(self, *args, **kwargs):
-        self.query.update(kwargs)
-
-    def order_by(self, *name):
-        self.group = name
-
-    def aggregate(self, *args):
-        self.agg += args
-
-    def build(self, table, *, fields=[], **kwargs):
-        if fields:
-            query = f'SELECT {", ".join(fields)} FROM {table}'
-
-        else:
-            query = f'SELECT * FROM {table}'
-
-        exact = []
-        gt = []
-        gte = []
-        lt = []
-        lte = []
-        by = []
-
-        for key in kwargs:
-            if key.endswith('__gt'):
-                gt.append({'k': key.replace('__gt', ''), 'v': kwargs[key]})
-
-            elif key.endswith('__gte'):
-                gte.append({'k': key.replace('__gte', ''), 'v': kwargs[key]})
-
-            elif key.endswith('__lt'):
-                lt.append({'k': key.replace('__lt', ''), 'v': kwargs[key]})
-
-            elif key.endswith('__lte'):
-                lte.append({'k': key.replace('__lte', ''), 'v': kwargs[key]})
-
-            elif key.endswith('__by'):
-                lte.append({'k': key.replace('__by', ''), 'v': kwargs[key]})
-
-            else:
-                exact.append({'k': key, 'v': kwargs[key]})
-
-        if gt or gte or lt or lte or exact:
-            query += ' WHERE '
-
-            for o in gt:
-                query += f'{o["k"]} > {o["v"]} AND '
-
-            for o in gte:
-                query += f'{o["k"]} >= {o["v"]} AND '
-
-            for o in lt:
-                query += f'{o["k"]} < {o["v"]} AND '
-
-            for o in lte:
-                query += f'{o["k"]} <= {o["v"]} AND '
-
-            for o in exact:
-                query += f'{o["k"]} = {o["v"]} AND '
-
-            if query.endswith(' AND '):
-                query = query[:-5]
-
-        if self.group:
-            query += ' GROUP BY ' + ', '.join(self.group)
-
-        if self.agg:
-            return
-
-        return query
 
 
 class BigQuery(metaclass=BigQueryMeta):
@@ -257,3 +179,221 @@ class BigQuery(metaclass=BigQueryMeta):
         """
 
         return query
+
+
+class Sum():
+
+    def __init__(self, param):
+        self._constructor_args = ((param, ), )
+
+
+class Count():
+
+    def __init__(self, param):
+        self._constructor_args = ((param, ), )
+
+
+class Avg():
+
+    def __init__(self, param):
+        self._constructor_args = ((param, ), )
+
+
+class BigQuerySet():
+
+    def __init__(self, table):
+        self.query = {}
+        self.agg = []
+        self.fields = None
+        self.order = None
+        self.group = None
+        self.limit = None
+        self.table = table
+
+    def set_query(self, *args, **kwargs):
+        self.query.update(kwargs)
+
+    def limit_by(self, name):
+        self.limit = name
+        return self
+
+    def order_by(self, *name):
+        self.order = name
+        return self
+
+    def group_by(self, *name):
+        self.group = name
+        return self
+
+    def aggregate(self, *args):
+        sql = self.sql(args)
+        print(sql)
+        params, kwparams = self.get_params()
+
+        client, project_id, dataset = BigQuery.client()
+
+        query_job = client.query(sql, *params, **kwparams)
+
+        return query_job.result()
+
+    def build(self):
+
+        sql = self.sql()
+
+        print(sql)
+        params, kwparams = self.get_params()
+
+        client, project_id, dataset = BigQuery.client()
+
+        query_job = client.query(sql, *params, **kwparams)
+        return query_job.result()
+
+    def filter(self, *args, **kwargs):
+        self.set_query(*args, **kwargs)
+        return self
+
+    def attribute_parser(self, key):
+        operand = '='
+        key = key.replace('__', '.')
+        if key[-4:] == '.gte':
+            key = key[:-4]
+            operand = '>='
+        elif key[-3:] == '.gt':
+            key = key[:-3]
+            operand = '>'
+        elif key[-3:] == '.lt':
+            key = key[:-3]
+            operand = '<'
+        if key[-4:] == '.lte':
+            key = key[:-4]
+            operand = '<='
+        return key, operand, 'x__' + key.replace('.', '__')
+
+    def get_type(self, elem):
+        if isinstance(elem, int):
+            return 'INT64'
+        if isinstance(elem, float):
+            return 'FLOAT64'
+        if isinstance(elem, bool):
+            return 'BOOL'
+        if isinstance(elem, str):
+            return 'STRING'
+        if isinstance(elem, datetime):
+            return 'DATETIME'
+
+    def get_params(self):
+        if not self.query:
+            return [], {}
+        params = []
+        kwparams = {}
+        query_params = []
+
+        for key, val in self.query.items():
+            key, operand, var_name = self.attribute_parser(key)
+            print('key')
+            print(key)
+            print('operand')
+            print(operand)
+            print('var_name')
+            print(var_name)
+            query_params.append(bigquery.ScalarQueryParameter(var_name, self.get_type(val), val))
+
+        print('query_params')
+        print(query_params)
+
+        job_config = bigquery.QueryJobConfig(query_parameters=query_params)
+        kwparams['job_config'] = job_config
+
+        return params, kwparams
+
+    def select(self, *names):
+        self.fields = names
+        return self
+
+    def aggregation_parser(self, agg):
+        operation = None
+        attribute = None
+        if isinstance(agg, Sum):
+            operation = 'SUM'
+            attribute = agg._constructor_args[0][0]
+
+        if isinstance(agg, Count):
+            operation = 'COUNT'
+            attribute = agg._constructor_args[0][0]
+
+        if isinstance(agg, Avg):
+            operation = 'AVG'
+            attribute = agg._constructor_args[0][0]
+
+        return operation, attribute
+
+    def sql(self, aggs=[]):
+        query_fields = []
+        if self.fields:
+            query_fields += self.fields
+        if aggs:
+            for agg in aggs:
+                operation, attribute = self.aggregation_parser(agg)
+                query_fields.append(f'{operation}({attribute}) AS {operation.lower()}__{attribute}')
+
+        if len(query_fields) > 0:
+            query = f"""SELECT {", ".join(query_fields)} FROM `breathecode-197918.4geeks_dev.{self.table}` """
+        else:
+            query = f"""SELECT * FROM `breathecode-197918.4geeks_dev.{self.table}` """
+
+        if self.query:
+            query += 'WHERE '
+            for key, val in self.query.items():
+                key, operand, var_name = self.attribute_parser(key)
+                query += f'{key} {operand} @{var_name} AND '
+            query = query[:-5]
+
+        if self.group:
+            group_by = ', '.join(self.group)
+            query += f' GROUP BY {group_by}'
+
+        if self.order:
+            order_by = ', '.join(self.order)
+            query += f' ORDER BY {order_by} DESC'
+
+        if self.limit:
+            query += f' LIMIT {self.limit}'
+
+        return query
+
+    def json_query(self, query):
+        if 'filter' in query:
+            self.filter(**query['filter'])
+
+        if 'fields' in query:
+            self.select(*query['fields'])
+
+        if 'by' in query:
+            self.group_by(*query['by'])
+
+        if 'order' in query:
+            self.order_by(*query['order'])
+
+        if 'limit' in query:
+            self.limit_by(query['limit'])
+
+        if 'grouping_function' in query:
+            grouping_function = query['grouping_function']
+            aggs = []
+            if 'sum' in grouping_function:
+                for value in grouping_function['sum']:
+                    aggs.append(Sum(value))
+
+            if 'count' in grouping_function:
+                for value in grouping_function['count']:
+                    aggs.append(Count(value))
+
+            if 'avg' in grouping_function:
+                for value in grouping_function['avg']:
+                    aggs.append(Avg(value))
+
+            result = self.aggregate(*aggs)
+        else:
+            result = self.build()
+
+        return result
