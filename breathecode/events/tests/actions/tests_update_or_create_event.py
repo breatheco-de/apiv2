@@ -185,7 +185,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'host_user_id': None,
             'free_for_bootcamps': True,
             'live_stream_url': None,
-            'related_asset': None,
+            'asset_slug': None,
             'uuid': uuid,
         }
 
@@ -268,7 +268,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'host_user_id': None,
             'free_for_bootcamps': True,
             'live_stream_url': None,
-            'related_asset': None,
+            'asset_slug': None,
             'uuid': uuid,
         }
 

@@ -285,11 +285,11 @@ class AssetBigSerializer(AssetMidSerializer):
 
     cluster = KeywordClusterSmallSerializer(required=False)
 
-    related_assets = serpy.MethodField()
+    assets_related = serpy.MethodField()
 
-    def get_related_assets(self, obj):
-        _related_assets = [AssetSmallSerializer(asset).data for asset in obj.related_assets.all()]
-        return _related_assets
+    def get_assets_related(self, obj):
+        _assets_related = [AssetSmallSerializer(asset).data for asset in obj.assets_related.all()]
+        return _assets_related
 
 
 class ParentAssetTechnologySerializer(serpy.Serializer):

@@ -463,10 +463,10 @@ class Asset(models.Model):
                                           null=True,
                                           help_text='Will only be used if "url" is the delivery format')
 
-    related_assets = models.ManyToManyField(
+    assets_related = models.ManyToManyField(
         'self',
         blank=True,
-        null=True,
+        symmetrical=False,
         help_text='Related assets used to get prepared before going through this asset.')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
