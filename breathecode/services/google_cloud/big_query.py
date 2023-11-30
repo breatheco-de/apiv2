@@ -112,74 +112,6 @@ class BigQuery(metaclass=BigQueryMeta):
         credentials.resolve_credentials()
         return client, os.getenv('GOOGLE_PROJECT_ID', 'test'), os.getenv('BIGQUERY_DATASET', '')
 
-    @classmethod
-    def select(cls, table, *, fields=[], **kwargs):
-        if fields:
-            query = f'SELECT {", ".join(fields)} FROM {table}'
-
-        else:
-            query = f'SELECT * FROM {table}'
-
-        exact = []
-        gt = []
-        gte = []
-        lt = []
-        lte = []
-        by = []
-
-        for key in kwargs:
-            if key.endswith('__gt'):
-                gt.append({'k': key.replace('__gt', ''), 'v': kwargs[key]})
-
-            elif key.endswith('__gte'):
-                gte.append({'k': key.replace('__gte', ''), 'v': kwargs[key]})
-
-            elif key.endswith('__lt'):
-                lt.append({'k': key.replace('__lt', ''), 'v': kwargs[key]})
-
-            elif key.endswith('__lte'):
-                lte.append({'k': key.replace('__lte', ''), 'v': kwargs[key]})
-
-            elif key.endswith('__by'):
-                lte.append({'k': key.replace('__by', ''), 'v': kwargs[key]})
-
-            else:
-                exact.append({'k': key, 'v': kwargs[key]})
-
-        if gt or gte or lt or lte or exact:
-            query += ' WHERE '
-
-            for o in gt:
-                query += f'{o["k"]} > {o["v"]} AND '
-
-            for o in gte:
-                query += f'{o["k"]} >= {o["v"]} AND '
-
-            for o in lt:
-                query += f'{o["k"]} < {o["v"]} AND '
-
-            for o in lte:
-                query += f'{o["k"]} <= {o["v"]} AND '
-
-            for o in exact:
-                query += f'{o["k"]} = {o["v"]} AND '
-
-            if query.endswith(' AND '):
-                query = query[:-5]
-
-        if by:
-            query += ' GROUP BY ' + ', '.join(by)
-        """
-        {"grouping_functions": [{
-            "AVG": "salary", -> salary__avg
-        }{
-            "AVG": "edad", -> edad__avg
-        },]}
-
-        """
-
-        return query
-
 
 class Sum():
 
@@ -202,6 +134,8 @@ class Avg():
 class BigQuerySet():
 
     def __init__(self, table):
+        client, project_id, dataset = BigQuery.client()
+
         self.query = {}
         self.agg = []
         self.fields = None
@@ -209,6 +143,9 @@ class BigQuerySet():
         self.group = None
         self.limit = None
         self.table = table
+        self.client = client
+        self.dataset = dataset
+        self.project_id = project_id
 
     def set_query(self, *args, **kwargs):
         self.query.update(kwargs)
@@ -230,9 +167,7 @@ class BigQuerySet():
         print(sql)
         params, kwparams = self.get_params()
 
-        client, project_id, dataset = BigQuery.client()
-
-        query_job = client.query(sql, *params, **kwparams)
+        query_job = self.client.query(sql, *params, **kwparams)
 
         return query_job.result()
 
@@ -243,9 +178,7 @@ class BigQuerySet():
         print(sql)
         params, kwparams = self.get_params()
 
-        client, project_id, dataset = BigQuery.client()
-
-        query_job = client.query(sql, *params, **kwparams)
+        query_job = self.client.query(sql, *params, **kwparams)
         return query_job.result()
 
     def filter(self, *args, **kwargs):
@@ -290,16 +223,7 @@ class BigQuerySet():
 
         for key, val in self.query.items():
             key, operand, var_name = self.attribute_parser(key)
-            print('key')
-            print(key)
-            print('operand')
-            print(operand)
-            print('var_name')
-            print(var_name)
             query_params.append(bigquery.ScalarQueryParameter(var_name, self.get_type(val), val))
-
-        print('query_params')
-        print(query_params)
 
         job_config = bigquery.QueryJobConfig(query_parameters=query_params)
         kwparams['job_config'] = job_config
@@ -337,9 +261,9 @@ class BigQuerySet():
                 query_fields.append(f'{operation}({attribute}) AS {operation.lower()}__{attribute}')
 
         if len(query_fields) > 0:
-            query = f"""SELECT {", ".join(query_fields)} FROM `breathecode-197918.4geeks_dev.{self.table}` """
+            query = f"""SELECT {", ".join(query_fields)} FROM `{self.project_id}.{self.dataset}.{self.table}` """
         else:
-            query = f"""SELECT * FROM `breathecode-197918.4geeks_dev.{self.table}` """
+            query = f"""SELECT * FROM `{self.project_id}.{self.dataset}.{self.table}` """
 
         if self.query:
             query += 'WHERE '

@@ -45,32 +45,39 @@ def bigquery_client_mock(self, n=1, user_id=1, kind=None):
     project_id = 'test'
     dataset = '4geeks'
 
-    query = f"""
-            SELECT *
-            FROM `{project_id}.{dataset}.activity`
-            WHERE user_id = @user_id
-                {'AND kind = @kind' if kind else ''}
-            ORDER BY id DESC
-            LIMIT @limit
-            OFFSET @offset
-        """
-
-    return (client_mock, result_mock, query, project_id, dataset, rows_to_insert)
+    return (client_mock, result_mock, project_id, dataset, rows_to_insert)
 
 
-def konoha_mock(self, n=1, name='Row 1', sum__n=1, c1=15, kind=None):
+def bigquery_client_mock_group(self, n=1, user_id=1, kind=None, fields=[], by=''):
     rows_to_insert = [{
-        'sum__n': sum__n,
-        'name': name,
-        'n': 15,
-        'extra': {
-            'c1': c1
+        'id': uuid4().hex,
+        'user_id': user_id,
+        'kind': kind if kind else self.bc.fake.slug(),
+        'related': {
+            'type': f'{self.bc.fake.slug()}.{self.bc.fake.slug()}',
+            'id': random.randint(1, 100),
+            'slug': self.bc.fake.slug(),
         },
-        'json': None,
+        'meta': {
+            self.bc.fake.slug().replace('-', '_'): self.bc.fake.slug(),
+            self.bc.fake.slug().replace('-', '_'): self.bc.fake.slug(),
+            self.bc.fake.slug().replace('-', '_'): self.bc.fake.slug(),
+        },
+        'timestamp': timezone.now().isoformat(),
     } for _ in range(n)]
 
+    query_rows = []
+    grouped_data = []
+    for row in rows_to_insert:
+        new_row = {key: row[key] for key in fields}
+        query_rows.append(new_row)
+
+    for row in query_rows:
+        if next(filter(lambda x: x[by] == row[by], grouped_data), None) is None:
+            grouped_data.append(row)
+
     result_mock = MagicMock()
-    result_mock.result.return_value = [AttrDict(**kwargs) for kwargs in rows_to_insert]
+    result_mock.result.return_value = [AttrDict(**kwargs) for kwargs in grouped_data]
 
     client_mock = MagicMock()
     client_mock.query.return_value = result_mock
@@ -78,17 +85,7 @@ def konoha_mock(self, n=1, name='Row 1', sum__n=1, c1=15, kind=None):
     project_id = 'test'
     dataset = '4geeks'
 
-    query = f"""
-            SELECT *
-            FROM `{project_id}.{dataset}.activity`
-            WHERE user_id = @user_id
-                {'AND kind = @kind' if kind else ''}
-            ORDER BY id DESC
-            LIMIT @limit
-            OFFSET @offset
-        """
-
-    return (client_mock, result_mock, query, project_id, dataset, rows_to_insert)
+    return (client_mock, result_mock, project_id, dataset, grouped_data)
 
 
 class MediaTestSuite(MediaTestCase):
@@ -99,9 +96,31 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_no_query(self):
+        url = reverse_lazy('v2:activity:report')
+        model = self.bc.database.create(user=1,
+                                        academy=1,
+                                        profile_academy=1,
+                                        capability='read_activity',
+                                        role=1)
+
+        self.bc.request.authenticate(model.user)
+        self.bc.request.set_headers(academy=1)
+
+        response = self.client.get(url)
+        json = response.json()
+        expected = {
+            'detail': 'query-not-found',
+            'status_code': 400,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test_get_two(self):
-        json_query = '{ "limit": 50 }'
+    def test_get_group_fields(self):
+        json_query = '{}'
+        expected_query = 'SELECT * FROM `test.4geeks.activity` '
         url = reverse_lazy('v2:activity:report') + f'?query={json_query}'
         model = self.bc.database.create(user=1,
                                         academy=1,
@@ -112,17 +131,45 @@ class MediaTestSuite(MediaTestCase):
         self.bc.request.authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
-        val = konoha_mock(self)
-        (client_mock, result_mock, query, project_id, dataset, expected) = val
+        val = bigquery_client_mock(self)
+        (client_mock, result_mock, project_id, dataset, expected) = val
 
         with patch('breathecode.services.google_cloud.big_query.BigQuery.client') as mock:
             mock.return_value = (client_mock, project_id, dataset)
             response = self.client.get(url)
             json = response.json()
-            print('json')
-            print(json)
 
             self.bc.check.calls(BigQuery.client.call_args_list, [call()])
+            assert client_mock.query.call_args[0][0] == expected_query
+            self.bc.check.calls(result_mock.result.call_args_list, [call()])
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_get_used_fields(self):
+        json_query = '{ "by": ["kind"], "fields": ["kind"] }'
+        expected_query = 'SELECT kind FROM `test.4geeks.activity`  GROUP BY kind'
+        url = reverse_lazy('v2:activity:report') + f'?query={json_query}'
+        model = self.bc.database.create(user=1,
+                                        academy=1,
+                                        profile_academy=1,
+                                        capability='read_activity',
+                                        role=1)
+
+        self.bc.request.authenticate(model.user)
+        self.bc.request.set_headers(academy=1)
+
+        val = bigquery_client_mock_group(self, by='kind', fields=['kind'])
+        (client_mock, result_mock, project_id, dataset, expected) = val
+
+        with patch('breathecode.services.google_cloud.big_query.BigQuery.client') as mock:
+            mock.return_value = (client_mock, project_id, dataset)
+            response = self.client.get(url)
+            json = response.json()
+
+            self.bc.check.calls(BigQuery.client.call_args_list, [call()])
+            assert client_mock.query.call_args[0][0] == expected_query
             self.bc.check.calls(result_mock.result.call_args_list, [call()])
 
         self.assertEqual(json, expected)

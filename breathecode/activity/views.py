@@ -664,22 +664,11 @@ class V2AcademyActivityReportView(APIView):
     def get(self, request, academy_id=None):
         query = request.GET.get('query', None)
         if query is None:
-            raise ValidationException('Query json was not provided', slug='query-found')
+            raise ValidationException('Query json was not provided', slug='query-not-found')
 
         query = json.loads(query)
-        result = BigQuerySet('konoha')
-        query = {
-            'filter': {
-                'name': 'Row 2'
-            },
-            # 'fields': ['name'],
-            # 'by': ['name'],
-            # 'order': ['name'],
-            'limit': 50,
-            # 'grouping_function' : {
-            #     'count': ['n']
-            # }
-        }
+        result = BigQuerySet('activity')
+
         print('query')
         print(query)
 
