@@ -589,6 +589,10 @@ class V2AcademyActivityView(APIView):
         lang = get_user_language(request)
         client, project_id, dataset = BigQuery.client()
 
+        user_id = request.GET.get('user_id', None)
+        if user_id is None:
+            user_id = request.user.id
+
         if activity_id:
             # Define a query
             query = f"""
@@ -604,7 +608,7 @@ class V2AcademyActivityView(APIView):
             job_config = bigquery.QueryJobConfig(query_parameters=[
                 bigquery.ScalarQueryParameter('activity_id', 'STRING', activity_id),
                 bigquery.ScalarQueryParameter('academy_id', 'INT64', academy_id),
-                bigquery.ScalarQueryParameter('user_id', 'INT64', request.user.id),
+                bigquery.ScalarQueryParameter('user_id', 'INT64', user_id),
             ])
 
             # Run the query
@@ -639,7 +643,7 @@ class V2AcademyActivityView(APIView):
 
         data = [
             bigquery.ScalarQueryParameter('academy_id', 'INT64', int(academy_id)),
-            bigquery.ScalarQueryParameter('user_id', 'INT64', request.user.id),
+            bigquery.ScalarQueryParameter('user_id', 'INT64', user_id),
             bigquery.ScalarQueryParameter('limit', 'INT64', limit),
             bigquery.ScalarQueryParameter('offset', 'INT64', offset),
         ]
