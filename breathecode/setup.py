@@ -3,8 +3,11 @@ import os
 import redis
 import ssl
 from pathlib import Path
+from django.core.cache import cache
 
-__all__ = ['configure_redis']
+IS_DJANGO_REDIS = hasattr(cache, 'delete_pattern')
+
+__all__ = ['configure_redis', 'Lock']
 
 logger = logging.getLogger(__name__)
 redis_client = None
@@ -85,3 +88,19 @@ def get_redis():
         redis_client = redis.from_url(redis_url, **settings)
 
     return redis_client
+
+
+if IS_DJANGO_REDIS:
+    from redis.lock import Lock
+else:
+
+    class Lock:
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            pass
+
+        def __exit__(self, *args, **kwargs):
+            pass
