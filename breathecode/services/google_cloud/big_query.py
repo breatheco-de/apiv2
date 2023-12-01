@@ -164,7 +164,7 @@ class BigQuerySet():
 
     def aggregate(self, *args):
         sql = self.sql(args)
-        print(sql)
+
         params, kwparams = self.get_params()
 
         query_job = self.client.query(sql, *params, **kwparams)
@@ -172,10 +172,8 @@ class BigQuerySet():
         return query_job.result()
 
     def build(self):
-
         sql = self.sql()
 
-        print(sql)
         params, kwparams = self.get_params()
 
         query_job = self.client.query(sql, *params, **kwparams)
