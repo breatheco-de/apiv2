@@ -2,6 +2,7 @@ import os
 import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from django.db.models import Sum, Avg, Count
 
 from breathecode.services.google_cloud import credentials
 from breathecode.utils.sqlalchemy import BigQueryBase
@@ -13,7 +14,7 @@ from google.auth.credentials import AnonymousCredentials
 client = None
 engine = None
 
-__all__ = ['BigQuery', 'BigQuerySet', 'Sum', 'Count', 'Avg']
+__all__ = ['BigQuery', 'BigQuerySet']
 
 
 def is_test_env():
@@ -111,24 +112,6 @@ class BigQuery(metaclass=BigQueryMeta):
 
         credentials.resolve_credentials()
         return client, os.getenv('GOOGLE_PROJECT_ID', 'test'), os.getenv('BIGQUERY_DATASET', '')
-
-
-class Sum():
-
-    def __init__(self, param):
-        self._constructor_args = ((param, ), )
-
-
-class Count():
-
-    def __init__(self, param):
-        self._constructor_args = ((param, ), )
-
-
-class Avg():
-
-    def __init__(self, param):
-        self._constructor_args = ((param, ), )
 
 
 class BigQuerySet():
