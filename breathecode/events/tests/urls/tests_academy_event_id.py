@@ -38,6 +38,7 @@ def get_serializer(event, academy, data={}):
         'host': event.host,
         'starting_at': datetime_to_iso_format(event.starting_at),
         'ending_at': datetime_to_iso_format(event.ending_at),
+        'ended_at': event.ended_at,
         'status': event.status,
         'event_type': event.event_type,
         'online_event': event.online_event,
