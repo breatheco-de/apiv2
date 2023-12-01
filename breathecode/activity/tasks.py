@@ -159,93 +159,6 @@ def get_attendancy_log_per_cohort_user(cohort_user_id: int):
     logger.info('History log saved')
 
 
-# @task(priority=TaskPriority.BACKGROUND.value)
-# def add_activity(user_id: int,
-#                  kind: str,
-#                  related_type: Optional[str] = None,
-#                  related_id: Optional[str | int] = None,
-#                  related_slug: Optional[str] = None,
-#                  **_):
-#     logger.info(f'Executing add_activity related to {str(kind)}')
-
-#     if related_type and not (bool(related_id) ^ bool(related_slug)):
-#         raise AbortTask(
-#             'If related_type is provided, either related_id or related_slug must be provided, but not both.')
-
-#     if not related_type and (related_id or related_slug):
-#         raise AbortTask(
-#             'If related_type is not provided, both related_id and related_slug must also be absent.')
-
-#     client, project_id, dataset = BigQuery.client()
-
-#     job_config = bigquery.QueryJobConfig(
-#         destination=f'{project_id}.{dataset}.activity',
-#         schema_update_options=[bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION],
-#         write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
-#         query_parameters=[
-#             bigquery.ScalarQueryParameter('x__id', 'STRING',
-#                                           uuid.uuid4().hex),
-#             bigquery.ScalarQueryParameter('x__user_id', 'INT64', user_id),
-#             bigquery.ScalarQueryParameter('x__kind', 'STRING', kind),
-#             bigquery.ScalarQueryParameter('x__timestamp', 'TIMESTAMP',
-#                                           timezone.now().isoformat()),
-#             bigquery.ScalarQueryParameter('x__related_type', 'STRING', related_type),
-#             bigquery.ScalarQueryParameter('x__related_id', 'INT64', related_id),
-#             bigquery.ScalarQueryParameter('x__related_slug', 'STRING', related_slug),
-#         ])
-
-#     meta = actions.get_activity_meta(kind, related_type, related_id, related_slug)
-
-#     meta_struct = ''
-
-#     for key in meta:
-#         t = 'STRING'
-
-#         # keep it adobe than the date confitional
-#         if isinstance(meta[key], datetime) or (isinstance(meta[key], str)
-#                                                and ISO_STRING_PATTERN.match(meta[key])):
-#             t = 'TIMESTAMP'
-#         elif isinstance(meta[key], date):
-#             t = 'DATE'
-#         elif isinstance(meta[key], str):
-#             pass
-#         elif isinstance(meta[key], bool):
-#             t = 'BOOL'
-#         elif isinstance(meta[key], int):
-#             t = 'INT64'
-#         elif isinstance(meta[key], float):
-#             t = 'FLOAT64'
-
-#         job_config.query_parameters += [bigquery.ScalarQueryParameter(key, t, meta[key])]
-#         meta_struct += f'@{key} as {key}, '
-
-#     if meta_struct:
-#         meta_struct = meta_struct[:-2]
-
-#     query = f"""
-#         SELECT
-#             @x__id as id,
-#             @x__user_id as user_id,
-#             @x__kind as kind,
-#             @x__timestamp as timestamp,
-#             STRUCT(
-#                 @x__related_type as type,
-#                 @x__related_id as id,
-#                 @x__related_slug as slug) as related,
-#             STRUCT({meta_struct}) as meta
-#     """
-
-#     query_job = client.query(query, job_config=job_config)
-#     query_job.done()
-
-#     if query_job.error_result:
-#         raise Exception(query_job.error_result.get('message', 'No description'))
-
-# with Lock(redis_client, lock_key, timeout=10, blocking_timeout=10):
-#     with transaction.atomic():
-#         instance, created = super().get_or_create(**kwargs)
-
-
 @task(priority=TaskPriority.BACKGROUND.value)
 def upload_activities(task_manager_id: int):
     client = None
@@ -325,17 +238,6 @@ def upload_activities(task_manager_id: int):
         cache.set(f'activity:backup:{worker}-{task_manager_id}', None)
 
 
-# from multiprocessing import current_process
-# from billiard.process import current_process
-
-# from celery.signals import celeryd_after_setup
-
-# @celeryd_after_setup.connect
-# def capture_worker_name(sender, instance, **kwargs):
-#     os.environ["WORKER_NAME"] = '{0}'.format(sender)
-import threading
-
-
 @task(priority=TaskPriority.BACKGROUND.value)
 def add_activity(user_id: int,
                  kind: str,
@@ -393,7 +295,6 @@ def add_activity(user_id: int,
             else:
                 data = []
 
-            # n = len(data)
             res = [
                 serialize_field('id', uuid.uuid4().hex, 'STRING', struct='x', prefix='x__'),
                 serialize_field('user_id', user_id, 'INT64', struct='x', prefix='x__'),
