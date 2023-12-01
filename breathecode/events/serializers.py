@@ -369,6 +369,7 @@ class AcademyEventSmallSerializer(serpy.Serializer):
     capacity = serpy.Field()
     starting_at = serpy.Field()
     ending_at = serpy.Field()
+    ended_at = serpy.Field()
     status = serpy.Field()
     host = serpy.Field()
     event_type = EventTypeSmallSerializer(required=False)
