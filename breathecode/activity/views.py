@@ -11,7 +11,7 @@ from breathecode.activity.models import StudentActivity
 from breathecode.activity.serializers import ActivitySerializer
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.authenticate.actions import get_user_language
-from breathecode.services.google_cloud.big_query import BigQuery, BigQuerySet
+from breathecode.services.google_cloud.big_query import BigQuery
 from breathecode.utils import (HeaderLimitOffsetPagination, ValidationException, capable_of, getLogger)
 from breathecode.utils.i18n import translation
 
@@ -667,7 +667,7 @@ class V2AcademyActivityReportView(APIView):
             raise ValidationException('Query json was not provided', slug='query-not-found')
 
         query = json.loads(query)
-        result = BigQuerySet('activity')
+        result = BigQuery.queryset('activity')
 
         result = result.json_query(query)
 
