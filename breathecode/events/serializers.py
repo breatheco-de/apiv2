@@ -285,6 +285,7 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
     banner = serpy.Field()
     starting_at = serpy.Field()
     ending_at = serpy.Field()
+    ended_at = serpy.Field()
     host = serpy.Field()
     status = serpy.Field()
     event_type = EventTypeSmallSerializer(required=False)
