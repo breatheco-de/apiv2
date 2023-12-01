@@ -669,9 +669,6 @@ class V2AcademyActivityReportView(APIView):
         query = json.loads(query)
         result = BigQuerySet('activity')
 
-        print('query')
-        print(query)
-
         result = result.json_query(query)
 
         data = []
