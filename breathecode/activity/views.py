@@ -1,5 +1,6 @@
+import json
 from django.contrib.auth.models import User
-from django.db.models import Q
+from django.db.models import Q, Sum, Avg, Count
 from google.cloud.ndb.query import OR
 from rest_framework import status
 from rest_framework.response import Response
@@ -589,6 +590,10 @@ class V2AcademyActivityView(APIView):
         lang = get_user_language(request)
         client, project_id, dataset = BigQuery.client()
 
+        user_id = request.GET.get('user_id', None)
+        if user_id is None:
+            user_id = request.user.id
+
         if activity_id:
             # Define a query
             query = f"""
@@ -604,7 +609,7 @@ class V2AcademyActivityView(APIView):
             job_config = bigquery.QueryJobConfig(query_parameters=[
                 bigquery.ScalarQueryParameter('activity_id', 'STRING', activity_id),
                 bigquery.ScalarQueryParameter('academy_id', 'INT64', academy_id),
-                bigquery.ScalarQueryParameter('user_id', 'INT64', request.user.id),
+                bigquery.ScalarQueryParameter('user_id', 'INT64', user_id),
             ])
 
             # Run the query
@@ -639,7 +644,7 @@ class V2AcademyActivityView(APIView):
 
         data = [
             bigquery.ScalarQueryParameter('academy_id', 'INT64', int(academy_id)),
-            bigquery.ScalarQueryParameter('user_id', 'INT64', request.user.id),
+            bigquery.ScalarQueryParameter('user_id', 'INT64', user_id),
             bigquery.ScalarQueryParameter('limit', 'INT64', limit),
             bigquery.ScalarQueryParameter('offset', 'INT64', offset),
         ]
@@ -655,3 +660,57 @@ class V2AcademyActivityView(APIView):
 
         serializer = ActivitySerializer(results, many=True)
         return Response(serializer.data)
+
+
+class V2AcademyActivityReportView(APIView):
+
+    @capable_of('read_activity')
+    def get(self, request, academy_id=None):
+        query = request.GET.get('query', '{}')
+
+        query = json.loads(query)
+        result = BigQuery.queryset('activity')
+
+        fields = request.GET.get('fields', None)
+        if fields is not None:
+            result = result.select(*fields.split(','))
+
+        by = request.GET.get('by', None)
+        if by is not None:
+            result = result.group_by(*by.split(','))
+
+        order = request.GET.get('order', None)
+        if order is not None:
+            result = result.order_by(*order.split(','))
+
+        limit = request.GET.get('limit', None)
+        if limit is not None:
+            result = result.limit_by(limit)
+
+        if 'filter' in query:
+            result = result.filter(**query['filter'])
+
+        if 'grouping_function' in query:
+            grouping_function = query['grouping_function']
+            aggs = []
+            if 'sum' in grouping_function:
+                for value in grouping_function['sum']:
+                    aggs.append(Sum(value))
+
+            if 'count' in grouping_function:
+                for value in grouping_function['count']:
+                    aggs.append(Count(value))
+
+            if 'avg' in grouping_function:
+                for value in grouping_function['avg']:
+                    aggs.append(Avg(value))
+
+            result = result.aggregate(*aggs)
+        else:
+            result = result.build()
+
+        data = []
+        for r in result:
+            data.append(dict(r.items()))
+
+        return Response(data)
