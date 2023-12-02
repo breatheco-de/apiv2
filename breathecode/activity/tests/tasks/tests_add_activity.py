@@ -141,44 +141,44 @@ def test_adding_the_resource_with_id_and_no_meta(bc: Breathecode, decompress_and
     assert decompress_and_parse(cache.get('activity:worker-0')) == [
         [
             {
-                'key': 'x__id',
-                'struct': 'x',
+                'key': 'id',
+                'struct': None,
                 'type': 'STRING',
                 'value': 'c5d8cbc54a894dd0983caae1b8507091'
             },
             {
-                'key': 'x__user_id',
-                'struct': 'x',
+                'key': 'user_id',
+                'struct': None,
                 'type': 'INT64',
                 'value': 1
             },
             {
-                'key': 'x__kind',
-                'struct': 'x',
+                'key': 'kind',
+                'struct': None,
                 'type': 'STRING',
                 'value': kind
             },
             {
-                'key': 'x__timestamp',
-                'struct': 'x',
+                'key': 'timestamp',
+                'struct': None,
                 'type': 'TIMESTAMP',
                 'value': UTC_NOW.isoformat()
             },
             {
-                'key': 'x__related_type',
-                'struct': 'x',
+                'key': 'type',
+                'struct': 'related',
                 'type': 'STRING',
                 'value': 'auth.User'
             },
             {
-                'key': 'x__related_id',
-                'struct': 'x',
+                'key': 'id',
+                'struct': 'related',
                 'type': 'INT64',
                 'value': 1
             },
             {
-                'key': 'x__related_slug',
-                'struct': 'x',
+                'key': 'slug',
+                'struct': 'related',
                 'type': 'STRING',
                 'value': None
             },
@@ -204,44 +204,44 @@ def test_adding_the_resource_with_slug_and_no_meta(bc: Breathecode, decompress_a
     assert decompress_and_parse(cache.get('activity:worker-0')) == [
         [
             {
-                'key': 'x__id',
-                'struct': 'x',
+                'key': 'id',
+                'struct': None,
                 'type': 'STRING',
                 'value': 'c5d8cbc54a894dd0983caae1b8507091'
             },
             {
-                'key': 'x__user_id',
-                'struct': 'x',
+                'key': 'user_id',
+                'struct': None,
                 'type': 'INT64',
                 'value': 1
             },
             {
-                'key': 'x__kind',
-                'struct': 'x',
+                'key': 'kind',
+                'struct': None,
                 'type': 'STRING',
                 'value': kind
             },
             {
-                'key': 'x__timestamp',
-                'struct': 'x',
+                'key': 'timestamp',
+                'struct': None,
                 'type': 'TIMESTAMP',
                 'value': UTC_NOW.isoformat()
             },
             {
-                'key': 'x__related_type',
-                'struct': 'x',
+                'key': 'type',
+                'struct': 'related',
                 'type': 'STRING',
                 'value': 'auth.User'
             },
             {
-                'key': 'x__related_id',
-                'struct': 'x',
+                'key': 'id',
+                'struct': 'related',
                 'type': 'INT64',
                 'value': None
             },
             {
-                'key': 'x__related_slug',
-                'struct': 'x',
+                'key': 'slug',
+                'struct': 'related',
                 'type': 'STRING',
                 'value': related_slug
             },
@@ -276,44 +276,44 @@ def test_adding_the_resource_with_meta(bc: Breathecode, set_activity_meta, decom
     assert decompress_and_parse(cache.get('activity:worker-0')) == [
         [
             {
-                'key': 'x__id',
-                'struct': 'x',
+                'key': 'id',
+                'struct': None,
                 'type': 'STRING',
                 'value': 'c5d8cbc54a894dd0983caae1b8507091'
             },
             {
-                'key': 'x__user_id',
-                'struct': 'x',
+                'key': 'user_id',
+                'struct': None,
                 'type': 'INT64',
                 'value': 1
             },
             {
-                'key': 'x__kind',
-                'struct': 'x',
+                'key': 'kind',
+                'struct': None,
                 'type': 'STRING',
                 'value': kind
             },
             {
-                'key': 'x__timestamp',
-                'struct': 'x',
+                'key': 'timestamp',
+                'struct': None,
                 'type': 'TIMESTAMP',
                 'value': UTC_NOW.isoformat()
             },
             {
-                'key': 'x__related_type',
-                'struct': 'x',
+                'key': 'type',
+                'struct': 'related',
                 'type': 'STRING',
                 'value': 'auth.User'
             },
             {
-                'key': 'x__related_id',
-                'struct': 'x',
+                'key': 'id',
+                'struct': 'related',
                 'type': 'INT64',
                 'value': 1
             },
             {
-                'key': 'x__related_slug',
-                'struct': 'x',
+                'key': 'slug',
+                'struct': 'related',
                 'type': 'STRING',
                 'value': None
             },
@@ -376,44 +376,44 @@ def test_adding_the_resource_with_meta__called_two_times(bc: Breathecode, set_ac
     assert decompress_and_parse(cache.get('activity:worker-0')) == [
         [
             {
-                'key': 'x__id',
-                'struct': 'x',
+                'key': 'id',
+                'struct': None,
                 'type': 'STRING',
                 'value': f'c5d8cbc54a894dd0983caae1b8507091'
             },
             {
-                'key': 'x__user_id',
-                'struct': 'x',
+                'key': 'user_id',
+                'struct': None,
                 'type': 'INT64',
                 'value': 1
             },
             {
-                'key': 'x__kind',
-                'struct': 'x',
+                'key': 'kind',
+                'struct': None,
                 'type': 'STRING',
                 'value': kind
             },
             {
-                'key': 'x__timestamp',
-                'struct': 'x',
+                'key': 'timestamp',
+                'struct': None,
                 'type': 'TIMESTAMP',
                 'value': UTC_NOW.isoformat()
             },
             {
-                'key': 'x__related_type',
-                'struct': 'x',
+                'key': 'type',
+                'struct': 'related',
                 'type': 'STRING',
                 'value': 'auth.User'
             },
             {
-                'key': 'x__related_id',
-                'struct': 'x',
+                'key': 'id',
+                'struct': 'related',
                 'type': 'INT64',
                 'value': 1
             },
             {
-                'key': 'x__related_slug',
-                'struct': 'x',
+                'key': 'slug',
+                'struct': 'related',
                 'type': 'STRING',
                 'value': None
             },
@@ -424,44 +424,44 @@ def test_adding_the_resource_with_meta__called_two_times(bc: Breathecode, set_ac
     assert decompress_and_parse(cache.get('activity:worker-1')) == [
         [
             {
-                'key': 'x__id',
-                'struct': 'x',
+                'key': 'id',
+                'struct': None,
                 'type': 'STRING',
                 'value': f'c5d8cbc54a894dd0983caae1b8507092'
             },
             {
-                'key': 'x__user_id',
-                'struct': 'x',
+                'key': 'user_id',
+                'struct': None,
                 'type': 'INT64',
                 'value': 1
             },
             {
-                'key': 'x__kind',
-                'struct': 'x',
+                'key': 'kind',
+                'struct': None,
                 'type': 'STRING',
                 'value': kind
             },
             {
-                'key': 'x__timestamp',
-                'struct': 'x',
+                'key': 'timestamp',
+                'struct': None,
                 'type': 'TIMESTAMP',
                 'value': UTC_NOW.isoformat()
             },
             {
-                'key': 'x__related_type',
-                'struct': 'x',
+                'key': 'type',
+                'struct': 'related',
                 'type': 'STRING',
                 'value': 'auth.User'
             },
             {
-                'key': 'x__related_id',
-                'struct': 'x',
+                'key': 'id',
+                'struct': 'related',
                 'type': 'INT64',
                 'value': 1
             },
             {
-                'key': 'x__related_slug',
-                'struct': 'x',
+                'key': 'slug',
+                'struct': 'related',
                 'type': 'STRING',
                 'value': None
             },

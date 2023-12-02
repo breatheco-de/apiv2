@@ -159,62 +159,6 @@ def get_attendancy_log_per_cohort_user(cohort_user_id: int):
     logger.info('History log saved')
 
 
-from google.cloud import bigquery
-from google.cloud.bigquery.schema import SchemaField
-from google.cloud.bigquery.table import Table
-
-
-class BigQueryS:
-
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
-
-    def __str__(self):
-        return str(self.__dict__)
-
-    @staticmethod
-    def table() -> list[SchemaField]:
-        # Your code here
-        from google.cloud import bigquery
-
-        # Initialize a BigQuery client
-        client = bigquery.Client()
-
-        # Define your project ID, dataset ID, and table ID
-        project_id = 'your-project-id'
-        dataset_id = 'your-dataset-id'
-        table_id = 'your-table-id'
-
-        # Construct a reference to the table
-        table_ref = client.dataset(dataset_id, project=project_id).table(table_id)
-
-        # Fetch the schema of the table
-        table = client.get_table(table_ref)
-
-        return table.schema
-
-    @classmethod
-    def schema(cls, table: Table | str) -> list[SchemaField]:
-        if isinstance(table, str):
-            table = cls.table()
-            # client, project_id, dataset = BigQuery.client()
-            # table = f'{project_id}.{dataset}.{table}'
-            # table = client.get_table(table)
-        return table.schema
-
-    @classmethod
-    def append_schema(cls, table: Table | str, new_fields):
-        if isinstance(table, str):
-            table = cls.table()
-
-        client = bigquery.Client()
-
-        # first implementation
-        table.schema = table.schema + new_fields
-
-        client.update_table(table, ['schema'])
-
-
 @task(priority=TaskPriority.BACKGROUND.value)
 def upload_activities(task_manager_id: int):
     client = None
@@ -258,6 +202,26 @@ def upload_activities(task_manager_id: int):
     if not data:
         cache.set(backup_key, None)
         raise AbortTask('No data to upload')
+
+    ###
+    table = BigQuery.table('activity')
+    schema = table.schema()
+    new_schema = []
+
+    verified = {}
+
+    for activity in res:
+        for field in activity:
+            if field['key'] not in schema:
+                new_schema.append(bigquery.SchemaField(field['key'], field['type']))
+
+            #FIXME
+            elif field['key']['meta']:
+                raise Exception(f'Field {field["key"]} has different type in the schema')
+
+    if new_schema:
+        table.update_schema(new_schema)
+    ###
 
     client, project_id, dataset = BigQuery.client()
 
@@ -352,17 +316,15 @@ def add_activity(user_id: int,
                 data = []
 
             res = [
-                serialize_field('id', uuid.uuid4().hex, 'STRING', struct='x', prefix='x__'),
-                serialize_field('user_id', user_id, 'INT64', struct='x', prefix='x__'),
-                serialize_field('kind', kind, 'STRING', struct='x', prefix='x__'),
+                serialize_field('id',
+                                uuid.uuid4().hex, 'STRING'),
+                serialize_field('user_id', user_id, 'INT64'),
+                serialize_field('kind', kind, 'STRING'),
                 serialize_field('timestamp',
-                                timezone.now().isoformat(),
-                                'TIMESTAMP',
-                                struct='x',
-                                prefix='x__'),
-                serialize_field('related_type', related_type, 'STRING', struct='x', prefix='x__'),
-                serialize_field('related_id', related_id, 'INT64', struct='x', prefix='x__'),
-                serialize_field('related_slug', related_slug, 'STRING', struct='x', prefix='x__'),
+                                timezone.now().isoformat(), 'TIMESTAMP'),
+                serialize_field('type', related_type, 'STRING', struct='related'),
+                serialize_field('id', related_id, 'INT64', struct='related'),
+                serialize_field('slug', related_slug, 'STRING', struct='related'),
             ]
 
             meta = actions.get_activity_meta(kind, related_type, related_id, related_slug)
