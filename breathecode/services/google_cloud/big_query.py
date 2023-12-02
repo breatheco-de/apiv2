@@ -53,6 +53,7 @@ class BigQuerySet():
 
     def aggregate(self, *args):
         sql = self.sql(args)
+        print(sql)
 
         params, kwparams = self.get_params()
 
@@ -62,6 +63,7 @@ class BigQuerySet():
 
     def build(self):
         sql = self.sql()
+        print(sql)
 
         params, kwparams = self.get_params()
 

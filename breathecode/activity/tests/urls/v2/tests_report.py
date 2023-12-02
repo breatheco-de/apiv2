@@ -139,32 +139,10 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_no_query(self):
-        url = reverse_lazy('v2:activity:report')
-        model = self.bc.database.create(user=1,
-                                        academy=1,
-                                        profile_academy=1,
-                                        capability='read_activity',
-                                        role=1)
-
-        self.bc.request.authenticate(model.user)
-        self.bc.request.set_headers(academy=1)
-
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'detail': 'query-not-found',
-            'status_code': 400,
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_get_all_fields(self):
-        json_query = '{}'
         expected_query = 'SELECT * FROM `test.4geeks.activity` '
-        url = reverse_lazy('v2:activity:report') + f'?query={json_query}'
+        url = reverse_lazy('v2:activity:report')
         model = self.bc.database.create(user=1,
                                         academy=1,
                                         profile_academy=1,
@@ -191,9 +169,8 @@ class MediaTestSuite(MediaTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_get_all_fields_limit(self):
-        json_query = '{ "limit": 5 }'
         expected_query = 'SELECT * FROM `test.4geeks.activity`  LIMIT 5'
-        url = reverse_lazy('v2:activity:report') + f'?query={json_query}'
+        url = reverse_lazy('v2:activity:report') + f'?limit=5'
         model = self.bc.database.create(user=1,
                                         academy=1,
                                         profile_academy=1,
@@ -221,9 +198,8 @@ class MediaTestSuite(MediaTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_get_group(self):
-        json_query = '{ "by": ["kind"], "fields": ["kind"] }'
         expected_query = 'SELECT kind FROM `test.4geeks.activity`  GROUP BY kind'
-        url = reverse_lazy('v2:activity:report') + f'?query={json_query}'
+        url = reverse_lazy('v2:activity:report') + f'?by=kind&fields=kind'
         model = self.bc.database.create(user=1,
                                         academy=1,
                                         profile_academy=1,
