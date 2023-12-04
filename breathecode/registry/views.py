@@ -30,7 +30,7 @@ from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerialize
                           AssetKeywordBigSerializer, PUTCategorySerializer, POSTCategorySerializer,
                           KeywordClusterMidSerializer, SEOReportSerializer, OriginalityScanSerializer,
                           VariableSmallSerializer, AssetAndTechnologySerializer,
-                          AssetBigAndTechnologySerializer, AssetBigAndTechnologyPublishedSerializer)
+                          AssetBigAndTechnologyPublishedSerializer)
 from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
 from breathecode.utils.views import render_message
 from rest_framework.response import Response
@@ -611,7 +611,7 @@ class AssetView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('exclude_category')
             items = items.exclude(category__slug__in=[p for p in param.split(',') if p])
 
-        items = items.filter(query, **lookup)
+        items = items.filter(query, **lookup, visibility='PUBLIC').distinct()
         items = handler.queryset(items)
 
         if 'big' in self.request.GET:

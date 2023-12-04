@@ -346,7 +346,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
                  timeout=2),
         ])
 
-        self.assertEqual(requests.request.call_args_list, [
+        assert requests.request.call_args_list == [
             call('POST',
                  'https://old.hardcoded.breathecode.url/admin/api.php',
                  params=[('api_action', 'contact_sync'), ('api_key', model.active_campaign_academy.ac_key),
@@ -359,7 +359,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
                      'field[59,0]': 'eventbrite',
                      'field[33,0]': 'eventbrite order placed'
                  },
-                 timeout=2),
+                 timeout=3),
             call('POST',
                  'https://old.hardcoded.breathecode.url/api/3/contactAutomations',
                  headers={
@@ -372,7 +372,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
                      'automation': model.automation.acp_id,
                  }},
                  timeout=2),
-        ])
+        ]
 
         self.assertEqual(add_event_tags_to_student.delay.call_args_list, [
             call(model.event.id, email=model.user.email),
@@ -459,7 +459,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
                      'field[59,0]': 'eventbrite',
                      'field[33,0]': 'eventbrite order placed'
                  },
-                 timeout=2),
+                 timeout=3),
             call('POST',
                  'https://old.hardcoded.breathecode.url/api/3/contactAutomations',
                  headers={
@@ -547,7 +547,35 @@ class EventbriteWebhookTestSuite(EventTestCase):
                  timeout=2),
         ])
 
-        self.check_old_breathecode_calls(model, ['create_contact', 'contact_automations'])
+        assert requests.request.call_args_list == [
+            call('POST',
+                 'https://old.hardcoded.breathecode.url/admin/api.php',
+                 params=[('api_action', 'contact_sync'), ('api_key', model.active_campaign_academy.ac_key),
+                         ('api_output', 'json')],
+                 data={
+                     'email': model.user.email,
+                     'first_name': model.user.first_name,
+                     'last_name': model.user.last_name,
+                     'field[18,0]': model.academy.slug,
+                     'field[59,0]': 'eventbrite',
+                     'field[33,0]': 'eventbrite order placed',
+                     'field[16,0]': 'en',
+                 },
+                 timeout=3),
+            call('POST',
+                 'https://old.hardcoded.breathecode.url/api/3/contactAutomations',
+                 headers={
+                     'Accept': 'application/json',
+                     'Content-Type': 'application/json',
+                     'Api-Token': model.active_campaign_academy.ac_key,
+                 },
+                 json={'contactAutomation': {
+                     'contact': 1,
+                     'automation': model.automation.acp_id,
+                 }},
+                 timeout=2),
+        ]
+
         self.assertEqual(add_event_tags_to_student.delay.call_args_list, [
             call(model.event.id, email=model.user.email),
         ])

@@ -34,7 +34,7 @@ def persist_single_lead(form_data, **_: Any):
                 entry.storage_status = 'PENDING'
                 entry.save()
                 raise RetryTask(f'Timeout processing lead for form_entry {str(entry.id)}')
-    
+
     except Exception as e:
         if not form_data:
             return

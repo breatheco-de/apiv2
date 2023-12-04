@@ -564,20 +564,20 @@ class Plan(AbstractPriceByTime):
 
     is_renewable = models.BooleanField(
         default=True,
-        help_text='Is if true, it will create a reneweval subscription instead of a plan financing')
+        help_text='Is if true, it will create a renewable subscription instead of a plan financing')
 
     status = models.CharField(max_length=12, choices=PLAN_STATUS, default=DRAFT, help_text='Status')
 
     time_of_life = models.IntegerField(default=1,
                                        blank=True,
                                        null=True,
-                                       help_text='Timelife of plan (e.g. 1, 2, 3, ...)')
+                                       help_text='Plan lifetime (e.g. 1, 2, 3, ...)')
     time_of_life_unit = models.CharField(max_length=10,
                                          choices=PAY_EVERY_UNIT,
                                          blank=True,
                                          null=True,
                                          default=MONTH,
-                                         help_text='Timelife unit (e.g. DAY, WEEK, MONTH or YEAR)')
+                                         help_text='Lifetime unit (e.g. DAY, WEEK, MONTH or YEAR)')
 
     trial_duration = models.IntegerField(default=1, help_text='Trial duration (e.g. 1, 2, 3, ...)')
     trial_duration_unit = models.CharField(max_length=10,
@@ -937,7 +937,7 @@ class AbstractIOweYou(models.Model):
         help_text='Event type set which the plans and services is for')
 
     # this reminds the plans to change the stock scheduler on change
-    plans = models.ManyToManyField(Plan, blank=True, help_text='Plans to be suplied')
+    plans = models.ManyToManyField(Plan, blank=True, help_text='Plans to be supplied')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -1023,7 +1023,7 @@ class Subscription(AbstractIOweYou):
                                            blank=True,
                                            through='SubscriptionServiceItem',
                                            through_fields=('subscription', 'service_item'),
-                                           help_text='Service items to be suplied')
+                                           help_text='Service items to be supplied')
 
     # remember the chosen period to pay again
     pay_every = models.IntegerField(default=1, help_text='Pay every X units (e.g. 1, 2, 3, ...)')

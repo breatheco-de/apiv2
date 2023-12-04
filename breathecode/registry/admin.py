@@ -10,7 +10,8 @@ from .models import (Asset, AssetTechnology, AssetAlias, AssetErrorLog, KeywordC
                      AssetKeyword, AssetComment, SEOReport, AssetImage, OriginalityScan,
                      CredentialsOriginality, SyllabusVersionProxy, ContentVariable)
 from .tasks import (async_pull_from_github, async_test_asset, async_download_readme_images,
-                    async_remove_img_from_cloud, async_upload_image_to_bucket, async_update_frontend_asset_cache)
+                    async_remove_img_from_cloud, async_upload_image_to_bucket,
+                    async_update_frontend_asset_cache)
 from .actions import (get_user_from_github_username, AssetThumbnailGenerator, scan_asset_originality,
                       add_syllabus_translations, clean_asset_readme)
 
@@ -214,6 +215,7 @@ def download_and_replace_images(modeladmin, request, queryset):
             messages.success(request, message='Asset was schedule for download')
         except Exception as e:
             messages.error(request, a.slug + ': ' + str(e))
+
 
 def reset_4geeks_com_cache(modeladmin, request, queryset):
     assets = queryset.all()

@@ -7,11 +7,13 @@ from django.utils import timezone
 
 from breathecode.mentorship.models import MentorshipSession
 
-from .models import Consumable
+from .models import Consumable, Plan
 from .signals import (consume_service, grant_service_permissions, lose_service_permissions,
                       reimburse_service_units)
 from breathecode.mentorship.signals import mentorship_session_status
 from breathecode.payments import tasks
+from django.db.models.signals import m2m_changed
+from .signals import update_plan_m2m_service_items
 
 logger = logging.getLogger(__name__)
 
@@ -78,3 +80,16 @@ def grant_service_permissions_receiver(sender: Type[Consumable], instance: Consu
 def post_mentoring_session_ended(sender, instance, **kwargs):
     if instance.mentee and instance.service and instance.status in ['FAILED', 'IGNORED']:
         tasks.refund_mentoring_session.delay(instance.id)
+
+
+@receiver(m2m_changed, sender=Plan.service_items.through)
+def plan_m2m_wrapper(sender: Type[Plan.service_items.through], instance: Plan, **kwargs):
+    if kwargs['action'] != 'post_add':
+        return
+
+    update_plan_m2m_service_items.send(sender=sender, instance=instance)
+
+
+@receiver(update_plan_m2m_service_items, sender=Plan.service_items.through)
+def plan_m2m_changed(sender: Type[Plan.service_items.through], instance: Plan, **kwargs):
+    tasks.update_service_stock_schedulers.delay(instance.id)

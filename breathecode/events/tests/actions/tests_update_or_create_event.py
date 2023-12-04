@@ -164,6 +164,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'currency': event['currency'],
             'starting_at': self.iso_to_datetime(event['start']['utc']),
             'ending_at': self.iso_to_datetime(event['end']['utc']),
+            'ended_at': None,
             'host': None,
             'academy_id': 1,
             'organization_id': model.organization.id,
@@ -184,6 +185,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'eventbrite_sync_description': '2021-11-23 09:10:58.295264+00:00',
             'host_user_id': None,
             'free_for_bootcamps': True,
+            'free_for_all': False,
             'uuid': uuid,
         }
 
@@ -245,6 +247,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'slug': f'geektalks-presentacion-de-proyectos-finales-{uuid}',
             'starting_at': self.iso_to_datetime(event['start']['utc']),
             'ending_at': self.iso_to_datetime(event['end']['utc']),
+            'ended_at': None,
             'host': None,
             'academy_id': 1,
             'organization_id': model.organization.id,
@@ -265,6 +268,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'eventbrite_sync_description': '2021-11-23 09:10:58.295264+00:00',
             'host_user_id': None,
             'free_for_bootcamps': True,
+            'free_for_all': False,
             'uuid': uuid,
         }
 
