@@ -48,6 +48,7 @@ class EventTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQuerie
             'tags': model['event'].tags,
             'slug': model['event'].slug,
             'starting_at': self.bc.datetime.to_iso_string(model['event'].starting_at),
+            'ended_at': model['event'].ended_at,
             'status': model['event'].status,
             'title': model['event'].title,
             'url': model['event'].url,
