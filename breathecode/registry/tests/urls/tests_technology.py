@@ -22,6 +22,7 @@ def get_serializer(asset_technology, assets=[], asset_technologies=[]):
         'parent': None,
         'slug': asset_technology.slug,
         'title': asset_technology.title,
+        'visibility': asset_technology.visibility,
     }
 
 

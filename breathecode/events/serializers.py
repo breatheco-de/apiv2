@@ -9,10 +9,11 @@ from breathecode.admissions.models import Academy
 from breathecode.admissions.serializers import UserPublicSerializer
 from slugify import slugify
 from rest_framework import serializers
-import serpy, logging
+import logging
 from django.utils import timezone
 from django.db.models.query_utils import Q
 import breathecode.activity.tasks as tasks_activity
+from breathecode.utils import serpy
 
 logger = logging.getLogger(__name__)
 
@@ -423,7 +424,7 @@ class EventHookCheckinSerializer(serpy.Serializer):
     created_at = serpy.Field()
     attended_at = serpy.Field()
     attendee = UserSerializer(required=False)
-    event = EventPublicBigSerializer()
+    event = EventHookSerializer()
 
 
 class EventSerializer(serializers.ModelSerializer):

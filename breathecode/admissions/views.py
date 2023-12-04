@@ -1,10 +1,8 @@
-import hashlib
 import logging
 
 import pytz
 from django.contrib.auth.models import AnonymousUser, User
 from django.db.models import FloatField, Max, Q, Value
-from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -361,9 +359,9 @@ class CohortUserView(APIView, GenerateLookupsMixin):
 
         handler = self.extensions(request)
 
-        # cache = handler.cache.get()
-        # if cache is not None:
-        #     return cache
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
 
         items = CohortUser.objects.all()
 
@@ -565,9 +563,9 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
 
         handler = self.extensions(request)
 
-        # cache = handler.cache.get()
-        # if cache is not None:
-        #     return cache
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
 
         if user_id is not None:
             item = CohortUser.objects.filter(cohort__academy__id=academy_id,
@@ -1142,9 +1140,9 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
     def get(self, request, cohort_id=None, academy_id=None):
         handler = self.extensions(request)
 
-        # cache = handler.cache.get()
-        # if cache is not None:
-        #     return cache
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
 
         if cohort_id is not None:
             item = None

@@ -8,7 +8,6 @@ from .models import Academy, Cohort, CohortUser, SyllabusVersion
 from .actions import test_syllabus
 from django.utils import timezone
 from django.contrib.auth.models import User
-from breathecode.notify import actions as notify_actions
 
 API_URL = os.getenv('API_URL', '')
 
@@ -38,14 +37,6 @@ def async_test_syllabus(syllabus_slug, syllabus_version) -> None:
         syl_version.integrity_report = {'errors': [str(e)], 'warnings': []}
         syl_version.integrity_status = 'ERROR'
     syl_version.save()
-
-    #FIXME: this doesn't work
-    if syl_version.status == 'ERROR':
-        notify_actions.send_email_message(
-            'diagnostic', user.email, {
-                'SUBJECT': f'Critical error error found on syllabus {syllabus_slug} v{version}',
-                'details': [f'- {item}\n' for error in syl_version.integrity_report.errors]
-            })
 
 
 @task(priority=TaskPriority.STUDENT.value)

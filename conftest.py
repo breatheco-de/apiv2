@@ -1,7 +1,7 @@
 import importlib
 import os
 import random
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 import pytest
 from scripts.utils.environment import reset_environment, test_environment
 from breathecode.utils.exceptions import TestError
@@ -14,6 +14,7 @@ from breathecode.notify.utils.hook_manager import HookManagerClass
 from django.utils import timezone
 from django.core.cache import cache
 from rest_framework.test import APIClient
+from django.dispatch.dispatcher import Signal
 from django.db.models.signals import (pre_init, post_init, pre_save, post_save, pre_delete, post_delete,
                                       m2m_changed, pre_migrate, post_migrate)
 
@@ -137,18 +138,41 @@ def enable_hook_manager(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
-def dont_wait_for_rescheduling_tasks(monkeypatch):
+def disable_newrelic_prints(monkeypatch):
+    """
+    Disable NewRelic prints.
+    """
+
+    monkeypatch.setattr('newrelic.core.agent._logger.info', lambda *args, **kwargs: None)
+    monkeypatch.setattr('newrelic.core.agent._logger.warn', lambda *args, **kwargs: None)
+    monkeypatch.setattr('newrelic.core.agent._logger.error', lambda *args, **kwargs: None)
+
+    yield
+
+
+@pytest.fixture(autouse=True)
+def dont_wait_for_rescheduling_tasks():
     """
     Don't wait for rescheduling tasks by default. You can re-enable it within a test by calling the provided wrapper.
     """
 
     with patch('breathecode.utils.decorators.task.RETRIES_LIMIT', 2):
-        with patch('breathecode.utils.decorators.task.Task.reattemp_settings',
+        with patch('breathecode.utils.decorators.task.Task.reattempt_settings',
                    lambda *args, **kwargs: dict()):
+            with patch('breathecode.utils.decorators.task.Task.circuit_breaker_settings',
+                       lambda *args, **kwargs: dict()):
+                yield
+
+
+@pytest.fixture(autouse=True)
+def dont_close_the_circuit():
+    """
+    Don't allow the circuit be closed.
+    """
+
+    with patch('circuitbreaker.CircuitBreaker._failure_count', 0, create=True):
+        with patch('circuitbreaker.CircuitBreaker.FAILURE_THRESHOLD', 10000000, create=True):
             yield
-
-
-from django.dispatch.dispatcher import Signal
 
 
 @pytest.fixture(scope='session')
@@ -258,10 +282,55 @@ def no_http_requests(monkeypatch):
     monkeypatch.setattr('urllib3.connectionpool.HTTPConnectionPool.urlopen', urlopen_mock)
 
 
+@pytest.fixture()
+def patch_request(monkeypatch):
+
+    def patcher(conf=None):
+        if not conf:
+            conf = []
+
+        def wrapper(*args, **kwargs):
+            raises = True
+
+            for c in conf:
+                if args == c[0].args and kwargs == c[0].kwargs:
+                    raises = False
+                    break
+
+            if raises:
+                raise TestError(f'Avoiding to make a real request to {args} {kwargs}')
+
+            mock = MagicMock()
+
+            if len(c) > 2:
+                mock.json.return_value = c[1]
+                mock.status_code = c[2]
+            elif len(c) > 1:
+                mock.json.return_value = c[1]
+                mock.status_code = 200
+            else:
+                mock.json.return_value = None
+                mock.status_code = 204
+
+            return mock
+
+        mock = MagicMock()
+        monkeypatch.setattr('requests.api.request', wrapper)
+
+        return mock
+
+    yield patcher
+
+
 @pytest.fixture(autouse=True)
 def clean_environment():
     reset_environment()
     test_environment()
+
+
+@pytest.fixture(autouse=True)
+def disable_new_relic(monkeypatch):
+    monkeypatch.setattr('newrelic.core.agent.Agent._atexit_shutdown', lambda *args, **kwargs: None)
 
 
 @pytest.fixture()

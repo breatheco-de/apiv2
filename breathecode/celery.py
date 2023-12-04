@@ -1,4 +1,11 @@
 from __future__ import absolute_import, unicode_literals
+
+# keeps this adobe
+import newrelic.agent
+
+newrelic.agent.initialize()
+
+# the rest of your Celery file contents go here
 import os
 from celery import Celery
 

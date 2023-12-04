@@ -1,4 +1,5 @@
 # from breathecode.media.schemas import MediaSchema
+from breathecode.authenticate.actions import get_user_language
 from breathecode.media.schemas import FileSchema, MediaSchema
 import os, hashlib, requests, logging, datetime
 from breathecode.services.google_cloud import FunctionV1
@@ -19,6 +20,8 @@ from breathecode.media.serializers import (GetMediaSerializer, MediaSerializer, 
 from slugify import slugify
 
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from breathecode.utils.i18n import translation
+from circuitbreaker import CircuitBreakerError
 
 logger = logging.getLogger(__name__)
 MIME_ALLOW = [
@@ -207,6 +210,8 @@ class MediaView(ViewSet, GenerateLookupsMixin):
     def delete(self, request, academy_id=None):
         from ..services.google_cloud import Storage
 
+        lang = get_user_language(request)
+
         lookups = self.generate_lookups(request, many_fields=['id'])
 
         if lookups:
@@ -222,9 +227,22 @@ class MediaView(ViewSet, GenerateLookupsMixin):
                 item.delete()
 
                 if not Media.objects.filter(hash=hash).count():
-                    storage = Storage()
-                    file = storage.file(media_gallery_bucket(), url)
-                    file.delete()
+                    try:
+                        storage = Storage()
+                        file = storage.file(media_gallery_bucket(), url)
+                        file.delete()
+
+                    except CircuitBreakerError:
+                        raise ValidationException(translation(
+                            lang,
+                            en='The circuit breaker is open due to an error, please try again later',
+                            es=
+                            'El circuit breaker está abierto debido a un error, por favor intente más tarde',
+                            slug='circuit-breaker-open'),
+                                                  slug='circuit-breaker-open',
+                                                  data={'service': 'Google Cloud Storage'},
+                                                  silent=True,
+                                                  code=503)
 
                     resolution = MediaResolution.objects.filter(hash=hash).first()
                     if resolution:
@@ -242,6 +260,8 @@ class MediaView(ViewSet, GenerateLookupsMixin):
     def delete_id(self, request, media_id=None, academy_id=None):
         from ..services.google_cloud import Storage
 
+        lang = get_user_language(request)
+
         data = Media.objects.filter(id=media_id).first()
         if not data:
             raise ValidationException('Media not found', code=404)
@@ -255,9 +275,21 @@ class MediaView(ViewSet, GenerateLookupsMixin):
         data.delete()
 
         if not Media.objects.filter(hash=hash).count():
-            storage = Storage()
-            file = storage.file(media_gallery_bucket(), url)
-            file.delete()
+            try:
+                storage = Storage()
+                file = storage.file(media_gallery_bucket(), url)
+                file.delete()
+
+            except CircuitBreakerError:
+                raise ValidationException(translation(
+                    lang,
+                    en='The circuit breaker is open due to an error, please try again later',
+                    es='El circuit breaker está abierto debido a un error, por favor intente más tarde',
+                    slug='circuit-breaker-open'),
+                                          slug='circuit-breaker-open',
+                                          data={'service': 'Google Cloud Storage'},
+                                          silent=True,
+                                          code=503)
 
             resolution = MediaResolution.objects.filter(hash=hash).first()
             if resolution:
@@ -372,7 +404,7 @@ class UploadView(APIView):
 
     # upload was separated because in one moment I think that the serializer
     # not should get many create and update operations together
-    def upload(self, request, academy_id=None, update=False):
+    def upload(self, request, lang, academy_id=None, update=False):
         from ..services.google_cloud import Storage
 
         files = request.data.getlist('file')
@@ -452,11 +484,24 @@ class UploadView(APIView):
 
                 else:
                     # upload file section
-                    storage = Storage()
-                    cloud_file = storage.file(media_gallery_bucket(), hash)
-                    cloud_file.upload(file, content_type=file.content_type)
-                    data['url'] = cloud_file.url()
-                    data['thumbnail'] = data['url'] + '-thumbnail'
+                    try:
+                        storage = Storage()
+                        cloud_file = storage.file(media_gallery_bucket(), hash)
+                        cloud_file.upload(file, content_type=file.content_type)
+                        data['url'] = cloud_file.url()
+                        data['thumbnail'] = data['url'] + '-thumbnail'
+
+                    except CircuitBreakerError:
+                        raise ValidationException(translation(
+                            lang,
+                            en='The circuit breaker is open due to an error, please try again later',
+                            es=
+                            'El circuit breaker está abierto debido a un error, por favor intente más tarde',
+                            slug='circuit-breaker-open'),
+                                                  slug='circuit-breaker-open',
+                                                  data={'service': 'Google Cloud Storage'},
+                                                  silent=True,
+                                                  code=503)
 
             result['data'].append(data)
 
@@ -476,7 +521,8 @@ class UploadView(APIView):
 
     @capable_of('crud_media')
     def put(self, request, academy_id=None):
-        upload = self.upload(request, academy_id, update=True)
+        lang = get_user_language(request)
+        upload = self.upload(request, lang, academy_id, update=True)
         serializer = MediaPUTSerializer(upload['instance'],
                                         data=upload['data'],
                                         context=upload['data'],
@@ -629,6 +675,8 @@ class ResolutionView(ViewSet):
     def delete(self, request, resolution_id=None, academy_id=None):
         from ..services.google_cloud import Storage
 
+        lang = get_user_language(request)
+
         resolution = MediaResolution.objects.filter(id=resolution_id).first()
         if not resolution:
             raise ValidationException('Resolution was not found', code=404, slug='resolution-not-found')
@@ -647,8 +695,20 @@ class ResolutionView(ViewSet):
         resolution.delete()
 
         if not MediaResolution.objects.filter(hash=hash).count():
-            storage = Storage()
-            file = storage.file(media_gallery_bucket(), url)
-            file.delete()
+            try:
+                storage = Storage()
+                file = storage.file(media_gallery_bucket(), url)
+                file.delete()
+
+            except CircuitBreakerError:
+                raise ValidationException(translation(
+                    lang,
+                    en='The circuit breaker is open due to an error, please try again later',
+                    es='El circuit breaker está abierto debido a un error, por favor intente más tarde',
+                    slug='circuit-breaker-open'),
+                                          slug='circuit-breaker-open',
+                                          data={'service': 'Google Cloud Storage'},
+                                          silent=True,
+                                          code=503)
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)

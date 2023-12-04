@@ -433,11 +433,11 @@ class UserInvite(models.Model):
                                  blank=True)
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, null=True, default=None, blank=True)
     role = models.ForeignKey(Role, on_delete=models.CASCADE, null=True, default=None, blank=True)
-    event_slug = models.SlugField(max_length=40,
+    event_slug = models.SlugField(max_length=120,
                                   blank=True,
                                   null=True,
                                   help_text='If set, the user signed up because of an Event')
-    asset_slug = models.SlugField(max_length=40,
+    asset_slug = models.SlugField(max_length=60,
                                   blank=True,
                                   null=True,
                                   help_text='If set, the user signed up because of an Asset')
@@ -477,6 +477,9 @@ class UserInvite(models.Model):
                                        blank=True,
                                        null=True,
                                        help_text='UTMs and other conversion information.')
+
+    email_quality = models.FloatField(default=None, blank=True, null=True)
+    email_status = models.JSONField(default=None, blank=True, null=True)
 
     def __str__(self):
         return f'Invite for {self.email}'
@@ -661,7 +664,7 @@ class GithubAcademyUser(models.Model):
         if self.user is None:
             return str(self.id) + ' ' + str(self.username)
         else:
-            return str(self.user) + ' ' + str(self.username)
+            return str(self.user.email) + ' ' + str(self.username)
 
     @staticmethod
     def create_log(msg):
@@ -689,9 +692,7 @@ class GithubAcademyUser(models.Model):
         exit_op = super().save(*args, **kwargs)
 
         if has_mutated and self.storage_status == 'SYNCHED':
-            prev = GithubAcademyUserLog.objects.filter(
-                academy_user=self, storage_status=self.storage_status,
-                storage_action=self.storage_action).order_by('-created_at').first()
+            prev = GithubAcademyUserLog.objects.filter(academy_user=self).order_by('-created_at').first()
 
             user_log = GithubAcademyUserLog(
                 academy_user=self,

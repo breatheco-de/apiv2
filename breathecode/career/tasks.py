@@ -1,5 +1,5 @@
 import logging
-from celery import shared_task, Task
+from celery import shared_task
 
 from breathecode.utils.decorators.task import TaskPriority
 from .models import Spider

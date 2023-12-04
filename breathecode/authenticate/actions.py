@@ -441,14 +441,17 @@ def remove_from_organization(cohort_id, user_id, force=False):
         return False
 
 
-def delete_from_github(github_user):
+def delete_from_github(github_user: GithubAcademyUser):
     try:
+        settings = AcademyAuthSettings.objects.filter(academy__id=github_user.academy.id).first()
+        gb = Github(org=settings.github_username, token=settings.github_owner.credentialsgithub.token)
+
         gb.delete_org_member(github_user.username)
-        _member.log('Successfully deleted in github organization')
+        github_user.log('Successfully deleted in github organization')
         print('Deleted github user: ' + github_user.username)
         return True
     except Exception as e:
-        _member.log('Error calling github API while deleting member from org: ' + str(e))
+        github_user.log('Error calling github API while deleting member from org: ' + str(e))
         print('Error deleting github user: ' + github_user.username)
         return False
 
@@ -483,7 +486,6 @@ def sync_organization_members(academy_id, only_status=None):
             es='La organizacion no tiene dueño o no este tiene credenciales para github'),
                                   slug='invalid-owner')
 
-    # print('Procesing following slugs', academy_slugs)
     # retry errored users only from this academy being synched
     GithubAcademyUser.objects.filter(academy=settings.academy,
                                      storage_status='ERROR')\
@@ -812,7 +814,7 @@ def get_optional_scopes_set(scope_set_id):
     return tuple(sorted(x for x in scope_set.optional_scopes.all()))
 
 
-def get_user_scopes(app_slug, user_id):
+def get_user_scopes(app_slug, user_id=None):
     from .models import AppUserAgreement
 
     info, _, _ = get_app_keys(app_slug)

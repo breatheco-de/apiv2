@@ -7,6 +7,7 @@ from breathecode.utils.api_view_extensions.priorities.response_order import Resp
 from breathecode.utils.cache import Cache
 from django.http import HttpResponse
 from rest_framework import status
+from rest_framework.response import Response
 
 __all__ = ['CacheExtension']
 
@@ -20,14 +21,26 @@ def is_cache_enabled():
     return os.getenv('CACHE', '1').lower() in ENABLE_LIST_OPTIONS
 
 
+@functools.lru_cache(maxsize=1)
+def user_timeout():
+    return 60 * int(os.getenv('USER_CACHE_MINUTES', 60 * 4))
+
+
+@functools.lru_cache(maxsize=1)
+def use_gzip():
+    return os.getenv('USE_GZIP', '0').lower() in ENABLE_LIST_OPTIONS
+
+
 class CacheExtension(ExtensionBase):
 
     _cache: Cache
     _cache_per_user: bool
     _cache_prefix: str
+    _encoding: Optional[str]
 
     def __init__(self, cache: Cache, **kwargs) -> None:
         self._cache = cache()
+        self._encoding = None
 
     def _optional_dependencies(self, cache_per_user: bool = False, cache_prefix: str = '', **kwargs):
         self._cache_per_user = cache_per_user
@@ -35,6 +48,26 @@ class CacheExtension(ExtensionBase):
 
     def _instance_name(self) -> Optional[str]:
         return 'cache'
+
+    def _get_encoding(self) -> Optional[str]:
+        # zstd should be the standard if we require more processing power in the future
+        # including the encoding in the params allow to support compression encoding
+        encoding = self._request.META.get('HTTP_ACCEPT_ENCODING', '')
+        if 'gzip' in encoding and use_gzip():
+            return 'gzip'
+
+        elif 'br' in encoding or '*' in encoding:
+            return 'br'
+
+        # this is a new standard, but not supported by all browsers
+        elif 'zstd' in encoding:
+            return 'zstd'
+
+        elif 'deflate' in encoding:
+            return 'deflate'
+
+        elif 'gzip' in encoding:
+            return 'gzip'
 
     def _get_params(self):
         extends = {
@@ -46,6 +79,10 @@ class CacheExtension(ExtensionBase):
 
         if lang := self._request.META.get('HTTP_ACCEPT_LANGUAGE'):
             extends['request.headers.accept-language'] = lang
+
+        if encoding := self._get_encoding():
+            extends['request.headers.accept-encoding'] = encoding
+            self._encoding = encoding
 
         if accept := self._request.META.get('HTTP_ACCEPT'):
             extends['request.headers.accept'] = accept
@@ -68,13 +105,14 @@ class CacheExtension(ExtensionBase):
 
         try:
             params = self._get_params()
-            res = self._cache.get(params)
+            res = self._cache.get(params, encoding=self._encoding)
 
             if res is None:
                 return None
 
-            data, mime, headers = res
-            response = HttpResponse(data, content_type=mime, status=status.HTTP_200_OK, headers=headers)
+            data, headers = res
+
+            response = HttpResponse(data, status=status.HTTP_200_OK, headers=headers)
             return response
 
         except Exception:
@@ -100,9 +138,17 @@ class CacheExtension(ExtensionBase):
 
         params = self._get_params()
 
+        timeout = None
+        if self._cache_per_user:
+            timeout = user_timeout()
+
         try:
-            res = self._cache.set(data, format=format, params=params)
-            data = res['data']
+            res = self._cache.set(data,
+                                  format=format,
+                                  params=params,
+                                  timeout=timeout,
+                                  encoding=self._encoding)
+            data = res['content']
             headers = {
                 **headers,
                 **res['headers'],

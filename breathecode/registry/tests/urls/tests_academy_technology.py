@@ -27,9 +27,11 @@ def get_serializer(asset_technology, assets=[], asset_technologies=[]):
             'is_deprecated': asset_technology.is_deprecated,
             'slug': asset_technology.slug,
             'title': asset_technology.title,
+            'visibility': asset_technology.visibility,
         } if asset_technology.parent else None,
         'slug': asset_technology.slug,
         'title': asset_technology.title,
+        'visibility': asset_technology.visibility,
         'sort_priority': asset_technology.sort_priority,
     }
 
@@ -112,7 +114,9 @@ class RegistryTestSuite(RegistryTestCase):
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      role=1,
-                                     asset_technology=2,
+                                     asset_technology=(2, {
+                                         'visibility': 'PUBLIC',
+                                     }),
                                      capability='read_technology')
         url = reverse_lazy('registry:academy_technology')
         response = self.client.get(url)
@@ -154,7 +158,7 @@ class RegistryTestSuite(RegistryTestCase):
 
     def test_with_two_asset_technologies__passing_include_children_as_true(self):
         self.headers(academy=1)
-        asset_technologies = [{'parent_id': n} for n in range(1, 3)]
+        asset_technologies = [{'visibility': 'PUBLIC', 'parent_id': n} for n in range(1, 3)]
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      role=1,
@@ -221,7 +225,7 @@ class RegistryTestSuite(RegistryTestCase):
     def test_with_two_asset_technologies__passing_language__found(self):
         cases = [('en', 'us'), ('us', 'us'), ('es', 'es'), ('es', ''), ('es', None)]
         for query, value in cases:
-            asset_technologies = [{'lang': value} for _ in range(0, 2)]
+            asset_technologies = [{'visibility': 'PUBLIC', 'lang': value} for _ in range(0, 2)]
             model = self.generate_models(authenticate=True,
                                          profile_academy=True,
                                          role=1,
@@ -304,6 +308,7 @@ class RegistryTestSuite(RegistryTestCase):
         sort_priority = query
 
         asset_technologies = [{
+            'visibility': 'PUBLIC',
             'sort_priority': sort_priority,
             'slug': self.bc.fake.slug(),
             'title': self.bc.fake.slug()
@@ -374,7 +379,7 @@ class RegistryTestSuite(RegistryTestCase):
             ('title', title2[0:random.randint(1, len(title2))], title2),
         ]
         for field, query, value in cases:
-            asset_technologies = [{field: f'{value}{n}'} for n in range(0, 2)]
+            asset_technologies = [{'visibility': 'PUBLIC', field: f'{value}{n}'} for n in range(0, 2)]
             model = self.generate_models(authenticate=True,
                                          profile_academy=True,
                                          role=1,
@@ -427,7 +432,7 @@ class RegistryTestSuite(RegistryTestCase):
 
     def test_with_two_asset_technologies__passing_parent__found(self):
         self.headers(academy=1)
-        asset_technologies = [{'parent_id': n} for n in range(1, 3)]
+        asset_technologies = [{'visibility': 'PUBLIC', 'parent_id': n} for n in range(1, 3)]
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      role=1,
@@ -550,7 +555,7 @@ class RegistryTestSuite(RegistryTestCase):
 
         self.headers(academy=1)
 
-        asset_technologies = [{'slug': s} for s in [slug1, slug2]]
+        asset_technologies = [{'visibility': 'PUBLIC', 'slug': s} for s in [slug1, slug2]]
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      role=1,
@@ -608,7 +613,7 @@ class RegistryTestSuite(RegistryTestCase):
         self.headers(academy=1)
 
         assets = [{'slug': s} for s in [slug1, slug2]]
-        asset_technologies = [{'featured_asset_id': n} for n in range(1, 3)]
+        asset_technologies = [{'visibility': 'PUBLIC', 'featured_asset_id': n} for n in range(1, 3)]
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      role=1,
@@ -678,7 +683,7 @@ class RegistryTestSuite(RegistryTestCase):
         self.headers(academy=1)
 
         assets = [{'asset_type': s} for s in [query1, query2]]
-        asset_technologies = [{'featured_asset_id': n} for n in range(1, 3)]
+        asset_technologies = [{'visibility': 'PUBLIC', 'featured_asset_id': n} for n in range(1, 3)]
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      role=1,
