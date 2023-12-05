@@ -3,9 +3,8 @@ import os
 import redis
 import ssl
 from pathlib import Path
-from django.core.cache import cache
 
-IS_DJANGO_REDIS = hasattr(cache, 'delete_pattern')
+IS_TEST_ENV = os.getenv('ENV') == 'test'
 
 __all__ = ['configure_redis', 'Lock']
 
@@ -90,7 +89,7 @@ def get_redis():
     return redis_client
 
 
-if IS_DJANGO_REDIS:
+if not IS_TEST_ENV:
     from redis.lock import Lock
 else:
 
