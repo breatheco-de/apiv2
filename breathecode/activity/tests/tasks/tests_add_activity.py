@@ -1,7 +1,8 @@
 import logging
 from typing import Optional
 import pytest
-import msgpack
+import pickle
+from google.cloud import bigquery
 
 from unittest.mock import MagicMock, call
 from django.utils import timezone
@@ -79,7 +80,7 @@ def decompress_and_parse():
 
     def wrapper(data: str):
         data = zstandard.decompress(data)
-        data = msgpack.loads(data)
+        data = pickle.loads(data)
 
         return data
 
@@ -139,51 +140,37 @@ def test_adding_the_resource_with_id_and_no_meta(bc: Breathecode, decompress_and
     assert actions.get_activity_meta.call_args_list == [call(kind, 'auth.User', 1, None)]
 
     assert decompress_and_parse(cache.get('activity:worker-0')) == [
-        [
-            {
-                'key': 'id',
-                'struct': None,
-                'type': 'STRING',
-                'value': 'c5d8cbc54a894dd0983caae1b8507091'
+        {
+            'data': {
+                'id': 'c5d8cbc54a894dd0983caae1b8507091',
+                'user_id': 1,
+                'kind': kind,
+                'timestamp': UTC_NOW.isoformat(),
+                'related': {
+                    'type': 'auth.User',
+                    'slug': None,
+                    'id': 1,
+                },
+                'meta': {}
             },
-            {
-                'key': 'user_id',
-                'struct': None,
-                'type': 'INT64',
-                'value': 1
-            },
-            {
-                'key': 'kind',
-                'struct': None,
-                'type': 'STRING',
-                'value': kind
-            },
-            {
-                'key': 'timestamp',
-                'struct': None,
-                'type': 'TIMESTAMP',
-                'value': UTC_NOW.isoformat()
-            },
-            {
-                'key': 'type',
-                'struct': 'related',
-                'type': 'STRING',
-                'value': 'auth.User'
-            },
-            {
-                'key': 'id',
-                'struct': 'related',
-                'type': 'INT64',
-                'value': 1
-            },
-            {
-                'key': 'slug',
-                'struct': 'related',
-                'type': 'STRING',
-                'value': None
-            },
-            *get_attrs_from_meta({}),
-        ],
+            'schema': [
+                bigquery.SchemaField('user_id', bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
+                bigquery.SchemaField('kind', bigquery.enums.SqlTypeNames.STRING, 'NULLABLE'),
+                bigquery.SchemaField('timestamp', bigquery.enums.SqlTypeNames.TIMESTAMP, 'NULLABLE'),
+                bigquery.SchemaField('related',
+                                     bigquery.enums.SqlTypeNames.STRUCT,
+                                     'NULLABLE',
+                                     fields=[
+                                         bigquery.SchemaField('type', bigquery.enums.SqlTypeNames.STRING,
+                                                              'NULLABLE'),
+                                         bigquery.SchemaField('id', bigquery.enums.SqlTypeNames.INT64,
+                                                              'NULLABLE'),
+                                         bigquery.SchemaField('slug', bigquery.enums.SqlTypeNames.STRING,
+                                                              'NULLABLE'),
+                                     ]),
+                bigquery.SchemaField('meta', bigquery.enums.SqlTypeNames.STRUCT, 'NULLABLE', fields=[]),
+            ],
+        },
     ]
 
 
@@ -202,51 +189,37 @@ def test_adding_the_resource_with_slug_and_no_meta(bc: Breathecode, decompress_a
     assert actions.get_activity_meta.call_args_list == [call(kind, 'auth.User', None, related_slug)]
 
     assert decompress_and_parse(cache.get('activity:worker-0')) == [
-        [
-            {
-                'key': 'id',
-                'struct': None,
-                'type': 'STRING',
-                'value': 'c5d8cbc54a894dd0983caae1b8507091'
+        {
+            'data': {
+                'id': 'c5d8cbc54a894dd0983caae1b8507091',
+                'user_id': 1,
+                'kind': kind,
+                'timestamp': UTC_NOW.isoformat(),
+                'related': {
+                    'type': 'auth.User',
+                    'slug': related_slug,
+                    'id': None,
+                },
+                'meta': {},
             },
-            {
-                'key': 'user_id',
-                'struct': None,
-                'type': 'INT64',
-                'value': 1
-            },
-            {
-                'key': 'kind',
-                'struct': None,
-                'type': 'STRING',
-                'value': kind
-            },
-            {
-                'key': 'timestamp',
-                'struct': None,
-                'type': 'TIMESTAMP',
-                'value': UTC_NOW.isoformat()
-            },
-            {
-                'key': 'type',
-                'struct': 'related',
-                'type': 'STRING',
-                'value': 'auth.User'
-            },
-            {
-                'key': 'id',
-                'struct': 'related',
-                'type': 'INT64',
-                'value': None
-            },
-            {
-                'key': 'slug',
-                'struct': 'related',
-                'type': 'STRING',
-                'value': related_slug
-            },
-            *get_attrs_from_meta({}),
-        ],
+            'schema': [
+                bigquery.SchemaField('user_id', bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
+                bigquery.SchemaField('kind', bigquery.enums.SqlTypeNames.STRING, 'NULLABLE'),
+                bigquery.SchemaField('timestamp', bigquery.enums.SqlTypeNames.TIMESTAMP, 'NULLABLE'),
+                bigquery.SchemaField('related',
+                                     bigquery.enums.SqlTypeNames.STRUCT,
+                                     'NULLABLE',
+                                     fields=[
+                                         bigquery.SchemaField('type', bigquery.enums.SqlTypeNames.STRING,
+                                                              'NULLABLE'),
+                                         bigquery.SchemaField('id', bigquery.enums.SqlTypeNames.INT64,
+                                                              'NULLABLE'),
+                                         bigquery.SchemaField('slug', bigquery.enums.SqlTypeNames.STRING,
+                                                              'NULLABLE'),
+                                     ]),
+                bigquery.SchemaField('meta', bigquery.enums.SqlTypeNames.STRUCT, 'NULLABLE', fields=[]),
+            ],
+        },
     ]
 
 
@@ -274,51 +247,43 @@ def test_adding_the_resource_with_meta(bc: Breathecode, set_activity_meta, decom
     assert logging.Logger.error.call_args_list == []
 
     assert decompress_and_parse(cache.get('activity:worker-0')) == [
-        [
-            {
-                'key': 'id',
-                'struct': None,
-                'type': 'STRING',
-                'value': 'c5d8cbc54a894dd0983caae1b8507091'
+        {
+            'data': {
+                'id': 'c5d8cbc54a894dd0983caae1b8507091',
+                'user_id': 1,
+                'kind': kind,
+                'timestamp': UTC_NOW.isoformat(),
+                'related': {
+                    'type': 'auth.User',
+                    'slug': None,
+                    'id': 1,
+                },
+                'meta': meta
             },
-            {
-                'key': 'user_id',
-                'struct': None,
-                'type': 'INT64',
-                'value': 1
-            },
-            {
-                'key': 'kind',
-                'struct': None,
-                'type': 'STRING',
-                'value': kind
-            },
-            {
-                'key': 'timestamp',
-                'struct': None,
-                'type': 'TIMESTAMP',
-                'value': UTC_NOW.isoformat()
-            },
-            {
-                'key': 'type',
-                'struct': 'related',
-                'type': 'STRING',
-                'value': 'auth.User'
-            },
-            {
-                'key': 'id',
-                'struct': 'related',
-                'type': 'INT64',
-                'value': 1
-            },
-            {
-                'key': 'slug',
-                'struct': 'related',
-                'type': 'STRING',
-                'value': None
-            },
-            *get_attrs_from_meta(meta),
-        ],
+            'schema': [
+                bigquery.SchemaField('user_id', bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
+                bigquery.SchemaField('kind', bigquery.enums.SqlTypeNames.STRING, 'NULLABLE'),
+                bigquery.SchemaField('timestamp', bigquery.enums.SqlTypeNames.TIMESTAMP, 'NULLABLE'),
+                bigquery.SchemaField('related',
+                                     bigquery.enums.SqlTypeNames.STRUCT,
+                                     'NULLABLE',
+                                     fields=[
+                                         bigquery.SchemaField('type', bigquery.enums.SqlTypeNames.STRING,
+                                                              'NULLABLE'),
+                                         bigquery.SchemaField('id', bigquery.enums.SqlTypeNames.INT64,
+                                                              'NULLABLE'),
+                                         bigquery.SchemaField('slug', bigquery.enums.SqlTypeNames.STRING,
+                                                              'NULLABLE'),
+                                     ]),
+                bigquery.SchemaField('meta',
+                                     bigquery.enums.SqlTypeNames.STRUCT,
+                                     'NULLABLE',
+                                     fields=[
+                                         bigquery.SchemaField(x, bigquery.enums.SqlTypeNames.STRING,
+                                                              'NULLABLE') for x in meta
+                                     ]),
+            ],
+        },
     ]
 
 
@@ -374,97 +339,81 @@ def test_adding_the_resource_with_meta__called_two_times(bc: Breathecode, set_ac
     assert logging.Logger.error.call_args_list == []
 
     assert decompress_and_parse(cache.get('activity:worker-0')) == [
-        [
-            {
-                'key': 'id',
-                'struct': None,
-                'type': 'STRING',
-                'value': f'c5d8cbc54a894dd0983caae1b8507091'
+        {
+            'data': {
+                'id': 'c5d8cbc54a894dd0983caae1b8507091',
+                'user_id': 1,
+                'kind': kind,
+                'timestamp': UTC_NOW.isoformat(),
+                'related': {
+                    'type': 'auth.User',
+                    'slug': None,
+                    'id': 1,
+                },
+                'meta': meta
             },
-            {
-                'key': 'user_id',
-                'struct': None,
-                'type': 'INT64',
-                'value': 1
-            },
-            {
-                'key': 'kind',
-                'struct': None,
-                'type': 'STRING',
-                'value': kind
-            },
-            {
-                'key': 'timestamp',
-                'struct': None,
-                'type': 'TIMESTAMP',
-                'value': UTC_NOW.isoformat()
-            },
-            {
-                'key': 'type',
-                'struct': 'related',
-                'type': 'STRING',
-                'value': 'auth.User'
-            },
-            {
-                'key': 'id',
-                'struct': 'related',
-                'type': 'INT64',
-                'value': 1
-            },
-            {
-                'key': 'slug',
-                'struct': 'related',
-                'type': 'STRING',
-                'value': None
-            },
-            *get_attrs_from_meta(meta),
-        ],
+            'schema': [
+                bigquery.SchemaField('user_id', bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
+                bigquery.SchemaField('kind', bigquery.enums.SqlTypeNames.STRING, 'NULLABLE'),
+                bigquery.SchemaField('timestamp', bigquery.enums.SqlTypeNames.TIMESTAMP, 'NULLABLE'),
+                bigquery.SchemaField('related',
+                                     bigquery.enums.SqlTypeNames.STRUCT,
+                                     'NULLABLE',
+                                     fields=[
+                                         bigquery.SchemaField('type', bigquery.enums.SqlTypeNames.STRING,
+                                                              'NULLABLE'),
+                                         bigquery.SchemaField('id', bigquery.enums.SqlTypeNames.INT64,
+                                                              'NULLABLE'),
+                                         bigquery.SchemaField('slug', bigquery.enums.SqlTypeNames.STRING,
+                                                              'NULLABLE'),
+                                     ]),
+                bigquery.SchemaField('meta',
+                                     bigquery.enums.SqlTypeNames.STRUCT,
+                                     'NULLABLE',
+                                     fields=[
+                                         bigquery.SchemaField(x, bigquery.enums.SqlTypeNames.STRING,
+                                                              'NULLABLE') for x in meta
+                                     ]),
+            ],
+        },
     ]
 
     assert decompress_and_parse(cache.get('activity:worker-1')) == [
-        [
-            {
-                'key': 'id',
-                'struct': None,
-                'type': 'STRING',
-                'value': f'c5d8cbc54a894dd0983caae1b8507092'
+        {
+            'data': {
+                'id': 'c5d8cbc54a894dd0983caae1b8507092',
+                'user_id': 1,
+                'kind': kind,
+                'timestamp': UTC_NOW.isoformat(),
+                'related': {
+                    'type': 'auth.User',
+                    'slug': None,
+                    'id': 1,
+                },
+                'meta': meta
             },
-            {
-                'key': 'user_id',
-                'struct': None,
-                'type': 'INT64',
-                'value': 1
-            },
-            {
-                'key': 'kind',
-                'struct': None,
-                'type': 'STRING',
-                'value': kind
-            },
-            {
-                'key': 'timestamp',
-                'struct': None,
-                'type': 'TIMESTAMP',
-                'value': UTC_NOW.isoformat()
-            },
-            {
-                'key': 'type',
-                'struct': 'related',
-                'type': 'STRING',
-                'value': 'auth.User'
-            },
-            {
-                'key': 'id',
-                'struct': 'related',
-                'type': 'INT64',
-                'value': 1
-            },
-            {
-                'key': 'slug',
-                'struct': 'related',
-                'type': 'STRING',
-                'value': None
-            },
-            *get_attrs_from_meta(meta),
-        ],
+            'schema': [
+                bigquery.SchemaField('user_id', bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
+                bigquery.SchemaField('kind', bigquery.enums.SqlTypeNames.STRING, 'NULLABLE'),
+                bigquery.SchemaField('timestamp', bigquery.enums.SqlTypeNames.TIMESTAMP, 'NULLABLE'),
+                bigquery.SchemaField('related',
+                                     bigquery.enums.SqlTypeNames.STRUCT,
+                                     'NULLABLE',
+                                     fields=[
+                                         bigquery.SchemaField('type', bigquery.enums.SqlTypeNames.STRING,
+                                                              'NULLABLE'),
+                                         bigquery.SchemaField('id', bigquery.enums.SqlTypeNames.INT64,
+                                                              'NULLABLE'),
+                                         bigquery.SchemaField('slug', bigquery.enums.SqlTypeNames.STRING,
+                                                              'NULLABLE'),
+                                     ]),
+                bigquery.SchemaField('meta',
+                                     bigquery.enums.SqlTypeNames.STRUCT,
+                                     'NULLABLE',
+                                     fields=[
+                                         bigquery.SchemaField(x, bigquery.enums.SqlTypeNames.STRING,
+                                                              'NULLABLE') for x in meta
+                                     ]),
+            ],
+        },
     ]

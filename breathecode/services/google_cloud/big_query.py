@@ -26,6 +26,44 @@ def is_test_env():
     return os.getenv('ENV') == 'test'
 
 
+class BigQueryModel:
+
+    def __init__(self, client: bigquery.Client, _project_id: str, _dataset: str, _table: str, **kwargs):
+
+        self._project_id = _project_id
+        self._dataset = _dataset
+        self._table = _table
+        self.client = client
+
+        self.__dict__.update(kwargs)
+
+    def __getattr__(self, __name: str) -> Any:
+        self.__dict__.get(__name)
+
+    def __setattr__(self, __name: str, __value: Any) -> None:
+        self.__dict__[__name] = __value
+
+    def __delattr__(self, __name: str) -> None:
+        del self.__dict__[__name]
+
+    def __str__(self) -> str:
+        return str(self.__dict__)
+
+    def __repr__(self) -> str:
+        return f'<BigQueryModel "{self._project_id}.{self._dataset}.{self._table}">'
+
+    def save(self):
+        table_ref = self.client.dataset(self._dataset, project=self._project_id).table(self._table)
+        table = self.client.get_table(table_ref)
+
+        row = [self.__dict__]
+
+        errors = self.client.insert_rows(table, row)
+
+        if errors:
+            raise Exception(errors)
+
+
 class BigQuerySet():
     query: dict[str, Any]
     agg: list[Any]
@@ -47,43 +85,73 @@ class BigQuerySet():
         self.client = client
         self.dataset = dataset
         self.project_id = project_id
-        self._table = None
+        self._table_ref = None
 
     def _get_table(self) -> Table:
-        if self._table:
-            return self._table
+        if self._table_ref:
+            return self._table_ref
 
         table_ref = self.client.dataset(self.dataset, project=self.project_id).table(self.table)
 
         # Fetch the schema of the table
         table = self.client.get_table(table_ref)
-        self._table = table
-        return table
+        self._table_ref = table
+        return self._table_ref
+
+    def new(self, **kwargs) -> BigQueryModel:
+        return BigQueryModel(client, self.project_id, self.dataset, self.table, **kwargs)
+
+    def bulk_insert(self, rows: list[dict[str, Any]]) -> None:
+        if len(rows) == 0:
+            return None
+
+        if isinstance(rows[0], BigQueryModel):
+            rows = [x.__dict__ for x in rows]
+
+        table = self._get_table()
+        errors = self.client.insert_rows(table, rows)
+
+        if errors:
+            raise Exception(errors)
 
     def schema(self) -> list[SchemaField]:
-        return self._get_table(f'{self.project_id}.{self.dataset}.{self.table}')
+        table = self._get_table()
+        return table.schema
 
-    def update_schema(self, schema: list[SchemaField], append=True) -> None:
+    def update_schema(self, schema: list[SchemaField], append=False) -> None:
         table = self._get_table()
 
         if append:
             new_schema = table.schema
 
             for field in schema:
-                if field not in new_schema:
+                if field in new_schema:
+                    continue
+
+                found = [x for x in new_schema if x.name == field.name]
+
+                if not found:
                     new_schema.append(field)
+                    continue
 
-                elif field.field_type is enums.StandardSqlTypeNames.STRUCT:
-                    x = [x for x in new_schema if x.name == field.name][0]
-                    new_schema.remove(x)
+                found = found[0]
 
-                    fields = field.fields
-                    new_fields = x.fields
-                    for f in new_fields:
-                        if f not in fields:
-                            fields.append(f)
+                if (found.field_type is not bigquery.enums.SqlTypeNames.STRUCT
+                        or field.field_type is not bigquery.enums.SqlTypeNames.STRUCT):
+                    new_schema.remove(found)
+                    new_schema.append(field)
+                    continue
 
-                    new_schema.append(SchemaField(field.name, field.field_type, fields=fields))
+                fields = found.fields
+                new_fields = field.fields
+
+                new_schema.remove(found)
+
+                for f in new_fields:
+                    if f not in fields:
+                        fields.append(f)
+
+                new_schema.append(SchemaField(field.name, field.field_type, fields=fields))
 
             table.schema = new_schema
 

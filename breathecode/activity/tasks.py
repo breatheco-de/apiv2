@@ -1,5 +1,6 @@
 from datetime import date, datetime
 import functools
+import pickle
 import msgpack
 import logging, os
 import re
@@ -166,27 +167,24 @@ def upload_activities(task_manager_id: int):
         client = get_redis_connection('default')
 
     workers = actions.get_workers_amount()
-
     res = []
-
-    processes_keys = 0
+    worker = 0
 
     while True:
-        worker = 0
-
         try:
             with Lock(client, f'lock:activity:worker-{worker}', timeout=3, blocking_timeout=3):
                 backup_key = f'activity:backup:{worker}-{task_manager_id}'
-                worker_key = f'lock:activity:worker-{worker}'
+                worker_key = f'activity:worker-{worker}'
 
                 data = cache.get(backup_key)
                 if not data:
                     data = cache.get(worker_key)
                     cache.set(backup_key, data)
-                    cache.set(worker_key, None)
+                    cache.delete(worker_key)
 
-                data = zstandard.decompress(data)
-                data = msgpack.loads(data)
+                if data:
+                    data = zstandard.decompress(data)
+                    data = pickle.loads(data)
 
         except LockError:
             raise RetryTask('Could not acquire lock for activity, operation timed out.')
@@ -195,67 +193,61 @@ def upload_activities(task_manager_id: int):
         if worker >= workers and data is None:
             break
 
-        processes_keys = worker
         worker += 1
-        res += data
 
-    if not data:
-        cache.set(backup_key, None)
+        if data:
+            res += data
+
+    if not res:
+        cache.delete(backup_key)
         raise AbortTask('No data to upload')
 
-    ###
     table = BigQuery.table('activity')
     schema = table.schema()
+    processes_keys = worker + 1
     new_schema = []
+    rows = []
 
-    verified = {}
+    to_check = set()
 
     for activity in res:
-        for field in activity:
-            if field['key'] not in schema:
-                new_schema.append(bigquery.SchemaField(field['key'], field['type']))
+        to_check.update(activity['schema'])
+        rows.append(activity['data'])
 
-            #FIXME
-            elif field['key']['meta']:
-                raise Exception(f'Field {field["key"]} has different type in the schema')
+    structs = {}
+    new_structs = {}
+
+    structs['meta'] = schema
+    for field in schema:
+        if field.field_type == bigquery.enums.SqlTypeNames.STRUCT:
+            structs[field.name] = field.fields
+
+    diff = to_check.symmetric_difference(schema)
+
+    for field in diff:
+        if field.field_type == bigquery.enums.SqlTypeNames.STRUCT:
+            if field.name not in new_structs:
+                new_structs[field.name] = set()
+
+            new_structs[field.name].update(field.fields)
+
+        else:
+            new_schema.append(field)
+
+    for struct in new_structs:
+        new_schema.append(
+            bigquery.SchemaField(struct,
+                                 bigquery.enums.SqlTypeNames.STRUCT,
+                                 'NULLABLE',
+                                 fields=new_structs[struct]))
 
     if new_schema:
-        table.update_schema(new_schema)
-    ###
+        table.update_schema(new_schema, append=True)
 
-    client, project_id, dataset = BigQuery.client()
-
-    job_config = bigquery.LoadJobConfig(
-        schema=[
-            bigquery.SchemaField('id', 'STRING'),
-            bigquery.SchemaField('user_id', 'INT64'),
-            bigquery.SchemaField('kind', 'STRING'),
-            bigquery.SchemaField('timestamp', 'TIMESTAMP'),
-            bigquery.SchemaField('related', 'STRUCT<type STRING, id INT64, slug STRING>'),
-            bigquery.SchemaField(
-                'meta', 'STRUCT<{}>'.format(', '.join([
-                    'id STRING',
-                    'user_id INT64',
-                    'kind STRING',
-                    'timestamp TIMESTAMP',
-                    'related_type STRING',
-                    'related_id INT64',
-                    'related_slug STRING',
-                ]))),
-        ],
-        write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
-    )
-
-    table = f'{project_id}.{dataset}.activity'
-
-    job = client.load_table_from_json(data, table, job_config=job_config)
-    job.result()
-
-    if job.error_result:
-        raise Exception(job.error_result.get('message', 'No description'))
+    table.bulk_insert(rows)
 
     for worker in range(processes_keys):
-        cache.set(f'activity:backup:{worker}-{task_manager_id}', None)
+        cache.delete(f'activity:backup:{worker}-{task_manager_id}')
 
 
 @task(priority=TaskPriority.BACKGROUND.value)
@@ -265,14 +257,6 @@ def add_activity(user_id: int,
                  related_id: Optional[str | int] = None,
                  related_slug: Optional[str] = None,
                  **_):
-
-    def serialize_field(field, value, type, prefix='', suffix='', struct=None):
-        return {
-            'key': prefix + field + suffix,
-            'type': type,
-            'value': value,
-            'struct': struct,
-        }
 
     logger.info(f'Executing add_activity related to {str(kind)}')
 
@@ -310,47 +294,80 @@ def add_activity(user_id: int,
 
             if data:
                 data = zstandard.decompress(data)
-                data = msgpack.loads(data)
+                data = pickle.loads(data)
 
             else:
                 data = []
 
-            res = [
-                serialize_field('id',
-                                uuid.uuid4().hex, 'STRING'),
-                serialize_field('user_id', user_id, 'INT64'),
-                serialize_field('kind', kind, 'STRING'),
-                serialize_field('timestamp',
-                                timezone.now().isoformat(), 'TIMESTAMP'),
-                serialize_field('type', related_type, 'STRING', struct='related'),
-                serialize_field('id', related_id, 'INT64', struct='related'),
-                serialize_field('slug', related_slug, 'STRING', struct='related'),
-            ]
+            res = {
+                'schema': [
+                    bigquery.SchemaField('user_id', bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
+                    bigquery.SchemaField('kind', bigquery.enums.SqlTypeNames.STRING, 'NULLABLE'),
+                    bigquery.SchemaField('timestamp', bigquery.enums.SqlTypeNames.TIMESTAMP, 'NULLABLE'),
+                    bigquery.SchemaField('related',
+                                         bigquery.enums.SqlTypeNames.STRUCT,
+                                         'NULLABLE',
+                                         fields=[
+                                             bigquery.SchemaField('type', bigquery.enums.SqlTypeNames.STRING,
+                                                                  'NULLABLE'),
+                                             bigquery.SchemaField('id', bigquery.enums.SqlTypeNames.INT64,
+                                                                  'NULLABLE'),
+                                             bigquery.SchemaField('slug', bigquery.enums.SqlTypeNames.STRING,
+                                                                  'NULLABLE'),
+                                         ]),
+                ],
+                'data': {
+                    'id': uuid.uuid4().hex,
+                    'user_id': user_id,
+                    'kind': kind,
+                    'timestamp': timezone.now().isoformat(),
+                    'related': {
+                        'type': related_type,
+                        'id': related_id,
+                        'slug': related_slug,
+                    },
+                    'meta': {},
+                },
+            }
+
+            fields = []
 
             meta = actions.get_activity_meta(kind, related_type, related_id, related_slug)
 
             for key in meta:
-                t = 'STRING'
+                t = bigquery.enums.SqlTypeNames.STRING
 
                 # keep it adobe than the date conditional
                 if isinstance(meta[key], datetime) or (isinstance(meta[key], str)
                                                        and ISO_STRING_PATTERN.match(meta[key])):
-                    t = 'TIMESTAMP'
+                    t = bigquery.enums.SqlTypeNames.TIMESTAMP
                 elif isinstance(meta[key], date):
-                    t = 'DATE'
+                    t = bigquery.enums.SqlTypeNames.DATE
                 elif isinstance(meta[key], str):
                     pass
                 elif isinstance(meta[key], bool):
-                    t = 'BOOL'
+                    t = bigquery.enums.SqlTypeNames.BOOL
                 elif isinstance(meta[key], int):
-                    t = 'INT64'
+                    t = bigquery.enums.SqlTypeNames.INT64
                 elif isinstance(meta[key], float):
-                    t = 'FLOAT64'
+                    t = bigquery.enums.SqlTypeNames.FLOAT64
 
-                res.append(serialize_field(key, meta[key], t, struct='meta'))
+                # res['data'].append(serialize_field(key, meta[key], t))
+                # res.append(serialize_field(key, meta[key], t, struct='meta'))
+
+                fields.append(bigquery.SchemaField(key, t))
+                res['data']['meta'][key] = meta[key]
+
+            meta_field = bigquery.SchemaField('meta',
+                                              bigquery.enums.SqlTypeNames.STRUCT,
+                                              'NULLABLE',
+                                              fields=fields)
+            # meta_field = bigquery.SchemaField('meta', 'STRUCT', 'NULLABLE', fields=fields)
+            res['schema'].append(meta_field)
+            # res['schema']['meta'] = meta_field
 
             data.append(res)
-            data = msgpack.dumps(data)
+            data = pickle.dumps(data)
             data = zstandard.compress(data)
 
             cache.set(worker_storage_key, data)

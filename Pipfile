@@ -59,7 +59,7 @@ requests = "*"
 dj-database-url = "*"
 django-heroku = "*"
 django-cors-headers = "*"
-django-phonenumber-field = {extras = ["phonenumberslite"], version = "*"}
+django-phonenumber-field = {extras = ["phonenumberslite"] }
 activecampaign-python = "*"
 schema = "*"
 mixer = "*"
@@ -81,9 +81,9 @@ python-slugify = "*"
 pyyaml = "*"
 uritemplate = "*"
 psycopg2-binary = "*"
-django-sql-explorer = {extras = ["xls"], version = "*"}
+django-sql-explorer = {extras = ["xls"] }
 google-cloud-ndb = "*"
-whitenoise = {extras = ["brotli"], version = "*"}
+whitenoise = {extras = ["brotli"] }
 channels = "*"
 channels-redis = "*"
 timeago = "*"
@@ -93,7 +93,7 @@ beautifulsoup4 = "*"
 lxml = "*"
 pandas = "*"
 daphne = "*"
-twisted = {extras = ["http2", "tls"], version = "*"}
+twisted = {extras = ["http2", "tls"] }
 nbconvert = "~=7.11.0"
 certifi = "*"
 numpy = "*"
@@ -107,11 +107,11 @@ launchdarkly-server-sdk = "*"
 async-timeout = "*"
 exceptiongroup = "*"
 pip = "*"
-sqlalchemy-bigquery = {version = "*", extras = ["bqstorage"]}
+sqlalchemy-bigquery = { extras = ["bqstorage"]}
 drf-yasg = "*"
 google-cloud-firestore = "*"
 gevent = "*"
-django-storages = {extras = ["google"], version = "*"}
+django-storages = {extras = ["google"] }
 newrelic = "*"
 graphene-django = "*"
 graphene-django-optimizer = "*"
@@ -119,7 +119,7 @@ sqlalchemy = "<2.0"
 pytest-env = "*"
 premailer = "*"
 google-cloud-bigquery = "*"
-redis = {extras = ["hiredis"], version = "*"}
+redis = {extras = ["hiredis"] }
 brotli = "*"
 circuitbreaker = "*"
 kombu = "*"

@@ -1,283 +1,290 @@
 """
 Test /answer
 """
-from datetime import date, datetime
-import logging
-from unittest.mock import MagicMock, call, patch
-from uuid import uuid4
+import pickle
+import random
+import zstandard as zstd
+from unittest.mock import MagicMock, call
+from django.core.cache import cache
 
+from google.cloud.bigquery.table import TableReference
+from google.cloud.bigquery.client import DatasetReference
 from django.utils import timezone
-from breathecode.services.google_cloud.big_query import BigQuery
+import pytest
 
-from breathecode.activity.tasks import add_activity
-from breathecode.activity import actions
+from breathecode.activity.tasks import upload_activities
 from google.cloud import bigquery
 
-from ..mixins import MediaTestCase
+from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 UTC_NOW = timezone.now()
 
 
-def bigquery_client_mock(user_id=1,
-                         kind=None,
-                         meta={},
-                         related_type=None,
-                         related_id=None,
-                         related_slug=None,
-                         fail=None):
+class TableMock:
 
-    result_mock = MagicMock()
+    def __init__(self, schema):
+        self.schema = schema
 
-    if fail:
-        result_mock.done.return_value = True
-        result_mock.error_result = {'message': fail}
-
-    else:
-        result_mock.done.return_value = False
-        result_mock.error_result = None
-
-    client_mock = MagicMock()
-    client_mock.query.return_value = result_mock
-
-    project_id = 'test'
-    dataset = '4geeks'
-
-    meta_struct = ''
-
-    job_config = bigquery.QueryJobConfig(
-        destination=f'{project_id}.{dataset}.activity',
-        schema_update_options=[bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION],
-        write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
-        query_parameters=[
-            bigquery.ScalarQueryParameter('x__id', 'STRING',
-                                          uuid4().hex),
-            bigquery.ScalarQueryParameter('x__user_id', 'INT64', user_id),
-            bigquery.ScalarQueryParameter('x__kind', 'STRING', kind),
-            bigquery.ScalarQueryParameter('x__timestamp', 'TIMESTAMP',
-                                          timezone.now().isoformat()),
-            bigquery.ScalarQueryParameter('x__related_type', 'STRING', related_type),
-            bigquery.ScalarQueryParameter('x__related_id', 'INT64', related_id),
-            bigquery.ScalarQueryParameter('x__related_slug', 'STRING', related_slug),
-        ])
-
-    for key in meta:
-        t = 'STRING'
-        if isinstance(meta[key], str):
-            pass
-        elif isinstance(meta[key], int):
-            t = 'INT64'
-        elif isinstance(meta[key], float):
-            t = 'FLOAT64'
-        elif isinstance(meta[key], bool):
-            t = 'BOOL'
-        elif isinstance(meta[key], datetime):
-            t = 'TIMESTAMP'
-        elif isinstance(meta[key], date):
-            t = 'DATE'
-
-        job_config.query_parameters.append(bigquery.ScalarQueryParameter(key, t, meta[key]))
-        meta_struct += f'@{key} as {key}, '
-
-    if meta_struct:
-        meta_struct = meta_struct[:-2]
-
-    query = f"""
-        SELECT
-            @x__id as id,
-            @x__user_id as user_id,
-            @x__kind as kind,
-            @x__timestamp as timestamp,
-            STRUCT(
-                @x__related_type as type,
-                @x__related_id as id,
-                @x__related_slug as slug) as related,
-            STRUCT({meta_struct}) as meta
-    """
-
-    return (client_mock, result_mock, query, project_id, dataset)
+    def __eq__(self, other):
+        return self.schema == other.schema
 
 
-# upload_activities
+@pytest.fixture(autouse=True)
+def apply_patch(db, monkeypatch):
+
+    m1 = MagicMock()
+    m2 = MagicMock()
+    m3 = MagicMock()
+
+    m3.return_value = TableMock([
+        bigquery.SchemaField('character', 'STRING', 'NULLABLE'),
+        bigquery.SchemaField('related',
+                             'RECORD',
+                             'NULLABLE',
+                             fields=(
+                                 bigquery.SchemaField('name', 'STRING', 'NULLABLE'),
+                                 bigquery.SchemaField('amount', 'INT64', 'NULLABLE'),
+                             )),
+        bigquery.SchemaField('meta',
+                             'RECORD',
+                             'NULLABLE',
+                             fields=(
+                                 bigquery.SchemaField('knife', 'BOOL', 'NULLABLE'),
+                                 bigquery.SchemaField('pistol', 'FLOAT64', 'NULLABLE'),
+                             )),
+    ])
+
+    m4 = MagicMock()
+    m5 = MagicMock(return_value=[])
+
+    monkeypatch.setattr('logging.Logger.info', m1)
+    monkeypatch.setattr('logging.Logger.error', m2)
+    monkeypatch.setattr('breathecode.activity.actions.get_workers_amount', lambda: 2)
+    monkeypatch.setattr('django.utils.timezone.now', lambda: UTC_NOW)
+    monkeypatch.setattr('google.cloud.bigquery.Client.get_table', m3)
+    monkeypatch.setattr('google.cloud.bigquery.Client.update_table', m4)
+    monkeypatch.setattr('google.cloud.bigquery.Client.insert_rows', m5)
+
+    monkeypatch.setattr('breathecode.services.google_cloud.credentials.resolve_credentials', lambda: None)
+
+    monkeypatch.setenv('GOOGLE_PROJECT_ID', 'project')
+    monkeypatch.setenv('BIGQUERY_DATASET', 'dataset')
+
+    yield m1, m2, m3, m4, m5
 
 
-class MediaTestSuite(MediaTestCase):
+@pytest.fixture
+def get_schema():
+    return lambda extra=[]: [
+        bigquery.SchemaField('user_id', bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
+        bigquery.SchemaField('kind', bigquery.enums.SqlTypeNames.STRING, 'NULLABLE'),
+        bigquery.SchemaField('timestamp', bigquery.enums.SqlTypeNames.TIMESTAMP, 'NULLABLE'),
+        bigquery.SchemaField('related',
+                             bigquery.enums.SqlTypeNames.STRUCT,
+                             'NULLABLE',
+                             fields=[
+                                 bigquery.SchemaField('type', bigquery.enums.SqlTypeNames.STRING, 'NULLABLE'),
+                                 bigquery.SchemaField('id', bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
+                                 bigquery.SchemaField('slug', bigquery.enums.SqlTypeNames.STRING, 'NULLABLE'),
+                             ]),
+        *extra,
+    ]
 
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.services.google_cloud.credentials.resolve_credentials', MagicMock())
-    @patch('breathecode.activity.actions.get_activity_meta', MagicMock(return_value={}))
-    def test_type_and_no_id_or_slug(self):
-        kind = self.bc.fake.slug()
 
-        val = bigquery_client_mock(user_id=1, kind=kind)
-        (client_mock, result_mock, _, project_id, dataset) = val
+@pytest.fixture
+def get_data(fake):
+    return lambda data={}: {
+        'id': fake.uuid4(),
+        'user_id': random.randint(1, 100),
+        'kind': fake.slug(),
+        'timestamp': UTC_NOW.isoformat(),
+        'related': {
+            'type': f'{fake.slug()}.{fake.slug()}',
+            'slug': fake.slug(),
+            'id': random.randint(1, 100),
+        },
+        'meta': {},
+        **data,
+    }
 
-        with patch('breathecode.services.google_cloud.big_query.BigQuery.client') as mock:
-            mock.return_value = (client_mock, project_id, dataset)
-            add_activity.delay(1, kind, related_type='auth.User')
 
-            self.bc.check.calls(BigQuery.client.call_args_list, [])
-            self.bc.check.calls(result_mock.done.call_args_list, [])
+def set_cache(key, value, timeout=None):
+    data = pickle.dumps(value)
+    data = zstd.compress(data)
 
-        self.bc.check.calls(logging.Logger.info.call_args_list,
-                            [call(f'Executing add_activity related to {kind}')])
-        self.bc.check.calls(logging.Logger.error.call_args_list, [
-            call(
-                'If related_type is provided, either related_id or related_slug must be provided, '
-                'but not both.',
-                exc_info=True),
-        ])
-        self.bc.check.calls(actions.get_activity_meta.call_args_list, [])
+    cache.set(key, data, timeout=timeout)
 
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.services.google_cloud.credentials.resolve_credentials', MagicMock())
-    @patch('breathecode.activity.actions.get_activity_meta', MagicMock(return_value={}))
-    def test_type_with_id_and_slug(self):
-        kind = self.bc.fake.slug()
 
-        val = bigquery_client_mock(user_id=1, kind=kind)
-        (client_mock, result_mock, _, project_id, dataset) = val
+def get_cache(key):
+    data = cache.get(key)
 
-        with patch('breathecode.services.google_cloud.big_query.BigQuery.client') as mock:
-            mock.return_value = (client_mock, project_id, dataset)
-            add_activity.delay(1, kind, related_id=1, related_slug='slug')
+    if data is None:
+        return None
 
-            self.bc.check.calls(BigQuery.client.call_args_list, [])
-            self.bc.check.calls(result_mock.done.call_args_list, [])
+    data = zstd.decompress(data)
+    data = pickle.loads(data)
 
-        self.bc.check.calls(logging.Logger.info.call_args_list,
-                            [call(f'Executing add_activity related to {kind}')])
-        self.bc.check.calls(logging.Logger.error.call_args_list, [
-            call('If related_type is not provided, both related_id and related_slug must also be absent.',
-                 exc_info=True),
-        ])
-        self.bc.check.calls(actions.get_activity_meta.call_args_list, [])
+    return data
 
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.services.google_cloud.credentials.resolve_credentials', MagicMock())
-    @patch('breathecode.activity.actions.get_activity_meta', MagicMock(return_value={}))
-    def test_adding_the_resource_with_id_and_no_meta(self):
-        kind = self.bc.fake.slug()
 
-        val = bigquery_client_mock(user_id=1, kind=kind, meta={})
-        (client_mock, result_mock, query, project_id, dataset) = val
+def sort_schema(table):
+    schema = sorted(table.schema, key=lambda v: v.name)
 
-        logging.Logger.info.call_args_list = []
+    for field in schema:
+        if field.field_type == 'RECORD':
+            field._fields = sorted(field._fields, key=lambda v: v.name)
 
-        with patch('breathecode.services.google_cloud.big_query.BigQuery.client') as mock:
-            mock.return_value = (client_mock, project_id, dataset)
-            add_activity.delay(1, kind, related_type='auth.User', related_id=1)
+    return schema
 
-            self.bc.check.calls(BigQuery.client.call_args_list, [call()])
-            assert client_mock.query.call_args[0][0] == query
-            self.bc.check.calls(result_mock.done.call_args_list, [call()])
 
-        self.bc.check.calls(logging.Logger.info.call_args_list,
-                            [call(f'Executing add_activity related to {kind}')])
-        self.bc.check.calls(logging.Logger.error.call_args_list, [])
+def both_schema_are_equal(a, b):
+    assert len(a) == len(b)
 
-        self.bc.check.calls(actions.get_activity_meta.call_args_list, [call(kind, 'auth.User', 1, None)])
+    for i in range(len(a)):
+        assert len(a[i].args) == len(b[i].args)
 
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.services.google_cloud.credentials.resolve_credentials', MagicMock())
-    @patch('breathecode.activity.actions.get_activity_meta', MagicMock(return_value={}))
-    def test_adding_the_resource_with_slug_and_no_meta(self):
-        kind = self.bc.fake.slug()
+        assert sort_schema(a[i].args[0]) == sort_schema(b[i].args[0])
 
-        val = bigquery_client_mock(user_id=1, kind=kind, meta={})
-        (client_mock, result_mock, query, project_id, dataset) = val
+        assert a[i].args[1] == b[i].args[1]
+        assert a[i].kwargs == b[i].kwargs
 
-        logging.Logger.info.call_args_list = []
 
-        related_slug = self.bc.fake.slug()
+def test_no_data(bc: Breathecode, apply_patch):
+    info_mock, error_mock, get_table_mock, update_table_mock, insert_rows_mock = apply_patch
 
-        with patch('breathecode.services.google_cloud.big_query.BigQuery.client') as mock:
-            mock.return_value = (client_mock, project_id, dataset)
-            add_activity.delay(1, kind, related_type='auth.User', related_slug=related_slug)
+    upload_activities.delay()
 
-            self.bc.check.calls(BigQuery.client.call_args_list, [call()])
-            assert client_mock.query.call_args[0][0] == query
-            self.bc.check.calls(result_mock.done.call_args_list, [call()])
+    assert info_mock.call_args_list == []
+    assert error_mock.call_args_list == [call('No data to upload', exc_info=True)]
 
-        self.bc.check.calls(logging.Logger.info.call_args_list,
-                            [call(f'Executing add_activity related to {kind}')])
-        self.bc.check.calls(logging.Logger.error.call_args_list, [])
+    assert get_cache('activity:worker-0') == None
+    assert get_cache('activity:worker-1') == None
 
-        self.bc.check.calls(actions.get_activity_meta.call_args_list,
-                            [call(kind, 'auth.User', None, related_slug)])
+    task = bc.database.get('commons.TaskManager', 1, dict=False)
 
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.services.google_cloud.credentials.resolve_credentials', MagicMock())
-    def test_adding_the_resource_with_meta(self):
-        kind = self.bc.fake.slug()
+    assert get_cache(f'activity:backup:0-{task.id}') == None
+    assert get_cache(f'activity:backup:1-{task.id}') == None
 
-        meta = {
-            self.bc.fake.slug().replace('-', '_'): self.bc.fake.slug(),
-            self.bc.fake.slug().replace('-', '_'): self.bc.fake.slug(),
-            self.bc.fake.slug().replace('-', '_'): self.bc.fake.slug(),
-        }
+    assert get_table_mock.call_args_list == []
+    assert update_table_mock.call_args_list == []
+    assert insert_rows_mock.call_args_list == []
 
-        val = bigquery_client_mock(user_id=1, kind=kind, meta=meta, related_type='auth.User', related_id=1)
-        (client_mock, result_mock, query, project_id, dataset) = val
 
-        logging.Logger.info.call_args_list = []
+def test_with_data_in_both_workers(bc: Breathecode, fake, apply_patch, get_schema, get_data):
+    info_mock, error_mock, get_table_mock, update_table_mock, insert_rows_mock = apply_patch
 
-        with patch('breathecode.activity.actions.get_activity_meta', MagicMock(return_value=meta)):
-            with patch('breathecode.services.google_cloud.big_query.BigQuery.client') as mock:
-                mock.return_value = (client_mock, project_id, dataset)
-                add_activity.delay(1, kind, related_type='auth.User', related_id=1)
+    attr1 = fake.slug()
+    attr2 = fake.slug()
+    attr3 = fake.slug()
+    attr4 = fake.slug()
 
-                self.bc.check.calls(BigQuery.client.call_args_list, [call()])
-                assert client_mock.query.call_args[0][0] == query
-                self.bc.check.calls(result_mock.done.call_args_list, [call()])
-                self.bc.check.calls(actions.get_activity_meta.call_args_list, [
-                    call(kind, 'auth.User', 1, None),
-                ])
+    schema1 = get_schema([
+        bigquery.SchemaField('meta',
+                             bigquery.enums.SqlTypeNames.STRUCT,
+                             'NULLABLE',
+                             fields=[
+                                 bigquery.SchemaField(attr1, bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
+                             ]),
+    ])
 
-        self.bc.check.calls(logging.Logger.info.call_args_list,
-                            [call(f'Executing add_activity related to {kind}')])
-        self.bc.check.calls(logging.Logger.error.call_args_list, [])
+    schema2 = get_schema([
+        bigquery.SchemaField('meta',
+                             bigquery.enums.SqlTypeNames.STRUCT,
+                             'NULLABLE',
+                             fields=[
+                                 bigquery.SchemaField(attr2, bigquery.enums.SqlTypeNames.BOOL, 'NULLABLE'),
+                                 bigquery.SchemaField(attr3, bigquery.enums.SqlTypeNames.FLOAT64, 'NULLABLE'),
+                                 bigquery.SchemaField(attr4, bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
+                             ]),
+    ])
 
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.services.google_cloud.credentials.resolve_credentials', MagicMock())
-    def test_adding_the_resource_with_meta__it_fails(self):
-        kind = self.bc.fake.slug()
+    data1 = get_data({'meta': {attr1: 1}})
+    data2 = get_data({
+        'meta': {
+            attr2: bool(random.randint(0, 1)),
+            attr3: random.random() * 100,
+            attr4: random.randint(1, 100),
+        },
+    })
 
-        meta = {
-            self.bc.fake.slug().replace('-', '_'): self.bc.fake.slug(),
-            self.bc.fake.slug().replace('-', '_'): self.bc.fake.slug(),
-            self.bc.fake.slug().replace('-', '_'): self.bc.fake.slug(),
-        }
+    data3 = get_data({
+        'meta': {
+            attr2: bool(random.randint(0, 1)),
+            attr3: random.random() * 100,
+            attr4: random.randint(1, 100),
+        },
+    })
 
-        exc = self.bc.fake.slug()
+    set_cache(
+        'activity:worker-0',
+        [
+            {
+                'data': data1,
+                'schema': schema1,
+            },
+        ],
+    )
 
-        val = bigquery_client_mock(user_id=1,
-                                   kind=kind,
-                                   meta=meta,
-                                   related_type='auth.User',
-                                   related_id=1,
-                                   fail=exc)
-        (client_mock, result_mock, query, project_id, dataset) = val
+    set_cache(
+        'activity:worker-1',
+        [
+            {
+                'data': data2,
+                'schema': schema2,
+            },
+            {
+                'data': data3,
+                'schema': schema2,
+            },
+        ],
+    )
 
-        logging.Logger.info.call_args_list = []
+    upload_activities.delay()
 
-        with patch('breathecode.activity.actions.get_activity_meta', MagicMock(return_value=meta)):
-            with patch('breathecode.services.google_cloud.big_query.BigQuery.client') as mock:
-                mock.return_value = (client_mock, project_id, dataset)
-                add_activity.delay(1, kind, related_type='auth.User', related_id=1)
+    assert info_mock.call_args_list == []
+    assert error_mock.call_args_list == []
 
-                self.bc.check.calls(BigQuery.client.call_args_list, [call()])
-                assert client_mock.query.call_args[0][0] == query
-                self.bc.check.calls(result_mock.done.call_args_list, [call()])
-                self.bc.check.calls(actions.get_activity_meta.call_args_list, [
-                    call(kind, 'auth.User', 1, None),
-                ])
+    assert get_cache('activity:worker-0') == None
+    assert get_cache('activity:worker-1') == None
 
-        self.bc.check.calls(logging.Logger.info.call_args_list,
-                            [call(f'Executing add_activity related to {kind}')])
-        self.bc.check.calls(logging.Logger.error.call_args_list, [call(exc, exc_info=True)])
+    task = bc.database.get('commons.TaskManager', 1, dict=False)
+
+    assert get_cache(f'activity:backup:0-{task.id}') == None
+    assert get_cache(f'activity:backup:1-{task.id}') == None
+
+    assert get_table_mock.call_args_list == [
+        call(TableReference(DatasetReference('project', 'dataset'), 'activity')),
+    ]
+
+    both_schema_are_equal(update_table_mock.call_args_list, [
+        call(
+            TableMock([
+                bigquery.SchemaField('character', 'STRING', 'NULLABLE'),
+                bigquery.SchemaField('kind', 'STRING', 'NULLABLE'),
+                bigquery.SchemaField('user_id', 'INTEGER', 'NULLABLE'),
+                bigquery.SchemaField('timestamp', 'TIMESTAMP', 'NULLABLE'),
+                bigquery.SchemaField(
+                    'meta',
+                    'RECORD',
+                    'NULLABLE',
+                    fields=(
+                        bigquery.SchemaField(attr1, bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
+                        bigquery.SchemaField(attr2, bigquery.enums.SqlTypeNames.BOOL, 'NULLABLE'),
+                        bigquery.SchemaField(attr3, bigquery.enums.SqlTypeNames.FLOAT64, 'NULLABLE'),
+                        bigquery.SchemaField(attr4, bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
+                        bigquery.SchemaField('knife', 'BOOL', 'NULLABLE'),
+                        bigquery.SchemaField('pistol', 'FLOAT64', 'NULLABLE'),
+                    )),
+                bigquery.SchemaField('related',
+                                     'RECORD',
+                                     'NULLABLE',
+                                     fields=(
+                                         bigquery.SchemaField('name', 'STRING', 'NULLABLE'),
+                                         bigquery.SchemaField('amount', 'INT64', 'NULLABLE'),
+                                         bigquery.SchemaField('id', 'INTEGER', 'NULLABLE'),
+                                         bigquery.SchemaField('type', 'STRING', 'NULLABLE'),
+                                         bigquery.SchemaField('slug', 'STRING', 'NULLABLE'),
+                                     )),
+            ]), ['schema'])
+    ])
+    assert insert_rows_mock.call_args_list == [call(get_table_mock.return_value, [data1, data2, data3])]

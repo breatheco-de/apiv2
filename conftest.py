@@ -357,3 +357,10 @@ def random_image(fake):
 @pytest.fixture(scope='module')
 def fake():
     return _fake
+
+
+# @pytest.fixture(autouse=True)
+# def patch_cache(monkeypatch):
+#     from breathecode.settings import CustomMemCache
+
+#     monkeypatch.setattr('breathecode.utils.cache.cache', CustomMemCache('default', {}))
