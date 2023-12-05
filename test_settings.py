@@ -5,9 +5,6 @@ os.environ['ENV'] = 'test'
 
 from breathecode.settings import *  # noqa: F401
 
-from django.core.cache.backends.locmem import LocMemCache
-import fnmatch
-
 DEBUG = True
 
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///:memory:')

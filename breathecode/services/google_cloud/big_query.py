@@ -277,7 +277,7 @@ class BigQuerySet():
 
         if self.query:
             query += 'WHERE '
-            for key, val in self.query.items():
+            for key, _ in self.query.items():
                 key, operand, var_name = self.attribute_parser(key)
                 query += f'{key} {operand} @{var_name} AND '
             query = query[:-5]
