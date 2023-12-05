@@ -359,8 +359,19 @@ def fake():
     return _fake
 
 
-# @pytest.fixture(autouse=True)
-# def patch_cache(monkeypatch):
-#     from breathecode.settings import CustomMemCache
+# @pytest.fixture(autouse=True, scope='session')
+# def patch_cache():
+#     # from breathecode.settings import CustomMemCache
+#     from breathecode import settings
 
-#     monkeypatch.setattr('breathecode.utils.cache.cache', CustomMemCache('default', {}))
+#     # monkeypatch.setattr('breathecode.utils.cache.cache', CustomMemCache('default', {}))
+#     # setattr(settings, 'CACHEOPS_ENABLED', False)
+
+#     x = {
+#         'default': {
+#             'LOCATION': 'breathecode',
+#             'BACKEND': 'breathecode.settings.CustomMemCache',
+#         },
+#     }
+#     setattr(settings, 'CACHES', x)
+#     yield

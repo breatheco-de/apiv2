@@ -1,15 +1,9 @@
 import os
 from django.core.management.base import BaseCommand
-from django.db.models import Q
-from breathecode.admissions.models import (Cohort, SyllabusSchedule, SyllabusScheduleTimeSlot)
-from google.cloud import bigquery
 from breathecode.services.google_cloud.big_query import BigQuery
-from breathecode.activity import actions
-from datetime import date, datetime
 from django.utils import timezone
 from django.core.cache import cache
 from breathecode.activity import tasks
-from django_redis import get_redis_connection
 
 IS_DJANGO_REDIS = hasattr(cache, 'delete_pattern')
 
