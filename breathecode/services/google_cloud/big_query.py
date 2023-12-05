@@ -14,7 +14,6 @@ from google.api_core.client_options import ClientOptions
 from google.auth.credentials import AnonymousCredentials
 from google.cloud.bigquery.table import Table, RowIterator
 from google.cloud.bigquery.schema import SchemaField
-from google.cloud.bigquery import enums
 
 client = None
 engine = None
@@ -262,7 +261,7 @@ class BigQuerySet():
 
         return operation, attribute
 
-    def sql(self, aggs: list[str] = []) -> str:
+    def sql(self, *aggs: str) -> str:
         query_fields = []
         if self.fields:
             query_fields += self.fields

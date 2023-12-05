@@ -1,6 +1,5 @@
 import os
 from django.core.management.base import BaseCommand
-from breathecode.services.google_cloud.big_query import BigQuery
 from django.utils import timezone
 from django.core.cache import cache
 from breathecode.activity import tasks
