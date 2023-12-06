@@ -51,7 +51,7 @@ from .forms import (InviteForm, LoginForm, PasswordChangeCustomForm, PickPasswor
                     SyncGithubUsersForm)
 from .models import (AppUserAgreement, CredentialsFacebook, CredentialsGithub, CredentialsGoogle,
                      CredentialsSlack, GitpodUser, OptionalScopeSet, Profile, ProfileAcademy, Role, Scope,
-                     Token, UserInvite, GithubAcademyUser, AcademyAuthSettings)
+                     Token, UserInvite, GithubAcademyUser, AcademyAuthSettings, UserSetting)
 from .serializers import (AppUserSerializer, AuthSerializer, GetGitpodUserSerializer,
                           GetProfileAcademySerializer, GetProfileAcademySmallSerializer, GetProfileSerializer,
                           GitpodUserSmallSerializer, MemberPOSTSerializer, MemberPUTSerializer,
@@ -832,7 +832,9 @@ class UserSettingsView(APIView):
         except User.DoesNotExist:
             raise ValidationException('You don\'t have a user', slug='user-not-found', code=403)
 
-        serializer = UserSettingsSerializer(request.user, data=request.data, context={'request': request})
+        settings, created = UserSetting.objects.get_or_create(user_id=request.user.id)
+
+        serializer = UserSettingsSerializer(settings, data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)

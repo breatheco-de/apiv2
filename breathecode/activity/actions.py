@@ -265,6 +265,7 @@ class FillActivityMeta:
 
         if instance.cohort:
             obj['cohort'] = instance.cohort.id
+            obj['academy'] = instance.cohort.academy.id
 
         if instance.opened_at:
             obj['opened_at'] = instance.opened_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
@@ -343,6 +344,7 @@ class FillActivityMeta:
 
         if instance.service:
             obj['service'] = instance.service.slug
+            obj['academy'] = instance.service.academy.id
 
         if instance.bill:
             obj['bill'] = instance.bill.id

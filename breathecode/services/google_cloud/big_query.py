@@ -268,7 +268,8 @@ class BigQuerySet():
         if aggs:
             for agg in aggs:
                 operation, attribute = self.aggregation_parser(agg)
-                query_fields.append(f'{operation}({attribute}) AS {operation.lower()}__{attribute}')
+                query_fields.append(
+                    f'{operation}({attribute}) AS {operation.lower()}__{attribute.replace(".", "__")}')
 
         if len(query_fields) > 0:
             query = f"""SELECT {", ".join(query_fields)} FROM `{self.project_id}.{self.dataset}.{self.table}` """
