@@ -23,7 +23,7 @@ class Command(BaseCommand):
     help = 'Delete duplicate cohort users imported from old breathecode'
 
     def add_arguments(self, parser):
-        parser.add_argument('--now', action='upload_today', help='Execute upload today instead of tomorrow')
+        parser.add_argument('--now', action='store_true', help='Execute upload today instead of tomorrow')
 
     def handle(self, *args, **options):
         utc_now = timezone.now()
