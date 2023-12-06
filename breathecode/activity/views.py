@@ -669,7 +669,7 @@ class V2AcademyActivityReportView(APIView):
         query = request.GET.get('query', '{}')
 
         query = json.loads(query)
-        result = BigQuery.queryset('activity')
+        result = BigQuery.table('activity')
 
         fields = request.GET.get('fields', None)
         if fields is not None:

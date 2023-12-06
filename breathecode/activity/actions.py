@@ -1,3 +1,5 @@
+import functools
+import os
 from typing import Any, Optional
 
 from breathecode.utils.decorators.task import AbortTask, RetryTask
@@ -580,3 +582,10 @@ def get_activity_meta(kind: str,
         return FillActivityMeta.invoice(*args)
 
     raise AbortTask(f'kind {kind} is not supported by {related_type} yet')
+
+
+@functools.lru_cache(maxsize=1)
+def get_workers_amount():
+    dynos = int(os.getenv('CELERY_DYNOS') or 1)
+    workers = int(os.getenv('CELERY_MAX_WORKERS') or 1)
+    return dynos * workers

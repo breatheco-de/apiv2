@@ -1,5 +1,7 @@
 import os
 import datetime
+from typing import Any
+from aiohttp_retry import Optional
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from django.db.models import Sum, Avg, Count
@@ -10,6 +12,8 @@ from google.cloud import bigquery
 from sqlalchemy.engine.mock import MockConnection
 from google.api_core.client_options import ClientOptions
 from google.auth.credentials import AnonymousCredentials
+from google.cloud.bigquery.table import Table, RowIterator
+from google.cloud.bigquery.schema import SchemaField
 
 client = None
 engine = None
@@ -21,9 +25,54 @@ def is_test_env():
     return os.getenv('ENV') == 'test'
 
 
-class BigQuerySet():
+class BigQueryModel:
 
-    def __init__(self, table, client, project_id, dataset):
+    def __init__(self, client: bigquery.Client, _project_id: str, _dataset: str, _table: str, **kwargs):
+
+        self._project_id = _project_id
+        self._dataset = _dataset
+        self._table = _table
+        self.client = client
+
+        self.__dict__.update(kwargs)
+
+    def __getattr__(self, __name: str) -> Any:
+        self.__dict__.get(__name)
+
+    def __setattr__(self, __name: str, __value: Any) -> None:
+        self.__dict__[__name] = __value
+
+    def __delattr__(self, __name: str) -> None:
+        del self.__dict__[__name]
+
+    def __str__(self) -> str:
+        return str(self.__dict__)
+
+    def __repr__(self) -> str:
+        return f'<BigQueryModel "{self._project_id}.{self._dataset}.{self._table}">'
+
+    def save(self):
+        table_ref = self.client.dataset(self._dataset, project=self._project_id).table(self._table)
+        table = self.client.get_table(table_ref)
+
+        row = [self.__dict__]
+
+        errors = self.client.insert_rows(table, row)
+
+        if errors:
+            raise Exception(errors)
+
+
+class BigQuerySet():
+    query: dict[str, Any]
+    agg: list[Any]
+    fields: Optional[list[str]]
+    order: Optional[list[str]]
+    group: Optional[list[str]]
+    limit: Optional[int]
+    _limit: Optional[Table]
+
+    def __init__(self, table: str, client: bigquery.Client, project_id: str, dataset: str) -> None:
 
         self.query = {}
         self.agg = []
@@ -35,23 +84,97 @@ class BigQuerySet():
         self.client = client
         self.dataset = dataset
         self.project_id = project_id
+        self._table_ref = None
 
-    def set_query(self, *args, **kwargs):
+    def _get_table(self) -> Table:
+        if self._table_ref:
+            return self._table_ref
+
+        table_ref = self.client.dataset(self.dataset, project=self.project_id).table(self.table)
+
+        # Fetch the schema of the table
+        table = self.client.get_table(table_ref)
+        self._table_ref = table
+        return self._table_ref
+
+    def new(self, **kwargs) -> BigQueryModel:
+        return BigQueryModel(client, self.project_id, self.dataset, self.table, **kwargs)
+
+    def bulk_insert(self, rows: list[dict[str, Any]]) -> None:
+        if len(rows) == 0:
+            return None
+
+        if isinstance(rows[0], BigQueryModel):
+            rows = [x.__dict__ for x in rows]
+
+        table = self._get_table()
+        errors = self.client.insert_rows(table, rows)
+
+        if errors:
+            raise Exception(errors)
+
+    def schema(self) -> list[SchemaField]:
+        table = self._get_table()
+        return table.schema
+
+    def update_schema(self, schema: list[SchemaField], append=False) -> None:
+        table = self._get_table()
+
+        if append:
+            new_schema = table.schema
+
+            for field in schema:
+                if field in new_schema:
+                    continue
+
+                found = [x for x in new_schema if x.name == field.name]
+
+                if not found:
+                    new_schema.append(field)
+                    continue
+
+                found = found[0]
+
+                if (found.field_type is not bigquery.enums.SqlTypeNames.STRUCT
+                        or field.field_type is not bigquery.enums.SqlTypeNames.STRUCT):
+                    new_schema.remove(found)
+                    new_schema.append(field)
+                    continue
+
+                fields = found.fields
+                new_fields = field.fields
+
+                new_schema.remove(found)
+
+                for f in new_fields:
+                    if f not in fields:
+                        fields.append(f)
+
+                new_schema.append(SchemaField(field.name, field.field_type, fields=fields))
+
+            table.schema = new_schema
+
+        else:
+            table.schema = schema
+
+        self.client.update_table(table, ['schema'])
+
+    def set_query(self, *args: Any, **kwargs: Any) -> None:
         self.query.update(kwargs)
 
-    def limit_by(self, name):
+    def limit_by(self, name: int) -> 'BigQuerySet':
         self.limit = name
         return self
 
-    def order_by(self, *name):
+    def order_by(self, *name: str) -> 'BigQuerySet':
         self.order = name
         return self
 
-    def group_by(self, *name):
+    def group_by(self, *name: str) -> 'BigQuerySet':
         self.group = name
         return self
 
-    def aggregate(self, *args):
+    def aggregate(self, *args: Any) -> RowIterator:
         sql = self.sql(args)
 
         params, kwparams = self.get_params()
@@ -60,7 +183,7 @@ class BigQuerySet():
 
         return query_job.result()
 
-    def build(self):
+    def build(self) -> RowIterator:
         sql = self.sql()
 
         params, kwparams = self.get_params()
@@ -68,11 +191,11 @@ class BigQuerySet():
         query_job = self.client.query(sql, *params, **kwparams)
         return query_job.result()
 
-    def filter(self, *args, **kwargs):
+    def filter(self, *args: Any, **kwargs: Any) -> 'BigQuerySet':
         self.set_query(*args, **kwargs)
         return self
 
-    def attribute_parser(self, key):
+    def attribute_parser(self, key: str) -> tuple[str, str, str]:
         operand = '='
         key = key.replace('__', '.')
         if key[-4:] == '.gte':
@@ -89,7 +212,7 @@ class BigQuerySet():
             operand = '<='
         return key, operand, 'x__' + key.replace('.', '__')
 
-    def get_type(self, elem):
+    def get_type(self, elem: Any) -> None:
         if isinstance(elem, int):
             return 'INT64'
         if isinstance(elem, float):
@@ -101,7 +224,7 @@ class BigQuerySet():
         if isinstance(elem, datetime):
             return 'DATETIME'
 
-    def get_params(self):
+    def get_params(self) -> tuple[list[Any], dict[str, Any]]:
         if not self.query:
             return [], {}
         params = []
@@ -117,11 +240,11 @@ class BigQuerySet():
 
         return params, kwparams
 
-    def select(self, *names):
+    def select(self, *names: str) -> 'BigQuerySet':
         self.fields = names
         return self
 
-    def aggregation_parser(self, agg):
+    def aggregation_parser(self, agg: Any) -> tuple[str, str]:
         operation = None
         attribute = None
         if isinstance(agg, Sum):
@@ -138,7 +261,7 @@ class BigQuerySet():
 
         return operation, attribute
 
-    def sql(self, aggs=[]):
+    def sql(self, *aggs: str) -> str:
         query_fields = []
         if self.fields:
             query_fields += self.fields
@@ -155,7 +278,7 @@ class BigQuerySet():
 
         if self.query:
             query += 'WHERE '
-            for key, val in self.query.items():
+            for key, _ in self.query.items():
                 key, operand, var_name = self.attribute_parser(key)
                 query += f'{key} {operand} @{var_name} AND '
             query = query[:-5]
@@ -173,7 +296,7 @@ class BigQuerySet():
 
         return query
 
-    def json_query(self, query):
+    def json_query(self, query: dict[str, Any]):
         if 'filter' in query:
             self.filter(**query['filter'])
 
@@ -304,7 +427,7 @@ class BigQuery(metaclass=BigQueryMeta):
         return client, os.getenv('GOOGLE_PROJECT_ID', 'test'), os.getenv('BIGQUERY_DATASET', '')
 
     @classmethod
-    def queryset(cls, table) -> BigQuerySet:
+    def table(cls, table: str) -> BigQuerySet:
         """Get a BigQuery client instance and project id."""
 
         client, project_id, dataset = cls.client()
