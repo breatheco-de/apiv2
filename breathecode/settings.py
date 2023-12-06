@@ -67,6 +67,7 @@ INSTALLED_APPS += [
     'rest_framework',
     'phonenumber_field',
     'corsheaders',
+    'breathecode.activity',
     'breathecode.notify',
     'breathecode.authenticate',
     'breathecode.monitoring',
