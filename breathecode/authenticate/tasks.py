@@ -105,7 +105,43 @@ def async_accept_user_from_waiting_list(user_invite_id: int) -> None:
 
 
 @task(priority=TaskPriority.OAUTH_CREDENTIALS.value)
-def destroy_legacy_key(legacy_key_id):
+def destroy_legacy_key(legacy_key_id, **_):
     from .models import LegacyKey
 
     LegacyKey.objects.filter(id=legacy_key_id).delete()
+
+
+@task(priority=TaskPriority.STUDENT.value)
+def create_user_from_invite(user_invite_id: int, **_):
+    logger.info('Running create_user_from_invite task')
+
+    if not (user_invite := UserInvite.objects.filter(id=user_invite_id).only(
+            'email', 'first_name', 'last_name', 'status', 'user_id', 'token').first()):
+        raise RetryTask('User invite not found')
+
+    if user_invite.status != 'ACCEPTED':
+        raise AbortTask('User invite is not accepted')
+
+    if user_invite.user or (user := User.objects.filter(email=user_invite.email).only('id').first()):
+        if not user_invite.user:
+            user_invite.user = user
+            user_invite.save()
+
+        raise AbortTask('User invite is already associated to a user')
+
+    if not user_invite.email:
+        raise AbortTask('No email found')
+
+    user = User()
+    user.username = user_invite.email
+    user.email = user_invite.email
+    user.first_name = user_invite.first_name or ''
+    user.last_name = user_invite.last_name or ''
+    user.save()
+
+    if user_invite.token:
+        notify_actions.send_email_message(
+            'pick_password', user.email, {
+                'SUBJECT': 'Set your password at 4Geeks',
+                'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{user_invite.token}'
+            })

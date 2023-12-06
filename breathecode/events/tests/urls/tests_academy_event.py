@@ -36,6 +36,7 @@ def post_serializer(data={}):
         'id': 0,
         'lang': None,
         'online_event': False,
+        'ended_at': None,
         'organization': 0,
         'published_at': None,
         'status': 'DRAFT',
@@ -80,6 +81,7 @@ def event_table(data={}):
         'eventbrite_sync_description': None,
         'eventbrite_sync_status': '',
         'title': None,
+        'ended_at': None,
         'url': '',
         'venue_id': None,
         'live_stream_url': None,
@@ -161,10 +163,12 @@ class AcademyEventTestSuite(EventTestCase):
             'lang': model['event'].lang,
             'online_event': model['event'].online_event,
             'starting_at': datetime_to_iso_format(model['event'].starting_at),
+            'ended_at': model['event'].ended_at,
             'status': model['event'].status,
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'capacity': model['event'].capacity,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
@@ -225,10 +229,12 @@ class AcademyEventTestSuite(EventTestCase):
             'lang': model['event'].lang,
             'online_event': model['event'].online_event,
             'starting_at': datetime_to_iso_format(model['event'].starting_at),
+            'ended_at': model['event'].ended_at,
             'status': model['event'].status,
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'capacity': model['event'].capacity,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
@@ -289,10 +295,12 @@ class AcademyEventTestSuite(EventTestCase):
             'lang': model['event'].lang,
             'online_event': model['event'].online_event,
             'starting_at': datetime_to_iso_format(model['event'].starting_at),
+            'ended_at': model['event'].ended_at,
             'status': model['event'].status,
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'capacity': model['event'].capacity,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
@@ -336,10 +344,12 @@ class AcademyEventTestSuite(EventTestCase):
             'lang': model['event'].lang,
             'online_event': model['event'].online_event,
             'starting_at': datetime_to_iso_format(model['event'].starting_at),
+            'ended_at': model['event'].ended_at,
             'status': model['event'].status,
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'capacity': model['event'].capacity,
             'venue': {
                 'city': model['event'].venue.city,
                 'id': model['event'].id,
@@ -653,6 +663,7 @@ class AcademyEventTestSuite(EventTestCase):
             'tags': ','.join([x.slug for x in model.tag]),
             'currency': 'USD',
             'free_for_bootcamps': True,
+            'free_for_all': False,
             'uuid': str(uuid),
         })
 
@@ -676,6 +687,7 @@ class AcademyEventTestSuite(EventTestCase):
                     'sync_with_eventbrite': False,
                     'currency': 'USD',
                     'free_for_bootcamps': True,
+                    'free_for_all': False,
                     'uuid': uuid,
                 }),
         ])
@@ -770,6 +782,7 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_sync_status': 'PENDING',
             'currency': 'USD',
             'free_for_bootcamps': True,
+            'free_for_all': False,
             'sync_with_eventbrite': False,
             'uuid': str(uuid),
         })
@@ -799,6 +812,7 @@ class AcademyEventTestSuite(EventTestCase):
                     'currency': 'USD',
                     'tags': ','.join([x.slug for x in model.tag]),
                     'free_for_bootcamps': True,
+                    'free_for_all': False,
                     'uuid': uuid,
                 }),
         ])
@@ -849,6 +863,7 @@ class AcademyEventTestSuite(EventTestCase):
             'currency': 'USD',
             'tags': ','.join([x.slug for x in model.tag]),
             'free_for_bootcamps': True,
+            'free_for_all': False,
             'uuid': str(uuid),
         })
 
@@ -873,6 +888,7 @@ class AcademyEventTestSuite(EventTestCase):
                     'currency': 'USD',
                     'tags': ','.join([x.slug for x in model.tag]),
                     'free_for_bootcamps': True,
+                    'free_for_all': False,
                     'uuid': uuid,
                 }),
         ])
@@ -952,6 +968,7 @@ class AcademyEventTestSuite(EventTestCase):
             'currency': 'USD',
             'tags': ','.join([x.slug for x in model.tag]),
             'free_for_bootcamps': True,
+            'free_for_all': False,
             'uuid': str(uuid),
         })
 
@@ -975,6 +992,7 @@ class AcademyEventTestSuite(EventTestCase):
                     'currency': 'USD',
                     'tags': ','.join([x.slug for x in model.tag]),
                     'free_for_bootcamps': True,
+                    'free_for_all': False,
                     'uuid': uuid,
                 }),
         ])
@@ -1036,6 +1054,7 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_sync_status': 'PENDING',
             'currency': 'USD',
             'free_for_bootcamps': True,
+            'free_for_all': False,
             'uuid': str(uuid),
         })
 
@@ -1059,6 +1078,7 @@ class AcademyEventTestSuite(EventTestCase):
                     'currency': 'USD',
                     'tags': data['tags'],
                     'free_for_bootcamps': True,
+                    'free_for_all': False,
                     'uuid': uuid,
                 }),
         ])
@@ -1124,6 +1144,7 @@ class AcademyEventTestSuite(EventTestCase):
             'tags': ','.join([x.slug for x in model.tag]),
             'currency': 'USD',
             'free_for_bootcamps': True,
+            'free_for_all': False,
             'uuid': str(uuid),
         })
 
@@ -1149,6 +1170,7 @@ class AcademyEventTestSuite(EventTestCase):
                     'lang': model.event_type.lang,
                     'currency': 'USD',
                     'free_for_bootcamps': True,
+                    'free_for_all': False,
                     'uuid': uuid,
                 }),
         ])

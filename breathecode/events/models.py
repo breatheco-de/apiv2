@@ -182,6 +182,8 @@ class Event(models.Model):
                             validators=[validate_language_code])
     currency = models.CharField(max_length=3, choices=CURRENCIES, default=USD, blank=True)
     tags = models.CharField(max_length=100, default='', blank=True)
+    free_for_all = models.BooleanField(
+        default=False, help_text='Determines if any user (From bootcamp or not) can join the event for free.')
     free_for_bootcamps = models.BooleanField(
         default=True,
         blank=True,
@@ -209,7 +211,13 @@ class Event(models.Model):
     )
 
     starting_at = models.DateTimeField(blank=False)
-    ending_at = models.DateTimeField(blank=False)
+    ending_at = models.DateTimeField(
+        blank=False, help_text='This field contains the value of when the event is supposed to be finished.')
+    ended_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text='This field contains the value of when the event actually finished.')
 
     host = models.CharField(max_length=100,
                             blank=True,
@@ -257,6 +265,10 @@ class Event(models.Model):
 
     def __str__(self):
         return self.title or 'No title'
+
+    def clean(self, *args, **kwargs):
+        if self.free_for_all == True:
+            self.free_for_bootcamps = True
 
     def save(self, *args, **kwargs):
         from .signals import event_saved
