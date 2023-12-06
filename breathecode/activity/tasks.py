@@ -159,51 +159,71 @@ def get_attendancy_log_per_cohort_user(cohort_user_id: int):
     logger.info('History log saved')
 
 
-@task(priority=TaskPriority.BACKGROUND.value)
-def upload_activities(task_manager_id: int):
-    client = None
-    if IS_DJANGO_REDIS:
-        client = get_redis_connection('default')
+@task(bind=True, priority=TaskPriority.BACKGROUND.value)
+def upload_activities(self, task_manager_id: int):
+
+    def extract_data():
+        nonlocal worker, res
+
+        client = None
+        if IS_DJANGO_REDIS:
+            client = get_redis_connection('default')
+
+        while True:
+            try:
+                with Lock(client, f'lock:activity:worker-{worker}', timeout=3, blocking_timeout=3):
+                    worker_key = f'activity:worker-{worker}'
+                    data = cache.get(worker_key)
+                    cache.delete(worker_key)
+
+                    if data:
+                        data = zstandard.decompress(data)
+                        data = pickle.loads(data)
+
+                        res += data
+
+            except LockError:
+                raise RetryTask('Could not acquire lock for activity, operation timed out.')
+
+            # this will keeping working even if the worker amount changes
+            if worker >= workers and data is None:
+                break
+
+            worker += 1
 
     workers = actions.get_workers_amount()
     res = []
     worker = 0
 
-    while True:
-        try:
-            with Lock(client, f'lock:activity:worker-{worker}', timeout=3, blocking_timeout=3):
-                backup_key = f'activity:backup:{worker}-{task_manager_id}'
-                worker_key = f'activity:worker-{worker}'
+    has_not_backup = self.task_manager.status == 'PENDING' and self.task_manager.attempts == 1
+    backup_key = f'activity:backup:{task_manager_id}'
 
-                data = cache.get(backup_key)
-                if not data:
-                    data = cache.get(worker_key)
-                    cache.set(backup_key, data)
-                    cache.delete(worker_key)
+    if has_not_backup:
+        extract_data()
 
-                if data:
-                    data = zstandard.decompress(data)
-                    data = pickle.loads(data)
-
-        except LockError:
-            raise RetryTask('Could not acquire lock for activity, operation timed out.')
-
-        # this will keeping working even if the worker amount changes
-        if worker >= workers and data is None:
-            break
-
-        worker += 1
+    else:
+        backup_key = f'activity:backup:{task_manager_id}'
+        data = cache.get(backup_key)
 
         if data:
-            res += data
+            data = zstandard.decompress(data)
+            data = pickle.loads(data)
+
+            res = data
+
+        else:
+            has_not_backup = True
+            extract_data()
 
     if not res:
-        cache.delete(backup_key)
+        # has backup
+        if not has_not_backup:
+            cache.delete(backup_key)
+
         raise AbortTask('No data to upload')
 
     table = BigQuery.table('activity')
     schema = table.schema()
-    processes_keys = worker + 1
     new_schema = []
     rows = []
 
@@ -240,13 +260,18 @@ def upload_activities(task_manager_id: int):
                                  'NULLABLE',
                                  fields=new_structs[struct]))
 
-    if new_schema:
-        table.update_schema(new_schema, append=True)
+    try:
+        if new_schema:
+            table.update_schema(new_schema, append=True)
 
-    table.bulk_insert(rows)
+        table.bulk_insert(rows)
 
-    for worker in range(processes_keys):
-        cache.delete(f'activity:backup:{worker}-{task_manager_id}')
+    except Exception as e:
+        data = pickle.dumps(res)
+        data = zstandard.compress(data)
+
+        cache.set(backup_key, data)
+        raise e
 
 
 @task(priority=TaskPriority.BACKGROUND.value)

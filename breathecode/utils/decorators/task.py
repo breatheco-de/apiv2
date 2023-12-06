@@ -184,6 +184,10 @@ class Task(object):
                 x.save()
                 return
 
+            if self.bind:
+                t = args[0]
+                setattr(t, 'task_manager', x)
+
             if self.is_transaction == True:
                 error = None
                 with transaction.atomic():
