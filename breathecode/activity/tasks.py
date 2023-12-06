@@ -159,7 +159,7 @@ def get_attendancy_log_per_cohort_user(cohort_user_id: int):
     logger.info('History log saved')
 
 
-@task(bind=True, priority=TaskPriority.BACKGROUND.value)
+@task(bind=True, priority=TaskPriority.ACADEMY.value)
 def upload_activities(self, task_manager_id: int):
 
     def extract_data():
