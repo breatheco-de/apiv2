@@ -39,12 +39,10 @@ class TaskManagerAdmin(admin.ModelAdmin):
     actions = [pause, resume, cancel, reverse, force_reverse]
 
     def get_duration(self, obj):
-        if obj.last_run:
-            duration = obj.last_run - obj.created_at
-            # Calculating duration in milliseconds
-            duration_ms = duration.total_seconds() * 1000
-            return f'{int(duration_ms)} ms'
-        return 'N/A'  # Or any default value you prefer
+        duration = obj.updated_at - obj.created_at
+        # Calculating duration in milliseconds
+        duration_ms = duration.total_seconds() * 1000
+        return f'{int(duration_ms)} ms'
 
     get_duration.short_description = 'Duration (ms)'
 
