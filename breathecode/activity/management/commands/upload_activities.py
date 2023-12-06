@@ -22,13 +22,21 @@ def get_activity_sampling_rate():
 class Command(BaseCommand):
     help = 'Delete duplicate cohort users imported from old breathecode'
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def add_arguments(self, parser):
+        parser.add_argument('--now', action='upload_today', help='Execute upload today instead of tomorrow')
 
     def handle(self, *args, **options):
         utc_now = timezone.now()
         sampling_rate = get_activity_sampling_rate()
-        tomorrow = (utc_now + timezone.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+        if options['now']:
+            tomorrow = utc_now
+
+        else:
+            tomorrow = (utc_now + timezone.timedelta(days=1)).replace(hour=0,
+                                                                      minute=0,
+                                                                      second=0,
+                                                                      microsecond=0)
         after_tomorrow = tomorrow + timezone.timedelta(days=1)
 
         cursor = tomorrow
