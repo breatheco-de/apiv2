@@ -29,7 +29,7 @@ class Command(BaseCommand):
         utc_now = timezone.now()
         sampling_rate = get_activity_sampling_rate()
 
-        if options['now']:
+        if 'now' in options and options['now']:
             tomorrow = utc_now
 
         else:
