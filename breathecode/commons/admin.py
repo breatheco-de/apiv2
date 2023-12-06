@@ -31,12 +31,22 @@ def resume(modeladmin, request, queryset):
 @admin.register(TaskManager)
 class TaskManagerAdmin(admin.ModelAdmin):
     list_display = [
-        'task_module', 'task_name', 'reverse_module', 'reverse_name', 'status', 'killed', 'last_run',
-        'current_page', 'total_pages'
+        'task_module', 'task_name', 'reverse_module', 'reverse_name', 'status', 'get_duration', 'last_run',
+        'current_page', 'total_pages', 'killed'
     ]
     search_fields = ['task_module', 'task_name', 'reverse_module', 'reverse_name']
     list_filter = ['status', 'killed', 'task_module']
     actions = [pause, resume, cancel, reverse, force_reverse]
+
+    def get_duration(self, obj):
+        if obj.last_run:
+            duration = obj.last_run - obj.created_at
+            # Calculating duration in milliseconds
+            duration_ms = duration.total_seconds() * 1000
+            return f'{int(duration_ms)} ms'
+        return 'N/A'  # Or any default value you prefer
+
+    get_duration.short_description = 'Duration (ms)'
 
 
 @admin.register(TaskWatcher)
