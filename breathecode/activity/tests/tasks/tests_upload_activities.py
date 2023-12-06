@@ -162,8 +162,7 @@ def test_no_data(bc: Breathecode, apply_patch):
 
     task = bc.database.get('commons.TaskManager', 1, dict=False)
 
-    assert get_cache(f'activity:backup:0-{task.id}') == None
-    assert get_cache(f'activity:backup:1-{task.id}') == None
+    assert get_cache(f'activity:backup:{task.id}') == None
 
     assert get_table_mock.call_args_list == []
     assert update_table_mock.call_args_list == []
@@ -249,8 +248,7 @@ def test_with_data_in_both_workers(bc: Breathecode, fake, apply_patch, get_schem
 
     task = bc.database.get('commons.TaskManager', 1, dict=False)
 
-    assert get_cache(f'activity:backup:0-{task.id}') == None
-    assert get_cache(f'activity:backup:1-{task.id}') == None
+    assert get_cache(f'activity:backup:{task.id}') == None
 
     assert get_table_mock.call_args_list == [
         call(TableReference(DatasetReference('project', 'dataset'), 'activity')),

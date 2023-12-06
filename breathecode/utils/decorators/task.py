@@ -303,7 +303,7 @@ class Task(object):
                         self.reattempt(x.task_module, x.task_name, x.attempts, arguments['args'],
                                        arguments['kwargs'])
 
-                    # it don't raise anything to manage the reattems with the task manager
+                    # it don't raise anything to manage the reattempts with the task manager
                     return
 
                 except AbortTask as e:
