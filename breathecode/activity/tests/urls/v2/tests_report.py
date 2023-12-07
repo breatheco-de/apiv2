@@ -2,6 +2,7 @@
 Test /report
 """
 import random
+import functools
 from uuid import uuid4
 from django.utils import timezone
 from unittest.mock import MagicMock, call, patch
@@ -129,6 +130,60 @@ def bigquery_client_mock_filters(self, n=1, user_id=1, kind=None, filters={}):
     dataset = '4geeks'
 
     return (client_mock, result_mock, project_id, dataset, rows_to_insert)
+
+
+def bigquery_client_mock_aggregation(self, n=1, user_id=1, kind=None, aggregation={}):
+    rows_to_insert = [{
+        'id': uuid4().hex,
+        'user_id': user_id,
+        'kind': kind if kind else self.bc.fake.slug(),
+        'related': {
+            'type': f'{self.bc.fake.slug()}.{self.bc.fake.slug()}',
+            'id': random.randint(1, 100),
+            'slug': self.bc.fake.slug(),
+        },
+        'meta': {
+            self.bc.fake.slug().replace('-', '_'): self.bc.fake.slug(),
+            self.bc.fake.slug().replace('-', '_'): self.bc.fake.slug(),
+            self.bc.fake.slug().replace('-', '_'): self.bc.fake.slug(),
+        },
+        'timestamp': timezone.now().isoformat(),
+    } for _ in range(n)]
+
+    query_rows = []
+    grouped_data = []
+    for row in rows_to_insert:
+        new_row = {key: row[key] for key in aggregation.values()}
+        query_rows.append(new_row)
+
+    res_dict = {}
+    if 'sum' in aggregation:
+        val = aggregation['sum']
+        new_key = f'sum__{val}'
+        res_dict[new_key] = functools.reduce(lambda x, y: x[val] + y[val], query_rows)
+
+    if 'count' in aggregation:
+        val = aggregation['count']
+        new_key = f'count__{val}'
+        res_dict[new_key] = len(query_rows)
+
+    if 'avg' in aggregation:
+        val = aggregation['avg']
+        new_key = f'avg__{val}'
+        res_dict[new_key] = functools.reduce(lambda x, y: x[val] + y[val], query_rows) / len(query_rows)
+
+    grouped_data.append(res_dict)
+
+    result_mock = MagicMock()
+    result_mock.result.return_value = [AttrDict(**kwargs) for kwargs in grouped_data]
+
+    client_mock = MagicMock()
+    client_mock.query.return_value = result_mock
+
+    project_id = 'test'
+    dataset = '4geeks'
+
+    return (client_mock, result_mock, project_id, dataset, grouped_data)
 
 
 class MediaTestSuite(MediaTestCase):
@@ -326,6 +381,93 @@ class MediaTestSuite(MediaTestCase):
         self.bc.request.set_headers(academy=1)
 
         val = bigquery_client_mock_filters(self, filters={'user_id__gt': 5})
+        (client_mock, result_mock, project_id, dataset, expected) = val
+
+        with patch('breathecode.services.google_cloud.big_query.BigQuery.client') as mock:
+            mock.return_value = (client_mock, project_id, dataset)
+            response = self.client.get(url)
+            json = response.json()
+
+            self.bc.check.calls(BigQuery.client.call_args_list, [call()])
+            assert client_mock.query.call_args[0][0] == expected_query
+            self.bc.check.calls(result_mock.result.call_args_list, [call()])
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_get_aggregation_sum(self):
+        json_query = '{ "grouping_function": { "sum": ["id"] } }'
+        expected_query = 'SELECT SUM(id) AS sum__id FROM `test.4geeks.activity` '
+        url = reverse_lazy('v2:activity:report') + f'?query={json_query}'
+        model = self.bc.database.create(user=1,
+                                        academy=1,
+                                        profile_academy=1,
+                                        capability='read_activity',
+                                        role=1)
+
+        self.bc.request.authenticate(model.user)
+        self.bc.request.set_headers(academy=1)
+
+        val = bigquery_client_mock_aggregation(self, aggregation={'sum': 'id'})
+        (client_mock, result_mock, project_id, dataset, expected) = val
+
+        with patch('breathecode.services.google_cloud.big_query.BigQuery.client') as mock:
+            mock.return_value = (client_mock, project_id, dataset)
+            response = self.client.get(url)
+            json = response.json()
+
+            self.bc.check.calls(BigQuery.client.call_args_list, [call()])
+            assert client_mock.query.call_args[0][0] == expected_query
+            self.bc.check.calls(result_mock.result.call_args_list, [call()])
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_get_aggregation_count(self):
+        json_query = '{ "grouping_function": { "count": ["kind"] } }'
+        expected_query = 'SELECT COUNT(kind) AS count__kind FROM `test.4geeks.activity` '
+        url = reverse_lazy('v2:activity:report') + f'?query={json_query}'
+        model = self.bc.database.create(user=1,
+                                        academy=1,
+                                        profile_academy=1,
+                                        capability='read_activity',
+                                        role=1)
+
+        self.bc.request.authenticate(model.user)
+        self.bc.request.set_headers(academy=1)
+
+        val = bigquery_client_mock_aggregation(self, n=2, aggregation={'count': 'kind'})
+        (client_mock, result_mock, project_id, dataset, expected) = val
+
+        with patch('breathecode.services.google_cloud.big_query.BigQuery.client') as mock:
+            mock.return_value = (client_mock, project_id, dataset)
+            response = self.client.get(url)
+            json = response.json()
+
+            self.bc.check.calls(BigQuery.client.call_args_list, [call()])
+            assert client_mock.query.call_args[0][0] == expected_query
+            self.bc.check.calls(result_mock.result.call_args_list, [call()])
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_get_aggregation_avg(self):
+        json_query = '{ "grouping_function": { "avg": ["user_id"] } }'
+        expected_query = 'SELECT AVG(user_id) AS avg__user_id FROM `test.4geeks.activity` '
+        url = reverse_lazy('v2:activity:report') + f'?query={json_query}'
+        model = self.bc.database.create(user=1,
+                                        academy=1,
+                                        profile_academy=1,
+                                        capability='read_activity',
+                                        role=1)
+
+        self.bc.request.authenticate(model.user)
+        self.bc.request.set_headers(academy=1)
+
+        val = bigquery_client_mock_aggregation(self, n=2, aggregation={'avg': 'user_id'})
         (client_mock, result_mock, project_id, dataset, expected) = val
 
         with patch('breathecode.services.google_cloud.big_query.BigQuery.client') as mock:
