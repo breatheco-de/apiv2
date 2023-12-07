@@ -42,7 +42,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     🔽🔽🔽 Without academy
     """
 
-    @patch.object(logging.Logger, 'warn', log_mock())
+    @patch.object(logging.Logger, 'warning', log_mock())
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
     @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
@@ -60,7 +60,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         export_event_to_eventbrite(None, model.organization)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [])
+        self.assertEqual(logging.Logger.warning.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list,
                          [call('The organization Nameless not have a academy assigned')])
         self.assertEqual(actions.export_event_description_to_eventbrite.call_args_list, [])
@@ -72,7 +72,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     🔽🔽🔽 With academy and event with title
     """
 
-    @patch.object(logging.Logger, 'warn', log_mock())
+    @patch.object(logging.Logger, 'warning', log_mock())
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
     @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
@@ -96,7 +96,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         export_event_to_eventbrite(model.event, model.organization)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [])
+        self.assertEqual(logging.Logger.warning.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
         self.assertEqual(actions.export_event_description_to_eventbrite.call_args_list, [call(model.event)])
 
@@ -112,7 +112,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     🔽🔽🔽 Check the payload without eventbrite_id
     """
 
-    @patch.object(logging.Logger, 'warn', log_mock())
+    @patch.object(logging.Logger, 'warning', log_mock())
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
     @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
@@ -138,7 +138,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         export_event_to_eventbrite(model.event, model.organization)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [])
+        self.assertEqual(logging.Logger.warning.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
         self.assertEqual(actions.export_event_description_to_eventbrite.call_args_list, [call(model.event)])
         self.assertEqual(
@@ -173,7 +173,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     🔽🔽🔽 Check the payload with eventbrite_id
     """
 
-    @patch.object(logging.Logger, 'warn', log_mock())
+    @patch.object(logging.Logger, 'warning', log_mock())
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
     @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
@@ -199,7 +199,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         export_event_to_eventbrite(model.event, model.organization)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [])
+        self.assertEqual(logging.Logger.warning.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
         self.assertEqual(actions.export_event_description_to_eventbrite.call_args_list, [call(model.event)])
         self.assertEqual(
@@ -234,7 +234,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     🔽🔽🔽 Check the payload with organizer_id
     """
 
-    @patch.object(logging.Logger, 'warn', log_mock())
+    @patch.object(logging.Logger, 'warning', log_mock())
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
     @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
@@ -261,7 +261,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         export_event_to_eventbrite(model.event, model.organization)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [])
+        self.assertEqual(logging.Logger.warning.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
         self.assertEqual(actions.export_event_description_to_eventbrite.call_args_list, [call(model.event)])
         self.assertEqual(

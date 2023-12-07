@@ -30,7 +30,7 @@ def post_save_profileacademy(sender, instance, **kwargs):
 @receiver(student_edu_status_updated, sender=CohortUser)
 def student_edustatus_updated(sender, instance, *args, **kwargs):
     if instance.educational_status == 'ACTIVE':
-        logger.warn(f'Student is now active in cohort `{instance.cohort.slug}`, processing task')
+        logger.warning(f'Student is now active in cohort `{instance.cohort.slug}`, processing task')
         tasks.add_cohort_task_to_student.delay(instance.user.id, instance.cohort.id,
                                                instance.cohort.academy.id)
 

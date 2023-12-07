@@ -13,7 +13,7 @@ class TestLead(LegacyAPITestCase):
     """
 
     @patch('breathecode.marketing.tasks.add_cohort_task_to_student.delay', MagicMock())
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.warning', MagicMock())
     def test_cohort_saved__create__without_educational_status_active(self, enable_signals):
         enable_signals('breathecode.admissions.signals.student_edu_status_updated')
 
@@ -41,14 +41,14 @@ class TestLead(LegacyAPITestCase):
             },
         ])
         self.assertEqual(add_cohort_task_to_student.delay.call_args_list, [])
-        self.assertEqual(logging.Logger.warn.call_args_list, [])
+        self.assertEqual(logging.Logger.warning.call_args_list, [])
 
     """
     🔽🔽🔽 CohortUser with status ACTIVE
     """
 
     @patch('breathecode.marketing.tasks.add_cohort_task_to_student.delay', MagicMock())
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.warning', MagicMock())
     def test_cohort_saved__create__with_educational_status_active(self, enable_signals):
         enable_signals('breathecode.admissions.signals.student_edu_status_updated')
 
@@ -63,6 +63,6 @@ class TestLead(LegacyAPITestCase):
         self.assertEqual(add_cohort_task_to_student.delay.call_args_list, [
             call(model.user.id, model.cohort.id, model.cohort.academy.id),
         ])
-        self.assertEqual(logging.Logger.warn.call_args_list, [
+        self.assertEqual(logging.Logger.warning.call_args_list, [
             call(f'Student is now active in cohort `{model.cohort.slug}`, processing task'),
         ])

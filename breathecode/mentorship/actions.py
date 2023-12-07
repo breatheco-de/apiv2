@@ -258,7 +258,6 @@ def last_month_date(current_date):
     # getting next month
     # using replace to get to last day + offset
     # to reach next month
-    datetime.datetime.now().replace
     nxt_mnth = current_date.replace(day=28, hour=23, minute=59, second=59,
                                     microsecond=999999) + datetime.timedelta(days=4)
 

@@ -251,7 +251,7 @@ def test_with_data_in_both_workers(bc: Breathecode, fake, apply_patch, get_schem
     assert get_cache(f'activity:backup:{task.id}') == None
 
     assert get_table_mock.call_args_list == [
-        call(TableReference(DatasetReference('project', 'dataset'), 'activity')),
+        call('project.dataset'),
     ]
 
     both_schema_are_equal(update_table_mock.call_args_list, [

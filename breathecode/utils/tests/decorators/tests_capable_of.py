@@ -21,7 +21,7 @@ def get_id(request, id, academy_id=None):
     return Response({'id': id, 'academy_id': academy_id})
 
 
-class TestView(APIView):
+class CustomTestView(APIView):
     """
     List all snippets, or create a new snippet.
     """
@@ -184,7 +184,7 @@ class ViewTestSuite(UtilsTestCase):
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request, id=1).render()
         expected = {
@@ -202,7 +202,7 @@ class ViewTestSuite(UtilsTestCase):
         request = request.get('/they-killed-kenny', HTTP_ACADEMY=1)
         force_authenticate(request, user=model.user)
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request, id=1).render()
         expected = {
@@ -224,7 +224,7 @@ class ViewTestSuite(UtilsTestCase):
         request = request.get('/they-killed-kenny', HTTP_ACADEMY=1)
         force_authenticate(request, user=model.user)
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request, id=1).render()
         expected = {'id': 1, 'academy_id': 1}
@@ -246,7 +246,7 @@ class ViewTestSuite(UtilsTestCase):
         request = request.get(f'/{slug_1}/{slug_2}', HTTP_ACADEMY=1)
         force_authenticate(request, user=model.user)
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request, id=1).render()
         expected = {'detail': 'This academy is not active', 'status_code': 403}
@@ -268,7 +268,7 @@ class ViewTestSuite(UtilsTestCase):
         request = request.get(f'/{slug_1}/{slug_2}', HTTP_ACADEMY=1)
         force_authenticate(request, user=model.user)
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request, id=1).render()
         expected = {'detail': 'This academy is deleted', 'status_code': 403}
@@ -287,7 +287,7 @@ class ViewTestSuite(UtilsTestCase):
         request = request.get('/v1/admissions/academy/activate', HTTP_ACADEMY=1)
         force_authenticate(request, user=model.user)
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request, id=1).render()
         expected = {'academy_id': 1, 'id': 1}
@@ -307,7 +307,7 @@ class ViewTestSuite(UtilsTestCase):
         request = request.get('/v1/admissions/academy/activate', HTTP_ACADEMY=1)
         force_authenticate(request, user=model.user)
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request, id=1).render()
         expected = {'detail': 'This academy is deleted', 'status_code': 403}

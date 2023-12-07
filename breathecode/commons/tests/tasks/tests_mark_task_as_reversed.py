@@ -40,7 +40,7 @@ param_names = 'task_module,task_name'
 def setup(db, monkeypatch):
     monkeypatch.setattr('breathecode.commons.tasks.mark_task_as_reversed.apply_async', MagicMock())
     monkeypatch.setattr('logging.Logger.info', MagicMock())
-    monkeypatch.setattr('logging.Logger.warn', MagicMock())
+    monkeypatch.setattr('logging.Logger.warning', MagicMock())
     monkeypatch.setattr('logging.Logger.error', MagicMock())
     monkeypatch.setattr('importlib.import_module', MagicMock())
     monkeypatch.setattr('breathecode.commons.tasks.TOLERANCE', TOLERANCE)
@@ -110,7 +110,7 @@ def test_not_found(bc: Breathecode):
     assert res == None
 
     assert Logger.info.call_args_list == [call('Running mark_task_as_reversed for 1')]
-    assert Logger.warn.call_args_list == []
+    assert Logger.warning.call_args_list == []
     assert Logger.error.call_args_list == [call('TaskManager 1 not found')]
 
     assert bc.database.list_of('commons.TaskManager') == []
@@ -138,7 +138,7 @@ def test_no_reverse_function(bc: Breathecode, arrange, task_module, task_name):
         call('Running mark_task_as_reversed for 1'),
     ]
 
-    assert Logger.warn.call_args_list == [call('TaskManager 1 does not have a reverse function')]
+    assert Logger.warning.call_args_list == [call('TaskManager 1 does not have a reverse function')]
     assert Logger.error.call_args_list == []
 
     assert bc.database.list_of('commons.TaskManager') == [bc.format.to_dict(model.task_manager)]
@@ -169,7 +169,7 @@ def test_reversed(bc: Breathecode, arrange, task_module, task_name):
         call('TaskManager 1 is being marked as REVERSED'),
     ]
 
-    assert Logger.warn.call_args_list == []
+    assert Logger.warning.call_args_list == []
     assert Logger.error.call_args_list == []
 
     assert bc.database.list_of('commons.TaskManager') == [
@@ -210,7 +210,7 @@ def test_task_last_run_less_than_the_tolerance(bc: Breathecode, arrange, task_mo
         call('Running mark_task_as_reversed for 1'),
     ]
 
-    assert Logger.warn.call_args_list == [call('TaskManager 1 was not killed, scheduling to run it again')]
+    assert Logger.warning.call_args_list == [call('TaskManager 1 was not killed, scheduling to run it again')]
     assert Logger.error.call_args_list == []
 
     assert bc.database.list_of('commons.TaskManager') == [
@@ -251,7 +251,7 @@ def test_task_last_run_less_than_the_tolerance__force_true(bc: Breathecode, arra
         call('TaskManager 1 is being marked as REVERSED'),
     ]
 
-    assert Logger.warn.call_args_list == []
+    assert Logger.warning.call_args_list == []
     assert Logger.error.call_args_list == []
 
     assert bc.database.list_of('commons.TaskManager') == [
@@ -289,7 +289,7 @@ def test_task_last_run_less_than_the_tolerance__attempts_gt_10(bc: Breathecode, 
         call('TaskManager 1 is being marked as REVERSED'),
     ]
 
-    assert Logger.warn.call_args_list == []
+    assert Logger.warning.call_args_list == []
     assert Logger.error.call_args_list == []
 
     assert bc.database.list_of('commons.TaskManager') == [
@@ -326,7 +326,7 @@ def test_task_last_run_greater_than_the_tolerance(bc: Breathecode, arrange, task
         call('TaskManager 1 is being marked as REVERSED'),
     ]
 
-    assert Logger.warn.call_args_list == []
+    assert Logger.warning.call_args_list == []
     assert Logger.error.call_args_list == []
 
     assert bc.database.list_of('commons.TaskManager') == [

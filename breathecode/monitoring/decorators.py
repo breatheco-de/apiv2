@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 from celery import Task
 from .models import RepositoryWebhook
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ class WebhookTask(Task):
             webhook.status_text = str(ex)[:255]
             logger.debug(ex)
 
-        webhook.run_at = datetime.now()
+        webhook.run_at = timezone.now()
         if webhook.status_text == self.pending_status:
             webhook.status_text = 'finished'
 

@@ -66,4 +66,4 @@ def validate_activity_have_correct_data_field(data):
 
 
 def generate_created_at():
-    return timezone.make_aware(datetime.now())
+    return timezone.now()

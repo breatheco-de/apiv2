@@ -229,7 +229,7 @@ def async_create_asset_thumbnail(asset_slug: str, **_):
         asset.preview = url
         asset.save()
 
-    logger.warn(f'Media was save with {hash} for academy {asset.academy}')
+    logger.warning(f'Media was save with {hash} for academy {asset.academy}')
 
 
 @shared_task(priority=TaskPriority.ACADEMY.value)

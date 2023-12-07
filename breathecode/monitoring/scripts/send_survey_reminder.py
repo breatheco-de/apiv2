@@ -8,7 +8,7 @@ Reminder for sending surveys to each cohort every 4 weeks
 from breathecode.utils import ScriptNotification
 from breathecode.feedback.models import Survey
 from breathecode.admissions.models import Cohort
-from datetime import datetime, timedelta
+from datetime import timedelta
 from django.utils import timezone
 
 
@@ -51,12 +51,12 @@ for cohort in cohorts:
 
     if lastest_survey is None:
         sent_at = cohort.kickoff_date.date()
-        num_weeks = calculate_weeks(sent_at, datetime.now().date())
+        num_weeks = calculate_weeks(sent_at, timezone.now().date())
         if num_weeks > 2:
             cohorts_with_pending_surveys.append(cohort.name + f': No previous survey was found.')
     else:
         sent_at = lastest_survey.sent_at.date()
-        num_weeks = calculate_weeks(sent_at, datetime.now().date())
+        num_weeks = calculate_weeks(sent_at, timezone.now().date())
         if num_weeks > 2:
             cohorts_with_pending_surveys.append(
                 cohort.name +

@@ -426,7 +426,7 @@ def update_event_description_from_eventbrite(event: Event) -> None:
 
 def update_or_create_event(data, org):
     if data is None:  #skip if no data
-        logger.warn('Ignored event')
+        logger.warning('Ignored event')
         return False
 
     if not org.academy:

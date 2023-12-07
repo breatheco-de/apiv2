@@ -18,7 +18,7 @@ def apply_get_env(configuration={}):
 class SurveyAnsweredTestSuite(FeedbackTestCase):
     """Test /academy/survey"""
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.warning', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores',
@@ -31,13 +31,13 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
         process_answer_received.delay(1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [])
+        self.assertEqual(logging.Logger.warning.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [call('Answer not found')])
         self.assertEqual(actions.calculate_survey_scores.call_args_list, [])
         self.assertEqual(actions.calculate_survey_response_rate.call_args_list, [])
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), [])
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.warning', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores',
@@ -52,13 +52,13 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
         process_answer_received.delay(1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [])
+        self.assertEqual(logging.Logger.warning.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [call('No survey connected to answer.')])
         self.assertEqual(actions.calculate_survey_scores.call_args_list, [])
         self.assertEqual(actions.calculate_survey_response_rate.call_args_list, [])
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), [])
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.warning', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores',
@@ -75,7 +75,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
         process_answer_received.delay(1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [])
+        self.assertEqual(logging.Logger.warning.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
         self.assertEqual(actions.calculate_survey_scores.call_args_list, [call(1)])
         self.assertEqual(actions.calculate_survey_response_rate.call_args_list, [call(1)])
@@ -90,7 +90,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
             },
         }])
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.warning', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
@@ -110,7 +110,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
         process_answer_received.delay(1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [])
+        self.assertEqual(logging.Logger.warning.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
         self.assertEqual(send_email_message.call_args_list, [])
         self.assertEqual(actions.calculate_survey_scores.call_args_list, [call(1)])
@@ -126,7 +126,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
             },
         }])
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.warning', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
@@ -146,7 +146,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
         process_answer_received.delay(1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [])
+        self.assertEqual(logging.Logger.warning.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
         self.assertEqual(send_email_message.call_args_list, [])
         self.assertEqual(actions.calculate_survey_scores.call_args_list, [call(1)])
@@ -359,7 +359,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
             },
         }])
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.warning', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
@@ -379,7 +379,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
         process_answer_received.delay(1)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [])
+        self.assertEqual(logging.Logger.warning.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
         self.assertEqual(send_email_message.call_args_list, [])
         self.assertEqual(actions.calculate_survey_scores.call_args_list, [call(1)])

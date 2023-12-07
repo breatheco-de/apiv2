@@ -10,7 +10,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        date_limit = timezone.make_aware(datetime.now() - timedelta(days=10))
+        date_limit = timezone.make_aware(timezone.now() - timedelta(days=10))
 
         RepositoryWebhook.objects.filter(run_at__isnull=True).delete()
 

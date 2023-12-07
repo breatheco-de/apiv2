@@ -231,7 +231,7 @@ delete_id_consumer_callback_with_time_of_life = build_view_function(
 
 def build_view_class(decorator, decorator_args=(), decorator_kwargs={}, with_permission=False):
 
-    class TestView(APIView):
+    class CustomView(APIView):
         """
         List all snippets, or create a new snippet.
         """
@@ -281,7 +281,7 @@ def build_view_class(decorator, decorator_args=(), decorator_kwargs={}, with_per
             assert kwargs['id'] == 1
             return Response(DELETE_ID_RESPONSE)
 
-    return TestView
+    return CustomView
 
 
 TestView = build_view_class(decorators.has_permission, decorator_args=(PERMISSION, ))
