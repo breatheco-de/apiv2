@@ -19,6 +19,7 @@ from breathecode.utils.validation_exception import ValidationException
 logger = logging.getLogger(__name__)
 
 
+@admin.display(description='♼ Test connection to Active Campaign')
 def test_ac(modeladmin, request, queryset):
     entries = queryset.all()
     try:
@@ -30,9 +31,7 @@ def test_ac(modeladmin, request, queryset):
         messages.error(request, message=str(e))
 
 
-test_ac.short_description = '♼ Test connection to Active Campaign'
-
-
+@admin.display(description='♼ Sync AC Tags')
 def sync_ac_tags(modeladmin, request, queryset):
     entries = queryset.all()
     try:
@@ -44,9 +43,7 @@ def sync_ac_tags(modeladmin, request, queryset):
         messages.error(request, message=str(e))
 
 
-sync_ac_tags.short_description = '♼ Sync AC Tags'
-
-
+@admin.display(description='♼ Sync AC Automations')
 def sync_ac_automations(modeladmin, request, queryset):
     entries = queryset.all()
     try:
@@ -56,9 +53,6 @@ def sync_ac_automations(modeladmin, request, queryset):
     except Exception as e:
         logger.fatal(str(e))
         messages.error(request, message=str(e))
-
-
-sync_ac_automations.short_description = '♼ Sync AC Automations'
 
 
 class CustomForm(forms.ModelForm):
@@ -133,15 +127,14 @@ def send_to_active_campaign(modeladmin, request, queryset):
     )
 
 
+@admin.display(description='♺ Download more info from facebook')
 def fetch_more_facebook_info(modeladmin, request, queryset):
     entries = queryset.all()
     for entry in entries:
         get_facebook_lead_info(entry.id)
 
 
-fetch_more_facebook_info.short_description = '♺ Download more info from facebook'
-
-
+@admin.display(description='🌐 Get GEO info')
 def get_geoinfo(modeladmin, request, queryset):
     entries = queryset.all()
     for entry in entries:
@@ -151,9 +144,6 @@ def get_geoinfo(modeladmin, request, queryset):
             'longitude': entry.longitude,
         }
         save_get_geolocal(entry, form_enty)
-
-
-get_geoinfo.short_description = '🌐 Get GEO info'
 
 
 class PPCFilter(SimpleListFilter):
@@ -269,6 +259,7 @@ def upload_to_active_campaign(modeladmin, request, queryset):
             messages.add_message(request, messages.ERROR, f'Error uploading tag {slug}: {str(e)}')
 
 
+@admin.display(description='Prepend "tech-" on slug')
 def prepend_tech_on_name(modeladmin, request, queryset):
 
     for t in queryset:
@@ -276,8 +267,6 @@ def prepend_tech_on_name(modeladmin, request, queryset):
             continue
         t.slug = 'tech-' + t.slug
         t.save()
-
-    prepend_tech_on_name.short_description = 'Prepend "tech-" on slug'
 
 
 class CustomTagModelForm(forms.ModelForm):
@@ -446,13 +435,11 @@ class DownloadableAdmin(admin.ModelAdmin):
             f"<span class='badge {colors[obj.destination_status]}'>{obj.destination_status}</span>")
 
 
+@admin.display(description='Reset app id')
 def reset_app_id(modeladmin, request, queryset):
     for app in queryset.all():
         app.app_id = secrets.token_urlsafe(16)
         app.save()
-
-
-reset_app_id.short_description = 'Reset app id'
 
 
 class LeadAppCustomForm(forms.ModelForm):

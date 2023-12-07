@@ -1,3 +1,4 @@
+import datetime as dt
 from datetime import datetime, timedelta
 import hashlib
 import hmac
@@ -173,7 +174,7 @@ def signature_schema(request, required_scopes, authorization: str, use_signature
 
     try:
         date = datetime.fromisoformat(authorization['Date'])
-        date = date.replace(tzinfo=timezone.utc)
+        date = date.replace(tzinfo=dt.timezone.utc)
         now = timezone.now()
         if (now - timedelta(minutes=TOLERANCE) > date) or (now + timedelta(minutes=TOLERANCE) < date):
             raise Exception()

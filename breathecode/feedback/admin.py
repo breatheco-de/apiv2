@@ -14,6 +14,7 @@ from breathecode.utils.admin import change_field
 logger = logging.getLogger(__name__)
 
 
+@admin.display(description='Send General NPS Survey')
 def send_bulk_survey(modeladmin, request, queryset):
     # mocking tools are poor to apply it
     from django.contrib import messages
@@ -41,15 +42,13 @@ def send_bulk_survey(modeladmin, request, queryset):
         messages.success(request, message='Survey was successfully sent')
 
 
-send_bulk_survey.short_description = 'Send General NPS Survey'
-
-
 @admin.register(UserProxy)
 class UserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name')
     actions = [send_bulk_survey]
 
 
+@admin.display(description='Send General NPS Survey')
 def send_bulk_cohort_user_survey(modeladmin, request, queryset):
     from django.contrib import messages
 
@@ -76,9 +75,7 @@ def send_bulk_cohort_user_survey(modeladmin, request, queryset):
         messages.success(request, message='Survey was successfully sent')
 
 
-send_bulk_cohort_user_survey.short_description = 'Send General NPS Survey'
-
-
+@admin.display(description='Generate review requests')
 def generate_review_requests(modeladmin, request, queryset):
     cus = queryset.all()
     for cu in cus:
@@ -94,11 +91,8 @@ def generate_review_requests(modeladmin, request, queryset):
         messages.error(request, message=str(e))
 
 
-generate_review_requests.short_description = 'Generate review requests'
-
-
 @admin.register(CohortUserProxy)
-class CohortUserAdmin(CohortUserAdmin):
+class CohortUserAdmin(admin.ModelAdmin):
     actions = [
         send_bulk_cohort_user_survey,
         generate_review_requests,
@@ -106,10 +100,11 @@ class CohortUserAdmin(CohortUserAdmin):
 
 
 @admin.register(CohortProxy)
-class CohortAdmin(CohortAdmin):
+class CohortAdmin(admin.ModelAdmin):
     list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'schedule')
 
 
+@admin.display(description='Add academy to answer')
 def add_academy_to_answer(modeladmin, request, queryset):
 
     for answer in queryset:
@@ -120,9 +115,6 @@ def add_academy_to_answer(modeladmin, request, queryset):
         else:
             pass
         answer.save()
-
-
-add_academy_to_answer.short_description = 'Add academy to answer'
 
 
 class AnswerTypeFilter(admin.SimpleListFilter):
@@ -191,6 +183,7 @@ class AnswerAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     #     return f"{object.entity_slug} (id:{str(object.entity_id)})"
 
 
+@admin.display(description='Send survey to all cohort students')
 def send_big_cohort_bulk_survey(modeladmin, request, queryset):
     logger.debug('send_big_cohort_bulk_survey called')
 
@@ -210,9 +203,6 @@ def send_big_cohort_bulk_survey(modeladmin, request, queryset):
     s.save()
 
     logger.info('All surveys scheduled to send for cohorts')
-
-
-send_big_cohort_bulk_survey.short_description = 'Send survey to all cohort students'
 
 
 class SentFilter(admin.SimpleListFilter):
@@ -244,13 +234,11 @@ def fill_sent_at_with_created_at(modeladmin, request, queryset):
         s.save()
 
 
+@admin.display(description='Recalculate all Survey scores and response rate')
 def calculate_survey_scores(modeladmin, request, queryset):
 
     for id in Survey.objects.all().values_list('id', flat=True):
         recalculate_survey_scores.delay(id)
-
-
-calculate_survey_scores.short_description = 'Recalculate all Survey scores and response rate'
 
 
 @admin.register(Survey)

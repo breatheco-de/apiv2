@@ -8,15 +8,13 @@ from breathecode.notify.models import SlackChannel
 from django.utils.html import format_html
 
 
+@admin.display(description='Run Applications Diagnostic')
 def test_app(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
     from .tasks import monitor_app
 
     for app in queryset.all():
         monitor_app.delay(app.id)
-
-
-test_app.short_description = 'Run Applications Diagnostic'
 
 
 class CustomAppModelForm(forms.ModelForm):
@@ -55,6 +53,7 @@ class ApplicationAdmin(admin.ModelAdmin):
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 
 
+@admin.display(description='Test Endpoint')
 def test_endpoint(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
     from .tasks import test_endpoint
@@ -63,16 +62,11 @@ def test_endpoint(modeladmin, request, queryset):
         test_endpoint.delay(end.id)
 
 
-test_endpoint.short_description = 'Test Endpoint'
-
-
+@admin.display(description='PAUSE for 1 day')
 def pause_for_one_day(modeladmin, request, queryset):
     for end in queryset.all():
         end.paused_until = timezone.now() + timezone.timedelta(days=1)
         end.save()
-
-
-pause_for_one_day.short_description = 'PAUSE for 1 day'
 
 
 # Register your models here.
@@ -98,15 +92,13 @@ class EndpointAdmin(admin.ModelAdmin):
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 
 
+@admin.display(description='Run Script')
 def run_single_script(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
     from .tasks import execute_scripts
 
     for s in queryset.all():
         execute_scripts.delay(s.id)
-
-
-run_single_script.short_description = 'Run Script'
 
 
 class CustomForm(forms.ModelForm):

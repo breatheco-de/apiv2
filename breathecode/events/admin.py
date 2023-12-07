@@ -45,13 +45,11 @@ class OrganizerAdmin(admin.ModelAdmin):
     actions = []
 
 
+@admin.display(description='Reattempt add event slug to Active Campaign')
 def reattempt_add_event_slug_as_acp_tag(modeladmin, request, queryset):
     for instance in queryset:
         if instance.academy:
             marketing_tasks.add_event_slug_as_acp_tag.delay(instance.id, instance.academy.id, force=True)
-
-
-reattempt_add_event_slug_as_acp_tag.short_description = 'Reattempt add event slug to Active Campaign'
 
 
 # Register your models here.

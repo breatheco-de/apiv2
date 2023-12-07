@@ -56,7 +56,7 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         model = self.bc.database.create(user=1)
 
         factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny', HTTP_ACADEMY=1)
+        request = factory.get('/they-killed-kenny', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
         view = get_id
@@ -78,7 +78,7 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
                                         capability='can_kill_kenny')
 
         factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny', HTTP_ACADEMY=1)
+        request = factory.get('/they-killed-kenny', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
         view = get_id
@@ -100,7 +100,7 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         factory = APIRequestFactory()
         slug_1 = self.bc.fake.slug()
         slug_2 = self.bc.fake.slug()
-        request = factory.get(f'/{slug_1}/{slug_2}', HTTP_ACADEMY=1)
+        request = factory.get(f'/{slug_1}/{slug_2}', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
         view = get_id
@@ -122,7 +122,7 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         factory = APIRequestFactory()
         slug_1 = self.bc.fake.slug()
         slug_2 = self.bc.fake.slug()
-        request = factory.get(f'/{slug_1}/{slug_2}', HTTP_ACADEMY=1)
+        request = factory.get(f'/{slug_1}/{slug_2}', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
         view = get_id
@@ -143,7 +143,7 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
                                         capability='can_kill_kenny')
 
         factory = APIRequestFactory()
-        request = factory.get('/v1/admissions/academy/activate', HTTP_ACADEMY=1)
+        request = factory.get('/v1/admissions/academy/activate', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
         view = get_id
@@ -163,7 +163,7 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
                                         capability='can_kill_kenny')
 
         factory = APIRequestFactory()
-        request = factory.get('/v1/admissions/academy/activate', HTTP_ACADEMY=1)
+        request = factory.get('/v1/admissions/academy/activate', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
         view = get_id
@@ -199,7 +199,7 @@ class ViewTestSuite(UtilsTestCase):
         model = self.bc.database.create(user=1)
 
         request = APIRequestFactory()
-        request = request.get('/they-killed-kenny', HTTP_ACADEMY=1)
+        request = request.get('/they-killed-kenny', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
         view = CustomTestView.as_view()
@@ -221,7 +221,7 @@ class ViewTestSuite(UtilsTestCase):
                                         capability='can_kill_kenny')
 
         request = APIRequestFactory()
-        request = request.get('/they-killed-kenny', HTTP_ACADEMY=1)
+        request = request.get('/they-killed-kenny', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
         view = CustomTestView.as_view()
@@ -243,7 +243,7 @@ class ViewTestSuite(UtilsTestCase):
         request = APIRequestFactory()
         slug_1 = self.bc.fake.slug()
         slug_2 = self.bc.fake.slug()
-        request = request.get(f'/{slug_1}/{slug_2}', HTTP_ACADEMY=1)
+        request = request.get(f'/{slug_1}/{slug_2}', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
         view = CustomTestView.as_view()
@@ -265,7 +265,7 @@ class ViewTestSuite(UtilsTestCase):
         request = APIRequestFactory()
         slug_1 = self.bc.fake.slug()
         slug_2 = self.bc.fake.slug()
-        request = request.get(f'/{slug_1}/{slug_2}', HTTP_ACADEMY=1)
+        request = request.get(f'/{slug_1}/{slug_2}', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
         view = CustomTestView.as_view()
@@ -284,7 +284,7 @@ class ViewTestSuite(UtilsTestCase):
                                         capability='can_kill_kenny')
 
         request = APIRequestFactory()
-        request = request.get('/v1/admissions/academy/activate', HTTP_ACADEMY=1)
+        request = request.get('/v1/admissions/academy/activate', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
         view = CustomTestView.as_view()
@@ -304,7 +304,7 @@ class ViewTestSuite(UtilsTestCase):
                                         capability='can_kill_kenny')
 
         request = APIRequestFactory()
-        request = request.get('/v1/admissions/academy/activate', HTTP_ACADEMY=1)
+        request = request.get('/v1/admissions/academy/activate', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
         view = CustomTestView.as_view()

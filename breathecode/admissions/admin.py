@@ -46,18 +46,14 @@ class AcademyForm(forms.ModelForm):
         self.fields['timezone'] = forms.ChoiceField(choices=timezones)
 
 
+@admin.display(description='Mark as available as SAAS')
 def mark_as_available_as_saas(modeladmin, request, queryset):
     queryset.update(available_as_saas=True)
 
 
-mark_as_available_as_saas.short_description = 'Mark as available as SAAS'
-
-
+@admin.display(description='Mark as unavailable as SAAS')
 def mark_as_unavailable_as_saas(modeladmin, request, queryset):
     queryset.update(available_as_saas=False)
-
-
-mark_as_unavailable_as_saas.short_description = 'Mark as unavailable as SAAS'
 
 
 @admin.register(Academy)
@@ -77,6 +73,7 @@ class CityAdmin(admin.ModelAdmin):
     list_display = ('name', 'country')
 
 
+@admin.display(description='Make him/her an ASSISTANT')
 def make_assistant(modeladmin, request, queryset):
     cohort_users = queryset.all()
     for cu in cohort_users:
@@ -84,9 +81,7 @@ def make_assistant(modeladmin, request, queryset):
         cu.save()
 
 
-make_assistant.short_description = 'Make it an ASSISTANT'
-
-
+@admin.display(description='Make him/her a TEACHER')
 def make_teacher(modeladmin, request, queryset):
     cohort_users = queryset.all()
     for cu in cohort_users:
@@ -94,9 +89,7 @@ def make_teacher(modeladmin, request, queryset):
         cu.save()
 
 
-make_teacher.short_description = 'Make it a TEACHER'
-
-
+@admin.display(description='Make him/her a STUDENT')
 def make_student(modeladmin, request, queryset):
     cohort_users = queryset.all()
     for cu in cohort_users:
@@ -104,9 +97,7 @@ def make_student(modeladmin, request, queryset):
         cu.save()
 
 
-make_student.short_description = 'Make it a STUDENT'
-
-
+@admin.display(description='Educational_status = ACTIVE')
 def make_edu_stat_active(modeladmin, request, queryset):
     cohort_users = queryset.all()
     for cu in cohort_users:
@@ -114,9 +105,7 @@ def make_edu_stat_active(modeladmin, request, queryset):
         cu.save()
 
 
-make_edu_stat_active.short_description = 'Educational_status = ACTIVE'
-
-
+@admin.display(description='Educational_status = GRADUATED')
 def make_edu_stat_graduate(modeladmin, request, queryset):
     cohort_users = queryset.all()
     for cu in cohort_users:
@@ -124,16 +113,11 @@ def make_edu_stat_graduate(modeladmin, request, queryset):
         cu.save()
 
 
-make_edu_stat_graduate.short_description = 'Educational_status = GRADUATED'
-
-
+@admin.display(description='Add student tag to active campaign')
 def add_student_tag_to_active_campaign(modeladmin, request, queryset):
     cohort_users = queryset.all()
     for v in cohort_users:
         add_cohort_task_to_student.delay(v.user.id, v.cohort.id, v.cohort.academy.id)
-
-
-add_student_tag_to_active_campaign.short_description = 'Add student tag to active campaign'
 
 
 @admin.register(CohortUser)
@@ -150,6 +134,7 @@ class CohortUserAdmin(admin.ModelAdmin):
         return obj.user.first_name + ' ' + obj.user.last_name + '(' + obj.user.email + ')'
 
 
+@admin.display(description='Sync Tasks')
 def sync_tasks(modeladmin, request, queryset):
     cohort_ids = queryset.values_list('id', flat=True)
     cohort_user = CohortUser.objects.filter(cohort__id__in=[cohort_ids])
@@ -157,30 +142,22 @@ def sync_tasks(modeladmin, request, queryset):
         sync_student_tasks(cu.user)
 
 
-sync_tasks.short_description = 'Sync Tasks'
-
-
+@admin.display(description='Mark as ENDED')
 def mark_as_ended(modeladmin, request, queryset):
     queryset.update(stage='ENDED')
 
 
-mark_as_ended.short_description = 'Mark as ENDED'
-
-
+@admin.display(description='Mark as STARTED')
 def mark_as_started(modeladmin, request, queryset):
     queryset.update(stage='STARTED')
 
 
-mark_as_started.short_description = 'Mark as STARTED'
-
-
-def mark_as_innactive(modeladmin, request, queryset):
+@admin.display(description='Mark as INACTIVE')
+def mark_as_inactive(modeladmin, request, queryset):
     queryset.update(stage='INACTIVE')
 
 
-mark_as_innactive.short_description = 'Mark as INACTIVE'
-
-
+@admin.display(description='Sync Timeslots With Certificate')
 def sync_timeslots(modeladmin, request, queryset):
     cohorts = queryset.all()
     count = 0
@@ -197,9 +174,6 @@ def sync_timeslots(modeladmin, request, queryset):
                          f'{count} of {cohorts.count()} cohorts timeslots were updated')
 
 
-sync_timeslots.short_description = 'Sync Timeslots With Certificate ⏱ '
-
-
 class CohortForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
@@ -207,13 +181,11 @@ class CohortForm(forms.ModelForm):
         self.fields['timezone'] = forms.ChoiceField(choices=timezones)
 
 
+@admin.display(description='Add cohort slug to active campaign')
 def add_cohort_slug_to_active_campaign(modeladmin, request, queryset):
     cohorts = queryset.all()
     for cohort in cohorts:
         add_cohort_slug_as_acp_tag.delay(cohort.id, cohort.academy.id)
-
-
-add_cohort_slug_to_active_campaign.short_description = 'Add cohort slug to active campaign'
 
 
 def get_attendancy_logs(modeladmin, request, queryset):
@@ -222,7 +194,7 @@ def get_attendancy_logs(modeladmin, request, queryset):
 
 
 cohort_actions = [
-    sync_tasks, mark_as_ended, mark_as_started, mark_as_innactive, sync_timeslots,
+    sync_tasks, mark_as_ended, mark_as_started, mark_as_inactive, sync_timeslots,
     add_cohort_slug_to_active_campaign, get_attendancy_logs
 ]
 
@@ -230,6 +202,7 @@ if os.getenv('ENVIRONMENT') == 'DEVELOPMENT':
     pass
 
 
+@admin.display(description='Link randomly relations to cohorts')
 def link_randomly_relations_to_cohorts(modeladmin, request, queryset):
     academies_instances = {}
     schedules_instances = {}
@@ -276,9 +249,6 @@ def link_randomly_relations_to_cohorts(modeladmin, request, queryset):
             x.save()
 
 
-link_randomly_relations_to_cohorts.short_description = 'Link randomly relations to cohorts'
-
-
 @admin.register(Cohort)
 class CohortAdmin(admin.ModelAdmin):
     form = CohortForm
@@ -298,6 +268,7 @@ class CohortAdmin(admin.ModelAdmin):
         return obj.certificate.slug + '.v' + str(obj.version)
 
 
+@admin.display(description='Sync from Github')
 def pull_from_github(modeladmin, request, queryset):
     all_syllabus = queryset.all()
 
@@ -340,9 +311,6 @@ def pull_from_github(modeladmin, request, queryset):
                     request,
                     f'Error {response.status_code} updating syllabus from github, make sure you have the '
                     'correct access rights to the repository')
-
-
-pull_from_github.short_description = 'Sync from Github'
 
 
 @admin.register(Syllabus)
@@ -424,6 +392,7 @@ class CohortTimeSlotAdmin(admin.ModelAdmin):
     search_fields = ['cohort__slug', 'timezone', 'cohort__name', 'cohort__academy__city__name']
 
 
+@admin.display(description='Replicate same timeslots in all academies')
 def replicate_in_all(modeladmin, request, queryset: QuerySet[SyllabusSchedule]):
     from django.contrib import messages
 
@@ -490,9 +459,6 @@ def replicate_in_all(modeladmin, request, queryset: QuerySet[SyllabusSchedule]):
 
     else:
         messages.add_message(request, messages.INFO, 'All academies in sync with those syllabus schedules')
-
-
-replicate_in_all.short_description = 'Replicate same timeslots in all academies'
 
 
 @admin.register(SyllabusSchedule)

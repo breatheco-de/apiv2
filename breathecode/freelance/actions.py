@@ -1,4 +1,5 @@
 import re, logging
+from django.contrib import admin
 from django.db.models import Q
 from .models import Freelancer, Issue, Bill, ProjectInvoice, ISSUE_STATUS
 from breathecode.authenticate.models import CredentialsGithub
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_hours(content):
-    p = re.compile('<hrs>(\d+\.?\d*)</hrs>')
+    p = re.compile('<hrs>(\\d+\.?\\d*)</hrs>')
     result = p.search(content)
     hours = None
     if result is not None:
@@ -20,7 +21,7 @@ def get_hours(content):
 
 
 def get_status(content):
-    p = re.compile('<status>(\w+)</status>')
+    p = re.compile('<status>(\\w+)</status>')
     result = p.search(content)
     status = None
     if result is not None:
@@ -294,11 +295,9 @@ def generate_freelancer_bill(freelancer):
     return [bills[bill_id]['instance'] for bill_id in bills]
 
 
+@admin.display(description='Process Hook')
 def run_hook(modeladmin, request, queryset):
     for hook in queryset.all():
         ac_academy = hook.ac_academy
         client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
         client.execute_action(hook.id, acp_ids)
-
-
-run_hook.short_description = 'Process Hook'

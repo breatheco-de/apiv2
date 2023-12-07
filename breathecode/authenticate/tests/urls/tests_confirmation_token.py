@@ -49,7 +49,7 @@ class AuthenticateJSONTestSuite(AuthTestCase):
 
         url = reverse_lazy('authenticate:confirmation_token', kwargs={'token': 'hash'})
 
-        response = self.client.get(url, format='json', HTTP_ACCEPT='application/json')
+        response = self.client.get(url, format='json', headers={'accept': 'application/json'})
         json = response.json()
         expected = {'detail': 'user-invite-not-found', 'status_code': 404}
 
@@ -67,7 +67,7 @@ class AuthenticateJSONTestSuite(AuthTestCase):
         model = self.bc.database.create(user_invite=1)
         url = reverse_lazy('authenticate:confirmation_token', kwargs={'token': model.user_invite.token})
 
-        response = self.client.get(url, format='json', HTTP_ACCEPT='application/json')
+        response = self.client.get(url, format='json', headers={'accept': 'application/json'})
         json = response.json()
         expected = {'detail': 'without-email', 'status_code': 400}
 
@@ -91,7 +91,7 @@ class AuthenticateJSONTestSuite(AuthTestCase):
         model = self.bc.database.create(user_invite=user_invite)
         url = reverse_lazy('authenticate:confirmation_token', kwargs={'token': model.user_invite.token})
 
-        response = self.client.get(url, format='json', HTTP_ACCEPT='application/json')
+        response = self.client.get(url, format='json', headers={'accept': 'application/json'})
         json = response.json()
         expected = {'detail': 'email-already-validated', 'status_code': 400}
 
@@ -112,7 +112,7 @@ class AuthenticateJSONTestSuite(AuthTestCase):
         model = self.bc.database.create(user_invite=user_invite)
         url = reverse_lazy('authenticate:confirmation_token', kwargs={'token': model.user_invite.token})
 
-        response = self.client.get(url, format='json', HTTP_ACCEPT='application/json')
+        response = self.client.get(url, format='json', headers={'accept': 'application/json'})
         json = response.json()
         expected = post_serializer(self, model.user_invite)
 
@@ -138,7 +138,7 @@ class AuthenticateJSONTestSuite(AuthTestCase):
         model = self.bc.database.create(user_invite=user_invite)
         url = reverse_lazy('authenticate:confirmation_token', kwargs={'token': model.user_invite.token})
 
-        response = self.client.get(url, format='json', HTTP_ACCEPT='application/json')
+        response = self.client.get(url, format='json', headers={'accept': 'application/json'})
         json = response.json()
         expected = [
             {

@@ -21,6 +21,7 @@ class DeviceAdmin(admin.ModelAdmin):
     list_display = ('user', 'registration_id')
 
 
+@admin.display(description='Import channels from slack')
 def sync_channels(modeladmin, request, queryset):
     logger.debug('Bulk sync channels')
     teams = queryset.all()
@@ -28,17 +29,12 @@ def sync_channels(modeladmin, request, queryset):
         sync_slack_team_channel(team.id)
 
 
-sync_channels.short_description = 'Import channels from slack'
-
-
+@admin.display(description='Import users from slack')
 def sync_users(modeladmin, request, queryset):
     logger.debug('Bulk sync channels')
     teams = queryset.all()
     for team in teams:
         async_slack_team_users.delay(team.id)
-
-
-sync_users.short_description = 'Import users from slack'
 
 
 @admin.register(SlackTeam)
@@ -98,6 +94,7 @@ class SlackChannelAdmin(admin.ModelAdmin, AdminExportCsvMixin):
             return 'No BC cohort'
 
 
+@admin.display(description='💬 Send slack test notification')
 def test_user_notification(modeladmin, request, queryset):
 
     users = queryset.all()
@@ -106,15 +103,13 @@ def test_user_notification(modeladmin, request, queryset):
         send_slack('test_message', slackuser=u.slackuser, data={'MESSAGE': 'Hello World'})
 
 
-test_user_notification.short_description = '💬 Send slack test notification'
-
-
 @admin.register(UserProxy)
 class UserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name')
     actions = [test_user_notification]
 
 
+@admin.display(description='💬 Send slack test notification')
 def test_cohort_notification(modeladmin, request, queryset):
 
     cohorts = queryset.all()
@@ -123,11 +118,8 @@ def test_cohort_notification(modeladmin, request, queryset):
         send_slack('test_message', slackchannel=c.slackchannel, data={'MESSAGE': 'Hello World'})
 
 
-test_cohort_notification.short_description = '💬 Send slack test notification'
-
-
 @admin.register(CohortProxy)
-class CohortAdmin(CohortAdmin):
+class CohortAdmin(admin.ModelAdmin):
     list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'schedule')
     actions = [test_cohort_notification]
 

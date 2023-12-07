@@ -1,9 +1,11 @@
 from datetime import timedelta
+from functools import wraps
 import json
 import random
 from unittest.mock import MagicMock, call, patch
 
 from django.utils import timezone
+import pytest
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -237,49 +239,46 @@ def build_view_class(decorator, decorator_args=(), decorator_kwargs={}, with_per
         """
         permission_classes = [AllowAny]
 
-        @decorator(*decorator_args, **decorator_kwargs)
-        def get(self, request, *args, **kwargs):
-            if with_permission:
-                assert kwargs['permission'] == PERMISSION
-                assert args[0] == PERMISSION
+        @staticmethod
+        def decorate(func):
 
+            def wrapper(request, *args, **kwargs):
+                if with_permission:
+                    assert kwargs.get('permission') == PERMISSION
+                    assert args[0] == PERMISSION
+
+                return func(request, *args, **kwargs)
+
+            return decorator(*decorator_args, **decorator_kwargs)(wrapper)
+
+        def get(self, request, *args, **kwargs):
             if 'id' in kwargs:
                 assert kwargs['id'] == 1
                 return Response(GET_ID_RESPONSE)
-
             return Response(GET_RESPONSE)
 
-        @decorator(*decorator_args, **decorator_kwargs)
-        def post(self, request, *args, **kwargs):
-            if with_permission:
-                assert kwargs['permission'] == PERMISSION
-                assert args[0] == PERMISSION
+        get = decorate(get)
 
+        def post(self, request, *args, **kwargs):
             return Response(POST_RESPONSE)
 
-        @decorator(*decorator_args, **decorator_kwargs)
-        def put(self, request, *args, **kwargs):
-            if with_permission:
-                assert kwargs['permission'] == PERMISSION
-                assert args[0] == PERMISSION
+        post = decorate(post)
 
+        def put(self, request, *args, **kwargs):
             if 'id' not in kwargs:
                 assert 0
-
             assert kwargs['id'] == 1
             return Response(PUT_ID_RESPONSE)
 
-        @decorator(*decorator_args, **decorator_kwargs)
-        def delete(self, request, *args, **kwargs):
-            if with_permission:
-                assert kwargs['permission'] == PERMISSION
-                assert args[0] == PERMISSION
+        put = decorate(put)
 
+        def delete(self, request, *args, **kwargs):
             if 'id' not in kwargs:
                 assert 0
-
             assert kwargs['id'] == 1
             return Response(DELETE_ID_RESPONSE)
+
+        delete = decorate(delete)
 
     return CustomView
 

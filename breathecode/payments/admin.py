@@ -162,7 +162,11 @@ class CohortSetAdmin(admin.ModelAdmin):
     list_filter = ['academy__slug']
     search_fields = ['slug', 'academy__slug', 'academy__name']
     actions = [add_cohort_set_to_the_subscriptions]
-    filter_horizontal = ('cohorts', )
+
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        if db_field.name == 'cohorts':
+            kwargs['widget'] = admin.widgets.FilteredSelectMultiple(db_field.verbose_name, False)
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
 
 
 @admin.register(CohortSetTranslation)

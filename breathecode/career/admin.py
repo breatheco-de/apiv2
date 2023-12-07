@@ -11,6 +11,7 @@ class PlatformAdmin(admin.ModelAdmin):
     list_display = ('name', 'created_at')
 
 
+@admin.display(description='Fetch sync all data.')
 def fetch_sync_all_data_admin(modeladmin, request, queryset):
     from django.contrib import messages
     from .actions import fetch_sync_all_data
@@ -24,6 +25,7 @@ def fetch_sync_all_data_admin(modeladmin, request, queryset):
         messages.error(request, f'There was an error retriving the spider {str(e)}')
 
 
+@admin.display(description='Run spider.')
 def run_spider_admin(modeladmin, request, queryset):
     from django.contrib import messages
     from .actions import run_spider
@@ -38,6 +40,7 @@ def run_spider_admin(modeladmin, request, queryset):
         messages.error(request, message)
 
 
+@admin.display(description='Get was publiched date.')
 def get_was_published_date_from_string_admin(modeladmin, request, queryset):
     from django.contrib import messages
     from .actions import get_was_published_date_from_string
@@ -49,11 +52,6 @@ def get_was_published_date_from_string_admin(modeladmin, request, queryset):
     except Exception as e:
         logger.error(f'There was an error retriving the jobs {str(e)}')
         messages.error(request, f'There was an error retriving the jobs {str(e)}')
-
-
-fetch_sync_all_data_admin.short_description = 'Fetch sync all data.'
-run_spider_admin.short_description = 'Run spider.'
-get_was_published_date_from_string_admin.short_description = 'Get was publiched date.'
 
 
 @admin.register(Spider)
