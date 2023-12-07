@@ -248,7 +248,7 @@ class ServiceItem(AbstractServiceItem):
     """
 
     service = models.ForeignKey(Service, on_delete=models.CASCADE, help_text='Service')
-    is_renewable = models.BooleanField(default=False, help_text='If the service is renewable or not')
+    is_renewable = models.BooleanField(default=False, help_text='If it\'s marked, the consumables will be renewed according to the renew_at and renew_at_unit values.')
 
     # the below fields are useless when is_renewable=False
     renew_at = models.IntegerField(
