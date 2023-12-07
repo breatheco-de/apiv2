@@ -2,7 +2,6 @@ import requests
 import logging
 from .models import Job, Employer, Position, PositionAlias, ZyteProject
 from breathecode.utils import ValidationException
-from datetime import datetime
 from django.utils import timezone
 from breathecode.career.services import scraper_factory
 

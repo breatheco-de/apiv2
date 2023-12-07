@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 from celery import Task
 from .models import RepositoryWebhook
 from django.utils import timezone

@@ -6,7 +6,7 @@ from .utils.hook_manager import HookManager
 from .models import Device, SlackTeam, SlackChannel, SlackUser, UserProxy, CohortProxy, SlackUserTeam
 from .actions import sync_slack_team_channel, send_slack
 from .tasks import async_slack_team_users
-from breathecode.admissions.admin import CohortAdmin
+from breathecode.admissions.admin import CohortAdmin as AdmissionsCohortAdmin
 from django.utils.html import format_html
 from django.template.defaultfilters import escape
 from django.urls import reverse
@@ -119,7 +119,7 @@ def test_cohort_notification(modeladmin, request, queryset):
 
 
 @admin.register(CohortProxy)
-class CohortAdmin(admin.ModelAdmin):
+class CohortAdmin(AdmissionsCohortAdmin):
     list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'schedule')
     actions = [test_cohort_notification]
 

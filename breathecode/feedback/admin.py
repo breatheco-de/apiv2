@@ -2,7 +2,7 @@ import logging
 import json
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
-from breathecode.admissions.admin import CohortAdmin, CohortUserAdmin
+from breathecode.admissions.admin import CohortAdmin as AdmissionsCohortAdmin, CohortUserAdmin as AdmissionsCohortUserAdmin
 from breathecode.feedback.tasks import recalculate_survey_scores
 from .models import Answer, UserProxy, CohortProxy, CohortUserProxy, Survey, Review, ReviewPlatform
 from .actions import send_survey_group, create_user_graduation_reviews
@@ -92,7 +92,7 @@ def generate_review_requests(modeladmin, request, queryset):
 
 
 @admin.register(CohortUserProxy)
-class CohortUserAdmin(admin.ModelAdmin):
+class CohortUserAdmin(AdmissionsCohortUserAdmin):
     actions = [
         send_bulk_cohort_user_survey,
         generate_review_requests,
@@ -100,7 +100,7 @@ class CohortUserAdmin(admin.ModelAdmin):
 
 
 @admin.register(CohortProxy)
-class CohortAdmin(admin.ModelAdmin):
+class CohortAdmin(AdmissionsCohortAdmin):
     list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'schedule')
 
 

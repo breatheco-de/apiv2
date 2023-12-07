@@ -1,7 +1,5 @@
-import functools
 import importlib
 import logging
-import os
 from typing import Any
 from celery import shared_task
 from datetime import timedelta

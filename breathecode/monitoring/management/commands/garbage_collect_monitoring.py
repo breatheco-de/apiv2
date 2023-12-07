@@ -1,7 +1,6 @@
 from django.core.management.base import BaseCommand
 from ...models import RepositoryWebhook
 from django.utils import timezone
-from datetime import datetime
 from datetime import timedelta
 
 

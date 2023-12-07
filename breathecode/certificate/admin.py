@@ -2,7 +2,7 @@ import logging, csv
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils.html import format_html
-from breathecode.admissions.admin import CohortAdmin
+from breathecode.admissions.admin import CohortAdmin as AdmissionsCohortAdmin
 from .models import Badge, Specialty, UserSpecialty, UserProxy, LayoutDesign, CohortProxy
 from .tasks import remove_screenshot, reset_screenshot, generate_cohort_certificates
 from .actions import generate_certificate
@@ -132,6 +132,6 @@ def cohort_bulk_certificate(modeladmin, request, queryset):
 
 
 @admin.register(CohortProxy)
-class CohortAdmin(admin.ModelAdmin):
+class CohortAdmin(AdmissionsCohortAdmin):
     list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'schedule')
     actions = [cohort_bulk_certificate]
