@@ -186,7 +186,7 @@ class Task(object):
 
             if self.bind:
                 t = args[0]
-                setattr(t, 'task_manager', x)
+                t.task_manager = x
 
             if self.is_transaction == True:
                 error = None
