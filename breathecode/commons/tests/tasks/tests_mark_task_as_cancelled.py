@@ -68,7 +68,7 @@ def arrange(bc: Breathecode, fake):
         model = bc.database.create(task_manager=task_manager)
 
         Logger.info.call_args_list = []
-        Logger.warn.call_args_list = []
+        Logger.warning.call_args_list = []
         Logger.error.call_args_list = []
 
         return model

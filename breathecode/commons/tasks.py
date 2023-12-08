@@ -169,7 +169,8 @@ def clean_task(key: str, **_: Any):
 
     try:
         cache.clear()
-        logger.debug(f'Cache cleaned for {key}')
+        if is_output_enable():
+            logger.debug(f'Cache cleaned for {key}')
 
     except Exception:
         raise RetryTask(f'Could not clean the cache {key}', log=is_output_enable())

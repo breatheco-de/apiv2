@@ -261,10 +261,14 @@ class BigQuerySet():
 
         return operation, attribute
 
-    def sql(self, *aggs: str) -> str:
+    def sql(self, aggs=None) -> str:
+        if aggs is None:
+            aggs = []
+
         query_fields = []
         if self.fields:
             query_fields += self.fields
+
         if aggs:
             for agg in aggs:
                 operation, attribute = self.aggregation_parser(agg)
