@@ -49,7 +49,7 @@ def setup(db, monkeypatch):
     monkeypatch.setattr('breathecode.commons.tasks.mark_task_as_pending.apply_async', MagicMock())
     monkeypatch.setattr('breathecode.commons.tasks.TOLERANCE', TOLERANCE)
     monkeypatch.setattr('logging.Logger.info', MagicMock())
-    monkeypatch.setattr('logging.Logger.warn', MagicMock())
+    monkeypatch.setattr('logging.Logger.warning', MagicMock())
     monkeypatch.setattr('logging.Logger.error', MagicMock())
 
     yield
@@ -106,7 +106,7 @@ def arrange(monkeypatch, bc: Breathecode, fake):
         model = bc.database.create(task_manager=task_manager)
 
         Logger.info.call_args_list = []
-        Logger.warn.call_args_list = []
+        Logger.warning.call_args_list = []
         Logger.error.call_args_list = []
 
         return model
@@ -122,7 +122,7 @@ def test_not_found(bc: Breathecode):
     assert res == None
 
     assert Logger.info.call_args_list == [call('Running mark_task_as_pending for 1')]
-    assert Logger.warn.call_args_list == []
+    assert Logger.warning.call_args_list == []
     assert Logger.error.call_args_list == [call('TaskManager 1 not found')]
 
     assert bc.database.list_of('commons.TaskManager') == []
@@ -148,7 +148,7 @@ def test_found(bc: Breathecode, arrange, task_module, task_name, get_call_args_l
         call('TaskManager 1 is being marked as PENDING'),
     ]
 
-    assert Logger.warn.call_args_list == []
+    assert Logger.warning.call_args_list == []
     assert Logger.error.call_args_list == []
 
     assert bc.database.list_of('commons.TaskManager') == [bc.format.to_dict(model.task_manager)]
@@ -183,7 +183,7 @@ def test_task_is_done(bc: Breathecode, arrange, task_module, task_name, get_call
         call('Running mark_task_as_pending for 1'),
     ]
 
-    assert Logger.warn.call_args_list == [call('TaskManager 1 was already DONE')]
+    assert Logger.warning.call_args_list == [call('TaskManager 1 was already DONE')]
     assert Logger.error.call_args_list == []
 
     assert bc.database.list_of('commons.TaskManager') == [bc.format.to_dict(model.task_manager)]
@@ -213,7 +213,7 @@ def test_task_is_running(bc: Breathecode, arrange, task_module, task_name, get_c
         call('Running mark_task_as_pending for 1'),
     ]
 
-    assert Logger.warn.call_args_list == [call('TaskManager 1 is already running')]
+    assert Logger.warning.call_args_list == [call('TaskManager 1 is already running')]
     assert Logger.error.call_args_list == []
 
     assert bc.database.list_of('commons.TaskManager') == [bc.format.to_dict(model.task_manager)]
@@ -242,7 +242,7 @@ def test_task_last_run_less_than_the_tolerance(bc: Breathecode, arrange, task_mo
         call('Running mark_task_as_pending for 1'),
     ]
 
-    assert Logger.warn.call_args_list == [call('TaskManager 1 was not killed, scheduling to run it again')]
+    assert Logger.warning.call_args_list == [call('TaskManager 1 was not killed, scheduling to run it again')]
     assert Logger.error.call_args_list == []
 
     assert bc.database.list_of('commons.TaskManager') == [bc.format.to_dict(model.task_manager)]
@@ -279,7 +279,7 @@ def test_task_last_run_less_than_the_tolerance__force_true(bc: Breathecode, arra
         call('TaskManager 1 is being marked as PENDING'),
     ]
 
-    assert Logger.warn.call_args_list == []
+    assert Logger.warning.call_args_list == []
     assert Logger.error.call_args_list == []
 
     assert bc.database.list_of('commons.TaskManager') == [bc.format.to_dict(model.task_manager)]
@@ -317,7 +317,7 @@ def test_task_last_run_less_than_the_tolerance__attempts_gt_10(bc: Breathecode, 
         call('TaskManager 1 is being marked as PENDING'),
     ]
 
-    assert Logger.warn.call_args_list == []
+    assert Logger.warning.call_args_list == []
     assert Logger.error.call_args_list == []
 
     assert bc.database.list_of('commons.TaskManager') == [bc.format.to_dict(model.task_manager)]
@@ -353,7 +353,7 @@ def test_task_last_run_greater_than_the_tolerance(bc: Breathecode, arrange, task
         call('TaskManager 1 is being marked as PENDING'),
     ]
 
-    assert Logger.warn.call_args_list == []
+    assert Logger.warning.call_args_list == []
     assert Logger.error.call_args_list == []
 
     assert bc.database.list_of('commons.TaskManager') == [bc.format.to_dict(model.task_manager)]

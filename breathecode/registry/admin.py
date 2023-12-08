@@ -261,6 +261,7 @@ class AssetForm(forms.ModelForm):
             asset_type=self.instance.asset_type).order_by('slug')  # or something else
         self.fields['technologies'].queryset = AssetTechnology.objects.all().order_by(
             'slug')  # or something else
+        self.fields['assets_related'].queryset = Asset.objects.exclude(pk=self.instance.pk)
 
 
 class WithDescription(admin.SimpleListFilter):

@@ -42,12 +42,20 @@ class TaskPriority(Enum):
     FIXER = 10  # fixes
 
 
-class AbortTask(Exception):
+class TaskException(Exception):
+    """Base class for other exceptions"""
+
+    def __init__(self, message: str, log=True) -> None:
+        self.log = log
+        super().__init__(message)
+
+
+class AbortTask(TaskException):
     """Abort task due to it doesn't meet the requirements, it will not be reattempted."""
     pass
 
 
-class RetryTask(Exception):
+class RetryTask(TaskException):
     """Retry task due to it doesn't meet the requirements for a synchronization issue like a not found, it will be reattempted."""
     pass
 
@@ -186,7 +194,7 @@ class Task(object):
 
             if self.bind:
                 t = args[0]
-                setattr(t, 'task_manager', x)
+                t.task_manager = x
 
             if self.is_transaction == True:
                 error = None
@@ -208,7 +216,7 @@ class Task(object):
                             x.save()
 
                         else:
-                            logger.warn(str(e))
+                            logger.warning(str(e))
                             x.save()
 
                             self.manage_circuit_breaker(e, x.task_module, x.task_name, x.attempts,
@@ -221,12 +229,16 @@ class Task(object):
                         x.status_message = str(e)[:255]
 
                         if x.attempts >= RETRIES_LIMIT:
-                            logger.exception(str(e))
+                            if e.log:
+                                logger.exception(str(e))
+
                             x.status = 'ERROR'
                             x.save()
 
                         else:
-                            logger.warn(str(e))
+                            if e.log:
+                                logger.warning(str(e))
+
                             x.save()
 
                             self.reattempt(x.task_module, x.task_name, x.attempts, arguments['args'],
@@ -240,7 +252,8 @@ class Task(object):
                         x.status_message = str(e)[:255]
                         x.save()
 
-                        logger.exception(str(e))
+                        if e.log:
+                            logger.exception(str(e))
 
                         # avoid reattempts
                         return
@@ -279,7 +292,7 @@ class Task(object):
                         x.save()
 
                     else:
-                        logger.warn(str(e))
+                        logger.warning(str(e))
                         x.save()
 
                         self.manage_circuit_breaker(e, x.task_module, x.task_name, x.attempts,
@@ -292,12 +305,16 @@ class Task(object):
                     x.status_message = str(e)[:255]
 
                     if x.attempts >= RETRIES_LIMIT:
-                        logger.exception(str(e))
+                        if e.log:
+                            logger.exception(str(e))
+
                         x.status = 'ERROR'
                         x.save()
 
                     else:
-                        logger.warn(str(e))
+                        if e.log:
+                            logger.warning(str(e))
+
                         x.save()
 
                         self.reattempt(x.task_module, x.task_name, x.attempts, arguments['args'],
@@ -311,7 +328,8 @@ class Task(object):
                     x.status_message = str(e)[:255]
                     x.save()
 
-                    logger.exception(str(e))
+                    if e.log:
+                        logger.exception(str(e))
 
                     # avoid reattempts
                     return

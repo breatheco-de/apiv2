@@ -104,6 +104,20 @@ def clear_cache():
     yield wrapper
 
 
+@pytest.fixture(autouse=True)
+def enable_cache_logging(monkeypatch):
+    """
+    Disable all signals by default. You can re-enable them within a test by calling the provided wrapper.
+    """
+
+    monkeypatch.setattr('breathecode.commons.actions.is_output_enable', lambda: False)
+
+    def wrapper(*args, **kwargs):
+        monkeypatch.setattr('breathecode.commons.actions.is_output_enable', lambda: True)
+
+    yield wrapper
+
+
 @pytest.fixture(autouse=True, scope='module')
 def random_seed():
     seed = os.getenv('RANDOM_SEED')

@@ -1,3 +1,4 @@
+import functools
 import logging
 import os
 from django_redis import get_redis_connection
@@ -20,6 +21,12 @@ def is_test():
     return env == 'test'
 
 
+@functools.lru_cache(maxsize=1)
+def is_output_enable():
+    # Set to True to enable output within the cache and it's used for testing purposes.
+    return os.getenv('HIDE_CACHE_LOG', '0') in ['0', 'false', 'False', 'f']
+
+
 def clean_cache(model_cls):
     from .tasks import clean_task
 
@@ -27,7 +34,8 @@ def clean_cache(model_cls):
     is_a_dependency = model_cls in CACHE_DEPENDENCIES
 
     if not have_descriptor and not is_a_dependency:
-        logger.warn(f'Cache not implemented for {model_cls.__name__}, skipping')
+        if is_output_enable():
+            logger.warning(f'Cache not implemented for {model_cls.__name__}, skipping')
         return
 
     key = model_cls.__module__ + '.' + model_cls.__name__
@@ -36,7 +44,7 @@ def clean_cache(model_cls):
     if not have_descriptor and is_a_dependency:
         if is_test() is False:
             conn = get_redis_connection('default')
-            my_lock = Lock(conn, f'cache:descriptor:{key}', timeout=0.2, blocking_timeout=0.2)
+            my_lock = Lock(conn, f'cache:descriptor:{key}', timeout=3, blocking_timeout=3)
 
             if my_lock.acquire(blocking=True):
 
@@ -50,7 +58,8 @@ def clean_cache(model_cls):
                     my_lock.release()
 
             else:
-                logger.error(f'Could not acquire lock for {key} on get_or_create, operation timed out.')
+                if is_output_enable():
+                    logger.error(f'Could not acquire lock for {key} on get_or_create, operation timed out.')
                 return
 
         else:
