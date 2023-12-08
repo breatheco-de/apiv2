@@ -16,7 +16,7 @@ param_names = 'task_module,task_name,get_call_args_list'
 @pytest.fixture(autouse=True)
 def setup(db, monkeypatch):
     monkeypatch.setattr('logging.Logger.info', MagicMock())
-    monkeypatch.setattr('logging.Logger.warn', MagicMock())
+    monkeypatch.setattr('logging.Logger.warning', MagicMock())
     monkeypatch.setattr('logging.Logger.error', MagicMock())
 
     yield
@@ -68,7 +68,7 @@ def arrange(bc: Breathecode, fake):
         model = bc.database.create(task_manager=task_manager)
 
         Logger.info.call_args_list = []
-        Logger.warn.call_args_list = []
+        Logger.warning.call_args_list = []
         Logger.error.call_args_list = []
 
         return model
@@ -84,7 +84,7 @@ def test_not_found(bc: Breathecode):
     assert res == None
 
     assert Logger.info.call_args_list == [call('Running mark_task_as_paused for 1')]
-    assert Logger.warn.call_args_list == []
+    assert Logger.warning.call_args_list == []
     assert Logger.error.call_args_list == [call('TaskManager 1 not found')]
 
     assert bc.database.list_of('commons.TaskManager') == []
@@ -105,7 +105,7 @@ def test_found(bc: Breathecode, arrange):
         call('TaskManager 1 is being marked as PAUSED'),
     ]
 
-    assert Logger.warn.call_args_list == []
+    assert Logger.warning.call_args_list == []
     assert Logger.error.call_args_list == []
 
     assert bc.database.list_of('commons.TaskManager') == [
@@ -131,7 +131,7 @@ def test_its_not_running(bc: Breathecode, arrange, status):
         call('Running mark_task_as_paused for 1'),
     ]
 
-    assert Logger.warn.call_args_list == [call('TaskManager 1 is not running')]
+    assert Logger.warning.call_args_list == [call('TaskManager 1 is not running')]
     assert Logger.error.call_args_list == []
 
     assert bc.database.list_of('commons.TaskManager') == [bc.format.to_dict(model.task_manager)]
