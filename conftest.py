@@ -107,7 +107,9 @@ def clear_cache():
 @pytest.fixture(autouse=True)
 def enable_cache_logging(monkeypatch):
     """
-    Disable all signals by default. You can re-enable them within a test by calling the provided wrapper.
+    Disable all signals by default.
+
+    You can re-enable them within a test by calling the provided wrapper.
     """
 
     monkeypatch.setattr('breathecode.commons.actions.is_output_enable', lambda: False)
@@ -137,8 +139,9 @@ def utc_now(set_datetime):
 
 @pytest.fixture(autouse=True)
 def enable_hook_manager(monkeypatch):
-    """
-    Disable the HookManagerClass.process_model_event by default. You can re-enable it within a test by calling the provided wrapper.
+    """Disable the HookManagerClass.process_model_event by default.
+
+    You can re-enable it within a test by calling the provided wrapper.
     """
 
     original_process_model_event = HookManagerClass.process_model_event
@@ -153,9 +156,7 @@ def enable_hook_manager(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def disable_newrelic_prints(monkeypatch):
-    """
-    Disable NewRelic prints.
-    """
+    """Disable NewRelic prints."""
 
     monkeypatch.setattr('newrelic.core.agent._logger.info', lambda *args, **kwargs: None)
     monkeypatch.setattr('newrelic.core.agent._logger.warn', lambda *args, **kwargs: None)
@@ -167,7 +168,9 @@ def disable_newrelic_prints(monkeypatch):
 @pytest.fixture(autouse=True)
 def dont_wait_for_rescheduling_tasks():
     """
-    Don't wait for rescheduling tasks by default. You can re-enable it within a test by calling the provided wrapper.
+    Don't wait for rescheduling tasks by default.
+
+    You can re-enable it within a test by calling the provided wrapper.
     """
 
     with patch('breathecode.utils.decorators.task.RETRIES_LIMIT', 2):
@@ -180,9 +183,7 @@ def dont_wait_for_rescheduling_tasks():
 
 @pytest.fixture(autouse=True)
 def dont_close_the_circuit():
-    """
-    Don't allow the circuit be closed.
-    """
+    """Don't allow the circuit be closed."""
 
     with patch('circuitbreaker.CircuitBreaker._failure_count', 0, create=True):
         with patch('circuitbreaker.CircuitBreaker.FAILURE_THRESHOLD', 10000000, create=True):
@@ -243,9 +244,8 @@ def signals():
 
 @pytest.fixture(autouse=True)
 def enable_signals(monkeypatch, signals):
-    """
-    Disable all signals by default. You can re-enable them within a test by calling the provided wrapper.
-    """
+    """Disable all signals by default. You can re-enable them within a test by calling the provided wrapper."""
+
     original_signal_send = Signal.send
     original_signal_send_robust = Signal.send_robust
 

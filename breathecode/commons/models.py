@@ -9,6 +9,7 @@ REVERSED = 'REVERSED'
 PAUSED = 'PAUSED'
 ABORTED = 'ABORTED'
 ERROR = 'ERROR'
+SCHEDULED = 'SCHEDULED'
 TASK_STATUS = (
     (PENDING, 'Pending'),
     (DONE, 'Done'),
@@ -17,12 +18,13 @@ TASK_STATUS = (
     (PAUSED, 'Paused'),
     (ABORTED, 'Aborted'),
     (ERROR, 'Error'),
+    (SCHEDULED, 'Scheduled'),
 )
 
 
 class TaskManager(models.Model):
     current_page = models.IntegerField(default=0, blank=True, null=True)
-    total_pages = models.IntegerField(default=0, blank=True, null=True)
+    total_pages = models.IntegerField(default=1, blank=True, null=True)
     attempts = models.IntegerField(default=1)
 
     task_module = models.CharField(max_length=200)
@@ -34,6 +36,7 @@ class TaskManager(models.Model):
     arguments = models.JSONField(default=dict, blank=True, null=True)
     status = models.CharField(max_length=20, choices=TASK_STATUS, default=PENDING)
     status_message = models.TextField(blank=True, null=True, max_length=255)
+    task_id = models.CharField(max_length=36, default='')
 
     killed = models.BooleanField(default=False)
     last_run = models.DateTimeField()
