@@ -157,7 +157,7 @@ def test_found(bc: Breathecode, arrange, task_module, task_name, get_call_args_l
         call(*model.task_manager.arguments['args'],
              **model.task_manager.arguments['kwargs'],
              page=1,
-             total_pages=0,
+             total_pages=1,
              task_manager_id=1)
     ]
     assert mark_task_as_pending.apply_async.call_args_list == []
@@ -288,7 +288,7 @@ def test_task_last_run_less_than_the_tolerance__force_true(bc: Breathecode, arra
         call(*model.task_manager.arguments['args'],
              **model.task_manager.arguments['kwargs'],
              page=1,
-             total_pages=0,
+             total_pages=1,
              task_manager_id=1)
     ]
     assert mark_task_as_pending.apply_async.call_args_list == []
@@ -326,7 +326,7 @@ def test_task_last_run_less_than_the_tolerance__attempts_gt_10(bc: Breathecode, 
         call(*model.task_manager.arguments['args'],
              **model.task_manager.arguments['kwargs'],
              page=1,
-             total_pages=0,
+             total_pages=1,
              task_manager_id=1)
     ]
     assert mark_task_as_pending.apply_async.call_args_list == []
@@ -362,7 +362,7 @@ def test_task_last_run_greater_than_the_tolerance(bc: Breathecode, arrange, task
         call(*model.task_manager.arguments['args'],
              **model.task_manager.arguments['kwargs'],
              page=1,
-             total_pages=0,
+             total_pages=1,
              task_manager_id=1)
     ]
     assert mark_task_as_pending.apply_async.call_args_list == []

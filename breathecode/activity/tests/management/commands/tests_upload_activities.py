@@ -11,10 +11,9 @@ UTC_NOW = timezone.now()
 
 def get_calls():
     utc_now = timezone.now()
-    tomorrow = (utc_now + timezone.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
 
-    for i in range(1, 25):
-        cursor = tomorrow + timezone.timedelta(hours=i)
+    for i in range(1, 11):
+        cursor = utc_now + timezone.timedelta(minutes=i)
         yield call(args=(), eta=cursor)
 
 
@@ -23,7 +22,7 @@ def apply_patch(db, monkeypatch):
     m1 = MagicMock()
 
     monkeypatch.setattr(
-        'breathecode.activity.management.commands.upload_activities.get_activity_sampling_rate', lambda: 3600)
+        'breathecode.activity.management.commands.upload_activities.get_activity_sampling_rate', lambda: 60)
     monkeypatch.setattr('breathecode.activity.tasks.upload_activities.apply_async', m1)
     monkeypatch.setattr('django.utils.timezone.now', lambda: UTC_NOW)
 

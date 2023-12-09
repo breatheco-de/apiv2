@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import functools
 import pickle
 import logging, os
@@ -190,6 +190,16 @@ def upload_activities(self, task_manager_id: int):
                 break
 
             worker += 1
+
+    utc_now = timezone.now()
+    limit = utc_now - timedelta(seconds=get_activity_sampling_rate())
+
+    # prevent to run the same task multiple times before the sampling rate time
+    task_cls = self.task_manager.__class__
+    task_cls.objects.filter(status='SCHEDULED',
+                            task_module=self.task_manager.task_module,
+                            task_name=self.task_manager.task_name,
+                            created_at__lt=limit).exclude(id=task_manager_id).delete()
 
     workers = actions.get_workers_amount()
     res = []

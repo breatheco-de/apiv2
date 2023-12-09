@@ -321,6 +321,7 @@ if REDIS_URL == '' or REDIS_URL == 'redis://localhost:6379':
 else:
     IS_REDIS_WITH_SSL = True
 
+SECURE_SSL_REDIRECT = True
 CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('GLOBAL_CACHE_MINUTES', 60 * 24))
 CACHES = {
     'default': {

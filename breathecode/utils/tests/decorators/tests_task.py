@@ -1,30 +1,47 @@
-from unittest.mock import MagicMock
+import re
+from unittest.mock import MagicMock, call
 import pytest
 from breathecode.admissions.models import Country
 import breathecode.utils.decorators as decorators
 from breathecode.utils.decorators import AbortTask
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
+from breathecode.utils.decorators.task import Task
 
 # enable this file to use the database
 pytestmark = pytest.mark.usefixtures('db')
 
 
-def inner_fn(*args, **kwargs):
-    key = next(iter(kwargs.keys()))
+class CustomException(Exception):
 
-    # this is used for testing the rollback
-    Country.objects.create(code=key[:3], name=kwargs[key])
+    def __eq__(self, other):
+        return isinstance(other, CustomException) and str(self) == str(other)
 
-    if 'MUST_BE_ABORTED' in kwargs and kwargs['MUST_BE_ABORTED'] is True:
-        raise AbortTask('It was aborted')
 
-    if 'MUST_RAISE_EXCEPTION' in kwargs and kwargs['MUST_RAISE_EXCEPTION'] is True:
-        raise Exception('Unexpected error')
+def get_inner_fn():
+    m = MagicMock()
 
-    if len(args) == 5:
-        kwargs['WITH_SELF'] = True
+    def inner_fn(*args, **kwargs):
+        key = next(iter(kwargs.keys()))
 
-    return args, kwargs
+        # this is used for testing the rollback
+        Country.objects.create(code=key[:3], name=kwargs[key])
+
+        if 'MUST_BE_ABORTED' in kwargs and kwargs['MUST_BE_ABORTED'] is True:
+            e = AbortTask('It was aborted')
+            m(e)
+            raise e
+
+        if 'MUST_RAISE_EXCEPTION' in kwargs and kwargs['MUST_RAISE_EXCEPTION'] is True:
+            e = CustomException('Unexpected error')
+            m(e)
+            raise e
+
+        if len(args) == 5:
+            kwargs['WITH_SELF'] = True
+
+        m(*args, **kwargs)
+
+    return inner_fn, m
 
 
 # it's to can reverse a task through the task manager
@@ -44,6 +61,7 @@ def fallback(*args, exception=None, **kwargs):
 def setup(bc: Breathecode, fake, monkeypatch, get_args, get_kwargs):
 
     def _arrange(*, task_manager, transaction=None, bind=False, with_fallback=False, with_reverse=False):
+        inner_fn, m = get_inner_fn()
         c = MagicMock()
         name = fake.slug().replace('-', '_')
 
@@ -64,6 +82,7 @@ def setup(bc: Breathecode, fake, monkeypatch, get_args, get_kwargs):
             params['reverse'] = reverse
 
         task = decorators.task(**params)(inner_fn)
+        monkeypatch.setattr(Task, '_get_fn', lambda self, task_module, task_name: task)
 
         setattr(c, name, MagicMock(side_effect=task))
 
@@ -75,7 +94,7 @@ def setup(bc: Breathecode, fake, monkeypatch, get_args, get_kwargs):
 
         # return model, task, name, args, kwargs, lambda: getattr(c, name).call_args_list
         city_code = next(iter(kwargs.keys()))
-        return model, task, name, args, kwargs, city_code
+        return model, task, name, args, kwargs, city_code, m
 
     yield _arrange
 
@@ -110,16 +129,85 @@ def db_item(data={}):
 
 # When: 0 TaskManager's
 # Then: it should create a new TaskManager and call the task
-def test_no_task_manager(bc: Breathecode, setup, utc_now):
-    _, task, task_name, args, kwargs, city_code = setup(task_manager=0,
-                                                        bind=False,
-                                                        with_fallback=False,
-                                                        with_reverse=False,
-                                                        transaction=False)
+def test_no_task_manager(bc: Breathecode, setup, utc_now, monkeypatch):
+    _, task, task_name, args, kwargs, city_code, result = setup(task_manager=0,
+                                                                bind=False,
+                                                                with_fallback=False,
+                                                                with_reverse=False,
+                                                                transaction=False)
 
+    # assert res == (args, {**kwargs, 'task_manager_id': 1})
+    monkeypatch.setattr('uuid.UUID.hex', lambda: 'asdasdasd')
     res = task(*args, **kwargs)
 
-    assert res == (args, {**kwargs, 'task_manager_id': 1})
+    from celery import Task
+    Task.delay
+
+    assert res == None
+    assert result.call_args_list == [call(*args, **{**kwargs, 'task_manager_id': 1})]
+
+    db = [
+        x for x in bc.database.list_of('commons.TaskManager')
+        if re.search(r'^[a-zA-Z0-9-]+$', x['task_id']) and x.pop('task_id')
+    ]
+
+    assert db == [
+        db_item({
+            'arguments': {
+                'args': list(args),
+                'kwargs': {
+                    **kwargs,
+                    'task_manager_id': 1,
+                },
+            },
+            'status': 'SCHEDULED',
+            'last_run': utc_now,
+            'task_name': task_name,
+            'current_page': 0,
+            'total_pages': 1,
+        }),
+    ]
+
+    # this is used for testing the rollback
+    assert bc.database.list_of('admissions.Country') == [
+        {
+            'code': city_code[:3],
+            'name': str(kwargs[city_code]),
+        },
+    ]
+
+
+# When: 0 TaskManager's
+# Then: it should create a new TaskManager and call the task
+def test_scheduled_task_manager_is_being_exec(bc: Breathecode, setup, utc_now, fake):
+    model, task, task_name, args, kwargs, city_code, result = setup(task_manager=1,
+                                                                    bind=False,
+                                                                    with_fallback=False,
+                                                                    with_reverse=False,
+                                                                    transaction=False)
+
+    id = fake.uuid4()
+
+    model.task_manager.status = 'SCHEDULED'
+    model.task_manager.arguments = {
+        'args': list(args),
+        'kwargs': {
+            **kwargs,
+            'task_manager_id': 1,
+        },
+    }
+
+    model.task_manager.task_module = 'breathecode.commons.tasks'
+    model.task_manager.task_name = task_name
+    model.task_manager.task_id = id
+    model.task_manager.save()
+
+    res = task(*args, **kwargs, task_manager_id=1)
+
+    # assert res == (args, {**kwargs, 'task_manager_id': 1})
+
+    assert res == None
+    assert result.call_args_list == [call(*args, **{**kwargs, 'task_manager_id': 1})]
 
     assert bc.database.list_of('commons.TaskManager') == [
         db_item({
@@ -133,8 +221,10 @@ def test_no_task_manager(bc: Breathecode, setup, utc_now):
             'status': 'DONE',
             'last_run': utc_now,
             'task_name': task_name,
+            'task_id': id,
             'current_page': 1,
             'total_pages': 1,
+            'status_message': '',
         }),
     ]
 
@@ -152,18 +242,34 @@ def test_no_task_manager(bc: Breathecode, setup, utc_now):
 # Then: it should create a new TaskManager and call the task,
 #    -> and save it as aborted even if transaction=True
 @pytest.mark.parametrize('transaction', [True, False, None])
-def test_no_task_manager__it_was_aborted(bc: Breathecode, setup, utc_now, transaction):
-    _, task, task_name, args, kwargs, city_code = setup(task_manager=0,
-                                                        bind=False,
-                                                        with_fallback=False,
-                                                        with_reverse=False,
-                                                        transaction=transaction)
+def test_no_task_manager__it_was_aborted(bc: Breathecode, setup, utc_now, transaction, fake):
+    model, task, task_name, args, kwargs, city_code, result = setup(task_manager=1,
+                                                                    bind=False,
+                                                                    with_fallback=False,
+                                                                    with_reverse=False,
+                                                                    transaction=transaction)
 
+    id = fake.uuid4()
     kwargs['MUST_BE_ABORTED'] = True
 
-    res = task(*args, **kwargs)
+    model.task_manager.status = 'SCHEDULED'
+    model.task_manager.arguments = {
+        'args': list(args),
+        'kwargs': {
+            **kwargs,
+            'task_manager_id': 1,
+        },
+    }
+
+    model.task_manager.task_module = 'breathecode.commons.tasks'
+    model.task_manager.task_name = task_name
+    model.task_manager.task_id = id
+    model.task_manager.save()
+
+    res = task(*args, **kwargs, task_manager_id=1)
 
     assert res == None
+    assert result.call_args_list == [call(AbortTask('It was aborted'))]
 
     assert bc.database.list_of('commons.TaskManager') == [
         db_item({
@@ -177,6 +283,7 @@ def test_no_task_manager__it_was_aborted(bc: Breathecode, setup, utc_now, transa
             'status': 'ABORTED',
             'last_run': utc_now,
             'task_name': task_name,
+            'task_id': id,
             'current_page': 1,
             'total_pages': 1,
             'status_message': 'It was aborted',
@@ -199,16 +306,31 @@ def test_no_task_manager__it_was_aborted(bc: Breathecode, setup, utc_now, transa
 @pytest.mark.parametrize('with_fallback', [False, None])
 @pytest.mark.parametrize('transaction', [False, None])
 def test_no_task_manager__it_got_an_exception__no_transaction__no_fallback(bc: Breathecode, setup, utc_now,
-                                                                           transaction, with_fallback):
-    _, task, task_name, args, kwargs, city_code = setup(task_manager=0,
-                                                        bind=False,
-                                                        with_fallback=with_fallback,
-                                                        with_reverse=False,
-                                                        transaction=transaction)
+                                                                           transaction, with_fallback, fake):
+    model, task, task_name, args, kwargs, city_code, result = setup(task_manager=1,
+                                                                    bind=False,
+                                                                    with_fallback=with_fallback,
+                                                                    with_reverse=False,
+                                                                    transaction=transaction)
 
+    id = fake.uuid4()
     kwargs['MUST_RAISE_EXCEPTION'] = True
 
-    task.delay(*args, **kwargs)
+    model.task_manager.status = 'SCHEDULED'
+    model.task_manager.arguments = {
+        'args': list(args),
+        'kwargs': {
+            **kwargs,
+            'task_manager_id': 1,
+        },
+    }
+
+    model.task_manager.task_module = 'breathecode.commons.tasks'
+    model.task_manager.task_name = task_name
+    model.task_manager.task_id = id
+    model.task_manager.save()
+
+    task.delay(*args, **kwargs, task_manager_id=1)
 
     assert bc.database.list_of('commons.TaskManager') == [
         db_item({
@@ -222,6 +344,7 @@ def test_no_task_manager__it_got_an_exception__no_transaction__no_fallback(bc: B
             'status': 'ERROR',
             'last_run': utc_now,
             'task_name': task_name,
+            'task_id': id,
             'current_page': 1,
             'total_pages': 1,
             'status_message': 'Unexpected error',
@@ -244,22 +367,40 @@ def test_no_task_manager__it_got_an_exception__no_transaction__no_fallback(bc: B
 #    -> and call the fallback
 @pytest.mark.parametrize('transaction', [False, None])
 def test_no_task_manager__it_got_an_exception__no_transaction__with_fallback(bc: Breathecode, setup, utc_now,
-                                                                             transaction):
-    _, task, task_name, args, kwargs, city_code = setup(task_manager=0,
-                                                        bind=False,
-                                                        with_fallback=True,
-                                                        with_reverse=False,
-                                                        transaction=transaction)
+                                                                             transaction, fake):
+    model, task, task_name, args, kwargs, city_code, result = setup(task_manager=1,
+                                                                    bind=False,
+                                                                    with_fallback=True,
+                                                                    with_reverse=False,
+                                                                    transaction=transaction)
 
+    id = fake.uuid4()
     kwargs['MUST_RAISE_EXCEPTION'] = True
 
-    res = task(*args, **kwargs)
+    model.task_manager.status = 'SCHEDULED'
+    model.task_manager.arguments = {
+        'args': list(args),
+        'kwargs': {
+            **kwargs,
+            'task_manager_id': 1,
+        },
+    }
+
+    model.task_manager.task_module = 'breathecode.commons.tasks'
+    model.task_manager.task_name = task_name
+    model.task_manager.task_id = id
+    model.task_manager.save()
+
+    res = task(*args, **kwargs, task_manager_id=1)
 
     assert res == (1, args, {
         **kwargs,
-        'task_manager_id': 1,
-        'exception': "<class 'Exception'>: Unexpected error",
+        'task_manager_id':
+        1,
+        'exception':
+        "<class 'breathecode.utils.tests.decorators.tests_task.CustomException'>: Unexpected error",
     }, 2)
+    assert result.call_args_list == [call(CustomException('Unexpected error'))]
 
     assert bc.database.list_of('commons.TaskManager') == [
         db_item({
@@ -273,6 +414,7 @@ def test_no_task_manager__it_got_an_exception__no_transaction__with_fallback(bc:
             'status': 'ERROR',
             'last_run': utc_now,
             'task_name': task_name,
+            'task_id': id,
             'current_page': 1,
             'total_pages': 1,
             'status_message': 'Unexpected error',
@@ -296,16 +438,32 @@ def test_no_task_manager__it_got_an_exception__no_transaction__with_fallback(bc:
 # When: it had an exception, with transaction and no fallback
 # Then: it should create a new TaskManager and call the task,
 #    -> it reverse the database (City)
-def test_no_task_manager__it_got_an_exception__with_transaction__no_fallback(bc: Breathecode, setup, utc_now):
-    _, task, task_name, args, kwargs, _ = setup(task_manager=0,
-                                                bind=False,
-                                                with_fallback=False,
-                                                with_reverse=False,
-                                                transaction=True)
+def test_no_task_manager__it_got_an_exception__with_transaction__no_fallback(bc: Breathecode, setup, utc_now,
+                                                                             fake):
+    model, task, task_name, args, kwargs, _, result = setup(task_manager=1,
+                                                            bind=False,
+                                                            with_fallback=False,
+                                                            with_reverse=False,
+                                                            transaction=True)
 
+    id = fake.uuid4()
     kwargs['MUST_RAISE_EXCEPTION'] = True
 
-    task.delay(*args, **kwargs)
+    model.task_manager.status = 'SCHEDULED'
+    model.task_manager.arguments = {
+        'args': list(args),
+        'kwargs': {
+            **kwargs,
+            'task_manager_id': 1,
+        },
+    }
+
+    model.task_manager.task_module = 'breathecode.commons.tasks'
+    model.task_manager.task_name = task_name
+    model.task_manager.task_id = id
+    model.task_manager.save()
+
+    task.delay(*args, **kwargs, task_manager_id=1)
 
     assert bc.database.list_of('commons.TaskManager') == [
         db_item({
@@ -319,6 +477,7 @@ def test_no_task_manager__it_got_an_exception__with_transaction__no_fallback(bc:
             'status': 'ERROR',
             'last_run': utc_now,
             'task_name': task_name,
+            'task_id': id,
             'current_page': 1,
             'total_pages': 1,
             'status_message': 'Unexpected error',
@@ -334,22 +493,44 @@ def test_no_task_manager__it_got_an_exception__with_transaction__no_fallback(bc:
 # Then: it should create a new TaskManager and call the task,
 #    -> it reverse the database (City) and save elements from the fallback (City)
 def test_no_task_manager__it_got_an_exception__with_transaction__with_fallback(
-        bc: Breathecode, setup, utc_now):
-    _, task, task_name, args, kwargs, _ = setup(task_manager=0,
-                                                bind=False,
-                                                with_fallback=True,
-                                                with_reverse=False,
-                                                transaction=True)
+        bc: Breathecode, setup, utc_now, fake):
 
+    #####################################
+
+    model, task, task_name, args, kwargs, _, result = setup(task_manager=1,
+                                                            bind=False,
+                                                            with_fallback=True,
+                                                            with_reverse=False,
+                                                            transaction=True)
+
+    id = fake.uuid4()
     kwargs['MUST_RAISE_EXCEPTION'] = True
 
-    res = task(*args, **kwargs)
+    model.task_manager.status = 'SCHEDULED'
+    model.task_manager.arguments = {
+        'args': list(args),
+        'kwargs': {
+            **kwargs,
+            'task_manager_id': 1,
+        },
+    }
+
+    model.task_manager.task_module = 'breathecode.commons.tasks'
+    model.task_manager.task_name = task_name
+    model.task_manager.task_id = id
+    model.task_manager.save()
+
+    res = task(*args, **kwargs, task_manager_id=1)
 
     assert res == (1, args, {
         **kwargs,
-        'task_manager_id': 1,
-        'exception': "<class 'Exception'>: Unexpected error",
+        'task_manager_id':
+        1,
+        'exception':
+        "<class 'breathecode.utils.tests.decorators.tests_task.CustomException'>: Unexpected error",
     }, 2)
+
+    assert result.call_args_list == [call(CustomException('Unexpected error'))]
 
     assert bc.database.list_of('commons.TaskManager') == [
         db_item({
@@ -363,6 +544,7 @@ def test_no_task_manager__it_got_an_exception__with_transaction__with_fallback(
             'status': 'ERROR',
             'last_run': utc_now,
             'task_name': task_name,
+            'task_id': id,
             'current_page': 1,
             'total_pages': 1,
             'status_message': 'Unexpected error',
@@ -382,15 +564,16 @@ def test_no_task_manager__it_got_an_exception__with_transaction__with_fallback(
 # Then: it should update the first TaskManager and call the task
 def test_two_task_managers(bc: Breathecode, setup, utc_now):
     task_manager = {'total_pages': 2}
-    model, task, _, args, kwargs, city_code = setup(task_manager=(2, task_manager),
-                                                    bind=False,
-                                                    with_fallback=False,
-                                                    with_reverse=False,
-                                                    transaction=False)
+    model, task, _, args, kwargs, city_code, result = setup(task_manager=(2, task_manager),
+                                                            bind=False,
+                                                            with_fallback=False,
+                                                            with_reverse=False,
+                                                            transaction=False)
 
     res = task(*args, **kwargs, task_manager_id=1)
 
-    assert res == (args, {**kwargs, 'task_manager_id': 1})
+    assert res == None
+    assert result.call_args_list == [call(*args, **{**kwargs, 'task_manager_id': 1})]
 
     assert bc.database.list_of('commons.TaskManager') == [
         {
@@ -399,6 +582,7 @@ def test_two_task_managers(bc: Breathecode, setup, utc_now):
             'last_run': utc_now,
             'current_page': 1,
             'total_pages': 2,
+            'status_message': '',
         },
         bc.format.to_dict(model.task_manager[1]),
     ]
@@ -421,15 +605,17 @@ def test_two_task_managers__it_must_be_killed(bc: Breathecode, setup, utc_now, s
         'status': status,
         'killed': False,
     }
-    model, task, _, args, kwargs, _ = setup(task_manager=(2, task_manager),
-                                            bind=False,
-                                            with_fallback=False,
-                                            with_reverse=False,
-                                            transaction=False)
+    model, task, _, args, kwargs, _, result = setup(task_manager=(2, task_manager),
+                                                    bind=False,
+                                                    with_fallback=False,
+                                                    with_reverse=False,
+                                                    transaction=False)
 
     res = task(*args, **kwargs, task_manager_id=1)
 
     assert res == None
+    assert result.call_args_list == []
+
     assert bc.database.list_of('commons.TaskManager') == [
         {
             **bc.format.to_dict(model.task_manager[0]),

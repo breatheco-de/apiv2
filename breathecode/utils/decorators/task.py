@@ -11,7 +11,7 @@ from django.utils import timezone
 from circuitbreaker import CircuitBreakerError
 import copy
 
-__all__ = ['task', 'AbortTask', 'RetryTask', 'RETRIES_LIMIT', 'TaskPriority']
+__all__ = ['task', 'AbortTask', 'RetryTask', 'RETRIES_LIMIT', 'TaskPriority', 'Task']
 
 logger = logging.getLogger(__name__)
 RETRIES_LIMIT = 10
@@ -40,23 +40,29 @@ class TaskPriority(Enum):
     REALTIME = 9  # schedule as soon as possible
     WEB_SERVICE_PAYMENT = 10  # payment in the web
     FIXER = 10  # fixes
+    SCHEDULER = 10  # fixes
 
 
 class TaskException(Exception):
-    """Base class for other exceptions"""
+    """Base class for other exceptions."""
 
     def __init__(self, message: str, log=True) -> None:
         self.log = log
         super().__init__(message)
 
+    def __eq__(self, other: 'TaskException'):
+        return type(self) == type(other) and str(self) == str(other) and self.log == other.log
+
 
 class AbortTask(TaskException):
     """Abort task due to it doesn't meet the requirements, it will not be reattempted."""
+
     pass
 
 
 class RetryTask(TaskException):
     """Retry task due to it doesn't meet the requirements for a synchronization issue like a not found, it will be reattempted."""
+
     pass
 
 
@@ -93,6 +99,8 @@ class Task(object):
         self.fallback = kwargs.pop('fallback', None)
         self.reverse = kwargs.pop('reverse', None)
         self.bind = kwargs.get('bind', False)
+        self.priority = kwargs.pop('priority', TaskPriority.DEFAULT.value)
+        kwargs['priority'] = TaskPriority.SCHEDULER.value
 
         if self.fallback and not callable(self.fallback):
             raise ProgrammingError('Fallback must be a callable')
@@ -111,33 +119,39 @@ class Task(object):
 
         return module_name, function_name
 
+    def _get_fn(self, task_module: str, task_name: str) -> Callable | None:
+        module = importlib.import_module(task_module)
+        return getattr(module, task_name, None)
+
     def reattempt_settings(self) -> dict[str, datetime]:
-        """
-        Return a dict with the settings to reattempt the task.
-        """
+        """Return a dict with the settings to reattempt the task."""
 
         return {'eta': timezone.now() + RETRY_AFTER}
 
     def reattempt(self, task_module: str, task_name: str, attempts: int, args: tuple[Any], kwargs: dict[str,
                                                                                                         Any]):
-        module = importlib.import_module(task_module)
-        x = getattr(module, task_name, None)
-
+        x = self._get_fn(task_module, task_name)
         x.apply_async(args=args, kwargs={**kwargs, 'attempts': attempts}, **self.reattempt_settings())
 
     def circuit_breaker_settings(self, e: CircuitBreakerError) -> dict[str, datetime]:
-        """
-        Return a dict with the settings to reattempt the task.
-        """
+        """Return a dict with the settings to reattempt the task."""
 
         return {'eta': timezone.now() + e._circuit_breaker.RECOVERY_TIMEOUT}
 
     def manage_circuit_breaker(self, e: CircuitBreakerError, task_module: str, task_name: str, attempts: int,
                                args: tuple[Any], kwargs: dict[str, Any]):
-        module = importlib.import_module(task_module)
-        x = getattr(module, task_name, None)
-
+        x = self._get_fn(task_module, task_name)
         x.apply_async(args=args, kwargs={**kwargs, 'attempts': attempts}, **self.circuit_breaker_settings(e))
+
+    def schedule(self, task_module: str, task_name: str, args: tuple[Any], kwargs: dict[str, Any]):
+        """Register a task to be executed in the future."""
+
+        x = self._get_fn(task_module, task_name)
+
+        if self.bind:
+            args = args[1:]
+
+        return x.apply_async(args=args, kwargs=kwargs, priority=self.priority)
 
     def __call__(self, function):
         from breathecode.commons.models import TaskManager
@@ -171,12 +185,15 @@ class Task(object):
                                                reverse_module=reverse_module,
                                                reverse_name=reverse_name,
                                                arguments=arguments,
-                                               status='PENDING',
-                                               current_page=page + 1,
+                                               status='SCHEDULED',
+                                               current_page=page,
                                                total_pages=total_pages,
                                                last_run=last_run)
 
                 kwargs['task_manager_id'] = x.id
+
+            if not created and x.status == 'SCHEDULED':
+                x.status = 'PENDING'
 
             if not created:
                 x.current_page = page + 1
@@ -201,10 +218,17 @@ class Task(object):
                 with transaction.atomic():
                     sid = transaction.savepoint()
                     try:
-                        x.status_message = ''
-                        x.save()
+                        if x.status == 'SCHEDULED':
+                            result = self.schedule(task_module, task_name, args, kwargs)
+                            x.task_id = result.id
+                            x.save()
+                            return
 
-                        res = function(*args, **kwargs)
+                        else:
+                            x.status_message = ''
+                            x.save()
+
+                            res = function(*args, **kwargs)
 
                     except CircuitBreakerError as e:
                         x.status_message = str(e)[:255]
@@ -280,7 +304,17 @@ class Task(object):
 
             else:
                 try:
-                    res = function(*args, **kwargs)
+                    if x.status == 'SCHEDULED':
+                        result = self.schedule(task_module, task_name, args, kwargs)
+                        x.task_id = result.id
+                        x.save()
+                        return
+
+                    else:
+                        x.status_message = ''
+                        x.save()
+
+                        res = function(*args, **kwargs)
 
                 except CircuitBreakerError as e:
                     x.status_message = str(e)[:255]
