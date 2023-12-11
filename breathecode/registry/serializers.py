@@ -93,6 +93,7 @@ class AssetSmallSerializer(serpy.Serializer):
     lang = serpy.Field()
     asset_type = serpy.Field()
     status = serpy.Field()
+    published_at = serpy.Field()
     category = AssetCategorySmallSerializer(required=False)
 
 
