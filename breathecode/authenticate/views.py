@@ -2125,7 +2125,7 @@ class ProfileView(APIView, GenerateLookupsMixin):
 
         serializer = ProfileSerializer(item, data=request.data)
         if serializer.is_valid():
-            _item = serializer.save()
+            item = serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
