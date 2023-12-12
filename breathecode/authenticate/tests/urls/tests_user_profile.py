@@ -46,6 +46,21 @@ def put_serializer(self, profile, data={}):
     }
 
 
+def profile_row(data={}):
+    return {
+        'avatar_url': None,
+        'bio': None,
+        'blog': None,
+        'github_username': None,
+        'linkedin_url': None,
+        'phone': '',
+        'portfolio_url': None,
+        'show_tutorial': True,
+        'twitter_username': None,
+        **data,
+    }
+
+
 class ProfileTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Auth
@@ -170,5 +185,11 @@ class ProfileTestSuite(AuthTestCase):
         json = response.json()
         expected = put_serializer(self, model.profile, data=data)
 
+        bc_data = {**data, 'user_id': 1, 'id': 1}
+        bc_data.pop('user', None)
+
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [
+            profile_row(data={**bc_data}),
+        ])
