@@ -96,6 +96,12 @@ class AssetSmallSerializer(serpy.Serializer):
     published_at = serpy.Field()
     category = AssetCategorySmallSerializer(required=False)
 
+    technologies = serpy.MethodField()
+
+    def get_technologies(self, obj):
+        techs = AssetTechnology.objects.filter(id__in=obj.technologies.filter(is_deprecated=False))
+        return ParentAssetTechnologySerializer(techs, many=True).data
+
 
 class AcademySmallSerializer(serpy.Serializer):
     id = serpy.Field()
