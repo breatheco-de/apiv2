@@ -2104,6 +2104,32 @@ class GitpodUserView(APIView, GenerateLookupsMixin):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class ProfileView(APIView, GenerateLookupsMixin):
+
+    @capable_of('crud_event')
+    def get(self, request, academy_id=None, user_id=None):
+
+        item = Profile.objects.filter(user__id=user_id).first()
+        if not item:
+            raise ValidationException('Profile not found', code=404, slug='profile-not-found')
+
+        serializer = GetProfileSerializer(item, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of('crud_event')
+    def put(self, request, academy_id=None, user_id=None):
+
+        item = Profile.objects.filter(user__id=user_id).first()
+        if not item:
+            raise ValidationException('Profile not found', code=404, slug='profile-not-found')
+
+        serializer = ProfileSerializer(item, data=request.data)
+        if serializer.is_valid():
+            item = serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class ProfileMeView(APIView, GenerateLookupsMixin):
 
     @has_permission('get_my_profile')
