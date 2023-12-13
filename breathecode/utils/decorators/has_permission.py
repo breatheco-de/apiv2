@@ -63,7 +63,7 @@ def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', da
 def has_permission(permission: str,
                    consumer: bool | HasPermissionCallback = False,
                    format='json') -> callable:
-    """This decorator check if the current user can access to the resource through of permissions"""
+    """Check if the current user can access to the resource through of permissions."""
 
     from breathecode.payments.models import Consumable, ConsumptionSession
 

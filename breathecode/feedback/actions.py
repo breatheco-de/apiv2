@@ -131,6 +131,10 @@ def send_question(user, cohort=None):
     answer.token_id = token_id
     answer.save()
 
+    obj = {}
+    if cu.cohort and cu.cohort.academy:
+        obj['COMPANY_INFO_EMAIL'] = cu.cohort.academy.feedback_email
+
     data = {
         'QUESTION': question['title'],
         'HIGHEST': answer.highest,
@@ -139,6 +143,7 @@ def send_question(user, cohort=None):
         'ANSWER_ID': answer.id,
         'BUTTON': strings[answer.cohort.language.lower()]['button_label'],
         'LINK': f'https://nps.4geeks.com/{answer.id}?token={token.key}',
+        **obj,
     }
 
     if user.email:

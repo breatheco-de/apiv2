@@ -499,14 +499,23 @@ class ResendInviteView(APIView):
             raise ValidationException(errors, code=400)
 
         if not invite.is_email_validated and invite_answered:
+            obj = {}
+            if invite.academy:
+                obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
+
             notify_actions.send_email_message(
                 'verify_email', invite.email, {
                     'SUBJECT': 'Verify your 4Geeks account',
-                    'LINK': os.getenv('API_URL', '') + f'/v1/auth/confirmation/{invite.token}'
+                    'LINK': os.getenv('API_URL', '') + f'/v1/auth/confirmation/{invite.token}',
+                    **obj,
                 })
 
         if not invite_answered:
-            resend_invite(invite.token, invite.email, invite.first_name)
+            obj = {}
+            if invite.academy:
+                obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
+
+            resend_invite(invite.token, invite.email, invite.first_name, extra=obj)
 
         invite.sent_at = timezone.now()
         invite.save()
@@ -1049,16 +1058,27 @@ def save_github_token(request):
                 if url is None or url == '':
                     url = os.getenv('APP_URL', 'https://4geeks.com')
 
+                obj = {}
+                if invite.academy:
+                    obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
+
                 return render_message(
                     request,
                     f'You are still number {invite.id} on the waiting list, we will email you once you are '
-                    f'given access <a href="{url}">Back to 4Geeks.com</a>')
+                    f'given access <a href="{url}">Back to 4Geeks.com</a>',
+                    data=obj)
 
             if user_does_not_exists:
+                obj = {}
+                if invite and invite.academy:
+                    obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
+
                 return render_message(
-                    request, 'We could not find in our records the email associated to this github account, '
+                    request,
+                    'We could not find in our records the email associated to this github account, '
                     'perhaps you want to signup to the platform first? <a href="' + url +
-                    '">Back to 4Geeks.com</a>')
+                    '">Back to 4Geeks.com</a>',
+                    data=obj)
 
             github_credentials = CredentialsGithub.objects.filter(github_id=github_user['id']).first()
 
@@ -1502,6 +1522,7 @@ def pick_password(request, token):
     _dict['callback'] = request.GET.get('callback', '')
 
     token_instance = Token.get_valid(token)
+    invite = None
 
     # allow a token to change the password
     if token_instance:
@@ -1523,19 +1544,31 @@ def pick_password(request, token):
         password2 = request.POST.get('password2', None)
 
         if password1 != password2:
+            obj = {}
+            if invite and invite.academy:
+                obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
+
             messages.error(request, 'Passwords don\'t match')
-            return render(request, 'form.html', {'form': form})
+            return render(request, 'form.html', {'form': form, **obj})
 
         if not password1:
+            obj = {}
+            if invite and invite.academy:
+                obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
+
             messages.error(request, "Password can't be empty")
-            return render(request, 'form.html', {'form': form})
+            return render(request, 'form.html', {'form': form, **obj})
 
         if (len(password1) < 8 or not re.findall(PATTERNS['CONTAINS_LOWERCASE'], password1)
                 or not re.findall(PATTERNS['CONTAINS_UPPERCASE'], password1)
                 or not re.findall(PATTERNS['CONTAINS_SYMBOLS'], password1)):
+            obj = {}
+            if invite and invite.academy:
+                obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
+
             messages.error(request, 'Password must contain 8 characters with lowercase, uppercase and '
                            'symbols')
-            return render(request, 'form.html', {'form': form})
+            return render(request, 'form.html', {'form': form, **obj})
 
         else:
             user.set_password(password1)
@@ -1552,9 +1585,14 @@ def pick_password(request, token):
             if callback is not None and callback != '':
                 return HttpResponseRedirect(redirect_to=request.POST.get('callback'))
             else:
-                return render(
-                    request, 'message.html',
-                    {'MESSAGE': 'You password has been reset successfully, you can close this window.'})
+                obj = {}
+                if invite and invite.academy:
+                    obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
+
+                return render(request, 'message.html', {
+                    'MESSAGE': 'You password has been reset successfully, you can close this window.',
+                    **obj
+                })
 
     return render(request, 'form.html', {'form': form})
 
@@ -1568,7 +1606,12 @@ class PasswordResetView(APIView):
         if profile_academy is None:
             raise ValidationException('Member not found', 400)
 
-        if reset_password([profile_academy.user]):
+        obj = {}
+        if profile_academy.academy:
+            obj['COMPANY_INFO_EMAIL'] = profile_academy.academy.feedback_email
+
+        if reset_password([profile_academy.user], extra=obj):
+
             token = Token.objects.filter(user=profile_academy.user, token_type='temporal').first()
             serializer = TokenSmallSerializer(token)
             return Response(serializer.data)
@@ -1650,8 +1693,13 @@ def render_invite(request, token, member_id=None):
             'phone': invite.phone,
         })
 
+        obj = {}
+        if invite.academy:
+            obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
+
         return render(request, 'form_invite.html', {
             'form': form,
+            **obj,
         })
 
     if request.method == 'POST' and request.META.get('CONTENT_TYPE') == 'application/json':

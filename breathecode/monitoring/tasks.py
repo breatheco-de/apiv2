@@ -29,20 +29,32 @@ def test_endpoint(self, endpoint_id):
 
     if result['status'] != 'OPERATIONAL':
         if endpoint.application.notify_email:
+
+            obj = {}
+            if endpoint.application.academy:
+                obj['COMPANY_INFO_EMAIL'] = endpoint.application.academy.feedback_email
+
             send_email_message(
                 'diagnostic', endpoint.application.notify_email, {
                     'subject': f'Errors found on app {endpoint.application.title} endpoint {endpoint.url}',
-                    'details': result['details']
+                    'details': result['details'],
+                    **obj,
                 })
 
         if (endpoint.application.notify_slack_channel and endpoint.application.academy
                 and hasattr(endpoint.application.academy, 'slackteam')
                 and hasattr(endpoint.application.academy.slackteam.owner, 'credentialsslack')):
+
+            obj = {}
+            if endpoint.application.academy:
+                obj['COMPANY_INFO_EMAIL'] = endpoint.application.academy.feedback_email
+
             send_slack_raw(
                 'diagnostic', endpoint.application.academy.slackteam.owner.credentialsslack.token,
                 endpoint.application.notify_slack_channel.slack_id, {
                     'subject': f'Errors found on app {endpoint.application.title} endpoint {endpoint.url}',
                     **result,
+                    **obj,
                 })
 
 
@@ -84,19 +96,29 @@ def execute_scripts(self, script_id):
             )
         else:
             logger.debug(f'Sending script notification report to {email}')
+            obj = {}
+            if script.application.academy:
+                obj['COMPANY_INFO_EMAIL'] = script.application.academy.feedback_email
+
             send_email_message('diagnostic', email, {
                 'subject': subject,
                 'details': result['text'],
-                'button': result['btn']
+                'button': result['btn'],
+                **obj,
             })
 
         if (app.notify_slack_channel and app.academy and hasattr(app.academy, 'slackteam')
                 and hasattr(app.academy.slackteam.owner, 'credentialsslack')):
             try:
+                obj = {}
+                if script.application.academy:
+                    obj['COMPANY_INFO_EMAIL'] = script.application.academy.feedback_email
+
                 send_slack_raw('diagnostic', app.academy.slackteam.owner.credentialsslack.token,
                                app.notify_slack_channel.slack_id, {
                                    'subject': subject,
                                    **result,
+                                   **obj,
                                })
             except Exception:
                 return False

@@ -98,7 +98,7 @@ class ActiveCampaign:
 
     @staticmethod
     def add_webhook_to_log(context: dict, academy_slug: str):
-        """Add one incoming webhook request to log"""
+        """Add one incoming webhook request to log."""
 
         # prevent circular dependency import between thousand modules previuosly loaded and cached
         from breathecode.marketing.models import ActiveCampaignWebhook, ActiveCampaignAcademy

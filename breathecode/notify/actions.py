@@ -189,12 +189,6 @@ def send_fcm_notification(slug, user_id, data=None):
     send_fcm(slug, registration_ids, data)
 
 
-def notify_all(slug, user, data):
-
-    send_email_message('nps', user.email, data)
-    send_slack('nps', user.slackuser, data)
-
-
 def get_template_content(slug, data=None, formats=None, inline_css=False):
 
     if data is None:

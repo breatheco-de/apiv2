@@ -62,8 +62,13 @@ def forward_asset_url(request, asset_slug=None):
         if not asset.external and asset.asset_type == 'LESSON':
             slug = Path(asset.readme_url).stem
             url = 'https://4geeks.com/en/lesson/' + slug + '?plain=true'
+
             if ENV == 'development':
-                return render_message(request, 'Redirect to: ' + url)
+                obj = {}
+                if asset.academy:
+                    obj['COMPANY_INFO_EMAIL'] = asset.academy.feedback_email
+
+                return render_message(request, 'Redirect to: ' + url, data=obj)
             else:
                 return HttpResponseRedirect(redirect_to=url)
 
@@ -80,7 +85,12 @@ def forward_asset_url(request, asset_slug=None):
                       asset=asset,
                       asset_type=asset.asset_type,
                       status_text=msg).save()
-        return render_message(request, msg)
+
+        obj = {}
+        if asset.academy:
+            obj['COMPANY_INFO_EMAIL'] = asset.academy.feedback_email
+
+        return render_message(request, msg, data=obj)
 
 
 @api_view(['GET'])
@@ -92,7 +102,11 @@ def render_preview_html(request, asset_slug):
         return render_message(request, f'Asset with slug {asset_slug} not found')
 
     if asset.asset_type == 'QUIZ':
-        return render_message(request, 'Quiz cannot be previewed')
+        obj = {}
+        if asset.academy:
+            obj['COMPANY_INFO_EMAIL'] = asset.academy.feedback_email
+
+        return render_message(request, 'Quiz cannot be previewed', data=obj)
 
     readme = asset.get_readme(parse=True)
     return render(

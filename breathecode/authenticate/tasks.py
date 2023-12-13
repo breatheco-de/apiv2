@@ -97,10 +97,15 @@ def async_accept_user_from_waiting_list(user_invite_id: int) -> None:
     invite.process_message = f'Registered as User with id {user.id}'
     invite.save()
 
+    obj = {}
+    if invite.academy:
+        obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
+
     notify_actions.send_email_message(
         'pick_password', user.email, {
             'SUBJECT': 'Set your password at 4Geeks',
-            'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{invite.token}'
+            'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{invite.token}',
+            **obj,
         })
 
 
@@ -138,6 +143,10 @@ def create_user_from_invite(user_invite_id: int, **_):
     user.first_name = user_invite.first_name or ''
     user.last_name = user_invite.last_name or ''
     user.save()
+
+    obj = {}
+    if user_invite.academy:
+        obj['COMPANY_INFO_EMAIL'] = user_invite.academy.feedback_email
 
     if user_invite.token:
         notify_actions.send_email_message(

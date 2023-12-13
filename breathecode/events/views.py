@@ -202,7 +202,11 @@ class EventMeView(APIView):
                 if single_event is None:
                     return render_message(request, 'Event not found or you dont have access')
                 if single_event.live_stream_url is None or single_event.live_stream_url == '':
-                    return render_message(request, 'Event live stream URL is not found')
+                    obj = {}
+                    if single_event.academy:
+                        obj['COMPANY_INFO_EMAIL'] = single_event.academy.feedback_email
+
+                    return render_message(request, 'Event live stream URL is not found', data=obj)
                 return redirect(single_event.live_stream_url)
 
             serializer = EventBigSerializer(single_event, many=False)
@@ -279,9 +283,14 @@ def join_live_class(request, token, live_class, lang):
     now = timezone.now()
 
     if live_class.starting_at > now:
+        obj = {}
+        if live_class.cohort_time_slot.cohort.academy:
+            obj['COMPANY_INFO_EMAIL'] = live_class.cohort_time_slot.cohort.academy.feedback_email
+
         return render(request, 'countdown.html', {
             'token': token.key,
             'event': LiveClassJoinSerializer(live_class).data,
+            **obj,
         })
 
     return redirect(live_class.cohort_time_slot.cohort.online_meeting_url)
@@ -399,7 +408,11 @@ class AcademyLiveClassJoinView(APIView):
                                   en='Live class has no online meeting url',
                                   es='La clase en vivo no tiene una URL de reunión en línea',
                                   slug='no-meeting-url')
-            return render_message(request, message, status=400)
+            obj = {}
+            if live_class.cohort_time_slot.cohort.academy:
+                obj['COMPANY_INFO_EMAIL'] = live_class.cohort_time_slot.cohort.academy.feedback_email
+
+            return render_message(request, message, status=400, data=obj)
 
         return redirect(live_class.cohort_time_slot.cohort.online_meeting_url)
 
@@ -612,7 +625,12 @@ class AcademyEventJoinView(APIView):
                                   en='Event has no live stream url',
                                   es='Evento no tiene url de live stream',
                                   slug='no-live-stream-url')
-            return render_message(request, message, status=400)
+
+            obj = {}
+            if event.academy:
+                obj['COMPANY_INFO_EMAIL'] = event.academy.feedback_email
+
+            return render_message(request, message, status=400, data=obj)
 
         return redirect(event.live_stream_url)
 
@@ -810,9 +828,14 @@ def join_event(request, token, event):
     now = timezone.now()
 
     if event.starting_at > now:
+        obj = {}
+        if event.academy:
+            obj['COMPANY_INFO_EMAIL'] = event.academy.feedback_email
+
         return render(request, 'countdown.html', {
             'token': token.key,
             'event': EventJoinSmallSerializer(event).data,
+            **obj,
         })
 
     # if the event is happening right now and I have not joined yet

@@ -52,13 +52,23 @@ def redirect_new_container(request, token):
     academy_id = cu.cohort.academy.id
     pa = ProfileAcademy.objects.filter(user=user, academy__id=academy_id).first()
     if pa is None:
-        return render_message(request, f"You don't seem to belong to academy {cu.cohot.academy.name}")
+        obj = {}
+        if cu.cohort.academy:
+            obj['COMPANY_INFO_EMAIL'] = cu.cohort.academy.feedback_email
+
+        return render_message(request,
+                              f"You don't seem to belong to academy {cu.cohot.academy.name}",
+                              data=obj)
 
     vendor = None
     try:
         vendor = get_provisioning_vendor(user, pa, cu.cohort)
     except Exception as e:
-        return render_message(request, str(e))
+        obj = {}
+        if cu.cohort.academy:
+            obj['COMPANY_INFO_EMAIL'] = cu.cohort.academy.feedback_email
+
+        return render_message(request, str(e), data=obj)
 
     if vendor.name.lower() == 'gitpod':
         return redirect(f'https://gitpod.io/#{url}')
@@ -66,8 +76,14 @@ def redirect_new_container(request, token):
         url = url.replace('https://github.com/', '')
         return redirect(f'https://codespaces.new/?repo={url}')
 
+    obj = {}
+    if cu.cohort.academy:
+        obj['COMPANY_INFO_EMAIL'] = cu.cohort.academy.feedback_email
+
     return render_message(
-        request, f"Unknown provisioning vendor: '{vendor.name}', please speak with your program manager.")
+        request,
+        f"Unknown provisioning vendor: '{vendor.name}', please speak with your program manager.",
+        data=obj)
 
 
 @private_view()
@@ -86,13 +102,23 @@ def redirect_workspaces(request, token):
     academy_id = cu.cohort.academy.id
     pa = ProfileAcademy.objects.filter(user=user, academy__id=academy_id).first()
     if pa is None:
-        return render_message(request, f"You don't seem to belong to academy {cu.cohort.academy.name}")
+        obj = {}
+        if cu.cohort.academy:
+            obj['COMPANY_INFO_EMAIL'] = cu.cohort.academy.feedback_email
+
+        return render_message(request,
+                              f"You don't seem to belong to academy {cu.cohort.academy.name}",
+                              data=obj)
 
     vendor = None
     try:
         vendor = get_provisioning_vendor(user, pa, cu.cohort)
     except Exception as e:
-        return render_message(request, str(e))
+        obj = {}
+        if cu.cohort.academy:
+            obj['COMPANY_INFO_EMAIL'] = cu.cohort.academy.feedback_email
+
+        return render_message(request, str(e), data=obj)
 
     return redirect(vendor.workspaces_url)
 
@@ -460,6 +486,7 @@ def render_html_bill(request, token, id=None):
         'pages': pages,
         'page': page,
         'url': url,
+        'COMPANY_INFO_EMAIL': item.academy.feedback_email,
     }
     template = get_template_content('provisioning_invoice', data)
     return HttpResponse(template['html'])

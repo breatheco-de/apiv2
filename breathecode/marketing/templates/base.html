@@ -123,7 +123,7 @@
 			padding-top: 20px;
 			padding-bottom: 20px;">
 
-							<!-- PREHEADER -->
+							<!-- PRE-HEADER -->
 							<!-- Set text color to background color -->
 							<div style="display: none; visibility: hidden; overflow: hidden; opacity: 0; font-size: 1px; line-height: 1px; height: 0; max-height: 0; max-width: 0;
 			color: #F0F0F0;" class="preheader">
@@ -133,9 +133,10 @@
 
 							<!-- LOGO -->
 							<!-- Image text color should be opposite to background color. Set your url, image src, alt and title. Alt text should fit the image size. Real image size should be x2. URL format:  -->
+							<!-- src="{{ request.session.academy.logo_url|default:"/static/assets/logo.png" }}" -->
 							<img
 									border="0" vspace="0" hspace="0"
-									src="{{ request.session.academy.icon_url|default:"/static/assets/logo.png" }}"
+									src="{% if COMPANY_LOGO is defined %}{{ COMPANY_LOGO }}{% elif request.session.academy.logo_url is defined %}{{ request.session.academy.logo_url }}{% else %}/static/assets/logo.png{% endif %}"
 									width="40" height="40" alt="Breathe Code" title="4Geeks"
 									style="
 				color: #000000;
@@ -166,8 +167,9 @@
 			padding-bottom: 25px;
 			color: #000000;
 			font-family: sans-serif;" class="paragraph">
-				Have a&nbsp;question? <a href="mailto:info@4geeks.com" target="_blank"
-					style="color: #127DB3; font-family: sans-serif; font-size: 14px; font-weight: 400; line-height: 160%;">info@4geeks.com</a>
+				Have a&nbsp;question? <a href="mailto:{{ COMPANY_INFO_EMAIL|default:'info@4geeks.com' }}" target="_blank"
+					style="color: #127DB3; font-family: sans-serif; font-size: 14px; font-weight: 400; line-height: 160%;">
+					{{ COMPANY_INFO_EMAIL|default:'info@4geeks.com' }}</a>
 			</td>
 		</tr>
 
@@ -238,7 +240,7 @@
 				<!--  -->
 				<img width="1" height="1" border="0" vspace="0" hspace="0"
 					style="margin: 0; padding: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; border: none; display: block;"
-					src="https://raw.githubusercontent.com/konsav/email-templates/master/images/tracker.png" />
+					src="/static/img/tracker.png" />
 
 			</td>
 		</tr>

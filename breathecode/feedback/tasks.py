@@ -172,6 +172,10 @@ def send_cohort_survey(self, user_id, survey_id):
         logger.info(message)
         raise Exception(message)
 
+    obj = {}
+    if cu.cohort and cu.cohort.academy:
+        obj['COMPANY_INFO_EMAIL'] = cu.cohort.academy.feedback_email
+
     token, created = Token.get_or_create(user, token_type='temporal', hours_length=48)
     data = {
         'SUBJECT': strings[survey.lang]['survey_subject'],
@@ -179,6 +183,7 @@ def send_cohort_survey(self, user_id, survey_id):
         'TRACKER_URL': f'{api_url()}/v1/feedback/survey/{survey_id}/tracker.png',
         'BUTTON': strings[survey.lang]['button_label'],
         'LINK': f'https://nps.4geeks.com/survey/{survey_id}?token={token.key}',
+        **obj,
     }
 
     if user.email:
@@ -261,6 +266,10 @@ def process_answer_received(self, answer_id):
 
         # TODO: instead of sending, use notifications system to be built on the breathecode.admin app.
         if list_of_emails:
+            obj = {}
+            if answer.academy:
+                obj['COMPANY_INFO_EMAIL'] = answer.academy.feedback_email
+
             notify_actions.send_email_message(
                 'negative_answer',
                 list_of_emails,
@@ -271,7 +280,8 @@ def process_answer_received(self, answer_id):
                     'SCORE': answer.score,
                     'COMMENTS': answer.comment,
                     'ACADEMY': answer.academy.name,
-                    'LINK': f'{admin_url}/feedback/surveys/{answer.academy.slug}/{answer.survey.id}'
+                    'LINK': f'{admin_url}/feedback/surveys/{answer.academy.slug}/{answer.survey.id}',
+                    **obj,
                 })
 
     return True
@@ -328,6 +338,10 @@ def send_mentorship_session_survey(self, session_id):
 
     token, _ = Token.get_or_create(session.mentee, token_type='temporal', hours_length=48)
 
+    obj = {}
+    if session.mentor.academy:
+        obj['COMPANY_INFO_EMAIL'] = session.mentor.academy.feedback_email
+
     # lazyload api url in test environment
     api_url = API_URL if ENV != 'test' else os.getenv('API_URL', '')
     data = {
@@ -336,6 +350,7 @@ def send_mentorship_session_survey(self, session_id):
         'TRACKER_URL': f'{api_url}/v1/feedback/answer/{answer.id}/tracker.png',
         'BUTTON': strings[answer.lang.lower()]['button_label'],
         'LINK': f'https://nps.4geeks.com/{answer.id}?token={token.key}',
+        **obj,
     }
 
     if session.mentee.email:

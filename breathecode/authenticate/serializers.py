@@ -767,12 +767,17 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                 url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
                     str(invite.token) + '?' + querystr
 
+                obj = {}
+                if single_cohort.academy:
+                    obj['COMPANY_INFO_EMAIL'] = single_cohort.academy.feedback_email
+
                 notify_actions.send_email_message(
                     'welcome_academy', email, {
                         'email': email,
                         'subject': 'Welcome to 4Geeks',
                         'LINK': url,
-                        'FIST_NAME': validated_data['first_name']
+                        'FIST_NAME': validated_data['first_name'],
+                        **obj,
                     })
 
         # add member to the academy (the cohort is inside validated_data
@@ -903,12 +908,17 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 })
             profile_academy.save()
 
+            obj = {}
+            if profile_academy.academy:
+                obj['COMPANY_INFO_EMAIL'] = profile_academy.academy.feedback_email
+
             notify_actions.send_email_message(
                 'academy_invite', email, {
                     'subject': f'Invitation to study at {academy.name}',
                     'invites': [ProfileAcademySmallSerializer(profile_academy).data],
                     'user': UserSmallSerializer(user).data,
                     'LINK': url,
+                    **obj,
                 })
             return profile_academy
 
@@ -970,6 +980,10 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 querystr = urllib.parse.urlencode({'callback': APP_URL})
                 url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
                     str(invite.token) + '?' + querystr
+
+                obj = {}
+                if single_cohort.academy:
+                    obj['COMPANY_INFO_EMAIL'] = single_cohort.academy.feedback_email
 
                 notify_actions.send_email_message(
                     'welcome_academy', email, {
@@ -1494,11 +1508,17 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 en='4Geeks - Validate account',
                 es='4Geeks - Valida tu cuenta',
             )
+
+            obj = {}
+            if obj.academy:
+                obj['COMPANY_INFO_EMAIL'] = obj.academy.feedback_email
+
             notify_actions.send_email_message(
                 'verify_email', self.user.email, {
                     'SUBJECT': subject,
                     'LANG': lang,
-                    'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{obj.token}'
+                    'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{obj.token}',
+                    **obj,
                 })
 
         self.instance.user = self.user

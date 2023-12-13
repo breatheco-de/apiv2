@@ -781,7 +781,11 @@ def deliver_assignment_view(request, task_id, token):
         if 'callback' in _dict and _dict['callback'] != '':
             return HttpResponseRedirect(redirect_to=_dict['callback'] + '?msg=The task has been delivered')
         else:
-            return render(request, 'message.html', {'message': 'The task has been delivered'})
+            obj = {}
+            if task.cohort:
+                obj['COMPANY_INFO_EMAIL'] = task.cohort.academy.feedback_email
+
+            return render(request, 'message.html', {'message': 'The task has been delivered', **obj})
     else:
         task = Task.objects.filter(id=task_id).first()
         if task is None:
