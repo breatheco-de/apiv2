@@ -15,6 +15,9 @@ ALLOWED_TYPES = {
     'auth.User': [
         'login',
     ],
+    'admissions.CohortUser': [
+        'joined_cohort',
+    ],
     'assignments.Task': [
         'open_syllabus_module',
         'read_assignment',
@@ -230,6 +233,41 @@ class FillActivityMeta:
 
         if instance.ending_date:
             obj['ending_date'] = instance.ending_date.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        return obj
+
+    @classmethod
+    def cohort_user(cls,
+                    kind: str,
+                    related_id: Optional[str | int] = None,
+                    related_slug: Optional[str] = None) -> dict[str, Any]:
+        from breathecode.admissions.models import CohortUser
+
+        kwargs = cls._get_query(related_id, related_slug)
+        instance = CohortUser.objects.filter(**kwargs).first()
+
+        if not instance:
+            raise RetryTask(f'CohortUser {related_id or related_slug} not found')
+
+        syllabus = (
+            f'{instance.cohort.syllabus_version.syllabus.slug}.v{instance.cohort.syllabus_version.version}'
+            if instance.cohort.syllabus_version else None)
+        obj = {
+            'id': instance.id,
+            'user_id': instance.user.id,
+            'first_name': instance.user.first_name,
+            'last_name': instance.user.last_name,
+            'cohort': instance.cohort.slug,
+            'watching': instance.watching,
+            'finantial_status': instance.finantial_status,
+            'educational_status': instance.educational_status,
+            'created_at': instance.created_at,
+            'updated_at': instance.updated_at,
+            'is_cohort_available_as_saas': instance.cohort.available_as_saas,
+        }
+
+        if instance.cohort.academy:
+            obj['academy'] = instance.cohort.academy.id
 
         return obj
 
