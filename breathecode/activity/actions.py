@@ -261,7 +261,6 @@ class FillActivityMeta:
             'watching': instance.watching,
             'finantial_status': instance.finantial_status,
             'educational_status': instance.educational_status,
-            'syllabus': syllabus,
             'created_at': instance.created_at,
             'updated_at': instance.updated_at,
             'is_cohort_available_as_saas': instance.cohort.available_as_saas,
@@ -597,6 +596,9 @@ def get_activity_meta(kind: str,
 
     if related_type == 'admissions.Cohort' and kind in ALLOWED_TYPES['admissions.Cohort']:
         return FillActivityMeta.cohort(*args)
+
+    if related_type == 'admissions.CohortUser' and kind in ALLOWED_TYPES['admissions.CohortUser']:
+        return FillActivityMeta.cohort_user(*args)
 
     if related_type == 'assignments.Task' and kind in ALLOWED_TYPES['assignments.Task']:
         return FillActivityMeta.task(*args)
