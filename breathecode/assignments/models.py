@@ -68,6 +68,7 @@ class Task(models.Model):
     live_url = models.CharField(max_length=150, blank=True, default=None, null=True)
     description = models.TextField(max_length=450, blank=True)
     opened_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
+    delivered_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
 
     subtasks = models.JSONField(
         default=None,
