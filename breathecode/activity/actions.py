@@ -261,7 +261,6 @@ class FillActivityMeta:
             'educational_status': instance.educational_status,
             'created_at': instance.created_at,
             'updated_at': instance.updated_at,
-            'cohort_syllabus': syllabus,
             'is_cohort_available_as_saas': instance.cohort.available_as_saas,
         }
 
