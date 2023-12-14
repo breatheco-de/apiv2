@@ -14,7 +14,7 @@ ALLOWED_TYPES = {
         'login',
     ],
     'admissions.CohortUser': [
-        'join_cohort',
+        'joined_cohort',
     ],
     'assignments.Task': [
         'open_syllabus_module',
