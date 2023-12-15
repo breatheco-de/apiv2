@@ -261,6 +261,7 @@ class FillActivityMeta:
             'watching': instance.watching,
             'finantial_status': instance.finantial_status,
             'educational_status': instance.educational_status,
+            'syllabus': syllabus,
             'created_at': instance.created_at,
             'updated_at': instance.updated_at,
             'is_cohort_available_as_saas': instance.cohort.available_as_saas,
