@@ -14,7 +14,7 @@ from django.utils import timezone
 
 UTC_NOW = timezone.now()
 DATE = datetime(year=2022, month=12, day=30, hour=9, minute=24, second=0, microsecond=0, tzinfo=pytz.UTC)
-URANDOM = os.urandom(20)
+URANDOM = os.urandom(16)
 
 
 def live_class_item(data={}):

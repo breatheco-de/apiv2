@@ -222,7 +222,7 @@ class GetTestSuite(AuthTestCase):
                                         new_scopes=[])
 
         # dump error in external files
-        if content != expected or True:
+        if content != expected:
             with open('content.html', 'w') as f:
                 f.write(content)
 

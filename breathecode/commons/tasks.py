@@ -2,7 +2,7 @@ import importlib
 import logging
 from celery import shared_task
 from datetime import timedelta
-from breathecode.commons.actions import is_output_enable
+from breathecode.commons import actions
 from breathecode.commons.models import TaskManager
 from django.utils import timezone
 from breathecode.utils import CACHE_DESCRIPTORS
@@ -169,14 +169,15 @@ def clean_task(self, key: str, task_manager_id: int):
     model_cls = getattr(module, model)
 
     if model_cls not in CACHE_DESCRIPTORS:
-        raise AbortTask(f'Cache not implemented for {model_cls.__name__}, skipping', log=is_output_enable())
+        raise AbortTask(f'Cache not implemented for {model_cls.__name__}, skipping',
+                        log=actions.is_output_enable())
 
     cache = CACHE_DESCRIPTORS[model_cls]
 
     try:
         cache.clear()
-        if is_output_enable():
+        if actions.is_output_enable():
             logger.debug(f'Cache cleaned for {key}')
 
     except Exception:
-        raise RetryTask(f'Could not clean the cache {key}', log=is_output_enable())
+        raise RetryTask(f'Could not clean the cache {key}', log=actions.is_output_enable())

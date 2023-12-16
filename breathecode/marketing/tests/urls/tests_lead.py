@@ -1,14 +1,19 @@
 """
 Test /academy/lead
 """
+from datetime import datetime
 from decimal import Decimal
+import re
 import string
 from random import choice, choices, randint
-from unittest.mock import PropertyMock, patch, MagicMock
+from unittest.mock import MagicMock, PropertyMock
 from django.urls.base import reverse_lazy
+import pytest
 from rest_framework import status
 from faker import Faker
-from ..mixins import MarketingTestCase
+from rest_framework.test import APIClient
+
+from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 fake = Faker()
 
@@ -143,17 +148,6 @@ def form_entry_field(data={}):
     }
 
 
-class FakeRecaptcha:
-
-    class RiskAnalysis:
-
-        def __init__(self, *args, **kwargs):
-            self.score = 0.9
-
-    def __init__(self, *args, **kwargs):
-        self.risk_analysis = self.RiskAnalysis()
-
-
 def generate_form_entry_kwargs(data={}):
     """That random values is too long that i prefer have it in one function"""
     return {
@@ -196,189 +190,186 @@ def generate_form_entry_kwargs(data={}):
     }
 
 
-class LeadTestSuite(MarketingTestCase):
-    """
-    🔽🔽🔽 Passing nothing
-    """
+class FakeRecaptcha:
 
-    @patch.multiple(
-        'breathecode.services.google_cloud.Recaptcha',
-        __init__=MagicMock(return_value=None),
-        create_assessment=MagicMock(return_value=FakeRecaptcha()),
-    )
-    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    @patch('uuid.UUID.int', PropertyMock(return_value=1000))
-    def test_lead__without_data(self):
-        url = reverse_lazy('marketing:lead')
+    class RiskAnalysis:
 
-        response = self.client.post(url, format='json')
-        json = response.json()
+        def __init__(self, *args, **kwargs):
+            self.score = 0.9
 
-        self.assertDatetime(json['created_at'])
-        self.assertDatetime(json['updated_at'])
-        del json['created_at']
-        del json['updated_at']
+    def __init__(self, *args, **kwargs):
+        self.risk_analysis = self.RiskAnalysis()
 
-        expected = post_serializer(data={
+
+def assertDatetime(date: datetime) -> bool:
+    if not isinstance(date, str):
+        assert isinstance(date, datetime)
+        return True
+
+    try:
+        string = re.sub(r'Z$', '', date)
+        datetime.fromisoformat(string)
+        return True
+    except Exception:
+        assert 0
+
+
+@pytest.fixture(autouse=True)
+def setup_db(db, monkeypatch):
+    monkeypatch.setattr('breathecode.services.google_cloud.Recaptcha.__init__', lambda: None)
+    monkeypatch.setattr('breathecode.services.google_cloud.Recaptcha.create_assessment',
+                        MagicMock(return_value=FakeRecaptcha()))
+    monkeypatch.setattr('uuid.UUID.int', PropertyMock(return_value=1000))
+    yield
+
+
+# When: Passing nothing
+def test_lead__without_data(bc: Breathecode, client: APIClient):
+    url = reverse_lazy('marketing:lead')
+
+    response = client.post(url, format='json')
+    json = response.json()
+
+    assertDatetime(json['created_at'])
+    assertDatetime(json['updated_at'])
+    del json['created_at']
+    del json['updated_at']
+
+    expected = post_serializer(data={
+        'attribution_id': None,
+    })
+
+    assert json == expected
+    assert response.status_code == status.HTTP_201_CREATED
+
+    assert bc.database.list_of('marketing.FormEntry') == [
+        form_entry_field({
+            'id': 1,
+            'academy_id': None,
+            'storage_status': 'ERROR',
+            'storage_status_text': 'Missing location information',
             'attribution_id': None,
         })
+    ]
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [
-            form_entry_field({
-                'id': 1,
-                'academy_id': None,
-                'storage_status': 'ERROR',
-                'storage_status_text': 'Missing location information',
-                'attribution_id': None,
-            })
-        ])
+# When: Validations of fields
+def test_lead__with__bad_data(bc: Breathecode, client: APIClient):
+    url = reverse_lazy('marketing:lead')
 
-    """
-    🔽🔽🔽 Validations of fields
-    """
+    data = generate_form_entry_kwargs()
+    response = client.post(url, data, format='json')
 
-    @patch.multiple(
-        'breathecode.services.google_cloud.Recaptcha',
-        __init__=MagicMock(return_value=None),
-        create_assessment=MagicMock(return_value=FakeRecaptcha()),
-    )
-    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    def test_lead__with__bad_data(self):
-        url = reverse_lazy('marketing:lead')
+    json = response.json()
+    expected = {
+        'phone': ["Phone number must be entered in the format: '+99999999'. Up to 15 digits allowed."],
+        'language': ['Ensure this field has no more than 2 characters.']
+    }
 
-        data = generate_form_entry_kwargs()
-        response = self.client.post(url, data, format='json')
+    assert json == expected
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-        json = response.json()
-        expected = {
-            'phone': ["Phone number must be entered in the format: '+99999999'. Up to 15 digits allowed."],
-            'language': ['Ensure this field has no more than 2 characters.']
-        }
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+# When: Passing required fields
+def test_lead__with__data(bc: Breathecode, client: APIClient):
+    url = reverse_lazy('marketing:lead')
 
-    """
-    🔽🔽🔽 Passing required fields
-    """
+    data = generate_form_entry_kwargs({
+        'phone': '123456789',
+        'language': 'en',
+    })
 
-    @patch.multiple(
-        'breathecode.services.google_cloud.Recaptcha',
-        __init__=MagicMock(return_value=None),
-        create_assessment=MagicMock(return_value=FakeRecaptcha()),
-    )
-    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    @patch('uuid.UUID.int', PropertyMock(return_value=1000))
-    def test_lead__with__data(self):
-        url = reverse_lazy('marketing:lead')
+    response = client.post(url, data, format='json')
+    json = response.json()
 
-        data = generate_form_entry_kwargs({
-            'phone': '123456789',
-            'language': 'en',
-        })
+    assertDatetime(json['created_at'])
+    assertDatetime(json['updated_at'])
+    del json['created_at']
+    del json['updated_at']
 
-        response = self.client.post(url, data, format='json')
-        json = response.json()
+    expected = post_serializer({
+        **data,
+        'id': 1,
+        'academy': None,
+        'latitude': bc.format.to_decimal_string(data['latitude']),
+        'longitude': bc.format.to_decimal_string(data['longitude']),
+        'attribution_id': '75b36c508866d18732305da14fe9a0',
+    })
 
-        self.assertDatetime(json['created_at'])
-        self.assertDatetime(json['updated_at'])
-        del json['created_at']
-        del json['updated_at']
-
-        expected = post_serializer({
+    assert json == expected
+    assert response.status_code == status.HTTP_201_CREATED
+    assert bc.database.list_of('marketing.FormEntry') == [
+        form_entry_field({
             **data,
             'id': 1,
-            'academy': None,
-            'latitude': self.bc.format.to_decimal_string(data['latitude']),
-            'longitude': self.bc.format.to_decimal_string(data['longitude']),
+            'academy_id': None,
+            'latitude': Decimal(data['latitude']),
+            'longitude': Decimal(data['longitude']),
+            'storage_status': 'ERROR',
+            'storage_status_text': f"No academy found with slug {data['location']}",
             'attribution_id': '75b36c508866d18732305da14fe9a0',
         })
+    ]
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [
-            form_entry_field({
-                **data,
-                'id': 1,
-                'academy_id': None,
-                'latitude': Decimal(data['latitude']),
-                'longitude': Decimal(data['longitude']),
-                'storage_status': 'ERROR',
-                'storage_status_text': f"No academy found with slug {data['location']}",
-                'attribution_id': '75b36c508866d18732305da14fe9a0',
-            })
-        ])
 
-    """
-    🔽🔽🔽 Passing slug of Academy or AcademyAlias
-    """
+# When: Passing slug of Academy or AcademyAlias
+@pytest.mark.parametrize(
+    'academy,academy_alias,academy_id',
+    [
+        ({
+            'slug': 'midgard'
+        }, None, None),
+        ({
+            'slug': 'midgard'
+        }, 1, None),  #
+        (1, {
+            'active_campaign_slug': 'midgard'
+        }, 1),
+    ])
+def test_passing_slug_of_academy_or_academy_alias(bc: Breathecode, client: APIClient, academy, academy_alias,
+                                                  academy_id):
+    model = bc.database.create(academy=academy, academy_alias=academy_alias)
+    url = reverse_lazy('marketing:lead')
 
-    @patch.multiple(
-        'breathecode.services.google_cloud.Recaptcha',
-        __init__=MagicMock(return_value=None),
-        create_assessment=MagicMock(return_value=FakeRecaptcha()),
-    )
-    @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    @patch('uuid.UUID.int', PropertyMock(return_value=1000))
-    def test_passing_slug_of_academy_or_academy_alias(self):
-        cases = [
-            ({
-                'slug': 'midgard'
-            }, None),
-            ({
-                'slug': 'midgard'
-            }, 1),
-            (1, {
-                'active_campaign_slug': 'midgard'
-            }),
-        ]
+    data = generate_form_entry_kwargs({
+        'phone': '123456789',
+        'language': 'en',
+        'location': 'midgard',
+    })
 
-        for academy, academy_alias in cases:
-            model = self.generate_models(academy=academy, academy_alias=academy_alias)
-            url = reverse_lazy('marketing:lead')
+    response = client.post(url, data, format='json')
+    json = response.json()
 
-            data = generate_form_entry_kwargs({
-                'phone': '123456789',
-                'language': 'en',
-                'location': 'midgard',
-            })
+    assertDatetime(json['created_at'])
+    assertDatetime(json['updated_at'])
+    del json['created_at']
+    del json['updated_at']
 
-            response = self.client.post(url, data, format='json')
-            json = response.json()
+    expected = post_serializer({
+        **data,
+        'id': model.academy.id,
+        'academy': academy_id,
+        'latitude': bc.format.to_decimal_string(data['latitude']),
+        'longitude': bc.format.to_decimal_string(data['longitude']),
+        'attribution_id': '75b36c508866d18732305da14fe9a0',
+    })
 
-            self.assertDatetime(json['created_at'])
-            self.assertDatetime(json['updated_at'])
-            del json['created_at']
-            del json['updated_at']
+    assert json == expected
+    assert response.status_code == status.HTTP_201_CREATED
+    assert bc.database.list_of('marketing.FormEntry') == [
+        form_entry_field({
+            **data,
+            'id': model.academy.id,
+            'academy_id': academy_id,
+            'latitude': Decimal(data['latitude']),
+            'longitude': Decimal(data['longitude']),
+            'storage_status': 'ERROR',
+            'storage_status_text': 'No academy found with slug midgard',
+            'attribution_id': '75b36c508866d18732305da14fe9a0',
+        })
+    ]
 
-            expected = post_serializer({
-                **data,
-                'id': model.academy.id,
-                'academy': model.academy.id if model.academy.id not in [1, 2] else None,
-                'latitude': self.bc.format.to_decimal_string(data['latitude']),
-                'longitude': self.bc.format.to_decimal_string(data['longitude']),
-                'attribution_id': '75b36c508866d18732305da14fe9a0',
-            })
-
-            self.assertEqual(json, expected)
-            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-            self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [
-                form_entry_field({
-                    **data,
-                    'id': model.academy.id,
-                    'academy_id': model.academy.id if model.academy.id not in [1, 2] else None,
-                    'latitude': Decimal(data['latitude']),
-                    'longitude': Decimal(data['longitude']),
-                    'storage_status': 'ERROR',
-                    'storage_status_text': 'No academy found with slug midgard',
-                    'attribution_id': '75b36c508866d18732305da14fe9a0',
-                })
-            ])
-
-            # teardown
-            self.bc.database.delete('admissions.Academy')
-            self.bc.database.delete('marketing.AcademyAlias')
-            self.bc.database.delete('marketing.FormEntry')
+    # teardown
+    bc.database.delete('admissions.Academy')
+    bc.database.delete('marketing.AcademyAlias')
+    bc.database.delete('marketing.FormEntry')

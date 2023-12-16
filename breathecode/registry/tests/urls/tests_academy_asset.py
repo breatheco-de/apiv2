@@ -116,6 +116,7 @@ def post_serializer(academy, category, data={}):
         'url': None,
         'visibility': 'PUBLIC',
         'with_solutions': False,
+        'assets_related': [],
         'with_video': False,
         **data,
     }
@@ -186,7 +187,7 @@ class TestRegistryAsset(LegacyAPITestCase):
                 'detail': 'Authentication credentials were not provided.',
                 'status_code': status.HTTP_401_UNAUTHORIZED
             })
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
         self.assertEqual(self.bc.database.list_of('registry.Asset'), [])
 
     def test__without_capability(self):
@@ -201,8 +202,8 @@ class TestRegistryAsset(LegacyAPITestCase):
             'detail': "You (user: 1) don't have this capability: read_asset for academy 1"
         }
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        assert json == expected
+        assert response.status_code == status.HTTP_403_FORBIDDEN
         self.assertEqual(self.bc.database.list_of('registry.Asset'), [])
 
     def test__post__without_category(self):
@@ -220,8 +221,8 @@ class TestRegistryAsset(LegacyAPITestCase):
             'status_code': 400,
         }
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        assert json == expected
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
         self.assertEqual(self.bc.database.list_of('registry.Asset'), [])
 
     @patch('breathecode.registry.tasks.async_pull_from_github.delay', MagicMock())
@@ -252,8 +253,8 @@ class TestRegistryAsset(LegacyAPITestCase):
         del data['category']
         expected = post_serializer(model.academy, model.asset_category, data=data)
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        assert json == expected
+        assert response.status_code == status.HTTP_201_CREATED
         self.assertEqual(tasks.async_pull_from_github.delay.call_args_list, [call('model_slug')])
         self.assertEqual(self.bc.database.list_of('registry.Asset'),
                          [database_item(model.academy, model.asset_category, data)])
@@ -283,8 +284,8 @@ class TestRegistryAsset(LegacyAPITestCase):
 
         expected = {'detail': 'without-id', 'status_code': 400}
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        assert json == expected
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_asset__put_many_with_wrong_id(self):
         """Test Asset bulk update"""
@@ -312,8 +313,8 @@ class TestRegistryAsset(LegacyAPITestCase):
 
         expected = {'detail': 'not-found', 'status_code': 404}
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        assert json == expected
+        assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_asset__put_many(self):
         """Test Asset bulk update"""
@@ -358,8 +359,8 @@ class TestRegistryAsset(LegacyAPITestCase):
             put_serializer(model.academy, model.asset_category, asset) for i, asset in enumerate(model.asset)
         ]
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert json == expected
+        assert response.status_code == status.HTTP_200_OK
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_asset__put_many_with_test_status_ok(self):
@@ -414,8 +415,8 @@ class TestRegistryAsset(LegacyAPITestCase):
                            })
         ]
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert json == expected
+        assert response.status_code == status.HTTP_200_OK
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_asset__put_many_with_test_status_warning(self):
@@ -470,8 +471,8 @@ class TestRegistryAsset(LegacyAPITestCase):
                            })
         ]
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert json == expected
+        assert response.status_code == status.HTTP_200_OK
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_asset__put_many_with_test_status_pending(self):
@@ -516,8 +517,8 @@ class TestRegistryAsset(LegacyAPITestCase):
             'status_code': 400
         }
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        assert json == expected
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_asset__put_many_with_test_status_error(self):
@@ -562,8 +563,8 @@ class TestRegistryAsset(LegacyAPITestCase):
             'status_code': 400
         }
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        assert json == expected
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_asset__put_many_with_test_status_Needs_Resync(self):
@@ -608,5 +609,5 @@ class TestRegistryAsset(LegacyAPITestCase):
             'status_code': 400
         }
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        assert json == expected
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
