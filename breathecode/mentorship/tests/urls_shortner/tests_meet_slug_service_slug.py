@@ -26,6 +26,7 @@ API_KEY = random.randint(1, 1000000000)
 
 def format_consumable(data={}):
     return {
+        'app_service_id': None,
         'cohort_set_id': None,
         'event_type_set_id': None,
         'how_many': 0,

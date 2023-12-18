@@ -1,6 +1,7 @@
+from breathecode.certificate.models import UserSpecialty
 from breathecode.utils import getLogger
 from breathecode.admissions.models import CohortUser
-from breathecode.utils.decorators.task import TaskPriority, task
+from breathecode.utils.decorators.task import AbortTask, RetryTask, TaskPriority, task
 
 # Get an instance of a logger
 logger = getLogger(__name__)
@@ -19,14 +20,15 @@ def take_screenshot(self, certificate_id, **_):
 def remove_screenshot(self, certificate_id, **_):
     from .actions import remove_certificate_screenshot
 
-    logger.debug('Starting remove_screenshot')
+    logger.info('Starting remove_screenshot')
 
     try:
-        remove_certificate_screenshot(certificate_id)
-    except Exception:
-        return False
+        res = remove_certificate_screenshot(certificate_id)
+    except UserSpecialty.DoesNotExist:
+        raise RetryTask(f'UserSpecialty {certificate_id} does not exist')
 
-    return True
+    if res is False:
+        raise AbortTask('UserSpecialty does not have any screenshot, it is skipped')
 
 
 @task(bind=True, priority=TaskPriority.CERTIFICATE.value)

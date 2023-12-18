@@ -55,6 +55,15 @@ def get_args(fake):
 
 
 @pytest.fixture
+def get_int():
+
+    def wrapper(min=0, max=1000):
+        return random.randint(min, max)
+
+    yield wrapper
+
+
+@pytest.fixture
 def get_kwargs(fake):
 
     def wrapper(num):
@@ -260,20 +269,39 @@ def enable_signals(monkeypatch, signals):
     monkeypatch.setattr(ModelSignal, 'send', lambda *args, **kwargs: None)
     monkeypatch.setattr(ModelSignal, 'send_robust', lambda *args, **kwargs: None)
 
-    #TODO: get a list of signals that will be enabled
-    def enable(*to_enable):
+    def enable(*to_enable, debug=False):
         monkeypatch.setattr(Signal, 'send', original_signal_send)
         monkeypatch.setattr(Signal, 'send_robust', original_signal_send_robust)
 
         monkeypatch.setattr(ModelSignal, 'send', original_model_signal_send)
         monkeypatch.setattr(ModelSignal, 'send_robust', original_model_signal_send_robust)
 
-        if to_enable:
+        if to_enable or debug:
             to_disable = [x for x in signals if x not in to_enable]
 
             for signal in to_disable:
-                monkeypatch.setattr(f'{signal}.send', lambda *args, **kwargs: None)
-                monkeypatch.setattr(f'{signal}.send_robust', lambda *args, **kwargs: None)
+
+                def apply_mock(module):
+
+                    def send_mock(*args, **kwargs):
+                        if debug:
+                            print(module)
+                            try:
+                                print('  args\n    ', args)
+                            except Exception:
+                                pass
+
+                            try:
+                                print('  kwargs\n    ', kwargs)
+                            except Exception:
+                                pass
+
+                            print('\n')
+
+                    monkeypatch.setattr(module, send_mock)
+
+                apply_mock(f'{signal}.send')
+                apply_mock(f'{signal}.send_robust')
 
     yield enable
 
@@ -371,3 +399,12 @@ def random_image(fake):
 @pytest.fixture(scope='module')
 def fake():
     return _fake
+
+
+@pytest.fixture()
+def get_queryset_pks():
+
+    def wrapper(queryset):
+        return [x.pk for x in queryset]
+
+    yield wrapper

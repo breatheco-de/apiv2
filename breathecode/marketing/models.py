@@ -73,6 +73,7 @@ class AcademyAlias(models.Model):
     applies to the academy it will look for matching alias to find the lead
     academy.
     """
+
     slug = models.SlugField(primary_key=True)
     active_campaign_slug = models.SlugField()
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
@@ -527,9 +528,7 @@ class FormEntry(models.Model):
         return False
 
     def set_attribution_id(self):
-        """
-        We'll keep the attribution id consistent as long as there is not sale made.
-        """
+        """We'll keep the attribution id consistent as long as there is not sale made."""
 
         if self.email is None:
             return None

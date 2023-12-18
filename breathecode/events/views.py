@@ -108,9 +108,7 @@ def get_events(request):
 
 
 class EventPublicView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
+
     permission_classes = [AllowAny]
 
     def get(self, request, event_slug=None, format=None):
@@ -131,9 +129,6 @@ class EventPublicView(APIView):
 
 
 class EventView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
 
     def get(self, request, format=None):
 
@@ -405,9 +400,7 @@ class AcademyLiveClassJoinView(APIView):
 
 
 class AcademyEventView(APIView, GenerateLookupsMixin):
-    """
-    List all snippets, or create a new snippet.
-    """
+
     extensions = APIViewExtensions(cache=EventCache, sort='-starting_at', paginate=True)
 
     @capable_of('read_event')
@@ -618,9 +611,6 @@ class AcademyEventJoinView(APIView):
 
 
 class EventTypeView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
 
     def get(self, request, format=None):
 
@@ -642,9 +632,6 @@ class EventTypeView(APIView):
 
 
 class AcademyEventTypeView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
 
     @capable_of('read_event_type')
     def get(self, request, academy_id=None, event_type_slug=None):
@@ -695,9 +682,7 @@ class AcademyEventTypeView(APIView):
 
 
 class EventTypeVisibilitySettingView(APIView):
-    """
-    Show the visibility settings of a EventType.
-    """
+    """Show the visibility settings of a EventType."""
 
     extensions = APIViewExtensions(sort='-id')
 
@@ -850,9 +835,6 @@ class EventCheckinView(APIView):
 
 
 class EventMeCheckinView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
 
     def put(self, request, event_id):
         lang = get_user_language(request)
@@ -922,9 +904,6 @@ class EventMeCheckinView(APIView):
 
 
 class AcademyEventCheckinView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
 
     extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
@@ -985,9 +964,6 @@ def eventbrite_webhook(request, organization_id):
 
 
 class AcademyOrganizerView(APIView):
-    """
-    List all snippets
-    """
 
     @capable_of('read_organization')
     def get(self, request, academy_id=None):
@@ -1002,9 +978,6 @@ class AcademyOrganizerView(APIView):
 
 # list venues
 class AcademyOrganizationOrganizerView(APIView):
-    """
-    List all snippets
-    """
 
     @capable_of('read_organization')
     def get(self, request, academy_id=None):
@@ -1037,9 +1010,6 @@ class AcademyOrganizationOrganizerView(APIView):
 
 # list venues
 class AcademyOrganizationView(APIView):
-    """
-    List all snippets
-    """
 
     @capable_of('read_organization')
     def get(self, request, academy_id=None):
@@ -1110,9 +1080,6 @@ class OrganizationWebhookView(APIView, HeaderLimitOffsetPagination):
 
 # list venues
 class AcademyVenueView(APIView):
-    """
-    List all snippets
-    """
 
     @capable_of('read_event')
     def get(self, request, format=None, academy_id=None, user_id=None):

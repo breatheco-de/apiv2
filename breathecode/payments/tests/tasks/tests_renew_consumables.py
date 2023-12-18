@@ -19,6 +19,7 @@ UTC_NOW = timezone.now()
 
 def consumable_item(data={}):
     return {
+        'app_service_id': None,
         'cohort_set_id': None,
         'event_type_set_id': None,
         'how_many': -1,
