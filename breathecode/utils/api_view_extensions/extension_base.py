@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 from django.db.models import QuerySet
 from django.core.handlers.wsgi import WSGIRequest
 
@@ -32,3 +32,6 @@ class ExtensionBase:
 
     def _optional_dependencies(self, **kwargs):
         ...
+
+    def __str__(self) -> str:
+        return self.__class__.__name__

@@ -313,22 +313,20 @@ def test_lead__with__data(bc: Breathecode, client: APIClient):
 
 
 # When: Passing slug of Academy or AcademyAlias
-@pytest.mark.parametrize(
-    'academy,academy_alias,academy_id',
-    [
-        ({
-            'slug': 'midgard'
-        }, None, None),
-        ({
-            'slug': 'midgard'
-        }, 1, None),  #
-        (1, {
-            'active_campaign_slug': 'midgard'
-        }, 1),
-    ])
+@pytest.mark.parametrize('academy,academy_alias,academy_id', [
+    ({
+        'slug': 'midgard'
+    }, None, None),
+    ({
+        'slug': 'midgard'
+    }, 1, None),
+    (1, {
+        'active_campaign_slug': 'midgard'
+    }, 1),
+])
 def test_passing_slug_of_academy_or_academy_alias(bc: Breathecode, client: APIClient, academy, academy_alias,
                                                   academy_id):
-    model = bc.database.create(academy=academy, academy_alias=academy_alias)
+    model = bc.database.create(academy=academy, academy_alias=academy_alias, active_campaig_academy=1)
     url = reverse_lazy('marketing:lead')
 
     data = generate_form_entry_kwargs({
@@ -368,8 +366,3 @@ def test_passing_slug_of_academy_or_academy_alias(bc: Breathecode, client: APICl
             'attribution_id': '75b36c508866d18732305da14fe9a0',
         })
     ]
-
-    # teardown
-    bc.database.delete('admissions.Academy')
-    bc.database.delete('marketing.AcademyAlias')
-    bc.database.delete('marketing.FormEntry')

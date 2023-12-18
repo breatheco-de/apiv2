@@ -56,7 +56,7 @@ class APIViewExtensionHandlers:
             self._spy_extension_arguments(**kwargs)
 
     def queryset(self, queryset: QuerySet[Any]) -> QuerySet[Any]:
-        """Apply mutations over queryset"""
+        """Apply mutations over queryset."""
 
         # The extension can decide if act or not
         extensions_allowed = [
@@ -70,7 +70,7 @@ class APIViewExtensionHandlers:
         return queryset
 
     def response(self, data: dict | list[dict], format='application/json'):
-        """Get the response of endpoint"""
+        """Get the response of endpoint."""
 
         headers = {}
 
@@ -92,13 +92,9 @@ class APIViewExtensionHandlers:
         self._spy_extensions(sorted([x.__name__ for x in self._extensions]))
 
     def _spy_extensions(self, _: list[str]) -> None:
-        """
-        That is used for spy the extensions is being used.
-        """
+        """Spy the extensions is being used in the tests."""
         ...
 
     def _spy_extension_arguments(self, **_) -> None:
-        """
-        That is used for spy the extension arguments is being used.
-        """
+        """Spy the extension arguments is being used in the tests."""
         ...

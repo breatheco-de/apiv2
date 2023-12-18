@@ -6,7 +6,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.signals import post_delete, post_save, pre_delete
 from breathecode.admissions.signals import student_edu_status_updated
 from breathecode.admissions.models import CohortUser
-from breathecode.authenticate.signals import invite_status_updated
+from breathecode.authenticate.signals import (invite_status_updated, user_info_updated, user_info_deleted,
+                                              app_scope_updated, cohort_user_deleted)
 from breathecode.authenticate.models import UserInvite
 from django.dispatch import receiver
 from .tasks import async_remove_from_organization, async_add_to_organization
@@ -19,6 +20,12 @@ logger = logging.getLogger(__name__)
 
 
 @receiver(post_save)
+def update_user_group(sender, instance, created: bool, **_):
+    # redirect to other signal to be able to mock it
+    user_info_updated.send(sender=sender, instance=instance, created=created)
+
+
+@receiver(user_info_updated)
 def set_user_group(sender, instance, created: bool, **_):
     group = None
     groups = None
@@ -54,6 +61,12 @@ def set_user_group(sender, instance, created: bool, **_):
 
 
 @receiver(post_delete)
+def delete_user_group(sender, instance, **_):
+    # redirect to other signal to be able to mock it
+    user_info_deleted.send(sender=sender, instance=instance)
+
+
+@receiver(user_info_deleted)
 def unset_user_group(sender, instance, **_):
     should_be_deleted = False
     group = None
@@ -84,6 +97,11 @@ def unset_user_group(sender, instance, **_):
 
 
 @receiver(pre_delete, sender=CohortUser)
+def delete_cohort_user(sender, instance, **_):
+    cohort_user_deleted.send(sender=sender, instance=instance)
+
+
+@receiver(cohort_user_deleted, sender=CohortUser)
 def post_delete_cohort_user(sender, instance, **_):
 
     # never ending cohorts cannot be in synch with github
@@ -114,30 +132,27 @@ def post_save_cohort_user(sender, instance, **_):
 
 @receiver(post_save, sender=AppRequiredScope)
 def increment_on_update_required_scope(sender: Type[AppRequiredScope], instance: AppRequiredScope, **_):
-    if AppUserAgreement.objects.filter(app=instance.app,
-                                       agreement_version=instance.app.agreement_version).exists():
-        instance.app.agreement_version += 1
-        instance.app.save()
+    app_scope_updated.send(sender=sender, instance=instance)
 
 
 @receiver(post_save, sender=AppOptionalScope)
 def increment_on_update_optional_scope(sender: Type[AppOptionalScope], instance: AppOptionalScope, **_):
-    if AppUserAgreement.objects.filter(app=instance.app,
-                                       agreement_version=instance.app.agreement_version).exists():
-        instance.app.agreement_version += 1
-        instance.app.save()
+    app_scope_updated.send(sender=sender, instance=instance)
 
 
 @receiver(pre_delete, sender=AppRequiredScope)
 def increment_on_delete_required_scope(sender: Type[AppRequiredScope], instance: AppRequiredScope, **_):
-    if AppUserAgreement.objects.filter(app=instance.app,
-                                       agreement_version=instance.app.agreement_version).exists():
-        instance.app.agreement_version += 1
-        instance.app.save()
+    app_scope_updated.send(sender=sender, instance=instance)
 
 
 @receiver(pre_delete, sender=AppOptionalScope)
 def increment_on_delete_optional_scope(sender: Type[AppOptionalScope], instance: AppOptionalScope, **_):
+    app_scope_updated.send(sender=sender, instance=instance)
+
+
+@receiver(app_scope_updated)
+def update_app_scope(sender: Type[AppOptionalScope | AppRequiredScope],
+                     instance: AppOptionalScope | AppRequiredScope, **_):
     if AppUserAgreement.objects.filter(app=instance.app,
                                        agreement_version=instance.app.agreement_version).exists():
         instance.app.agreement_version += 1

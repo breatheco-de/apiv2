@@ -4,10 +4,13 @@
 
 from unittest.mock import MagicMock, patch, call
 from django.urls.base import reverse_lazy
+import pytest
 from rest_framework import status
+from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 from breathecode.tests.mixins.legacy import LegacyAPITestCase
 from breathecode.registry import tasks
 from django.utils import timezone
+from rest_framework.test import APIClient
 
 UTC_NOW = timezone.now()
 
@@ -70,6 +73,7 @@ def database_item(academy, category, data={}):
 
 
 def post_serializer(academy, category, data={}):
+    translations = {}
 
     return {
         'academy': {
@@ -112,7 +116,7 @@ def post_serializer(academy, category, data={}):
         'technologies': [],
         'test_status': None,
         'title': 'model_title',
-        'translations': {},
+        'translations': translations,
         'url': None,
         'visibility': 'PUBLIC',
         'with_solutions': False,
@@ -174,440 +178,427 @@ def put_serializer(academy, category, asset, data={}):
     }
 
 
-class TestRegistryAsset(LegacyAPITestCase):
+@pytest.fixture(autouse=True)
+def setup(db, monkeypatch):
+    monkeypatch.setattr('breathecode.registry.signals.asset_slug_modified.send', MagicMock())
+    yield
 
-    def test__without_auth(self):
-        """Test /certificate without auth"""
-        url = reverse_lazy('registry:academy_asset')
-        response = self.client.get(url)
-        json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED
-            })
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        self.assertEqual(self.bc.database.list_of('registry.Asset'), [])
+def test__without_auth(bc: Breathecode, client: APIClient):
+    """Test /certificate without auth"""
+    url = reverse_lazy('registry:academy_asset')
+    response = client.get(url)
+    json = response.json()
 
-    def test__without_capability(self):
-        """Test /certificate without auth"""
-        self.headers(academy=1)
-        url = reverse_lazy('registry:academy_asset')
-        self.generate_models(authenticate=True)
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'status_code': 403,
-            'detail': "You (user: 1) don't have this capability: read_asset for academy 1"
-        }
+    assert json == {
+        'detail': 'Authentication credentials were not provided.',
+        'status_code': status.HTTP_401_UNAUTHORIZED
+    }
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert bc.database.list_of('registry.Asset') == []
 
-        assert json == expected
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-        self.assertEqual(self.bc.database.list_of('registry.Asset'), [])
 
-    def test__post__without_category(self):
-        """Test /Asset without category"""
-        model = self.generate_models(role=1, capability='crud_asset', profile_academy=1, academy=1, user=1)
+def test__without_capability(bc: Breathecode, client: APIClient):
+    """Test /certificate without auth"""
+    url = reverse_lazy('registry:academy_asset')
+    model = bc.database.create(user=1)
+    client.force_authenticate(user=model.user)
 
-        self.bc.request.authenticate(model.user)
-        self.bc.request.set_headers(academy=1)
-        url = reverse_lazy('registry:academy_asset')
-        data = {'slug': 'model_slug', 'asset_type': 'PROJECT', 'lang': 'es'}
-        response = self.client.post(url, data, format='json')
-        json = response.json()
-        expected = {
-            'detail': 'no-category',
-            'status_code': 400,
-        }
+    response = client.get(url, HTTP_ACADEMY=1)
+    json = response.json()
+    expected = {
+        'status_code': 403,
+        'detail': "You (user: 1) don't have this capability: read_asset for academy 1"
+    }
 
-        assert json == expected
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        self.assertEqual(self.bc.database.list_of('registry.Asset'), [])
+    assert json == expected
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert bc.database.list_of('registry.Asset') == []
 
-    @patch('breathecode.registry.tasks.async_pull_from_github.delay', MagicMock())
-    def test__post__with__all__mandatory__properties(self):
-        """Test /Asset creation with all mandatory properties"""
-        model = self.bc.database.create(
-            role=1,
-            capability='crud_asset',
-            profile_academy=1,
-            academy=1,
-            user=1,
-            asset_category=1,
-        )
 
-        self.bc.request.authenticate(model.user)
-        self.bc.request.set_headers(academy=1)
+def test__post__without_category(bc: Breathecode, client: APIClient):
+    """Test /Asset without category"""
+    model = bc.database.create(role=1, capability='crud_asset', profile_academy=1, academy=1, user=1)
 
-        url = reverse_lazy('registry:academy_asset')
-        data = {
-            'slug': 'model_slug',
-            'asset_type': 'PROJECT',
-            'lang': 'us',
-            'category': 1,
-            'title': 'model_slug'
-        }
-        response = self.client.post(url, data, format='json')
-        json = response.json()
-        del data['category']
-        expected = post_serializer(model.academy, model.asset_category, data=data)
+    client.force_authenticate(user=model.user)
+    url = reverse_lazy('registry:academy_asset')
+    data = {'slug': 'model_slug', 'asset_type': 'PROJECT', 'lang': 'es'}
+    response = client.post(url, data, format='json', HTTP_ACADEMY=1)
+    json = response.json()
+    expected = {
+        'detail': 'no-category',
+        'status_code': 400,
+    }
 
-        assert json == expected
-        assert response.status_code == status.HTTP_201_CREATED
-        self.assertEqual(tasks.async_pull_from_github.delay.call_args_list, [call('model_slug')])
-        self.assertEqual(self.bc.database.list_of('registry.Asset'),
-                         [database_item(model.academy, model.asset_category, data)])
+    assert json == expected
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert bc.database.list_of('registry.Asset') == []
 
-    def test_asset__put_many_without_id(self):
-        """Test Asset bulk update"""
-        self.headers(academy=1)
 
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_asset',
-                                     role='potato',
-                                     asset_category=True,
-                                     asset={
-                                         'category_id': 1,
-                                         'academy_id': 1,
-                                         'slug': 'asset-1'
-                                     })
+@patch('breathecode.registry.tasks.async_pull_from_github.delay', MagicMock())
+def test__post__with__all__mandatory__properties(bc: Breathecode, client: APIClient):
+    """Test /Asset creation with all mandatory properties"""
+    model = bc.database.create(
+        role=1,
+        capability='crud_asset',
+        profile_academy=1,
+        academy=1,
+        user=1,
+        asset_category=1,
+    )
 
-        url = reverse_lazy('registry:academy_asset')
-        data = [{
-            'category': 1,
-        }]
+    client.force_authenticate(user=model.user)
 
-        response = self.client.put(url, data, format='json')
-        json = response.json()
+    url = reverse_lazy('registry:academy_asset')
+    data = {'slug': 'model_slug', 'asset_type': 'PROJECT', 'lang': 'us', 'category': 1, 'title': 'model_slug'}
+    response = client.post(url, data, format='json', HTTP_ACADEMY=1)
+    json = response.json()
+    del data['category']
+    expected = post_serializer(model.academy, model.asset_category, data=data)
 
-        expected = {'detail': 'without-id', 'status_code': 400}
+    assert json == expected
+    assert response.status_code == status.HTTP_201_CREATED
+    assert tasks.async_pull_from_github.delay.call_args_list == [call('model_slug')]
+    assert bc.database.list_of('registry.Asset') == [database_item(model.academy, model.asset_category, data)]
 
-        assert json == expected
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_asset__put_many_with_wrong_id(self):
-        """Test Asset bulk update"""
-        self.headers(academy=1)
+def test_asset__put_many_without_id(bc: Breathecode, client: APIClient):
+    """Test Asset bulk update"""
 
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_asset',
-                                     role='potato',
-                                     asset_category=True,
-                                     asset={
-                                         'category_id': 1,
-                                         'academy_id': 1,
-                                         'slug': 'asset-1'
-                                     })
+    model = bc.database.create(user=1,
+                               profile_academy=True,
+                               capability='crud_asset',
+                               role='potato',
+                               asset_category=True,
+                               asset={
+                                   'category_id': 1,
+                                   'academy_id': 1,
+                                   'slug': 'asset-1'
+                               })
+    client.force_authenticate(user=model.user)
 
-        url = reverse_lazy('registry:academy_asset')
-        data = [{
-            'category': 1,
-            'id': 2,
-        }]
+    url = reverse_lazy('registry:academy_asset')
+    data = [{
+        'category': 1,
+    }]
 
-        response = self.client.put(url, data, format='json')
-        json = response.json()
+    response = client.put(url, data, format='json', HTTP_ACADEMY=1)
+    json = response.json()
 
-        expected = {'detail': 'not-found', 'status_code': 404}
+    expected = {'detail': 'without-id', 'status_code': 400}
 
-        assert json == expected
-        assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert json == expected
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_asset__put_many(self):
-        """Test Asset bulk update"""
-        self.headers(academy=1)
 
-        model = self.generate_models(
-            authenticate=True,
-            profile_academy=True,
-            capability='crud_asset',
-            role='potato',
-            asset_category={'lang': 'es'},
-            asset=[{
-                'category_id': 1,
-                'lang': 'es',
-                'academy_id': 1,
-                'slug': 'asset-1'
-            }, {
-                'category_id': 1,
-                'lang': 'es',
-                'academy_id': 1,
-                'slug': 'asset-2'
-            }],
-        )
+def test_asset__put_many_with_wrong_id(bc: Breathecode, client: APIClient):
+    """Test Asset bulk update"""
 
-        url = reverse_lazy('registry:academy_asset')
-        data = [{
-            'id': 1,
-            'category': 1,
+    model = bc.database.create(user=1,
+                               profile_academy=True,
+                               capability='crud_asset',
+                               role='potato',
+                               asset_category=True,
+                               asset={
+                                   'category_id': 1,
+                                   'academy_id': 1,
+                                   'slug': 'asset-1'
+                               })
+    client.force_authenticate(user=model.user)
+
+    url = reverse_lazy('registry:academy_asset')
+    data = [{
+        'category': 1,
+        'id': 2,
+    }]
+
+    response = client.put(url, data, format='json', HTTP_ACADEMY=1)
+    json = response.json()
+
+    expected = {'detail': 'not-found', 'status_code': 404}
+
+    assert json == expected
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_asset__put_many(bc: Breathecode, client: APIClient):
+    """Test Asset bulk update"""
+
+    model = bc.database.create(
+        user=1,
+        profile_academy=True,
+        capability='crud_asset',
+        role='potato',
+        asset_category={'lang': 'es'},
+        asset=[{
+            'category_id': 1,
+            'lang': 'es',
+            'academy_id': 1,
+            'slug': 'asset-1'
         }, {
-            'id': 2,
-            'category': 1,
-        }]
+            'category_id': 1,
+            'lang': 'es',
+            'academy_id': 1,
+            'slug': 'asset-2'
+        }],
+    )
+    client.force_authenticate(user=model.user)
 
-        response = self.client.put(url, data, format='json')
-        json = response.json()
+    url = reverse_lazy('registry:academy_asset')
+    data = [{
+        'id': 1,
+        'category': 1,
+    }, {
+        'id': 2,
+        'category': 1,
+    }]
 
-        for item in json:
-            del item['created_at']
-            del item['updated_at']
+    response = client.put(url, data, format='json', HTTP_ACADEMY=1)
+    json = response.json()
 
-        expected = [
-            put_serializer(model.academy, model.asset_category, asset) for i, asset in enumerate(model.asset)
-        ]
+    for item in json:
+        del item['created_at']
+        del item['updated_at']
 
-        assert json == expected
-        assert response.status_code == status.HTTP_200_OK
+    expected = [
+        put_serializer(model.academy, model.asset_category, asset) for i, asset in enumerate(model.asset)
+    ]
 
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test_asset__put_many_with_test_status_ok(self):
-        """Test Asset bulk update"""
-        self.headers(academy=1)
+    assert json == expected
+    assert response.status_code == status.HTTP_200_OK
 
-        slug = self.bc.fake.slug()
 
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_asset',
-                                     role='potato',
-                                     asset_category={'lang': 'es'},
-                                     asset={
-                                         'category_id': 1,
-                                         'academy_id': 1,
-                                         'slug': 'asset-1',
-                                         'visibility': 'PRIVATE',
-                                         'test_status': 'OK',
-                                         'lang': 'es',
-                                     })
+@patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+def test_asset__put_many_with_test_status_ok(bc: Breathecode, client: APIClient):
+    """Test Asset bulk update"""
 
-        title = self.bc.fake.slug()
-        date = timezone.now()
+    model = bc.database.create(user=1,
+                               profile_academy=True,
+                               capability='crud_asset',
+                               role='potato',
+                               asset_category={'lang': 'es'},
+                               asset={
+                                   'category_id': 1,
+                                   'academy_id': 1,
+                                   'slug': 'asset-1',
+                                   'visibility': 'PRIVATE',
+                                   'test_status': 'OK',
+                                   'lang': 'es',
+                               })
+    client.force_authenticate(user=model.user)
 
-        url = reverse_lazy('registry:academy_asset')
-        data = [{
-            'category': 1,
-            'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
-            'updated_at': self.bc.datetime.to_iso_string(UTC_NOW),
-            'title': title,
-            'id': 1,
-            'visibility': 'PUBLIC',
-            'asset_type': 'VIDEO',
-        }]
+    title = bc.fake.slug()
+    date = timezone.now()
 
-        response = self.client.put(url, data, format='json')
-        json = response.json()
+    url = reverse_lazy('registry:academy_asset')
+    data = [{
+        'category': 1,
+        'created_at': bc.datetime.to_iso_string(UTC_NOW),
+        'updated_at': bc.datetime.to_iso_string(UTC_NOW),
+        'title': title,
+        'id': 1,
+        'visibility': 'PUBLIC',
+        'asset_type': 'VIDEO',
+    }]
 
-        expected = [
-            put_serializer(model.academy,
-                           model.asset_category,
-                           model.asset,
-                           data={
-                               'test_status': 'OK',
-                               'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
-                               'updated_at': self.bc.datetime.to_iso_string(UTC_NOW),
-                               'title': title,
-                               'id': 1,
-                               'visibility': 'PUBLIC',
-                               'asset_type': 'VIDEO',
-                           })
-        ]
+    response = client.put(url, data, format='json', HTTP_ACADEMY=1)
+    json = response.json()
 
-        assert json == expected
-        assert response.status_code == status.HTTP_200_OK
+    expected = [
+        put_serializer(model.academy,
+                       model.asset_category,
+                       model.asset,
+                       data={
+                           'test_status': 'OK',
+                           'created_at': bc.datetime.to_iso_string(UTC_NOW),
+                           'updated_at': bc.datetime.to_iso_string(UTC_NOW),
+                           'title': title,
+                           'id': 1,
+                           'visibility': 'PUBLIC',
+                           'asset_type': 'VIDEO',
+                       })
+    ]
 
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test_asset__put_many_with_test_status_warning(self):
-        """Test Asset bulk update"""
-        self.headers(academy=1)
+    assert json == expected
+    assert response.status_code == status.HTTP_200_OK
 
-        slug = self.bc.fake.slug()
 
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_asset',
-                                     role='potato',
-                                     asset_category={'lang': 'es'},
-                                     asset={
-                                         'category_id': 1,
-                                         'academy_id': 1,
-                                         'slug': 'asset-1',
-                                         'visibility': 'PRIVATE',
-                                         'test_status': 'WARNING',
-                                         'lang': 'es',
-                                     })
+@patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+def test_asset__put_many_with_test_status_warning(bc: Breathecode, client: APIClient):
+    """Test Asset bulk update"""
 
-        title = self.bc.fake.slug()
-        date = timezone.now()
+    model = bc.database.create(user=1,
+                               profile_academy=True,
+                               capability='crud_asset',
+                               role='potato',
+                               asset_category={'lang': 'es'},
+                               asset={
+                                   'category_id': 1,
+                                   'academy_id': 1,
+                                   'slug': 'asset-1',
+                                   'visibility': 'PRIVATE',
+                                   'test_status': 'WARNING',
+                                   'lang': 'es',
+                               })
+    client.force_authenticate(user=model.user)
 
-        url = reverse_lazy('registry:academy_asset')
-        data = [{
-            'category': 1,
-            'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
-            'updated_at': self.bc.datetime.to_iso_string(UTC_NOW),
-            'title': title,
-            'id': 1,
-            'visibility': 'PUBLIC',
-            'asset_type': 'VIDEO',
-        }]
+    title = bc.fake.slug()
+    date = timezone.now()
 
-        response = self.client.put(url, data, format='json')
-        json = response.json()
+    url = reverse_lazy('registry:academy_asset')
+    data = [{
+        'category': 1,
+        'created_at': bc.datetime.to_iso_string(UTC_NOW),
+        'updated_at': bc.datetime.to_iso_string(UTC_NOW),
+        'title': title,
+        'id': 1,
+        'visibility': 'PUBLIC',
+        'asset_type': 'VIDEO',
+    }]
 
-        expected = [
-            put_serializer(model.academy,
-                           model.asset_category,
-                           model.asset,
-                           data={
-                               'test_status': 'WARNING',
-                               'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
-                               'updated_at': self.bc.datetime.to_iso_string(UTC_NOW),
-                               'title': title,
-                               'id': 1,
-                               'visibility': 'PUBLIC',
-                               'asset_type': 'VIDEO',
-                           })
-        ]
+    response = client.put(url, data, format='json', HTTP_ACADEMY=1)
+    json = response.json()
 
-        assert json == expected
-        assert response.status_code == status.HTTP_200_OK
+    expected = [
+        put_serializer(model.academy,
+                       model.asset_category,
+                       model.asset,
+                       data={
+                           'test_status': 'WARNING',
+                           'created_at': bc.datetime.to_iso_string(UTC_NOW),
+                           'updated_at': bc.datetime.to_iso_string(UTC_NOW),
+                           'title': title,
+                           'id': 1,
+                           'visibility': 'PUBLIC',
+                           'asset_type': 'VIDEO',
+                       })
+    ]
 
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test_asset__put_many_with_test_status_pending(self):
-        """Test Asset bulk update"""
-        self.headers(academy=1)
+    assert json == expected
+    assert response.status_code == status.HTTP_200_OK
 
-        slug = self.bc.fake.slug()
 
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_asset',
-                                     role='potato',
-                                     asset_category={'lang': 'es'},
-                                     asset={
-                                         'category_id': 1,
-                                         'academy_id': 1,
-                                         'slug': 'asset-1',
-                                         'visibility': 'PRIVATE',
-                                         'test_status': 'PENDING',
-                                         'lang': 'es',
-                                     })
+@patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+def test_asset__put_many_with_test_status_pending(bc: Breathecode, client: APIClient):
+    """Test Asset bulk update"""
 
-        title = self.bc.fake.slug()
-        date = timezone.now()
+    model = bc.database.create(user=1,
+                               profile_academy=True,
+                               capability='crud_asset',
+                               role='potato',
+                               asset_category={'lang': 'es'},
+                               asset={
+                                   'category_id': 1,
+                                   'academy_id': 1,
+                                   'slug': 'asset-1',
+                                   'visibility': 'PRIVATE',
+                                   'test_status': 'PENDING',
+                                   'lang': 'es',
+                               })
+    client.force_authenticate(user=model.user)
 
-        url = reverse_lazy('registry:academy_asset')
-        data = [{
-            'category': 1,
-            'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
-            'updated_at': self.bc.datetime.to_iso_string(UTC_NOW),
-            'title': title,
-            'id': 1,
-            'visibility': 'PUBLIC',
-            'asset_type': 'VIDEO',
-        }]
+    title = bc.fake.slug()
+    date = timezone.now()
 
-        response = self.client.put(url, data, format='json')
-        json = response.json()
+    url = reverse_lazy('registry:academy_asset')
+    data = [{
+        'category': 1,
+        'created_at': bc.datetime.to_iso_string(UTC_NOW),
+        'updated_at': bc.datetime.to_iso_string(UTC_NOW),
+        'title': title,
+        'id': 1,
+        'visibility': 'PUBLIC',
+        'asset_type': 'VIDEO',
+    }]
 
-        expected = {
-            'detail': 'This asset has to pass tests successfully before publishing',
-            'status_code': 400
-        }
+    response = client.put(url, data, format='json', HTTP_ACADEMY=1)
+    json = response.json()
 
-        assert json == expected
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+    expected = {'detail': 'This asset has to pass tests successfully before publishing', 'status_code': 400}
 
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test_asset__put_many_with_test_status_error(self):
-        """Test Asset bulk update"""
-        self.headers(academy=1)
+    assert json == expected
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-        slug = self.bc.fake.slug()
 
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_asset',
-                                     role='potato',
-                                     asset_category={'lang': 'es'},
-                                     asset={
-                                         'category_id': 1,
-                                         'academy_id': 1,
-                                         'slug': 'asset-1',
-                                         'visibility': 'PRIVATE',
-                                         'test_status': 'ERROR',
-                                         'lang': 'es',
-                                     })
+@patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+def test_asset__put_many_with_test_status_error(bc: Breathecode, client: APIClient):
+    """Test Asset bulk update"""
 
-        title = self.bc.fake.slug()
-        date = timezone.now()
+    model = bc.database.create(user=1,
+                               profile_academy=True,
+                               capability='crud_asset',
+                               role='potato',
+                               asset_category={'lang': 'es'},
+                               asset={
+                                   'category_id': 1,
+                                   'academy_id': 1,
+                                   'slug': 'asset-1',
+                                   'visibility': 'PRIVATE',
+                                   'test_status': 'ERROR',
+                                   'lang': 'es',
+                               })
+    client.force_authenticate(user=model.user)
 
-        url = reverse_lazy('registry:academy_asset')
-        data = [{
-            'category': 1,
-            'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
-            'updated_at': self.bc.datetime.to_iso_string(UTC_NOW),
-            'title': title,
-            'id': 1,
-            'visibility': 'PUBLIC',
-            'asset_type': 'VIDEO',
-        }]
+    title = bc.fake.slug()
+    date = timezone.now()
 
-        response = self.client.put(url, data, format='json')
-        json = response.json()
+    url = reverse_lazy('registry:academy_asset')
+    data = [{
+        'category': 1,
+        'created_at': bc.datetime.to_iso_string(UTC_NOW),
+        'updated_at': bc.datetime.to_iso_string(UTC_NOW),
+        'title': title,
+        'id': 1,
+        'visibility': 'PUBLIC',
+        'asset_type': 'VIDEO',
+    }]
 
-        expected = {
-            'detail': 'This asset has to pass tests successfully before publishing',
-            'status_code': 400
-        }
+    response = client.put(url, data, format='json', HTTP_ACADEMY=1)
+    json = response.json()
 
-        assert json == expected
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+    expected = {'detail': 'This asset has to pass tests successfully before publishing', 'status_code': 400}
 
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test_asset__put_many_with_test_status_Needs_Resync(self):
-        """Test Asset bulk update"""
-        self.headers(academy=1)
+    assert json == expected
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-        slug = self.bc.fake.slug()
 
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_asset',
-                                     role='potato',
-                                     asset_category={'lang': 'es'},
-                                     asset={
-                                         'category_id': 1,
-                                         'academy_id': 1,
-                                         'slug': 'asset-1',
-                                         'visibility': 'PRIVATE',
-                                         'test_status': 'NEEDS_RESYNC',
-                                         'lang': 'es',
-                                     })
+@patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+def test_asset__put_many_with_test_status_Needs_Resync(bc: Breathecode, client: APIClient):
+    """Test Asset bulk update"""
 
-        title = self.bc.fake.slug()
-        date = timezone.now()
+    model = bc.database.create(user=1,
+                               profile_academy=True,
+                               capability='crud_asset',
+                               role='potato',
+                               asset_category={'lang': 'es'},
+                               asset={
+                                   'category_id': 1,
+                                   'academy_id': 1,
+                                   'slug': 'asset-1',
+                                   'visibility': 'PRIVATE',
+                                   'test_status': 'NEEDS_RESYNC',
+                                   'lang': 'es',
+                               })
+    client.force_authenticate(user=model.user)
 
-        url = reverse_lazy('registry:academy_asset')
-        data = [{
-            'category': 1,
-            'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
-            'updated_at': self.bc.datetime.to_iso_string(UTC_NOW),
-            'title': title,
-            'id': 1,
-            'visibility': 'PUBLIC',
-            'asset_type': 'VIDEO',
-        }]
+    title = bc.fake.slug()
+    date = timezone.now()
 
-        response = self.client.put(url, data, format='json')
-        json = response.json()
+    url = reverse_lazy('registry:academy_asset')
+    data = [{
+        'category': 1,
+        'created_at': bc.datetime.to_iso_string(UTC_NOW),
+        'updated_at': bc.datetime.to_iso_string(UTC_NOW),
+        'title': title,
+        'id': 1,
+        'visibility': 'PUBLIC',
+        'asset_type': 'VIDEO',
+    }]
 
-        expected = {
-            'detail': 'This asset has to pass tests successfully before publishing',
-            'status_code': 400
-        }
+    response = client.put(url, data, format='json', HTTP_ACADEMY=1)
+    json = response.json()
 
-        assert json == expected
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+    expected = {'detail': 'This asset has to pass tests successfully before publishing', 'status_code': 400}
+
+    assert json == expected
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
