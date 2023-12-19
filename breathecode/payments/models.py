@@ -1479,6 +1479,17 @@ class ServiceStockScheduler(models.Model):
         return 'Unset'
 
 
+class PaymentContact(models.Model):
+    user = models.OneToOneField(User,
+                                on_delete=models.CASCADE,
+                                related_name='payment_contact',
+                                help_text='Customer')
+    stripe_id = models.CharField(max_length=20, help_text='Stripe id')  # actually return 18 characters
+
+    def __str__(self) -> str:
+        return f'{self.user.email} ({self.stripe_id})'
+
+
 GOOD = 'GOOD'
 BAD = 'BAD'
 FRAUD = 'FRAUD'
@@ -1489,17 +1500,6 @@ REPUTATION_STATUS = [
     (FRAUD, 'Fraud'),
     (UNKNOWN, 'Unknown'),
 ]
-
-
-class PaymentContact(models.Model):
-    user = models.OneToOneField(User,
-                                on_delete=models.CASCADE,
-                                related_name='payment_contact',
-                                help_text='Customer')
-    stripe_id = models.CharField(max_length=20, help_text='Stripe id')  # actually return 18 characters
-
-    def __str__(self) -> str:
-        return f'{self.user.email} ({self.stripe_id})'
 
 
 class FinancialReputation(models.Model):
@@ -1515,11 +1515,11 @@ class FinancialReputation(models.Model):
                                 help_text='Customer')
 
     in_4geeks = models.CharField(max_length=17,
-                                 choices=INVOICE_STATUS,
+                                 choices=REPUTATION_STATUS,
                                  default=GOOD,
                                  help_text='4Geeks reputation')
     in_stripe = models.CharField(max_length=17,
-                                 choices=INVOICE_STATUS,
+                                 choices=REPUTATION_STATUS,
                                  default=GOOD,
                                  help_text='Stripe reputation')
 

@@ -1,16 +1,18 @@
 import math
 import random
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, call
 
 import pytest
-from breathecode.payments import tasks
+import stripe
 from django.urls import reverse_lazy
-from rest_framework import status
-from breathecode.admissions import tasks as admissions_tasks
-
 from django.utils import timezone
-from ..mixins import PaymentsTestCase
+from rest_framework import status
+from rest_framework.test import APIClient
+
 import breathecode.activity.tasks as activity_tasks
+from breathecode.admissions import tasks as admissions_tasks
+from breathecode.payments import tasks
+from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 UTC_NOW = timezone.now()
 
@@ -42,14 +44,14 @@ def format_invoice_item(data={}):
     }
 
 
-def get_serializer(self, currency, user, data={}):
+def get_serializer(bc, currency, user, data={}):
     return {
         'amount': 0,
         'currency': {
             'code': currency.code,
             'name': currency.name,
         },
-        'paid_at': self.bc.datetime.to_iso_string(UTC_NOW),
+        'paid_at': bc.datetime.to_iso_string(UTC_NOW),
         'status': 'FULFILLED',
         'user': {
             'email': user.email,
@@ -104,7 +106,7 @@ def get_amount_per_period(period, data):
 
 def invoice_mock():
 
-    class FakeInvoice():
+    class FakeInvoice:
         id = 1
         amount = 100
 
@@ -112,676 +114,869 @@ def invoice_mock():
 
 
 @pytest.fixture(autouse=True)
-def setup(monkeypatch):
+def get_patch(db, monkeypatch):
     monkeypatch.setattr(activity_tasks.add_activity, 'delay', MagicMock())
-    yield
+    monkeypatch.setattr('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
+    monkeypatch.setattr('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
+    monkeypatch.setattr('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    monkeypatch.setattr('breathecode.payments.tasks.build_subscription.delay', MagicMock())
+    monkeypatch.setattr('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
+    monkeypatch.setattr('breathecode.payments.tasks.build_free_subscription.delay', MagicMock())
+    monkeypatch.setattr('stripe.Charge.create', MagicMock(return_value={'id': 1}))
+    monkeypatch.setattr('stripe.Customer.create', MagicMock(return_value={'id': 1}))
+
+    def wrapper(charge={}, customer={}):
+        monkeypatch.setattr('stripe.Charge.create', MagicMock(return_value=charge))
+        monkeypatch.setattr('stripe.Customer.create', MagicMock(return_value=customer))
+
+    yield wrapper
 
 
-class SignalTestSuite(PaymentsTestCase):
-    """
-    🔽🔽🔽 GET without auth
-    """
+def test_without_auth(bc: Breathecode, client: APIClient):
+    url = reverse_lazy('payments:pay')
+    response = client.post(url)
 
-    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
-    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
-    def test__without_auth(self):
-        url = reverse_lazy('payments:pay')
-        response = self.client.post(url)
+    json = response.json()
+    expected = {
+        'detail': 'Authentication credentials were not provided.',
+        'status_code': 401,
+    }
 
-        json = response.json()
-        expected = {'detail': 'Authentication credentials were not provided.', 'status_code': 401}
+    assert json == expected
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+    assert bc.database.list_of('payments.Bag') == []
+    assert bc.database.list_of('authenticate.UserSetting') == []
 
-        self.assertEqual(self.bc.database.list_of('payments.Bag'), [])
-        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [])
+    bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+    bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
+    bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
-        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
-        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
-        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
-    """
-    🔽🔽🔽 Get with zero Bag, without passing token
-    """
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
-    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
-    def test__without_bag__without_passing_token(self):
-        model = self.bc.database.create(user=1)
-        self.bc.request.authenticate(model.user)
-
-        url = reverse_lazy('payments:pay')
-        response = self.client.post(url)
-        self.bc.request.authenticate(model.user)
-
-        json = response.json()
-        expected = {'detail': 'missing-token', 'status_code': 404}
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-
-        self.assertEqual(self.bc.database.list_of('payments.Bag'), [])
-        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
-        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
-            format_user_setting({'lang': 'en'}),
-        ])
-
-        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
-        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
-        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
-
-    """
-    🔽🔽🔽 Get with zero Bag, passing token
-    """
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
-    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
-    def test__without_bag__passing_token(self):
-        model = self.bc.database.create(user=1)
-        self.bc.request.authenticate(model.user)
-
-        url = reverse_lazy('payments:pay')
-        data = {'token': 'xdxdxdxdxdxdxdxdxdxd'}
-        response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
-
-        json = response.json()
-        expected = {'detail': 'not-found-or-without-checking', 'status_code': 404}
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-
-        self.assertEqual(self.bc.database.list_of('payments.Bag'), [])
-        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
-        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
-            format_user_setting({'lang': 'en'}),
-        ])
-
-        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
-        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
-        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
-
-    """
-    🔽🔽🔽 Get with zero Bag, passing token, without Plan and ServiceItem
-    """
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
-    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
-    def test__without_bag__passing_token__empty_bag(self):
-        bag = {
-            'token': 'xdxdxdxdxdxdxdxdxdxd',
-            'expires_at': UTC_NOW,
-            'status': 'CHECKING',
-            'type': 'BAG',
+@pytest.mark.parametrize('in_4geeks', [True, False])
+@pytest.mark.parametrize('bad_reputation', ['BAD', 'FRAUD'])
+@pytest.mark.parametrize('good_reputation', ['GOOD', 'UNKNOWN'])
+def test_fraud_case(bc: Breathecode, client: APIClient, in_4geeks, bad_reputation, good_reputation):
+    if in_4geeks:
+        financial_reputation = {
+            'in_4geeks': bad_reputation,
+            'in_stripe': good_reputation,
         }
-        model = self.bc.database.create(user=1, bag=bag, currency=1, academy=1)
-        self.bc.request.authenticate(model.user)
+    else:
+        financial_reputation = {
+            'in_4geeks': good_reputation,
+            'in_stripe': bad_reputation,
+        }
 
-        url = reverse_lazy('payments:pay')
-        data = {'token': 'xdxdxdxdxdxdxdxdxdxd'}
-        response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+    model = bc.database.create(user=1, financial_reputation=financial_reputation)
+    client.force_authenticate(user=model.user)
 
-        json = response.json()
-        expected = {'detail': 'bag-is-empty', 'status_code': 400}
+    url = reverse_lazy('payments:pay')
+    response = client.post(url)
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    json = response.json()
+    expected = {
+        'detail': 'fraud-or-bad-reputation',
+        'status_code': 402,
+        'silent': True,
+        'silent_code': 'fraud-or-bad-reputation',
+    }
 
-        self.assertEqual(self.bc.database.list_of('payments.Bag'), [self.bc.format.to_dict(model.bag)])
-        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
-        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
-            format_user_setting({'lang': 'en'}),
-        ])
+    assert json == expected
+    assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
 
-        self.bc.check.queryset_with_pks(model.bag.plans.all(), [])
-        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
+    assert bc.database.list_of('payments.Bag') == []
+    assert bc.database.list_of('payments.Invoice') == []
+    assert bc.database.list_of('authenticate.UserSetting') == [
+        format_user_setting({'lang': 'en'}),
+    ]
 
-        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
-        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
-        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+    bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+    bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
+    bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
+
+
+@pytest.mark.parametrize('reputation1', ['GOOD', 'UNKNOWN'])
+@pytest.mark.parametrize('reputation2', ['GOOD', 'UNKNOWN'])
+def test_no_token(bc: Breathecode, client: APIClient, reputation1, reputation2):
+    financial_reputation = {
+        'in_4geeks': reputation1,
+        'in_stripe': reputation2,
+    }
+
+    model = bc.database.create(user=1, financial_reputation=financial_reputation)
+    client.force_authenticate(user=model.user)
+
+    url = reverse_lazy('payments:pay')
+    response = client.post(url)
+
+    json = response.json()
+    expected = {'detail': 'missing-token', 'status_code': 404}
+
+    assert json == expected
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    assert bc.database.list_of('payments.Bag') == []
+    assert bc.database.list_of('payments.Invoice') == []
+    assert bc.database.list_of('authenticate.UserSetting') == [
+        format_user_setting({'lang': 'en'}),
+    ]
+
+    bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+    bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
+    bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
+
+
+def test_without_bag__passing_token(bc: Breathecode, client: APIClient):
+    model = bc.database.create(user=1)
+    client.force_authenticate(user=model.user)
+
+    url = reverse_lazy('payments:pay')
+    data = {'token': 'xdxdxdxdxdxdxdxdxdxd'}
+    response = client.post(url, data, format='json')
+
+    json = response.json()
+    expected = {'detail': 'not-found-or-without-checking', 'status_code': 404}
+
+    assert json == expected
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    assert bc.database.list_of('payments.Bag') == []
+    assert bc.database.list_of('payments.Invoice') == []
+    assert bc.database.list_of('authenticate.UserSetting') == [
+        format_user_setting({'lang': 'en'}),
+    ]
+
+    bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+    bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
+    bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
+
+
+def test_no_bag(bc: Breathecode, client: APIClient):
+    bag = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+        'expires_at': UTC_NOW,
+        'status': 'CHECKING',
+        'type': 'BAG',
+    }
+    model = bc.database.create(user=1, bag=bag, currency=1, academy=1)
+    client.force_authenticate(user=model.user)
+
+    url = reverse_lazy('payments:pay')
+    data = {'token': 'xdxdxdxdxdxdxdxdxdxd'}
+    response = client.post(url, data, format='json')
+
+    json = response.json()
+    expected = {'detail': 'bag-is-empty', 'status_code': 400}
+
+    assert json == expected
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    assert bc.database.list_of('payments.Bag') == [bc.format.to_dict(model.bag)]
+    assert bc.database.list_of('payments.Invoice') == []
+    assert bc.database.list_of('authenticate.UserSetting') == [
+        format_user_setting({'lang': 'en'}),
+    ]
+
+    bc.check.queryset_with_pks(model.bag.plans.all(), [])
+    bc.check.queryset_with_pks(model.bag.service_items.all(), [])
+
+    bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+    bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
+    bc.check.calls(
+        activity_tasks.add_activity.delay.call_args_list,
+        [
             call(1, 'bag_created', related_type='payments.Bag', related_id=1),
-        ])
+        ],
+    )
 
-    """
-    🔽🔽🔽 Get with zero Bag, passing token, with Plan and ServiceItem
-    """
 
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
-    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
-    def test__without_bag__passing_token__with_bag_filled__without_free_trial(self):
-        bag = {
-            'token': 'xdxdxdxdxdxdxdxdxdxd',
-            'expires_at': UTC_NOW,
-            'status': 'CHECKING',
-            'type': 'BAG',
-            random.choice(['amount_per_month', 'amount_per_quarter', 'amount_per_half', 'amount_per_year']): 1
-        }
+def test_with_bag__no_free_trial(bc: Breathecode, client: APIClient):
+    bag = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+        'expires_at': UTC_NOW,
+        'status': 'CHECKING',
+        'type': 'BAG',
+        random.choice([
+            'amount_per_month',
+            'amount_per_quarter',
+            'amount_per_half',
+            'amount_per_year',
+        ]): 1,
+    }
 
-        plan = {'is_renewable': False}
+    plan = {'is_renewable': False}
 
-        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
-        self.bc.request.authenticate(model.user)
+    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
+    client.force_authenticate(user=model.user)
 
-        url = reverse_lazy('payments:pay')
-        data = {'token': 'xdxdxdxdxdxdxdxdxdxd'}
-        response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+    url = reverse_lazy('payments:pay')
+    data = {'token': 'xdxdxdxdxdxdxdxdxdxd'}
+    response = client.post(url, data, format='json')
 
-        json = response.json()
-        expected = {'detail': 'missing-chosen-period', 'status_code': 400}
+    json = response.json()
+    expected = {'detail': 'missing-chosen-period', 'status_code': 400}
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    assert json == expected
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-        self.assertEqual(self.bc.database.list_of('payments.Bag'), [self.bc.format.to_dict(model.bag)])
-        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
-        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
-            format_user_setting({'lang': 'en'}),
-        ])
+    assert bc.database.list_of('payments.Bag') == [bc.format.to_dict(model.bag)]
+    assert bc.database.list_of('payments.Invoice') == []
+    assert bc.database.list_of('authenticate.UserSetting') == [
+        format_user_setting({'lang': 'en'}),
+    ]
 
-        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
-        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+    bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+    bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
 
-        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
-        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
-        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+    bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+    bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
+    bc.check.calls(
+        activity_tasks.add_activity.delay.call_args_list,
+        [
             call(1, 'bag_created', related_type='payments.Bag', related_id=1),
-        ])
+        ],
+    )
 
-    """
-    🔽🔽🔽 Get with zero Bag, passing token, with Plan and ServiceItem, passing chosen_period
-    """
 
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
-    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
-    def test__without_bag__passing_token__passing_chosen_period__bad_value(self):
-        bag = {
-            'token': 'xdxdxdxdxdxdxdxdxdxd',
-            'expires_at': UTC_NOW,
-            'status': 'CHECKING',
-            'type': 'BAG',
-        }
+def test_bad_choosen_period(bc: Breathecode, client: APIClient):
+    bag = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+        'expires_at': UTC_NOW,
+        'status': 'CHECKING',
+        'type': 'BAG',
+    }
 
-        plan = {'is_renewable': False}
+    plan = {'is_renewable': False}
 
-        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
-        self.bc.request.authenticate(model.user)
+    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
+    client.force_authenticate(user=model.user)
 
-        url = reverse_lazy('payments:pay')
-        data = {'token': 'xdxdxdxdxdxdxdxdxdxd', 'chosen_period': self.bc.fake.slug()}
-        response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+    url = reverse_lazy('payments:pay')
+    data = {'token': 'xdxdxdxdxdxdxdxdxdxd', 'chosen_period': bc.fake.slug()}
+    response = client.post(url, data, format='json')
 
-        json = response.json()
-        expected = {'detail': 'invalid-chosen-period', 'status_code': 400}
+    json = response.json()
+    expected = {'detail': 'invalid-chosen-period', 'status_code': 400}
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    assert json == expected
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-        self.assertEqual(self.bc.database.list_of('payments.Bag'), [self.bc.format.to_dict(model.bag)])
-        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
-        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
-            format_user_setting({'lang': 'en'}),
-        ])
+    assert bc.database.list_of('payments.Bag') == [bc.format.to_dict(model.bag)]
+    assert bc.database.list_of('payments.Invoice') == []
+    assert bc.database.list_of('authenticate.UserSetting') == [
+        format_user_setting({'lang': 'en'}),
+    ]
 
-        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
-        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+    bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+    bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
 
-        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
-        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
-        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+    bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+    bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
+    bc.check.calls(
+        activity_tasks.add_activity.delay.call_args_list,
+        [
             call(1, 'bag_created', related_type='payments.Bag', related_id=1),
-        ])
+        ],
+    )
 
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
-    @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
-    @patch('breathecode.payments.tasks.build_free_subscription.delay', MagicMock())
-    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
-    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
-    def test__without_bag__passing_token__passing_chosen_period__good_value__free_trial_without_plan_offer(
-            self):
-        bag = {
-            'token': 'xdxdxdxdxdxdxdxdxdxd',
-            'expires_at': UTC_NOW,
-            'status': 'CHECKING',
-            'type': 'BAG',
-        }
 
-        plan = {'is_renewable': False}
+def test_free_trial__no_plan_offer(bc: Breathecode, client: APIClient):
+    bag = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+        'expires_at': UTC_NOW,
+        'status': 'CHECKING',
+        'type': 'BAG',
+    }
 
-        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
-        self.bc.request.authenticate(model.user)
+    plan = {'is_renewable': False}
 
-        url = reverse_lazy('payments:pay')
-        data = {
-            'token': 'xdxdxdxdxdxdxdxdxdxd',
-        }
-        response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
+    client.force_authenticate(user=model.user)
 
-        json = response.json()
-        expected = {'detail': 'the-plan-was-chosen-is-not-ready-too-be-sold', 'status_code': 400}
+    url = reverse_lazy('payments:pay')
+    data = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+    }
+    response = client.post(url, data, format='json')
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    json = response.json()
+    expected = {
+        'detail': 'the-plan-was-chosen-is-not-ready-too-be-sold',
+        'status_code': 400,
+    }
 
-        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
-            self.bc.format.to_dict(model.bag),
-        ])
-        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
-        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
-            format_user_setting({'lang': 'en'}),
-        ])
+    assert json == expected
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
-        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
-        self.assertEqual(tasks.build_subscription.delay.call_args_list, [])
-        self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [])
-        self.assertEqual(tasks.build_free_subscription.delay.call_args_list, [])
+    assert bc.database.list_of('payments.Bag') == [
+        bc.format.to_dict(model.bag),
+    ]
+    assert bc.database.list_of('payments.Invoice') == []
+    assert bc.database.list_of('authenticate.UserSetting') == [
+        format_user_setting({'lang': 'en'}),
+    ]
 
-        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
-        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
-        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+    bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+    bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+    assert tasks.build_subscription.delay.call_args_list == []
+    assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.build_free_subscription.delay.call_args_list == []
+
+    bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+    bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
+    bc.check.calls(
+        activity_tasks.add_activity.delay.call_args_list,
+        [
             call(1, 'bag_created', related_type='payments.Bag', related_id=1),
-        ])
+        ],
+    )
 
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
-    @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
-    @patch('breathecode.payments.tasks.build_free_subscription.delay', MagicMock())
-    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
-    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
-    def test__without_bag__passing_token__free_trial(self):
-        bag = {
-            'token': 'xdxdxdxdxdxdxdxdxdxd',
-            'expires_at': UTC_NOW,
-            'status': 'CHECKING',
-            'type': 'BAG',
-        }
 
-        plan = {'is_renewable': False}
+def test_free_trial__with_plan_offer(bc: Breathecode, client: APIClient):
+    bag = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+        'expires_at': UTC_NOW,
+        'status': 'CHECKING',
+        'type': 'BAG',
+    }
 
-        model = self.bc.database.create(user=1,
-                                        bag=bag,
-                                        academy=1,
-                                        currency=1,
-                                        plan=plan,
-                                        service_item=1,
-                                        plan_offer=1)
-        self.bc.request.authenticate(model.user)
+    plan = {'is_renewable': False}
 
-        url = reverse_lazy('payments:pay')
-        data = {
-            'token': 'xdxdxdxdxdxdxdxdxdxd',
-        }
-        response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+    model = bc.database.create(user=1,
+                               bag=bag,
+                               academy=1,
+                               currency=1,
+                               plan=plan,
+                               service_item=1,
+                               plan_offer=1)
+    client.force_authenticate(user=model.user)
 
-        json = response.json()
-        expected = get_serializer(self, model.currency, model.user, data={})
+    url = reverse_lazy('payments:pay')
+    data = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+    }
+    response = client.post(url, data, format='json')
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+    json = response.json()
+    expected = get_serializer(bc, model.currency, model.user, data={})
 
-        self.assertEqual(self.bc.database.list_of('payments.Bag'),
-                         [{
-                             **self.bc.format.to_dict(model.bag),
-                             'token': None,
-                             'status': 'PAID',
-                             'expires_at': None,
-                         }])
-        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [format_invoice_item()])
-        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
-            format_user_setting({'lang': 'en'}),
-        ])
+    assert json == expected
+    assert response.status_code == status.HTTP_201_CREATED
 
-        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
-        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
-        self.assertEqual(tasks.build_subscription.delay.call_args_list, [])
-        self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [])
-        self.assertEqual(tasks.build_free_subscription.delay.call_args_list, [call(1, 1)])
+    assert bc.database.list_of('payments.Bag') == [{
+        **bc.format.to_dict(model.bag),
+        'token': None,
+        'status': 'PAID',
+        'expires_at': None,
+    }]
+    assert bc.database.list_of('payments.Invoice') == [format_invoice_item()]
+    assert bc.database.list_of('authenticate.UserSetting') == [
+        format_user_setting({'lang': 'en'}),
+    ]
 
-        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
-        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [call(1, 1)])
-        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
-            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
-            call(1, 'checkout_completed', related_type='payments.Invoice', related_id=1),
-        ])
+    bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+    bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+    assert tasks.build_subscription.delay.call_args_list == []
+    assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.build_free_subscription.delay.call_args_list == [call(1, 1)]
 
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
-    @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
-    @patch('breathecode.payments.tasks.build_free_subscription.delay', MagicMock())
-    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
-    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
-    def test__without_bag__passing_token__free_plan__is_renewable(self):
-        bag = {
-            'token': 'xdxdxdxdxdxdxdxdxdxd',
-            'expires_at': UTC_NOW,
-            'status': 'CHECKING',
-            'type': 'BAG',
-        }
-
-        plan = {'is_renewable': True, 'trial_duration': 0}
-
-        model = self.bc.database.create(user=1,
-                                        bag=bag,
-                                        academy=1,
-                                        currency=1,
-                                        plan=plan,
-                                        service_item=1,
-                                        plan_offer=1)
-        self.bc.request.authenticate(model.user)
-
-        url = reverse_lazy('payments:pay')
-        data = {
-            'token': 'xdxdxdxdxdxdxdxdxdxd',
-        }
-        response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
-
-        json = response.json()
-        expected = get_serializer(self, model.currency, model.user, data={})
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-        self.assertEqual(self.bc.database.list_of('payments.Bag'),
-                         [{
-                             **self.bc.format.to_dict(model.bag),
-                             'token': None,
-                             'status': 'PAID',
-                             'expires_at': None,
-                         }])
-        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [format_invoice_item()])
-        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
-            format_user_setting({'lang': 'en'}),
-        ])
-
-        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
-        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
-        self.assertEqual(tasks.build_subscription.delay.call_args_list, [])
-        self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [])
-        self.assertEqual(tasks.build_free_subscription.delay.call_args_list, [call(1, 1)])
-
-        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
-        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [call(1, 1)])
-        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+    bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+    bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [call(1, 1)])
+    bc.check.calls(
+        activity_tasks.add_activity.delay.call_args_list,
+        [
             call(1, 'bag_created', related_type='payments.Bag', related_id=1),
             call(1, 'checkout_completed', related_type='payments.Invoice', related_id=1),
-        ])
+        ],
+    )
 
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
-    @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
-    @patch('breathecode.payments.tasks.build_free_subscription.delay', MagicMock())
-    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
-    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
-    def test__without_bag__passing_token__free_plan__not_is_renewable(self):
-        bag = {
-            'token': 'xdxdxdxdxdxdxdxdxdxd',
-            'expires_at': UTC_NOW,
-            'status': 'CHECKING',
-            'type': 'BAG',
-        }
 
-        plan = {'is_renewable': False, 'trial_duration': 0}
+@pytest.mark.parametrize(
+    'exc,silent_code',
+    [
+        (stripe.error.CardError, 'card-error'),
+        (stripe.error.RateLimitError, 'rate-limit-error'),
+        (stripe.error.InvalidRequestError, 'invalid-request'),
+        (stripe.error.AuthenticationError, 'authentication-error'),
+        (stripe.error.APIConnectionError, 'payment-service-are-down'),
+        (stripe.error.StripeError, 'stripe-error'),
+        (Exception, 'unexpected-exception'),
+    ],
+)
+def test_pay_for_subscription_has_failed(bc: Breathecode, client: APIClient, exc, silent_code, monkeypatch,
+                                         fake):
 
-        model = self.bc.database.create(user=1,
-                                        bag=bag,
-                                        academy=1,
-                                        currency=1,
-                                        plan=plan,
-                                        service_item=1,
-                                        plan_offer=1)
-        self.bc.request.authenticate(model.user)
+    def get_exp():
+        args = [fake.slug()]
+        kwargs = {}
+        if exc in [stripe.error.CardError, stripe.error.InvalidRequestError]:
+            kwargs['param'] = {}
 
-        url = reverse_lazy('payments:pay')
-        data = {
-            'token': 'xdxdxdxdxdxdxdxdxdxd',
-        }
-        response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+        if exc == stripe.error.CardError:
+            kwargs['code'] = fake.slug()
 
-        json = response.json()
-        expected = get_serializer(self, model.currency, model.user, data={})
+        return exc(*args, **kwargs)
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+    monkeypatch.setattr(
+        'breathecode.payments.services.stripe.Stripe._execute_callback',
+        MagicMock(side_effect=get_exp()),
+    )
 
-        self.assertEqual(self.bc.database.list_of('payments.Bag'),
-                         [{
-                             **self.bc.format.to_dict(model.bag),
-                             'token': None,
-                             'status': 'PAID',
-                             'expires_at': None,
-                         }])
-        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [format_invoice_item()])
-        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
-            format_user_setting({'lang': 'en'}),
-        ])
+    bag = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+        'expires_at': UTC_NOW,
+        'status': 'CHECKING',
+        'type': 'BAG',
+        **generate_amounts_by_time(),
+    }
+    chosen_period = random.choice(['MONTH', 'QUARTER', 'HALF', 'YEAR'])
+    amount = get_amount_per_period(chosen_period, bag)
 
-        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
-        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
-        self.assertEqual(tasks.build_subscription.delay.call_args_list, [])
-        self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [])
-        self.assertEqual(tasks.build_free_subscription.delay.call_args_list, [call(1, 1)])
+    plan = {'is_renewable': False}
 
-        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
-        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [call(1, 1)])
-        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
+    client.force_authenticate(user=model.user)
+
+    url = reverse_lazy('payments:pay')
+    data = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+        'chosen_period': chosen_period,
+    }
+    response = client.post(url, data, format='json')
+
+    json = response.json()
+    expected = {
+        'detail': silent_code,
+        'silent': True,
+        'silent_code': silent_code,
+        'status_code': 402,
+    }
+
+    assert json == expected
+    assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
+
+    assert bc.database.list_of('payments.Bag') == [
+        bc.format.to_dict(model.bag),
+    ]
+    assert bc.database.list_of('payments.Invoice') == []
+    assert bc.database.list_of('authenticate.UserSetting') == [
+        format_user_setting({'lang': 'en'}),
+    ]
+
+    bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+    bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+    assert tasks.build_subscription.delay.call_args_list == []
+    assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.build_free_subscription.delay.call_args_list == []
+
+    bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+    bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
+    bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+        call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+    ])
+
+
+@pytest.mark.parametrize(
+    'exc,silent_code',
+    [
+        (stripe.error.CardError, 'card-error'),
+        (stripe.error.RateLimitError, 'rate-limit-error'),
+        (stripe.error.InvalidRequestError, 'invalid-request'),
+        (stripe.error.AuthenticationError, 'authentication-error'),
+        (stripe.error.APIConnectionError, 'payment-service-are-down'),
+        (stripe.error.StripeError, 'stripe-error'),
+        (Exception, 'unexpected-exception'),
+    ],
+)
+def test_pay_for_plan_financing_has_failed(bc: Breathecode, client: APIClient, exc, silent_code, monkeypatch,
+                                           fake):
+
+    def get_exp():
+        args = [fake.slug()]
+        kwargs = {}
+        if exc in [stripe.error.CardError, stripe.error.InvalidRequestError]:
+            kwargs['param'] = {}
+
+        if exc == stripe.error.CardError:
+            kwargs['code'] = fake.slug()
+
+        return exc(*args, **kwargs)
+
+    monkeypatch.setattr(
+        'breathecode.payments.services.stripe.Stripe._execute_callback',
+        MagicMock(side_effect=get_exp()),
+    )
+
+    how_many_installments = random.randint(1, 12)
+    charge = random.random() * 99 + 1
+    bag = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+        'expires_at': UTC_NOW,
+        'status': 'CHECKING',
+        'type': 'BAG',
+        **generate_amounts_by_time(),
+    }
+    financing_option = {
+        'monthly_price': charge,
+        'how_many_months': how_many_installments,
+    }
+    plan = {'is_renewable': False}
+
+    model = bc.database.create(
+        user=1,
+        bag=bag,
+        academy=1,
+        currency=1,
+        plan=plan,
+        service_item=1,
+        financing_option=financing_option,
+    )
+    client.force_authenticate(user=model.user)
+
+    url = reverse_lazy('payments:pay')
+    data = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+        'how_many_installments': how_many_installments,
+    }
+    response = client.post(url, data, format='json')
+
+    json = response.json()
+    expected = {
+        'detail': silent_code,
+        'silent': True,
+        'silent_code': silent_code,
+        'status_code': 402,
+    }
+
+    assert json == expected
+    assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
+
+    assert bc.database.list_of('payments.Bag') == [
+        bc.format.to_dict(model.bag),
+    ]
+    assert bc.database.list_of('payments.Invoice') == []
+    assert bc.database.list_of('authenticate.UserSetting') == [
+        format_user_setting({'lang': 'en'}),
+    ]
+
+    bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+    bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+    assert tasks.build_subscription.delay.call_args_list == []
+    assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.build_free_subscription.delay.call_args_list == []
+
+    bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+    bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
+    bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+        call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+    ])
+
+
+def test_free_plan__is_renewable(bc: Breathecode, client: APIClient):
+    bag = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+        'expires_at': UTC_NOW,
+        'status': 'CHECKING',
+        'type': 'BAG',
+    }
+
+    plan = {'is_renewable': True, 'trial_duration': 0}
+
+    model = bc.database.create(user=1,
+                               bag=bag,
+                               academy=1,
+                               currency=1,
+                               plan=plan,
+                               service_item=1,
+                               plan_offer=1)
+    client.force_authenticate(user=model.user)
+
+    url = reverse_lazy('payments:pay')
+    data = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+    }
+    response = client.post(url, data, format='json')
+
+    json = response.json()
+    expected = get_serializer(bc, model.currency, model.user, data={})
+
+    assert json == expected
+    assert response.status_code == status.HTTP_201_CREATED
+
+    assert bc.database.list_of('payments.Bag') == [{
+        **bc.format.to_dict(model.bag),
+        'token': None,
+        'status': 'PAID',
+        'expires_at': None,
+    }]
+    assert bc.database.list_of('payments.Invoice') == [format_invoice_item()]
+    assert bc.database.list_of('authenticate.UserSetting') == [
+        format_user_setting({'lang': 'en'}),
+    ]
+
+    bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+    bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+    assert tasks.build_subscription.delay.call_args_list == []
+    assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.build_free_subscription.delay.call_args_list == [call(1, 1)]
+
+    bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+    bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [call(1, 1)])
+    bc.check.calls(
+        activity_tasks.add_activity.delay.call_args_list,
+        [
             call(1, 'bag_created', related_type='payments.Bag', related_id=1),
             call(1, 'checkout_completed', related_type='payments.Invoice', related_id=1),
-        ])
+        ],
+    )
 
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
-    @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
-    @patch('breathecode.payments.tasks.build_free_subscription.delay', MagicMock())
-    @patch('stripe.Charge.create', MagicMock(return_value={'id': 1}))
-    @patch('stripe.Customer.create', MagicMock(return_value={'id': 1}))
-    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
-    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
-    def test__without_bag__passing_token__passing_chosen_period__good_value__amount_set(self):
-        bag = {
-            'token': 'xdxdxdxdxdxdxdxdxdxd',
-            'expires_at': UTC_NOW,
-            'status': 'CHECKING',
-            'type': 'BAG',
-            **generate_amounts_by_time()
-        }
-        chosen_period = random.choice(['MONTH', 'QUARTER', 'HALF', 'YEAR'])
-        amount = get_amount_per_period(chosen_period, bag)
 
-        plan = {'is_renewable': False}
+def test_free_plan__not_is_renewable(bc: Breathecode, client: APIClient):
+    bag = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+        'expires_at': UTC_NOW,
+        'status': 'CHECKING',
+        'type': 'BAG',
+    }
 
-        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
-        self.bc.request.authenticate(model.user)
+    plan = {'is_renewable': False, 'trial_duration': 0}
 
-        url = reverse_lazy('payments:pay')
-        data = {
-            'token': 'xdxdxdxdxdxdxdxdxdxd',
-            'chosen_period': chosen_period,
-        }
-        response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+    model = bc.database.create(user=1,
+                               bag=bag,
+                               academy=1,
+                               currency=1,
+                               plan=plan,
+                               service_item=1,
+                               plan_offer=1)
+    client.force_authenticate(user=model.user)
 
-        json = response.json()
-        expected = get_serializer(self, model.currency, model.user, data={'amount': math.ceil(amount)})
+    url = reverse_lazy('payments:pay')
+    data = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+    }
+    response = client.post(url, data, format='json')
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+    json = response.json()
+    expected = get_serializer(bc, model.currency, model.user, data={})
 
-        self.assertEqual(self.bc.database.list_of('payments.Bag'),
-                         [{
-                             **self.bc.format.to_dict(model.bag),
-                             'token': None,
-                             'status': 'PAID',
-                             'expires_at': None,
-                             'chosen_period': chosen_period,
-                         }])
-        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [
-            format_invoice_item({
-                'amount': math.ceil(amount),
-                'stripe_id': '1',
-            }),
-        ])
-        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
-            format_user_setting({'lang': 'en'}),
-        ])
+    assert json == expected
+    assert response.status_code == status.HTTP_201_CREATED
 
-        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
-        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
-        self.assertEqual(tasks.build_subscription.delay.call_args_list, [call(1, 1)])
-        self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [])
-        self.assertEqual(tasks.build_free_subscription.delay.call_args_list, [])
+    assert bc.database.list_of('payments.Bag') == [{
+        **bc.format.to_dict(model.bag),
+        'token': None,
+        'status': 'PAID',
+        'expires_at': None,
+    }]
+    assert bc.database.list_of('payments.Invoice') == [format_invoice_item()]
+    assert bc.database.list_of('authenticate.UserSetting') == [
+        format_user_setting({'lang': 'en'}),
+    ]
 
-        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
-        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [call(1, 1)])
-        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+    bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+    bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+    assert tasks.build_subscription.delay.call_args_list == []
+    assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.build_free_subscription.delay.call_args_list == [call(1, 1)]
+
+    bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+    bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [call(1, 1)])
+    bc.check.calls(
+        activity_tasks.add_activity.delay.call_args_list,
+        [
             call(1, 'bag_created', related_type='payments.Bag', related_id=1),
             call(1, 'checkout_completed', related_type='payments.Invoice', related_id=1),
-        ])
+        ],
+    )
 
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
-    @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
-    @patch('breathecode.payments.tasks.build_free_subscription.delay', MagicMock())
-    @patch('stripe.Charge.create', MagicMock(return_value={'id': 1}))
-    @patch('stripe.Customer.create', MagicMock(return_value={'id': 1}))
-    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
-    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
-    def test__passing_token__passing_how_many_installments__not_found(self):
-        bag = {
-            'token': 'xdxdxdxdxdxdxdxdxdxd',
-            'expires_at': UTC_NOW,
-            'status': 'CHECKING',
-            'type': 'BAG',
-            **generate_amounts_by_time()
-        }
-        chosen_period = random.choice(['MONTH', 'QUARTER', 'HALF', 'YEAR'])
-        amount = get_amount_per_period(chosen_period, bag)
 
-        plan = {'is_renewable': False}
+def test_with_chosen_period__amount_set(bc: Breathecode, client: APIClient):
+    bag = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+        'expires_at': UTC_NOW,
+        'status': 'CHECKING',
+        'type': 'BAG',
+        **generate_amounts_by_time(),
+    }
+    chosen_period = random.choice(['MONTH', 'QUARTER', 'HALF', 'YEAR'])
+    amount = get_amount_per_period(chosen_period, bag)
 
-        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
-        self.bc.request.authenticate(model.user)
+    plan = {'is_renewable': False}
 
-        url = reverse_lazy('payments:pay')
-        data = {
-            'token': 'xdxdxdxdxdxdxdxdxdxd',
-            'how_many_installments': random.randint(1, 12),
-        }
-        response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
+    client.force_authenticate(user=model.user)
 
-        json = response.json()
-        expected = {'detail': 'invalid-bag-configured-by-installments', 'status_code': 500}
+    url = reverse_lazy('payments:pay')
+    data = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+        'chosen_period': chosen_period,
+    }
+    response = client.post(url, data, format='json')
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+    json = response.json()
+    expected = get_serializer(bc, model.currency, model.user, data={'amount': math.ceil(amount)})
 
-        self.assertEqual(self.bc.database.list_of('payments.Bag'), [{
-            **self.bc.format.to_dict(model.bag),
-        }])
-        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
-        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
-            format_user_setting({'lang': 'en'}),
-        ])
+    assert json == expected
+    assert response.status_code == status.HTTP_201_CREATED
 
-        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
-        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
-        self.assertEqual(tasks.build_subscription.delay.call_args_list, [])
-        self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [])
-        self.assertEqual(tasks.build_free_subscription.delay.call_args_list, [])
+    assert bc.database.list_of('payments.Bag') == [{
+        **bc.format.to_dict(model.bag),
+        'token': None,
+        'status': 'PAID',
+        'expires_at': None,
+        'chosen_period': chosen_period,
+    }]
+    assert bc.database.list_of('payments.Invoice') == [
+        format_invoice_item({
+            'amount': math.ceil(amount),
+            'stripe_id': '1',
+        }),
+    ]
+    assert bc.database.list_of('authenticate.UserSetting') == [
+        format_user_setting({'lang': 'en'}),
+    ]
 
-        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
-        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
-        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
-            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
-        ])
+    bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+    bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+    assert tasks.build_subscription.delay.call_args_list == [call(1, 1)]
+    assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.build_free_subscription.delay.call_args_list == []
 
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.tasks.build_subscription.delay', MagicMock())
-    @patch('breathecode.payments.tasks.build_plan_financing.delay', MagicMock())
-    @patch('breathecode.payments.tasks.build_free_subscription.delay', MagicMock())
-    @patch('stripe.Charge.create', MagicMock(return_value={'id': 1}))
-    @patch('stripe.Customer.create', MagicMock(return_value={'id': 1}))
-    @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
-    @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
-    def test__passing_token__passing_how_many_installments__found(self):
-        how_many_installments = random.randint(1, 12)
-        charge = random.random() * 99 + 1
-        bag = {
-            'token': 'xdxdxdxdxdxdxdxdxdxd',
-            'expires_at': UTC_NOW,
-            'status': 'CHECKING',
-            'type': 'BAG',
-            **generate_amounts_by_time()
-        }
-        financing_option = {'monthly_price': charge, 'how_many_months': how_many_installments}
-        plan = {'is_renewable': False}
-
-        model = self.bc.database.create(user=1,
-                                        bag=bag,
-                                        academy=1,
-                                        currency=1,
-                                        plan=plan,
-                                        service_item=1,
-                                        financing_option=financing_option)
-        self.bc.request.authenticate(model.user)
-
-        url = reverse_lazy('payments:pay')
-        data = {
-            'token': 'xdxdxdxdxdxdxdxdxdxd',
-            'how_many_installments': how_many_installments,
-        }
-        response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
-
-        json = response.json()
-        expected = get_serializer(self, model.currency, model.user, data={'amount': math.ceil(charge)})
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-        self.assertEqual(
-            self.bc.database.list_of('payments.Bag'),
-            [{
-                **self.bc.format.to_dict(model.bag),
-                'token': None,
-                'status': 'PAID',
-                #  'chosen_period': 'NO_SET',
-                'expires_at': None,
-                'how_many_installments': how_many_installments,
-            }])
-        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [
-            format_invoice_item({
-                'amount': math.ceil(charge),
-                'stripe_id': '1',
-            }),
-        ])
-        self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
-            format_user_setting({'lang': 'en'}),
-        ])
-
-        self.bc.check.queryset_with_pks(model.bag.plans.all(), [1])
-        self.bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
-        self.assertEqual(tasks.build_subscription.delay.call_args_list, [])
-        self.assertEqual(tasks.build_plan_financing.delay.call_args_list, [call(1, 1)])
-        self.assertEqual(tasks.build_free_subscription.delay.call_args_list, [])
-
-        self.bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
-        self.bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [call(1, 1)])
-        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+    bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+    bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [call(1, 1)])
+    bc.check.calls(
+        activity_tasks.add_activity.delay.call_args_list,
+        [
             call(1, 'bag_created', related_type='payments.Bag', related_id=1),
             call(1, 'checkout_completed', related_type='payments.Invoice', related_id=1),
-        ])
+        ],
+    )
+
+
+def test_installments_not_found(bc: Breathecode, client: APIClient):
+    bag = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+        'expires_at': UTC_NOW,
+        'status': 'CHECKING',
+        'type': 'BAG',
+        **generate_amounts_by_time(),
+    }
+    chosen_period = random.choice(['MONTH', 'QUARTER', 'HALF', 'YEAR'])
+    amount = get_amount_per_period(chosen_period, bag)
+
+    plan = {'is_renewable': False}
+
+    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
+    client.force_authenticate(user=model.user)
+
+    url = reverse_lazy('payments:pay')
+    data = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+        'how_many_installments': random.randint(1, 12),
+    }
+    response = client.post(url, data, format='json')
+
+    json = response.json()
+    expected = {'detail': 'invalid-bag-configured-by-installments', 'status_code': 500}
+
+    assert json == expected
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+
+    assert bc.database.list_of('payments.Bag') == [{
+        **bc.format.to_dict(model.bag),
+    }]
+    assert bc.database.list_of('payments.Invoice') == []
+    assert bc.database.list_of('authenticate.UserSetting') == [
+        format_user_setting({'lang': 'en'}),
+    ]
+
+    bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+    bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+    assert tasks.build_subscription.delay.call_args_list == []
+    assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.build_free_subscription.delay.call_args_list == []
+
+    bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+    bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
+    bc.check.calls(
+        activity_tasks.add_activity.delay.call_args_list,
+        [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ],
+    )
+
+
+def test_with_installments(bc: Breathecode, client: APIClient):
+    how_many_installments = random.randint(1, 12)
+    charge = random.random() * 99 + 1
+    bag = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+        'expires_at': UTC_NOW,
+        'status': 'CHECKING',
+        'type': 'BAG',
+        **generate_amounts_by_time(),
+    }
+    financing_option = {
+        'monthly_price': charge,
+        'how_many_months': how_many_installments,
+    }
+    plan = {'is_renewable': False}
+
+    model = bc.database.create(
+        user=1,
+        bag=bag,
+        academy=1,
+        currency=1,
+        plan=plan,
+        service_item=1,
+        financing_option=financing_option,
+    )
+    client.force_authenticate(user=model.user)
+
+    url = reverse_lazy('payments:pay')
+    data = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+        'how_many_installments': how_many_installments,
+    }
+    response = client.post(url, data, format='json')
+
+    json = response.json()
+    expected = get_serializer(bc, model.currency, model.user, data={'amount': math.ceil(charge)})
+
+    assert json == expected
+    assert response.status_code == status.HTTP_201_CREATED
+
+    assert bc.database.list_of('payments.Bag') == [{
+        **bc.format.to_dict(model.bag),
+        'token': None,
+        'status': 'PAID',
+        #  'chosen_period': 'NO_SET',
+        'expires_at': None,
+        'how_many_installments': how_many_installments,
+    }]
+    assert bc.database.list_of('payments.Invoice') == [
+        format_invoice_item({
+            'amount': math.ceil(charge),
+            'stripe_id': '1',
+        }),
+    ]
+    assert bc.database.list_of('authenticate.UserSetting') == [
+        format_user_setting({'lang': 'en'}),
+    ]
+
+    bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+    bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+    assert tasks.build_subscription.delay.call_args_list == []
+    assert tasks.build_plan_financing.delay.call_args_list == [call(1, 1)]
+    assert tasks.build_free_subscription.delay.call_args_list == []
+
+    bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+    bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [call(1, 1)])
+    bc.check.calls(
+        activity_tasks.add_activity.delay.call_args_list,
+        [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+            call(1, 'checkout_completed', related_type='payments.Invoice', related_id=1),
+        ],
+    )
