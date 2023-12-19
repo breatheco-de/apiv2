@@ -112,42 +112,36 @@ class Stripe:
 
         except stripe.error.RateLimitError as e:
             logger.error(str(e))
-            raise PaymentException(
-                translation(
-                    self.language,
-                    en='Too many requests',
-                    es='Demasiadas solicitudes',
-                    slug='rate-limit-error',
-                ),
+            raise PaymentException(translation(
+                self.language,
+                en='Too many requests',
+                es='Demasiadas solicitudes',
                 slug='rate-limit-error',
-                silent=True,
-            )
+            ),
+                                   slug='rate-limit-error',
+                                   silent=True)
 
         except stripe.error.InvalidRequestError as e:
             logger.error(str(e))
-            raise PaymentException(
-                translation(
-                    self.language,
-                    en='Invalid request',
-                    es='Solicitud invalida',
-                    slug='invalid-request',
-                ),
+            raise PaymentException(translation(
+                self.language,
+                en='Invalid request',
+                es='Solicitud invalida',
                 slug='invalid-request',
-                silent=True,
-            )
+            ),
+                                   slug='invalid-request',
+                                   silent=True)
 
         except stripe.error.AuthenticationError as e:
             logger.error(str(e))
-            raise PaymentException(
-                translation(
-                    self.language,
-                    en='Authentication error',
-                    es='Error de autenticación',
-                    slug='authentication-error',
-                ),
+            raise PaymentException(translation(
+                self.language,
+                en='Authentication error',
+                es='Error de autenticación',
                 slug='authentication-error',
-                silent=True,
-            )
+            ),
+                                   slug='authentication-error',
+                                   silent=True)
 
         except stripe.error.APIConnectionError as e:
             attempts += 1
@@ -156,44 +150,38 @@ class Stripe:
 
             logger.error(str(e))
 
-            raise PaymentException(
-                translation(
-                    self.language,
-                    en='Payment service are down, try again later',
-                    es='El servicio de pago está caído, inténtalo de nuevo más tarde',
-                    slug='payment-service-are-down',
-                ),
+            raise PaymentException(translation(
+                self.language,
+                en='Payment service are down, try again later',
+                es='El servicio de pago está caído, inténtalo de nuevo más tarde',
                 slug='payment-service-are-down',
-                silent=True,
-            )
+            ),
+                                   slug='payment-service-are-down',
+                                   silent=True)
 
         except stripe.error.StripeError as e:
             logger.error(str(e))
-            raise PaymentException(
-                translation(
-                    self.language,
-                    en='We have problems with the payment provider, try again later',
-                    es='Tenemos problemas con el proveedor de pago, inténtalo de nuevo más tarde',
-                    slug='stripe-error',
-                ),
+            raise PaymentException(translation(
+                self.language,
+                en='We have problems with the payment provider, try again later',
+                es='Tenemos problemas con el proveedor de pago, inténtalo de nuevo más tarde',
                 slug='stripe-error',
-                silent=True,
-            )
+            ),
+                                   slug='stripe-error',
+                                   silent=True)
 
         except Exception as e:
             # Something else happened, completely unrelated to Stripe
             logger.error(str(e))
 
-            raise PaymentException(
-                translation(
-                    self.language,
-                    en='A unexpected error occur during the payment process, please contact support',
-                    es='Ocurrió un error inesperado durante el proceso de pago, comuníquese con soporte',
-                    slug='unexpected-exception',
-                ),
+            raise PaymentException(translation(
+                self.language,
+                en='A unexpected error occur during the payment process, please contact support',
+                es='Ocurrió un error inesperado durante el proceso de pago, comuníquese con soporte',
                 slug='unexpected-exception',
-                silent=True,
-            )
+            ),
+                                   slug='unexpected-exception',
+                                   silent=True)
 
     def pay(
         self,
@@ -233,12 +221,10 @@ class Stripe:
         invoice_amount = math.ceil(amount)
 
         def callback():
-            return stripe.Charge.create(
-                customer=customer.stripe_id,
-                amount=math.ceil(stripe_amount),
-                currency=currency.code.lower(),
-                description=description,
-            )
+            return stripe.Charge.create(customer=customer.stripe_id,
+                                        amount=math.ceil(stripe_amount),
+                                        currency=currency.code.lower(),
+                                        description=description)
 
         charge = self._i18n_validations(callback)
 
