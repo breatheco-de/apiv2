@@ -1,8 +1,9 @@
 import os
 from typing import Optional
-from django.db.models import QuerySet
 
+from django.db.models import QuerySet
 from rest_framework.exceptions import APIException
+
 from .shorteners import C
 
 __all__ = ['PaymentException']
@@ -34,7 +35,7 @@ class PaymentException(APIException):
             self.detail = slug
 
     def _get_details(self):
-        return [PaymentException(x.args[0], **{**x.kwargs, 'code': self.status_code}) for x in self.detail]
+        return [PaymentException(x.args[0], **x.kwargs) for x in self.detail]
 
     def get_message(self):
         if isinstance(self.detail, str):

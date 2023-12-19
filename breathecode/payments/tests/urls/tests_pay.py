@@ -493,7 +493,7 @@ def test_free_trial__with_plan_offer(bc: Breathecode, client: APIClient):
 
 
 @pytest.mark.parametrize(
-    'exc,silent_code',
+    'exc_cls,silent_code',
     [
         (stripe.error.CardError, 'card-error'),
         (stripe.error.RateLimitError, 'rate-limit-error'),
@@ -504,19 +504,19 @@ def test_free_trial__with_plan_offer(bc: Breathecode, client: APIClient):
         (Exception, 'unexpected-exception'),
     ],
 )
-def test_pay_for_subscription_has_failed(bc: Breathecode, client: APIClient, exc, silent_code, monkeypatch,
-                                         fake):
+def test_pay_for_subscription_has_failed(bc: Breathecode, client: APIClient, exc_cls, silent_code,
+                                         monkeypatch, fake):
 
     def get_exp():
         args = [fake.slug()]
         kwargs = {}
-        if exc in [stripe.error.CardError, stripe.error.InvalidRequestError]:
+        if exc_cls in [stripe.error.CardError, stripe.error.InvalidRequestError]:
             kwargs['param'] = {}
 
-        if exc == stripe.error.CardError:
+        if exc_cls == stripe.error.CardError:
             kwargs['code'] = fake.slug()
 
-        return exc(*args, **kwargs)
+        return exc_cls(*args, **kwargs)
 
     monkeypatch.setattr(
         'breathecode.payments.services.stripe.Stripe._execute_callback',
@@ -575,10 +575,11 @@ def test_pay_for_subscription_has_failed(bc: Breathecode, client: APIClient, exc
     bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
         call(1, 'bag_created', related_type='payments.Bag', related_id=1),
     ])
+    assert 0
 
 
 @pytest.mark.parametrize(
-    'exc,silent_code',
+    'exc_cls,silent_code',
     [
         (stripe.error.CardError, 'card-error'),
         (stripe.error.RateLimitError, 'rate-limit-error'),
@@ -589,19 +590,19 @@ def test_pay_for_subscription_has_failed(bc: Breathecode, client: APIClient, exc
         (Exception, 'unexpected-exception'),
     ],
 )
-def test_pay_for_plan_financing_has_failed(bc: Breathecode, client: APIClient, exc, silent_code, monkeypatch,
-                                           fake):
+def test_pay_for_plan_financing_has_failed(bc: Breathecode, client: APIClient, exc_cls, silent_code,
+                                           monkeypatch, fake):
 
     def get_exp():
         args = [fake.slug()]
         kwargs = {}
-        if exc in [stripe.error.CardError, stripe.error.InvalidRequestError]:
+        if exc_cls in [stripe.error.CardError, stripe.error.InvalidRequestError]:
             kwargs['param'] = {}
 
-        if exc == stripe.error.CardError:
+        if exc_cls == stripe.error.CardError:
             kwargs['code'] = fake.slug()
 
-        return exc(*args, **kwargs)
+        return exc_cls(*args, **kwargs)
 
     monkeypatch.setattr(
         'breathecode.payments.services.stripe.Stripe._execute_callback',
