@@ -575,7 +575,6 @@ def test_pay_for_subscription_has_failed(bc: Breathecode, client: APIClient, exc
     bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
         call(1, 'bag_created', related_type='payments.Bag', related_id=1),
     ])
-    assert 0
 
 
 @pytest.mark.parametrize(

@@ -99,47 +99,37 @@ class Stripe:
 
         except stripe.error.CardError as e:
             logger.error(str(e))
-            raise PaymentException(
-                translation(
-                    self.language,
-                    en='Card declined',
-                    es='Tarjeta rechazada',
-                    slug='card-error',
-                ),
-                slug='card-error',
-                silent=True,
-            )
+            raise PaymentException(translation(self.language,
+                                               en='Card declined',
+                                               es='Tarjeta rechazada',
+                                               slug='card-error'),
+                                   slug='card-error',
+                                   silent=True)
 
         except stripe.error.RateLimitError as e:
             logger.error(str(e))
-            raise PaymentException(translation(
-                self.language,
-                en='Too many requests',
-                es='Demasiadas solicitudes',
-                slug='rate-limit-error',
-            ),
+            raise PaymentException(translation(self.language,
+                                               en='Too many requests',
+                                               es='Demasiadas solicitudes',
+                                               slug='rate-limit-error'),
                                    slug='rate-limit-error',
                                    silent=True)
 
         except stripe.error.InvalidRequestError as e:
             logger.error(str(e))
-            raise PaymentException(translation(
-                self.language,
-                en='Invalid request',
-                es='Solicitud invalida',
-                slug='invalid-request',
-            ),
+            raise PaymentException(translation(self.language,
+                                               en='Invalid request',
+                                               es='Solicitud invalida',
+                                               slug='invalid-request'),
                                    slug='invalid-request',
                                    silent=True)
 
         except stripe.error.AuthenticationError as e:
             logger.error(str(e))
-            raise PaymentException(translation(
-                self.language,
-                en='Authentication error',
-                es='Error de autenticación',
-                slug='authentication-error',
-            ),
+            raise PaymentException(translation(self.language,
+                                               en='Authentication error',
+                                               es='Error de autenticación',
+                                               slug='authentication-error'),
                                    slug='authentication-error',
                                    silent=True)
 
@@ -154,8 +144,7 @@ class Stripe:
                 self.language,
                 en='Payment service are down, try again later',
                 es='El servicio de pago está caído, inténtalo de nuevo más tarde',
-                slug='payment-service-are-down',
-            ),
+                slug='payment-service-are-down'),
                                    slug='payment-service-are-down',
                                    silent=True)
 
@@ -165,8 +154,7 @@ class Stripe:
                 self.language,
                 en='We have problems with the payment provider, try again later',
                 es='Tenemos problemas con el proveedor de pago, inténtalo de nuevo más tarde',
-                slug='stripe-error',
-            ),
+                slug='stripe-error'),
                                    slug='stripe-error',
                                    silent=True)
 
@@ -178,8 +166,7 @@ class Stripe:
                 self.language,
                 en='A unexpected error occur during the payment process, please contact support',
                 es='Ocurrió un error inesperado durante el proceso de pago, comuníquese con soporte',
-                slug='unexpected-exception',
-            ),
+                slug='unexpected-exception'),
                                    slug='unexpected-exception',
                                    silent=True)
 
