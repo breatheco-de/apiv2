@@ -1,13 +1,16 @@
 import os
-from django.db.models import QuerySet
-from django.core.handlers.wsgi import WSGIRequest
 from typing import Any, Optional
+
+from django.core.handlers.wsgi import WSGIRequest
+from django.db.models import QuerySet
 from django.http import HttpResponse
-from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.response import Response
+
 from breathecode.utils.api_view_extensions.extension_base import ExtensionBase
 from breathecode.utils.api_view_extensions.extensions.language_extension import LanguageExtension
 from breathecode.utils.api_view_extensions.extensions.lookup_extension import LookupExtension
+
 from .extensions import CacheExtension
 
 __all__ = ['APIViewExtensionHandlers']
@@ -15,9 +18,7 @@ is_test_env = os.getenv('ENV') == 'test'
 
 
 class APIViewExtensionHandlers:
-    """
-    A collection of tools that pretend can build extensions globally
-    """
+    """A collection of tools that pretend can build extensions globally."""
 
     # the custom method we want to export go here
     cache: Optional[CacheExtension]
@@ -30,9 +31,7 @@ class APIViewExtensionHandlers:
     _instances: set[ExtensionBase]
 
     def __init__(self, request: WSGIRequest, valid_extensions: Optional[set[ExtensionBase]] = None, **kwargs):
-        """
-        Build the handlers
-        """
+        """Build the handlers."""
 
         if valid_extensions is None:
             valid_extensions = []

@@ -1,3 +1,4 @@
+import math
 import os
 
 import stripe
@@ -8,7 +9,6 @@ from breathecode.authenticate.models import UserSetting
 from breathecode.payments.models import Bag, Currency, FinancialReputation, Invoice, PaymentContact
 from breathecode.utils import PaymentException, ValidationException, getLogger
 from breathecode.utils.i18n import translation
-import math
 
 logger = getLogger(__name__)
 
@@ -16,6 +16,8 @@ __all__ = ['Stripe']
 
 
 class Stripe:
+    """Stripe service."""
+
     api_key: str
     language: str
 
@@ -24,12 +26,17 @@ class Stripe:
         self.language = 'en'
 
     def set_language(self, lang: str) -> None:
+        """Set the language for the error messages."""
         self.language = lang
 
     def set_language_from_settings(self, settings: UserSetting):
+        """Set the language for the error messages."""
+
         self.language = settings.lang
 
     def create_card_token(self, card_number: str, exp_month: int, exp_year: int, cvc: str) -> None:
+        """Create a card token to be used in the payment process."""
+
         stripe.api_key = self.api_key
 
         def callback():
@@ -43,6 +50,8 @@ class Stripe:
         return self._i18n_validations(callback).id
 
     def add_payment_method(self, user: User, token: str):
+        """Add a payment method to the user."""
+
         stripe.api_key = self.api_key
 
         contact = PaymentContact.objects.filter(user=user).first()
@@ -55,6 +64,8 @@ class Stripe:
         return self._i18n_validations(callback)
 
     def add_contact(self, user: User):
+        """Add a contact to the user."""
+
         stripe.api_key = self.api_key
 
         if contact := PaymentContact.objects.filter(user=user).first():
@@ -77,9 +88,14 @@ class Stripe:
 
         return contact
 
+    def _execute_callback(self, callback: callable):
+        return callback()
+
     def _i18n_validations(self, callback: callable, attempts=0):
+        """Translate the error messages from stripe to the user language."""
+
         try:
-            return callback()
+            return self._execute_callback(callback)
 
         except stripe.error.CardError as e:
             logger.error(str(e))
@@ -154,24 +170,30 @@ class Stripe:
                                    slug='unexpected-exception',
                                    silent=True)
 
-    def pay(self,
-            user: User,
-            bag: Bag,
-            amount: int,
-            currency: str | Currency = 'usd',
-            description: str = '') -> Invoice:
+    def pay(
+        self,
+        user: User,
+        bag: Bag,
+        amount: int,
+        currency: str | Currency = 'usd',
+        description: str = '',
+    ) -> Invoice:
+        """Pay for a given bag."""
 
         stripe.api_key = self.api_key
 
         if isinstance(currency, str):
             currency = Currency.objects.filter(code=currency).first()
             if not currency:
-                raise ValidationException(translation(
-                    self.language,
-                    en='Cannot determine the currency during process of payment',
-                    es='No se puede determinar la moneda durante el proceso de pago',
-                    slug='currency'),
-                                          code=500)
+                raise ValidationException(
+                    translation(
+                        self.language,
+                        en='Cannot determine the currency during process of payment',
+                        es='No se puede determinar la moneda durante el proceso de pago',
+                        slug='currency',
+                    ),
+                    code=500,
+                )
 
         customer = self.add_contact(user)
 
@@ -205,6 +227,7 @@ class Stripe:
         return invoice
 
     def refund_payment(self, invoice: Invoice) -> Invoice:
+        """Refund a given invoice."""
 
         stripe.api_key = self.api_key
 
@@ -223,7 +246,7 @@ class Stripe:
         return invoice
 
     def create_payment_link(self, price_id: str, quantity: int) -> tuple[str, str]:
-        """Create a payment link for a given price id, return the id and the url"""
+        """Create a payment link for a given price id, return the id and the url."""
 
         stripe.api_key = self.api_key
 
