@@ -180,6 +180,16 @@ def has_permission(permission: str,
                     raise e
 
                 if format == 'html':
+                    from breathecode.payments.models import Subscription, PlanOffer
+                    # print('consumer')
+                    # print(consumer)
+                    # context = build_context()
+                    # context, args, kwargs = consumer(context, args, kwargs)
+                    # print('context')
+                    # print(context)
+                    subscriptions = Subscription.objects.filter(user=request.user,
+                                                                service_items__service__slug=service)
+                    print(subscriptions)
                     return render_message(request, str(e), status=402)
 
                 return Response({'detail': str(e), 'status_code': 402}, 402)
