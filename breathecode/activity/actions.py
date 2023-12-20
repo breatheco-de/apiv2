@@ -258,13 +258,13 @@ class FillActivityMeta:
             'first_name': instance.user.first_name,
             'last_name': instance.user.last_name,
             'cohort': instance.cohort.slug,
-            'watching': instance.watching,
-            'finantial_status': instance.finantial_status,
-            'educational_status': instance.educational_status,
+            'available_as_saas': instance.cohort.available_as_saas,
             'syllabus': syllabus,
-            'created_at': instance.created_at,
-            'updated_at': instance.updated_at,
-            'is_cohort_available_as_saas': instance.cohort.available_as_saas,
+            # 'watching': instance.watching,
+            # 'finantial_status': instance.finantial_status,
+            # 'educational_status': instance.educational_status,
+            # 'created_at': instance.created_at,
+            # 'updated_at': instance.updated_at,
         }
 
         if instance.cohort.academy:
