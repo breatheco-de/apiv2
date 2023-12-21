@@ -1,20 +1,18 @@
-import binascii
 from datetime import timedelta, datetime
 import logging
-import random
 import os
 import pytz
 from unittest.mock import MagicMock, call, patch
 
 from breathecode.events.tasks import build_live_classes_from_timeslot
 from ..mixins.new_events_tests_case import EventTestCase
-from ...signals import event_saved
 import breathecode.events.actions as actions
 from django.utils import timezone
+from breathecode.events.models import LiveClass
 
 UTC_NOW = timezone.now()
 DATE = datetime(year=2022, month=12, day=30, hour=9, minute=24, second=0, microsecond=0, tzinfo=pytz.UTC)
-URANDOM = os.urandom(20)
+URANDOM = os.urandom(16)
 
 
 def live_class_item(data={}):
@@ -115,15 +113,15 @@ class AcademyEventTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(logging.Logger, 'debug', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=DATE))
-    @patch('os.urandom', MagicMock(return_value=URANDOM))
-    @patch('binascii.hexlify', MagicMock(side_effect=[
-        b'r1',
-        b'r2',
-        b'r3',
-        b'r4',
-        b'r5',
-        b'r6',
-    ]))
+    @patch('breathecode.events.models.LiveClass._get_hash',
+           MagicMock(side_effect=[
+               'r1',
+               'r2',
+               'r3',
+               'r4',
+               'r5',
+               'r6',
+           ]))
     def test_one_cohort_time_slot_with_ending_date_in_the_future__weekly(self):
         base_date = DATE
         cohort = {
@@ -206,8 +204,7 @@ class AcademyEventTestSuite(EventTestCase):
                 'remote_meeting_url': model.cohort.online_meeting_url,
             }),
         ])
-        self.assertEqual(os.urandom.call_args_list, [call(20) for _ in range(6)])
-        self.assertEqual(binascii.hexlify.call_args_list, [call(URANDOM) for _ in range(6)])
+        assert LiveClass._get_hash.call_args_list == [call() for _ in range(6)]
 
     """
     🔽🔽🔽 with 1 CohortTimeSlot, Cohort with ending_date in the future, it's weekly
@@ -217,15 +214,15 @@ class AcademyEventTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(logging.Logger, 'debug', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=DATE))
-    @patch('os.urandom', MagicMock(return_value=URANDOM))
-    @patch('binascii.hexlify', MagicMock(side_effect=[
-        b'r1',
-        b'r2',
-        b'r3',
-        b'r4',
-        b'r5',
-        b'r6',
-    ]))
+    @patch('breathecode.events.models.LiveClass._get_hash',
+           MagicMock(side_effect=[
+               'r1',
+               'r2',
+               'r3',
+               'r4',
+               'r5',
+               'r6',
+           ]))
     def test_one_cohort_time_slot_with_ending_date_in_the_future__monthly(self):
         base_date = DATE
         cohort = {
@@ -268,8 +265,7 @@ class AcademyEventTestSuite(EventTestCase):
                 'remote_meeting_url': model.cohort.online_meeting_url,
             }),
         ])
-        self.assertEqual(os.urandom.call_args_list, [call(20) for _ in range(1)])
-        self.assertEqual(binascii.hexlify.call_args_list, [call(URANDOM) for _ in range(1)])
+        assert LiveClass._get_hash.call_args_list == [call()]
 
     """
     🔽🔽🔽 with 1 CohortTimeSlot, Cohort with ending_date in the future, it's daily
@@ -279,8 +275,15 @@ class AcademyEventTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(logging.Logger, 'debug', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=DATE))
-    @patch('os.urandom', MagicMock(return_value=URANDOM))
-    @patch('binascii.hexlify', MagicMock(side_effect=[bytes(f'r{n}', 'utf-8') for n in range(1, 7)]))
+    @patch('breathecode.events.models.LiveClass._get_hash',
+           MagicMock(side_effect=[
+               'r1',
+               'r2',
+               'r3',
+               'r4',
+               'r5',
+               'r6',
+           ]))
     def test_one_cohort_time_slot_with_ending_date_in_the_future__daily(self):
         base_date = DATE
         cohort = {
@@ -362,5 +365,4 @@ class AcademyEventTestSuite(EventTestCase):
                 'remote_meeting_url': model.cohort.online_meeting_url,
             }),
         ])
-        self.assertEqual(os.urandom.call_args_list, [call(20) for _ in range(6)])
-        self.assertEqual(binascii.hexlify.call_args_list, [call(URANDOM) for _ in range(6)])
+        assert LiveClass._get_hash.call_args_list == [call() for _ in range(6)]

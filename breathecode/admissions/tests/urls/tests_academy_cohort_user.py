@@ -916,17 +916,31 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'phone': model['profile_academy'].phone,
             },
             'tasks': [{
-                'id': model['task'].id,
-                'associated_slug': model['task'].associated_slug,
-                'description': model['task'].description,
-                'github_url': model['task'].github_url,
-                'live_url': model['task'].live_url,
-                'task_type': model['task'].task_type,
-                'task_status': model['task'].task_status,
-                'revision_status': model['task'].revision_status,
-                'created_at': re.sub(r'\+00:00$', 'Z', model['task'].created_at.isoformat()),
-                'updated_at': re.sub(r'\+00:00$', 'Z', model['task'].updated_at.isoformat()),
-                'title': model['task'].title,
+                'id':
+                model['task'].id,
+                'associated_slug':
+                model['task'].associated_slug,
+                'description':
+                model['task'].description,
+                'github_url':
+                model['task'].github_url,
+                'live_url':
+                model['task'].live_url,
+                'task_type':
+                model['task'].task_type,
+                'task_status':
+                model['task'].task_status,
+                'revision_status':
+                model['task'].revision_status,
+                'created_at':
+                re.sub(r'\+00:00$', 'Z', model['task'].created_at.isoformat()),
+                'updated_at':
+                re.sub(r'\+00:00$', 'Z', model['task'].updated_at.isoformat()),
+                'delivered_at':
+                re.sub(r'\+00:00$', 'Z', model['task'].delivered_at.isoformat())
+                if model['task'].delivered_at is not None else None,
+                'title':
+                model['task'].title,
             }],
             'cohort': {
                 'id': model['cohort_user'].cohort.id,

@@ -55,7 +55,9 @@ class RegistryModelsMixin(ModelsMixin):
             models['asset_keyword'] = create_models(asset_keyword, 'registry.AssetKeyword', **kargs)
 
         if not 'asset' in models and (is_valid(asset) or is_valid(asset_alias) or is_valid(asset_comment)):
-            kargs = {}
+            kargs = {
+                'all_translations': [],
+            }
 
             if 'asset_technology' in models:
                 kargs['technologies'] = get_list(models['asset_technology'])

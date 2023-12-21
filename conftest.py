@@ -55,6 +55,15 @@ def get_args(fake):
 
 
 @pytest.fixture
+def get_int():
+
+    def wrapper(min=0, max=1000):
+        return random.randint(min, max)
+
+    yield wrapper
+
+
+@pytest.fixture
 def get_kwargs(fake):
 
     def wrapper(num):
@@ -104,6 +113,22 @@ def clear_cache():
     yield wrapper
 
 
+@pytest.fixture(autouse=True)
+def enable_cache_logging(monkeypatch):
+    """
+    Disable all signals by default.
+
+    You can re-enable them within a test by calling the provided wrapper.
+    """
+
+    monkeypatch.setattr('breathecode.commons.actions.is_output_enable', lambda: False)
+
+    def wrapper(*args, **kwargs):
+        monkeypatch.setattr('breathecode.commons.actions.is_output_enable', lambda: True)
+
+    yield wrapper
+
+
 @pytest.fixture(autouse=True, scope='module')
 def random_seed():
     seed = os.getenv('RANDOM_SEED')
@@ -123,8 +148,9 @@ def utc_now(set_datetime):
 
 @pytest.fixture(autouse=True)
 def enable_hook_manager(monkeypatch):
-    """
-    Disable the HookManagerClass.process_model_event by default. You can re-enable it within a test by calling the provided wrapper.
+    """Disable the HookManagerClass.process_model_event by default.
+
+    You can re-enable it within a test by calling the provided wrapper.
     """
 
     original_process_model_event = HookManagerClass.process_model_event
@@ -139,9 +165,7 @@ def enable_hook_manager(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def disable_newrelic_prints(monkeypatch):
-    """
-    Disable NewRelic prints.
-    """
+    """Disable NewRelic prints."""
 
     monkeypatch.setattr('newrelic.core.agent._logger.info', lambda *args, **kwargs: None)
     monkeypatch.setattr('newrelic.core.agent._logger.warn', lambda *args, **kwargs: None)
@@ -153,7 +177,9 @@ def disable_newrelic_prints(monkeypatch):
 @pytest.fixture(autouse=True)
 def dont_wait_for_rescheduling_tasks():
     """
-    Don't wait for rescheduling tasks by default. You can re-enable it within a test by calling the provided wrapper.
+    Don't wait for rescheduling tasks by default.
+
+    You can re-enable it within a test by calling the provided wrapper.
     """
 
     with patch('breathecode.utils.decorators.task.RETRIES_LIMIT', 2):
@@ -166,9 +192,7 @@ def dont_wait_for_rescheduling_tasks():
 
 @pytest.fixture(autouse=True)
 def dont_close_the_circuit():
-    """
-    Don't allow the circuit be closed.
-    """
+    """Don't allow the circuit be closed."""
 
     with patch('circuitbreaker.CircuitBreaker._failure_count', 0, create=True):
         with patch('circuitbreaker.CircuitBreaker.FAILURE_THRESHOLD', 10000000, create=True):
@@ -229,9 +253,8 @@ def signals():
 
 @pytest.fixture(autouse=True)
 def enable_signals(monkeypatch, signals):
-    """
-    Disable all signals by default. You can re-enable them within a test by calling the provided wrapper.
-    """
+    """Disable all signals by default. You can re-enable them within a test by calling the provided wrapper."""
+
     original_signal_send = Signal.send
     original_signal_send_robust = Signal.send_robust
 
@@ -246,20 +269,39 @@ def enable_signals(monkeypatch, signals):
     monkeypatch.setattr(ModelSignal, 'send', lambda *args, **kwargs: None)
     monkeypatch.setattr(ModelSignal, 'send_robust', lambda *args, **kwargs: None)
 
-    #TODO: get a list of signals that will be enabled
-    def enable(*to_enable):
+    def enable(*to_enable, debug=False):
         monkeypatch.setattr(Signal, 'send', original_signal_send)
         monkeypatch.setattr(Signal, 'send_robust', original_signal_send_robust)
 
         monkeypatch.setattr(ModelSignal, 'send', original_model_signal_send)
         monkeypatch.setattr(ModelSignal, 'send_robust', original_model_signal_send_robust)
 
-        if to_enable:
+        if to_enable or debug:
             to_disable = [x for x in signals if x not in to_enable]
 
             for signal in to_disable:
-                monkeypatch.setattr(f'{signal}.send', lambda *args, **kwargs: None)
-                monkeypatch.setattr(f'{signal}.send_robust', lambda *args, **kwargs: None)
+
+                def apply_mock(module):
+
+                    def send_mock(*args, **kwargs):
+                        if debug:
+                            print(module)
+                            try:
+                                print('  args\n    ', args)
+                            except Exception:
+                                pass
+
+                            try:
+                                print('  kwargs\n    ', kwargs)
+                            except Exception:
+                                pass
+
+                            print('\n')
+
+                    monkeypatch.setattr(module, send_mock)
+
+                apply_mock(f'{signal}.send')
+                apply_mock(f'{signal}.send_robust')
 
     yield enable
 
@@ -357,3 +399,12 @@ def random_image(fake):
 @pytest.fixture(scope='module')
 def fake():
     return _fake
+
+
+@pytest.fixture()
+def get_queryset_pks():
+
+    def wrapper(queryset):
+        return [x.pk for x in queryset]
+
+    yield wrapper

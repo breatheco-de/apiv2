@@ -13,6 +13,7 @@ from breathecode.services.activecampaign import ACOldClient, ActiveCampaign, Act
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils import getLogger
 import numpy as np
+from django.db.models import Q
 
 logger = getLogger(__name__)
 
@@ -270,7 +271,8 @@ def register_new_lead(form_entry=None):
         raise ValidationException('Missing location information')
 
     ac_academy = None
-    alias = AcademyAlias.objects.filter(active_campaign_slug=form_entry['location']).first()
+    alias = AcademyAlias.objects.filter(
+        Q(active_campaign_slug=form_entry['location']) | Q(academy__slug=form_entry['location'])).first()
 
     try:
         if alias is not None:

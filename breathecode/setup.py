@@ -4,7 +4,9 @@ import redis
 import ssl
 from pathlib import Path
 
-__all__ = ['configure_redis']
+IS_TEST_ENV = os.getenv('ENV') == 'test'
+
+__all__ = ['configure_redis', 'Lock']
 
 logger = logging.getLogger(__name__)
 redis_client = None
@@ -85,3 +87,19 @@ def get_redis():
         redis_client = redis.from_url(redis_url, **settings)
 
     return redis_client
+
+
+if not IS_TEST_ENV:
+    from redis.lock import Lock
+else:
+
+    class Lock:
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            pass
+
+        def __exit__(self, *args, **kwargs):
+            pass

@@ -24,6 +24,7 @@ def get_serializer(syllabus_version, syllabus):
             'slug': syllabus.academy_owner.slug,
             'white_labeled': syllabus.academy_owner.white_labeled,
             'icon_url': syllabus.academy_owner.icon_url,
+            'available_as_saas': syllabus.academy_owner.available_as_saas,
         },
         'syllabus': syllabus.id,
         'version': syllabus_version.version,

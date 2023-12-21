@@ -110,16 +110,27 @@ class Check:
         ```
         """
 
-        assert len(first) == len(second), f'not have same length than {first}\n{second}'
-        self._parent.assertEqual(len(first),
-                                 len(second),
-                                 msg=f'Does not have same length\n\n{first}\n\n!=\n\n{second}')
+        is_unittest = hasattr(self._parent, 'assertEqual')
 
-        for i in range(0, len(first)):
-            self._parent.assertEqual(first[i].args, second[i].args, msg=f'args in index {i} does not match')
-            self._parent.assertEqual(first[i].kwargs,
-                                     second[i].kwargs,
-                                     msg=f'kwargs in index {i} does not match')
+        if is_unittest:
+            self._parent.assertEqual(len(first),
+                                     len(second),
+                                     msg=f'Does not have same length\n\n{first}\n\n!=\n\n{second}')
+
+            for i in range(0, len(first)):
+                self._parent.assertEqual(first[i].args,
+                                         second[i].args,
+                                         msg=f'args in index {i} does not match')
+                self._parent.assertEqual(first[i].kwargs,
+                                         second[i].kwargs,
+                                         msg=f'kwargs in index {i} does not match')
+
+        else:
+            assert len(first) == len(second), f'not have same length than {first}\n{second}'
+
+            for i in range(0, len(first)):
+                assert first[i].args == second[i].args, f'args in index {i} does not match'
+                assert first[i].kwargs == second[i].kwargs, f'kwargs in index {i} does not match'
 
     def _fill_partial_equality(self, first: dict, second: dict) -> dict:
         original = {}

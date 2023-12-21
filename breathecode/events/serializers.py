@@ -235,6 +235,7 @@ class EventPublicBigSerializer(EventSmallSerializer):
     currency = serpy.Field()
     host_user = UserBigSerializer(required=False)
     free_for_bootcamps = serpy.Field()
+    free_for_all = serpy.Field()
     published_at = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()

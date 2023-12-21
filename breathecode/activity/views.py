@@ -630,6 +630,8 @@ class V2AcademyActivityView(APIView):
         limit = int(request.GET.get('limit', 100))
         offset = (int(request.GET.get('page', 1)) - 1) * limit
         kind = request.GET.get('kind', None)
+        date_start = request.GET.get('date_start', None)
+        date_end = request.GET.get('date_end', None)
 
         query = f"""
             SELECT *
@@ -637,6 +639,8 @@ class V2AcademyActivityView(APIView):
             WHERE user_id = @user_id
                 AND meta.academy = @academy_id
                 {'AND kind = @kind' if kind else ''}
+                {'AND timestamp >= @date_start' if date_start else ''}
+                {'AND timestamp <= @date_end' if date_end else ''}
             ORDER BY id DESC
             LIMIT @limit
             OFFSET @offset
@@ -651,6 +655,12 @@ class V2AcademyActivityView(APIView):
 
         if kind:
             data.append(bigquery.ScalarQueryParameter('kind', 'STRING', kind))
+
+        if date_start:
+            data.append(bigquery.ScalarQueryParameter('date_start', 'TIMESTAMP', date_start))
+
+        if date_end:
+            data.append(bigquery.ScalarQueryParameter('date_end', 'TIMESTAMP', date_end))
 
         job_config = bigquery.QueryJobConfig(query_parameters=data)
 
@@ -669,7 +679,7 @@ class V2AcademyActivityReportView(APIView):
         query = request.GET.get('query', '{}')
 
         query = json.loads(query)
-        result = BigQuery.queryset('activity')
+        result = BigQuery.table('activity')
 
         fields = request.GET.get('fields', None)
         if fields is not None:

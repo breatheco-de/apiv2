@@ -5,7 +5,7 @@ PROJECT_ID := test
 
 # docker image for BigQuery emulator
 BQ_EMULATOR_IMAGE := ghcr.io/goccy/bigquery-emulator:latest
-NEW_RELIC_METADATA_COMMIT := $(shell git rev-parse HEAD)
+HEROKU_SLUG_COMMIT := $(shell git rev-parse HEAD)
 
 new-relic:
 	@echo ${NEW_RELIC_LICENSE_KEY}
@@ -14,14 +14,14 @@ new-relic:
 
 release:
 	@export CORALOGIX_SUBSYSTEM=web; \
-		export NEW_RELIC_METADATA_COMMIT=${NEW_RELIC_METADATA_COMMIT}; \
+		export NEW_RELIC_METADATA_COMMIT=${HEROKU_SLUG_COMMIT}; \
 		# newrelic-admin run-program bin/start-pgbouncer-stunnel \
 		gunicorn breathecode.wsgi --timeout 29 --workers ${WEB_WORKERS} \
 		--worker-connections ${WEB_WORKER_CONNECTION} --worker-class ${WEB_WORKER_CLASS}
 
 web:
 	@export CORALOGIX_SUBSYSTEM=web; \
-		export NEW_RELIC_METADATA_COMMIT=${NEW_RELIC_METADATA_COMMIT}; \
+		export NEW_RELIC_METADATA_COMMIT=${HEROKU_SLUG_COMMIT}; \
 		# newrelic-admin run-program bin/start-pgbouncer-stunnel \
 		gunicorn breathecode.wsgi --timeout 29 --workers ${WEB_WORKERS} \
 		--worker-connections ${WEB_WORKER_CONNECTION} --worker-class ${WEB_WORKER_CLASS}

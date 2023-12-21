@@ -24,7 +24,7 @@ from .views import (AcademyInviteView, AcademyTokenView, AppUserAgreementView, A
                     get_users, login_html_view, pick_password, render_academy_invite, render_invite,
                     render_user_invite, reset_password_view, save_facebook_token, save_github_token,
                     save_google_token, save_slack_token, sync_gitpod_users_view, GithubUserView,
-                    AcademyGithubSyncView, AcademyAuthSettingsView, UserSettingsView)
+                    AcademyGithubSyncView, AcademyAuthSettingsView, UserSettingsView, ProfileView)
 
 app_name = 'authenticate'
 urlpatterns = [
@@ -38,6 +38,7 @@ urlpatterns = [
     path('user/<str:id_or_email>', get_user_by_id_or_email),
     path('role', get_roles, name='role'),
     path('role/<str:role_slug>', get_roles, name='role_slug'),
+    path('profile/<int:user_id>', ProfileView.as_view(), name='user_profile'),
     path('profile/me', ProfileMeView.as_view(), name='profile_me'),
     path('profile/me/picture', ProfileMePictureView.as_view(), name='profile_me_picture'),
     path('profile/invite/me', ProfileInviteMeView.as_view(), name='profile_invite_me'),
