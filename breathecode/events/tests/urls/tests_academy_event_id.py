@@ -29,6 +29,7 @@ def get_serializer(event, academy, data={}):
         'capacity': event.capacity,
         'description': event.description,
         'excerpt': event.excerpt,
+        'free_for_all': event.free_for_all,
         'title': event.title,
         'lang': event.lang,
         'url': event.url,
@@ -121,38 +122,6 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         response = self.client.get(url)
         json = response.json()
-        expected = {
-            'id': model['event'].id,
-            'capacity': model['event'].capacity,
-            'description': model['event'].description,
-            'excerpt': model['event'].excerpt,
-            'title': model['event'].title,
-            'lang': model['event'].lang,
-            'url': model['event'].url,
-            'banner': model['event'].banner,
-            'tags': model['event'].tags,
-            'slug': model['event'].slug,
-            'host': model['event'].host,
-            'starting_at': datetime_to_iso_format(model['event'].starting_at),
-            'ending_at': datetime_to_iso_format(model['event'].ending_at),
-            # 'updated_at': datetime_to_iso_format(model['event'].updated_at),
-            'status': model['event'].status,
-            'event_type': model['event'].event_type,
-            'online_event': model['event'].online_event,
-            'venue': model['event'].venue,
-            'academy': {
-                'id': 1,
-                'slug': model['academy'].slug,
-                'name': model['academy'].name,
-                'city': {
-                    'name': model['event'].academy.city.name
-                }
-            },
-            'sync_with_eventbrite': False,
-            'live_stream_url': model['event'].live_stream_url,
-            'eventbrite_sync_status': 'PENDING',
-            'eventbrite_sync_description': None,
-        }
         expected = get_serializer(model.event,
                                   model.academy,
                                   data={
