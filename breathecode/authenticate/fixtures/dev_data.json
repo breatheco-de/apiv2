@@ -1542,6 +1542,28 @@
         }
     },
     {
+        "model": "authenticate.userinvite",
+        "pk": 2,
+        "fields": {
+            "email": "gmarquez@4geeksacademy.com",
+            "academy": 1,
+            "cohort": 1,
+            "role": "admin",
+            "first_name": "Gustavo",
+            "last_name": "Marquez",
+            "token": "651b247dd71d91fba3dd44cf7bbbded96cd447e4",
+            "author": 2,
+            "is_email_validated": true,
+            "status": "ACCEPTED",
+            "process_status": "DONE",
+            "process_message": "Done!",
+            "phone": "+584149544966",
+            "created_at": "2022-10-13T00:17:59.970Z",
+            "updated_at": "2022-10-13T00:17:59.970Z",
+            "sent_at": "2022-10-13T00:16:50Z"
+        }
+    },
+    {
         "model": "authenticate.profileacademy",
         "pk": 1,
         "fields": {

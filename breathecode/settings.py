@@ -120,6 +120,9 @@ REST_FRAMEWORK = {
     ),
 }
 
+if os.getenv('ENABLE_DEFAULT_PAGINATION', 'y') in ['t', 'true', 'True', 'TRUE', '1', 'yes', 'y']:
+    REST_FRAMEWORK['PAGE_SIZE'] = 20
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',

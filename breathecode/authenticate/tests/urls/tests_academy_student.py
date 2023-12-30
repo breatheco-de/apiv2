@@ -754,7 +754,7 @@ class StudentPostTestSuite(AuthTestCase):
             'user_id': 1,
         }])
 
-        self.assertEqual(actions.send_email_message.call_args_list, [])
+        assert actions.send_email_message.call_args_list == []
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
@@ -787,7 +787,7 @@ class StudentPostTestSuite(AuthTestCase):
             'user_id': 1,
         }])
 
-        self.assertEqual(actions.send_email_message.call_args_list, [])
+        assert actions.send_email_message.call_args_list == []
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
@@ -818,7 +818,7 @@ class StudentPostTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'),
                          [self.bc.format.to_dict(model.profile_academy)])
 
-        self.assertEqual(actions.send_email_message.call_args_list, [])
+        assert actions.send_email_message.call_args_list == []
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
@@ -849,7 +849,7 @@ class StudentPostTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'),
                          [self.bc.format.to_dict(model.profile_academy)])
 
-        self.assertEqual(actions.send_email_message.call_args_list, [])
+        assert actions.send_email_message.call_args_list == []
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
@@ -882,7 +882,7 @@ class StudentPostTestSuite(AuthTestCase):
             'user_id': 1,
         }])
 
-        self.assertEqual(actions.send_email_message.call_args_list, [])
+        assert actions.send_email_message.call_args_list == []
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
     """
@@ -920,7 +920,7 @@ class StudentPostTestSuite(AuthTestCase):
         ])
 
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
-        self.assertEqual(actions.send_email_message.call_args_list, [])
+        assert actions.send_email_message.call_args_list == []
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
     """
@@ -960,7 +960,7 @@ class StudentPostTestSuite(AuthTestCase):
         ])
 
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
-        self.assertEqual(actions.send_email_message.call_args_list, [])
+        assert actions.send_email_message.call_args_list == []
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
     """
@@ -999,7 +999,7 @@ class StudentPostTestSuite(AuthTestCase):
         ])
 
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
-        self.assertEqual(actions.send_email_message.call_args_list, [])
+        assert actions.send_email_message.call_args_list == []
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
     """
@@ -1064,7 +1064,7 @@ class StudentPostTestSuite(AuthTestCase):
         url = os.getenv('API_URL') + '/v1/auth/academy/html/invite?' + querystr
 
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
-        self.assertEqual(actions.send_email_message.call_args_list, [
+        assert actions.send_email_message.call_args_list == [
             call(
                 'academy_invite', model.user[1].email, {
                     'subject':
@@ -1091,7 +1091,7 @@ class StudentPostTestSuite(AuthTestCase):
                     'LINK':
                     url,
                 }),
-        ])
+        ]
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
     """
@@ -1157,7 +1157,7 @@ class StudentPostTestSuite(AuthTestCase):
         url = os.getenv('API_URL') + '/v1/auth/academy/html/invite?' + querystr
 
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
-        self.assertEqual(actions.send_email_message.call_args_list, [
+        assert actions.send_email_message.call_args_list == [
             call(
                 'academy_invite', model.user[1].email, {
                     'subject':
@@ -1184,7 +1184,7 @@ class StudentPostTestSuite(AuthTestCase):
                     'LINK':
                     url,
                 }),
-        ])
+        ]
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
     """
@@ -1258,14 +1258,14 @@ class StudentPostTestSuite(AuthTestCase):
                 'syllabus_id': None,
             }),
         ])
-        self.assertEqual(actions.send_email_message.call_args_list, [
+        assert actions.send_email_message.call_args_list == [
             call('welcome_academy', 'dude@dude.dude', {
                 'email': 'dude@dude.dude',
                 'subject': 'Welcome to 4Geeks.com',
                 'LINK': url,
                 'FIST_NAME': 'Kenny'
             })
-        ])
+        ]
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
     """
@@ -1310,7 +1310,7 @@ class StudentPostTestSuite(AuthTestCase):
             str(TOKEN) + '?' + querystr
 
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
-        self.assertEqual(actions.send_email_message.call_args_list, [])
+        assert actions.send_email_message.call_args_list == []
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
     """
@@ -1391,14 +1391,14 @@ class StudentPostTestSuite(AuthTestCase):
                 'longitude': None,
             }),
         ])
-        self.assertEqual(actions.send_email_message.call_args_list, [
+        assert actions.send_email_message.call_args_list == [
             call('welcome_academy', 'dude@dude.dude', {
                 'email': 'dude@dude.dude',
                 'subject': 'Welcome to 4Geeks.com',
                 'LINK': url,
                 'FIST_NAME': 'Kenny'
             })
-        ])
+        ]
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [
             self.bc.format.to_dict(model.plan),
         ])
@@ -1449,7 +1449,7 @@ class StudentPostTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.user_invite),
         ])
 
-        self.assertEqual(actions.send_email_message.call_args_list, [])
+        assert actions.send_email_message.call_args_list == []
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('random.getrandbits', MagicMock(side_effect=getrandbits))
@@ -1535,14 +1535,14 @@ class StudentPostTestSuite(AuthTestCase):
             }),
         ])
 
-        self.assertEqual(actions.send_email_message.call_args_list, [
+        assert actions.send_email_message.call_args_list == [
             call('welcome_academy', 'dude2@dude.dude', {
                 'email': 'dude2@dude.dude',
                 'subject': 'Welcome to 4Geeks.com',
                 'LINK': url,
                 'FIST_NAME': 'Kenny'
             })
-        ])
+        ]
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
@@ -1587,7 +1587,7 @@ class StudentPostTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.user_invite),
         ])
 
-        self.assertEqual(actions.send_email_message.call_args_list, [])
+        assert actions.send_email_message.call_args_list == []
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
 

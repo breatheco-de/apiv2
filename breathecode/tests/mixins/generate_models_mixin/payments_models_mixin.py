@@ -41,6 +41,7 @@ class PaymentsModelsMixin(ModelsMixin):
                                  provisioning_price=False,
                                  cohort_set=False,
                                  cohort_set_translation=False,
+                                 app_service=False,
                                  models={},
                                  **kwargs):
         """Generate models"""
@@ -396,6 +397,14 @@ class PaymentsModelsMixin(ModelsMixin):
             models['subscription_service_item'] = create_models(subscription_service_item,
                                                                 'payments.SubscriptionServiceItem', **kargs)
 
+        if not 'app_service' in models and is_valid(app_service):
+            kargs = {}
+
+            if 'app' in models:
+                kargs['app'] = just_one(models['app'])
+
+            models['app_service'] = create_models(app_service, 'payments.AppService', **kargs)
+
         if not 'consumable' in models and (is_valid(consumable) or is_valid(consumption_session)):
             kargs = {}
 
@@ -413,6 +422,9 @@ class PaymentsModelsMixin(ModelsMixin):
 
             if 'event_type_set' in models:
                 kargs['event_type_set'] = just_one(models['event_type_set'])
+
+            if 'app_service' in models:
+                kargs['app_service'] = just_one(models['app_service'])
 
             models['consumable'] = create_models(consumable, 'payments.Consumable', **kargs)
 
