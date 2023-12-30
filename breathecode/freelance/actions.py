@@ -5,7 +5,6 @@ from breathecode.authenticate.models import CredentialsGithub
 from breathecode.admissions.models import Academy
 from github import Github
 from breathecode.services.activecampaign import ActiveCampaign
-from breathecode.marketing.actions import acp_ids
 
 logger = logging.getLogger(__name__)
 
@@ -298,7 +297,7 @@ def run_hook(modeladmin, request, queryset):
     for hook in queryset.all():
         ac_academy = hook.ac_academy
         client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
-        client.execute_action(hook.id, acp_ids)
+        client.execute_action(hook.id)
 
 
 run_hook.short_description = 'Process Hook'

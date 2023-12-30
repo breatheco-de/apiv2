@@ -9,7 +9,7 @@ from .models import FormEntry, Tag, Automation, ActiveCampaignAcademy, AcademyAl
 from rest_framework.exceptions import APIException
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import CredentialsFacebook
-from breathecode.services.activecampaign import ACOldClient, ActiveCampaign, ActiveCampaignClient
+from breathecode.services.activecampaign import ACOldClient, ActiveCampaign, ActiveCampaignClient, acp_ids, map_ids
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils import getLogger
 import numpy as np
@@ -22,36 +22,6 @@ MAIL_ABSTRACT_KEY = os.getenv('MAIL_ABSTRACT_KEY')
 
 def get_save_leads():
     return os.getenv('SAVE_LEADS')
-
-
-acp_ids = {
-    # "strong": "49",
-    # "soft": "48",
-    # "newsletter_list": "3",
-    'utm_plan': '67',
-    'utm_placement': '66',
-    'utm_term': '65',
-    'utm_source': '59',
-    'utm_medium': '36',
-    'utm_content': '35',
-    'utm_url': '60',
-    'utm_location': '18',
-    'utm_campaign': '33',
-    'gender': '45',
-    'course': '2',
-    'client_comments': '13',
-    'current_download': '46',  # used in downloadables
-    'utm_language': '16',
-    'utm_country': '19',
-    'gclid': '26',
-    'referral_key': '27',
-    'deal': {
-        'expected_cohort': '10',
-        'expected_cohort_date': '21',
-        'utm_location': '16',
-        'utm_course': '6',
-    }
-}
 
 
 def bind_formentry_with_webhook(webhook):
@@ -433,6 +403,56 @@ def test_ac_connection(ac_academy):
     client = ActiveCampaignClient(ac_academy.ac_url, ac_academy.ac_key)
     response = client.tags.list_all_tags(limit=1)
     return response
+
+
+def update_deal_custom_fields(formentry_id: int):
+
+    entry = FormEntry.objects.filter(id=formentry_id).first()
+    contact_id = entry.ac_contact_id
+    deal_id = entry.ac_deal_id
+
+    if entry.academy is None or entry.academy.activecampaignacademy is None:
+        raise Exception('Academy not found or not found in active campaign')
+    ac_academy = entry.academy.activecampaignacademy
+
+    client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
+    _incoming_values = client.get_contact_customfields(contact_id)
+
+    # get only the right side (values) in the dict of custom fields
+    _ids_to_update = [x for x in acp_ids.values() if isinstance(x, str)]
+    _updated_fields = []
+    for _field in _incoming_values:
+        if _field['field'] not in _ids_to_update:
+            logger.debug(f"Skipping contact custom field {_field['field']}")
+            continue
+        # convert contact custom field id to deal custom field id
+        _mapped_id = map_ids(_field['field'])
+        # only go thru if the deal has the respective match custom field
+        if _mapped_id:
+            _updated_fields.append({
+                'customFieldId': _mapped_id,
+                'fieldValue': _field['value'],
+            })
+
+        # deal utm_location
+        _form_entry_updated = False
+        if _mapped_id == '16':
+            _form_entry_updated = True
+            entry.ac_deal_location = _field['value']
+        # deal utm_course
+        elif _mapped_id == '6':
+            _form_entry_updated = True
+            entry.ac_deal_course = _field['value']
+
+        if _form_entry_updated: entry.save()
+
+    try:
+        if client.update_deal(deal_id, {'fields': _updated_fields}):
+            return True
+
+    except Exception:
+        logger.exception(f'There was an error updating new deal {deal_id} with its contact custom fields')
+        return False
 
 
 def sync_tags(ac_academy):
