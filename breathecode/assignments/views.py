@@ -1,4 +1,5 @@
 from django.http import HttpResponseRedirect, StreamingHttpResponse
+from breathecode.assignments.permissions.consumers import code_revision_service
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 import logging, hashlib, os
@@ -15,6 +16,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+from breathecode.utils.decorators import has_permission
 from breathecode.utils.service import Service
 from .models import Task, FinalProject, UserAttachment
 from .actions import deliver_task
@@ -904,7 +906,9 @@ class MeCodeRevisionView(APIView):
             resource[header] = response.headers[header]
 
         return resource
-
+    
+    # TODO: removed the consumer param code_revision_service because it has to be refactored https://github.com/breatheco-de/breatheco-de/issues/6688
+    @has_permission('add_code_review')
     def post(self, request, task_id):
         lang = get_user_language(request)
         params = {}

@@ -254,17 +254,17 @@ class FillActivityMeta:
             if instance.cohort.syllabus_version else None)
         obj = {
             'id': instance.id,
-            'user_id': instance.user.id,
-            'first_name': instance.user.first_name,
-            'last_name': instance.user.last_name,
-            'cohort': instance.cohort.slug,
-            'watching': instance.watching,
-            'finantial_status': instance.finantial_status,
-            'educational_status': instance.educational_status,
-            'syllabus': syllabus,
-            'created_at': instance.created_at,
-            'updated_at': instance.updated_at,
-            'is_cohort_available_as_saas': instance.cohort.available_as_saas,
+            'user_first_name': instance.user.first_name,
+            'user_last_name': instance. user.last_name,
+            'cohort': instance.cohort.id,
+            # 'available_as_saas': instance.cohort.available_as_saas,
+            # 'syllabus': syllabus,
+            # 'user_id': instance.user.id,
+            # 'watching': instance.watching,
+            # 'finantial_status': instance.finantial_status,
+            # 'educational_status': instance.educational_status,
+            # 'created_at': instance.created_at,
+            # 'updated_at': instance.updated_at,
         }
 
         if instance.cohort.academy:

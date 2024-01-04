@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import os
 from typing import Any, Optional
 from breathecode.utils.api_view_extensions.extension_base import ExtensionBase
 from breathecode.utils.api_view_extensions.priorities.mutator_order import MutatorOrder
@@ -12,13 +13,17 @@ REQUIREMENTS = ['cache']
 OFFSET_QUERY_PARAM = 'offset'
 LIMIT_QUERY_PARAM = 'limit'
 MAX_LIMIT = None
-DEFAULT_LIMIT = 1000
+
+if os.getenv('ENABLE_DEFAULT_PAGINATION', 'y') in ['t', 'true', 'True', 'TRUE', '1', 'yes', 'y']:
+    DEFAULT_LIMIT = 20
+
+else:
+    DEFAULT_LIMIT = 1000
 
 
 def _positive_int(integer_string, strict=False, cutoff=None):
-    """
-    Cast a string to a strictly positive integer.
-    """
+    """Cast a string to a strictly positive integer."""
+
     ret = int(integer_string)
     if ret < 0 or (ret == 0 and strict):
         raise ValueError()
@@ -36,34 +41,36 @@ class PaginationExtension(ExtensionBase):
 
     def __init__(self, paginate: bool, **kwargs) -> None:
         self._paginate = paginate
+        self._is_list = False
 
     def _can_modify_queryset(self) -> bool:
         return self._paginate
 
     def _get_order_of_mutator(self) -> int:
-        return MutatorOrder.PAGINATION
+        return int(MutatorOrder.PAGINATION)
 
     def _can_modify_response(self) -> bool:
-        return self._paginate and self._is_paginate()
+        return self._paginate
 
     def _get_order_of_response(self) -> int:
-        return int(ResponseOrder.PAGINATION) if self._is_paginate() else -1
+        return int(ResponseOrder.PAGINATION)
 
     def _is_paginate(self):
         return bool(self._request.GET.get(LIMIT_QUERY_PARAM) or self._request.GET.get(OFFSET_QUERY_PARAM))
 
     def _apply_queryset_mutation(self, queryset: QuerySet[Any]):
-        if not self._is_paginate():
-            return queryset
-
-        self._use_envelope = True
-        if str(self._request.GET.get('envelope')).lower() in ['false', '0']:
-            self._use_envelope = False
-
+        self._use_envelope = False
+        self._is_list = True
         self._count = self._get_count(queryset)
         self._offset = self._get_offset()
         self._limit = self._get_limit()
-        return queryset[self._offset:self._offset + self._limit]
+
+        if self._is_paginate() and self._request.GET.get(
+                'envelope', '').lower() in ['false', 'f', '0', 'no', 'n', 'off', '']:
+            self._use_envelope = True
+
+        self._queryset = queryset[self._offset:self._offset + self._limit]
+        return self._queryset
 
     def _apply_response_mutation(self,
                                  data: list[dict] | dict,
@@ -71,6 +78,9 @@ class PaginationExtension(ExtensionBase):
                                  format='application/json'):
         if headers is None:
             headers = {}
+
+        if not self._is_list:
+            return (data, headers)
 
         next_url = self._parse_comma(self._get_next_link())
         previous_url = self._parse_comma(self._get_previous_link())
@@ -88,7 +98,9 @@ class PaginationExtension(ExtensionBase):
                 links.append('<{}>; rel="{}"'.format(url, label))
 
         headers = {**headers, 'Link': ', '.join(links)} if links else {**headers}
-        headers['x-total-count'] = self._count
+        headers['X-Total-Count'] = self._count
+        headers['X-Per-Page'] = self._limit
+        headers['X-Page'] = int(self._offset / self._limit) + 1
 
         if self._use_envelope:
             data = OrderedDict([('count', self._count), ('first', first_url), ('next', next_url),
@@ -104,9 +116,7 @@ class PaginationExtension(ExtensionBase):
         return string.replace('%2C', ',')
 
     def _get_count(self, queryset: QuerySet[Any] | list):
-        """
-        Determine an object count, supporting either querysets or regular lists.
-        """
+        """Determine an object count, supporting either querysets or regular lists."""
 
         try:
             return queryset.count()

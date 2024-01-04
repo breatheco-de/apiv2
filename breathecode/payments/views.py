@@ -1,41 +1,72 @@
 from datetime import timedelta
 
+from django.db import transaction
+from django.db.models import CharField, Q, Value
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+import breathecode.activity.tasks as tasks_activity
+from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_user_language
-from django.db.models import CharField, Q, Value
-
-from breathecode.payments import tasks
-from breathecode.admissions import tasks as admissions_tasks
-from breathecode.payments import actions
-from breathecode.payments.actions import (PlanFinder, add_items_to_bag, filter_consumables, get_amount,
-                                          get_amount_by_chosen_period, get_balance_by_resource)
+from breathecode.payments import actions, tasks
+from breathecode.payments.actions import (
+    PlanFinder,
+    add_items_to_bag,
+    filter_consumables,
+    get_amount,
+    get_amount_by_chosen_period,
+    get_balance_by_resource,
+)
 from breathecode.payments.caches import PlanOfferCache
-from breathecode.payments.models import (AcademyService, Bag, CohortSet, Consumable, Currency, EventTypeSet,
-                                         FinancialReputation, Invoice, MentorshipServiceSet, Plan,
-                                         PlanFinancing, PlanOffer, Service, ServiceItem, Subscription)
+from breathecode.payments.models import (
+    AcademyService,
+    Bag,
+    CohortSet,
+    Consumable,
+    Currency,
+    EventTypeSet,
+    FinancialReputation,
+    Invoice,
+    MentorshipServiceSet,
+    Plan,
+    PlanFinancing,
+    PlanOffer,
+    Service,
+    ServiceItem,
+    Subscription,
+)
 from breathecode.payments.serializers import (
-    GetBagSerializer, GetEventTypeSetSerializer, GetEventTypeSetSmallSerializer, GetInvoiceSerializer,
-    GetInvoiceSmallSerializer, GetMentorshipServiceSetSerializer, GetMentorshipServiceSetSmallSerializer,
-    GetPlanFinancingSerializer, GetPlanOfferSerializer, GetPlanSerializer,
-    GetServiceItemWithFeaturesSerializer, GetServiceSerializer, GetSubscriptionSerializer, PlanSerializer,
-    ServiceSerializer, GetAcademyServiceSmallSerializer, POSTAcademyServiceSerializer,
-    PUTAcademyServiceSerializer)
+    GetAcademyServiceSmallSerializer,
+    GetBagSerializer,
+    GetEventTypeSetSerializer,
+    GetEventTypeSetSmallSerializer,
+    GetInvoiceSerializer,
+    GetInvoiceSmallSerializer,
+    GetMentorshipServiceSetSerializer,
+    GetMentorshipServiceSetSmallSerializer,
+    GetPlanFinancingSerializer,
+    GetPlanOfferSerializer,
+    GetPlanSerializer,
+    GetServiceItemWithFeaturesSerializer,
+    GetServiceSerializer,
+    GetSubscriptionSerializer,
+    PlanSerializer,
+    POSTAcademyServiceSerializer,
+    PUTAcademyServiceSerializer,
+    ServiceSerializer,
+)
 from breathecode.payments.services.stripe import Stripe
-from breathecode.utils import APIViewExtensions
+from breathecode.utils import APIViewExtensions, getLogger
 from breathecode.utils.decorators.capable_of import capable_of
 from breathecode.utils.i18n import translation
 from breathecode.utils.payment_exception import PaymentException
 from breathecode.utils.shorteners import C
 from breathecode.utils.validation_exception import ValidationException
-from django.db import transaction
-from breathecode.utils import getLogger
-import breathecode.activity.tasks as tasks_activity
 
 logger = getLogger(__name__)
 

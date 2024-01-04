@@ -12,7 +12,7 @@ from breathecode.utils import getLogger
 from .models import AcademyAlias, FormEntry, ShortLink, ActiveCampaignWebhook, ActiveCampaignAcademy, Tag, Downloadable
 from breathecode.monitoring.models import CSVUpload
 from .serializers import (PostFormEntrySerializer)
-from .actions import register_new_lead, save_get_geolocal, acp_ids, bind_formentry_with_webhook
+from .actions import register_new_lead, save_get_geolocal, bind_formentry_with_webhook, update_deal_custom_fields
 from breathecode.utils.decorators.task import AbortTask, RetryTask, TaskPriority, task
 
 logger = getLogger(__name__)
@@ -81,6 +81,13 @@ def update_link_viewcount(slug, **_: Any):
         sl.save()
 
 
+@task(priority=TaskPriority.MARKETING.value)
+def async_update_deal_custom_fields(formentry_id: str, **_: Any):
+    logger.info('Starting to sync deal with contact')
+    update_deal_custom_fields(formentry_id)
+    logger.debug('async_update_deal_custom_fields: ok')
+
+
 @task(priority=TaskPriority.REALTIME.value)
 def async_activecampaign_webhook(webhook_id, **_: Any):
     logger.info('Starting async_activecampaign_webhook')
@@ -93,7 +100,7 @@ def async_activecampaign_webhook(webhook_id, **_: Any):
     if ac_academy is not None:
         try:
             client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
-            client.execute_action(webhook_id, acp_ids)
+            client.execute_action(webhook_id)
         except Exception as e:
             logger.debug('ActiveCampaign Webhook Exception')
             raise e

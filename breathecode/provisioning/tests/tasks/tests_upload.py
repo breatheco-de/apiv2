@@ -235,6 +235,16 @@ def github_academy_user_data(data={}):
     }
 
 
+def get_last_task_manager_id(bc):
+    task_manager_cls = bc.database.get_model('commons.TaskManager')
+    task_manager = task_manager_cls.objects.order_by('-id').first()
+
+    if task_manager is None:
+        return 0
+
+    return task_manager.id
+
+
 class RandomFileTestSuite(ProvisioningTestCase):
     # When: random csv is uploaded and the file does not exists
     # Then: the task should not create any bill or activity
@@ -999,6 +1009,8 @@ class CodespacesTestSuite(ProvisioningTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
+        task_manager_id = get_last_task_manager_id(self.bc) + 1
+
         slug = self.bc.fake.slug()
         with patch('breathecode.services.google_cloud.File.download',
                    MagicMock(side_effect=csv_file_mock(csv))):
@@ -1062,9 +1074,9 @@ class CodespacesTestSuite(ProvisioningTestCase):
         self.bc.check.calls(logging.Logger.error.call_args_list, [])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [
-            call(slug, page=1, task_manager_id=1),
-            call(slug, page=2, task_manager_id=1),
-            call(slug, page=3, task_manager_id=1),
+            call(slug, page=1, task_manager_id=task_manager_id),
+            call(slug, page=2, task_manager_id=task_manager_id),
+            call(slug, page=3, task_manager_id=task_manager_id),
         ])
 
         self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [call(slug)])
@@ -1652,6 +1664,8 @@ class GitpodTestSuite(ProvisioningTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
+        task_manager_id = get_last_task_manager_id(self.bc) + 1
+
         slug = self.bc.fake.slug()
         with patch('breathecode.services.google_cloud.File.download',
                    MagicMock(side_effect=csv_file_mock(csv))):
@@ -1714,9 +1728,9 @@ class GitpodTestSuite(ProvisioningTestCase):
         self.bc.check.calls(logging.Logger.error.call_args_list, [])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [
-            call(slug, page=1, task_manager_id=1),
-            call(slug, page=2, task_manager_id=1),
-            call(slug, page=3, task_manager_id=1),
+            call(slug, page=1, task_manager_id=task_manager_id),
+            call(slug, page=2, task_manager_id=task_manager_id),
+            call(slug, page=3, task_manager_id=task_manager_id),
         ])
 
         self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [call(slug)])

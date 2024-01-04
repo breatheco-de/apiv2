@@ -30,6 +30,46 @@ def serialize_cache_object(data, headers={}):
     return res
 
 
+def assert_pagination(headers: dict, limit, offset, lenght):
+    assert 'Link' in headers
+    assert 'X-Total-Count' in headers
+    assert 'X-Page' in headers
+    assert 'X-Per-Page' in headers
+
+    assert headers['X-Total-Count'] == str(lenght)
+    # assert headers['X-Total-Page'] == str(int(lenght / limit))
+    assert headers['X-Page'] == str(int(offset / limit) + 1)
+    assert headers['X-Per-Page'] == str(limit)
+
+    if offset == 0:
+        assert headers['Link'] == (
+            f'<http://testserver/the-beans-should-not-have-sugar?limit={limit}&offset={limit}>; rel="next", '
+            f'<http://testserver/the-beans-should-not-have-sugar?limit={limit}&offset={lenght - limit if lenght - limit>= 0 else 0}>; rel="last"'
+        )
+    elif offset + limit >= lenght:
+        previous_offset = offset - limit if offset - limit >= 0 else 0
+
+        if previous_offset:
+            previous_offset_section = f'&offset={previous_offset}'
+
+        else:
+            previous_offset_section = ''
+
+        assert headers['Link'] == (
+            f'<http://testserver/the-beans-should-not-have-sugar?limit={limit}>; rel="first", '
+            f'<http://testserver/the-beans-should-not-have-sugar?limit={limit}{previous_offset_section}>; rel="previous"'
+        )
+    else:
+        raise NotImplemented('This case is not implemented')
+
+
+def assert_no_pagination(headers: dict, limit, offset, lenght):
+    assert 'Link' not in headers
+    assert 'X-Total-Count' not in headers
+    assert 'X-Page' not in headers
+    assert 'X-Per-Page' not in headers
+
+
 class GetCohortSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
@@ -798,7 +838,6 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
     🔽🔽🔽 Pagination True
     """
 
-    @pytest.mark.skip(reason='It was not prioritized in the scrum')
     def test_pagination__get__activate__25_cohorts_just_get_20(self):
         cache.clear()
 
@@ -814,6 +853,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert_pagination(response.headers, limit=20, offset=0, lenght=25)
 
     def test_pagination__get__activate__with_10_cohorts__get_first_five(self):
         cache.clear()
@@ -837,6 +877,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert_pagination(response.headers, limit=5, offset=0, lenght=10)
 
     def test_pagination__get__activate__with_10_cohorts__get_last_five(self):
         cache.clear()
@@ -860,6 +901,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert_pagination(response.headers, limit=5, offset=5, lenght=10)
 
     def test_pagination__get__activate__with_10_cohorts__after_last_five(self):
         cache.clear()
@@ -883,6 +925,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert_pagination(response.headers, limit=5, offset=10, lenght=10)
 
     """
     🔽🔽🔽 Pagination False
@@ -904,6 +947,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         self.assertEqual(json.loads(brotli.decompress(response.content)), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert_no_pagination(response.headers, limit=20, offset=0, lenght=25)
 
     def test_pagination__get__deactivate__with_10_cohorts__get_first_five(self):
         cache.clear()
@@ -920,6 +964,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert_no_pagination(response.headers, limit=20, offset=0, lenght=25)
 
     def test_pagination__get__deactivate__with_10_cohorts__get_last_five(self):
         cache.clear()
@@ -936,6 +981,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert_no_pagination(response.headers, limit=20, offset=0, lenght=25)
 
     def test_pagination__get__deactivate__with_10_cohorts__after_last_five(self):
         cache.clear()
@@ -952,6 +998,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert_no_pagination(response.headers, limit=20, offset=0, lenght=25)
 
 
 class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):

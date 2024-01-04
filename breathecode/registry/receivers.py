@@ -31,7 +31,7 @@ def post_asset_slug_modified(sender, instance: Asset, **kwargs):
     a = Asset.objects.get(id=instance.id)
     a.all_translations.add(instance)
     instance.save()
-    async_update_frontend_asset_cache(instance.slug)
+    async_update_frontend_asset_cache.delay(instance.slug)
 
 
 @receiver(asset_title_modified, sender=Asset)
@@ -41,7 +41,7 @@ def asset_title_was_updated(sender, instance, **kwargs):
     if instance.status != 'PUBLISHED':
         return False
 
-    async_update_frontend_asset_cache(instance.slug)
+    async_update_frontend_asset_cache.delay(instance.slug)
 
     bucket_name = os.getenv('SCREENSHOTS_BUCKET', None)
     if bucket_name is None or bucket_name == '':
