@@ -52,11 +52,26 @@ def validate_permission(user: User, permission: str, consumer: bool | HasPermiss
     return found.user_set.filter(id=user.id).exists() or found.group_set.filter(user__id=user.id).exists()
 
 
-def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', data=None, status=None):
+def render_message(r,
+                   msg,
+                   btn_label=None,
+                   btn_url=None,
+                   btn_target='_blank',
+                   data=None,
+                   status=None,
+                   go_back=None,
+                   url_back=None):
     if data is None:
         data = {}
 
-    _data = {'MESSAGE': msg, 'BUTTON': btn_label, 'BUTTON_TARGET': btn_target, 'LINK': btn_url}
+    _data = {
+        'MESSAGE': msg,
+        'BUTTON': btn_label,
+        'BUTTON_TARGET': btn_target,
+        'LINK': btn_url,
+        'GO_BACK': go_back,
+        'URL_BACK': url_back
+    }
 
     return render(r, 'message.html', {**_data, **data}, status=status)
 
@@ -182,24 +197,45 @@ def has_permission(permission: str,
 
                 if format == 'html':
                     from breathecode.payments.models import Subscription, PlanOffer
-                    # print('consumer')
-                    # print(consumer)
+
                     context = build_context()
                     context, args, kwargs = consumer(context, args, kwargs)
-                    print('context')
-                    print(context)
-                    print('request.paramsss')
-                    print(request.path)
+
+                    renovate_consumables = {}
                     url = request.path
                     match = re.search(r'service/(.*)', url)
                     service = match.group(1)
-                    print('service')
-                    print(service)
-                    subscriptions = Subscription.objects.filter(user=request.user,
-                                                                service_items__service__slug=service)
-                    print('subscriptions')
-                    print(subscriptions)
-                    return render_message(request, str(e), status=402)
+
+                    subscription = Subscription.objects.filter(
+                        user=request.user,
+                        plans__mentorship_service_set__mentorship_services__slug=service).first()
+
+                    plan_offer = None
+                    user_plans = []
+
+                    if subscription is not None:
+                        user_plans = subscription.plans.all()
+
+                    for plan in user_plans:
+                        plan_offer = PlanOffer.objects.filter(original_plan__slug=plan.slug).first()
+
+                    if plan_offer is not None:
+                        renovate_consumables['btn_label'] = 'Get more consumables'
+                        renovate_consumables[
+                            'btn_url'] = f'https://4geeks.com/checkout?plan={plan_offer.suggested_plan.slug}'
+                    elif subscription is not None:
+                        current_plan = user_plans.filter(
+                            mentorship_service_set__mentorship_services__slug=service).first()
+                        renovate_consumables['btn_label'] = 'Get more consumables'
+                        renovate_consumables[
+                            'btn_url'] = f'https://4geeks.com/checkout?mentorship_service_set={current_plan.mentorship_service_set.slug}'
+
+                    return render_message(request,
+                                          str(e),
+                                          status=402,
+                                          go_back='Go back to Dashboard',
+                                          url_back='https://4geeks.com/choose-program',
+                                          **renovate_consumables)
 
                 return Response({'detail': str(e), 'status_code': 402}, 402)
 
