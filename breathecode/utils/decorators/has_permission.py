@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timedelta
 import logging
 import traceback
@@ -183,12 +184,20 @@ def has_permission(permission: str,
                     from breathecode.payments.models import Subscription, PlanOffer
                     # print('consumer')
                     # print(consumer)
-                    # context = build_context()
-                    # context, args, kwargs = consumer(context, args, kwargs)
-                    # print('context')
-                    # print(context)
+                    context = build_context()
+                    context, args, kwargs = consumer(context, args, kwargs)
+                    print('context')
+                    print(context)
+                    print('request.paramsss')
+                    print(request.path)
+                    url = request.path
+                    match = re.search(r'service/(.*)', url)
+                    service = match.group(1)
+                    print('service')
+                    print(service)
                     subscriptions = Subscription.objects.filter(user=request.user,
                                                                 service_items__service__slug=service)
+                    print('subscriptions')
                     print(subscriptions)
                     return render_message(request, str(e), status=402)
 
