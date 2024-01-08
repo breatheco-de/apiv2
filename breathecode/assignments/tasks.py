@@ -114,6 +114,7 @@ def set_cohort_user_assignments(task_id: int):
     try:
         if hasattr(task.user, 'credentialsgithub') and task.github_url:
             s = Service('rigobot', task.user.id)
+            logger.info("Service rigobot found", s)
 
         if s and task.task_status == 'DONE':
             response = s.post('/v1/finetuning/me/repository/',
@@ -121,6 +122,7 @@ def set_cohort_user_assignments(task_id: int):
                                   'url': task.github_url,
                                   'watchers': task.user.credentialsgithub.username,
                               })
+            logger.info("repository added to rigobot if task is done")
             data = response.json()
             task.rigobot_repository_id = data['id']
 
@@ -130,6 +132,7 @@ def set_cohort_user_assignments(task_id: int):
                                  'url': task.github_url,
                                  'activity_status': 'INACTIVE',
                              })
+            logger.info("repository added to rigobot if task is not done")
             data = response.json()
             task.rigobot_repository_id = data['id']
 
