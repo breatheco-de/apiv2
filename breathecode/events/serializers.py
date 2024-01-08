@@ -278,6 +278,7 @@ class AcademyEventSmallSerializer(serpy.Serializer):
     tags = serpy.Field()
     host_user = UserSerializer(required=False)
     author = UserSerializer(required=False)
+    free_for_all = serpy.Field()
 
 
 class GetLiveClassSerializer(serpy.Serializer):

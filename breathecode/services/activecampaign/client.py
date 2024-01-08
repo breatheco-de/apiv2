@@ -10,6 +10,65 @@ from activecampaign.client import Client
 
 logger = logging.getLogger(__name__)
 
+acp_ids = {
+    # "strong": "49",
+    # "soft": "48",
+    # "newsletter_list": "3",
+    'utm_plan': '67',
+    'utm_placement': '66',
+    'utm_term': '65',
+    'utm_source': '59',
+    'utm_medium': '36',
+    'utm_content': '35',
+    'utm_url': '60',
+    'utm_location': '18',
+    'utm_campaign': '33',
+    'gender': '45',
+    'course': '2',
+    'client_comments': '13',
+    'current_download': '46',  # used in downloadables
+    'utm_language': '16',
+    'utm_country': '19',
+    'gclid': '26',
+    'referral_key': '27',
+    'deal': {
+        'expected_cohort': '10',
+        'expected_cohort_date': '21',
+        'utm_location': '16',
+        'utm_course': '6',
+        'utm_url': '5',
+        'gclid': '4',
+        'utm_campaign': '7',
+        'utm_source': '8',
+        'utm_medium': '9',
+        'utm_location': '16',
+        'utm_term': '22',
+        'utm_placement': '23',
+        'referral_key': '34',
+        'scheudule': '35',
+    }
+}
+
+
+def map_ids(contact_customfield_id):
+    contact_to_deal = {
+        '66': '23',
+        '65': '22',
+        '59': '8',
+        '36': '9',
+        '60': '5',
+        '18': '16',
+        '33': '7',
+        '2': '6',
+        '26': '4',
+        '27': '34',
+    }
+
+    if contact_customfield_id in contact_to_deal:
+        return contact_to_deal[contact_customfield_id]
+
+    return None
+
 
 class ActiveCampaignClient(Client):
 
@@ -41,7 +100,7 @@ class ActiveCampaign:
         self.token = token
         self.headers = {'Authorization': f'Bearer {token}'}
 
-    def execute_action(self, webhook_id: int, acp_ids: dict):
+    def execute_action(self, webhook_id: int):
         # prevent circular dependency import between thousand modules previuosly loaded and cached
         from breathecode.marketing.models import ActiveCampaignWebhook
 
@@ -130,6 +189,103 @@ class ActiveCampaign:
         logger.debug(f'Get deal {self.host}/api/3/deals/{deal_id}', resp.status_code)
         return resp.json()
 
+    def update_deal(self, id: str, fields: dict):
+        import requests
+
+        #The following are the fields that can be updated on the deal
+        _allowed_fields = [
+            'contact', 'account', 'description', 'currency', 'group', 'owner', 'percent', 'stage', 'status',
+            'title', 'value', 'fields'
+        ]
+        _allowed_custom_ids = [x for x in acp_ids['deal'].values()]
+        # {
+        # "deal": {
+        #     "contact": "51",
+        #     "account": "45",
+        #     "description": "This deal is an important deal",
+        #     "currency": "usd",
+        #     "group": "1",
+        #     "owner": "1",
+        #     "percent": null,
+        #     "stage": "1",
+        #     "status": 0,
+        #     "title": "AC Deal",
+        #     "value": 45600,
+        #     "fields": [
+        #       {
+        #         "customFieldId": 1,
+        #         "fieldValue": "First field value"
+        #       },
+        #       {
+        #         "customFieldId": 2,
+        #         "fieldValue": "2008-01-20"
+        #       },
+        #       {
+        #         "customFieldId": 3,
+        #         "fieldValue": 8800,
+        #         "fieldCurrency": "USD"
+        #       }
+        #     ]
+        # }
+        # }
+        _to_be_updated = {'fields': []}
+        for field_key in fields:
+            if field_key not in _allowed_fields:
+                logger.error(
+                    f'Error updating deal `{id}`, field "{field_key}" does not exist on active campaign deals'
+                )
+                raise Exception(f'Field {field_key} does not exist for active campaign deals')
+
+            # include all non-custom fields on the payload to be updated
+            if field_key != 'fields':
+                _to_be_updated[field_key] = acp_ids[field_key]
+
+        # custom fields validation
+        if 'fields' in fields:
+            for cf in fields['fields']:
+                if cf['customFieldId'] not in _allowed_custom_ids:
+                    logger.error(
+                        f'Error updating deal `{id}`, custom field with id "{cf["customFieldId"]}" does not exist'
+                    )
+                    raise Exception(
+                        f'Custom field with id {cf["customFieldId"]} does not exist for active campaign deals'
+                    )
+
+            _to_be_updated['fields'] = fields['fields'].copy()
+
+        body = {
+            'deal': {
+                **_to_be_updated,
+            }
+        }
+
+        resp = requests.put(f'{self.host}/api/3/deals/{id}',
+                            headers={'Api-Token': self.token},
+                            json=body,
+                            timeout=2)
+        logger.info(f'Updating lead `{id}` on active campaign')
+
+        if resp.status_code in [201, 200]:
+            logger.info('Deal updated successfully')
+            body = resp.json()
+
+            if 'deal' in body:
+                return body['deal']
+
+            else:
+                logger.error(
+                    f'Failed to update deal with id `{id}` because the structure of response was changed')
+                raise Exception(
+                    f'Failed to update deal with id `{id}` because the structure of response was changed')
+
+        else:
+            logger.error(f'Error updating deal `{id}` with status={str(resp.status_code)}')
+
+            error = resp.json()
+            logger.error(error)
+
+            raise Exception(f'Error updating deal with id `{id}` with status={str(resp.status_code)}')
+
     def get_contact_by_email(self, email):
         import requests
 
@@ -145,6 +301,98 @@ class ActiveCampaign:
             return data['contacts'][0]
         else:
             raise Exception(f'Problem fetching contact in activecampaign with email {email}')
+
+    def get_contact(self, id: str):
+        import requests
+
+        # "contact": {
+        #     "cdate": "2007-05-05T12:49:09-05:00",
+        #     "email": "charlesReynolds@example.com",
+        #     "phone": "",
+        #     "firstName": "Charles",
+        #     "lastName": "Reynolds",
+        #     "orgid": "0",
+        #     "segmentio_id": "",
+        #     "bounced_hard": "0",
+        #     "bounced_soft": "0",
+        #     "bounced_date": null,
+        #     "ip": "0",
+        #     "ua": null,
+        #     "hash": "",
+        #     "socialdata_lastcheck": null,
+        #     "email_local": "",
+        #     "email_domain": "",
+        #     "sentcnt": "0",
+        #     "rating_tstamp": null,
+        #     "gravatar": "0",
+        #     "deleted": "0",
+        #     "adate": null,
+        #     "udate": null,
+        #     "edate": null,
+        #     "contactAutomations": [
+        #     "1"
+        #     ],
+        #     "contactLists": [
+        #     "1"
+        #     ],
+        #     "fieldValues": [
+        #     "1"
+        #     ],
+        #     "geoIps": [
+        #     "1"
+        #     ],
+        #     "deals": [
+        #     "1"
+        #     ],
+        #     "accountContacts": [
+        #     "1"
+        #     ],
+        #     "links": {},
+        #     "id": "1",
+        #     "organization": null
+        # }
+        resp = requests.get(f'{self.host}/api/3/contacts/{id}', headers={'Api-Token': self.token}, timeout=2)
+        logger.debug(f'Get contact by eidmail {self.host}/api/3/contacts/{id} => status={resp.status_code}')
+        data = resp.json()
+        if data and 'contact' in data:
+            return data['contact']
+        else:
+            raise Exception(f'Problem fetching contact in activecampaign with id {id}')
+
+    def get_contact_customfields(self, id: str):
+
+        # {
+        #     "fieldValues": [
+        #         {
+        #             "contact": "5",
+        #             "field": "1",
+        #             "value": "United States",
+        #             "cdate": "2021-05-12T14:19:38-05:00",
+        #             "udate": "2021-05-12T14:54:57-05:00",
+        #             "created_by": "0",
+        #             "updated_by": "0",
+        #             "links": {
+        #                 "owner": "https://:account.api-us1.com/api/3/fieldValues/1/owner",
+        #                 "field": "https://:account.api-us1.com/api/3/fieldValues/1/field"
+        #             },
+        #             "id": "1",
+        #             "owner": "5"
+        #         },
+        #     ]
+        # }
+        import requests
+
+        resp = requests.get(f'{self.host}/api/3/contacts/{id}/fieldValues',
+                            headers={'Api-Token': self.token},
+                            timeout=2)
+        logger.debug(
+            f'Get contact field values {self.host}/api/3/contacts/{id}/fieldValues => status={resp.status_code}'
+        )
+        data = resp.json()
+        if data and 'fieldValues' in data:
+            return data['fieldValues']
+        else:
+            raise Exception(f'Problem fetching contact custom fields in activecampaign with id {id}')
 
     def get_deal_customfields(self, deal_id):
         #/api/3/deals/id

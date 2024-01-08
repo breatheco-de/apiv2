@@ -5,9 +5,10 @@ from .models import (Course, CourseTranslation, FormEntry, Tag, Automation, Shor
                      ActiveCampaignWebhook, AcademyAlias, Downloadable, LeadGenerationApp, UTMField,
                      AcademyProxy)
 from .actions import (register_new_lead, save_get_geolocal, get_facebook_lead_info, test_ac_connection,
-                      sync_tags, sync_automations, acp_ids, delete_tag, bind_formentry_with_webhook)
-from .tasks import (async_activecampaign_webhook)
-from breathecode.services.activecampaign import ActiveCampaign
+                      sync_tags, sync_automations, delete_tag, bind_formentry_with_webhook,
+                      update_deal_custom_fields)
+from .tasks import (async_activecampaign_webhook, async_update_deal_custom_fields)
+from breathecode.services.activecampaign import ActiveCampaign, acp_ids
 from django.utils import timezone
 from django.utils.html import format_html
 from django.contrib.admin import SimpleListFilter
@@ -142,6 +143,18 @@ def fetch_more_facebook_info(modeladmin, request, queryset):
 fetch_more_facebook_info.short_description = '♺ Download more info from facebook'
 
 
+def sync_contact_custom_fields_with_deal(modeladmin, request, queryset):
+    entries = queryset.all()
+    for entry in entries:
+        if not entry.ac_contact_id or not entry.ac_deal_id:
+            messages.error(request, message=f'FormEntry {str(entry.id)} is missing deal_id or contact_id')
+            return None
+
+    for entry in entries:
+        # update_deal_custom_fields(entry.ac_deal_id, entry.ac_contact_id)
+        async_update_deal_custom_fields.delay(entry.id)
+
+
 def get_geoinfo(modeladmin, request, queryset):
     entries = queryset.all()
     for entry in entries:
@@ -181,12 +194,14 @@ class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
         'storage_status', 'location', 'course', 'deal_status', PPCFilter, 'lead_generation_app', 'utm_medium',
         'utm_campaign', 'utm_source'
     ]
-    actions = [send_to_active_campaign, get_geoinfo, fetch_more_facebook_info, 'async_export_as_csv'
-               ] + change_field([
-                   'bogota-colombia', 'mexicocity-mexico', 'quito-ecuador', 'buenosaires-argentina',
-                   'caracas-venezuela', 'online'
-               ],
-                                name='location')
+    actions = [
+        send_to_active_campaign, get_geoinfo, fetch_more_facebook_info, sync_contact_custom_fields_with_deal,
+        'async_export_as_csv'
+    ] + change_field([
+        'bogota-colombia', 'mexicocity-mexico', 'quito-ecuador', 'buenosaires-argentina', 'caracas-venezuela',
+        'online'
+    ],
+                     name='location')
 
     def _attribution_id(self, obj):
 
@@ -400,7 +415,7 @@ def process_hook(modeladmin, request, queryset):
         print(f'Procesing hook: {hook.id}')
         ac_academy = hook.ac_academy
         client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
-        client.execute_action(hook.id, acp_ids)
+        client.execute_action(hook.id)
 
 
 @admin.register(ActiveCampaignWebhook)
