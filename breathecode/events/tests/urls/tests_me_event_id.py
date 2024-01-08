@@ -103,6 +103,7 @@ def get_serializer(self,
         'currency': event.currency,
         'description': event.description,
         'ending_at': self.bc.datetime.to_iso_string(event.ending_at),
+        'ended_at': event.ended_at,
         'event_type': {
             'academy': academy_serialized,
             'id': event_type.id,
