@@ -423,7 +423,7 @@ def render_html_bill(request, token, id=None):
             translation(lang, en='Bill not found', es='Factura no encontrada', slug='bill-not-found')
         })
 
-    status_map = {'DUE': 'UNDER_REVIEW', 'APPROVED': 'READY_TO_PAY', 'PAID': 'ALREADY PAID'}
+    status_map = {'DUE': 'UNDER_REVIEW', 'APPROVED': 'READY_TO_PAY', 'PAID': 'ALREADY PAID', 'PENDING': 'PENDING'}
     status_mapper = {}
     for key, value in BILL_STATUS:
         status_mapper[key] = value
