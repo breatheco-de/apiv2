@@ -196,7 +196,7 @@ def has_permission(permission: str,
                     raise e
 
                 if format == 'html':
-                    from breathecode.payments.models import Subscription, PlanOffer
+                    from breathecode.payments.models import Subscription, PlanOffer, PlanFinancing
 
                     context = build_context()
                     context, args, kwargs = consumer(context, args, kwargs)
@@ -215,6 +215,12 @@ def has_permission(permission: str,
 
                     if subscription is not None:
                         user_plans = subscription.plans.all()
+                    else:
+                        plan_financing = PlanFinancing.objects.filter(
+                            user=request.user,
+                            plans__mentorship_service_set__mentorship_services__slug=service).first()
+                        if plan_financing is not None:
+                            user_plans = plan_financing.plans.all()
 
                     for plan in user_plans:
                         plan_offer = PlanOffer.objects.filter(original_plan__slug=plan.slug).first()
