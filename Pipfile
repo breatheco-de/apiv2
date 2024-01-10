@@ -52,7 +52,7 @@ flake8-bugbear = "*"
 pytest-gevent = "*"
 
 [packages]
-django = "~=5.0"
+django = "~=5.0.1"
 djangorestframework = "~=3.14.0"
 serpy = "*"
 gunicorn = "*"
@@ -125,4 +125,4 @@ circuitbreaker = "*"
 kombu = "*"
 zstandard = "*"
 psycopg = {extras = ["pool", "binary"], version = "*"}
-cryptography = "~=41.0.6"
+cryptography = "~=41.0.7"
