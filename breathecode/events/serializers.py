@@ -172,6 +172,7 @@ class EventSmallSerializer(EventTinySerializer):
     capacity = serpy.Field()
     status = serpy.Field()
     host = serpy.Field()
+    ended_at = serpy.Field()
     online_event = serpy.Field()
     venue = VenueSerializer(required=False)
     academy = AcademySerializer(required=False)
