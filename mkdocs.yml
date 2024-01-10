@@ -1,67 +1,108 @@
-site_name: BreatheCode
+site_name: 4geeks
 site_url: https://breathecode.herokuapp.com/
 
 theme:
-  name: "material"
+    name: "material"
 
 # this define the order of menu
 nav:
-  - 'index.md'
-  - Installation:
-      - 'installation/environment-variables.md'
-      - 'installation/fixtures.md'
-  - Deployments:
-      - 'deployment/environment-variables.md'
-      - 'deployment/configuring-the-github-secrets.md'
-  - Apps:
-    - Monitoring:
-      - 'apps/monitoring/introduction.md'
-      - 'apps/monitoring/scripts.md'
-    - 'apps/activities.md'
-    - 'apps/admissions.md'
-  - Security:
-    - 'security/introduction.md'
-    - 'security/authentication-class.md'
-    - 'security/capabilities.md'
-    - 'security/schema-link.md'
-  - Services:
-    - Google Cloud:
-      - 'services/google_cloud/google-cloud-functions.md'
-      - 'services/google_cloud/storage.md'
-    - Slack:
-      - 'services/slack integration/icons.md'
-  - Signals:
-    - 'signals/quickstart.md'
-  - Testing:
-    - 'testing/runing-tests.md'
-    - Mixins:
-      - 'bc': 'testing/mixins/bc.md'
-      - 'bc.fake': 'testing/mixins/bc-fake.md'
-      - 'bc.request': 'testing/mixins/bc-request.md'
-      - 'bc.database': 'testing/mixins/bc-database.md'
-      - 'bc.datetime': 'testing/mixins/bc-datetime.md'
-      - 'bc.format': 'testing/mixins/bc-format.md'
-      - 'bc.check': 'testing/mixins/bc-check.md'
-      - 'bc.cache': 'testing/mixins/bc-cache.md'
-      - 'bc.random': 'testing/mixins/bc-random.md'
-    - Mocks:
-      - 'testing/mocks/using-mocks.md'
-      - 'testing/mocks/mock-requests.md'
+    - "index.md"
+    - Getting started:
+          # which version of python install
+          - Set up:
+                - Works locally:
+                      - "getting-started/setup/works-locally/introduction.md"
+                      - "getting-started/setup/works-locally/devcontainer.md"
+                      - "getting-started/setup/works-locally/on-host-os.md"
+                - Works on the cloud:
+                      - "getting-started/setup/works-on-the-cloud/introduction.md"
+                      - "getting-started/setup/works-on-the-cloud/gitpod.md"
+                      - "getting-started/setup/works-on-the-cloud/codespaces.md"
+    - Essential:
+          - Django:
+                - "essential/django/introduction.md"
+                - "essential/django/urls.md"
+                - "essential/django/views.md"
+                - "essential/django/models.md"
+                - "essential/django/admin.md"
+                - "essential/django/commands.md"
+                - "essential/django/signals.md"
+                - "essential/django/templates.md"
+          - Django Rest Framework:
+                - "essential/django-rest-framework/introduction.md"
+                - "essential/django-rest-framework/views.md"
+                - "essential/django-rest-framework/serializers.md"
+                - "essential/django-rest-framework/validators.md"
+          - "essential/serpy.md"
+          - Celery:
+                - "essential/celery/introduction.md"
+                - "essential/celery/tasks.md"
+                - "essential/celery/calling.md"
+          - 4geeks:
+                - "essential/4geeks/actions.md"
+    - Advanced:
+          - Celery:
+                - "advanced/celery/application.md"
+                - "advanced/celery/canvas.md"
+                - "advanced/celery/periodic-tasks.md"
+                - "advanced/celery/routing.md"
+                - "advanced/celery/settings.md"
+    - Testing:
+          - "testing/runing-tests.md"
+          - Mixins:
+                - "bc": "testing/mixins/bc.md"
+                - "bc.fake": "testing/mixins/bc-fake.md"
+                - "bc.request": "testing/mixins/bc-request.md"
+                - "bc.database": "testing/mixins/bc-database.md"
+                - "bc.datetime": "testing/mixins/bc-datetime.md"
+                - "bc.format": "testing/mixins/bc-format.md"
+                - "bc.check": "testing/mixins/bc-check.md"
+                - "bc.cache": "testing/mixins/bc-cache.md"
+                - "bc.random": "testing/mixins/bc-random.md"
+          - Mocks:
+                - "testing/mocks/using-mocks.md"
+                - "testing/mocks/mock-requests.md"
+    - infrastructure:
+          - "infrastructure/environment-variables.md"
+          - Deployments:
+                - "deployment/environment-variables.md"
+                - "deployment/configuring-the-github-secrets.md"
+    - Not placed yet:
+          - "installation/fixtures.md"
+          - Apps:
+                - Monitoring:
+                      - "apps/monitoring/introduction.md"
+                      - "apps/monitoring/scripts.md"
+                - "apps/activities.md"
+                - "apps/admissions.md"
+          - Security:
+                - "security/introduction.md"
+                - "security/authentication-class.md"
+                - "security/capabilities.md"
+                - "security/schema-link.md"
+          - Services:
+                - Google Cloud:
+                      - "services/google_cloud/google-cloud-functions.md"
+                      - "services/google_cloud/storage.md"
+                - Slack:
+                      - "services/slack integration/icons.md"
+          - Signals:
+                - "signals/quickstart.md"
 
 plugins:
-  - search
-  - mkdocstrings:
-      handlers:
-        python:
-          setup_commands:
-            - import os
-            - import django
-            - os.environ.setdefault("DJANGO_SETTINGS_MODULE", "breathecode.settings")
-            - django.setup()
+    - search
+    - mkdocstrings:
+          handlers:
+              python:
+                  setup_commands:
+                      - import os
+                      - import django
+                      - os.environ.setdefault("DJANGO_SETTINGS_MODULE", "breathecode.settings")
+                      - django.setup()
 
 markdown_extensions:
-  - pymdownx.highlight:
-      anchor_linenums: true
-  - pymdownx.inlinehilite
-  - pymdownx.snippets
-  - pymdownx.superfences
+    - pymdownx.highlight:
+          anchor_linenums: true
+    - pymdownx.inlinehilite
+    - pymdownx.snippets
+    - pymdownx.superfences
