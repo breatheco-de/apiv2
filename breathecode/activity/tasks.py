@@ -1,25 +1,29 @@
-from datetime import date, datetime
 import functools
+import logging
+import os
 import pickle
-import logging, os
 import re
-from typing import Optional
 import uuid
-from celery import shared_task
+from datetime import date, datetime, timedelta
+from typing import Optional
+
 import zstandard
+from celery import shared_task
+from django.core.cache import cache
+from django.utils import timezone
+from django_redis import get_redis_connection
+from google.cloud import bigquery
+from redis.exceptions import LockError
+
 from breathecode.activity import actions
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.admissions.utils.cohort_log import CohortDayLog
 from breathecode.services.google_cloud.big_query import BigQuery
-from breathecode.utils.decorators import task, AbortTask, TaskPriority, RetryTask
-from .models import StudentActivity
 from breathecode.utils import NDB
-from django.utils import timezone
-from google.cloud import bigquery
-from django.core.cache import cache
-from django_redis import get_redis_connection
-from redis.exceptions import LockError
+from breathecode.utils.decorators import AbortTask, RetryTask, TaskPriority, task
 from breathecode.utils.redis import Lock
+
+from .models import StudentActivity
 
 
 @functools.lru_cache(maxsize=1)
@@ -160,7 +164,7 @@ def get_attendancy_log_per_cohort_user(cohort_user_id: int):
 
 
 @task(bind=True, priority=TaskPriority.ACADEMY.value)
-def upload_activities(self, task_manager_id: int):
+def upload_activities(self, task_manager_id: int, **_):
 
     def extract_data():
         nonlocal worker, res
@@ -190,6 +194,16 @@ def upload_activities(self, task_manager_id: int):
                 break
 
             worker += 1
+
+    utc_now = timezone.now()
+    limit = utc_now - timedelta(seconds=get_activity_sampling_rate())
+
+    # prevent to run the same task multiple times before the sampling rate time
+    task_cls = self.task_manager.__class__
+    task_cls.objects.filter(status='SCHEDULED',
+                            task_module=self.task_manager.task_module,
+                            task_name=self.task_manager.task_name,
+                            created_at__lt=limit).exclude(id=task_manager_id).delete()
 
     workers = actions.get_workers_amount()
     res = []

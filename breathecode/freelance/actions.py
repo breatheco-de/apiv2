@@ -1,12 +1,15 @@
-import re, logging
+import logging
+import re
+
 from django.contrib import admin
 from django.db.models import Q
-from .models import Freelancer, Issue, Bill, ProjectInvoice, ISSUE_STATUS
-from breathecode.authenticate.models import CredentialsGithub
-from breathecode.admissions.models import Academy
 from github import Github
+
+from breathecode.admissions.models import Academy
+from breathecode.authenticate.models import CredentialsGithub
 from breathecode.services.activecampaign import ActiveCampaign
-from breathecode.marketing.actions import acp_ids
+
+from .models import ISSUE_STATUS, Bill, Freelancer, Issue, ProjectInvoice
 
 logger = logging.getLogger(__name__)
 
@@ -300,4 +303,4 @@ def run_hook(modeladmin, request, queryset):
     for hook in queryset.all():
         ac_academy = hook.ac_academy
         client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
-        client.execute_action(hook.id, acp_ids)
+        client.execute_action(hook.id)

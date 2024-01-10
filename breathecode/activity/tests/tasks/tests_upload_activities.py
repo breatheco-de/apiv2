@@ -3,18 +3,17 @@ Test /answer
 """
 import pickle
 import random
-import zstandard as zstd
 from unittest.mock import MagicMock, call
-from django.core.cache import cache
 
-from google.cloud.bigquery.table import TableReference
-from google.cloud.bigquery.client import DatasetReference
-from django.utils import timezone
 import pytest
+import zstandard as zstd
+from django.core.cache import cache
+from django.utils import timezone
+from google.cloud import bigquery
+from google.cloud.bigquery.client import DatasetReference
+from google.cloud.bigquery.table import TableReference
 
 from breathecode.activity.tasks import upload_activities
-from google.cloud import bigquery
-
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 UTC_NOW = timezone.now()

@@ -85,7 +85,7 @@ def grant_service_permissions(modeladmin, request, queryset):
 @admin.register(Consumable)
 class ConsumableAdmin(admin.ModelAdmin):
     list_display = ('id', 'unit_type', 'how_many', 'service_item', 'user', 'valid_until')
-    list_filter = ['unit_type']
+    list_filter = ['unit_type', 'app_service__app__slug', 'service_item__service__slug']
     search_fields = ['service_item__service__slug']
     raw_id_fields = ['user', 'service_item', 'cohort_set', 'event_type_set', 'mentorship_service_set']
     actions = [grant_service_permissions]

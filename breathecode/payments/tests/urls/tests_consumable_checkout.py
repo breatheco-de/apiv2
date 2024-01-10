@@ -648,12 +648,14 @@ class SignalTestSuite(PaymentsTestCase):
             }),
         ])
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
-            format_consumable_item(data={
-                'mentorship_service_set_id': 1,
-                'service_item_id': 1,
-                'user_id': 1,
-                'how_many': how_many,
-            }),
+            format_consumable_item(
+                data={
+                    'mentorship_service_set_id': 1,
+                    'service_item_id': 1,
+                    'app_service_id': None,
+                    'user_id': 1,
+                    'how_many': how_many,
+                }),
         ])
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
             format_user_setting({'lang': 'en'}),
@@ -725,12 +727,14 @@ class SignalTestSuite(PaymentsTestCase):
                              'amount': amount,
                          })])
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
-            format_consumable_item(data={
-                'event_type_set_id': 1,
-                'service_item_id': 1,
-                'user_id': 1,
-                'how_many': how_many,
-            }),
+            format_consumable_item(
+                data={
+                    'event_type_set_id': 1,
+                    'service_item_id': 1,
+                    'app_service_id': None,
+                    'user_id': 1,
+                    'how_many': how_many,
+                }),
         ])
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
             format_user_setting({'lang': 'en'}),

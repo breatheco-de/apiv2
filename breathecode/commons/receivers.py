@@ -2,10 +2,12 @@ import functools
 import logging
 import os
 from typing import Any, Type
-
-from django.db.models.signals import post_delete, post_save
+from celery.result import AsyncResult
+from django.db.models.signals import post_delete, post_save, pre_delete
 from django.dispatch import receiver
 from django.db import models
+
+from breathecode.commons.models import TaskManager
 from .signals import update_cache
 
 import breathecode.commons.actions as actions
@@ -39,3 +41,9 @@ def clean_cache(sender: Type[models.Model], **_: Any):
         return
 
     actions.clean_cache(sender)
+
+
+@receiver(pre_delete, sender=TaskManager)
+def unschedule_task(sender: Type[TaskManager], instance: TaskManager, **kwargs):
+    if instance.status == 'SCHEDULED' and instance.task_id:
+        AsyncResult(instance.task_id).revoke()

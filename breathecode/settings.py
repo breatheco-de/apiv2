@@ -120,6 +120,9 @@ REST_FRAMEWORK = {
     ),
 }
 
+if os.getenv('ENABLE_DEFAULT_PAGINATION', 'y') in ['t', 'true', 'True', 'TRUE', '1', 'yes', 'y']:
+    REST_FRAMEWORK['PAGE_SIZE'] = 20
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -318,6 +321,9 @@ if REDIS_URL == '' or REDIS_URL == 'redis://localhost:6379':
 
 else:
     IS_REDIS_WITH_SSL = True
+
+# on localhost this should be false to avoid SSL Certificate
+SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'TRUE') == 'TRUE'
 
 CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('GLOBAL_CACHE_MINUTES', 60 * 24))
 CACHES = {

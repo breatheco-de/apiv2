@@ -1,9 +1,8 @@
 import importlib
 import logging
-from typing import Any
 from celery import shared_task
 from datetime import timedelta
-from breathecode.commons.actions import is_output_enable
+from breathecode.commons import actions
 from breathecode.commons.models import TaskManager
 from django.utils import timezone
 from breathecode.utils import CACHE_DESCRIPTORS
@@ -140,8 +139,8 @@ def mark_task_as_pending(task_manager_id, *, attempts=0, force=False, last_run=N
 MODULES = {}
 
 
-@task(bind=False, priority=TaskPriority.CACHE.value)
-def clean_task(key: str, **_: Any):
+@task(bind=True, priority=TaskPriority.CACHE.value)
+def clean_task(self, key: str, task_manager_id: int):
     # make sure all the modules are loaded
     from breathecode.admissions import caches as _  # noqa: F811, F401
     from breathecode.assignments import caches as _  # noqa: F811, F401
@@ -151,6 +150,13 @@ def clean_task(key: str, **_: Any):
     from breathecode.mentorship import caches as _  # noqa: F811, F401
     from breathecode.payments import caches as _  # noqa: F811, F401
     from breathecode.registry import caches as _  # noqa: F811, F401
+
+    task_cls = self.task_manager.__class__
+    task_cls.objects.filter(status='SCHEDULED',
+                            task_module=self.task_manager.task_module,
+                            task_name=self.task_manager.task_name,
+                            arguments__args__exact=[key],
+                            arguments__args__len=1).exclude(id=task_manager_id).delete()
 
     unpack = key.split('.')
     model = unpack[-1]
@@ -163,14 +169,15 @@ def clean_task(key: str, **_: Any):
     model_cls = getattr(module, model)
 
     if model_cls not in CACHE_DESCRIPTORS:
-        raise AbortTask(f'Cache not implemented for {model_cls.__name__}, skipping', log=is_output_enable())
+        raise AbortTask(f'Cache not implemented for {model_cls.__name__}, skipping',
+                        log=actions.is_output_enable())
 
     cache = CACHE_DESCRIPTORS[model_cls]
 
     try:
         cache.clear()
-        if is_output_enable():
+        if actions.is_output_enable():
             logger.debug(f'Cache cleaned for {key}')
 
     except Exception:
-        raise RetryTask(f'Could not clean the cache {key}', log=is_output_enable())
+        raise RetryTask(f'Could not clean the cache {key}', log=actions.is_output_enable())

@@ -67,6 +67,7 @@ class GetSmallAcademySerializer(serpy.Serializer):
     slug = serpy.Field()
     white_labeled = serpy.Field()
     icon_url = serpy.Field()
+    available_as_saas = serpy.Field()
 
 
 class GetProfileAcademySmallSerializer(serpy.Serializer):

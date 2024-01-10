@@ -172,6 +172,7 @@ class EventSmallSerializer(EventTinySerializer):
     capacity = serpy.Field()
     status = serpy.Field()
     host = serpy.Field()
+    ended_at = serpy.Field()
     online_event = serpy.Field()
     venue = VenueSerializer(required=False)
     academy = AcademySerializer(required=False)
@@ -235,6 +236,7 @@ class EventPublicBigSerializer(EventSmallSerializer):
     currency = serpy.Field()
     host_user = UserBigSerializer(required=False)
     free_for_bootcamps = serpy.Field()
+    free_for_all = serpy.Field()
     published_at = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
@@ -277,6 +279,7 @@ class AcademyEventSmallSerializer(serpy.Serializer):
     tags = serpy.Field()
     host_user = UserSerializer(required=False)
     author = UserSerializer(required=False)
+    free_for_all = serpy.Field()
 
 
 class GetLiveClassSerializer(serpy.Serializer):

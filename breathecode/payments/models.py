@@ -13,7 +13,7 @@ from django.contrib.auth.models import Permission
 from django.db.models import QuerySet
 
 from breathecode.admissions.models import DRAFT, Academy, Cohort, Country
-from breathecode.authenticate.models import UserInvite
+from breathecode.authenticate.models import App, UserInvite
 from breathecode.events.models import EventType
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.mentorship.models import MentorshipService
@@ -39,9 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 class Currency(models.Model):
-    """
-    Represents a currency.
-    """
+    """Represents a currency."""
 
     code = models.CharField(max_length=3,
                             unique=True,
@@ -72,9 +70,7 @@ class Currency(models.Model):
 
 
 class AbstractPriceByUnit(models.Model):
-    """
-    This model is used to store the price of a Product or a Service.
-    """
+    """This model is used to store the price of a Product or a Service."""
 
     price_per_unit = models.FloatField(default=0, help_text='Price per unit')
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text='Currency')
@@ -87,9 +83,7 @@ class AbstractPriceByUnit(models.Model):
 
 
 class AbstractPriceByTime(models.Model):
-    """
-    This model is used to store the price of a Product or a Service.
-    """
+    """This model is used to store the price of a Product or a Service."""
 
     price_per_month = models.FloatField(default=None, blank=True, null=True, help_text='Price per month')
     price_per_quarter = models.FloatField(default=None, blank=True, null=True, help_text='Price per quarter')
@@ -105,9 +99,7 @@ class AbstractPriceByTime(models.Model):
 
 
 class AbstractAmountByTime(models.Model):
-    """
-    This model is used to store the price of a Product or a Service.
-    """
+    """This model is used to store the price of a Product or a Service."""
 
     amount_per_month = models.FloatField(default=0, help_text='Amount per month')
     amount_per_quarter = models.FloatField(default=0, help_text='Amount per quarter')
@@ -135,9 +127,7 @@ PAY_EVERY_UNIT = [
 
 
 class AbstractAsset(models.Model):
-    """
-    This model represents a product or a service that can be sold.
-    """
+    """This model represents a product or a service that can be sold."""
 
     slug = models.CharField(
         max_length=60,
@@ -174,17 +164,23 @@ class AbstractAsset(models.Model):
 COHORT_SET = 'COHORT_SET'
 MENTORSHIP_SERVICE_SET = 'MENTORSHIP_SERVICE_SET'
 EVENT_TYPE_SET = 'EVENT_TYPE_SET'
+CHAT_SUPPORT = 'CHAT_SUPPORT'
+CODE_REVIEW = 'CODE_REVIEW'
+BUILD_PROJECT = 'BUILD_PROJECT'
+TEST_PROJECT = 'TEST_PROJECT'
 SERVICE_TYPES = [
     (COHORT_SET, 'Cohort set'),
     (MENTORSHIP_SERVICE_SET, 'Mentorship service set'),
     (EVENT_TYPE_SET, 'Event type set'),
+    (CHAT_SUPPORT, 'Chat support'),
+    (CODE_REVIEW, 'Code review'),
+    (BUILD_PROJECT, 'Build project'),
+    (TEST_PROJECT, 'Test project'),
 ]
 
 
 class Service(AbstractAsset):
-    """
-    Represents the service that can be purchased by the customer.
-    """
+    """Represents the service that can be purchased by the customer."""
 
     groups = models.ManyToManyField(Group,
                                     blank=True,
@@ -223,9 +219,7 @@ SERVICE_UNITS = [
 
 
 class AbstractServiceItem(models.Model):
-    """
-    Common fields for ServiceItem and Consumable.
-    """
+    """Common fields for ServiceItem and Consumable."""
 
     # the unit between a service and a product are different
     unit_type = models.CharField(max_length=10,
@@ -243,9 +237,7 @@ class AbstractServiceItem(models.Model):
 
 # this class is used as referenced of units of a service can be used
 class ServiceItem(AbstractServiceItem):
-    """
-    This model is used as referenced of units of a service can be used.
-    """
+    """This model is used as referenced of units of a service can be used."""
 
     service = models.ForeignKey(Service, on_delete=models.CASCADE, help_text='Service')
     is_renewable = models.BooleanField(
@@ -283,9 +275,7 @@ class ServiceItem(AbstractServiceItem):
 
 
 class ServiceItemFeature(models.Model):
-    """
-    This model is used as referenced of units of a service can be used.
-    """
+    """This model is used as referenced of units of a service can be used."""
 
     service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE, help_text='Service item')
     lang = models.CharField(max_length=5,
@@ -300,9 +290,7 @@ class ServiceItemFeature(models.Model):
 
 
 class FinancingOption(models.Model):
-    """
-    This model is used as referenced of units of a service can be used.
-    """
+    """This model is used as referenced of units of a service can be used."""
 
     _lang = 'en'
 
@@ -331,9 +319,7 @@ class FinancingOption(models.Model):
 
 
 class CohortSet(models.Model):
-    """
-    Cohort set.
-    """
+    """Cohort set."""
 
     _lang = 'en'
 
@@ -375,9 +361,7 @@ class CohortSetTranslation(models.Model):
 
 
 class CohortSetCohort(models.Model):
-    """
-    M2M between CohortSet and Cohort.
-    """
+    """M2M between CohortSet and Cohort."""
 
     _lang = 'en'
 
@@ -408,9 +392,7 @@ class CohortSetCohort(models.Model):
 
 
 class MentorshipServiceSet(models.Model):
-    """
-    M2M between plan and ServiceItem
-    """
+    """M2M between plan and ServiceItem."""
 
     slug = models.SlugField(
         max_length=100,
@@ -436,9 +418,7 @@ class MentorshipServiceSetTranslation(models.Model):
 
 
 class EventTypeSet(models.Model):
-    """
-    M2M between plan and ServiceItem
-    """
+    """M2M between plan and ServiceItem."""
 
     slug = models.SlugField(
         max_length=100,
@@ -552,9 +532,7 @@ PLAN_STATUS = [
 
 
 class Plan(AbstractPriceByTime):
-    """
-    A plan is a group of services that can be purchased by a user.
-    """
+    """A plan is a group of services that can be purchased by a user."""
 
     slug = models.CharField(
         max_length=60,
@@ -759,9 +737,8 @@ CHOSEN_PERIOD = [
 
 
 class Bag(AbstractAmountByTime):
-    """
-    Represents a credit that can be used by a user to use a service.
-    """
+    """Represents a credit that can be used by a user to use a service."""
+
     objects = LockManager()
 
     status = models.CharField(max_length=8,
@@ -831,9 +808,7 @@ INVOICE_STATUS = [
 
 
 class Invoice(models.Model):
-    """
-    Represents a payment made by a user
-    """
+    """Represents a payment made by a user."""
 
     amount = models.FloatField(
         default=0,
@@ -898,9 +873,7 @@ SUBSCRIPTION_STATUS = [
 
 
 class AbstractIOweYou(models.Model):
-    """
-    Common fields for all I owe you.
-    """
+    """Common fields for all I owe you."""
 
     status = models.CharField(max_length=13,
                               choices=SUBSCRIPTION_STATUS,
@@ -951,9 +924,7 @@ class AbstractIOweYou(models.Model):
 
 
 class PlanFinancing(AbstractIOweYou):
-    """
-    Allows to financing a plan
-    """
+    """Allows to financing a plan."""
 
     # in this day the financing needs being paid again
     next_payment_at = models.DateTimeField(help_text='Next payment date')
@@ -999,9 +970,7 @@ class PlanFinancing(AbstractIOweYou):
 
 
 class Subscription(AbstractIOweYou):
-    """
-    Allows to create a subscription to a plan and services.
-    """
+    """Allows to create a subscription to a plan and services."""
 
     _lang = 'en'
 
@@ -1082,10 +1051,31 @@ class SubscriptionServiceItem(models.Model):
         return str(self.service_item)
 
 
+class AppService(models.Model):
+    app = models.ForeignKey(App,
+                            on_delete=models.CASCADE,
+                            help_text='Subscription',
+                            null=True,
+                            blank=True,
+                            default=None)
+    service = models.SlugField(help_text='Microservice slug')
+
+    def clean(self) -> None:
+        if self.__class__.objects.filter(app=self.app, service=self.service).exists():
+            raise forms.ValidationError('App service already exists')
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return self.app.slug + ' -> ' + self.service
+
+
 class Consumable(AbstractServiceItem):
-    """
-    This model is used to represent the units of a service that can be consumed.
-    """
+    """This model is used to represent the units of a service that can be consumed."""
 
     service_item = models.ForeignKey(
         ServiceItem,
@@ -1101,19 +1091,26 @@ class Consumable(AbstractServiceItem):
                                    default=None,
                                    blank=True,
                                    null=True,
-                                   help_text='Cohort which the consumable belongs to')
+                                   help_text='Cohort set which the consumable belongs to')
     event_type_set = models.ForeignKey(EventTypeSet,
                                        on_delete=models.CASCADE,
                                        default=None,
                                        blank=True,
                                        null=True,
-                                       help_text='Event type which the consumable belongs to')
-    mentorship_service_set = models.ForeignKey(MentorshipServiceSet,
-                                               on_delete=models.CASCADE,
-                                               default=None,
-                                               blank=True,
-                                               null=True,
-                                               help_text='Mentorship service which the consumable belongs to')
+                                       help_text='Event type set which the consumable belongs to')
+    mentorship_service_set = models.ForeignKey(
+        MentorshipServiceSet,
+        on_delete=models.CASCADE,
+        default=None,
+        blank=True,
+        null=True,
+        help_text='Mentorship service set which the consumable belongs to')
+    app_service = models.ForeignKey(AppService,
+                                    on_delete=models.CASCADE,
+                                    default=None,
+                                    blank=True,
+                                    null=True,
+                                    help_text='App service which the consumable belongs to')
 
     valid_until = models.DateTimeField(
         null=True,
@@ -1202,7 +1199,7 @@ class Consumable(AbstractServiceItem):
         resources = [self.cohort_set]
 
         if self.id:
-            resources += [self.event_type_set, self.mentorship_service_set]
+            resources += [self.event_type_set, self.mentorship_service_set, self.app_service]
 
         how_many_resources_are_set = len([
             r for r in resources
@@ -1378,9 +1375,7 @@ class ConsumptionSession(models.Model):
 
 
 class PlanServiceItem(models.Model):
-    """
-    M2M between plan and ServiceItem
-    """
+    """M2M between plan and ServiceItem."""
 
     _lang = 'en'
 
@@ -1389,9 +1384,7 @@ class PlanServiceItem(models.Model):
 
 
 class PlanServiceItemHandler(models.Model):
-    """
-    M2M between plan and ServiceItem
-    """
+    """M2M between plan and ServiceItem."""
 
     handler = models.ForeignKey(PlanServiceItem, on_delete=models.CASCADE, help_text='Plan service item')
 
@@ -1431,9 +1424,7 @@ class PlanServiceItemHandler(models.Model):
 
 
 class ServiceStockScheduler(models.Model):
-    """
-    This model is used to represent the units of a service that can be consumed.
-    """
+    """This model is used to represent the units of a service that can be consumed."""
 
     # all this section are M2M service items, in the first case we have a query with subscription and service
     # item for schedule the renovations
@@ -1488,6 +1479,17 @@ class ServiceStockScheduler(models.Model):
         return 'Unset'
 
 
+class PaymentContact(models.Model):
+    user = models.OneToOneField(User,
+                                on_delete=models.CASCADE,
+                                related_name='payment_contact',
+                                help_text='Customer')
+    stripe_id = models.CharField(max_length=20, help_text='Stripe id')  # actually return 18 characters
+
+    def __str__(self) -> str:
+        return f'{self.user.email} ({self.stripe_id})'
+
+
 GOOD = 'GOOD'
 BAD = 'BAD'
 FRAUD = 'FRAUD'
@@ -1500,21 +1502,11 @@ REPUTATION_STATUS = [
 ]
 
 
-class PaymentContact(models.Model):
-    user = models.OneToOneField(User,
-                                on_delete=models.CASCADE,
-                                related_name='payment_contact',
-                                help_text='Customer')
-    stripe_id = models.CharField(max_length=20, help_text='Stripe id')  # actually return 18 characters
-
-    def __str__(self) -> str:
-        return f'{self.user.email} ({self.stripe_id})'
-
-
 class FinancialReputation(models.Model):
     """
-    The purpose of this model is to store the reputation of a user, if the user has a bad reputation, the
-    user will not be able to buy services.
+    Store the reputation of a user.
+
+    If the user has a bad reputation, the user will not be able to buy services.
     """
 
     user = models.OneToOneField(User,
@@ -1523,11 +1515,11 @@ class FinancialReputation(models.Model):
                                 help_text='Customer')
 
     in_4geeks = models.CharField(max_length=17,
-                                 choices=INVOICE_STATUS,
+                                 choices=REPUTATION_STATUS,
                                  default=GOOD,
                                  help_text='4Geeks reputation')
     in_stripe = models.CharField(max_length=17,
-                                 choices=INVOICE_STATUS,
+                                 choices=REPUTATION_STATUS,
                                  default=GOOD,
                                  help_text='Stripe reputation')
 
@@ -1535,9 +1527,7 @@ class FinancialReputation(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def get_reputation(self):
-        """
-        Returns the worst reputation between the two.
-        """
+        """Get the worst reputation available made by an user."""
 
         if self.in_4geeks == FRAUD or self.in_stripe == FRAUD:
             return FRAUD

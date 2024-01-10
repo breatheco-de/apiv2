@@ -27,6 +27,8 @@ def get_serializer(self, task, user):
         'title': task.title,
         'description': task.description,
         'opened_at': self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
+        'delivered_at':
+        self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
         'user': {
             'first_name': user.first_name,
             'id': user.id,

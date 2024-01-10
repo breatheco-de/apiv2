@@ -1,14 +1,14 @@
 """
 Test /answer
 """
+from logging import Logger
 from random import randint
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
 from breathecode.registry.tasks import async_create_asset_thumbnail
-from logging import Logger
 from breathecode.services.google_cloud.function_v1 import FunctionV1
-
 from breathecode.tests.mixins.breathecode_mixin.breathecode import fake
+
 from ..mixins import RegistryTestCase
 
 
@@ -51,7 +51,7 @@ class RegistryTestSuite(RegistryTestCase):
         async_create_asset_thumbnail.delay('slug')
 
         self.assertEqual(self.bc.database.list_of('media.Media'), [])
-        self.assertEqual(Logger.warning.call_args_list, [call('Asset with slug slug not found')])
+        self.assertEqual(Logger.warning.call_args_list, [])
         self.assertEqual(Logger.error.call_args_list, [call('Asset with slug slug not found', exc_info=True)])
 
     """

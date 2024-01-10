@@ -1,19 +1,18 @@
 """
 Test mentorships
 """
-from datetime import datetime, timedelta
 import random
-from unittest.mock import patch
-from django.utils import timezone
+from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
-from pytz import timezone as pytz_timezone
 
 import pytz
+from django.utils import timezone
+from pytz import timezone as pytz_timezone
 
 from breathecode.tests.mocks import apply_requests_head_mock
 
-from ..mixins import MentorshipTestCase
 from ...actions import mentor_is_ready
+from ..mixins import MentorshipTestCase
 
 BOOKING_URL = 'https://calendly.com/abc-xyz'
 ONLINE_MEETING_URL = 'https://hardcoded.url/abc-xyz'
@@ -122,13 +121,14 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
         mentor_profile = {
             'online_meeting_url': self.bc.fake.url(),
             'booking_url': BOOKING_URL,
+            'availability_report': ['bad-booking-url'],
         }
 
         model = self.bc.database.create(mentor_profile=mentor_profile, syllabus=1)
         mentor_profile_db = self.bc.format.to_dict(model.mentor_profile)
 
-        with self.assertRaisesMessage(
-                Exception, f'Mentor {model.mentor_profile.name} booking URL is failing with code 400'):
+        with self.assertRaisesMessage(Exception,
+                                      f'Mentor {model.mentor_profile.name} booking URL is failing'):
             mentor_is_ready(model.mentor_profile)
 
         self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
@@ -149,14 +149,14 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
             'online_meeting_url': self.bc.fake.url(),
             'booking_url': BOOKING_URL,
             'online_meeting_url': ONLINE_MEETING_URL,
+            'availability_report': ['bad-online-meeting-url'],
         }
 
         model = self.bc.database.create(mentor_profile=mentor_profile, syllabus=1)
         mentor_profile_db = self.bc.format.to_dict(model.mentor_profile)
 
-        with self.assertRaisesMessage(
-                Exception, f'Mentor {model.mentor_profile.name} online_meeting_url is failing with code '
-                '400'):
+        with self.assertRaisesMessage(Exception,
+                                      f'Mentor {model.mentor_profile.name} online meeting URL is failing'):
             mentor_is_ready(model.mentor_profile)
 
         self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
