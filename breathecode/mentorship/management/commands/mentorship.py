@@ -2,7 +2,6 @@ import os
 
 from django.core.cache import cache
 from django.core.management.base import BaseCommand
-from django.utils import timezone
 
 from breathecode.mentorship import tasks
 from breathecode.mentorship.models import MentorProfile

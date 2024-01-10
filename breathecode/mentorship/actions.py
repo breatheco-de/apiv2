@@ -3,7 +3,6 @@ import logging
 from datetime import timedelta
 
 import pytz
-import requests
 from dateutil.relativedelta import relativedelta
 from django.db.models import Q, QuerySet
 from django.shortcuts import render
