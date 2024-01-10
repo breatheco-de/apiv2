@@ -906,7 +906,7 @@ class MeCodeRevisionView(APIView):
             resource[header] = response.headers[header]
 
         return resource
-    
+
     # TODO: removed the consumer param code_revision_service because it has to be refactored https://github.com/breatheco-de/breatheco-de/issues/6688
     @has_permission('add_code_review')
     def post(self, request, task_id):
