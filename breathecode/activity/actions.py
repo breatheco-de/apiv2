@@ -249,13 +249,13 @@ class FillActivityMeta:
         if not instance:
             raise RetryTask(f'CohortUser {related_id or related_slug} not found')
 
-        syllabus = (
-            f'{instance.cohort.syllabus_version.syllabus.slug}.v{instance.cohort.syllabus_version.version}'
-            if instance.cohort.syllabus_version else None)
+        # syllabus = (
+        #     f'{instance.cohort.syllabus_version.syllabus.slug}.v{instance.cohort.syllabus_version.version}'
+        #     if instance.cohort.syllabus_version else None)
         obj = {
             'id': instance.id,
             'user_first_name': instance.user.first_name,
-            'user_last_name': instance. user.last_name,
+            'user_last_name': instance.user.last_name,
             'cohort': instance.cohort.id,
             # 'available_as_saas': instance.cohort.available_as_saas,
             # 'syllabus': syllabus,

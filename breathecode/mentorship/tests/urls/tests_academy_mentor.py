@@ -1,17 +1,19 @@
 """
 This file just can contains duck tests refert to AcademyInviteView
 """
-from datetime import timedelta
 import hashlib
+from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
+
 from django.urls.base import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
 
 import breathecode.mentorship.actions as actions
 from breathecode.mentorship.caches import MentorProfileCache
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
+
 from ..mixins import MentorshipTestCase
-from django.utils import timezone
 
 UTC_NOW = timezone.now()
 
@@ -181,6 +183,7 @@ def mentor_profile_columns(data={}):
         'token': token,
         'user_id': 0,
         'academy_id': 0,
+        'availability_report': [],
         **data,
     }
 

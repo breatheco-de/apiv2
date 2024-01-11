@@ -1,20 +1,44 @@
-import logging, secrets
-from django.contrib import admin, messages
+import logging
+import secrets
+
 from django import forms
-from .models import (Course, CourseTranslation, FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy,
-                     ActiveCampaignWebhook, AcademyAlias, Downloadable, LeadGenerationApp, UTMField,
-                     AcademyProxy)
-from .actions import (register_new_lead, save_get_geolocal, get_facebook_lead_info, test_ac_connection,
-                      sync_tags, sync_automations, delete_tag, bind_formentry_with_webhook,
-                      update_deal_custom_fields)
-from .tasks import (async_activecampaign_webhook, async_update_deal_custom_fields)
-from breathecode.services.activecampaign import ActiveCampaign, acp_ids
+from django.contrib import admin, messages
+from django.contrib.admin import SimpleListFilter
 from django.utils import timezone
 from django.utils.html import format_html
-from django.contrib.admin import SimpleListFilter
+
+from breathecode.services.activecampaign import ActiveCampaign
 from breathecode.utils import AdminExportCsvMixin
 from breathecode.utils.admin import change_field
 from breathecode.utils.validation_exception import ValidationException
+
+from .actions import (
+    bind_formentry_with_webhook,
+    delete_tag,
+    get_facebook_lead_info,
+    register_new_lead,
+    save_get_geolocal,
+    sync_automations,
+    sync_tags,
+    test_ac_connection,
+)
+from .models import (
+    AcademyAlias,
+    AcademyProxy,
+    ActiveCampaignAcademy,
+    ActiveCampaignWebhook,
+    Automation,
+    Course,
+    CourseTranslation,
+    Downloadable,
+    FormEntry,
+    LeadGenerationApp,
+    ShortLink,
+    Tag,
+    UTMField,
+)
+from .tasks import async_activecampaign_webhook, async_update_deal_custom_fields
+
 # Register your models here.
 
 logger = logging.getLogger(__name__)

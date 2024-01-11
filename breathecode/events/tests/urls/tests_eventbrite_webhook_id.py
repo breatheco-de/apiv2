@@ -1,15 +1,21 @@
 """
 Test /eventbrite/webhook
 """
-import requests
 from unittest.mock import MagicMock, call, patch
-from rest_framework import status
+
+import requests
 from django.urls.base import reverse_lazy
-from breathecode.tests.mocks import (apply_eventbrite_requests_post_mock, EVENTBRITE_ORDER_URL,
-                                     apply_old_breathecode_requests_request_mock)
-from breathecode.tests.mocks.requests import REQUESTS_PATH, apply_requests_get_mock
-from breathecode.tests.mocks.eventbrite.constants.event import EVENTBRITE_EVENT
+from rest_framework import status
+
 import breathecode.events.actions as actions
+from breathecode.tests.mocks import (
+    EVENTBRITE_ORDER_URL,
+    apply_eventbrite_requests_post_mock,
+    apply_old_breathecode_requests_request_mock,
+)
+from breathecode.tests.mocks.eventbrite.constants.event import EVENTBRITE_EVENT
+from breathecode.tests.mocks.requests import REQUESTS_PATH, apply_requests_get_mock
+
 from ..mixins import EventTestCase
 
 eventbrite_url = 'https://www.eventbriteapi.com/v3/events/1/'
@@ -343,7 +349,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.assertEqual(requests.get.call_args_list, [
             call('https://www.eventbriteapi.com/v3/events/1/orders/1/',
                  headers={'Authorization': 'Bearer '},
-                 timeout=2),
+                 timeout=5),
         ])
 
         assert requests.request.call_args_list == [
@@ -443,7 +449,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.assertEqual(requests.get.call_args_list, [
             call('https://www.eventbriteapi.com/v3/events/1/orders/1/',
                  headers={'Authorization': 'Bearer '},
-                 timeout=2),
+                 timeout=5),
         ])
 
         self.assertEqual(requests.request.call_args_list, [
@@ -544,7 +550,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.assertEqual(requests.get.call_args_list, [
             call('https://www.eventbriteapi.com/v3/events/1/orders/1/',
                  headers={'Authorization': 'Bearer '},
-                 timeout=2),
+                 timeout=5),
         ])
 
         assert requests.request.call_args_list == [

@@ -1,6 +1,6 @@
 import logging
+
 from django.utils import timezone
-from breathecode.marketing.models import ActiveCampaignAcademy
 
 status = {
     'Won': 'WON',

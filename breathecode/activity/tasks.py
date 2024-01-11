@@ -276,8 +276,6 @@ def upload_activities(self, task_manager_id: int, **_):
 
     try:
         if new_schema:
-            print('updating schema', schema)
-            print('updating schema', new_schema)
             table.update_schema(new_schema, append=True)
 
         table.bulk_insert(rows)
