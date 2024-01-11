@@ -8,16 +8,18 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
-from datetime import datetime
+import json
+import logging
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import TypedDict
+
+import dj_database_url
+
 # TODO: decouple file storage from django
 # from time import time
 import django_heroku
-import dj_database_url
-import json
-import logging
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
 
@@ -369,8 +371,9 @@ elif IS_REDIS_WITH_SSL:
     }
 
 if IS_TEST_ENV:
-    from django.core.cache.backends.locmem import LocMemCache
     import fnmatch
+
+    from django.core.cache.backends.locmem import LocMemCache
 
     class Key(TypedDict):
         key: str
@@ -445,6 +448,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 # SQL Explorer
 EXPLORER_CONNECTIONS = {'Default': 'default'}
 EXPLORER_DEFAULT_CONNECTION = 'default'
+
+# Use the format of Django 6.0, remove it when upgrading to Django 6.0
+FORMS_URLFIELD_ASSUME_HTTPS = True
 
 sql_keywords_path = Path(os.getcwd()) / 'breathecode' / 'sql_keywords.json'
 with open(sql_keywords_path, 'r') as f:

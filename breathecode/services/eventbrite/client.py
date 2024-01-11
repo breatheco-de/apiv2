@@ -1,9 +1,10 @@
-import re
 import logging
 import os
-import urllib
-import breathecode.services.eventbrite.actions as actions
+import re
 import traceback
+import urllib
+
+import breathecode.services.eventbrite.actions as actions
 
 logger = logging.getLogger(__name__)
 
@@ -47,9 +48,7 @@ class Eventbrite:
             raise Exception(result['error_description'])
 
         if 'pagination' in result:
-            print('has more items?', result['pagination']['has_more_items'])
             if result['pagination']['has_more_items']:
-                print('Continuation: ', result['pagination']['continuation'])
                 new_result = self.request(_type,
                                           url,
                                           query_string={
@@ -57,7 +56,6 @@ class Eventbrite:
                                               result['pagination']['continuation']
                                           })
                 for key in new_result:
-                    print(key, type(new_result[key]) == 'list')
                     if type(new_result[key]) == 'list':
                         new_result[key] = result[key] + new_result[key]
                 result.update(new_result)
@@ -110,7 +108,7 @@ class Eventbrite:
         action = webhook.action.replace('.', '_')
         api_url = webhook.api_url
 
-        if (re.search('^https://www\.eventbriteapi\.com/v3/events/\d+/?$', api_url)):
+        if (re.search(r'^https://www\.eventbriteapi\.com/v3/events/\d+/?$', api_url)):
             api_url = api_url + '?expand=organizer,venue'
 
         logger.debug(f'Executing => {action}')

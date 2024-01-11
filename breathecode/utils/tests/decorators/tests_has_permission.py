@@ -1,11 +1,11 @@
-from datetime import timedelta
-from functools import wraps
 import json
 import random
+from datetime import timedelta
+from functools import wraps
 from unittest.mock import MagicMock, call, patch
 
-from django.utils import timezone
 import pytest
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -13,9 +13,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.test import APIRequestFactory, force_authenticate
 from rest_framework.views import APIView
-from breathecode.payments import models
 
 import breathecode.utils.decorators as decorators
+from breathecode.payments import models
 from breathecode.payments import signals as payments_signals
 from breathecode.utils.decorators import PermissionContextType
 
@@ -279,6 +279,8 @@ def build_view_class(decorator, decorator_args=(), decorator_kwargs={}, with_per
             return Response(DELETE_ID_RESPONSE)
 
         delete = decorate(delete)
+
+    CustomView.__test__ = False
 
     return CustomView
 

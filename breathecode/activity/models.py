@@ -1,10 +1,10 @@
 import json
 import os
-from google.cloud import ndb
-from sqlalchemy import Column, Integer, String, TIMESTAMP, JSON
+
+from google.cloud import bigquery, ndb
+from sqlalchemy import JSON, TIMESTAMP, Column, Integer, String
 
 from breathecode.utils.sqlalchemy import BigQueryBase
-from google.cloud import bigquery
 
 
 def is_test_env():
@@ -37,8 +37,8 @@ class ActivityMeta(BigQueryBase):
     # related
     resource = Column(String(30), nullable=True)
     resource_id = Column(String(30), nullable=True)
-    meta = Column(String, default='\{\}')
-    meta = Column(JSON, default='\{\}')
+    meta = Column(String, default='{}')
+    meta = Column(JSON, default='{}')
     timestamp = Column(TIMESTAMP, nullable=False)
 
 
@@ -51,7 +51,7 @@ class Activity(BigQueryBase):
     kind = Column(String(25), nullable=False)
     related = Column(String(30), nullable=True)
     related_id = Column(String(30), nullable=True)
-    meta = Column(String, default='\{\}')
+    meta = Column(String, default='{}')
     timestamp = Column(TIMESTAMP, nullable=False)
 
     @property

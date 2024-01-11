@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_hours(content):
-    p = re.compile('<hrs>(\\d+\.?\\d*)</hrs>')
+    p = re.compile(r'<hrs>(\d+\.?\d*)</hrs>')
     result = p.search(content)
     hours = None
     if result is not None:
