@@ -201,6 +201,11 @@ def has_permission(permission: str,
                     context = build_context()
                     context, args, kwargs = consumer(context, args, kwargs)
 
+                    print('context')
+                    print(context)
+                    print('context[consumer]')
+                    print(context['consumer'])
+
                     renovate_consumables = {}
                     url = request.path
                     match = re.search(r'service/(.*)', url)
