@@ -27,32 +27,24 @@ lang_flags = {
 }
 
 
+@admin.display(description='Add GITPOD flag (to open on gitpod)')
 def add_gitpod(modeladmin, request, queryset):
     queryset.update(gitpod=True)
 
 
-add_gitpod.short_description = 'Add GITPOD flag (to open on gitpod)'
-
-
+@admin.display(description='Remove GITPOD flag')
 def remove_gitpod(modeladmin, request, queryset):
     queryset.update(gitpod=False)
 
 
-remove_gitpod.short_description = 'Remove GITPOD flag'
-
-
+@admin.display(description='Make it an EXTERNAL resource (new window)')
 def make_external(modeladmin, request, queryset):
     queryset.update(external=True)
 
 
-make_external.short_description = 'Make it an EXTERNAL resource (new window)'
-
-
+@admin.display(description='Make it an INTERNAL resource (same window)')
 def make_internal(modeladmin, request, queryset):
     queryset.update(external=False)
-
-
-make_internal.short_description = 'Make it an INTERNAL resource (same window)'
 
 
 def pull_content_from_github(modeladmin, request, queryset):

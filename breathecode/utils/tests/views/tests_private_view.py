@@ -1,13 +1,8 @@
 import json
 from unittest.mock import MagicMock, call, patch
-from rest_framework.views import APIView
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
-from rest_framework.test import APIRequestFactory, force_authenticate
+from rest_framework.test import APIRequestFactory
 import breathecode.utils.views as views
-from rest_framework.permissions import AllowAny
 from rest_framework import status
-from django.contrib.sessions.middleware import SessionMiddleware
 from django.contrib.sessions.backends.db import SessionStore
 from django.contrib import messages
 from django.http import JsonResponse
@@ -15,21 +10,6 @@ from django.http import JsonResponse
 from ..mixins import UtilsTestCase
 
 PERMISSION = 'can_kill_kenny'
-
-
-class TestView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
-    permission_classes = [AllowAny]
-
-    @views.private_view(PERMISSION)
-    def get(self, request, id, academy_id=None):
-        return Response({'id': id, 'academy_id': academy_id})
-
-
-from rest_framework.decorators import api_view, renderer_classes
-from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
 
 
 def build_view(*args, **kwargs):

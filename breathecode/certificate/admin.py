@@ -2,7 +2,7 @@ import logging, csv
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils.html import format_html
-from breathecode.admissions.admin import CohortAdmin
+from breathecode.admissions.admin import CohortAdmin as AdmissionsCohortAdmin
 from .models import Badge, Specialty, UserSpecialty, UserProxy, LayoutDesign, CohortProxy
 from .tasks import remove_screenshot, reset_screenshot, generate_cohort_certificates
 from .actions import generate_certificate
@@ -37,6 +37,7 @@ class LayoutDesignAdmin(admin.ModelAdmin):
             return 'not default'
 
 
+@admin.display(description='🔄 RETAKE Screenshot')
 def screenshot(modeladmin, request, queryset):
     from django.contrib import messages
 
@@ -46,9 +47,7 @@ def screenshot(modeladmin, request, queryset):
     messages.success(request, message='Screenshots scheduled correctly')
 
 
-screenshot.short_description = '🔄 RETAKE Screenshot'
-
-
+@admin.display(description='⛔️ DELETE Screenshot')
 def delete_screenshot(modeladmin, request, queryset):
     from django.contrib import messages
 
@@ -58,9 +57,7 @@ def delete_screenshot(modeladmin, request, queryset):
     messages.success(request, message='Screenshots scheduled for deletion')
 
 
-delete_screenshot.short_description = '⛔️ DELETE Screenshot'
-
-
+@admin.display(description='⬇️ Export Selected')
 def export_user_specialty_csv(self, request, queryset):
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename=certificates.csv'
@@ -73,9 +70,6 @@ def export_user_specialty_csv(self, request, queryset):
         ])
 
     return response
-
-
-export_user_specialty_csv.short_description = '⬇️ Export Selected'
 
 
 @admin.register(UserSpecialty)
@@ -102,6 +96,7 @@ class UserSpecialtyAdmin(admin.ModelAdmin):
         return ['token', 'expires_at']
 
 
+@admin.display(description='🎖 Generate Student Certificate')
 def user_bulk_certificate(modeladmin, request, queryset):
     from django.contrib import messages
 
@@ -118,15 +113,13 @@ def user_bulk_certificate(modeladmin, request, queryset):
         messages.error(request, message=str(e))
 
 
-user_bulk_certificate.short_description = '🎖 Generate Student Certificate'
-
-
 @admin.register(UserProxy)
 class UserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name')
     actions = [user_bulk_certificate]
 
 
+@admin.display(description='🥇 Generate Cohort Certificates')
 def cohort_bulk_certificate(modeladmin, request, queryset):
     from django.contrib import messages
 
@@ -138,10 +131,7 @@ def cohort_bulk_certificate(modeladmin, request, queryset):
     messages.success(request, message='Scheduled certificate generation')
 
 
-cohort_bulk_certificate.short_description = '🥇 Generate Cohort Certificates'
-
-
 @admin.register(CohortProxy)
-class CohortAdmin(CohortAdmin):
+class CohortAdmin(AdmissionsCohortAdmin):
     list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'schedule')
     actions = [cohort_bulk_certificate]

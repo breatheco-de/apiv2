@@ -2,12 +2,13 @@
 Test cases for /user
 """
 import base64
-import urllib
 import os
+import urllib
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
 from ..mixins import AuthTestCase
-from ..mocks import SlackRequestsMock
 
 
 class AuthenticateTestSuite(AuthTestCase):

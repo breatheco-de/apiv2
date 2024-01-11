@@ -2,10 +2,13 @@
 Test cases for /user
 """
 import os
-from breathecode.authenticate.models import Token
 from unittest.mock import call, patch
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
+from breathecode.authenticate.models import Token
+
 from ..mixins.new_auth_test_case import AuthTestCase
 
 
@@ -25,13 +28,11 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertNotEqual(content.find('<title>'), -1)
         self.assertNotEqual(content.find('Email is required'), -1)
         self.assertNotEqual(
-            content.find(
-                '<label for="id_password1">Password1:</label></th><td><ul class="errorlist"><li>This field is required.</li>'
-            ), -1)
+            content.find('<ul class="errorlist"><li>This field is required.</li></ul>\n'
+                         '<input type="password" name="password1"'), -1)
         self.assertNotEqual(
-            content.find(
-                '<label for="id_password2">Password2:</label></th><td><ul class="errorlist"><li>This field is required.</li>'
-            ), -1)
+            content.find('<ul class="errorlist"><li>This field is required.</li></ul>\n'
+                         '<input type="password" name="password2"'), -1)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_user_dict(), [])
@@ -53,12 +54,12 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertNotEqual(content.find('<title>'), -1)
         self.assertNotEqual(
             content.find(
-                '<label for="id_password1">Password1:</label></th><td><ul class="errorlist"><li>Ensure this value has at least 8 characters (it has 5).</li></ul>'
-            ), -1)
+                '<ul class="errorlist"><li>Ensure this value has at least 8 characters (it has 5).</li></ul>\n'
+                '<input type="password" name="password1"'), -1)
         self.assertNotEqual(
             content.find(
-                '<label for="id_password2">Password2:</label></th><td><ul class="errorlist"><li>Ensure this value has at least 8 characters (it has 5).</li></ul>'
-            ), -1)
+                '<ul class="errorlist"><li>Ensure this value has at least 8 characters (it has 5).</li></ul>\n'
+                '<input type="password" name="password2"'), -1)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_user_dict(), [])

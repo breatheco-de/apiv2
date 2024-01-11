@@ -1,10 +1,10 @@
 import re
-
 from datetime import datetime
-from django.utils import timezone
-from dateutil.tz import gettz, tzutc
-from dateutil import parser
+
 import pytz
+from dateutil import parser
+from dateutil.tz import gettz, tzutc
+from django.utils import timezone
 
 __all__ = ['DatetimeInteger', 'duration_to_str', 'from_now']
 
@@ -60,7 +60,7 @@ class Datetime(datetime):
 
 
 class DatetimeInteger:
-    """This type of date pretend resolve the problems related to summer schedule"""
+    """This type of date pretend resolve the problems related to summer schedule."""
 
     def __init__(self, year, month, day, hour, minute):
         self.year = str(year)
@@ -92,7 +92,7 @@ class DatetimeInteger:
     @staticmethod
     def to_iso_string(timezone: str, integer: int) -> str:
         tz = gettz(timezone)
-        matches = re.match('^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$', str(integer))
+        matches = re.match(r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$', str(integer))
         if not matches:
             return None
 
@@ -109,7 +109,7 @@ class DatetimeInteger:
     @staticmethod
     def to_datetime(timezone: str, integer: int) -> datetime:
         tz = pytz.timezone(timezone)
-        matches = re.match('^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$', str(integer))
+        matches = re.match(r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$', str(integer))
         if not matches:
             return None
 
@@ -127,7 +127,7 @@ class DatetimeInteger:
     @staticmethod
     def to_utc_datetime(timezone: str, integer: int) -> datetime:
         tz = pytz.timezone(timezone)
-        matches = re.match('^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$', str(integer))
+        matches = re.match(r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$', str(integer))
         if not matches:
             return None
 

@@ -6,6 +6,7 @@ from breathecode.utils.admin import change_field
 # Register your models here.
 
 
+@admin.display(description='Sync open issues')
 def sync_issues(modeladmin, request, queryset):
     freelancers = queryset.all()
     for freelancer in freelancers:
@@ -14,9 +15,6 @@ def sync_issues(modeladmin, request, queryset):
             messages.success(message=f'{count} issues successfully synched!', request=request)
         except ValueError as err:
             messages.error(request, err)
-
-
-sync_issues.short_description = 'Sync open issues'
 
 
 def generate_freelancer_bill(modeladmin, request, queryset):

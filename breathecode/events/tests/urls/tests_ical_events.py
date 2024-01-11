@@ -1,12 +1,14 @@
 """
 Test /academy/cohort
 """
-from unittest.mock import MagicMock, patch
 import urllib
 from datetime import timedelta
-from django.utils import timezone
+from unittest.mock import MagicMock, patch
+
 from django.urls.base import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
+
 from ..mixins.new_events_tests_case import EventTestCase
 
 
@@ -251,7 +253,7 @@ class AcademyCohortTestSuite(EventTestCase):
             self.line_limit(f'DESCRIPTION:Url: {event.url}\\nAcademy: '
                             f'{event.academy.name}\\nVenue: {event.venue.title}\\n'
                             ''),
-            'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
+            'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
             self.line_limit(
                 f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
             'END:VEVENT',
@@ -354,7 +356,7 @@ class AcademyCohortTestSuite(EventTestCase):
             self.line_limit(f'DESCRIPTION:Url: {event.url}\\nAcademy: '
                             f'{event.academy.name}\\nVenue: {event.venue.title}\\n'
                             ''),
-            'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
+            'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
             self.line_limit(
                 f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
             'END:VEVENT',
@@ -480,7 +482,7 @@ class AcademyCohortTestSuite(EventTestCase):
             self.line_limit(f'DESCRIPTION:Url: {event1.url}\\nAcademy: '
                             f'{event1.academy.name}\\nVenue: {event1.venue.title}\\n'
                             ''),
-            'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
+            'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
             self.line_limit(
                 f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
             'END:VEVENT',
@@ -493,7 +495,7 @@ class AcademyCohortTestSuite(EventTestCase):
             self.line_limit(f'DESCRIPTION:Url: {event2.url}\\nAcademy: '
                             f'{event2.academy.name}\\nVenue: {event2.venue.title}\\n'
                             ''),
-            'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
+            'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
             self.line_limit(
                 f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
             'END:VEVENT',
@@ -568,7 +570,7 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            f'PRODID:-//4Geeks//Academy Events (1\,2) {key}//EN',
+            f'PRODID:-//4Geeks//Academy Events (1\\,2) {key}//EN',
             'METHOD:PUBLISH',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
             self.line_limit(f'URL:http://localhost:8000{url}'),
@@ -583,7 +585,7 @@ class AcademyCohortTestSuite(EventTestCase):
             self.line_limit(f'DESCRIPTION:Url: {event1.url}\\nAcademy: '
                             f'{event1.academy.name}\\nVenue: {event1.venue.title}\\n'
                             ''),
-            'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
+            'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
             self.line_limit(
                 f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
             'END:VEVENT',
@@ -596,7 +598,7 @@ class AcademyCohortTestSuite(EventTestCase):
             self.line_limit(f'DESCRIPTION:Url: {event2.url}\\nAcademy: '
                             f'{event2.academy.name}\\nVenue: {event2.venue.title}\\n'
                             ''),
-            'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
+            'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
             self.line_limit(
                 f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
             'END:VEVENT',
@@ -609,7 +611,7 @@ class AcademyCohortTestSuite(EventTestCase):
             self.line_limit(f'DESCRIPTION:Url: {event3.url}\\nAcademy: '
                             f'{event3.academy.name}\\nVenue: {event3.venue.title}\\n'
                             ''),
-            'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
+            'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
             self.line_limit(
                 f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'),
             'END:VEVENT',
@@ -622,7 +624,7 @@ class AcademyCohortTestSuite(EventTestCase):
             self.line_limit(f'DESCRIPTION:Url: {event4.url}\\nAcademy: '
                             f'{event4.academy.name}\\nVenue: {event4.venue.title}\\n'
                             ''),
-            'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
+            'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
             self.line_limit(
                 f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'),
             'END:VEVENT',
@@ -697,7 +699,7 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            f'PRODID:-//4Geeks//Academy Events (1\,2) {key}//EN',
+            f'PRODID:-//4Geeks//Academy Events (1\\,2) {key}//EN',
             'METHOD:PUBLISH',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
             self.line_limit(f'URL:http://localhost:8000{url}'),
@@ -712,7 +714,7 @@ class AcademyCohortTestSuite(EventTestCase):
             self.line_limit(f'DESCRIPTION:Url: {event1.url}\\nAcademy: '
                             f'{event1.academy.name}\\nVenue: {event1.venue.title}\\n'
                             ''),
-            'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
+            'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
             self.line_limit(
                 f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
             'END:VEVENT',
@@ -725,7 +727,7 @@ class AcademyCohortTestSuite(EventTestCase):
             self.line_limit(f'DESCRIPTION:Url: {event2.url}\\nAcademy: '
                             f'{event2.academy.name}\\nVenue: {event2.venue.title}\\n'
                             ''),
-            'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
+            'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
             self.line_limit(
                 f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
             'END:VEVENT',
@@ -738,7 +740,7 @@ class AcademyCohortTestSuite(EventTestCase):
             self.line_limit(f'DESCRIPTION:Url: {event3.url}\\nAcademy: '
                             f'{event3.academy.name}\\nVenue: {event3.venue.title}\\n'
                             ''),
-            'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
+            'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
             self.line_limit(
                 f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'),
             'END:VEVENT',
@@ -751,7 +753,7 @@ class AcademyCohortTestSuite(EventTestCase):
             self.line_limit(f'DESCRIPTION:Url: {event4.url}\\nAcademy: '
                             f'{event4.academy.name}\\nVenue: {event4.venue.title}\\n'
                             ''),
-            'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
+            'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
             self.line_limit(
                 f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'),
             'END:VEVENT',

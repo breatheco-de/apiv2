@@ -90,7 +90,7 @@ class BigQuerySet():
         if self._table_ref:
             return self._table_ref
 
-        table_ref = self.client.dataset(self.dataset, project=self.project_id).table(self.table)
+        table_ref = f'{self.project_id}.{self.dataset}'
 
         # Fetch the schema of the table
         table = self.client.get_table(table_ref)

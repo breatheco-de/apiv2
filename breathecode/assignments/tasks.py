@@ -1,14 +1,15 @@
-import os
 import logging
+import os
 import re
 
 from celery import shared_task
-from breathecode.admissions.models import CohortUser
 
-from breathecode.assignments.actions import task_is_valid_for_notifications, NOTIFICATION_STRINGS
 import breathecode.notify.actions as actions
+from breathecode.admissions.models import CohortUser
+from breathecode.assignments.actions import NOTIFICATION_STRINGS, task_is_valid_for_notifications
 from breathecode.utils.decorators.task import TaskPriority
 from breathecode.utils.service import Service
+
 from .models import Task
 
 # Get an instance of a logger
@@ -114,7 +115,6 @@ def set_cohort_user_assignments(task_id: int):
     try:
         if hasattr(task.user, 'credentialsgithub') and task.github_url:
             s = Service('rigobot', task.user.id)
-            logger.info('Service rigobot found', s)
 
         if s and task.task_status == 'DONE':
             response = s.post('/v1/finetuning/me/repository/',
@@ -132,7 +132,9 @@ def set_cohort_user_assignments(task_id: int):
                                  'url': task.github_url,
                                  'activity_status': 'INACTIVE',
                              })
+
             logger.info('repository added to rigobot if task is not done')
+
             data = response.json()
             task.rigobot_repository_id = data['id']
 

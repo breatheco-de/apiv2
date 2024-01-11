@@ -22,27 +22,21 @@ from . import tasks
 logger = logging.getLogger(__name__)
 
 
+@admin.display(description='Delete all tokens')
 def clean_all_tokens(modeladmin, request, queryset):
     user_ids = queryset.values_list('id', flat=True)
     delete_tokens(users=user_ids, status='all')
 
 
-clean_all_tokens.short_description = 'Delete all tokens'
-
-
+@admin.display(description='Delete EXPIRED tokens')
 def clean_expired_tokens(modeladmin, request, queryset):
     user_ids = queryset.values_list('id', flat=True)
     delete_tokens(users=user_ids, status='expired')
 
 
-clean_expired_tokens.short_description = 'Delete EXPIRED tokens'
-
-
+@admin.display(description='Send reset password link')
 def send_reset_password(modeladmin, request, queryset):
     reset_password(users=queryset)
-
-
-send_reset_password.short_description = 'Send reset password link'
 
 
 @admin.register(CredentialsGithub)
@@ -122,13 +116,11 @@ class UserInviteAdmin(admin.ModelAdmin):
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>invite url</a>")
 
 
+@admin.display(description='Clear user password')
 def clear_user_password(modeladmin, request, queryset):
     for u in queryset:
         u.set_unusable_password()
         u.save()
-
-
-clear_user_password.short_description = 'Clear user password'
 
 
 @admin.register(UserProxy)
@@ -218,22 +210,18 @@ class UserSettingAdmin(admin.ModelAdmin):
     # actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]
 
 
+@admin.display(description='Generate academy token')
 def generate_token(modeladmin, request, queryset):
     academies = queryset.all()
     for a in academies:
         generate_academy_token(a.id)
 
 
-generate_token.short_description = 'Generate academy token'
-
-
+@admin.display(description='RESET academy token')
 def reset_token(modeladmin, request, queryset):
     academies = queryset.all()
     for a in academies:
         generate_academy_token(a.id, force=True)
-
-
-reset_token.short_description = 'RESET academy token'
 
 
 @admin.register(AcademyProxy)

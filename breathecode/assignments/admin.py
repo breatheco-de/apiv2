@@ -9,6 +9,7 @@ from .actions import sync_student_tasks
 logger = logging.getLogger(__name__)
 
 
+@admin.display(description='Delete and sync Tasks')
 def sync_tasks(modeladmin, request, queryset):
 
     for u in queryset:
@@ -19,16 +20,13 @@ def sync_tasks(modeladmin, request, queryset):
             logger.exception(f'There was a problem syncronizing tassks for student {u.email}')
 
 
-sync_tasks.short_description = 'Delete and sync Tasks'
-
-
 @admin.register(UserProxy)
 class UserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name')
     actions = [sync_tasks]
 
 
-#FIXME: this maybe is a deadcode
+@admin.display(description='Delete AND SYNC Tasks for all students of this cohort')
 def sync_cohort_tasks(modeladmin, request, queryset):
     from .actions import sync_cohort_tasks
 
@@ -40,9 +38,7 @@ def sync_cohort_tasks(modeladmin, request, queryset):
             pass
 
 
-sync_cohort_tasks.short_description = 'Delete AND SYNC Tasks for all students of this cohort'
-
-
+@admin.display(description='Delete tasks for all students of this cohort')
 def delete_cohort_tasks(modeladmin, request, queryset):
 
     for c in queryset:
@@ -52,41 +48,30 @@ def delete_cohort_tasks(modeladmin, request, queryset):
             pass
 
 
-delete_cohort_tasks.short_description = 'Delete tasks for all students of this cohort'
-
-
 @admin.register(CohortProxy)
 class CohortAdmin(admin.ModelAdmin):
     list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'schedule')
     actions = [sync_cohort_tasks, delete_cohort_tasks]
 
 
+@admin.display(description='Mark task status as DONE')
 def mark_as_delivered(modeladmin, request, queryset):
     queryset.update(task_status='DONE')
 
 
-mark_as_delivered.short_description = 'Mark task status as DONE'
-
-
+@admin.display(description='Mark revision status as APPROVED')
 def mark_as_approved(modeladmin, request, queryset):
     queryset.update(revision_status='APPROVED')
 
 
-mark_as_approved.short_description = 'Mark revision status as APPROVED'
-
-
+@admin.display(description='Mark revision status as IGNORED')
 def mark_as_ignored(modeladmin, request, queryset):
     queryset.update(revision_status='IGNORED')
 
 
-mark_as_ignored.short_description = 'Mark revision status as IGNORED'
-
-
+@admin.display(description='Mark revision status as REJECTED')
 def mark_as_rejected(modeladmin, request, queryset):
     queryset.update(revision_status='REJECTED')
-
-
-mark_as_rejected.short_description = 'Mark revision status as REJECTED'
 
 
 @admin.register(Task)

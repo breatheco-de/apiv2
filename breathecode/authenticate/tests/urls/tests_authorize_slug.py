@@ -11,6 +11,7 @@ from rest_framework import status
 from ..mixins.new_auth_test_case import AuthTestCase
 from django.core.handlers.wsgi import WSGIRequest
 from django.utils import timezone
+from django.test.client import FakePayload
 
 UTC_NOW = timezone.now()
 
@@ -54,7 +55,7 @@ def render_authorization(app, required_scopes=[], optional_scopes=[], selected_s
         'SERVER_PROTOCOL': 'HTTP/1.1',
         'wsgi.version': (1, 0),
         'wsgi.url_scheme': 'http',
-        'wsgi.input': None,
+        'wsgi.input': FakePayload(b''),
         'wsgi.errors': None,
         'wsgi.multiprocess': True,
         'wsgi.multithread': False,

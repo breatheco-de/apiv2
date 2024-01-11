@@ -1,19 +1,19 @@
 """
 Test /academy/cohort
 """
-from unittest.mock import MagicMock, patch
 import urllib
-from datetime import timedelta
-from dateutil.tz import gettz
-from django.utils import timezone
-from datetime import datetime
-from django.urls.base import reverse_lazy
-import pytz
-from rest_framework import status
-from breathecode.events.actions import fix_datetime_weekday
-from django.utils import timezone
+from datetime import datetime, timedelta
+from unittest.mock import MagicMock, patch
 
+import pytz
+from dateutil.tz import gettz
+from django.urls.base import reverse_lazy
+from django.utils import timezone
+from rest_framework import status
+
+from breathecode.events.actions import fix_datetime_weekday
 from breathecode.utils import DatetimeInteger
+
 from ..mixins.new_events_tests_case import EventTestCase
 
 
@@ -561,7 +561,7 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            f'PRODID:-//4Geeks//Academy Cohorts (1\,2) {key}//EN',
+            f'PRODID:-//4Geeks//Academy Cohorts (1\\,2) {key}//EN',
             'METHOD:PUBLISH',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
             self.line_limit(f'URL:http://localhost:8000{url}'),
@@ -695,7 +695,7 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            f'PRODID:-//4Geeks//Academy Cohorts (1\,2) {key}//EN',
+            f'PRODID:-//4Geeks//Academy Cohorts (1\\,2) {key}//EN',
             'METHOD:PUBLISH',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
             self.line_limit(f'URL:http://localhost:8000{url}'),
