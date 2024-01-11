@@ -198,18 +198,11 @@ def has_permission(permission: str,
                 if format == 'html':
                     from breathecode.payments.models import Subscription, PlanOffer, PlanFinancing
 
+                    service = kwargs['service_slug']
                     context = build_context()
                     context, args, kwargs = consumer(context, args, kwargs)
 
-                    print('context')
-                    print(context)
-                    print('context[consumer]')
-                    print(context['consumer'])
-
                     renovate_consumables = {}
-                    url = request.path
-                    match = re.search(r'service/(.*)', url)
-                    service = match.group(1)
 
                     subscription = Subscription.objects.filter(
                         user=request.user,
