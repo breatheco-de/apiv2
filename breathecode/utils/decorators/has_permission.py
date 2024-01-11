@@ -198,9 +198,9 @@ def has_permission(permission: str,
                 if format == 'html':
                     from breathecode.payments.models import Subscription, PlanOffer, PlanFinancing
 
-                    service = kwargs['service_slug']
-                    context = build_context()
-                    context, args, kwargs = consumer(context, args, kwargs)
+                    service = None
+                    if 'service_slug' in kwargs:
+                        service = kwargs['service_slug']
 
                     renovate_consumables = {}
 
