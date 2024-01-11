@@ -221,7 +221,9 @@ def has_permission(permission: str,
                             user_plans = plan_financing.plans.all()
 
                     for plan in user_plans:
-                        plan_offer = PlanOffer.objects.filter(original_plan__slug=plan.slug).first()
+                        offer = PlanOffer.objects.filter(original_plan__slug=plan.slug).first()
+                        if offer is not None:
+                            plan_offer = offer
 
                     if plan_offer is not None:
                         renovate_consumables['btn_label'] = 'Get more consumables'
