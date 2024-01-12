@@ -1,7 +1,6 @@
 # trio is not supported by django yet and should break gevent
 
-FILE="./README.md"
-# SECONDS=10
+FILE="./general.md"
 CONNECTIONS=2000
 THREADS=20
 PORT=8000

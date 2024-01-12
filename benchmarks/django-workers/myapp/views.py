@@ -121,21 +121,21 @@ async def async_gateway_10s_view(request: HttpRequest):
 
 def requests_view(request: HttpRequest):
     # eventbrite bug
-    response = requests.get('https://jsonplaceholder.typicode.com/posts')
+    response = requests.get('https://jsonplaceholder.typicode.com/posts', timeout=60)
     json = response.json()
     return JsonResponse(json, safe=False)
 
 
 async def async_requests_view(request: HttpRequest):
     # eventbrite bug
-    response = requests.get('https://jsonplaceholder.typicode.com/posts')
+    response = requests.get('https://jsonplaceholder.typicode.com/posts', timeout=60)
     json = response.json()
     return JsonResponse(json, safe=False)
 
 
 def httpx_view(request: HttpRequest):
     # eventbrite bug
-    response = httpx.get('https://jsonplaceholder.typicode.com/posts')
+    response = httpx.get('https://jsonplaceholder.typicode.com/posts', timeout=60)
     json = response.json()
     return JsonResponse(json, safe=False)
 
@@ -143,7 +143,7 @@ def httpx_view(request: HttpRequest):
 async def async_httpx_view(request: HttpRequest):
     # eventbrite bug
     async with httpx.AsyncClient(http2=True) as client:
-        response = await client.get('https://jsonplaceholder.typicode.com/posts')
+        response = await client.get('https://jsonplaceholder.typicode.com/posts', timeout=60)
         json = response.json()
 
     return JsonResponse(json, safe=False)
@@ -152,7 +152,7 @@ async def async_httpx_view(request: HttpRequest):
 async def async_aiohttp_view(request: HttpRequest):
     # eventbrite bug
     async with aiohttp.ClientSession() as session:
-        async with session.get('https://jsonplaceholder.typicode.com/posts') as response:
+        async with session.get('https://jsonplaceholder.typicode.com/posts', timeout=60) as response:
             json = await response.json()
             return JsonResponse(json, safe=False)
 
