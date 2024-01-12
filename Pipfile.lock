@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "0e019bdaa8add51ba79b33ffab2a12828923e281ba75e66b08f372abcf572d91"
+            "sha256": "da05bf7453387a8457c5043807e40aa4c26f0425cbd075e0360cf529190fb3b0"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -1228,7 +1228,7 @@
                 "sha256:fd096eb7ffef17c456cfa587523c5f92321ae02427ff955bebe9e3c63bc9f0da",
                 "sha256:fe754d231288e1e64323cfad462fcee8f0288654c10bdf4f603a39ed923bef33"
             ],
-            "markers": "python_version >= '3' and platform_machine == 'aarch64' or (platform_machine == 'ppc64le' or (platform_machine == 'x86_64' or (platform_machine == 'amd64' or (platform_machine == 'AMD64' or (platform_machine == 'win32' or platform_machine == 'WIN32')))))",
+            "markers": "python_version >= '3.11' and platform_python_implementation == 'CPython'",
             "version": "==3.0.3"
         },
         "grpcio": {
@@ -3194,7 +3194,7 @@
                 "sha256:23478f88c37f27d76ac8aee6c905017a143b0b1b886c3c9f66bc2fd94f9f5783",
                 "sha256:af72aea155e91adfc61c3ae9e0e342dbc0cba726d6cba4b6c72c1f34e47291cd"
             ],
-            "markers": "python_version >= '3.8'",
+            "markers": "python_version >= '3.7'",
             "version": "==4.9.0"
         },
         "tzdata": {
@@ -3221,6 +3221,15 @@
             ],
             "markers": "python_version >= '3.8'",
             "version": "==2.1.0"
+        },
+        "uvicorn": {
+            "hashes": [
+                "sha256:6dddbad1d7ee0f5140aba5ec138ddc9612c5109399903828b4874c9937f009c2",
+                "sha256:ce107f5d9bd02b4636001a77a4e74aab5e1e2b146868ebbad565237145af444c"
+            ],
+            "index": "pypi",
+            "markers": "python_version >= '3.8'",
+            "version": "==0.25.0"
         },
         "vine": {
             "hashes": [
@@ -3925,7 +3934,7 @@
                 "sha256:fd096eb7ffef17c456cfa587523c5f92321ae02427ff955bebe9e3c63bc9f0da",
                 "sha256:fe754d231288e1e64323cfad462fcee8f0288654c10bdf4f603a39ed923bef33"
             ],
-            "markers": "python_version >= '3' and platform_machine == 'aarch64' or (platform_machine == 'ppc64le' or (platform_machine == 'x86_64' or (platform_machine == 'amd64' or (platform_machine == 'AMD64' or (platform_machine == 'win32' or platform_machine == 'WIN32')))))",
+            "markers": "python_version >= '3.11' and platform_python_implementation == 'CPython'",
             "version": "==3.0.3"
         },
         "griffe": {
