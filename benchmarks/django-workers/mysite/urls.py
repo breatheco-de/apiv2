@@ -31,6 +31,8 @@ urlpatterns = [
     path('myapp/sync/requests', myapp.views.requests_view),
     path('myapp/sync/httpx', myapp.views.httpx_view),
     path('myapp/sync/brotli', myapp.views.brotli_view),
+    path('myapp/sync/cache_hit', myapp.views.fake_cache_hit_view),
+    path('myapp/sync/cache_set', myapp.views.fake_cache_set_view),
     path('myapp/async/seed', myapp.views.async_seed),
     path('myapp/async/json', myapp.views.async_json_view),
     path('myapp/async/json/<int:id>', myapp.views.async_json_view),
@@ -44,4 +46,6 @@ urlpatterns = [
     path('myapp/async/httpx', myapp.views.async_httpx_view),
     path('myapp/async/aiohttp', myapp.views.async_aiohttp_view),
     path('myapp/async/brotli', myapp.views.async_brotli_view),
+    path('myapp/async/cache_hit', myapp.views.async_fake_cache_hit_view),
+    path('myapp/async/cache_set', myapp.views.async_fake_cache_set_view),
 ]

@@ -165,3 +165,27 @@ def brotli_view(request: HttpRequest):
 async def async_brotli_view(request: HttpRequest):
     encoded = brotli.compress(stored)
     return HttpResponse(encoded)
+
+
+def fake_cache_hit_view(request: HttpRequest):
+    # latency issue
+    time.sleep(0.02)
+    return JsonResponse({'status': 'ok'})
+
+
+async def async_fake_cache_hit_view(request: HttpRequest):
+    # latency issue
+    await asyncio.sleep(0.02)
+    return JsonResponse({'status': 'ok'})
+
+
+def fake_cache_set_view(request: HttpRequest):
+    # with brotli
+    time.sleep(0.2)
+    return JsonResponse({'status': 'ok'})
+
+
+async def async_fake_cache_set_view(request: HttpRequest):
+    # with brotli
+    await asyncio.sleep(0.2)
+    return JsonResponse({'status': 'ok'})
