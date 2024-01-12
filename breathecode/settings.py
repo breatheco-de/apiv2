@@ -67,6 +67,7 @@ INSTALLED_APPS += [
     'django.contrib.postgres',
     'django.contrib.admindocs',
     'rest_framework',
+    'adrf',
     'phonenumber_field',
     'corsheaders',
     'breathecode.activity',

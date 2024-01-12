@@ -12,12 +12,12 @@ import newrelic.agent
 
 newrelic.agent.initialize()
 
-# the rest of your WSGI file contents go here
+# the rest of your ASGI file contents go here
 import os
 
-from django.core.wsgi import get_wsgi_application
+from django.core.asgi import get_asgi_application
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'breathecode.settings')
 
-application = get_wsgi_application()
-application = newrelic.agent.WSGIApplicationWrapper(application)
+application = get_asgi_application()
+application = newrelic.agent.ASGIApplicationWrapper(application)

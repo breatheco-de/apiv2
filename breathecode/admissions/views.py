@@ -1,39 +1,83 @@
 import logging
 
 import pytz
+from adrf.decorators import api_view
 from django.contrib.auth.models import AnonymousUser, User
 from django.db.models import FloatField, Max, Q, Value
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import permission_classes
 from rest_framework.exceptions import ParseError, PermissionDenied, ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from breathecode.admissions import tasks
 
-from breathecode.admissions.caches import (CohortCache, CohortUserCache, SyllabusVersionCache, TeacherCache,
-                                           UserCache)
+from breathecode.admissions import tasks
+from breathecode.admissions.caches import (
+    CohortCache,
+    CohortUserCache,
+    SyllabusVersionCache,
+    TeacherCache,
+    UserCache,
+)
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
-from breathecode.utils.i18n import translation
-from breathecode.utils import (APIViewExtensions, DatetimeInteger, GenerateLookupsMixin,
-                               HeaderLimitOffsetPagination, ValidationException, capable_of, localize_query)
+from breathecode.utils import (
+    APIViewExtensions,
+    DatetimeInteger,
+    GenerateLookupsMixin,
+    HeaderLimitOffsetPagination,
+    ValidationException,
+    capable_of,
+    localize_query,
+)
 from breathecode.utils.find_by_full_name import query_like_by_full_name
+from breathecode.utils.i18n import translation
 
 from .actions import find_asset_on_json, test_syllabus, update_asset_on_json
-from .models import (DELETED, STUDENT, Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus,
-                     SyllabusSchedule, SyllabusScheduleTimeSlot, SyllabusVersion)
+from .models import (
+    DELETED,
+    STUDENT,
+    Academy,
+    Cohort,
+    CohortTimeSlot,
+    CohortUser,
+    Syllabus,
+    SyllabusSchedule,
+    SyllabusScheduleTimeSlot,
+    SyllabusVersion,
+)
 from .serializers import (
-    AcademyReportSerializer, AcademySerializer, CohortPUTSerializer, CohortSerializer,
-    CohortTimeSlotSerializer, CohortUserPUTSerializer, CohortUserSerializer, GetAcademyWithStatusSerializer,
-    GetBigAcademySerializer, GetCohortSerializer, GETCohortTimeSlotSerializer, GetCohortUserSerializer,
-    GetCohortUserTasksSerializer, GetPublicCohortUserSerializer, GetSyllabusScheduleSerializer,
-    GETSyllabusScheduleTimeSlotSerializer, GetSyllabusSerializer, GetSyllabusSmallSerializer,
-    GetSyllabusVersionSerializer, GetTeacherAcademySmallSerializer, PublicCohortSerializer,
-    SyllabusSchedulePUTSerializer, SyllabusScheduleSerializer, SyllabusScheduleTimeSlotSerializer,
-    SyllabusSerializer, SyllabusVersionPutSerializer, SyllabusVersionSerializer, UserDJangoRestSerializer,
-    UserMeSerializer)
+    AcademyReportSerializer,
+    AcademySerializer,
+    CohortPUTSerializer,
+    CohortSerializer,
+    CohortTimeSlotSerializer,
+    CohortUserPUTSerializer,
+    CohortUserSerializer,
+    GetAcademyWithStatusSerializer,
+    GetBigAcademySerializer,
+    GetCohortSerializer,
+    GETCohortTimeSlotSerializer,
+    GetCohortUserSerializer,
+    GetCohortUserTasksSerializer,
+    GetPublicCohortUserSerializer,
+    GetSyllabusScheduleSerializer,
+    GETSyllabusScheduleTimeSlotSerializer,
+    GetSyllabusSerializer,
+    GetSyllabusSmallSerializer,
+    GetSyllabusVersionSerializer,
+    GetTeacherAcademySmallSerializer,
+    PublicCohortSerializer,
+    SyllabusSchedulePUTSerializer,
+    SyllabusScheduleSerializer,
+    SyllabusScheduleTimeSlotSerializer,
+    SyllabusSerializer,
+    SyllabusVersionPutSerializer,
+    SyllabusVersionSerializer,
+    UserDJangoRestSerializer,
+    UserMeSerializer,
+)
 from .utils import CohortLog
 
 logger = logging.getLogger(__name__)
@@ -75,9 +119,7 @@ def get_single_academy(request, academy_id=None):
 
 
 class AcademyTeacherView(APIView, GenerateLookupsMixin):
-    """
-    List all snippets, or create a new snippet.
-    """
+    """List all snippets, or create a new snippet."""
 
     extensions = APIViewExtensions(cache=TeacherCache, paginate=True)
 
@@ -311,9 +353,7 @@ class UserMeView(APIView):
 
 
 class AcademyView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
+    """List all snippets, or create a new snippet."""
 
     @capable_of('read_my_academy')
     def get(self, request, format=None, academy_id=None):
@@ -349,9 +389,7 @@ class UserView(APIView):
 
 
 class CohortUserView(APIView, GenerateLookupsMixin):
-    """
-    List all snippets, or create a new snippet.
-    """
+    """List all snippets, or create a new snippet."""
 
     extensions = APIViewExtensions(cache=CohortUserCache, paginate=True)
 
@@ -1072,9 +1110,7 @@ class AcademySyllabusScheduleTimeSlotView(APIView, GenerateLookupsMixin):
 
 
 class CohortMeView(APIView, GenerateLookupsMixin):
-    """
-    List all snippets, or create a new snippet.
-    """
+    """List all snippets, or create a new snippet."""
 
     extensions = APIViewExtensions(cache=CohortCache,
                                    cache_per_user=True,
@@ -1130,9 +1166,8 @@ class CohortMeView(APIView, GenerateLookupsMixin):
 
 
 class AcademyCohortView(APIView, GenerateLookupsMixin):
-    """
-    List all snippets, or create a new snippet.
-    """
+    """List all snippets, or create a new snippet."""
+
     permission_classes = [IsAuthenticated]
     extensions = APIViewExtensions(cache=CohortCache, sort='-kickoff_date', paginate=True)
 
@@ -1448,9 +1483,7 @@ def get_schedule(request, schedule_id):
 
 
 class SyllabusView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
+    """List all snippets, or create a new snippet."""
 
     extensions = APIViewExtensions(paginate=True)
 
@@ -1702,9 +1735,7 @@ class SyllabusVersionView(APIView):
 
 
 class AllSyllabusVersionsView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
+    """List all snippets, or create a new snippet."""
 
     permission_classes = [AllowAny]
 
@@ -1737,9 +1768,7 @@ class AllSyllabusVersionsView(APIView):
 
 
 class PublicCohortUserView(APIView, GenerateLookupsMixin):
-    """
-    List all snippets, or create a new snippet.
-    """
+    """List all snippets, or create a new snippet."""
 
     extensions = APIViewExtensions(cache=CohortUserCache, paginate=True)
     permission_classes = [AllowAny]
@@ -1780,9 +1809,7 @@ class PublicCohortUserView(APIView, GenerateLookupsMixin):
 
 
 class AcademyCohortHistoryView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
+    """List all snippets, or create a new snippet."""
 
     @capable_of('read_cohort_log')
     def get(self, request, cohort_id, academy_id):
@@ -1834,9 +1861,7 @@ class AcademyCohortHistoryView(APIView):
 
 
 class MeCohortUserHistoryView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
+    """List all snippets, or create a new snippet."""
 
     def get(self, request, cohort_id=None):
 
@@ -1870,7 +1895,7 @@ class CohortJoinView(APIView):
     extensions = APIViewExtensions(cache=CohortUserCache, paginate=True)
 
     def post(self, request, cohort_id=None):
-        from breathecode.payments.models import Subscription, PlanFinancing
+        from breathecode.payments.models import PlanFinancing, Subscription
         from breathecode.payments.serializers import GetAbstractIOweYouSerializer
 
         lang = get_user_language(request)

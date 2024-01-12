@@ -126,3 +126,4 @@ kombu = "*"
 zstandard = "*"
 psycopg = {extras = ["pool", "binary"], version = "*"}
 cryptography = "~=41.0.7"
+adrf = "*"
