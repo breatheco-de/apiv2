@@ -7,6 +7,7 @@ newrelic.agent.initialize()
 
 # the rest of your Celery file contents go here
 import os
+
 from celery import Celery
 
 from breathecode.setup import get_redis_config
