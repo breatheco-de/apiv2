@@ -1,17 +1,20 @@
-import pytz
-import re
+import functools
 import logging
-
+import os
+import re
 from datetime import datetime, timedelta
+
+import pytz
+from django.db.models import QuerySet
 from django.db.models.query_utils import Q
 from django.utils import timezone
-from breathecode.admissions.models import Cohort, CohortTimeSlot, TimeSlot, CohortUser
+
+from breathecode.admissions.models import Cohort, CohortTimeSlot, CohortUser, TimeSlot
 from breathecode.payments.models import AbstractIOweYou, PlanFinancing, Subscription
 from breathecode.utils.datetime_integer import DatetimeInteger
 
-from .models import Organization, Venue, Event, Organizer, EventType
+from .models import Event, EventType, Organization, Organizer, Venue
 from .utils import Eventbrite
-from django.db.models import QuerySet
 
 logger = logging.getLogger(__name__)
 
@@ -707,3 +710,11 @@ def get_ical_cohort_description(item: Cohort):
     # TODO: add private url to meeting url
 
     return description
+
+
+@functools.lru_cache(maxsize=1)
+def is_eventbrite_enabled():
+    if 'ENV' in os.environ and os.environ['ENV'] == 'test':
+        return True
+
+    return os.getenv('EVENTBRITE', '0') == '1'
