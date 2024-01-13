@@ -1,0 +1,19 @@
+# Journal
+
+## Notes
+
+- RPM: request per minute.
+- `/v1/admissions/cohort/all`: a light endpoint cached.
+- `/v1/admissions/syllabus/version`: a heavy endpoint cached.
+
+## 01/12/2024
+
+- `[dev]` switch `WEB_WORKER_CLASS` from `gevent` to `uvicorn.workers.UvicornWorker`.
+- `[dev]` switch `WEB_WORKERS` from `1` to `2`.
+- `[dev]` switch `WEB_WORKER_CONNECTION` from `120` to `160`.
+
+Side effects:
+
+- Support to async in Django.
+- Memory up from 265MB to 437MB.
+- `/v1/admissions/cohort/all` and `/v1/admissions/syllabus/version` changed from 35 RPM both to 133 RPM #1 and 31 RPM #2, this should change with each attempt.

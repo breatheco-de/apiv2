@@ -1,8 +1,26 @@
 site_name: 4geeks
 site_url: https://breathecode.herokuapp.com/
 
+repo_name: breatheco-de/apiv2
+repo_url: https://github.com/breatheco-de/apiv2
+edit_uri: ""
+
 theme:
-    name: "material"
+    name: 'material'
+    palette:
+      - scheme: 'default'
+        media: '(prefers-color-scheme: light)'
+        toggle:
+          icon: 'material/lightbulb'
+          name: "Switch to dark mode"
+      - scheme: 'slate'
+        media: '(prefers-color-scheme: dark)'
+        primary: 'blue'
+        toggle:
+          icon: 'material/lightbulb-outline'
+          name: 'Switch to light mode'
+#     features:
+#         - navigation.sections
 
 # this define the order of menu
 nav:
@@ -63,12 +81,18 @@ nav:
                 - "testing/mocks/using-mocks.md"
                 - "testing/mocks/mock-requests.md"
     - infrastructure:
+          - "infrastructure/journal.md"
+          - "infrastructure/web.md"
+          - "infrastructure/infra-env.md"
+          - Studies:
+                - "infrastructure/studies/http-clients.md"
+                - "infrastructure/studies/django-workers.md"
+    - Not placed yet:
           - "infrastructure/environment-variables.md"
+          - "installation/fixtures.md"
           - Deployments:
                 - "deployment/environment-variables.md"
                 - "deployment/configuring-the-github-secrets.md"
-    - Not placed yet:
-          - "installation/fixtures.md"
           - Apps:
                 - Monitoring:
                       - "apps/monitoring/introduction.md"
@@ -106,3 +130,6 @@ markdown_extensions:
     - pymdownx.inlinehilite
     - pymdownx.snippets
     - pymdownx.superfences
+
+extra_css:
+    - css/custom.css
