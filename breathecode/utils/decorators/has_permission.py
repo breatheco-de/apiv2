@@ -209,32 +209,27 @@ def has_permission(permission: str,
                         plans__mentorship_service_set__mentorship_services__slug=service).first()
 
                     plan_offer = None
-                    user_plans = []
+                    user_plan = None
 
                     if subscription is not None:
-                        user_plans = subscription.plans.all()
+                        user_plan = subscription.plans.first()
                     else:
                         plan_financing = PlanFinancing.objects.filter(
                             user=request.user,
                             plans__mentorship_service_set__mentorship_services__slug=service).first()
                         if plan_financing is not None:
-                            user_plans = plan_financing.plans.all()
+                            user_plan = plan_financing.plans.first()
 
-                    for plan in user_plans:
-                        suggested = PlanOffer.objects.filter(original_plan__slug=plan.slug).first()
-                        if offer is not None:
-                            plan_offer = suggested
+                    plan_offer = PlanOffer.objects.filter(original_plan__slug=user_plan.slug).first()
 
                     if plan_offer is not None:
                         renovate_consumables['btn_label'] = 'Get more consumables'
                         renovate_consumables[
                             'btn_url'] = f'https://4geeks.com/checkout?plan={plan_offer.suggested_plan.slug}'
                     elif subscription is not None:
-                        current_plan = user_plans.filter(
-                            mentorship_service_set__mentorship_services__slug=service).first()
                         renovate_consumables['btn_label'] = 'Get more consumables'
                         renovate_consumables[
-                            'btn_url'] = f'https://4geeks.com/checkout?mentorship_service_set={current_plan.mentorship_service_set.slug}'
+                            'btn_url'] = f'https://4geeks.com/checkout?mentorship_service_set={user_plan.mentorship_service_set.slug}'
 
                     return render_message(request,
                                           str(e),
