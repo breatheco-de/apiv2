@@ -126,6 +126,9 @@ REST_FRAMEWORK = {
 if os.getenv('ENABLE_DEFAULT_PAGINATION', 'y') in ['t', 'true', 'True', 'TRUE', '1', 'yes', 'y']:
     REST_FRAMEWORK['PAGE_SIZE'] = 20
 
+# whitenoise runs in sync mode, it must be wrapped or removed
+# CompressResponseMiddleware must be upgraded because a django deprecation
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -144,6 +147,9 @@ MIDDLEWARE = [
     'breathecode.middlewares.CompressResponseMiddleware',
     'django.middleware.http.ConditionalGetMiddleware',
 ]
+
+if ENVIRONMENT != 'test':
+    MIDDLEWARE += ['django_minify_html.middleware.MinifyHtmlMiddleware']
 
 DISABLE_SERVER_SIDE_CURSORS = True  # required when using pgbouncer's pool_mode=transaction
 

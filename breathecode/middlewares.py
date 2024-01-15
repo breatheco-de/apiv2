@@ -3,9 +3,10 @@ import gzip
 import os
 import sys
 import zlib
+
 import brotli
-from django.utils.deprecation import MiddlewareMixin
 import zstandard
+from django.utils.deprecation import MiddlewareMixin
 
 ENV = os.getenv('ENV', '')
 IS_TEST = ENV not in ['production', 'staging', 'development']
@@ -69,30 +70,11 @@ class CompressResponseMiddleware(MiddlewareMixin):
         if response.content:
             accept_encoding = request.META.get('HTTP_ACCEPT_ENCODING', '')
 
-            # # chrome have a bug when all zstd flags are enabled, deflate is not decoded in this case
-            # is_deflate_default = 'zstd' not in accept_encoding
-
             dont_force_gzip = not use_gzip()
 
             # sort by compression ratio and speed
             if 'zstd' in accept_encoding and dont_force_gzip:
                 self._compress(response, 'zstd', zstandard.compress)
-
-            # # default to deflate
-            # elif is_deflate_default:
-            #     if ('deflate' in accept_encoding or '*' in accept_encoding) and dont_force_gzip:
-            #         self._compress(response, 'deflate', zlib.compress)
-
-            #     elif 'gzip' in accept_encoding or (is_deflate_default is False and '*' in accept_encoding):
-            #         self._compress(response, 'gzip', gzip.compress)
-
-            # # default to gzip
-            # elif is_deflate_default is False:
-            #     if 'gzip' in accept_encoding or '*' in accept_encoding:
-            #         self._compress(response, 'gzip', gzip.compress)
-
-            #     elif ('deflate' in accept_encoding or '*' in accept_encoding) and dont_force_gzip:
-            #         self._compress(response, 'deflate', zlib.compress)
 
             elif ('deflate' in accept_encoding or '*' in accept_encoding) and dont_force_gzip:
                 self._compress(response, 'deflate', zlib.compress)
