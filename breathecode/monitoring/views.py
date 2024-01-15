@@ -116,7 +116,7 @@ def process_github_webhook(request, subscription_token):
 
     academy_slugs = set([subscription.owner.slug] +
                         [academy.slug for academy in subscription.shared_with.all()])
-    payload = request.data
+    payload = request.data.copy()
     payload['scope'] = request.headers['X-GitHub-Event']
 
     if subscription.repository != payload['repository']['html_url']:
