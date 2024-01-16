@@ -114,10 +114,10 @@ def set_cohort_user_assignments(task_id: int):
     logger.info('Task user id, before try')
     try:
         logger.info('Task user id')
-        logger.info('Task user id', task.user.id)
+        logger.info('Task user id', task.user)
         if hasattr(task.user, 'credentialsgithub') and task.github_url:
-            logger.info('Task user id', task.user.id)
-            s = Service('rigobot', task.user.id)
+            logger.info('Task user id', task.user)
+            s = Service('rigobot', task.user)
             logger.info('Service rigobot found', s)
 
         if s and task.task_status == 'DONE':
