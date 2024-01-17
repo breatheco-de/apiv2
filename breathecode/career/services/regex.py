@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+
 from django.utils import timezone
 
 
@@ -70,22 +71,22 @@ def salary_month_only_one(findings, string_salary):
 
 
 _cases_date = {
-    '^(?:Active\s)?(\d{1,2})\+? days? ago': days_ago_to_date,
-    '(.*\s?\d{1,2}\+?,? \d{1,4})': change_format_to_date,
-    '^today': lambda *args, **kwargs: today(),
-    '^Today': lambda *args, **kwargs: today(),
-    '^Just posted': lambda *args, **kwargs: today(),
-    '^just posted': lambda *args, **kwargs: today(),
+    r'^(?:Active\s)?(\d{1,2})\+? days? ago': days_ago_to_date,
+    r'(.*\s?\d{1,2}\+?,? \d{1,4})': change_format_to_date,
+    r'^today': lambda *args, **kwargs: today(),
+    r'^Today': lambda *args, **kwargs: today(),
+    r'^Just posted': lambda *args, **kwargs: today(),
+    r'^just posted': lambda *args, **kwargs: today(),
 }
 
 _cases_location = {
-    '(.*\s)?\((.*)\)': location_format,
-    '^\s?(.*)': get_remote_from_strin,
+    r'(.*\s)?\((.*)\)': location_format,
+    r'^\s?(.*)': get_remote_from_strin,
 }
 
 _cases_salary = {
-    '^(.*)\s?-\s(.*)\+? a? year': salary,
-    '^(.*)\s?to\s(.*)\+? per? year': salary,
-    '^(.*)\s?-\s(.*)\+? USD/month': salary_month,
-    '^(.*)\s?\+? USD/month': salary_month_only_one,
+    r'^(.*)\s?-\s(.*)\+? a? year': salary,
+    r'^(.*)\s?to\s(.*)\+? per? year': salary,
+    r'^(.*)\s?-\s(.*)\+? USD/month': salary_month,
+    r'^(.*)\s?\+? USD/month': salary_month_only_one,
 }

@@ -15,6 +15,7 @@ from breathecode.mentorship.models import MentorshipSession
 from breathecode.notify import actions
 from breathecode.tests.mixins.legacy import LegacyAPITestCase
 from django.core.handlers.wsgi import WSGIRequest
+from django.test.client import FakePayload
 
 UTC_NOW = timezone.now()
 CSRF_TOKEN = str(randint(10000, 10000000000000))
@@ -44,7 +45,7 @@ def render(message, mentorship_session=None, token=None):
         'SERVER_PROTOCOL': 'HTTP/1.1',
         'wsgi.version': (1, 0),
         'wsgi.url_scheme': 'http',
-        'wsgi.input': None,
+        'wsgi.input': FakePayload(b''),
         'wsgi.errors': None,
         'wsgi.multiprocess': True,
         'wsgi.multithread': False,
@@ -82,7 +83,7 @@ def render_form(self, mentorship_session=None, token=None, data={}, post=False, 
         'SERVER_PROTOCOL': 'HTTP/1.1',
         'wsgi.version': (1, 0),
         'wsgi.url_scheme': 'http',
-        'wsgi.input': None,
+        'wsgi.input': FakePayload(b''),
         'wsgi.errors': None,
         'wsgi.multiprocess': True,
         'wsgi.multithread': False,
@@ -145,7 +146,7 @@ def render_post_form(self, messages=[], mentorship_session=None, token=None, dat
         'SERVER_PROTOCOL': 'HTTP/1.1',
         'wsgi.version': (1, 0),
         'wsgi.url_scheme': 'http',
-        'wsgi.input': None,
+        'wsgi.input': FakePayload(b''),
         'wsgi.errors': None,
         'wsgi.multiprocess': True,
         'wsgi.multithread': False,

@@ -16,6 +16,7 @@ from breathecode.tests.mocks.requests import apply_requests_request_mock
 from ..mixins import MentorshipTestCase
 from django.core.handlers.wsgi import WSGIRequest
 from breathecode.payments import tasks
+from django.test.client import FakePayload
 
 UTC_NOW = timezone.now()
 URL = 'https://netscape.bankruptcy.story'
@@ -114,7 +115,7 @@ def render(message,
         'SERVER_PROTOCOL': 'HTTP/1.1',
         'wsgi.version': (1, 0),
         'wsgi.url_scheme': 'http',
-        'wsgi.input': None,
+        'wsgi.input': FakePayload(b''),
         'wsgi.errors': None,
         'wsgi.multiprocess': True,
         'wsgi.multithread': False,

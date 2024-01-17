@@ -8,6 +8,7 @@ from rest_framework import status
 from django.utils import timezone
 from ..mixins import MentorshipTestCase
 from django.core.handlers.wsgi import WSGIRequest
+from django.test.client import FakePayload
 
 UTC_NOW = timezone.now()
 
@@ -32,7 +33,7 @@ def render(message, mentor_profile=None, token=None, fix_logo=False):
         'SERVER_PROTOCOL': 'HTTP/1.1',
         'wsgi.version': (1, 0),
         'wsgi.url_scheme': 'http',
-        'wsgi.input': None,
+        'wsgi.input': FakePayload(b''),
         'wsgi.errors': None,
         'wsgi.multiprocess': True,
         'wsgi.multithread': False,

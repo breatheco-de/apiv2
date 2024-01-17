@@ -24,7 +24,8 @@ if __name__ == '__main__':
         seed = args.seed
 
     pytest_args = ' '.join(args.pytest_args)
-    command = f'pytest {pytest_args} --disable-pytest-warnings -n auto --nomigrations --durations=1'
+    # command = f'pytest {pytest_args} --disable-pytest-warnings -n auto --nomigrations --durations=1'
+    command = f'pytest {pytest_args} -n auto --nomigrations --durations=1'
 
     env = os.environ.copy()
     env['ENV'] = 'test'

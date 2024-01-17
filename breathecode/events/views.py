@@ -1,51 +1,85 @@
+import logging
 import os
+import re
+from datetime import datetime, timedelta
 
+import pytz
 from django.contrib.auth.models import User
 from django.db.models.query_utils import Q
-from breathecode.authenticate.actions import get_user_language, server_id
-from breathecode.events.caches import EventCache, LiveClassCache
-from .permissions.consumers import event_by_url_param, live_class_by_url_param
-from datetime import datetime, timedelta
-from breathecode.utils.views import private_view, render_message
-from django.shortcuts import redirect, render
-import logging
-import re
-import pytz
-
 from django.http.response import HttpResponse
-from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from django.shortcuts import redirect, render
 from django.utils import timezone
-
+from icalendar import Calendar as iCalendar
+from icalendar import Event as iEvent
+from icalendar import vCalAddress, vText
 from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes, renderer_classes
 from rest_framework.permissions import AllowAny
-from breathecode.utils.decorators import has_permission
-from breathecode.utils.i18n import translation
 
-from breathecode.utils.multi_status_response import MultiStatusResponse
-from .actions import fix_datetime_weekday, update_timeslots_out_of_range, get_my_event_types
-from .models import (Event, EventType, EventCheckin, LiveClass, EventTypeVisibilitySetting, Organization,
-                     Venue, EventbriteWebhook, Organizer)
-from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
-from rest_framework.decorators import api_view, permission_classes
-from .serializers import (EventBigSerializer, EventJoinSmallSerializer, EventPublicBigSerializer,
-                          GetLiveClassSerializer, LiveClassJoinSerializer, LiveClassSerializer,
-                          EventSerializer, EventSmallSerializer, EventTypeSerializer, EventTypeBigSerializer,
-                          EventCheckinSerializer, EventSmallSerializerNoAcademy,
-                          EventTypeVisibilitySettingSerializer, PostEventTypeSerializer,
-                          EventTypePutSerializer, VenueSerializer, OrganizationBigSerializer,
-                          OrganizationSerializer, EventbriteWebhookSerializer, OrganizerSmallSerializer,
-                          EventCheckinSmallSerializer, PUTEventCheckinSerializer, POSTEventCheckinSerializer,
-                          AcademyEventSmallSerializer)
-from rest_framework.views import APIView
 # from django.http import HttpResponse
 from rest_framework.response import Response
-from breathecode.utils import ValidationException, capable_of, HeaderLimitOffsetPagination, DatetimeInteger, GenerateLookupsMixin
-from rest_framework.decorators import renderer_classes
+from rest_framework.views import APIView
+
+from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
+from breathecode.authenticate.actions import get_user_language, server_id
+from breathecode.events import actions
+from breathecode.events.caches import EventCache, LiveClassCache
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.eventbrite import Eventbrite
+from breathecode.utils import (
+    DatetimeInteger,
+    GenerateLookupsMixin,
+    HeaderLimitOffsetPagination,
+    ValidationException,
+    capable_of,
+    response_207,
+)
+from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from breathecode.utils.decorators import has_permission
+from breathecode.utils.i18n import translation
+from breathecode.utils.multi_status_response import MultiStatusResponse
+from breathecode.utils.views import private_view, render_message
+
+from .actions import fix_datetime_weekday, get_my_event_types, update_timeslots_out_of_range
+from .models import (
+    Event,
+    EventbriteWebhook,
+    EventCheckin,
+    EventType,
+    EventTypeVisibilitySetting,
+    LiveClass,
+    Organization,
+    Organizer,
+    Venue,
+)
+from .permissions.consumers import event_by_url_param, live_class_by_url_param
+from .serializers import (
+    AcademyEventSmallSerializer,
+    EventBigSerializer,
+    EventbriteWebhookSerializer,
+    EventCheckinSerializer,
+    EventCheckinSmallSerializer,
+    EventJoinSmallSerializer,
+    EventPublicBigSerializer,
+    EventSerializer,
+    EventSmallSerializer,
+    EventSmallSerializerNoAcademy,
+    EventTypeBigSerializer,
+    EventTypePutSerializer,
+    EventTypeSerializer,
+    EventTypeVisibilitySettingSerializer,
+    GetLiveClassSerializer,
+    LiveClassJoinSerializer,
+    LiveClassSerializer,
+    OrganizationBigSerializer,
+    OrganizationSerializer,
+    OrganizerSmallSerializer,
+    POSTEventCheckinSerializer,
+    PostEventTypeSerializer,
+    PUTEventCheckinSerializer,
+    VenueSerializer,
+)
 from .tasks import async_eventbrite_webhook
-from breathecode.utils import response_207
-from icalendar import Calendar as iCalendar, Event as iEvent, vCalAddress, vText
 
 logger = logging.getLogger(__name__)
 MONDAY = 0
@@ -950,6 +984,9 @@ class AcademyEventCheckinView(APIView):
 @permission_classes([AllowAny])
 @renderer_classes([PlainTextRenderer])
 def eventbrite_webhook(request, organization_id):
+    if actions.is_eventbrite_enabled() is False:
+        return Response('ok', content_type='text/plain')
+
     webhook = Eventbrite.add_webhook_to_log(request.data, organization_id)
 
     if webhook:

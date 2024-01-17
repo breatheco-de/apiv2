@@ -8,16 +8,18 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
-from datetime import datetime
+import json
+import logging
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import TypedDict
+
+import dj_database_url
+
 # TODO: decouple file storage from django
 # from time import time
 import django_heroku
-import dj_database_url
-import json
-import logging
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
 
@@ -65,6 +67,7 @@ INSTALLED_APPS += [
     'django.contrib.postgres',
     'django.contrib.admindocs',
     'rest_framework',
+    'adrf',
     'phonenumber_field',
     'corsheaders',
     'breathecode.activity',
@@ -267,8 +270,6 @@ TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
-USE_L10N = True
-
 USE_TZ = True
 
 # Honor the 'X-Forwarded-Proto' header for request.is_secure()
@@ -371,8 +372,9 @@ elif IS_REDIS_WITH_SSL:
     }
 
 if IS_TEST_ENV:
-    from django.core.cache.backends.locmem import LocMemCache
     import fnmatch
+
+    from django.core.cache.backends.locmem import LocMemCache
 
     class Key(TypedDict):
         key: str
@@ -427,44 +429,13 @@ if IS_TEST_ENV:
 # overwrite the redis url with the new one
 os.environ['REDIS_URL'] = REDIS_URL
 
-# TODO: decouple file storage from django
-# if ENVIRONMENT != 'test':
-#     DEFAULT_FILE_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
-#     STATICFILES_STORAGE = 'breathecode.utils.GCSManifestStaticFilesStorage'
-
-#     GS_BUCKET_NAME = os.getenv('GS_BUCKET_NAME', '')
-#     GS_FILE_OVERWRITE = False
-
-#     class StaticFileCacheMiddleware:
-
-#         def __init__(self, get_response):
-#             self.get_response = get_response
-
-#         def __call__(self, request):
-#             response = self.get_response(request)
-
-#             # Check if the response is for a static file
-#             if request.path.startswith("/static/"):
-#                 # Set the cache headers (1 year in this example)
-#                 max_age = 365 * 24 * 60 * 60
-#                 response["Cache-Control"] = f"public, max-age={max_age}"
-#                 response["Expires"] = http_date(time() + max_age)
-
-#             return response
-
-#     MIDDLEWARE += [
-#         'breathecode.settings.MemoryUsageMiddleware',
-#     ]
-
-# TODO: decouple file storage from django
-# else:
-#     # Simplified static file serving.
-#     # https://warehouse.python.org/project/whitenoise/
-#     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
 # Simplified static file serving.
 # https://warehouse.python.org/project/whitenoise/
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STORAGES = {
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
 
 SITE_ID = 1
 
@@ -478,6 +449,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 # SQL Explorer
 EXPLORER_CONNECTIONS = {'Default': 'default'}
 EXPLORER_DEFAULT_CONNECTION = 'default'
+
+# Use the format of Django 6.0, remove it when upgrading to Django 6.0
+FORMS_URLFIELD_ASSUME_HTTPS = True
 
 sql_keywords_path = Path(os.getcwd()) / 'breathecode' / 'sql_keywords.json'
 with open(sql_keywords_path, 'r') as f:
@@ -523,3 +497,6 @@ if IS_REDIS_WITH_SSL_ON_HEROKU:
 
 # keep last part of the file
 django_heroku.settings(locals(), databases=False)
+
+# django_heroku does not support the new storages properly required by django 5.0
+del locals()['STATICFILES_STORAGE']

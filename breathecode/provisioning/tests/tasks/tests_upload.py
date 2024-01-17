@@ -1,26 +1,26 @@
 """
 Test /answer/:id
 """
-from datetime import datetime, timedelta
-import io
 import json
+import logging
+import os
 import random
+import re
+import string
+from datetime import datetime, timedelta
+from random import choices
+from unittest.mock import MagicMock, PropertyMock, call, patch
+
+import pandas as pd
 import pytz
 from django.utils import timezone
-import pandas as pd
+from faker import Faker
 from pytz import UTC
-from breathecode.provisioning.tasks import upload
-from breathecode.provisioning import tasks
-import re, string, os
-import logging
-from unittest.mock import PropertyMock, patch, MagicMock, call
-from breathecode.services.datetime_to_iso_format import datetime_to_iso_format
-from random import choices
 
-from breathecode.tests.mocks.requests import apply_requests_get_mock
+from breathecode.provisioning import tasks
+from breathecode.provisioning.tasks import upload
 
 from ..mixins import ProvisioningTestCase
-from faker import Faker
 
 GOOGLE_CLOUD_KEY = os.getenv('GOOGLE_CLOUD_KEY', None)
 
@@ -83,7 +83,7 @@ def random_csv(lines=1):
 
 def codespaces_csv(lines=1, data={}):
     usernames = [fake.slug() for _ in range(lines)]
-    dates = [datetime_to_show_date(datetime.utcnow()) for _ in range(lines)]
+    dates = [datetime_to_show_date(timezone.now()) for _ in range(lines)]
     products = [fake.name() for _ in range(lines)]
     skus = [fake.slug() for _ in range(lines)]
     quantities = [random.randint(1, 10) for _ in range(lines)]
@@ -112,7 +112,7 @@ def codespaces_csv(lines=1, data={}):
 def gitpod_csv(lines=1, data={}):
     ids = [random.randint(1, 10) for _ in range(lines)]
     credit_cents = [random.randint(1, 10000) for _ in range(lines)]
-    effective_times = [datetime_to_iso(datetime.utcnow()) for _ in range(lines)]
+    effective_times = [datetime_to_iso(timezone.now()) for _ in range(lines)]
     kinds = [fake.slug() for _ in range(lines)]
     usernames = [fake.slug() for _ in range(lines)]
     contextURLs = [
@@ -2060,8 +2060,8 @@ class GitpodTestSuite(ProvisioningTestCase):
 
         cohort = {
             'academy_id': 1,
-            'kickoff_date': datetime.utcnow() + timedelta(days=1),
-            'ending_date': datetime.utcnow() - timedelta(days=1),
+            'kickoff_date': timezone.now() + timedelta(days=1),
+            'ending_date': timezone.now() - timedelta(days=1),
         }
 
         model = self.bc.database.create(user=10,

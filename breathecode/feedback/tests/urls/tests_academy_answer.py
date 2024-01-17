@@ -678,7 +678,7 @@ class AnswerTestSuite(FeedbackTestCase):
             }
             base_url = reverse_lazy('feedback:answer')
             url = f'{base_url}?{urllib.parse.urlencode(params)}'
-            response = self.client.get(url, headers={'Academy', model['academy'].id})
+            response = self.client.get(url, headers={'Academy': model['academy'].id})
             json = response.json()
 
             json = [{**x, 'created_at': None} for x in json if self.assertDatetime(x['created_at'])]
