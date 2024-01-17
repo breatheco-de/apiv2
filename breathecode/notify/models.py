@@ -1,13 +1,16 @@
-from django.db import models
 from collections import OrderedDict
-from django.core import serializers
+
 from django.conf import settings
 from django.contrib.auth.models import User
-from breathecode.admissions.models import Academy, Cohort
+from django.core import serializers
+from django.db import models
 from rest_framework.exceptions import ValidationError
 
+from breathecode.admissions.models import Academy, Cohort
+
 __all__ = [
-    'UserProxy', 'CohortProxy', 'Device', 'SlackTeam', 'SlackUser', 'SlackUserTeam', 'SlackChannel', 'Hook'
+    'UserProxy', 'CohortProxy', 'Device', 'SlackTeam', 'SlackUser', 'SlackUserTeam', 'SlackChannel', 'Hook',
+    'Notify'
 ]
 AUTH_USER_MODEL = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
 if getattr(settings, 'HOOK_CUSTOM_MODEL', None) is None:
@@ -137,9 +140,8 @@ class SlackChannel(models.Model):
 
 
 class AbstractHook(models.Model):
-    """
-    Stores a representation of a Hook.
-    """
+    """Stores a representation of a Hook."""
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -160,8 +162,9 @@ class AbstractHook(models.Model):
         abstract = True
 
     def clean(self):
+        """Validate events."""
+
         from .utils.hook_manager import HookManager
-        """ Validation for events. """
         if self.event not in HookManager.HOOK_EVENTS.keys():
             raise ValidationError('Invalid hook event {evt}.'.format(evt=self.event))
 
@@ -171,6 +174,7 @@ class AbstractHook(models.Model):
     def serialize_hook(self, instance):
         """
         Serialize the object down to Python primitives.
+
         By default it uses Django's built in serializer.
         """
         from .utils.hook_manager import HookManager
@@ -202,3 +206,45 @@ class Hook(AbstractHook):
 
     class Meta(AbstractHook.Meta):
         swappable = 'HOOK_CUSTOM_MODEL'
+
+
+SLACK = 'SLACK'
+EMAIL = 'EMAIL'
+SMS = 'SMS'
+PUSH = 'PUSH'
+NOTIFY_CHANNELS = {
+    SLACK: 'Slack',
+    EMAIL: 'Email',
+    SMS: 'SMS',
+    PUSH: 'Push',
+}
+
+MINUTE = 'MINUTE'
+HOUR = 'HOUR'
+DAY = 'DAY'
+WEEK = 'WEEK'
+MONTH = 'MONTH'
+YEAR = 'YEAR'
+FREQUENCY_UNIT = {
+    MINUTE: 'Minute',
+    HOUR: 'Hour',
+    DAY: 'Day',
+    WEEK: 'Week',
+    MONTH: 'Month',
+    YEAR: 'Year',
+}
+
+
+class Notify(models.Model):
+    template_slug = models.SlugField(max_length=50)
+    resource_slug = models.SlugField(max_length=50)
+
+    frequency = models.IntegerField(max_length=50)
+    frequency_unit = models.CharField(max_length=50, choices=FREQUENCY_UNIT, default=DAY)
+    x = models.DurationField(max_length=50)
+    channel = models.CharField(max_length=50, choices=NOTIFY_CHANNELS, default=EMAIL)
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    email = models.EmailField()
+    available_attempts = models.IntegerField(null=True, blank=True)
+    attempts_done = models.IntegerField(null=True, blank=True)
