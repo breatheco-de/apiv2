@@ -1,15 +1,24 @@
-from rest_framework.exceptions import APIException
-import os, logging, json
+import json
+import logging
+import os
+import warnings
+from typing import Any, Optional, TypedDict
+
+import requests
+from dateutil.relativedelta import relativedelta
+from django.contrib.auth.models import User
 from django.template.loader import get_template
 from django.utils import timezone
-from pyfcm import FCMNotification
-from breathecode.services.slack import client
-from breathecode.admissions.models import Cohort, CohortUser
-from breathecode.utils import ValidationException
-from .models import Device, SlackChannel, SlackTeam, SlackUser, SlackUserTeam
-import requests
-from twilio.rest import Client
 from premailer import transform
+from pyfcm import FCMNotification
+from rest_framework.exceptions import APIException
+from twilio.rest import Client
+
+from breathecode.admissions.models import Cohort, CohortUser
+from breathecode.services.slack import client
+from breathecode.utils import ValidationException
+
+from .models import Device, Notify, SlackChannel, SlackTeam, SlackUser, SlackUserTeam
 
 push_service = None
 FIREBASE_KEY = os.getenv('FIREBASE_KEY', None)
@@ -20,6 +29,9 @@ logger = logging.getLogger(__name__)
 
 
 def send_email_message(template_slug, to, data=None, force=False, inline_css=False):
+    warnings.warn("'send_email_message' is deprecated. Use 'send_email' or `asend_email` instead.",
+                  DeprecationWarning,
+                  stacklevel=2)
 
     if data is None:
         data = {}
@@ -281,7 +293,6 @@ def sync_slack_team_channel(team_id):
     channels = data['channels']
     while 'response_metadata' in data and 'next_cursor' in data['response_metadata'] and data[
             'response_metadata']['next_cursor'] != '':
-        print('Next cursor: ', data['response_metadata']['next_cursor'])
         data = api.get(
             'conversations.list', {
                 'limit': 300,
@@ -331,7 +342,6 @@ def sync_slack_team_users(team_id):
     members = data['members']
     while 'response_metadata' in data and 'next_cursor' in data['response_metadata'] and data[
             'response_metadata']['next_cursor'] != '':
-        print('Next cursor: ', data['response_metadata']['next_cursor'])
         data = api.get('users.list', {'limit': 300, 'cursor': data['response_metadata']['next_cursor']})
         members = members + data['members']
 
@@ -445,3 +455,219 @@ def sync_slack_channel(payload, team=None):
     slack_channel.save()
 
     return slack_channel
+
+
+def _notify():
+    pass
+
+
+async def _anotify():
+    pass
+
+
+class To(TypedDict):
+    user: User
+    email: str
+
+
+def get_user_objects(template_slug: str,
+                     to: User | str | list[User | str],
+                     frequency: str,
+                     resource_slug: Optional[str] = None,
+                     attempts: Optional[int] = None) -> list[To]:
+
+    def get_notify_meta(user: User, email: str) -> tuple[Notify, bool]:
+        return Notify.objects.get_or_create(template_slug=template_slug,
+                                            email=email,
+                                            frequency=frequency,
+                                            resource_slug=resource_slug,
+                                            defaults={
+                                                'available_attempts': attempts,
+                                                'attempts_done': 0,
+                                                'user': user,
+                                            })
+
+    s = set()
+    if isinstance(to, list) == False:
+        to = [to]
+
+    for x in to:
+        if isinstance(x, User):
+            new = (x, x.email)
+
+            if new not in s:
+                notify, _ = get_notify_meta(*new)
+                if resource_slug and notify.available_attempts is not None and notify.available_attempts <= notify.attempts_done:
+                    continue
+
+                notify.attempts_done += 1
+                notify.save()
+
+            s.add(new)
+
+        elif isinstance(x, str):
+            user = User.objects.filter(email=to).first()
+            new = (user, user.email)
+
+            if new not in s:
+                notify, _ = get_notify_meta(*new)
+                if resource_slug and notify.available_attempts is not None and notify.available_attempts <= notify.attempts_done:
+                    continue
+
+                notify.attempts_done += 1
+                notify.save()
+
+            s.add(new)
+
+        else:
+            raise ValueError(f'Type {type(x)} is not supported, only User or str are allowed')
+
+    return [{'email': email, 'user': user} for user, email in s]
+
+
+def aget_user_objects(template_slug: str,
+                      to: User | str | list[User | str],
+                      frequency: str,
+                      resource_slug: Optional[str] = None,
+                      attempts: Optional[int] = None) -> list[To]:
+
+    def get_notify_meta(user: User, email: str) -> tuple[Notify, bool]:
+        return Notify.objects.get_or_create(template_slug=template_slug,
+                                            email=email,
+                                            frequency=frequency,
+                                            resource_slug=resource_slug,
+                                            defaults={
+                                                'available_attempts': attempts,
+                                                'attempts_done': 0,
+                                                'user': user,
+                                            })
+
+    s = set()
+    if isinstance(to, list) == False:
+        to = [to]
+
+    for x in to:
+        if isinstance(x, User):
+            new = (x, x.email)
+
+            if new not in s:
+                notify, _ = get_notify_meta(*new)
+                if resource_slug and notify.available_attempts is not None and notify.available_attempts <= notify.attempts_done:
+                    continue
+
+                notify.attempts_done += 1
+                notify.save()
+
+            s.add(new)
+
+        elif isinstance(x, str):
+            user = User.objects.filter(email=to).first()
+            new = (user, user.email)
+
+            if new not in s:
+                notify, _ = get_notify_meta(*new)
+                if resource_slug and notify.available_attempts is not None and notify.available_attempts <= notify.attempts_done:
+                    continue
+
+                notify.attempts_done += 1
+                notify.save()
+
+            s.add(new)
+
+        else:
+            raise ValueError(f'Type {type(x)} is not supported, only User or str are allowed')
+
+    return [{'email': email, 'user': user} for user, email in s]
+
+
+def parse_frequency(frequency: str) -> relativedelta:
+    unit = frequency[-1:]
+    amount = int(frequency[:-1])
+
+    if unit == 'd':
+        return relativedelta(days=amount)
+
+    if unit == 'w':
+        return relativedelta(weeks=amount)
+
+    if unit == 'm':
+        return relativedelta(months=amount)
+
+    if unit == 'y':
+        return relativedelta(years=amount)
+
+    raise ValueError(f'Frequency {frequency} is not supported')
+
+
+def send_email(template_slug: str,
+               to: User | str | list[User | str],
+               frequency: str,
+               data: Optional[dict[str, Any]] = None,
+               force: bool = False,
+               inline_css: bool = False,
+               resource_slug: Optional[str] = None,
+               attempts: Optional[int] = None):
+    if force is False and os.getenv('EMAIL_NOTIFICATIONS_ENABLED',
+                                    'TRUE') not in ['TRUE', 'T', 't', 'y', 'yes']:
+        logger.warning('Email not sent because EMAIL_NOTIFICATIONS_ENABLED != TRUE')
+        return
+
+    frequency = parse_frequency(frequency)
+
+    if data is None:
+        data = {}
+
+    for x in get_user_objects(template_slug, to, frequency, resource_slug, attempts):
+        ...
+
+    if to is None or to == '' or (isinstance(to, list) and len(to) == 0):
+        raise ValidationException(f'Invalid email to send notification to {str(to)}')
+
+    template = get_template_content(template_slug, data, ['email'], inline_css=inline_css)
+
+    result = requests.post(f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages",
+                           auth=('api', os.environ.get('MAILGUN_API_KEY', '')),
+                           data={
+                               'from': f"4Geeks <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
+                               'to': to,
+                               'subject': template['subject'],
+                               'text': template['text'],
+                               'html': template['html']
+                           },
+                           timeout=2)
+
+    if result.status_code != 200:
+        logger.error(f'Error sending email, mailgun status code: {str(result.status_code)}')
+        logger.error(result.text)
+    else:
+        logger.debug('Email notification  ' + template_slug + ' sent')
+
+    return result.status_code == 200
+
+
+async def asend_email():
+    pass
+
+
+def send_slack():
+    pass
+
+
+async def asend_slack():
+    pass
+
+
+def send_sms():
+    pass
+
+
+async def asend_sms():
+    pass
+
+
+def send_push():
+    pass
+
+
+async def asend_push():
+    pass
