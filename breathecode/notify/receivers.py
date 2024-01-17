@@ -80,6 +80,15 @@ def form_entry_updated(sender, instance, **kwargs):
     HookManager.process_model_event(instance, model_label, 'won_or_lost', payload_override=serializer.data)
 
 
+@receiver(new_form_entry_deal, sender=FormEntry)
+def new_form_entry_deal(sender, instance, **kwargs):
+    logger.debug('Sending formentry with new deal to hook')
+    model_label = get_model_label(instance)
+
+    serializer = FormEntryHookSerializer(instance)
+    HookManager.process_model_event(instance, model_label, 'new_deal', payload_override=serializer.data)
+
+
 @receiver(new_event_attendee, sender=EventCheckin)
 def handle_new_event_attendee(sender, instance, **kwargs):
     logger.debug('Sending new event attendance')

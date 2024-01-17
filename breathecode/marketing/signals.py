@@ -7,3 +7,4 @@ from django.dispatch import Signal
 downloadable_saved = Signal()
 
 form_entry_won_or_lost = Signal()
+new_form_entry_deal = Signal()
