@@ -6,7 +6,7 @@ from typing import Callable, Optional, TypedDict
 
 from django.contrib.auth.models import AnonymousUser
 from django.core.handlers.wsgi import WSGIRequest
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
 from django.utils import timezone
 from rest_framework.views import APIView
 from django.db.models import Sum
@@ -205,8 +205,8 @@ def has_permission(permission: str,
                     renovate_consumables = {}
 
                     subscription = Subscription.objects.filter(
-                        user=request.user,
-                        plans__mentorship_service_set__mentorship_services__slug=service).first()
+                        Q(user=request.user, plans__mentorship_service_set__mentorship_services__slug=service)
+                        | Q(user=request.user, plans__event_type_set__event_types__slug=service)).first()
 
                     plan_offer = None
                     user_plan = None
@@ -215,8 +215,9 @@ def has_permission(permission: str,
                         user_plan = subscription.plans.first()
                     else:
                         plan_financing = PlanFinancing.objects.filter(
-                            user=request.user,
-                            plans__mentorship_service_set__mentorship_services__slug=service).first()
+                            Q(user=request.user,
+                              plans__mentorship_service_set__mentorship_services__slug=service)
+                            | Q(user=request.user, plans__event_type_set__event_types__slug=service)).first()
                         if plan_financing is not None:
                             user_plan = plan_financing.plans.first()
 
