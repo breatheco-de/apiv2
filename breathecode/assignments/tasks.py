@@ -136,7 +136,7 @@ def set_cohort_user_assignments(task_id: int):
             data = response.json()
             task.rigobot_repository_id = data['id']
 
-    except Exception:
-        logger.error('App Rigobot not found')
+    except Exception as e:
+        logger.error('App Rigobot not found', str(e))
 
     logger.info('History log saved')
