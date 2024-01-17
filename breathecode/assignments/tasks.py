@@ -115,6 +115,7 @@ def set_cohort_user_assignments(task_id: int):
     try:
         if hasattr(task.user, 'credentialsgithub') and task.github_url:
             s = Service('rigobot', task.user.id)
+            logger.info('Service rigobot found')
 
         if s and task.task_status == 'DONE':
             response = s.post('/v1/finetuning/me/repository/',
@@ -138,7 +139,7 @@ def set_cohort_user_assignments(task_id: int):
             data = response.json()
             task.rigobot_repository_id = data['id']
 
-    except Exception:
-        logger.error('App Rigobot not found')
+    except Exception as e:
+        logger.error('App Rigobot not found: ' + str(e))
 
     logger.info('History log saved')
