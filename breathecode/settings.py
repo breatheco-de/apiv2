@@ -79,6 +79,57 @@ INSTALLED_APPS = [
     'graphene_django',
 ]
 
+GRAPHENE = {'SCHEMA': 'breathecode.schema.schema'}
+
+if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or ENVIRONMENT == 'test':
+    INSTALLED_APPS.append('breathecode.cypress')
+
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS':
+    'rest_framework.schemas.openapi.AutoSchema',
+    'DEFAULT_VERSIONING_CLASS':
+    'rest_framework.versioning.NamespaceVersioning',
+    'DEFAULT_PAGINATION_CLASS':
+    'breathecode.utils.HeaderLimitOffsetPagination',
+    'EXCEPTION_HANDLER':
+    'breathecode.utils.breathecode_exception_handler',
+    'PAGE_SIZE':
+    100,
+    'DEFAULT_VERSION':
+    'v1',
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'breathecode.authenticate.authentication.ExpiringTokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework_csv.renderers.CSVRenderer',
+    ),
+}
+
+if os.getenv('ENABLE_DEFAULT_PAGINATION', 'y') in ['t', 'true', 'True', 'TRUE', '1', 'yes', 'y']:
+    REST_FRAMEWORK['PAGE_SIZE'] = 20
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+
+    # Cache
+    # 'django.middleware.cache.UpdateCacheMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    # 'django.middleware.cache.FetchFromCacheMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    #'breathecode.utils.admin_timezone.TimezoneMiddleware',
+    'breathecode.middlewares.CompressResponseMiddleware',
+    'django.middleware.http.ConditionalGetMiddleware',
+]
+
 if os.getenv('GOOGLE_APPLICATION_CREDENTIALS') and (GS_BUCKET_NAME := os.getenv('STATIC_BUCKET')):
     from google.oauth2 import service_account
 
@@ -120,6 +171,10 @@ else:
         'whitenoise.runserver_nostatic',
     ]
 
+    MIDDLEWARE += [
+        'whitenoise.middleware.WhiteNoiseMiddleware',
+    ]
+
     # Simplified static file serving.
     # https://warehouse.python.org/project/whitenoise/
     STORAGES = {
@@ -127,58 +182,6 @@ else:
             'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
         },
     }
-
-GRAPHENE = {'SCHEMA': 'breathecode.schema.schema'}
-
-if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or ENVIRONMENT == 'test':
-    INSTALLED_APPS.append('breathecode.cypress')
-
-REST_FRAMEWORK = {
-    'DEFAULT_SCHEMA_CLASS':
-    'rest_framework.schemas.openapi.AutoSchema',
-    'DEFAULT_VERSIONING_CLASS':
-    'rest_framework.versioning.NamespaceVersioning',
-    'DEFAULT_PAGINATION_CLASS':
-    'breathecode.utils.HeaderLimitOffsetPagination',
-    'EXCEPTION_HANDLER':
-    'breathecode.utils.breathecode_exception_handler',
-    'PAGE_SIZE':
-    100,
-    'DEFAULT_VERSION':
-    'v1',
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'breathecode.authenticate.authentication.ExpiringTokenAuthentication',
-    ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
-    ],
-    'DEFAULT_RENDERER_CLASSES': (
-        'rest_framework.renderers.JSONRenderer',
-        'rest_framework_csv.renderers.CSVRenderer',
-    ),
-}
-
-if os.getenv('ENABLE_DEFAULT_PAGINATION', 'y') in ['t', 'true', 'True', 'TRUE', '1', 'yes', 'y']:
-    REST_FRAMEWORK['PAGE_SIZE'] = 20
-
-MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
-
-    # Cache
-    # 'django.middleware.cache.UpdateCacheMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    # 'django.middleware.cache.FetchFromCacheMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    #'breathecode.utils.admin_timezone.TimezoneMiddleware',
-    'breathecode.middlewares.CompressResponseMiddleware',
-    'django.middleware.http.ConditionalGetMiddleware',
-]
 
 DISABLE_SERVER_SIDE_CURSORS = True  # required when using pgbouncer's pool_mode=transaction
 
