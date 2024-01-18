@@ -89,7 +89,6 @@ if os.getenv('GOOGLE_APPLICATION_CREDENTIALS') and (GS_BUCKET_NAME := os.getenv(
     GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
         os.getenv('GOOGLE_APPLICATION_CREDENTIALS'))
 
-    GS_BUCKET_NAME = os.getenv('GS_BUCKET_NAME', '')
     GS_PROJECT_ID = os.getenv('GOOGLE_PROJECT_ID', '')
     GS_IS_GZIPPED = True
     GS_QUERYSTRING_AUTH = False
