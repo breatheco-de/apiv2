@@ -20,7 +20,6 @@ import django_heroku
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
 
-from breathecode.services.google_cloud.credentials import resolve_credentials
 from breathecode.setup import configure_redis
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -82,8 +81,6 @@ INSTALLED_APPS = [
 
 if os.getenv('GOOGLE_APPLICATION_CREDENTIALS') and (GS_BUCKET_NAME := os.getenv('STATIC_BUCKET')):
     from google.oauth2 import service_account
-
-    resolve_credentials()
 
     GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
         os.getenv('GOOGLE_APPLICATION_CREDENTIALS'))
