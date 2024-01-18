@@ -82,6 +82,10 @@ INSTALLED_APPS = [
 if os.getenv('GOOGLE_APPLICATION_CREDENTIALS') and (GS_BUCKET_NAME := os.getenv('STATIC_BUCKET')):
     from google.oauth2 import service_account
 
+    from .setup import resolve_gcloud_credentials
+
+    resolve_gcloud_credentials()
+
     GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
         os.getenv('GOOGLE_APPLICATION_CREDENTIALS'))
 
@@ -104,7 +108,6 @@ if os.getenv('GOOGLE_APPLICATION_CREDENTIALS') and (GS_BUCKET_NAME := os.getenv(
     # }
 
     GS_EXPIRATION = timedelta(days=7)
-    LOAD_WHITENOISE = False
 
     STORAGES = {
         'staticfiles': {
