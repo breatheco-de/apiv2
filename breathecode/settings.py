@@ -509,6 +509,7 @@ HOOK_EVENTS = {
     'event.new_event_order': 'events.EventCheckin.new_event_order',
     'event.new_event_attendee': 'events.EventCheckin.new_event_attendee',
     'form_entry.won_or_lost': 'marketing.FormEntry.won_or_lost',
+    'form_entry.new_deal': 'marketing.FormEntry.new_deal',
     'session.mentorship_session_status': 'mentorship.MentorshipSession.mentorship_session_status',
 }
 
