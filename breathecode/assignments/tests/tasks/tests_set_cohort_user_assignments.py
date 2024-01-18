@@ -294,7 +294,7 @@ class MediaTestSuite(AssignmentsTestCase):
             call('Executing set_cohort_user_assignments'),
             call('History log saved'),
         ])
-        self.assertEqual(Logger.error.call_args_list, [call('App Rigobot not found')])
+        self.assertEqual(Logger.error.call_args_list, [call('Rigobot error: App not found')])
 
     @patch.multiple('breathecode.utils.service.Service',
                     __init__=MagicMock(return_value=None),
@@ -355,6 +355,7 @@ class MediaTestSuite(AssignmentsTestCase):
         ])
         self.assertEqual(Logger.info.call_args_list, [
             call('Executing set_cohort_user_assignments'),
+            call('Service rigobot found'),
             call('repository added to rigobot if task is not done'),
             call('History log saved'),
         ])
@@ -428,6 +429,7 @@ class MediaTestSuite(AssignmentsTestCase):
         ])
         self.assertEqual(Logger.info.call_args_list, [
             call('Executing set_cohort_user_assignments'),
+            call('Service rigobot found'),
             call('repository added to rigobot if task is done'),
             call('History log saved'),
         ])

@@ -1,5 +1,6 @@
 import os
 from typing import Optional
+
 import jwt
 from rest_framework.test import APITestCase
 
@@ -98,7 +99,10 @@ class Request:
         - user: a instance of user model `breathecode.authenticate.models.User`
         """
         from datetime import datetime, timedelta
-        now = datetime.utcnow()
+
+        from django.utils import timezone
+
+        now = timezone.now()
 
         # https://datatracker.ietf.org/doc/html/rfc7519#section-4
         payload = {
