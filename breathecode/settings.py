@@ -11,22 +11,17 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import TypedDict
 
 import dj_database_url
-
-# TODO: decouple file storage from django
-# from time import time
 import django_heroku
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
 
+from breathecode.services.google_cloud.credentials import resolve_credentials
 from breathecode.setup import configure_redis
-
-# TODO: decouple file storage from django
-# from django.utils.http import http_date
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -46,16 +41,8 @@ DEBUG = (ENVIRONMENT == 'development' or ENVIRONMENT == 'test')
 
 ALLOWED_HOSTS = []
 
-INSTALLED_APPS = []
-
-# TODO: decouple file storage from django
-# if ENVIRONMENT == 'test':
-#     INSTALLED_APPS += ['whitenoise.runserver_nostatic']
-
 # Application definition
-INSTALLED_APPS += [
-    # TODO: decouple file storage from django
-    'whitenoise.runserver_nostatic',
+INSTALLED_APPS = [
     'breathecode.admin_styles',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -92,6 +79,55 @@ INSTALLED_APPS += [
     'explorer',
     'graphene_django',
 ]
+
+if os.getenv('GOOGLE_APPLICATION_CREDENTIALS') and (GS_BUCKET_NAME := os.getenv('STATIC_BUCKET')):
+    from google.oauth2 import service_account
+
+    resolve_credentials()
+
+    GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
+        os.getenv('GOOGLE_APPLICATION_CREDENTIALS'))
+
+    GS_BUCKET_NAME = os.getenv('GS_BUCKET_NAME', '')
+    GS_PROJECT_ID = os.getenv('GOOGLE_PROJECT_ID', '')
+    GS_IS_GZIPPED = True
+    GS_QUERYSTRING_AUTH = False
+    GS_FILE_OVERWRITE = True
+    GZIP_CONTENT_TYPES = (
+        'text/html',
+        'text/css',
+        'text/javascript',
+        'application/javascript',
+        'application/x-javascript',
+        'image/svg+xml',
+    )
+
+    # GS_OBJECT_PARAMETERS = {
+    #     'cache_control': 'max-age=604800',  # 1 week
+    # }
+
+    GS_EXPIRATION = timedelta(days=7)
+    LOAD_WHITENOISE = False
+
+    STORAGES = {
+        'staticfiles': {
+            'BACKEND': 'storages.backends.gcloud.GoogleCloudStorage',
+        },
+    }
+    # STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+
+else:
+    INSTALLED_APPS += [
+        'whitenoise.runserver_nostatic',
+    ]
+
+    # Simplified static file serving.
+    # https://warehouse.python.org/project/whitenoise/
+    STORAGES = {
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        },
+    }
 
 GRAPHENE = {'SCHEMA': 'breathecode.schema.schema'}
 
@@ -428,14 +464,6 @@ if IS_TEST_ENV:
 
 # overwrite the redis url with the new one
 os.environ['REDIS_URL'] = REDIS_URL
-
-# Simplified static file serving.
-# https://warehouse.python.org/project/whitenoise/
-STORAGES = {
-    'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
-    },
-}
 
 SITE_ID = 1
 

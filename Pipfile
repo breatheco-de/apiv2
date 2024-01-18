@@ -111,7 +111,6 @@ sqlalchemy-bigquery = { extras = ["bqstorage"]}
 drf-yasg = "*"
 google-cloud-firestore = "*"
 gevent = "*"
-django-storages = {extras = ["google"] }
 newrelic = "*"
 graphene-django = "*"
 graphene-django-optimizer = "*"
@@ -128,3 +127,6 @@ psycopg = {extras = ["pool", "binary"], version = "*"}
 cryptography = "~=41.0.7"
 adrf = "*"
 uvicorn = "*"
+django-storages = {extras = ["google"], version = "*"}
+aiohttp = {extras = ["speedups"], version = "*"}
+aiodns = "*"
