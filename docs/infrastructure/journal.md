@@ -28,3 +28,7 @@ Side effects:
 - `[prod]` set `CELERY_DYNOS` to `2`
 - `[prod]` set `CELERY_MAX_WORKERS` to `3`
 - `[dev]` switch `CELERY_MAX_WORKERS` from `1` to `2`
+
+## 01/17/2024
+
+- `[all]` set `STATIC_BUCKET`
