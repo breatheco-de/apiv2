@@ -2,17 +2,19 @@ import hashlib
 import logging
 import os
 
+from adrf.views import APIView
 from circuitbreaker import CircuitBreakerError
 from django.contrib import messages
+from django.core.exceptions import SynchronousOnlyOperation
 from django.db.models import Q
-from django.http import HttpResponseRedirect, StreamingHttpResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, StreamingHttpResponse
 from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from slugify import slugify
 
 import breathecode.activity.tasks as tasks_activity
@@ -29,9 +31,10 @@ from breathecode.utils import (
 )
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
+from breathecode.utils.decorators.capable_of import acapable_of
 from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
-from breathecode.utils.service import Service
+from breathecode.utils.service import Service, service
 
 from .actions import deliver_task, sync_cohort_tasks
 from .caches import TaskCache
@@ -964,11 +967,11 @@ class MeCodeRevisionView(APIView):
         return resource
 
 
-class AcademyTaskCodeRevisionView(APIView):
+class AcademyCodeRevisionView(APIView):
 
-    @capable_of('read_assignment')
-    def get(self, request, academy_id, task_id=None):
-        if task_id and not (task := Task.objects.filter(id=task_id, cohort__academy__id=academy_id).first()):
+    async def get_code_revision(self, request, academy_id, task_id, coderevision_id):
+        if task_id and not (task := await Task.objects.filter(id=task_id,
+                                                              cohort__academy__id=academy_id).afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         params = {}
@@ -978,47 +981,196 @@ class AcademyTaskCodeRevisionView(APIView):
         if task_id:
             params['repo'] = task.github_url
 
-        s = Service('rigobot')
-        response = s.get('/v1/finetuning/coderevision', params=params, stream=True)
-        resource = StreamingHttpResponse(
-            response.raw,
-            status=response.status_code,
-            reason=response.reason,
-        )
+        url = '/v1/finetuning/coderevision'
 
-        header_keys = [
-            x for x in response.headers.keys() if x != 'Transfer-Encoding' and x != 'Content-Encoding'
-            and x != 'Keep-Alive' and x != 'Connection'
-        ]
+        if coderevision_id is not None:
+            url = f'{url}/{coderevision_id}'
 
-        for header in header_keys:
-            resource[header] = response.headers[header]
+        try:
+            s = await service('rigobot')
 
-        return resource
+        except SynchronousOnlyOperation:
+            raise ValidationException('Async is not supported by the worker',
+                                      code=500,
+                                      slug='no-async-support')
+
+        except Exception:
+            raise ValidationException('App rigobot not found', code=404, slug='app-not-found')
+
+        async with s:
+            async with s.aget(url, params=params) as response:
+                banned = [
+                    'Transfer-Encoding', 'Content-Encoding', 'Keep-Alive', 'Connection', 'Content-Length',
+                    'Upgrade'
+                ]
+                header_keys = [x for x in response.headers.keys() if x not in banned]
+
+                headers = {}
+                for header in header_keys:
+                    headers[str(header)] = response.headers[header]
+
+                return HttpResponse(await response.content.read(), status=response.status, headers=headers)
+
+    async def add_code_revision(self, request, academy_id, task_id, coderevision_id):
+        if task_id and not (task := Task.objects.filter(id=task_id, cohort__academy__id=academy_id).afirst()):
+            raise ValidationException('Task not found', code=404, slug='task-not-found')
+
+        params = {}
+        for key in request.GET.keys():
+            params[key] = request.GET.get(key)
+
+        if task_id:
+            params['repo'] = task.github_url
+
+        try:
+            s = await service('rigobot')
+
+        except SynchronousOnlyOperation:
+            raise ValidationException('Async is not supported by the worker',
+                                      code=500,
+                                      slug='no-async-support')
+
+        except Exception:
+            raise ValidationException('App rigobot not found', code=404, slug='app-not-found')
+
+        async with s:
+            async with s.apost('/v1/finetuning/coderevision', data=request.data, params=params) as response:
+                banned = [
+                    'Transfer-Encoding', 'Content-Encoding', 'Keep-Alive', 'Connection', 'Content-Length',
+                    'Upgrade'
+                ]
+                header_keys = [x for x in response.headers.keys() if x not in banned]
+
+                headers = {}
+                for header in header_keys:
+                    headers[str(header)] = response.headers[header]
+
+                return HttpResponse(await response.content.read(), status=response.status, headers=headers)
+
+    async def verify(self, request, academy_id, task_id, coderevision_id, call: callable):
+        try:
+            return await call(request, academy_id, task_id, coderevision_id)
+
+        except SynchronousOnlyOperation as e:
+            raise e
+
+        except ValidationException as e:
+            raise e
+
+        except Exception as e:
+            raise ValidationException('Unexpected error: ' + str(e), code=500)
+
+    @acapable_of('read_assignment')
+    async def get(self, request, academy_id=None, task_id=None, coderevision_id=None):
+        return await self.verify(request, academy_id, task_id, coderevision_id, self.get_code_revision)
+
+    @acapable_of('crud_assignment')
+    async def post(self, request, academy_id, task_id=None):
+        return await self.verify(request, academy_id, task_id, None, self.add_code_revision)
+
+
+class AcademyCommitFileView(APIView):
+
+    async def get_commit_file(self, request, academy_id, task_id, commitfile_id):
+        if task_id and not (task := Task.objects.filter(id=task_id, cohort__academy__id=academy_id).afirst()):
+            raise ValidationException('Task not found', code=404, slug='task-not-found')
+
+        params = {}
+        for key in request.GET.keys():
+            params[key] = request.GET.get(key)
+
+        if task_id:
+            params['repo'] = task.github_url
+
+        url = '/v1/finetuning/commitfile'
+
+        if commitfile_id is not None:
+            url = f'{url}/{commitfile_id}'
+
+        try:
+            s = await service('rigobot')
+
+        except SynchronousOnlyOperation:
+            raise ValidationException('Async is not supported by the worker',
+                                      code=500,
+                                      slug='no-async-support')
+
+        except Exception:
+            raise ValidationException('App rigobot not found', code=404, slug='app-not-found')
+
+        async with s:
+            async with s.aget(url, data=request.data, params=params) as response:
+                banned = [
+                    'Transfer-Encoding', 'Content-Encoding', 'Keep-Alive', 'Connection', 'Content-Length',
+                    'Upgrade'
+                ]
+                header_keys = [x for x in response.headers.keys() if x not in banned]
+
+                headers = {}
+                for header in header_keys:
+                    headers[str(header)] = response.headers[header]
+
+                return HttpResponse(await response.content.read(), status=response.status, headers=headers)
+
+    async def verify(self, request, academy_id, task_id, commitfile_id, call: callable):
+        try:
+            return await call(request, academy_id, task_id, commitfile_id)
+
+        except SynchronousOnlyOperation as e:
+            raise e
+
+        except ValidationException as e:
+            raise e
+
+        except Exception as e:
+            raise ValidationException('Unexpected error: ' + str(e), code=500)
+
+    @capable_of('read_assignment')
+    async def get(self, request, academy_id, task_id=None, commitfile_id=None):
+        await self.verify(request, academy_id, task_id, commitfile_id, self.get_commit_file)
 
 
 class MeCodeRevisionRateView(APIView):
 
-    def post(self, request, coderevision_id):
-        s = Service('rigobot', request.user.id)
-        response = s.post(f'/v1/finetuning/rate/coderevision/{coderevision_id}',
-                          data=request.data,
-                          stream=True)
-        resource = StreamingHttpResponse(
-            response.raw,
-            status=response.status_code,
-            reason=response.reason,
-        )
+    async def add_rate(self, request, coderevision_id):
+        try:
+            s = await service('rigobot', request.user.id)
 
-        header_keys = [
-            x for x in response.headers.keys() if x != 'Transfer-Encoding' and x != 'Content-Encoding'
-            and x != 'Keep-Alive' and x != 'Connection'
-        ]
+        except SynchronousOnlyOperation:
+            raise ValidationException('Async is not supported by the worker',
+                                      code=500,
+                                      slug='no-async-support')
 
-        for header in header_keys:
-            resource[header] = response.headers[header]
+        except Exception:
+            raise ValidationException('App rigobot not found', code=404, slug='app-not-found')
 
-        return resource
+        async with s:
+            async with s.apost(f'/v1/finetuning/rate/coderevision/{coderevision_id}',
+                               data=request.data) as response:
+                banned = [
+                    'Transfer-Encoding', 'Content-Encoding', 'Keep-Alive', 'Connection', 'Content-Length',
+                    'Upgrade'
+                ]
+                header_keys = [x for x in response.headers.keys() if x not in banned]
+
+                headers = {}
+                for header in header_keys:
+                    headers[str(header)] = response.headers[header]
+
+                return HttpResponse(await response.content.read(), status=response.status, headers=headers)
+
+    async def post(self, request, coderevision_id):
+        try:
+            return await self.add_rate(request, coderevision_id)
+
+        except SynchronousOnlyOperation as e:
+            raise e
+
+        except ValidationException as e:
+            raise e
+
+        except Exception as e:
+            raise ValidationException('Unexpected error: ' + str(e), code=500)
 
 
 class MeCommitFileView(APIView):

@@ -1,5 +1,6 @@
 import os
 from typing import Optional
+from warnings import warn
 
 import jwt
 from rest_framework.test import APITestCase
@@ -57,6 +58,7 @@ class Request:
 
         - user: a instance of user model `breathecode.authenticate.models.User`
         """
+        warn('Use `client.manual_authentication` instead', DeprecationWarning, stacklevel=2)
         self._parent.client.force_authenticate(user=user)
 
     def manual_authentication(self, user) -> None:
@@ -76,6 +78,8 @@ class Request:
         - user: a instance of user model `breathecode.authenticate.models.User`.
         """
         from breathecode.authenticate.models import Token
+
+        warn('Use `client.credentials` instead', DeprecationWarning, stacklevel=2)
 
         token = Token.objects.create(user=user)
         self._parent.client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')

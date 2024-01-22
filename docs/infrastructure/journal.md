@@ -20,15 +20,19 @@ Side effects:
 
 ## 01/15/2024
 
-- `[all]` `django_minify_html` was added to the middlewares
-- `[prod]` `make_charges` frequency changed from `each 10 minutes` to `Daily at 12:00 AM UTC`
+- `[all]` `django_minify_html` was added to the middlewares.
+- `[prod]` `make_charges` frequency changed from `each 10 minutes` to `Daily at 12:00 AM UTC`.
 
 ## 01/16/2024
 
-- `[prod]` set `CELERY_DYNOS` to `2`
-- `[prod]` set `CELERY_MAX_WORKERS` to `3`
-- `[dev]` switch `CELERY_MAX_WORKERS` from `1` to `2`
+- `[prod]` set `CELERY_DYNOS` to `2`.
+- `[prod]` set `CELERY_MAX_WORKERS` to `3`.
+- `[dev]` switch `CELERY_MAX_WORKERS` from `1` to `2`.
 
 ## 01/17/2024
 
-- `[all]` set `STATIC_BUCKET`
+- `[all]` `STATIC_BUCKET` setted.
+
+Side effects:
+
+- `/v1/admissions/cohort/all` changed from 133 RPM both to 145 - 170 (one time) RPM, this should change with each attempt.

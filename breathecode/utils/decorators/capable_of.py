@@ -1,11 +1,13 @@
-from rest_framework.exceptions import PermissionDenied
+from asgiref.sync import sync_to_async
 from django.contrib.auth.models import AnonymousUser
-
-from breathecode.utils.exceptions import ProgrammingError
-from ..validation_exception import ValidationException
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import APIView
 
-__all__ = ['capable_of']
+from breathecode.utils.exceptions import ProgrammingError
+
+from ..validation_exception import ValidationException
+
+__all__ = ['capable_of', 'acapable_of']
 
 
 def capable_of(capability=None):
@@ -39,6 +41,43 @@ def capable_of(capability=None):
                 # add the new kwargs argument to the context to be used by APIViewExtensions
                 request.parser_context['kwargs']['academy_id'] = academy_id
                 return function(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def acapable_of(capability=None):
+
+    def decorator(function):
+
+        async def wrapper(*args, **kwargs):
+            if isinstance(capability, str) == False:
+                raise ProgrammingError('Capability must be a string')
+
+            try:
+                if hasattr(args[0], '__class__') and isinstance(args[0], APIView):
+                    request = args[1]
+
+                elif hasattr(args[0], 'user') and hasattr(args[0].user, 'has_perm'):
+                    request = args[0]
+
+                # websocket support
+                elif hasattr(args[0], 'ws_request'):
+                    request = args[0]
+
+                else:
+                    raise IndexError()
+
+            except IndexError:
+                raise ProgrammingError('Missing request information, use this decorator with DRF View')
+
+            academy_id = await sync_to_async(get_academy_from_capability)(kwargs, request, capability)
+            if academy_id:
+                kwargs['academy_id'] = academy_id
+                # add the new kwargs argument to the context to be used by APIViewExtensions
+                request.parser_context['kwargs']['academy_id'] = academy_id
+                return await function(*args, **kwargs)
 
         return wrapper
 
