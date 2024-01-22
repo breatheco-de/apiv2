@@ -1,6 +1,13 @@
 from __future__ import annotations
-from typing import Optional
+
+import asyncio
+from types import TracebackType
+from typing import Any, Optional, Type
+
+import aiohttp
 import requests
+from aiohttp.client_reqrep import ClientResponse
+from asgiref.sync import sync_to_async
 
 __all__ = ['Service']
 
@@ -11,6 +18,7 @@ class Service:
         from breathecode.authenticate.actions import get_app
 
         self.app = get_app(app_pk)
+
         self.user_pk = user_pk
         self.mode = mode
 
@@ -100,3 +108,101 @@ class Service:
         url = self.app.app_url + self._fix_url(url)
         headers = self._authenticate(method, **kwargs)
         return requests.request(method, url, **kwargs, headers=headers)
+
+
+class AppNotFound(Exception):
+    pass
+
+
+class AsyncService(Service):
+    session: aiohttp.ClientSession
+
+    def __init__(self, app_pk: str | int, user_pk: Optional[str | int] = None, *, mode: Optional[str] = None):
+        self.app_pk = app_pk
+        self.user_pk = user_pk
+        self.mode = mode
+
+    def __enter__(self) -> None:
+        raise TypeError('Use async with instead')
+
+    def __exit__(self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException],
+                 exc_tb: Optional[TracebackType]) -> None:
+        pass
+
+    async def __aenter__(self):
+        from breathecode.authenticate.actions import get_app
+
+        try:
+            self.app = await sync_to_async(get_app)(self.app_pk)
+
+        except Exception:
+            raise AppNotFound(f'App {self.app_pk} not found')
+
+        self.user_pk = self.user_pk
+        self.mode = self.mode
+
+        self.session = aiohttp.ClientSession()
+
+        return self
+
+    async def __aexit__(self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException],
+                        exc_tb: Optional[TracebackType]):
+        await self.session.close()
+
+    def aget(self, url: str, *, allow_redirects: bool = True, **kwargs: Any) -> ClientResponse:
+        url = self.app.app_url + self._fix_url(url)
+        params = kwargs.pop('params', None)
+        headers = self._authenticate('get', params=params, **kwargs)
+
+        return self.session.get(url,
+                                allow_redirects=allow_redirects,
+                                **kwargs,
+                                headers=headers,
+                                params=params)
+
+    def apost(self, url: str, *, data: Any = None, **kwargs: Any) -> ClientResponse:
+        url = self.app.app_url + self._fix_url(url)
+        headers = self._authenticate('post', data=data, **kwargs)
+
+        return self.session.post(url, data=data, **kwargs, headers=headers)
+
+    def aput(self, url: str, *, data: Any = None, **kwargs: Any) -> ClientResponse:
+        url = self.app.app_url + self._fix_url(url)
+        headers = self._authenticate('put', data=data, **kwargs)
+
+        return self.session.put(url, data=data, **kwargs, headers=headers)
+
+    def apatch(self, url: str, *, data: Any = None, **kwargs: Any) -> ClientResponse:
+        url = self.app.app_url + self._fix_url(url)
+        headers = self._authenticate('patch', data=data, **kwargs)
+
+        return self.session.patch(url, data=data, **kwargs, headers=headers)
+
+    def adelete(self, url: str, **kwargs: Any) -> ClientResponse:
+        url = self.app.app_url + self._fix_url(url)
+        headers = self._authenticate('delete', **kwargs)
+
+        return self.session.delete(url, **kwargs, headers=headers)
+
+    def aoptions(self, url: str, *, allow_redirects: bool = True, **kwargs: Any) -> ClientResponse:
+        url = self.app.app_url + self._fix_url(url)
+        headers = self._authenticate('options', **kwargs)
+
+        return self.session.options(url, allow_redirects=allow_redirects, **kwargs, headers=headers)
+
+    def ahead(self, url: str, *, allow_redirects: bool = True, **kwargs: Any) -> ClientResponse:
+        url = self.app.app_url + self._fix_url(url)
+        headers = self._authenticate('head', **kwargs)
+
+        return self.session.head(url, allow_redirects=allow_redirects, **kwargs, headers=headers)
+
+    def arequest(self, method: str, url: str, **kwargs: Any) -> ClientResponse:
+        url = self.app.app_url + self._fix_url(url)
+        headers = self._authenticate(method, **kwargs)
+
+        return self.session.request(method, url, **kwargs, headers=headers)
+
+
+async def service(app_pk: str | int, user_pk: Optional[str | int] = None, *, mode: Optional[str] = None):
+    s = AsyncService(app_pk, user_pk, mode=mode)
+    return s

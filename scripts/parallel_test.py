@@ -1,11 +1,12 @@
 #!/bin/env python
 
 from __future__ import absolute_import
+
+import argparse
 import os
 import random
-import sys
-import argparse
 import subprocess
+import sys
 
 
 def parse_arguments():

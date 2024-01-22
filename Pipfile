@@ -5,6 +5,8 @@ verify_ssl = true
 
 [scripts]
 start="python manage.py runserver 0.0.0.0:8000"
+wsgi="gunicorn breathecode.wsgi --worker-class gevent"
+asgi="gunicorn breathecode.asgi --worker-class uvicorn.workers.UvicornWorker"
 format="pre-commit run --all-files"
 migrate="python manage.py migrate"
 makemigrations="python manage.py makemigrations"

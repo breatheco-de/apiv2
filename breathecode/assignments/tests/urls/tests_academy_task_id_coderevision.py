@@ -5,12 +5,20 @@ import json
 import random
 from unittest.mock import MagicMock, call, patch
 
+import pytest
 from django.urls.base import reverse_lazy
 from rest_framework import status
 
+from breathecode.authenticate.actions import reset_app_cache
 from breathecode.utils.service import Service
 
 from ..mixins import AssignmentsTestCase
+
+
+@pytest.fixture(autouse=True)
+def setup(db):
+    reset_app_cache()
+    yield
 
 
 class MediaTestSuite(AssignmentsTestCase):
@@ -69,7 +77,13 @@ class MediaTestSuite(AssignmentsTestCase):
         mock.reason = 'OK'
 
         task = {'github_url': self.bc.fake.url()}
-        model = self.bc.database.create(profile_academy=1, role=1, capability='read_assignment')
+        model = self.bc.database.create(profile_academy=1,
+                                        role=1,
+                                        capability='read_assignment',
+                                        app={
+                                            'slug': 'rigobot',
+                                            'app_url': self.bc.fake.url()
+                                        })
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('assignments:academy_task_id_coderevision',
@@ -105,7 +119,14 @@ class MediaTestSuite(AssignmentsTestCase):
         mock.reason = 'OK'
 
         task = {'github_url': self.bc.fake.url()}
-        model = self.bc.database.create(profile_academy=1, task=task, role=1, capability='read_assignment')
+        model = self.bc.database.create(profile_academy=1,
+                                        task=task,
+                                        role=1,
+                                        capability='read_assignment',
+                                        app={
+                                            'slug': 'rigobot',
+                                            'app_url': self.bc.fake.url()
+                                        })
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('assignments:academy_task_id_coderevision',
