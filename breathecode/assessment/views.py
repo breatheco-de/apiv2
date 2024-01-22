@@ -95,9 +95,9 @@ class GetThresholdView(APIView):
             param = self.request.GET.get('academy')
 
             if param.isnumeric():
-                kwargs['academy__id'] = int(param)
+                lookup['academy__id'] = int(param)
             else:
-                kwargs['academy__slug'] = param
+                lookup['academy__slug'] = param
         else:
             lookup['academy__isnull'] = True
 
