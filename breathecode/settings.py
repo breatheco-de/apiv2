@@ -328,8 +328,12 @@ STATICFILES_DIRS = [
     os.path.join(PROJECT_ROOT, 'static'),
 ]
 
-CORS_ORIGIN_ALLOW_ALL = True
+CSRF_TRUSTED_ORIGINS = [
+    'http://*.gitpod.io',
+    'https://*.gitpod.io',
+]
 
+CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_HEADERS = [
     'accept',
     'academy',
