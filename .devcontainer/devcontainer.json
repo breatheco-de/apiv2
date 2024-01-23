@@ -5,7 +5,9 @@
     },
     "features": {
         "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
-            "dockerDashComposeVersion": "v2"
+            "dockerDashComposeVersion": "v2",
+            "installDockerBuildx": true,
+            "moby": false
         }
     },
     "customizations": {

@@ -16,7 +16,7 @@ def main():
     with httpx.Client() as client:
         for url in url_list:
             t1 = timer()
-            r = client.get(url, timeout=timeout)
+            client.get(url, timeout=timeout)
             t2 = timer()
             secs = t2 - t1
             father_time.append(secs)
@@ -26,7 +26,7 @@ def main():
     father_time = []
     for url in url_list:
         t1 = timer()
-        r = requests.get(url, timeout=timeout)
+        requests.get(url, timeout=timeout)
         t2 = timer()
         secs = t2 - t1
         father_time.append(secs)

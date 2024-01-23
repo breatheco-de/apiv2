@@ -1,17 +1,16 @@
-import re
-from datetime import datetime, timedelta
 import logging
 import traceback
+from datetime import datetime, timedelta
 from typing import Callable, Optional, TypedDict
 
 from django.contrib.auth.models import AnonymousUser
 from django.core.handlers.wsgi import WSGIRequest
-from django.db.models import Q, QuerySet
-from django.utils import timezone
-from rest_framework.views import APIView
-from django.db.models import Sum
-from django.shortcuts import render
+from django.db.models import Q, QuerySet, Sum
 from django.http import JsonResponse
+from django.shortcuts import render
+from django.utils import timezone
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from breathecode.authenticate.models import Permission, User
 from breathecode.payments.signals import consume_service
@@ -19,7 +18,6 @@ from breathecode.payments.signals import consume_service
 from ..exceptions import ProgrammingError
 from ..payment_exception import PaymentException
 from ..validation_exception import ValidationException
-from rest_framework.response import Response
 
 __all__ = ['has_permission', 'validate_permission', 'HasPermissionCallback', 'PermissionContextType']
 
@@ -196,7 +194,7 @@ def has_permission(permission: str,
                     raise e
 
                 if format == 'html':
-                    from breathecode.payments.models import Subscription, PlanOffer, PlanFinancing
+                    from breathecode.payments.models import PlanFinancing, PlanOffer, Subscription
 
                     service = None
                     if 'service_slug' in kwargs:

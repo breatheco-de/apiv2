@@ -7,13 +7,12 @@ from circuitbreaker import CircuitBreakerError
 from django.contrib import messages
 from django.core.exceptions import SynchronousOnlyOperation
 from django.db.models import Q
-from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, StreamingHttpResponse
+from django.http import HttpResponse, HttpResponseRedirect, StreamingHttpResponse
 from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import PermissionDenied
-from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from slugify import slugify
 
@@ -155,9 +154,6 @@ def sync_cohort_tasks_view(request, cohort_id=None):
 
 
 class FinalProjectScreenshotView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
 
     def upload(self, request, update=False):
         from ..services.google_cloud import Storage
@@ -216,9 +212,6 @@ class FinalProjectScreenshotView(APIView):
 
 
 class FinalProjectMeView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
 
     def get(self, request, project_id=None, user_id=None):
         if not user_id:
@@ -356,9 +349,6 @@ class FinalProjectMeView(APIView):
 
 
 class CohortTaskView(APIView, GenerateLookupsMixin):
-    """
-    List all snippets, or create a new snippet.
-    """
     extensions = APIViewExtensions(cache=TaskCache, sort='-created_at', paginate=True)
 
     @capable_of('read_assignment')
@@ -414,9 +404,6 @@ class CohortTaskView(APIView, GenerateLookupsMixin):
 
 
 class TaskMeAttachmentView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
 
     @capable_of('read_assignment')
     def get(self, request, task_id, academy_id):
@@ -567,9 +554,6 @@ class TaskMeAttachmentView(APIView):
 
 
 class TaskMeView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
     extensions = APIViewExtensions(cache=TaskCache, cache_per_user=True, paginate=True)
 
     def get(self, request, task_id=None, user_id=None):
@@ -758,9 +742,6 @@ class TaskMeView(APIView):
 
 
 class TaskMeDeliverView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
 
     @capable_of('task_delivery_details')
     def get(self, request, task_id, academy_id):
@@ -828,9 +809,6 @@ def deliver_assignment_view(request, task_id, token):
 
 
 class SubtaskMeView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
 
     def get(self, request, task_id):
 
@@ -1012,7 +990,8 @@ class AcademyCodeRevisionView(APIView):
                 return HttpResponse(await response.content.read(), status=response.status, headers=headers)
 
     async def add_code_revision(self, request, academy_id, task_id, coderevision_id):
-        if task_id and not (task := Task.objects.filter(id=task_id, cohort__academy__id=academy_id).afirst()):
+        if task_id and not (task := await Task.objects.filter(id=task_id,
+                                                              cohort__academy__id=academy_id).afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         params = {}
@@ -1051,9 +1030,6 @@ class AcademyCodeRevisionView(APIView):
         try:
             return await call(request, academy_id, task_id, coderevision_id)
 
-        except SynchronousOnlyOperation as e:
-            raise e
-
         except ValidationException as e:
             raise e
 
@@ -1072,7 +1048,8 @@ class AcademyCodeRevisionView(APIView):
 class AcademyCommitFileView(APIView):
 
     async def get_commit_file(self, request, academy_id, task_id, commitfile_id):
-        if task_id and not (task := Task.objects.filter(id=task_id, cohort__academy__id=academy_id).afirst()):
+        if task_id and not (task := await Task.objects.filter(id=task_id,
+                                                              cohort__academy__id=academy_id).afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         params = {}
@@ -1099,7 +1076,7 @@ class AcademyCommitFileView(APIView):
             raise ValidationException('App rigobot not found', code=404, slug='app-not-found')
 
         async with s:
-            async with s.aget(url, data=request.data, params=params) as response:
+            async with s.aget(url, params=params) as response:
                 banned = [
                     'Transfer-Encoding', 'Content-Encoding', 'Keep-Alive', 'Connection', 'Content-Length',
                     'Upgrade'
@@ -1116,18 +1093,15 @@ class AcademyCommitFileView(APIView):
         try:
             return await call(request, academy_id, task_id, commitfile_id)
 
-        except SynchronousOnlyOperation as e:
-            raise e
-
         except ValidationException as e:
             raise e
 
         except Exception as e:
             raise ValidationException('Unexpected error: ' + str(e), code=500)
 
-    @capable_of('read_assignment')
+    @acapable_of('read_assignment')
     async def get(self, request, academy_id, task_id=None, commitfile_id=None):
-        await self.verify(request, academy_id, task_id, commitfile_id, self.get_commit_file)
+        return await self.verify(request, academy_id, task_id, commitfile_id, self.get_commit_file)
 
 
 class MeCodeRevisionRateView(APIView):
@@ -1162,9 +1136,6 @@ class MeCodeRevisionRateView(APIView):
     async def post(self, request, coderevision_id):
         try:
             return await self.add_rate(request, coderevision_id)
-
-        except SynchronousOnlyOperation as e:
-            raise e
 
         except ValidationException as e:
             raise e
