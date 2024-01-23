@@ -485,6 +485,38 @@ ROLES = [
     },
     {
         'slug':
+        'read_only',
+        'name':
+        'Read Only (Base)',
+        'caps': [
+            'read_academyservice',
+            'read_member',
+            'read_syllabus',
+            'read_student',
+            'read_all_cohort',
+            'read_media',
+            'read_my_academy',
+            'read_invite',
+            'read_survey',
+            'read_tag',
+            'read_layout',
+            'read_event',
+            'read_event_type',
+            'read_certificate',
+            'read_won_lead',
+            'read_eventcheckin',
+            'read_review',
+            'read_activity',
+            'read_shortlink',
+            'read_mentorship_service',
+            'read_mentorship_mentor',
+            'read_lead_gen_app',
+            'read_technology',
+            'read_service',
+        ],
+    },
+    {
+        'slug':
         'staff',
         'name':
         'Staff (Base)',
