@@ -3,10 +3,11 @@ Test /answer
 """
 import json
 import random
-from unittest.mock import MagicMock, call
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import aiohttp
 import pytest
+from django.core.exceptions import SynchronousOnlyOperation
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -69,6 +70,53 @@ def get_jwt(bc: Breathecode, monkeypatch):
     yield token
 
 
+@pytest.fixture(params=[
+    ('breathecode.utils.service.AsyncService.__init__', Exception, 'Async is not supported by the worker',
+     'app-not-found', 404, True),
+    ('breathecode.utils.service.AsyncService.__init__', SynchronousOnlyOperation, 'App rigobot not found',
+     'no-async-support', 500, True),
+    ('breathecode.utils.service.AsyncService.apost', Exception, 'random exc', 'Unexpected error: random exc',
+     500, False),
+])
+def post_exc(request, monkeypatch):
+    path, exc, message, slug, code, is_async = request.param
+    if is_async:
+
+        def async_exc_mock(*args, **kwargs):
+            raise exc(message)
+
+        monkeypatch.setattr(path, async_exc_mock)
+
+    else:
+
+        class ContextMock:
+
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def __aenter__(self):
+                raise exc(message)
+
+            async def __aexit__(self, exc_type, exc, tb):
+                pass
+
+            def __enter__(self):
+                raise exc(message)
+
+            def __exit__(self, exc_type, exc, tb):
+                pass
+
+        async def async_exc_mock(message):
+            raise exc(message)
+
+        monkeypatch.setattr(path, ContextMock)
+
+    yield {
+        'slug': slug,
+        'code': code,
+    }
+
+
 # When: no auth
 # Then: response 401
 def test_no_auth(bc: Breathecode, client: APIClient):
@@ -81,6 +129,35 @@ def test_no_auth(bc: Breathecode, client: APIClient):
     assert json == expected
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert bc.database.list_of('assignments.Task') == []
+
+
+# When: raise an exception
+# Then: response 200
+def test_raise_an_exception(bc: Breathecode, client: APIClient, post_exc):
+    expected = {'detail': post_exc['slug'], 'status_code': post_exc['code']}
+    query = {
+        bc.fake.slug(): bc.fake.slug(),
+        bc.fake.slug(): bc.fake.slug(),
+        bc.fake.slug(): bc.fake.slug(),
+    }
+
+    task = {'github_url': bc.fake.url()}
+    model = bc.database.create(profile_academy=1,
+                               task=task,
+                               app={
+                                   'slug': 'rigobot',
+                                   'app_url': bc.fake.url()
+                               })
+    client.force_authenticate(model.user)
+
+    url = reverse_lazy('assignments:me_coderevision_id_rate', kwargs={'coderevision_id': 1})
+
+    response = client.post(url, query, format='json')
+    json = response.json()
+
+    assert json == expected
+    assert response.status_code == post_exc['code']
+    assert bc.database.list_of('assignments.Task') == [bc.format.to_dict(model.task)]
 
 
 # When: auth

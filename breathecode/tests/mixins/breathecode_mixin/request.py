@@ -28,6 +28,10 @@ class Request:
         self.bc.request.set_headers(academy=1, thing_of_importance='potato')
         ```
         """
+        warn('Use rest_framework.test.APIClient instead. Example: client.get(..., headers={...})',
+             DeprecationWarning,
+             stacklevel=2)
+
         headers = {}
 
         items = [
