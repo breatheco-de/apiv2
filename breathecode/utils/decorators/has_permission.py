@@ -219,13 +219,14 @@ def has_permission(permission: str,
                         if plan_financing is not None:
                             user_plan = plan_financing.plans.first()
 
-                    plan_offer = PlanOffer.objects.filter(original_plan__slug=user_plan.slug).first()
+                    if user_plan:
+                        plan_offer = PlanOffer.objects.filter(original_plan__slug=user_plan.slug).first()
 
                     if plan_offer is not None:
                         renovate_consumables['btn_label'] = 'Get more consumables'
                         renovate_consumables[
                             'btn_url'] = f'https://4geeks.com/checkout?plan={plan_offer.suggested_plan.slug}'
-                    elif subscription is not None:
+                    elif subscription is not None and user_plan:
                         renovate_consumables['btn_label'] = 'Get more consumables'
                         renovate_consumables[
                             'btn_url'] = f'https://4geeks.com/checkout?mentorship_service_set={user_plan.mentorship_service_set.slug}'
