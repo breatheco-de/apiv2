@@ -36,3 +36,9 @@ Side effects:
 Side effects:
 
 - `/v1/admissions/cohort/all` changed from 133 RPM both to 145 - 170 (one time) RPM, this should change with each attempt.
+
+## 01/24/2024
+
+- `[prod]` preboot was enabled.
+- `[prod]` switch `WEB_WORKER_CLASS` from `gevent` to `uvicorn.workers.UvicornWorker`.
+- `[prod]` switch `LOG_LEVEL` from `DEBUG` to `WARNING`.
