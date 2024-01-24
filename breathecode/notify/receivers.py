@@ -5,7 +5,7 @@ from breathecode.authenticate.models import UserInvite
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_status
 from breathecode.mentorship.serializers import SessionHookSerializer
-from breathecode.marketing.signals import form_entry_won_or_lost
+from breathecode.marketing.signals import form_entry_won_or_lost, new_form_entry_deal
 from breathecode.marketing.models import FormEntry
 from breathecode.marketing.serializers import FormEntryHookSerializer
 from breathecode.admissions.signals import student_edu_status_updated
@@ -78,6 +78,15 @@ def form_entry_updated(sender, instance, **kwargs):
 
     serializer = FormEntryHookSerializer(instance)
     HookManager.process_model_event(instance, model_label, 'won_or_lost', payload_override=serializer.data)
+
+
+@receiver(new_form_entry_deal, sender=FormEntry)
+def new_form_entry_deal(sender, instance, **kwargs):
+    logger.debug('Sending formentry with new deal to hook')
+    model_label = get_model_label(instance)
+
+    serializer = FormEntryHookSerializer(instance)
+    HookManager.process_model_event(instance, model_label, 'new_deal', payload_override=serializer.data)
 
 
 @receiver(new_event_attendee, sender=EventCheckin)

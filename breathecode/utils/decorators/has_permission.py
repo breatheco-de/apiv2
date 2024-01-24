@@ -1,16 +1,16 @@
-from datetime import datetime, timedelta
 import logging
 import traceback
+from datetime import datetime, timedelta
 from typing import Callable, Optional, TypedDict
 
 from django.contrib.auth.models import AnonymousUser
 from django.core.handlers.wsgi import WSGIRequest
-from django.db.models import QuerySet
-from django.utils import timezone
-from rest_framework.views import APIView
-from django.db.models import Sum
-from django.shortcuts import render
+from django.db.models import Q, QuerySet, Sum
 from django.http import JsonResponse
+from django.shortcuts import render
+from django.utils import timezone
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from breathecode.authenticate.models import Permission, User
 from breathecode.payments.signals import consume_service
@@ -18,7 +18,6 @@ from breathecode.payments.signals import consume_service
 from ..exceptions import ProgrammingError
 from ..payment_exception import PaymentException
 from ..validation_exception import ValidationException
-from rest_framework.response import Response
 
 __all__ = ['has_permission', 'validate_permission', 'HasPermissionCallback', 'PermissionContextType']
 
@@ -51,11 +50,26 @@ def validate_permission(user: User, permission: str, consumer: bool | HasPermiss
     return found.user_set.filter(id=user.id).exists() or found.group_set.filter(user__id=user.id).exists()
 
 
-def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', data=None, status=None):
+def render_message(r,
+                   msg,
+                   btn_label=None,
+                   btn_url=None,
+                   btn_target='_blank',
+                   data=None,
+                   status=None,
+                   go_back=None,
+                   url_back=None):
     if data is None:
         data = {}
 
-    _data = {'MESSAGE': msg, 'BUTTON': btn_label, 'BUTTON_TARGET': btn_target, 'LINK': btn_url}
+    _data = {
+        'MESSAGE': msg,
+        'BUTTON': btn_label,
+        'BUTTON_TARGET': btn_target,
+        'LINK': btn_url,
+        'GO_BACK': go_back,
+        'URL_BACK': url_back
+    }
 
     return render(r, 'message.html', {**_data, **data}, status=status)
 
@@ -180,7 +194,49 @@ def has_permission(permission: str,
                     raise e
 
                 if format == 'html':
-                    return render_message(request, str(e), status=402)
+                    from breathecode.payments.models import PlanFinancing, PlanOffer, Subscription
+
+                    service = None
+                    if 'service_slug' in kwargs:
+                        service = kwargs['service_slug']
+
+                    renovate_consumables = {}
+
+                    subscription = Subscription.objects.filter(
+                        Q(user=request.user, plans__mentorship_service_set__mentorship_services__slug=service)
+                        | Q(user=request.user, plans__event_type_set__event_types__slug=service)).first()
+
+                    plan_offer = None
+                    user_plan = None
+
+                    if subscription is not None:
+                        user_plan = subscription.plans.first()
+                    else:
+                        plan_financing = PlanFinancing.objects.filter(
+                            Q(user=request.user,
+                              plans__mentorship_service_set__mentorship_services__slug=service)
+                            | Q(user=request.user, plans__event_type_set__event_types__slug=service)).first()
+                        if plan_financing is not None:
+                            user_plan = plan_financing.plans.first()
+
+                    if user_plan:
+                        plan_offer = PlanOffer.objects.filter(original_plan__slug=user_plan.slug).first()
+
+                    if plan_offer is not None:
+                        renovate_consumables['btn_label'] = 'Get more consumables'
+                        renovate_consumables[
+                            'btn_url'] = f'https://4geeks.com/checkout?plan={plan_offer.suggested_plan.slug}'
+                    elif subscription is not None and user_plan:
+                        renovate_consumables['btn_label'] = 'Get more consumables'
+                        renovate_consumables[
+                            'btn_url'] = f'https://4geeks.com/checkout?mentorship_service_set={user_plan.mentorship_service_set.slug}'
+
+                    return render_message(request,
+                                          str(e),
+                                          status=402,
+                                          go_back='Go back to Dashboard',
+                                          url_back='https://4geeks.com/choose-program',
+                                          **renovate_consumables)
 
                 return Response({'detail': str(e), 'status_code': 402}, 402)
 

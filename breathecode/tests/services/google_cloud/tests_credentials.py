@@ -1,12 +1,12 @@
 import logging
 import os
 from pathlib import Path
-
-from unittest.mock import MagicMock, call, patch, mock_open
-from breathecode.services.google_cloud.credentials import resolve_credentials
 from unittest import TestCase
+from unittest.mock import MagicMock, call, mock_open, patch
 
-logger = logging.getLogger('breathecode.services.google_cloud.credentials')
+from breathecode.services.google_cloud.credentials import resolve_credentials
+
+logger = logging.getLogger('breathecode.setup')
 
 
 class CredentialsTestCase(TestCase):
