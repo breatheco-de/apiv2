@@ -42,3 +42,5 @@ Side effects:
 - `[prod]` preboot was enabled.
 - `[prod]` switch `WEB_WORKER_CLASS` from `gevent` to `uvicorn.workers.UvicornWorker`.
 - `[prod]` switch `LOG_LEVEL` from `DEBUG` to `WARNING`.
+- `[dev]` set `WEB_MAX_REQUESTS` to `6000`
+- `[dev]` set `WEB_MAX_REQUESTS_JITTER` to `3000`
