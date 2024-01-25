@@ -1,4 +1,4 @@
-"""breathecode URL Configuration
+"""breathecode URL Configuration.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/3.0/topics/http/urls/
@@ -14,16 +14,17 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 import os
-from breathecode.utils.views import get_root_schema_view
-from breathecode.utils.urls import mount_app_openapi
 
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
-from django.views.generic import TemplateView
-from django.conf.urls.static import static
-from django.conf import settings
-from graphene_django.views import GraphQLView
 from django.views.decorators.csrf import csrf_exempt
+from django.views.generic import TemplateView
+from graphene_django.views import GraphQLView
+
+from breathecode.utils.urls import mount_app_openapi
+from breathecode.utils.views import get_root_schema_view
 
 ENVIRONMENT = os.environ.get('ENV')
 
