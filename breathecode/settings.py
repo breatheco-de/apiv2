@@ -114,6 +114,7 @@ if os.getenv('ENABLE_DEFAULT_PAGINATION', 'y') in ['t', 'true', 'True', 'TRUE', 
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'breathecode.middlewares.static_redirect_middleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
 
