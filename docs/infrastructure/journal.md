@@ -21,7 +21,7 @@ Side effects:
 ## 01/15/2024
 
 - `[all]` `django_minify_html` was added to the middlewares.
-- `[prod]` `make_charges` frequency changed from `each 10 minutes` to `Daily at 12:00 AM UTC`.
+- `[prod]` `make_charges` frequency changed from `every 10 minutes` to `Daily at 12:00 AM UTC`.
 
 ## 01/16/2024
 
@@ -42,5 +42,13 @@ Side effects:
 - `[prod]` preboot was enabled.
 - `[prod]` switch `WEB_WORKER_CLASS` from `gevent` to `uvicorn.workers.UvicornWorker`.
 - `[prod]` switch `LOG_LEVEL` from `DEBUG` to `WARNING`.
-- `[dev]` set `WEB_MAX_REQUESTS` to `6000`
-- `[dev]` set `WEB_MAX_REQUESTS_JITTER` to `3000`
+- `[prod]` set `WEB_MAX_REQUESTS` to `6000`.
+- `[prod]` set `WEB_MAX_REQUESTS_JITTER` to `3000`.
+- `[dev]` set `WEB_MAX_REQUESTS` to `100`.
+- `[dev]` set `WEB_MAX_REQUESTS_JITTER` to `50`.
+
+Side effects:
+
+- In dev, this prevents the server could getting out of memory.
+- In prod, this helps to have sufficient memory to add a third worker.
+- If the server would have 1000 requests each 10 minutes, this would restart the worker each 60-90 minutes.
