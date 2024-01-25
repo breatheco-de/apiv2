@@ -654,7 +654,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 
             expected_keys = [
                 'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'conversion_url',
-                'landing_url', 'user_agent', 'plan', 'location'
+                'landing_url', 'user_agent', 'plan', 'location', 'translations'
             ]
 
             for key in conversion_info.keys():
@@ -1440,7 +1440,8 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
             expected_keys = [
                 'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'conversion_url',
-                'landing_url', 'user_agent', 'plan', 'location'
+                'landing_url', 'user_agent', 'plan', 'location', 'internal_cta_placement',
+                'internal_cta_content', 'internal_cta_campaign'
             ]
 
             for key in conversion_info.keys():

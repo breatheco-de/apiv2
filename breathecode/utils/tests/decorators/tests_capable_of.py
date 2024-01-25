@@ -21,7 +21,7 @@ def get_id(request, id, academy_id=None):
     return Response({'id': id, 'academy_id': academy_id})
 
 
-class TestView(APIView):
+class CustomTestView(APIView):
     """
     List all snippets, or create a new snippet.
     """
@@ -56,7 +56,7 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         model = self.bc.database.create(user=1)
 
         factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny', HTTP_ACADEMY=1)
+        request = factory.get('/they-killed-kenny', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
         view = get_id
@@ -78,7 +78,7 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
                                         capability='can_kill_kenny')
 
         factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny', HTTP_ACADEMY=1)
+        request = factory.get('/they-killed-kenny', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
         view = get_id
@@ -100,7 +100,7 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         factory = APIRequestFactory()
         slug_1 = self.bc.fake.slug()
         slug_2 = self.bc.fake.slug()
-        request = factory.get(f'/{slug_1}/{slug_2}', HTTP_ACADEMY=1)
+        request = factory.get(f'/{slug_1}/{slug_2}', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
         view = get_id
@@ -122,7 +122,7 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         factory = APIRequestFactory()
         slug_1 = self.bc.fake.slug()
         slug_2 = self.bc.fake.slug()
-        request = factory.get(f'/{slug_1}/{slug_2}', HTTP_ACADEMY=1)
+        request = factory.get(f'/{slug_1}/{slug_2}', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
         view = get_id
@@ -143,7 +143,7 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
                                         capability='can_kill_kenny')
 
         factory = APIRequestFactory()
-        request = factory.get('/v1/admissions/academy/activate', HTTP_ACADEMY=1)
+        request = factory.get('/v1/admissions/academy/activate', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
         view = get_id
@@ -163,7 +163,7 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
                                         capability='can_kill_kenny')
 
         factory = APIRequestFactory()
-        request = factory.get('/v1/admissions/academy/activate', HTTP_ACADEMY=1)
+        request = factory.get('/v1/admissions/academy/activate', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
         view = get_id
@@ -184,7 +184,7 @@ class ViewTestSuite(UtilsTestCase):
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request, id=1).render()
         expected = {
@@ -199,10 +199,10 @@ class ViewTestSuite(UtilsTestCase):
         model = self.bc.database.create(user=1)
 
         request = APIRequestFactory()
-        request = request.get('/they-killed-kenny', HTTP_ACADEMY=1)
+        request = request.get('/they-killed-kenny', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request, id=1).render()
         expected = {
@@ -221,10 +221,10 @@ class ViewTestSuite(UtilsTestCase):
                                         capability='can_kill_kenny')
 
         request = APIRequestFactory()
-        request = request.get('/they-killed-kenny', HTTP_ACADEMY=1)
+        request = request.get('/they-killed-kenny', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request, id=1).render()
         expected = {'id': 1, 'academy_id': 1}
@@ -243,10 +243,10 @@ class ViewTestSuite(UtilsTestCase):
         request = APIRequestFactory()
         slug_1 = self.bc.fake.slug()
         slug_2 = self.bc.fake.slug()
-        request = request.get(f'/{slug_1}/{slug_2}', HTTP_ACADEMY=1)
+        request = request.get(f'/{slug_1}/{slug_2}', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request, id=1).render()
         expected = {'detail': 'This academy is not active', 'status_code': 403}
@@ -265,10 +265,10 @@ class ViewTestSuite(UtilsTestCase):
         request = APIRequestFactory()
         slug_1 = self.bc.fake.slug()
         slug_2 = self.bc.fake.slug()
-        request = request.get(f'/{slug_1}/{slug_2}', HTTP_ACADEMY=1)
+        request = request.get(f'/{slug_1}/{slug_2}', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request, id=1).render()
         expected = {'detail': 'This academy is deleted', 'status_code': 403}
@@ -284,10 +284,10 @@ class ViewTestSuite(UtilsTestCase):
                                         capability='can_kill_kenny')
 
         request = APIRequestFactory()
-        request = request.get('/v1/admissions/academy/activate', HTTP_ACADEMY=1)
+        request = request.get('/v1/admissions/academy/activate', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request, id=1).render()
         expected = {'academy_id': 1, 'id': 1}
@@ -304,10 +304,10 @@ class ViewTestSuite(UtilsTestCase):
                                         capability='can_kill_kenny')
 
         request = APIRequestFactory()
-        request = request.get('/v1/admissions/academy/activate', HTTP_ACADEMY=1)
+        request = request.get('/v1/admissions/academy/activate', headers={'academy': 1})
         force_authenticate(request, user=model.user)
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request, id=1).render()
         expected = {'detail': 'This academy is deleted', 'status_code': 403}

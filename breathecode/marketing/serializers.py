@@ -1,14 +1,26 @@
-import logging, re
-from django.utils import timezone
+import logging
+import re
 from datetime import timedelta
-from .models import CourseTranslation, FormEntry, AcademyAlias, ShortLink, Tag, ActiveCampaignAcademy, Automation
-from breathecode.monitoring.actions import test_link
-from breathecode.admissions.models import Academy, Cohort
+
+from django.db.models.query_utils import Q
+from django.utils import timezone
 from rest_framework import serializers
+
+from breathecode.admissions.models import Academy, Cohort
+from breathecode.monitoring.actions import test_link
+from breathecode.utils import serpy
 from breathecode.utils.integer_to_base import to_base
 from breathecode.utils.validation_exception import ValidationException
-from django.db.models.query_utils import Q
-from breathecode.utils import serpy
+
+from .models import (
+    AcademyAlias,
+    ActiveCampaignAcademy,
+    Automation,
+    CourseTranslation,
+    FormEntry,
+    ShortLink,
+    Tag,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -434,7 +446,7 @@ class ShortLinkSerializer(serializers.ModelSerializer):
 
         if 'slug' in data and data['slug'] is not None:
 
-            if not re.match('^[-\w]+$', data['slug']):
+            if not re.match(r'^[-\w]+$', data['slug']):
                 raise ValidationException(
                     f'Invalid link slug {data["slug"]}, should only contain letters, numbers and slash "-"',
                     slug='invalid-slug-format')

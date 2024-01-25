@@ -95,6 +95,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'slug': model.syllabus.academy_owner.slug,
                 'white_labeled': model.syllabus.academy_owner.white_labeled,
                 'icon_url': model.syllabus.academy_owner.icon_url,
+                'available_as_saas': model.syllabus.academy_owner.available_as_saas,
             },
             'duration_in_days': model.syllabus.duration_in_days,
             'duration_in_hours': model.syllabus.duration_in_hours,

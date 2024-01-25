@@ -8,6 +8,7 @@ from .models import Academy, Cohort, CohortUser, SyllabusVersion
 from .actions import test_syllabus
 from django.utils import timezone
 from django.contrib.auth.models import User
+import breathecode.activity.tasks as tasks_activity
 
 API_URL = os.getenv('API_URL', '')
 
@@ -51,13 +52,13 @@ def build_cohort_user(cohort_id: int, user_id: int, role: str = 'STUDENT', **_: 
     if not (user := User.objects.filter(id=user_id, is_active=True).first()):
         raise AbortTask(f'User with id {user_id} not found')
 
-    _, created = CohortUser.objects.get_or_create(cohort=cohort,
-                                                  user=user,
-                                                  role=role,
-                                                  defaults={
-                                                      'finantial_status': 'UP_TO_DATE',
-                                                      'educational_status': 'ACTIVE',
-                                                  })
+    cohort_user, created = CohortUser.objects.get_or_create(cohort=cohort,
+                                                            user=user,
+                                                            role=role,
+                                                            defaults={
+                                                                'finantial_status': 'UP_TO_DATE',
+                                                                'educational_status': 'ACTIVE',
+                                                            })
 
     if created:
         logger.info('User added to cohort')
@@ -93,6 +94,11 @@ def build_cohort_user(cohort_id: int, user_id: int, role: str = 'STUDENT', **_: 
 
     if created:
         logger.info('ProfileAcademy added')
+
+    tasks_activity.add_activity.delay(user_id,
+                                      'joined_cohort',
+                                      related_type='admissions.CohortUser',
+                                      related_id=cohort_user.id)
 
 
 @task(priority=TaskPriority.STUDENT.value)

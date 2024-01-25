@@ -60,7 +60,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     🔽🔽🔽 Data is None
     """
 
-    @patch.object(logging.Logger, 'warn', log_mock())
+    @patch.object(logging.Logger, 'warning', log_mock())
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'create_or_update_venue', create_or_update_venue_mock())
     @patch.object(actions, 'create_or_update_organizer', create_or_update_organizer_mock())
@@ -74,7 +74,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         update_or_create_event(None, model.organization)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [call('Ignored event')])
+        self.assertEqual(logging.Logger.warning.call_args_list, [call('Ignored event')])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(actions.create_or_update_venue.call_args_list, [])
@@ -88,7 +88,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     🔽🔽🔽 Without academy
     """
 
-    @patch.object(logging.Logger, 'warn', log_mock())
+    @patch.object(logging.Logger, 'warning', log_mock())
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'create_or_update_venue', create_or_update_venue_mock())
     @patch.object(actions, 'create_or_update_organizer', create_or_update_organizer_mock())
@@ -102,7 +102,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         update_or_create_event(EVENTBRITE_EVENTS['events'][0], model.organization)
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [])
+        self.assertEqual(logging.Logger.warning.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list,
                          [call('The organization Nameless not have a academy assigned')])
 
@@ -117,7 +117,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     🔽🔽🔽 With academy
     """
 
-    @patch.object(logging.Logger, 'warn', log_mock())
+    @patch.object(logging.Logger, 'warning', log_mock())
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
     @patch.object(actions, 'create_or_update_venue', create_or_update_venue_mock())
@@ -136,7 +136,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         update_or_create_event(EVENTBRITE_EVENTS['events'][0], model.organization)
         event = EVENTBRITE_EVENTS['events'][0]
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [])
+        self.assertEqual(logging.Logger.warning.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(actions.create_or_update_venue.call_args_list,
@@ -197,7 +197,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     🔽🔽🔽 With academy and event
     """
 
-    @patch.object(logging.Logger, 'warn', log_mock())
+    @patch.object(logging.Logger, 'warning', log_mock())
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
     @patch.object(actions, 'create_or_update_venue', create_or_update_venue_mock())
@@ -220,7 +220,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         update_or_create_event(EVENTBRITE_EVENTS['events'][0], model.organization)
         event = EVENTBRITE_EVENTS['events'][0]
 
-        self.assertEqual(logging.Logger.warn.call_args_list, [])
+        self.assertEqual(logging.Logger.warning.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(actions.create_or_update_venue.call_args_list,

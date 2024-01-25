@@ -8,23 +8,19 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
-from datetime import datetime
-import os
-from pathlib import Path
-from typing import TypedDict
-# TODO: decouple file storage from django
-# from time import time
-import django_heroku
-import dj_database_url
 import json
 import logging
+import os
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import TypedDict
+
+import dj_database_url
+import django_heroku
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
 
 from breathecode.setup import configure_redis
-
-# TODO: decouple file storage from django
-# from django.utils.http import http_date
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -44,16 +40,8 @@ DEBUG = (ENVIRONMENT == 'development' or ENVIRONMENT == 'test')
 
 ALLOWED_HOSTS = []
 
-INSTALLED_APPS = []
-
-# TODO: decouple file storage from django
-# if ENVIRONMENT == 'test':
-#     INSTALLED_APPS += ['whitenoise.runserver_nostatic']
-
 # Application definition
-INSTALLED_APPS += [
-    # TODO: decouple file storage from django
-    'whitenoise.runserver_nostatic',
+INSTALLED_APPS = [
     'breathecode.admin_styles',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -65,6 +53,7 @@ INSTALLED_APPS += [
     'django.contrib.postgres',
     'django.contrib.admindocs',
     'rest_framework',
+    'adrf',
     'phonenumber_field',
     'corsheaders',
     'breathecode.activity',
@@ -120,9 +109,12 @@ REST_FRAMEWORK = {
     ),
 }
 
+if os.getenv('ENABLE_DEFAULT_PAGINATION', 'y') in ['t', 'true', 'True', 'TRUE', '1', 'yes', 'y']:
+    REST_FRAMEWORK['PAGE_SIZE'] = 20
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'breathecode.middlewares.static_redirect_middleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
 
@@ -138,6 +130,59 @@ MIDDLEWARE = [
     'breathecode.middlewares.CompressResponseMiddleware',
     'django.middleware.http.ConditionalGetMiddleware',
 ]
+
+if os.getenv('GOOGLE_APPLICATION_CREDENTIALS') and (GS_BUCKET_NAME := os.getenv('STATIC_BUCKET')):
+    from google.oauth2 import service_account
+
+    from .setup import resolve_gcloud_credentials
+
+    resolve_gcloud_credentials()
+
+    GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
+        os.getenv('GOOGLE_APPLICATION_CREDENTIALS'))
+
+    GS_PROJECT_ID = os.getenv('GOOGLE_PROJECT_ID', '')
+    GS_IS_GZIPPED = True
+    GS_QUERYSTRING_AUTH = False
+    GS_FILE_OVERWRITE = True
+    GZIP_CONTENT_TYPES = (
+        'text/html',
+        'text/css',
+        'text/javascript',
+        'application/javascript',
+        'application/x-javascript',
+        'image/svg+xml',
+    )
+
+    # GS_OBJECT_PARAMETERS = {
+    #     'cache_control': 'max-age=604800',  # 1 week
+    # }
+
+    GS_EXPIRATION = timedelta(days=7)
+
+    STORAGES = {
+        'staticfiles': {
+            'BACKEND': 'storages.backends.gcloud.GoogleCloudStorage',
+        },
+    }
+    # STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+
+else:
+    INSTALLED_APPS += [
+        'whitenoise.runserver_nostatic',
+    ]
+
+    MIDDLEWARE += [
+        'whitenoise.middleware.WhiteNoiseMiddleware',
+    ]
+
+    # Simplified static file serving.
+    # https://warehouse.python.org/project/whitenoise/
+    STORAGES = {
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        },
+    }
 
 DISABLE_SERVER_SIDE_CURSORS = True  # required when using pgbouncer's pool_mode=transaction
 
@@ -264,8 +309,6 @@ TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
-USE_L10N = True
-
 USE_TZ = True
 
 # Honor the 'X-Forwarded-Proto' header for request.is_secure()
@@ -286,8 +329,12 @@ STATICFILES_DIRS = [
     os.path.join(PROJECT_ROOT, 'static'),
 ]
 
-CORS_ORIGIN_ALLOW_ALL = True
+CSRF_TRUSTED_ORIGINS = [
+    'http://*.gitpod.io',
+    'https://*.gitpod.io',
+]
 
+CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_HEADERS = [
     'accept',
     'academy',
@@ -321,7 +368,9 @@ if REDIS_URL == '' or REDIS_URL == 'redis://localhost:6379':
 else:
     IS_REDIS_WITH_SSL = True
 
-SECURE_SSL_REDIRECT = True
+# on localhost this should be false to avoid SSL Certificate
+SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'TRUE') == 'TRUE'
+
 CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('GLOBAL_CACHE_MINUTES', 60 * 24))
 CACHES = {
     'default': {
@@ -366,8 +415,9 @@ elif IS_REDIS_WITH_SSL:
     }
 
 if IS_TEST_ENV:
-    from django.core.cache.backends.locmem import LocMemCache
     import fnmatch
+
+    from django.core.cache.backends.locmem import LocMemCache
 
     class Key(TypedDict):
         key: str
@@ -422,45 +472,6 @@ if IS_TEST_ENV:
 # overwrite the redis url with the new one
 os.environ['REDIS_URL'] = REDIS_URL
 
-# TODO: decouple file storage from django
-# if ENVIRONMENT != 'test':
-#     DEFAULT_FILE_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
-#     STATICFILES_STORAGE = 'breathecode.utils.GCSManifestStaticFilesStorage'
-
-#     GS_BUCKET_NAME = os.getenv('GS_BUCKET_NAME', '')
-#     GS_FILE_OVERWRITE = False
-
-#     class StaticFileCacheMiddleware:
-
-#         def __init__(self, get_response):
-#             self.get_response = get_response
-
-#         def __call__(self, request):
-#             response = self.get_response(request)
-
-#             # Check if the response is for a static file
-#             if request.path.startswith("/static/"):
-#                 # Set the cache headers (1 year in this example)
-#                 max_age = 365 * 24 * 60 * 60
-#                 response["Cache-Control"] = f"public, max-age={max_age}"
-#                 response["Expires"] = http_date(time() + max_age)
-
-#             return response
-
-#     MIDDLEWARE += [
-#         'breathecode.settings.MemoryUsageMiddleware',
-#     ]
-
-# TODO: decouple file storage from django
-# else:
-#     # Simplified static file serving.
-#     # https://warehouse.python.org/project/whitenoise/
-#     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-# Simplified static file serving.
-# https://warehouse.python.org/project/whitenoise/
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
 SITE_ID = 1
 
 # Change 'default' database configuration with $DATABASE_URL.
@@ -473,6 +484,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 # SQL Explorer
 EXPLORER_CONNECTIONS = {'Default': 'default'}
 EXPLORER_DEFAULT_CONNECTION = 'default'
+
+# Use the format of Django 6.0, remove it when upgrading to Django 6.0
+FORMS_URLFIELD_ASSUME_HTTPS = True
 
 sql_keywords_path = Path(os.getcwd()) / 'breathecode' / 'sql_keywords.json'
 with open(sql_keywords_path, 'r') as f:
@@ -502,6 +516,7 @@ HOOK_EVENTS = {
     'event.new_event_order': 'events.EventCheckin.new_event_order',
     'event.new_event_attendee': 'events.EventCheckin.new_event_attendee',
     'form_entry.won_or_lost': 'marketing.FormEntry.won_or_lost',
+    'form_entry.new_deal': 'marketing.FormEntry.new_deal',
     'session.mentorship_session_status': 'mentorship.MentorshipSession.mentorship_session_status',
 }
 
@@ -518,3 +533,6 @@ if IS_REDIS_WITH_SSL_ON_HEROKU:
 
 # keep last part of the file
 django_heroku.settings(locals(), databases=False)
+
+# django_heroku does not support the new storages properly required by django 5.0
+del locals()['STATICFILES_STORAGE']

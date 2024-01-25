@@ -13,6 +13,7 @@ from random import randint
 from breathecode.authenticate.forms import InviteForm
 from ..mixins.new_auth_test_case import AuthTestCase
 from breathecode.payments.tasks import build_plan_financing
+from django.test.client import FakePayload
 
 CSRF_TOKEN = str(randint(10000, 10000000000000))
 render_to_string = loader.render_to_string
@@ -55,7 +56,7 @@ def render_page_with_user_invite(model, arguments={}):
         'SERVER_PROTOCOL': 'HTTP/1.1',
         'wsgi.version': (1, 0),
         'wsgi.url_scheme': 'http',
-        'wsgi.input': {},
+        'wsgi.input': FakePayload(b''),
         'wsgi.errors': {},
         'wsgi.multiprocess': True,
         'wsgi.multithread': False,
@@ -89,7 +90,7 @@ def render_page_post_form(token, arguments={}, messages=[]):
         'SERVER_PROTOCOL': 'HTTP/1.1',
         'wsgi.version': (1, 0),
         'wsgi.url_scheme': 'http',
-        'wsgi.input': {},
+        'wsgi.input': FakePayload(b''),
         'wsgi.errors': {},
         'wsgi.multiprocess': True,
         'wsgi.multithread': False,

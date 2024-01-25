@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Performance Test</title>
+  </head>
+  <body>
+    <h1>Performance Test</h1>
+    <table border="1">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for obj in my_objects %}
+        <tr>
+          <td>{{ obj.name }}</td>
+          <td>{{ obj.value }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </body>
+</html>

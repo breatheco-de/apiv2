@@ -627,6 +627,7 @@ class V2AcademyActivityView(APIView):
             serializer = ActivitySerializer(result, many=False)
             return Response(serializer.data)
 
+        order = request.GET.get('order', 'id')
         limit = int(request.GET.get('limit', 100))
         offset = (int(request.GET.get('page', 1)) - 1) * limit
         kind = request.GET.get('kind', None)
@@ -641,7 +642,7 @@ class V2AcademyActivityView(APIView):
                 {'AND kind = @kind' if kind else ''}
                 {'AND timestamp >= @date_start' if date_start else ''}
                 {'AND timestamp <= @date_end' if date_end else ''}
-            ORDER BY id DESC
+            ORDER BY @order DESC
             LIMIT @limit
             OFFSET @offset
         """
@@ -651,6 +652,7 @@ class V2AcademyActivityView(APIView):
             bigquery.ScalarQueryParameter('user_id', 'INT64', user_id),
             bigquery.ScalarQueryParameter('limit', 'INT64', limit),
             bigquery.ScalarQueryParameter('offset', 'INT64', offset),
+            bigquery.ScalarQueryParameter('order', 'STRING', order),
         ]
 
         if kind:

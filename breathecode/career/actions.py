@@ -2,7 +2,6 @@ import requests
 import logging
 from .models import Job, Employer, Position, PositionAlias, ZyteProject
 from breathecode.utils import ValidationException
-from datetime import datetime
 from django.utils import timezone
 from breathecode.career.services import scraper_factory
 
@@ -41,13 +40,13 @@ def run_spider(spider):
     if result['status'] == 'error':
         spider.spider_last_run_status = 'ERROR'
         spider.spider_last_run_desc = f"The spider career ended error. ({result['message']} at " + str(
-            datetime.now()) + ')'
+            timezone.now()) + ')'
         spider.save()
         logger.error(f'The spider ended error. Type error {result["message"]}')
     else:
         spider.spider_last_run_status = 'SYNCHED'
         spider.spider_last_run_desc = f'The execution of the spider was successful to {spider.name} at ' + str(
-            datetime.now())
+            timezone.now())
         spider.save()
 
     return (response.status_code == 200 and 'status' in result and result['status'] == 'ok', result)
@@ -95,7 +94,7 @@ def get_scraped_data_of_platform(spider, api_fetch):
             if response.status_code != 200:
                 spider.sync_status = 'ERROR'
                 spider.sync_desc = f'There was a {response.status_code} error fetching spider {spider.zyte_spider_number} job {num_spider} (get_scraped_data_of_platform)' + str(
-                    datetime.now())
+                    timezone.now())
                 spider.save()
 
                 logger.error(
@@ -191,7 +190,7 @@ def fetch_sync_all_data(spider):
         spider.zyte_last_fetch_date = timezone.now()
         spider.sync_status = 'SYNCHED'
         spider.sync_desc = f"The spider's career ended successfully. Added {job_saved} new jobs to {spider.name} at " + str(
-            datetime.now())
+            timezone.now())
         spider.save()
 
         ZyteProject.objects.filter(id=spider.zyte_project.id).update(zyte_api_last_job_number=job_number)

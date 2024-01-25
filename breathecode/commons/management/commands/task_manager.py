@@ -5,6 +5,7 @@ from breathecode.notify.actions import send_email_message
 from ...models import TaskManager, TaskWatcher
 from datetime import datetime, timedelta
 from django.db.models import Q
+from django.utils import timezone
 
 TOLERANCE = 30
 
@@ -24,7 +25,7 @@ STATUSES = [
 
 def is_report_time():
     # Getting the current datetime
-    now = datetime.now()
+    now = timezone.now()
 
     # Constructing the starting and ending datetime objects
     start_time = datetime.strptime(f'{now} {HOUR}:{MINUTE}', '%Y-%m-%d %H:%M')

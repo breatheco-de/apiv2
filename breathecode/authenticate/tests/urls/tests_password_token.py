@@ -10,6 +10,7 @@ from django.urls.base import reverse_lazy
 from rest_framework import status
 from django.http import QueryDict
 from django.core.handlers.wsgi import WSGIRequest
+from django.test.client import FakePayload
 
 from breathecode.authenticate.forms import PickPasswordForm
 from ..mixins.new_auth_test_case import AuthTestCase
@@ -65,7 +66,7 @@ def render_pick_password(self, method, token, data, messages=[]):
         'SERVER_PROTOCOL': 'HTTP/1.1',
         'wsgi.version': (1, 0),
         'wsgi.url_scheme': 'http',
-        'wsgi.input': None,
+        'wsgi.input': FakePayload(b''),
         'wsgi.errors': None,
         'wsgi.multiprocess': True,
         'wsgi.multithread': False,

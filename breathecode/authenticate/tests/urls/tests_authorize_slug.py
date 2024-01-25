@@ -11,6 +11,7 @@ from rest_framework import status
 from ..mixins.new_auth_test_case import AuthTestCase
 from django.core.handlers.wsgi import WSGIRequest
 from django.utils import timezone
+from django.test.client import FakePayload
 
 UTC_NOW = timezone.now()
 
@@ -54,7 +55,7 @@ def render_authorization(app, required_scopes=[], optional_scopes=[], selected_s
         'SERVER_PROTOCOL': 'HTTP/1.1',
         'wsgi.version': (1, 0),
         'wsgi.url_scheme': 'http',
-        'wsgi.input': None,
+        'wsgi.input': FakePayload(b''),
         'wsgi.errors': None,
         'wsgi.multiprocess': True,
         'wsgi.multithread': False,
@@ -78,6 +79,27 @@ def render_authorization(app, required_scopes=[], optional_scopes=[], selected_s
             'new_scopes': new_scopes,
             'reject_url': app.redirect_url + '?app=4geeks&status=rejected',
         }, request)
+
+
+def fix_data(apps=[], scopes=[]):
+
+    def fixer(s):
+        for word in ['permissions', 'required', 'optional', 'checked', 'New', 'new']:
+            s = s.replace(word, 'x')
+
+        return s
+
+    for app in apps:
+        app.name = fixer(app.name)
+        app.slug = fixer(app.slug)
+        app.description = fixer(app.description)
+        app.save()
+
+    for scope in scopes:
+        scope.name = fixer(scope.name)
+        scope.slug = fixer(scope.slug)
+        scope.description = fixer(scope.description)
+        scope.save()
 
 
 class GetTestSuite(AuthTestCase):
@@ -126,6 +148,8 @@ class GetTestSuite(AuthTestCase):
         app = {'require_an_agreement': False}
         model = self.bc.database.create(user=1, token=1, app=app)
 
+        fix_data([model.app])
+
         querystring = self.bc.format.to_querystring({'token': model.token.key})
         url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug
                                                                   }) + f'?{querystring}'
@@ -155,6 +179,8 @@ class GetTestSuite(AuthTestCase):
         app = {'require_an_agreement': True}
         model = self.bc.database.create(user=1, token=1, app=app)
 
+        fix_data([model.app])
+
         querystring = self.bc.format.to_querystring({'token': model.token.key})
         url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug
                                                                   }) + f'?{querystring}'
@@ -177,11 +203,19 @@ class GetTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.app),
         ])
 
-        self.assertTrue('permissions' not in content)
-        self.assertTrue('required' not in content)
-        self.assertTrue('optional' not in content)
-        self.assertTrue(content.count('checked') == 0)
-        self.assertTrue(content.count('New') == 0)
+        try:
+            self.assertTrue('permissions' not in content)
+            self.assertTrue('required' not in content)
+            self.assertTrue('optional' not in content)
+            self.assertTrue(content.count('checked') == 0)
+            self.assertTrue(content.count('New') == 0)
+        except Exception as e:
+            with open('content.html', 'w') as f:
+                f.write(content)
+
+            with open('expected.html', 'w') as f:
+                f.write(expected)
+            raise e
 
     # When: app require an agreement, with scopes
     # Then: return 200
@@ -210,6 +244,8 @@ class GetTestSuite(AuthTestCase):
                                         app_required_scope=app_required_scopes,
                                         app_optional_scope=app_optional_scopes)
 
+        fix_data([model.app], model.scope)
+
         querystring = self.bc.format.to_querystring({'token': model.token.key})
         url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug
                                                                   }) + f'?{querystring}'
@@ -222,7 +258,7 @@ class GetTestSuite(AuthTestCase):
                                         new_scopes=[])
 
         # dump error in external files
-        if content != expected or True:
+        if content != expected:
             with open('content.html', 'w') as f:
                 f.write(content)
 
@@ -235,11 +271,19 @@ class GetTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.app),
         ])
 
-        self.assertTrue('permissions' in content)
-        self.assertTrue('required' in content)
-        self.assertTrue('optional' in content)
-        self.assertTrue(content.count('checked') == 4)
-        self.assertTrue(content.count('New') == 0)
+        try:
+            self.assertTrue('permissions' in content)
+            self.assertTrue('required' in content)
+            self.assertTrue('optional' in content)
+            self.assertTrue(content.count('checked') == 4)
+            self.assertTrue(content.count('New') == 0)
+        except Exception as e:
+            with open('content.html', 'w') as f:
+                f.write(content)
+
+            with open('expected.html', 'w') as f:
+                f.write(expected)
+            raise e
 
     # When: app require an agreement, with scopes, it requires update the agreement
     # Then: return 200
@@ -274,6 +318,8 @@ class GetTestSuite(AuthTestCase):
                                         app_required_scope=app_required_scopes,
                                         app_optional_scope=app_optional_scopes)
 
+        fix_data([model.app], model.scope)
+
         querystring = self.bc.format.to_querystring({'token': model.token.key})
         url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug
                                                                   }) + f'?{querystring}'
@@ -300,11 +346,19 @@ class GetTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.app),
         ])
 
-        self.assertTrue('permissions' in content)
-        self.assertTrue('required' in content)
-        self.assertTrue('optional' in content)
-        self.assertTrue(content.count('checked') == 3)
-        self.assertTrue(content.count('New') == 0)
+        try:
+            self.assertTrue('permissions' in content)
+            self.assertTrue('required' in content)
+            self.assertTrue('optional' in content)
+            self.assertTrue(content.count('checked') == 3)
+            self.assertTrue(content.count('New') == 0)
+        except Exception as e:
+            with open('content.html', 'w') as f:
+                f.write(content)
+
+            with open('expected.html', 'w') as f:
+                f.write(expected)
+            raise e
 
     # When: app require an agreement, with scopes, it requires update the agreement
     # Then: return 200
@@ -338,6 +392,8 @@ class GetTestSuite(AuthTestCase):
                                         optional_scope_set=optional_scope_set,
                                         app_required_scope=app_required_scopes,
                                         app_optional_scope=app_optional_scopes)
+
+        fix_data([model.app], model.scope)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
         url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug
@@ -418,6 +474,8 @@ class PostTestSuite(AuthTestCase):
         app = {'require_an_agreement': False, 'agreement_version': 1}
         model = self.bc.database.create(user=1, token=1, app=app)
 
+        fix_data([model.app])
+
         querystring = self.bc.format.to_querystring({'token': model.token.key})
         url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug
                                                                   }) + f'?{querystring}'
@@ -470,6 +528,8 @@ class PostTestSuite(AuthTestCase):
                                         scope=scopes,
                                         app_required_scope=app_required_scopes,
                                         app_optional_scope=app_optional_scopes)
+
+        fix_data([model.app], model.scope)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
         url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug
@@ -539,6 +599,8 @@ class PostTestSuite(AuthTestCase):
                                         app_optional_scope=app_optional_scopes,
                                         app_user_agreement=app_user_agreement)
 
+        fix_data([model.app], model.scope)
+
         querystring = self.bc.format.to_querystring({'token': model.token.key})
         url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug
                                                                   }) + f'?{querystring}'
@@ -605,6 +667,8 @@ class PostTestSuite(AuthTestCase):
                                         app_optional_scope=app_optional_scopes,
                                         app_user_agreement=app_user_agreement,
                                         optional_scope_set=optional_scope_set)
+
+        fix_data([model.app], model.scope)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
         url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug

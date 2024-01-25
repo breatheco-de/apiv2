@@ -1,26 +1,26 @@
 """
 Test /answer/:id
 """
-from datetime import datetime, timedelta
-import io
 import json
+import logging
+import os
 import random
+import re
+import string
+from datetime import datetime, timedelta
+from random import choices
+from unittest.mock import MagicMock, PropertyMock, call, patch
+
+import pandas as pd
 import pytz
 from django.utils import timezone
-import pandas as pd
+from faker import Faker
 from pytz import UTC
-from breathecode.provisioning.tasks import upload
-from breathecode.provisioning import tasks
-import re, string, os
-import logging
-from unittest.mock import PropertyMock, patch, MagicMock, call
-from breathecode.services.datetime_to_iso_format import datetime_to_iso_format
-from random import choices
 
-from breathecode.tests.mocks.requests import apply_requests_get_mock
+from breathecode.provisioning import tasks
+from breathecode.provisioning.tasks import upload
 
 from ..mixins import ProvisioningTestCase
-from faker import Faker
 
 GOOGLE_CLOUD_KEY = os.getenv('GOOGLE_CLOUD_KEY', None)
 
@@ -83,7 +83,7 @@ def random_csv(lines=1):
 
 def codespaces_csv(lines=1, data={}):
     usernames = [fake.slug() for _ in range(lines)]
-    dates = [datetime_to_show_date(datetime.utcnow()) for _ in range(lines)]
+    dates = [datetime_to_show_date(timezone.now()) for _ in range(lines)]
     products = [fake.name() for _ in range(lines)]
     skus = [fake.slug() for _ in range(lines)]
     quantities = [random.randint(1, 10) for _ in range(lines)]
@@ -112,7 +112,7 @@ def codespaces_csv(lines=1, data={}):
 def gitpod_csv(lines=1, data={}):
     ids = [random.randint(1, 10) for _ in range(lines)]
     credit_cents = [random.randint(1, 10000) for _ in range(lines)]
-    effective_times = [datetime_to_iso(datetime.utcnow()) for _ in range(lines)]
+    effective_times = [datetime_to_iso(timezone.now()) for _ in range(lines)]
     kinds = [fake.slug() for _ in range(lines)]
     usernames = [fake.slug() for _ in range(lines)]
     contextURLs = [
@@ -233,6 +233,16 @@ def github_academy_user_data(data={}):
         'username': None,
         **data,
     }
+
+
+def get_last_task_manager_id(bc):
+    task_manager_cls = bc.database.get_model('commons.TaskManager')
+    task_manager = task_manager_cls.objects.order_by('-id').first()
+
+    if task_manager is None:
+        return 0
+
+    return task_manager.id
 
 
 class RandomFileTestSuite(ProvisioningTestCase):
@@ -999,6 +1009,8 @@ class CodespacesTestSuite(ProvisioningTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
+        task_manager_id = get_last_task_manager_id(self.bc) + 1
+
         slug = self.bc.fake.slug()
         with patch('breathecode.services.google_cloud.File.download',
                    MagicMock(side_effect=csv_file_mock(csv))):
@@ -1062,9 +1074,9 @@ class CodespacesTestSuite(ProvisioningTestCase):
         self.bc.check.calls(logging.Logger.error.call_args_list, [])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [
-            call(slug, page=1, task_manager_id=1),
-            call(slug, page=2, task_manager_id=1),
-            call(slug, page=3, task_manager_id=1),
+            call(slug, page=1, task_manager_id=task_manager_id),
+            call(slug, page=2, task_manager_id=task_manager_id),
+            call(slug, page=3, task_manager_id=task_manager_id),
         ])
 
         self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [call(slug)])
@@ -1652,6 +1664,8 @@ class GitpodTestSuite(ProvisioningTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
+        task_manager_id = get_last_task_manager_id(self.bc) + 1
+
         slug = self.bc.fake.slug()
         with patch('breathecode.services.google_cloud.File.download',
                    MagicMock(side_effect=csv_file_mock(csv))):
@@ -1714,9 +1728,9 @@ class GitpodTestSuite(ProvisioningTestCase):
         self.bc.check.calls(logging.Logger.error.call_args_list, [])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [
-            call(slug, page=1, task_manager_id=1),
-            call(slug, page=2, task_manager_id=1),
-            call(slug, page=3, task_manager_id=1),
+            call(slug, page=1, task_manager_id=task_manager_id),
+            call(slug, page=2, task_manager_id=task_manager_id),
+            call(slug, page=3, task_manager_id=task_manager_id),
         ])
 
         self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [call(slug)])
@@ -2046,8 +2060,8 @@ class GitpodTestSuite(ProvisioningTestCase):
 
         cohort = {
             'academy_id': 1,
-            'kickoff_date': datetime.utcnow() + timedelta(days=1),
-            'ending_date': datetime.utcnow() - timedelta(days=1),
+            'kickoff_date': timezone.now() + timedelta(days=1),
+            'ending_date': timezone.now() - timedelta(days=1),
         }
 
         model = self.bc.database.create(user=10,

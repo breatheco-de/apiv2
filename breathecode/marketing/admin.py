@@ -1,24 +1,50 @@
-import logging, secrets
-from django.contrib import admin, messages
+import logging
+import secrets
+
 from django import forms
-from .models import (Course, CourseTranslation, FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy,
-                     ActiveCampaignWebhook, AcademyAlias, Downloadable, LeadGenerationApp, UTMField,
-                     AcademyProxy)
-from .actions import (register_new_lead, save_get_geolocal, get_facebook_lead_info, test_ac_connection,
-                      sync_tags, sync_automations, acp_ids, delete_tag, bind_formentry_with_webhook)
-from .tasks import (async_activecampaign_webhook)
-from breathecode.services.activecampaign import ActiveCampaign
+from django.contrib import admin, messages
+from django.contrib.admin import SimpleListFilter
 from django.utils import timezone
 from django.utils.html import format_html
-from django.contrib.admin import SimpleListFilter
+
+from breathecode.services.activecampaign import ActiveCampaign
 from breathecode.utils import AdminExportCsvMixin
 from breathecode.utils.admin import change_field
 from breathecode.utils.validation_exception import ValidationException
+
+from .actions import (
+    bind_formentry_with_webhook,
+    delete_tag,
+    get_facebook_lead_info,
+    register_new_lead,
+    save_get_geolocal,
+    sync_automations,
+    sync_tags,
+    test_ac_connection,
+)
+from .models import (
+    AcademyAlias,
+    AcademyProxy,
+    ActiveCampaignAcademy,
+    ActiveCampaignWebhook,
+    Automation,
+    Course,
+    CourseTranslation,
+    Downloadable,
+    FormEntry,
+    LeadGenerationApp,
+    ShortLink,
+    Tag,
+    UTMField,
+)
+from .tasks import async_activecampaign_webhook, async_update_deal_custom_fields
+
 # Register your models here.
 
 logger = logging.getLogger(__name__)
 
 
+@admin.display(description='♼ Test connection to Active Campaign')
 def test_ac(modeladmin, request, queryset):
     entries = queryset.all()
     try:
@@ -30,9 +56,7 @@ def test_ac(modeladmin, request, queryset):
         messages.error(request, message=str(e))
 
 
-test_ac.short_description = '♼ Test connection to Active Campaign'
-
-
+@admin.display(description='♼ Sync AC Tags')
 def sync_ac_tags(modeladmin, request, queryset):
     entries = queryset.all()
     try:
@@ -44,9 +68,7 @@ def sync_ac_tags(modeladmin, request, queryset):
         messages.error(request, message=str(e))
 
 
-sync_ac_tags.short_description = '♼ Sync AC Tags'
-
-
+@admin.display(description='♼ Sync AC Automations')
 def sync_ac_automations(modeladmin, request, queryset):
     entries = queryset.all()
     try:
@@ -56,9 +78,6 @@ def sync_ac_automations(modeladmin, request, queryset):
     except Exception as e:
         logger.fatal(str(e))
         messages.error(request, message=str(e))
-
-
-sync_ac_automations.short_description = '♼ Sync AC Automations'
 
 
 class CustomForm(forms.ModelForm):
@@ -133,13 +152,24 @@ def send_to_active_campaign(modeladmin, request, queryset):
     )
 
 
+@admin.display(description='♺ Download more info from facebook')
 def fetch_more_facebook_info(modeladmin, request, queryset):
     entries = queryset.all()
     for entry in entries:
         get_facebook_lead_info(entry.id)
 
 
-fetch_more_facebook_info.short_description = '♺ Download more info from facebook'
+@admin.display(description='🌐 Get GEO info')
+def sync_contact_custom_fields_with_deal(modeladmin, request, queryset):
+    entries = queryset.all()
+    for entry in entries:
+        if not entry.ac_contact_id or not entry.ac_deal_id:
+            messages.error(request, message=f'FormEntry {str(entry.id)} is missing deal_id or contact_id')
+            return None
+
+    for entry in entries:
+        # update_deal_custom_fields(entry.ac_deal_id, entry.ac_contact_id)
+        async_update_deal_custom_fields.delay(entry.id)
 
 
 def get_geoinfo(modeladmin, request, queryset):
@@ -151,9 +181,6 @@ def get_geoinfo(modeladmin, request, queryset):
             'longitude': entry.longitude,
         }
         save_get_geolocal(entry, form_enty)
-
-
-get_geoinfo.short_description = '🌐 Get GEO info'
 
 
 class PPCFilter(SimpleListFilter):
@@ -181,12 +208,14 @@ class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
         'storage_status', 'location', 'course', 'deal_status', PPCFilter, 'lead_generation_app', 'utm_medium',
         'utm_campaign', 'utm_source'
     ]
-    actions = [send_to_active_campaign, get_geoinfo, fetch_more_facebook_info, 'async_export_as_csv'
-               ] + change_field([
-                   'bogota-colombia', 'mexicocity-mexico', 'quito-ecuador', 'buenosaires-argentina',
-                   'caracas-venezuela', 'online'
-               ],
-                                name='location')
+    actions = [
+        send_to_active_campaign, get_geoinfo, fetch_more_facebook_info, sync_contact_custom_fields_with_deal,
+        'async_export_as_csv'
+    ] + change_field([
+        'bogota-colombia', 'mexicocity-mexico', 'quito-ecuador', 'buenosaires-argentina', 'caracas-venezuela',
+        'online'
+    ],
+                     name='location')
 
     def _attribution_id(self, obj):
 
@@ -269,6 +298,7 @@ def upload_to_active_campaign(modeladmin, request, queryset):
             messages.add_message(request, messages.ERROR, f'Error uploading tag {slug}: {str(e)}')
 
 
+@admin.display(description='Prepend "tech-" on slug')
 def prepend_tech_on_name(modeladmin, request, queryset):
 
     for t in queryset:
@@ -276,8 +306,6 @@ def prepend_tech_on_name(modeladmin, request, queryset):
             continue
         t.slug = 'tech-' + t.slug
         t.save()
-
-    prepend_tech_on_name.short_description = 'Prepend "tech-" on slug'
 
 
 class CustomTagModelForm(forms.ModelForm):
@@ -400,7 +428,7 @@ def process_hook(modeladmin, request, queryset):
         print(f'Procesing hook: {hook.id}')
         ac_academy = hook.ac_academy
         client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
-        client.execute_action(hook.id, acp_ids)
+        client.execute_action(hook.id)
 
 
 @admin.register(ActiveCampaignWebhook)
@@ -446,13 +474,11 @@ class DownloadableAdmin(admin.ModelAdmin):
             f"<span class='badge {colors[obj.destination_status]}'>{obj.destination_status}</span>")
 
 
+@admin.display(description='Reset app id')
 def reset_app_id(modeladmin, request, queryset):
     for app in queryset.all():
         app.app_id = secrets.token_urlsafe(16)
         app.save()
-
-
-reset_app_id.short_description = 'Reset app id'
 
 
 class LeadAppCustomForm(forms.ModelForm):

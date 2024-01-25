@@ -1,12 +1,37 @@
 from django.urls import path
-from .views import (AcademyActivateView, AcademyView, CohortJoinView, CohortMeView, CohortUserView,
-                    AcademyCohortView, MeCohortUserHistoryView, SyllabusVersionView, SyllabusView,
-                    get_timezones, UserView, UserMeView, AcademyCohortUserView, get_schedule,
-                    AllSyllabusVersionsView, AcademySyllabusScheduleView, SyllabusScheduleView,
-                    get_all_academies, PublicCohortView, AcademyCohortTimeSlotView, handle_test_syllabus,
-                    AcademySyllabusScheduleTimeSlotView, AcademySyncCohortTimeSlotView, AcademyReportView,
-                    get_public_syllabus, SyllabusAssetView, PublicCohortUserView, AcademyCohortHistoryView,
-                    AcademyTeacherView, get_single_academy)
+
+from .views import (
+    AcademyActivateView,
+    AcademyCohortHistoryView,
+    AcademyCohortTimeSlotView,
+    AcademyCohortUserView,
+    AcademyCohortView,
+    AcademyReportView,
+    AcademySyllabusScheduleTimeSlotView,
+    AcademySyllabusScheduleView,
+    AcademySyncCohortTimeSlotView,
+    AcademyTeacherView,
+    AcademyView,
+    AllSyllabusVersionsView,
+    CohortJoinView,
+    CohortMeView,
+    CohortUserView,
+    MeCohortUserHistoryView,
+    PublicCohortUserView,
+    PublicCohortView,
+    SyllabusAssetView,
+    SyllabusScheduleView,
+    SyllabusVersionView,
+    SyllabusView,
+    UserMeView,
+    UserView,
+    get_all_academies,
+    get_public_syllabus,
+    get_schedule,
+    get_single_academy,
+    get_timezones,
+    handle_test_syllabus,
+)
 
 app_name = 'admissions'
 urlpatterns = [

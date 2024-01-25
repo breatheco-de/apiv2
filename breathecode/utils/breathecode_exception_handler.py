@@ -1,7 +1,7 @@
-from rest_framework.views import exception_handler
 from django.core.exceptions import ValidationError
-from breathecode.utils.payment_exception import PaymentException
+from rest_framework.views import exception_handler
 
+from breathecode.utils.payment_exception import PaymentException
 from breathecode.utils.validation_exception import ValidationException
 
 __all__ = ['breathecode_exception_handler']

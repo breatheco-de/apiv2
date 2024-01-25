@@ -7,26 +7,38 @@ import random
 import re
 import secrets
 import string
-from typing import Optional
 import urllib.parse
-from random import randint
-from django.core.handlers.wsgi import WSGIRequest
-import jwt
-import breathecode.notify.actions as notify_actions
 from functools import lru_cache
+from random import randint
+from typing import Optional
 
-from django.contrib.auth.models import User
-from django.utils import timezone
-from django.db.models import Q
-from breathecode.admissions.models import Academy, CohortUser
-from breathecode.utils import ValidationException
-from breathecode.utils.i18n import translation
-from breathecode.services.github import Github
+import jwt
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat, PublicFormat
+from django.contrib.auth.models import User
+from django.core.handlers.wsgi import WSGIRequest
+from django.db.models import Q
+from django.utils import timezone
 
-from .models import (App, CredentialsGithub, DeviceId, GitpodUser, ProfileAcademy, Role, Token, UserSetting,
-                     AcademyAuthSettings, GithubAcademyUser, UserInvite)
+import breathecode.notify.actions as notify_actions
+from breathecode.admissions.models import Academy, CohortUser
+from breathecode.services.github import Github
+from breathecode.utils import ValidationException
+from breathecode.utils.i18n import translation
+
+from .models import (
+    AcademyAuthSettings,
+    App,
+    CredentialsGithub,
+    DeviceId,
+    GithubAcademyUser,
+    GitpodUser,
+    ProfileAcademy,
+    Role,
+    Token,
+    UserInvite,
+    UserSetting,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -233,17 +245,17 @@ def update_gitpod_users(html):
         match = findings.pop(0)
         input_html = html[match.start():match.end()]
 
-        matches = list(re.finditer('>Reactivate<', input_html))
+        matches = list(re.finditer(r'>Reactivate<', input_html))
         if len(matches) > 0:
             all_inactive_users.append(user)
             continue
 
-        matches = list(re.finditer('"assignee-([\w\-]+)"', input_html))
+        matches = list(re.finditer(r'"assignee-([\w\-]+)"', input_html))
         if len(matches) > 0:
             match = matches.pop(0)
             user['assignee'] = match.group(1)
 
-        matches = list(re.finditer('github\.com\/([\w\-]+)"', input_html))
+        matches = list(re.finditer(r'github\.com\/([\w\-]+)"', input_html))
         if len(matches) > 0:
             match = matches.pop(0)
             user['github'] = match.group(1)
@@ -284,8 +296,8 @@ def get_user_settings(user_id: int) -> UserSetting:
     from breathecode.admissions.models import CohortUser
     from breathecode.assessment.models import Assessment, Question, UserAssessment
     from breathecode.events.models import Event
-    from breathecode.marketing.models import FormEntry
     from breathecode.feedback.models import Answer
+    from breathecode.marketing.models import FormEntry
 
     try:
         settings, created = UserSetting.objects.get_or_create(user_id=user_id)
@@ -457,11 +469,9 @@ def delete_from_github(github_user: GithubAcademyUser):
 
         gb.delete_org_member(github_user.username)
         github_user.log('Successfully deleted in github organization')
-        print('Deleted github user: ' + github_user.username)
         return True
     except Exception as e:
         github_user.log('Error calling github API while deleting member from org: ' + str(e))
-        print('Error deleting github user: ' + github_user.username)
         return False
 
 
@@ -929,8 +939,8 @@ def get_app(pk: str | int) -> App:
 
 
 def accept_invite_action(data=None, token=None, lang='en'):
-    from breathecode.payments.models import Invoice, Bag, Plan
     from breathecode.payments import tasks as payments_tasks
+    from breathecode.payments.models import Bag, Invoice, Plan
 
     if data is None:
         data = {}

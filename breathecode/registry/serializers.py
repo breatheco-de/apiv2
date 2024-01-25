@@ -80,6 +80,12 @@ class SmallAsset(serpy.Serializer):
     slug = serpy.Field()
 
 
+class AssetCategorySmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+
+
 class AssetSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
@@ -87,17 +93,19 @@ class AssetSmallSerializer(serpy.Serializer):
     lang = serpy.Field()
     asset_type = serpy.Field()
     status = serpy.Field()
+    published_at = serpy.Field()
+    category = AssetCategorySmallSerializer(required=False)
+
+    technologies = serpy.MethodField()
+
+    def get_technologies(self, obj):
+        techs = AssetTechnology.objects.filter(id__in=obj.technologies.filter(is_deprecated=False))
+        return ParentAssetTechnologySerializer(techs, many=True).data
 
 
 class AcademySmallSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
-
-
-class AssetCategorySmallSerializer(serpy.Serializer):
-    id = serpy.Field()
-    slug = serpy.Field()
-    title = serpy.Field()
 
 
 class KeywordClusterSmallSerializer(serpy.Serializer):

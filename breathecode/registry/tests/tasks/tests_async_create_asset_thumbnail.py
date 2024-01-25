@@ -1,14 +1,14 @@
 """
 Test /answer
 """
+from logging import Logger
 from random import randint
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
 from breathecode.registry.tasks import async_create_asset_thumbnail
-from logging import Logger
 from breathecode.services.google_cloud.function_v1 import FunctionV1
-
 from breathecode.tests.mixins.breathecode_mixin.breathecode import fake
+
 from ..mixins import RegistryTestCase
 
 
@@ -45,20 +45,20 @@ class RegistryTestSuite(RegistryTestCase):
     🔽🔽🔽 Without Asset
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.warning', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test__without_asset(self):
         async_create_asset_thumbnail.delay('slug')
 
         self.assertEqual(self.bc.database.list_of('media.Media'), [])
-        self.assertEqual(Logger.warn.call_args_list, [call('Asset with slug slug not found')])
+        self.assertEqual(Logger.warning.call_args_list, [call('Asset with slug slug not found')])
         self.assertEqual(Logger.error.call_args_list, [call('Asset with slug slug not found', exc_info=True)])
 
     """
     🔽🔽🔽 With Asset, bad Function response
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.warning', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.services.google_cloud.function_v1.FunctionV1.__init__', MagicMock(return_value=None))
     @patch('breathecode.services.google_cloud.function_v1.FunctionV1.call',
@@ -70,7 +70,7 @@ class RegistryTestSuite(RegistryTestCase):
         async_create_asset_thumbnail.delay(model.asset.slug)
 
         self.assertEqual(self.bc.database.list_of('media.Media'), [])
-        self.assertEqual(Logger.warn.call_args_list, [])
+        self.assertEqual(Logger.warning.call_args_list, [])
         self.assertEqual(Logger.error.call_args_list, [
             call(
                 'Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` '
@@ -96,7 +96,7 @@ class RegistryTestSuite(RegistryTestCase):
     🔽🔽🔽 With Asset, good Function response
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.warning', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.services.google_cloud.function_v1.FunctionV1.__init__', MagicMock(return_value=None))
     @patch('breathecode.services.google_cloud.function_v1.FunctionV1.call',
@@ -137,7 +137,7 @@ class RegistryTestSuite(RegistryTestCase):
                 'thumbnail': f'https://storage.googleapis.com/random-bucket/{hash}-thumbnail',
                 'url': f'https://storage.googleapis.com/random-bucket/{hash}',
             }])
-        self.assertEqual(Logger.warn.call_args_list, [
+        self.assertEqual(Logger.warning.call_args_list, [
             call(f'Media was save with {hash} for academy {model.asset.academy}'),
         ])
         self.assertEqual(Logger.error.call_args_list, [])
@@ -160,7 +160,7 @@ class RegistryTestSuite(RegistryTestCase):
     🔽🔽🔽 With Asset and Media, good Function response, without AssetCategory
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.warning', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.services.google_cloud.function_v1.FunctionV1.__init__', MagicMock(return_value=None))
     @patch('breathecode.services.google_cloud.function_v1.FunctionV1.call',
@@ -184,7 +184,7 @@ class RegistryTestSuite(RegistryTestCase):
         self.assertEqual(self.bc.database.list_of('media.Media'), [
             self.bc.format.to_dict(model.media),
         ])
-        self.assertEqual(Logger.warn.call_args_list, [])
+        self.assertEqual(Logger.warning.call_args_list, [])
         self.assertEqual(Logger.error.call_args_list, [
             call('Not able to retrieve a preview generation', exc_info=True),
         ])
@@ -197,7 +197,7 @@ class RegistryTestSuite(RegistryTestCase):
     🔽🔽🔽 With Asset and Media, good Function response, with AssetCategory without preview_generation_url
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.warning', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.services.google_cloud.function_v1.FunctionV1.__init__', MagicMock(return_value=None))
     @patch('breathecode.services.google_cloud.function_v1.FunctionV1.call',
@@ -225,7 +225,7 @@ class RegistryTestSuite(RegistryTestCase):
             self.bc.format.to_dict(model.media),
         ])
 
-        self.assertEqual(Logger.warn.call_args_list, [])
+        self.assertEqual(Logger.warning.call_args_list, [])
         self.assertEqual(Logger.error.call_args_list, [
             call(f'Media with hash {hash} already exists, skipping', exc_info=True),
         ])
@@ -249,7 +249,7 @@ class RegistryTestSuite(RegistryTestCase):
     🔽🔽🔽 With Asset and Media, good Function response, Media for another Academy
     """
 
-    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.warning', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.services.google_cloud.function_v1.FunctionV1.__init__', MagicMock(return_value=None))
     @patch('breathecode.services.google_cloud.function_v1.FunctionV1.call',
@@ -280,7 +280,7 @@ class RegistryTestSuite(RegistryTestCase):
                 'slug': f'{model.asset.academy.slug}-{model.asset.category.slug}-{model.asset.slug}',
             }
         ])
-        self.assertEqual(Logger.warn.call_args_list, [])
+        self.assertEqual(Logger.warning.call_args_list, [])
         self.assertEqual(Logger.error.call_args_list, [
             call(f'Media was save with {hash} for academy {model.academy[0]}', exc_info=True),
         ])

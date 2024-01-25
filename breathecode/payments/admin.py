@@ -85,7 +85,7 @@ def grant_service_permissions(modeladmin, request, queryset):
 @admin.register(Consumable)
 class ConsumableAdmin(admin.ModelAdmin):
     list_display = ('id', 'unit_type', 'how_many', 'service_item', 'user', 'valid_until')
-    list_filter = ['unit_type']
+    list_filter = ['unit_type', 'app_service__app__slug', 'service_item__service__slug']
     search_fields = ['service_item__service__slug']
     raw_id_fields = ['user', 'service_item', 'cohort_set', 'event_type_set', 'mentorship_service_set']
     actions = [grant_service_permissions]
@@ -162,7 +162,11 @@ class CohortSetAdmin(admin.ModelAdmin):
     list_filter = ['academy__slug']
     search_fields = ['slug', 'academy__slug', 'academy__name']
     actions = [add_cohort_set_to_the_subscriptions]
-    filter_horizontal = ('cohorts', )
+
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        if db_field.name == 'cohorts':
+            kwargs['widget'] = admin.widgets.FilteredSelectMultiple(db_field.verbose_name, False)
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
 
 
 @admin.register(CohortSetTranslation)

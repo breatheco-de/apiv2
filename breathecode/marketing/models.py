@@ -5,7 +5,7 @@ from datetime import timedelta
 from django.contrib.auth.models import User
 
 from breathecode.authenticate.models import UserInvite
-from .signals import form_entry_won_or_lost
+from .signals import form_entry_won_or_lost, new_form_entry_deal
 from breathecode.admissions.models import Academy, Cohort
 from django.core.validators import RegexValidator
 from breathecode.admissions.models import Syllabus
@@ -73,6 +73,7 @@ class AcademyAlias(models.Model):
     applies to the academy it will look for matching alias to find the lead
     academy.
     """
+
     slug = models.SlugField(primary_key=True)
     active_campaign_slug = models.SlugField()
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
@@ -315,6 +316,7 @@ class FormEntry(models.Model):
     def __init__(self, *args, **kwargs):
         super(FormEntry, self).__init__(*args, **kwargs)
         self.__old_deal_status = self.deal_status
+        self.__old_deal_id = self.ac_deal_id
 
     contact = models.ForeignKey(Contact, on_delete=models.CASCADE, null=True, default=None, blank=True)
 
@@ -495,6 +497,10 @@ class FormEntry(models.Model):
     def save(self, *args, **kwargs):
 
         deal_status_modified = False
+        is_new_deal = False
+
+        if self.__old_deal_id != self.ac_deal_id and self.ac_deal_id is not None:
+            is_new_deal = True
 
         if self.__old_deal_status != self.deal_status:
             deal_status_modified = True
@@ -505,6 +511,7 @@ class FormEntry(models.Model):
         super().save(*args, **kwargs)
 
         if deal_status_modified: form_entry_won_or_lost.send(instance=self, sender=FormEntry)
+        if is_new_deal: new_form_entry_deal.send(instance=self, sender=FormEntry)
 
     def is_duplicate(self, incoming_lead):
         duplicate_leads_delta_avoidance = timedelta(minutes=30)
@@ -527,9 +534,7 @@ class FormEntry(models.Model):
         return False
 
     def set_attribution_id(self):
-        """
-        We'll keep the attribution id consistent as long as there is not sale made.
-        """
+        """We'll keep the attribution id consistent as long as there is not sale made."""
 
         if self.email is None:
             return None

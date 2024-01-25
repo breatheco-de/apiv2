@@ -1,12 +1,17 @@
-import hashlib, binascii, os
-from django.utils import timezone
-from breathecode.admissions.models import Academy, Syllabus
+import binascii
+import hashlib
+import os
+from datetime import timedelta
+
 from django.contrib.auth.models import User
 from django.db import models
-from datetime import timedelta
+from django.utils import timezone
+
 import breathecode.mentorship.signals as signals
+from breathecode.admissions.models import Academy, Syllabus
 from breathecode.notify.models import SlackChannel
 from breathecode.utils.validators.language import validate_language_code
+
 # settings customizable for each academy
 # class AcademySettings(models.Model):
 #     is_video_streaming_active = models.BooleanField(default=False)
@@ -188,6 +193,11 @@ class MentorProfile(models.Model):
                              null=True,
                              default=None,
                              help_text='Only use this if the user does not exist on breathecode already')
+
+    availability_report = models.JSONField(blank=True,
+                                           null=False,
+                                           default=[],
+                                           help_text='Mentor availability report')
 
     user = models.ForeignKey(User,
                              on_delete=models.CASCADE,

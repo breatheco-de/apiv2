@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 @task(bind=True)
-def async_validate_email_invite(self, invite_id, task_manager_id):
+def async_validate_email_invite(self, invite_id, task_manager_id, **_):
     logger.debug(f'Validating email for invite {invite_id}')
     user_invite = UserInvite.objects.filter(id=invite_id).first()
 

@@ -1,11 +1,12 @@
 #!/bin/env python
 
 from __future__ import absolute_import
+
+import argparse
 import os
 import random
-import sys
-import argparse
 import subprocess
+import sys
 
 
 def parse_arguments():
@@ -24,7 +25,8 @@ if __name__ == '__main__':
         seed = args.seed
 
     pytest_args = ' '.join(args.pytest_args)
-    command = f'pytest {pytest_args} --disable-pytest-warnings -n auto --nomigrations --durations=1'
+    # command = f'pytest {pytest_args} --disable-pytest-warnings -n auto --nomigrations --durations=1'
+    command = f'pytest {pytest_args} -n auto --nomigrations --durations=1'
 
     env = os.environ.copy()
     env['ENV'] = 'test'

@@ -38,13 +38,12 @@ class TaskManagerAdmin(admin.ModelAdmin):
     list_filter = ['status', 'killed', 'task_module']
     actions = [pause, resume, cancel, reverse, force_reverse]
 
+    @admin.display(description='Duration (ms)')
     def get_duration(self, obj):
         duration = obj.updated_at - obj.created_at
         # Calculating duration in milliseconds
         duration_ms = duration.total_seconds() * 1000
         return f'{int(duration_ms)} ms'
-
-    get_duration.short_description = 'Duration (ms)'
 
 
 @admin.register(TaskWatcher)

@@ -1,13 +1,16 @@
 import os
-from django.db.models import QuerySet
-from django.core.handlers.wsgi import WSGIRequest
 from typing import Any, Optional
+
+from django.core.handlers.wsgi import WSGIRequest
+from django.db.models import QuerySet
 from django.http import HttpResponse
-from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.response import Response
+
 from breathecode.utils.api_view_extensions.extension_base import ExtensionBase
 from breathecode.utils.api_view_extensions.extensions.language_extension import LanguageExtension
 from breathecode.utils.api_view_extensions.extensions.lookup_extension import LookupExtension
+
 from .extensions import CacheExtension
 
 __all__ = ['APIViewExtensionHandlers']
@@ -15,9 +18,7 @@ is_test_env = os.getenv('ENV') == 'test'
 
 
 class APIViewExtensionHandlers:
-    """
-    A collection of tools that pretend can build extensions globally
-    """
+    """A collection of tools that pretend can build extensions globally."""
 
     # the custom method we want to export go here
     cache: Optional[CacheExtension]
@@ -30,9 +31,7 @@ class APIViewExtensionHandlers:
     _instances: set[ExtensionBase]
 
     def __init__(self, request: WSGIRequest, valid_extensions: Optional[set[ExtensionBase]] = None, **kwargs):
-        """
-        Build the handlers
-        """
+        """Build the handlers."""
 
         if valid_extensions is None:
             valid_extensions = []
@@ -56,7 +55,7 @@ class APIViewExtensionHandlers:
             self._spy_extension_arguments(**kwargs)
 
     def queryset(self, queryset: QuerySet[Any]) -> QuerySet[Any]:
-        """Apply mutations over queryset"""
+        """Apply mutations over queryset."""
 
         # The extension can decide if act or not
         extensions_allowed = [
@@ -70,7 +69,7 @@ class APIViewExtensionHandlers:
         return queryset
 
     def response(self, data: dict | list[dict], format='application/json'):
-        """Get the response of endpoint"""
+        """Get the response of endpoint."""
 
         headers = {}
 
@@ -92,13 +91,9 @@ class APIViewExtensionHandlers:
         self._spy_extensions(sorted([x.__name__ for x in self._extensions]))
 
     def _spy_extensions(self, _: list[str]) -> None:
-        """
-        That is used for spy the extensions is being used.
-        """
+        """Spy the extensions is being used in the tests."""
         ...
 
     def _spy_extension_arguments(self, **_) -> None:
-        """
-        That is used for spy the extension arguments is being used.
-        """
+        """Spy the extension arguments is being used in the tests."""
         ...

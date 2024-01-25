@@ -7,6 +7,7 @@ from .actions import send_assestment
 logger = logging.getLogger(__name__)
 
 
+@admin.display(description='Send General Assessment')
 def send_bulk_assesment(modeladmin, request, queryset):
     user = queryset.all()
     try:
@@ -16,9 +17,6 @@ def send_bulk_assesment(modeladmin, request, queryset):
     except Exception as e:
         logger.fatal(str(e))
         messages.error(request, message=str(e))
-
-
-send_bulk_assesment.short_description = 'Send General Assessment'
 
 
 @admin.register(UserProxy)

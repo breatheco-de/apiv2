@@ -18,7 +18,7 @@ from ...mixins import MediaTestCase
 UTC_NOW = timezone.now()
 
 
-def bigquery_client_mock(self, n=1, user_id=1, kind=None):
+def bigquery_client_mock(self, n=1, user_id=1, kind=None, date_start=None, date_end=None):
     rows_to_insert = [{
         'id': uuid4().hex,
         'user_id': user_id,
@@ -51,7 +51,9 @@ def bigquery_client_mock(self, n=1, user_id=1, kind=None):
             WHERE user_id = @user_id
                 AND meta.academy = @academy_id
                 {'AND kind = @kind' if kind else ''}
-            ORDER BY id DESC
+                {'AND timestamp >= @date_start' if date_start else ''}
+                {'AND timestamp <= @date_end' if date_end else ''}
+            ORDER BY @order DESC
             LIMIT @limit
             OFFSET @offset
         """

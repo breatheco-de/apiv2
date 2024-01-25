@@ -3,14 +3,32 @@ Test /answer
 """
 
 import random
+from logging import Logger
 from unittest.mock import MagicMock, call, patch
 
-from breathecode.assignments import signals
-from logging import Logger
+import pytest
 
-from ..mixins import AssignmentsTestCase
-from ...tasks import set_cohort_user_assignments
+from breathecode.assignments import signals
 from breathecode.utils.service import Service
+
+from ...tasks import set_cohort_user_assignments
+from ..mixins import AssignmentsTestCase
+
+
+@pytest.fixture(autouse=True)
+def x(db, monkeypatch):
+    empty = lambda *args, **kwargs: None
+
+    monkeypatch.setattr('logging.Logger.info', MagicMock())
+    monkeypatch.setattr('logging.Logger.error', MagicMock())
+
+    monkeypatch.setattr('breathecode.assignments.signals.assignment_created.send', empty)
+    monkeypatch.setattr('breathecode.assignments.signals.assignment_status_updated.send', empty)
+    monkeypatch.setattr('breathecode.activity.tasks.get_attendancy_log.delay', empty)
+    monkeypatch.setattr('django.db.models.signals.pre_delete.send', empty)
+    monkeypatch.setattr('breathecode.admissions.signals.student_edu_status_updated.send', empty)
+
+    yield
 
 
 class MediaTestSuite(AssignmentsTestCase):
@@ -19,13 +37,6 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 Without Task
     """
 
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_created.send', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test__without_tasks(self):
         set_cohort_user_assignments.delay(1)
 
@@ -38,13 +49,6 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 One Task
     """
 
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_created.send', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test__with_one_task(self):
         model = self.bc.database.create(task=1)
 
@@ -61,13 +65,6 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 One Task
     """
 
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_created.send', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test__with_one_task__task_is_pending(self):
         task_type = random.choice(['LESSON', 'QUIZ', 'PROJECT', 'EXERCISE'])
         task = {
@@ -101,13 +98,6 @@ class MediaTestSuite(AssignmentsTestCase):
         ])
         self.assertEqual(Logger.error.call_args_list, [])
 
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_created.send', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test__with_one_task__task_is_done(self):
         task_type = random.choice(['LESSON', 'QUIZ', 'PROJECT', 'EXERCISE'])
         task = {
@@ -145,13 +135,6 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 One Task with log
     """
 
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_created.send', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test__with_one_task__task_is_pending__with_log__already_exists(self):
         task_type = random.choice(['LESSON', 'QUIZ', 'PROJECT', 'EXERCISE'])
         task = {
@@ -196,13 +179,6 @@ class MediaTestSuite(AssignmentsTestCase):
         ])
         self.assertEqual(Logger.error.call_args_list, [])
 
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_created.send', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test__with_one_task__task_is_pending__with_log__from_different_items(self):
         task_type = random.choice(['LESSON', 'QUIZ', 'PROJECT', 'EXERCISE'])
         task = {
@@ -261,13 +237,6 @@ class MediaTestSuite(AssignmentsTestCase):
         ])
         self.assertEqual(Logger.error.call_args_list, [])
 
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_created.send', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test__rigobot_not_found(self):
         task_type = random.choice(['LESSON', 'QUIZ', 'PROJECT', 'EXERCISE'])
         task = {
@@ -325,15 +294,8 @@ class MediaTestSuite(AssignmentsTestCase):
             call('Executing set_cohort_user_assignments'),
             call('History log saved'),
         ])
-        self.assertEqual(Logger.error.call_args_list, [call('App Rigobot not found')])
+        self.assertEqual(Logger.error.call_args_list, [call('Rigobot error: App not found')])
 
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_created.send', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     @patch.multiple('breathecode.utils.service.Service',
                     __init__=MagicMock(return_value=None),
                     post=MagicMock(),
@@ -393,6 +355,8 @@ class MediaTestSuite(AssignmentsTestCase):
         ])
         self.assertEqual(Logger.info.call_args_list, [
             call('Executing set_cohort_user_assignments'),
+            call('Service rigobot found'),
+            call('repository added to rigobot if task is not done'),
             call('History log saved'),
         ])
         self.assertEqual(Logger.error.call_args_list, [])
@@ -406,13 +370,6 @@ class MediaTestSuite(AssignmentsTestCase):
                  })
         ])
 
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_created.send', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     @patch.multiple('breathecode.utils.service.Service',
                     __init__=MagicMock(return_value=None),
                     post=MagicMock(),
@@ -472,6 +429,8 @@ class MediaTestSuite(AssignmentsTestCase):
         ])
         self.assertEqual(Logger.info.call_args_list, [
             call('Executing set_cohort_user_assignments'),
+            call('Service rigobot found'),
+            call('repository added to rigobot if task is done'),
             call('History log saved'),
         ])
         self.assertEqual(Logger.error.call_args_list, [])
@@ -484,13 +443,6 @@ class MediaTestSuite(AssignmentsTestCase):
             })])
         self.bc.check.calls(Service.put.call_args_list, [])
 
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_created.send', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test__with_one_task__task_is_done__with_log__already_exists(self):
         task_type = random.choice(['LESSON', 'QUIZ', 'PROJECT', 'EXERCISE'])
         task = {
@@ -535,13 +487,6 @@ class MediaTestSuite(AssignmentsTestCase):
         ])
         self.assertEqual(Logger.error.call_args_list, [])
 
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_created.send', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test__with_one_task__task_is_done__with_log__from_different_items(self):
         task_type = random.choice(['LESSON', 'QUIZ', 'PROJECT', 'EXERCISE'])
         task = {

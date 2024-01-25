@@ -1,11 +1,12 @@
 import re
 
-from breathecode.utils.i18n import translation
-from .models import ProvisioningBill, ProvisioningContainer
-
 from rest_framework import serializers
-from breathecode.utils.validation_exception import ValidationException
+
 from breathecode.utils import serpy
+from breathecode.utils.i18n import translation
+from breathecode.utils.validation_exception import ValidationException
+
+from .models import ProvisioningBill, ProvisioningContainer
 
 
 class AcademySerializer(serpy.Serializer):
@@ -101,7 +102,7 @@ class ProvisioningContainerSerializer(serializers.ModelSerializer):
 
         if 'slug' in data and data['slug'] is not None:
 
-            if not re.match('^[-\w]+$', data['slug']):
+            if not re.match(r'^[-\w]+$', data['slug']):
                 raise ValidationException(
                     f'Invalid link slug {data["slug"]}, should only contain letters, numbers and slash "-"',
                     slug='invalid-slug-format')

@@ -932,7 +932,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
         need_translation = self.request.GET.get('need_translation', False)
         if need_translation == 'true':
-            items = items.annotate(num_translations=Count('all_translations')).filter(num_translations__lte=1) \
+            items = items.annotate(num_translations=Count('all_translations')).filter(num_translations__lte=1)
 
         items = items.filter(**lookup).distinct()
         items = handler.queryset(items)

@@ -1,16 +1,19 @@
-import logging, datetime, requests
-import pytz
-from django.db.models import Q
-from django.utils import timezone
+import datetime
+import logging
 from datetime import timedelta
+
+import pytz
+from dateutil.relativedelta import relativedelta
+from django.db.models import Q, QuerySet
 from django.shortcuts import render
+from django.utils import timezone
+
 from breathecode.mentorship.exceptions import ExtendSessionException
 from breathecode.services.daily.client import DailyClient
 from breathecode.utils.datetime_integer import duration_to_str
-from django.db.models import QuerySet
-from .models import MentorshipSession, MentorshipBill
 from breathecode.utils.validation_exception import ValidationException
-from dateutil.relativedelta import relativedelta
+
+from .models import MentorProfile, MentorshipBill, MentorshipSession
 
 logger = logging.getLogger(__name__)
 
@@ -258,7 +261,6 @@ def last_month_date(current_date):
     # getting next month
     # using replace to get to last day + offset
     # to reach next month
-    datetime.datetime.now().replace
     nxt_mnth = current_date.replace(day=28, hour=23, minute=59, second=59,
                                     microsecond=999999) + datetime.timedelta(days=4)
 
@@ -371,26 +373,25 @@ def generate_mentor_bill(mentor, bill, sessions, reset=False):
     return bill
 
 
-def mentor_is_ready(mentor):
+def mentor_is_ready(mentor: MentorProfile):
 
     if mentor.online_meeting_url is None or mentor.online_meeting_url == '':
         raise Exception(
             f'Mentor {mentor.name} does not have backup online_meeting_url, update the value before activating.'
         )
+
     elif mentor.booking_url is None or 'https://calendly.com' not in mentor.booking_url:
         raise Exception(
             f'Mentor {mentor.name} booking_url must point to calendly, update the value before activating.')
+
     elif len(mentor.syllabus.all()) == 0:
         raise Exception(
             f'Mentor {mentor.name} has no syllabus associated, update the value before activating.')
-    else:
-        response = requests.head(mentor.booking_url, timeout=2)
-        if response.status_code > 399:
-            raise Exception(
-                f'Mentor {mentor.name} booking URL is failing with code {str(response.status_code)}.')
-        response = requests.head(mentor.online_meeting_url, timeout=2)
-        if response.status_code > 399:
-            raise Exception(
-                f'Mentor {mentor.name} online_meeting_url is failing with code {str(response.status_code)}.')
+
+    elif 'no-booking-url' not in mentor.availability_report and 'bad-booking-url' in mentor.availability_report:
+        raise Exception(f'Mentor {mentor.name} booking URL is failing.')
+
+    elif 'no-online-meeting-url' not in mentor.availability_report and 'bad-online-meeting-url' in mentor.availability_report:
+        raise Exception(f'Mentor {mentor.name} online meeting URL is failing.')
 
     return True

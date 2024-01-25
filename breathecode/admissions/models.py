@@ -1,12 +1,16 @@
-import hashlib, base64
+import base64
+import hashlib
 import json
-import os, logging
+import logging
+import os
+
 from django import forms
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
-from .signals import syllabus_version_json_updated
+
 from . import signals
+from .signals import syllabus_version_json_updated
 
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', None)
 logger = logging.getLogger(__name__)
@@ -144,8 +148,8 @@ class Academy(models.Model):
             self.status = self.status.upper()
 
     def save(self, *args, **kwargs):
-        from .signals import academy_saved
         from .actions import get_bucket_object
+        from .signals import academy_saved
 
         self.full_clean()
         created = not self.id
@@ -280,19 +284,6 @@ class SyllabusSchedule(models.Model):
 
     def __str__(self):
         return self.name
-
-    # def delete(self, *args, **kwargs):
-    #     remove_bucket_object("certificate-logo-"+self.slug)
-    #     super(Image, self).delete(*args, **kwargs)
-
-    # def save(self, *args, **kwargs):
-
-    #     if GOOGLE_APPLICATION_CREDENTIALS is not None and GOOGLE_APPLICATION_CREDENTIALS != '':
-    #         obj = get_bucket_object('certificate-logo-' + self.slug)
-    #         if obj is not None:
-    #             self.logo = obj.public_url
-
-    #     super().save(*args, **kwargs)  # Call the "real" save() method.
 
 
 INACTIVE = 'INACTIVE'

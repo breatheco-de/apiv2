@@ -1,7 +1,6 @@
 from django.core.management.base import BaseCommand
 from ...models import RepositoryWebhook
 from django.utils import timezone
-from datetime import datetime
 from datetime import timedelta
 
 
@@ -10,7 +9,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        date_limit = timezone.make_aware(datetime.now() - timedelta(days=10))
+        date_limit = timezone.make_aware(timezone.now() - timedelta(days=10))
 
         RepositoryWebhook.objects.filter(run_at__isnull=True).delete()
 

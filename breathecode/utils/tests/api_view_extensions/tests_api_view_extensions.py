@@ -30,6 +30,46 @@ def serialize_cache_object(data, headers={}):
     return res
 
 
+def assert_pagination(headers: dict, limit, offset, lenght):
+    assert 'Link' in headers
+    assert 'X-Total-Count' in headers
+    assert 'X-Page' in headers
+    assert 'X-Per-Page' in headers
+
+    assert headers['X-Total-Count'] == str(lenght)
+    # assert headers['X-Total-Page'] == str(int(lenght / limit))
+    assert headers['X-Page'] == str(int(offset / limit) + 1)
+    assert headers['X-Per-Page'] == str(limit)
+
+    if offset == 0:
+        assert headers['Link'] == (
+            f'<http://testserver/the-beans-should-not-have-sugar?limit={limit}&offset={limit}>; rel="next", '
+            f'<http://testserver/the-beans-should-not-have-sugar?limit={limit}&offset={lenght - limit if lenght - limit>= 0 else 0}>; rel="last"'
+        )
+    elif offset + limit >= lenght:
+        previous_offset = offset - limit if offset - limit >= 0 else 0
+
+        if previous_offset:
+            previous_offset_section = f'&offset={previous_offset}'
+
+        else:
+            previous_offset_section = ''
+
+        assert headers['Link'] == (
+            f'<http://testserver/the-beans-should-not-have-sugar?limit={limit}>; rel="first", '
+            f'<http://testserver/the-beans-should-not-have-sugar?limit={limit}{previous_offset_section}>; rel="previous"'
+        )
+    else:
+        raise NotImplemented('This case is not implemented')
+
+
+def assert_no_pagination(headers: dict, limit, offset, lenght):
+    assert 'Link' not in headers
+    assert 'X-Total-Count' not in headers
+    assert 'X-Page' not in headers
+    assert 'X-Per-Page' not in headers
+
+
 class GetCohortSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
@@ -63,7 +103,7 @@ def serialize_cache_value(data):
                                                                                 'false').encode('utf-8')
 
 
-class TestView(APIView):
+class CustomTestView(APIView):
     permission_classes = [AllowAny]
     extensions = APIViewExtensions(cache=CohortCache, sort='name', paginate=True)
 
@@ -97,15 +137,15 @@ class TestView(APIView):
         return handler.response(serializer.data)
 
 
-class PaginateFalseTestView(TestView):
+class PaginateFalseTestView(CustomTestView):
     extensions = APIViewExtensions(cache=CohortCache, sort='name', paginate=False)
 
 
-class CachePerUserTestView(TestView):
+class CachePerUserTestView(CustomTestView):
     extensions = APIViewExtensions(cache=CohortCache, cache_per_user=True, sort='name', paginate=False)
 
 
-class CachePrefixTestView(TestView):
+class CachePrefixTestView(CustomTestView):
     extensions = APIViewExtensions(cache=CohortCache,
                                    cache_prefix='the-beans-should-not-have-sugar',
                                    sort='name',
@@ -129,7 +169,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         request = APIRequestFactory()
         request = request.get(f'/the-beans-should-not-have-sugar/1')
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
         view(request)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
@@ -155,7 +195,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         request = APIRequestFactory()
         request = request.get(f'/the-beans-should-not-have-sugar/1')
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
         view(request)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
@@ -218,7 +258,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
                 'request.path': '/the-beans-should-not-have-sugar',
             }.items()))
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request)
         expected = []
@@ -241,7 +281,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         request = APIRequestFactory()
         request = request.get('/the-beans-should-not-have-sugar')
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request)
         expected = GetCohortSerializer([model.cohort], many=True).data
@@ -264,7 +304,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         request = APIRequestFactory()
         request = request.get('/the-beans-should-not-have-sugar')
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request)
         expected = GetCohortSerializer(sorted(model.cohort, key=lambda x: x.name), many=True).data
@@ -291,7 +331,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         request = APIRequestFactory()
         request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={",".join(params)}')
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request)
         expected = GetCohortSerializer(model.cohort[4:], many=True).data
@@ -318,7 +358,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             request = APIRequestFactory()
             request = request.get('/the-beans-should-not-have-sugar')
 
-            view = TestView.as_view()
+            view = CustomTestView.as_view()
             response = view(request)
 
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
@@ -345,7 +385,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             request = APIRequestFactory()
             request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={",".join(params)}')
 
-            view = TestView.as_view()
+            view = CustomTestView.as_view()
             response = view(request)
 
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
@@ -376,7 +416,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             request = APIRequestFactory()
             request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={slug}')
 
-            view = TestView.as_view()
+            view = CustomTestView.as_view()
             response = view(request)
             expected = GetCohortSerializer([model.cohort], many=True).data
 
@@ -419,7 +459,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             request = APIRequestFactory()
             request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={slug}')
 
-            view = TestView.as_view()
+            view = CustomTestView.as_view()
             response = view(request)
             expected = case + case
 
@@ -786,7 +826,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         request = APIRequestFactory()
         request = request.get('/the-beans-should-not-have-sugar')
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request)
         expected = GetCohortSerializer(sorted(model.cohort, key=lambda x: x.name), many=True).data
@@ -798,7 +838,6 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
     🔽🔽🔽 Pagination True
     """
 
-    @pytest.mark.skip(reason='It was not prioritized in the scrum')
     def test_pagination__get__activate__25_cohorts_just_get_20(self):
         cache.clear()
 
@@ -807,13 +846,14 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         request = APIRequestFactory()
         request = request.get('/the-beans-should-not-have-sugar')
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request)
         expected = GetCohortSerializer(sorted(model.cohort, key=lambda x: x.name)[:20], many=True).data
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert_pagination(response.headers, limit=20, offset=0, lenght=25)
 
     def test_pagination__get__activate__with_10_cohorts__get_first_five(self):
         cache.clear()
@@ -823,7 +863,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         request = APIRequestFactory()
         request = request.get('/the-beans-should-not-have-sugar?limit=5&offset=0')
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request)
         expected = {
@@ -837,6 +877,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert_pagination(response.headers, limit=5, offset=0, lenght=10)
 
     def test_pagination__get__activate__with_10_cohorts__get_last_five(self):
         cache.clear()
@@ -846,7 +887,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         request = APIRequestFactory()
         request = request.get('/the-beans-should-not-have-sugar?limit=5&offset=5')
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request)
         expected = {
@@ -860,6 +901,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert_pagination(response.headers, limit=5, offset=5, lenght=10)
 
     def test_pagination__get__activate__with_10_cohorts__after_last_five(self):
         cache.clear()
@@ -869,7 +911,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         request = APIRequestFactory()
         request = request.get('/the-beans-should-not-have-sugar?limit=5&offset=10')
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request)
         expected = {
@@ -883,6 +925,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert_pagination(response.headers, limit=5, offset=10, lenght=10)
 
     """
     🔽🔽🔽 Pagination False
@@ -904,6 +947,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         self.assertEqual(json.loads(brotli.decompress(response.content)), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert_no_pagination(response.headers, limit=20, offset=0, lenght=25)
 
     def test_pagination__get__deactivate__with_10_cohorts__get_first_five(self):
         cache.clear()
@@ -920,6 +964,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert_no_pagination(response.headers, limit=20, offset=0, lenght=25)
 
     def test_pagination__get__deactivate__with_10_cohorts__get_last_five(self):
         cache.clear()
@@ -936,6 +981,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert_no_pagination(response.headers, limit=20, offset=0, lenght=25)
 
     def test_pagination__get__deactivate__with_10_cohorts__after_last_five(self):
         cache.clear()
@@ -952,6 +998,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert_no_pagination(response.headers, limit=20, offset=0, lenght=25)
 
 
 class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
@@ -971,7 +1018,7 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
         request = APIRequestFactory()
         request = request.get(f'/the-beans-should-not-have-sugar/1')
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
         view(request, id=1)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
@@ -991,7 +1038,7 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
         request = APIRequestFactory()
         request = request.get('/the-beans-should-not-have-sugar/1')
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request, id=1).render()
         expected = {'detail': 'Not found', 'status_code': 404}
@@ -1009,7 +1056,7 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
         request = APIRequestFactory()
         request = request.get('/the-beans-should-not-have-sugar/1')
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
 
         response = view(request, id=1)
         expected = GetCohortSerializer(model.cohort, many=False).data
@@ -1048,7 +1095,7 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
             request = APIRequestFactory()
             request = request.get('/the-beans-should-not-have-sugar/1')
 
-            view = TestView.as_view()
+            view = CustomTestView.as_view()
             response = view(request, id=1)
 
             self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
@@ -1078,7 +1125,7 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
         request = APIRequestFactory()
         request = request.get(f'/the-beans-should-not-have-sugar/1')
 
-        view = TestView.as_view()
+        view = CustomTestView.as_view()
         response = view(request, id=1)
         expected = GetCohortSerializer(model.cohort, many=False).data
 
@@ -1119,7 +1166,7 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
             request = APIRequestFactory()
             request = request.get(f'/the-beans-should-not-have-sugar/1')
 
-            view = TestView.as_view()
+            view = CustomTestView.as_view()
             response = view(request, id=1)
             key = 'Cohort__id=1&' + urllib.parse.urlencode({
                 **request.GET,
