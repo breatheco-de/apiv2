@@ -20,4 +20,5 @@ from django.core.asgi import get_asgi_application
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'breathecode.settings')
 
 application = get_asgi_application()
-application = newrelic.agent.ASGIApplicationWrapper(application)
+if os.getenv('NOWRAP_APP') != '1':
+    application = newrelic.agent.ASGIApplicationWrapper(application)
