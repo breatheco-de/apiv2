@@ -527,23 +527,11 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                             es=f'Evento no encontrado para esta academia {academy_id}',
                             slug='event-not-found'))
 
-        organization_id = Organization.objects.filter(
-            Q(academy__id=academy_id) | Q(organizer__academy__id=academy_id)).values_list('id',
-                                                                                          flat=True).first()
-        if not organization_id:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en=f"Academy {already.academy.name} doesn\'t have the integrations with Eventbrite done",
-                    es=f'La academia {already.academy.name} no tiene las integraciones con Eventbrite aún',
-                    slug='organization-not-exist'))
-
         data = {}
         for key in request.data.keys():
             data[key] = request.data.get(key)
 
         data['sync_status'] = 'PENDING'
-        data['organization'] = organization_id
 
         serializer = EventSerializer(already, data=data, context={'lang': lang, 'academy_id': academy_id})
         if serializer.is_valid():
