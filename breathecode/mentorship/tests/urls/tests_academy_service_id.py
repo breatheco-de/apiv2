@@ -1,15 +1,17 @@
 """
 This file just can contains duck tests refert to AcademyInviteView
 """
-from datetime import timedelta
 import random
+from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
+
 from django.urls.base import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
 
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
+
 from ..mixins import MentorshipTestCase
-from django.utils import timezone
 
 UTC_NOW = timezone.now()
 
@@ -110,7 +112,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     def test__get__without_academy_header(self):
         model = self.bc.database.create(user=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_service_id', kwargs={'service_id': 1})
         response = self.client.get(url)
@@ -132,7 +134,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         model = self.bc.database.create(user=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_service_id', kwargs={'service_id': 1})
         response = self.client.get(url)
@@ -157,7 +159,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_service_id', kwargs={'service_id': 1})
         response = self.client.get(url)
@@ -181,7 +183,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_service_id', kwargs={'service_id': 1})
         response = self.client.get(url)
@@ -208,7 +210,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_service_id', kwargs={'service_id': 1})
         self.client.get(url)
@@ -229,7 +231,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         model = self.bc.database.create(user=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_service_id', kwargs={'service_id': 1})
         response = self.client.put(url)
@@ -254,7 +256,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_service_id', kwargs={'service_id': 1})
         response = self.client.put(url)
@@ -279,7 +281,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_service_id', kwargs={'service_id': 1})
         response = self.client.put(url)
@@ -306,7 +308,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_service_id', kwargs={'service_id': 1})
         data = {

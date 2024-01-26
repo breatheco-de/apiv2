@@ -3,9 +3,8 @@ import random
 from unittest.mock import MagicMock, patch
 
 from django.urls import reverse_lazy
-from rest_framework import status
-
 from django.utils import timezone
+from rest_framework import status
 
 from breathecode.tests.mixins.legacy import LegacyAPITestCase
 
@@ -130,11 +129,11 @@ class TestSignal(LegacyAPITestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__without_consumables(self):
         model = self.bc.database.create(user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {'mentorship_service_sets': [], 'cohort_sets': [], 'event_type_sets': []}
@@ -150,11 +149,11 @@ class TestSignal(LegacyAPITestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__one_consumable__how_many_is_zero(self):
         model = self.bc.database.create_v2(user=1, consumable=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {'mentorship_service_sets': [], 'cohort_sets': [], 'event_type_sets': []}
@@ -187,11 +186,11 @@ class TestSignal(LegacyAPITestCase):
         academy = {'available_as_saas': True}
 
         model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3, academy=academy)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -243,11 +242,11 @@ class TestSignal(LegacyAPITestCase):
         academy = {'available_as_saas': True}
 
         model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3, academy=academy)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable') + '?cohort_set=4,5,6'
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -280,11 +279,11 @@ class TestSignal(LegacyAPITestCase):
         academy = {'available_as_saas': True}
 
         model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3, academy=academy)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable') + '?cohort_set=1,2,3'
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -345,11 +344,11 @@ class TestSignal(LegacyAPITestCase):
         how_many_belong_to3 = sum([x['how_many'] for x in belong_to3])
 
         model = self.bc.database.create(user=1, consumable=consumables, mentorship_service_set=3)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -398,11 +397,11 @@ class TestSignal(LegacyAPITestCase):
         } for n in range(9)]
 
         model = self.bc.database.create(user=1, consumable=consumables, mentorship_service_set=3)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable') + '?mentorship_service_set=4,5,6'
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -433,11 +432,11 @@ class TestSignal(LegacyAPITestCase):
         how_many_belong_to3 = sum([x['how_many'] for x in belong_to3])
 
         model = self.bc.database.create(user=1, consumable=consumables, mentorship_service_set=3)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable') + '?mentorship_service_set=1,2,3'
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -508,11 +507,11 @@ class TestSignal(LegacyAPITestCase):
                                         }, {
                                             'icon_url': 'https://www.google.com'
                                         }])
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -571,11 +570,11 @@ class TestSignal(LegacyAPITestCase):
                                         }, {
                                             'icon_url': 'https://www.google.com'
                                         }])
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable') + '?event_type_set=4,5,6'
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -616,11 +615,11 @@ class TestSignal(LegacyAPITestCase):
                                         }, {
                                             'icon_url': 'https://www.google.com'
                                         }])
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable') + '?event_type_set=1,2,3'
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -683,11 +682,11 @@ class TestSignal(LegacyAPITestCase):
         academy = {'available_as_saas': True}
 
         model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3, academy=academy)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -739,11 +738,11 @@ class TestSignal(LegacyAPITestCase):
         academy = {'available_as_saas': True}
 
         model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3, academy=academy)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable') + f'?cohort_set_slug=blabla1,blabla2,blabla3'
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -777,12 +776,12 @@ class TestSignal(LegacyAPITestCase):
         academy = {'available_as_saas': True}
 
         model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3, academy=academy)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable'
                            ) + f'?cohort_set_slug={",".join([x.slug for x in model.cohort_set])}'
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -843,11 +842,11 @@ class TestSignal(LegacyAPITestCase):
         how_many_belong_to3 = sum([x['how_many'] for x in belong_to3])
 
         model = self.bc.database.create(user=1, consumable=consumables, mentorship_service_set=3)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -897,12 +896,12 @@ class TestSignal(LegacyAPITestCase):
         } for n in range(9)]
 
         model = self.bc.database.create(user=1, consumable=consumables, mentorship_service_set=3)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy(
             'payments:me_service_consumable') + f'?mentorship_service_set_slug=blabla1,blabla2,blabla3'
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -933,13 +932,13 @@ class TestSignal(LegacyAPITestCase):
         how_many_belong_to3 = sum([x['how_many'] for x in belong_to3])
 
         model = self.bc.database.create(user=1, consumable=consumables, mentorship_service_set=3)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy(
             'payments:me_service_consumable'
         ) + f'?mentorship_service_set_slug={",".join([x.slug for x in model.mentorship_service_set])}'
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -1009,11 +1008,11 @@ class TestSignal(LegacyAPITestCase):
                                         }, {
                                             'icon_url': 'https://www.google.com'
                                         }])
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -1072,11 +1071,11 @@ class TestSignal(LegacyAPITestCase):
                                         }, {
                                             'icon_url': 'https://www.google.com'
                                         }])
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable') + f'?event_type_set_slug=blabla1,blabla2,blabla3'
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -1117,12 +1116,12 @@ class TestSignal(LegacyAPITestCase):
                                         }, {
                                             'icon_url': 'https://www.google.com'
                                         }])
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable'
                            ) + f'?event_type_set_slug={",".join([x.slug for x in model.event_type_set])}'
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -1212,7 +1211,7 @@ class TestSignal(LegacyAPITestCase):
                                         cohort_set=1,
                                         mentorship_service_set=1,
                                         academy=academy)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable'
                            ) + f'?event_type_set_slug={model.event_type_set.slug}' \
@@ -1220,7 +1219,7 @@ class TestSignal(LegacyAPITestCase):
                            f'&mentorship_service_set_slug={model.mentorship_service_set.slug}'
 
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {

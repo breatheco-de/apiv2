@@ -1,16 +1,20 @@
 """
 Test /academy/survey
 """
-import re, urllib
-from unittest.mock import patch, MagicMock, call
+import re
+import urllib
+from unittest.mock import MagicMock, call, patch
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
+    apply_google_cloud_bucket_mock,
+    apply_google_cloud_client_mock,
 )
+
 from ..mixins import FeedbackTestCase
 
 
@@ -66,7 +70,7 @@ class SurveyTestSuite(FeedbackTestCase):
         self.headers(academy=1)
 
         model = self.generate_models(user=1, profile_academy=True, survey=2, capability='crud_survey', role=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('feedback:academy_survey_id', kwargs={'survey_id': 1}) + '?id=1,2'
         response = self.client.delete(url)
@@ -83,7 +87,7 @@ class SurveyTestSuite(FeedbackTestCase):
 
         model = self.generate_models(user=1, profile_academy=True, survey=1, capability='crud_survey', role=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('feedback:academy_survey_id', kwargs={'survey_id': 1})
         response = self.client.delete(url)
@@ -97,7 +101,7 @@ class SurveyTestSuite(FeedbackTestCase):
 
         model = self.generate_models(user=1, profile_academy=True, capability='crud_survey', role=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('feedback:academy_survey_id', kwargs={'survey_id': 1})
         response = self.client.delete(url)
@@ -124,7 +128,7 @@ class SurveyTestSuite(FeedbackTestCase):
 
             self.headers(academy=model.academy.id)
 
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
 
             url = reverse_lazy('feedback:academy_survey_id', kwargs={'survey_id': model.survey.id})
             response = self.client.delete(url)
@@ -145,7 +149,7 @@ class SurveyTestSuite(FeedbackTestCase):
                                      role=1,
                                      answer=answer)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('feedback:academy_survey_id', kwargs={'survey_id': 1})
         response = self.client.delete(url)

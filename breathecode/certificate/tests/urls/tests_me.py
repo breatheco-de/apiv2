@@ -2,12 +2,14 @@
 Test /certificate
 """
 from unittest.mock import MagicMock, call, patch
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
 
-from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
-from ..mixins import CertificateTestCase
 import breathecode.certificate.signals as signals
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
+
+from ..mixins import CertificateTestCase
 
 
 def get_serializer(self, user_specialty, academy, specialty, user):
@@ -77,7 +79,7 @@ class CertificateTestSuite(CertificateTestCase):
     def test__get__without_permission(self):
         model = self.bc.database.create(user=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('certificate:me')
         response = self.client.get(url)
 
@@ -96,7 +98,7 @@ class CertificateTestSuite(CertificateTestCase):
         permission = {'codename': 'get_my_certificate'}
         model = self.bc.database.create(user=1, permission=permission)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('certificate:me')
         response = self.client.get(url)
 
@@ -115,7 +117,7 @@ class CertificateTestSuite(CertificateTestCase):
         permission = {'codename': 'get_my_certificate'}
         model = self.bc.database.create(user=1, permission=permission, user_specialty=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('certificate:me')
         response = self.client.get(url)
 
@@ -140,7 +142,7 @@ class CertificateTestSuite(CertificateTestCase):
                                             'status': 'PERSISTED'
                                         })
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('certificate:me')
         response = self.client.get(url)
 
@@ -161,7 +163,7 @@ class CertificateTestSuite(CertificateTestCase):
         user_specialties = [{'token': 'xyz1', 'status': 'PERSISTED'}, {'token': 'xyz2'}]
         model = self.bc.database.create(user=1, permission=permission, user_specialty=user_specialties)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('certificate:me')
         response = self.client.get(url)
 
@@ -206,7 +208,7 @@ class CertificateTestSuite(CertificateTestCase):
         permission = {'codename': 'get_my_certificate'}
         model = self.bc.database.create(user=1, permission=permission, user_specialty=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('certificate:me')
         self.client.get(url)
 

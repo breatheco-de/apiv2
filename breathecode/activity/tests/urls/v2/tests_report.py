@@ -1,17 +1,16 @@
 """
 Test /report
 """
-import random
 import functools
-from uuid import uuid4
-from django.utils import timezone
+import random
 from unittest.mock import MagicMock, call, patch
+from uuid import uuid4
 
 from django.urls.base import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
 
 from breathecode.services.google_cloud.big_query import BigQuery
-
 from breathecode.utils.attr_dict import AttrDict
 
 from ...mixins import MediaTestCase
@@ -204,7 +203,7 @@ class MediaTestSuite(MediaTestCase):
                                         capability='read_activity',
                                         role=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         val = bigquery_client_mock(self)
@@ -232,7 +231,7 @@ class MediaTestSuite(MediaTestCase):
                                         capability='read_activity',
                                         role=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         val = bigquery_client_mock(self)
@@ -261,7 +260,7 @@ class MediaTestSuite(MediaTestCase):
                                         capability='read_activity',
                                         role=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         val = bigquery_client_mock_group(self, by='kind', fields=['kind'])
@@ -290,7 +289,7 @@ class MediaTestSuite(MediaTestCase):
                                         capability='read_activity',
                                         role=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         val = bigquery_client_mock_filters(self, filters={'user_id__lte': 5})
@@ -319,7 +318,7 @@ class MediaTestSuite(MediaTestCase):
                                         capability='read_activity',
                                         role=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         val = bigquery_client_mock_filters(self, filters={'user_id__lt': 5})
@@ -348,7 +347,7 @@ class MediaTestSuite(MediaTestCase):
                                         capability='read_activity',
                                         role=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         val = bigquery_client_mock_filters(self, filters={'user_id__gte': 5})
@@ -377,7 +376,7 @@ class MediaTestSuite(MediaTestCase):
                                         capability='read_activity',
                                         role=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         val = bigquery_client_mock_filters(self, filters={'user_id__gt': 5})
@@ -406,7 +405,7 @@ class MediaTestSuite(MediaTestCase):
                                         capability='read_activity',
                                         role=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         val = bigquery_client_mock_aggregation(self, aggregation={'sum': 'id'})
@@ -435,7 +434,7 @@ class MediaTestSuite(MediaTestCase):
                                         capability='read_activity',
                                         role=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         val = bigquery_client_mock_aggregation(self, n=2, aggregation={'count': 'kind'})
@@ -464,7 +463,7 @@ class MediaTestSuite(MediaTestCase):
                                         capability='read_activity',
                                         role=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         val = bigquery_client_mock_aggregation(self, n=2, aggregation={'avg': 'user_id'})

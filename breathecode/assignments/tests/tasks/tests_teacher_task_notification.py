@@ -2,10 +2,11 @@
 Test /answer
 """
 from unittest.mock import MagicMock, call, patch
+
 from breathecode.assignments import signals
 
-from ..mixins import AssignmentsTestCase
 from ...tasks import teacher_task_notification
+from ..mixins import AssignmentsTestCase
 
 
 class MediaTestSuite(AssignmentsTestCase):
@@ -22,6 +23,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_teacher_task_notification__without_env(self):
         import os
         from logging import Logger
+
         from breathecode.notify.actions import send_email_message
 
         teacher_task_notification.delay(1)
@@ -46,6 +48,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_teacher_task_notification__without_tasks(self):
         import os
         from logging import Logger
+
         from breathecode.notify.actions import send_email_message
 
         # os.environ['TEACHER_URL'] = 'https://hardcoded.url'
@@ -71,6 +74,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_teacher_task_notification__with_task(self):
         import os
         from logging import Logger
+
         from breathecode.notify.actions import send_email_message
 
         model = self.bc.database.create(task=1)
@@ -98,6 +102,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_teacher_task_notification__with_task__with_cohort(self):
         import os
         from logging import Logger
+
         from breathecode.notify.actions import send_email_message
 
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
@@ -116,7 +121,9 @@ class MediaTestSuite(AssignmentsTestCase):
                     'details':
                     (f'{model.user.first_name} {model.user.last_name} send their task "{model.task.title}", '
                      'you can review the task at '
-                     f'https://hardcoded.url/cohort/{model.cohort.slug}/assignments')
+                     f'https://hardcoded.url/cohort/{model.cohort.slug}/assignments'),
+                    'COMPANY_INFO_EMAIL':
+                    None,
                 })
         ])
         self.assertEqual(
@@ -141,6 +148,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_teacher_task_notification__with_task__with_cohort__lang_es(self):
         import os
         from logging import Logger
+
         from breathecode.notify.actions import send_email_message
 
         cohort = {'language': 'es'}
@@ -160,7 +168,9 @@ class MediaTestSuite(AssignmentsTestCase):
                     'details':
                     (f'{model.user.first_name} {model.user.last_name} envió su tarea "{model.task.title}", '
                      'puedes revisarla en '
-                     f'https://hardcoded.url/cohort/{model.cohort.slug}/assignments')
+                     f'https://hardcoded.url/cohort/{model.cohort.slug}/assignments'),
+                    'COMPANY_INFO_EMAIL':
+                    None,
                 })
         ])
         self.assertEqual(
@@ -186,6 +196,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_teacher_task_notification__with_task__with_cohort__ends_with_slash(self):
         import os
         from logging import Logger
+
         from breathecode.notify.actions import send_email_message
 
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
@@ -204,7 +215,9 @@ class MediaTestSuite(AssignmentsTestCase):
                     'details':
                     (f'{model.user.first_name} {model.user.last_name} send their task "{model.task.title}", '
                      'you can review the task at '
-                     f'https://hardcoded.url/cohort/{model.cohort.slug}/assignments')
+                     f'https://hardcoded.url/cohort/{model.cohort.slug}/assignments'),
+                    'COMPANY_INFO_EMAIL':
+                    None,
                 })
         ])
         self.assertEqual(

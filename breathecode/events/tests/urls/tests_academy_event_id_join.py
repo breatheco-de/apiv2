@@ -1,6 +1,8 @@
 from unittest.mock import MagicMock, patch
-from django.urls.base import reverse_lazy
+
 from django.template import loader
+from django.urls.base import reverse_lazy
+
 from ..mixins.new_events_tests_case import EventTestCase
 
 
@@ -39,7 +41,7 @@ class AcademyVenueTestSuite(EventTestCase):
         url = reverse_lazy('events:academy_event_id_join', kwargs={'event_id': 1})
         model = self.bc.database.create(user=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         response = self.client.get(url)
         json = response.json()
@@ -64,7 +66,7 @@ class AcademyVenueTestSuite(EventTestCase):
                                         capability='start_or_end_event',
                                         role='potato')
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         response = self.client.get(url)
         json = response.json()
@@ -86,7 +88,7 @@ class AcademyVenueTestSuite(EventTestCase):
                                         role='potato',
                                         event=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('events:academy_event_id_join', kwargs={'event_id': 1})
 
         response = self.client.get(url)
@@ -121,7 +123,7 @@ class AcademyVenueTestSuite(EventTestCase):
                                         role='potato',
                                         event=event)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('events:academy_event_id_join', kwargs={'event_id': 1})
 
         response = self.client.get(url)

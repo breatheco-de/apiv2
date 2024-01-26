@@ -1,25 +1,36 @@
 import hashlib
-from django.db import IntegrityError
 import logging
-import random
 import os
+import random
 import urllib.parse
-import breathecode.notify.actions as notify_actions
-from django.contrib.auth.models import User
 
-from breathecode.utils.i18n import translation
-from .models import (CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile, Token, GitpodUser,
-                     GithubAcademyUser, AcademyAuthSettings, UserSetting)
-from breathecode.authenticate.actions import get_user_settings
-from breathecode.utils import ValidationException, serpy
-from breathecode.admissions.models import Academy, Cohort
-from rest_framework.exceptions import ValidationError
-from rest_framework import serializers
+from django.contrib.auth.models import Permission, User
+from django.db import IntegrityError
 from django.db.models import Q
-from django.contrib.auth.models import Permission
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+
+import breathecode.authenticate.tasks as tasks_authenticate
+import breathecode.notify.actions as notify_actions
+from breathecode.admissions.models import Academy, Cohort
+from breathecode.authenticate.actions import get_user_settings
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
-import breathecode.authenticate.tasks as tasks_authenticate
+from breathecode.utils import ValidationException, serpy
+from breathecode.utils.i18n import translation
+
+from .models import (
+    AcademyAuthSettings,
+    CredentialsGithub,
+    GithubAcademyUser,
+    GitpodUser,
+    Profile,
+    ProfileAcademy,
+    Role,
+    Token,
+    UserInvite,
+    UserSetting,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -768,7 +779,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     str(invite.token) + '?' + querystr
 
                 obj = {}
-                if single_cohort.academy:
+                if single_cohort and single_cohort.academy:
                     obj['COMPANY_INFO_EMAIL'] = single_cohort.academy.feedback_email
 
                 notify_actions.send_email_message(
@@ -982,7 +993,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     str(invite.token) + '?' + querystr
 
                 obj = {}
-                if single_cohort.academy:
+                if single_cohort and single_cohort.academy:
                     obj['COMPANY_INFO_EMAIL'] = single_cohort.academy.feedback_email
 
                 notify_actions.send_email_message(
@@ -1221,8 +1232,8 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                   'conversion_info', 'asset_slug', 'event_slug')
 
     def validate(self, data: dict[str, str]):
-        from breathecode.payments.models import Plan
         from breathecode.marketing.models import Course
+        from breathecode.payments.models import Plan
 
         country = data['country'] if 'country' in data else None
         forbidden_countries = ['spain']
@@ -1510,16 +1521,16 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 es='4Geeks - Valida tu cuenta',
             )
 
-            obj = {}
+            obj2 = {}
             if obj.academy:
-                obj['COMPANY_INFO_EMAIL'] = obj.academy.feedback_email
+                obj2['COMPANY_INFO_EMAIL'] = obj.academy.feedback_email
 
             notify_actions.send_email_message(
                 'verify_email', self.user.email, {
                     'SUBJECT': subject,
                     'LANG': lang,
                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{obj.token}',
-                    **obj,
+                    **obj2,
                 })
 
         self.instance.user = self.user

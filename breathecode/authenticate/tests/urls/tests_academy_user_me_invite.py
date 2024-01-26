@@ -1,11 +1,13 @@
 """
 Set of tests for MeInviteView, this include duck tests
 """
+from random import choice
 from unittest.mock import MagicMock, patch
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from random import choice
 from rest_framework.response import Response
+
 from ..mixins.new_auth_test_case import AuthTestCase
 
 
@@ -53,7 +55,7 @@ class MemberGetDuckTestSuite(AuthTestCase):
     def test_duck_test__with_auth___mock_view(self):
         model = self.bc.database.create(user=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('authenticate:academy_user_me_invite')
         response = self.client.get(url)
@@ -103,7 +105,7 @@ class MemberPutDuckTestSuite(AuthTestCase):
     def test_duck_test__with_auth___mock_view(self):
         model = self.bc.database.create(user=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('authenticate:academy_user_me_invite')
         response = self.client.put(url)

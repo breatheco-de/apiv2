@@ -3,11 +3,13 @@ Test cases for /user
 """
 from datetime import timedelta
 from unittest.mock import MagicMock, patch
+
 from django.urls.base import reverse_lazy
-from rest_framework import status
 from django.utils import timezone
+from rest_framework import status
 
 from breathecode.tests.mixins.breathecode_mixin.breathecode import fake
+
 from ..mixins.new_auth_test_case import AuthTestCase
 
 UTC_NOW = timezone.now()
@@ -52,7 +54,7 @@ class AuthenticateTestSuite(AuthTestCase):
             url = reverse_lazy('authenticate:token_me')
 
             model = self.bc.database.create(user=1)
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
             response = self.client.post(url, data)
             json = response.json()
             expected = {
@@ -98,7 +100,7 @@ class AuthenticateTestSuite(AuthTestCase):
             url = reverse_lazy('authenticate:token_me')
 
             model = self.bc.database.create(user=1)
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
             response = self.client.post(url, data)
             json = response.json()
             expected = {'detail': 'token-type-invalid-or-not-allowed', 'status_code': 400}

@@ -2,18 +2,19 @@
 Test /academy/survey
 """
 
-from unittest.mock import patch, MagicMock, call
-
 import logging
+from datetime import timedelta
+from unittest.mock import MagicMock, call, patch
+
+from django.utils import timezone
+
+import breathecode.feedback.tasks as tasks
+import breathecode.notify.actions as actions
+from breathecode.feedback.models import Answer
+from breathecode.feedback.tasks import generate_user_cohort_survey_answers, send_cohort_survey
+from breathecode.utils import ValidationException
 
 from ..mixins import FeedbackTestCase
-from breathecode.feedback.tasks import send_cohort_survey, generate_user_cohort_survey_answers
-import breathecode.feedback.tasks as tasks
-from breathecode.feedback.models import Answer
-from django.utils import timezone
-from datetime import timedelta
-import breathecode.notify.actions as actions
-from breathecode.utils import ValidationException
 
 now = timezone.now()
 
@@ -141,7 +142,8 @@ class SendCohortSurvey(FeedbackTestCase):
                     'Please take 5 minutes to give us feedback about your experience at the academy so far.',
                     'TRACKER_URL': f'https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png',
                     'BUTTON': 'Answer the question',
-                    'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}'
+                    'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}',
+                    'COMPANY_INFO_EMAIL': None,
                 })
         ])
 
@@ -182,7 +184,8 @@ class SendCohortSurvey(FeedbackTestCase):
                         'Please take 5 minutes to give us feedback about your experience at the academy so far.',
                         'TRACKER_URL': f'https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png',
                         'BUTTON': 'Answer the question',
-                        'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}'
+                        'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}',
+                        'COMPANY_INFO_EMAIL': None,
                     })
             ])
 
@@ -243,7 +246,8 @@ class SendCohortSurvey(FeedbackTestCase):
                             'TRACKER_URL':
                             f'https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png',
                             'BUTTON': 'Answer the question',
-                            'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}'
+                            'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}',
+                            'COMPANY_INFO_EMAIL': None,
                         })
                 ]))
             self.assertEqual(actions.send_email_message.call_args_list, [
@@ -254,7 +258,8 @@ class SendCohortSurvey(FeedbackTestCase):
                         'Please take 5 minutes to give us feedback about your experience at the academy so far.',
                         'TRACKER_URL': f'https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png',
                         'BUTTON': 'Answer the question',
-                        'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}'
+                        'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}',
+                        'COMPANY_INFO_EMAIL': None,
                     })
             ])
 

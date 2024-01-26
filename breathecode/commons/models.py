@@ -1,7 +1,6 @@
+from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
-
-from django.contrib.auth.models import User
 
 PENDING = 'PENDING'
 DONE = 'DONE'
@@ -37,7 +36,7 @@ class TaskManager(models.Model):
     arguments = models.JSONField(default=dict, blank=True, null=True)
     status = models.CharField(max_length=20, choices=TASK_STATUS, default=PENDING)
     status_message = models.TextField(blank=True, null=True, max_length=255)
-    task_id = models.CharField(max_length=36, default='')
+    task_id = models.CharField(max_length=36, default='', blank=True)
 
     killed = models.BooleanField(default=False)
     last_run = models.DateTimeField()
@@ -50,6 +49,9 @@ class TaskManager(models.Model):
         return self.task_module + '.' + self.task_name + ' ' + str(self.arguments)
 
     def clean(self) -> None:
+        # if self.task_id is None:
+        #     self.task_id = ''
+
         if self.started_at is None and self.status == PENDING:
             self.started_at = timezone.now()
 

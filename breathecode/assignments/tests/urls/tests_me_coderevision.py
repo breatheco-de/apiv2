@@ -47,7 +47,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         task = {'github_url': self.bc.fake.url()}
         model = self.bc.database.create(profile_academy=1, task=task)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:me_coderevision') + '?' + self.bc.format.querystring(query)
 
@@ -82,7 +82,7 @@ class MediaTestSuite(AssignmentsTestCase):
         task = {'github_url': self.bc.fake.url()}
         credentials_github = {'username': self.bc.fake.slug()}
         model = self.bc.database.create(profile_academy=1, task=task, credentials_github=credentials_github)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:me_coderevision') + '?' + self.bc.format.querystring(query)
 
