@@ -56,6 +56,7 @@ from .permissions.consumers import event_by_url_param, live_class_by_url_param
 from .serializers import (
     AcademyEventSmallSerializer,
     EventBigSerializer,
+    EventPUTSerializer,
     EventbriteWebhookSerializer,
     EventCheckinSerializer,
     EventCheckinSmallSerializer,
@@ -519,25 +520,69 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
     def put(self, request, academy_id=None, event_id=None):
         lang = get_user_language(request)
 
-        already = Event.objects.filter(id=event_id, academy__id=academy_id).first()
-        if already is None:
-            raise ValidationException(
-                translation(lang,
-                            en=f'Event not found for this academy {academy_id}',
-                            es=f'Evento no encontrado para esta academia {academy_id}',
-                            slug='event-not-found'))
+        data_list = request.data
+        if not isinstance(request.data, list):
 
-        data = {}
-        for key in request.data.keys():
-            data[key] = request.data.get(key)
+            # make it a list
+            data_list = [request.data]
 
-        data['sync_status'] = 'PENDING'
+            if event_id is None:
+                raise ValidationException('Missing event_id')
 
-        serializer = EventSerializer(already, data=data, context={'lang': lang, 'academy_id': academy_id})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            event = Event.objects.filter(id=event_id, academy__id=academy_id).first()
+            if event is None:
+                raise ValidationException(
+                    translation(lang,
+                                en=f'Event not found for this academy {academy_id}',
+                                es=f'Evento no encontrado para esta academia {academy_id}',
+                                slug='event-not-found'))
+
+            data_list[0]['id'] = event.id
+
+        all_events = []
+        for data in data_list:
+
+            if 'id' not in data:
+                raise ValidationException(
+                    translation(lang,
+                                en=f'Event id not found',
+                                es=f'No encontró el id del evento',
+                                slug='event-id-not-found'))
+
+            instance = Event.objects.filter(id=data['id'], academy__id=academy_id).first()
+            if not instance:
+                raise ValidationException(
+                    translation(lang,
+                                en=f'Event not found for this academy {academy_id}',
+                                es=f'Evento no encontrado para esta academia {academy_id}',
+                                slug='event-not-found'))
+            all_events.append(instance)
+
+        all_serializers = []
+        index = -1
+        for data in data_list:
+            index += 1
+            serializer = EventPUTSerializer(all_events[index],
+                                            data=data,
+                                            context={
+                                                'lang': lang,
+                                                'request': request,
+                                                'academy_id': academy_id
+                                            })
+            all_serializers.append(serializer)
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        all_events = []
+        for serializer in all_serializers:
+            all_events.append(serializer.save())
+
+        if isinstance(request.data, list):
+            serializer = EventSerializer(all_events, many=True)
+        else:
+            serializer = EventSerializer(all_events.pop(), many=False)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @capable_of('crud_event')
     def delete(self, request, academy_id=None, event_id=None):
