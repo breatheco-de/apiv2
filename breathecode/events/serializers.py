@@ -222,6 +222,7 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
     ending_at = serpy.Field()
     ended_at = serpy.Field()
     host = serpy.Field()
+    asset_slug = serpy.Field()
     status = serpy.Field()
     event_type = EventTypeSmallSerializer(required=False)
     online_event = serpy.Field()
