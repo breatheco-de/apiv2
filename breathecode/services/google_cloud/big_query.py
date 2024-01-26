@@ -1,19 +1,19 @@
-import os
 import datetime
-from typing import Any
-from aiohttp_retry import Optional
+import os
+from typing import Any, Optional
+
+from django.db.models import Avg, Count, Sum
+from google.api_core.client_options import ClientOptions
+from google.auth.credentials import AnonymousCredentials
+from google.cloud import bigquery
+from google.cloud.bigquery.schema import SchemaField
+from google.cloud.bigquery.table import RowIterator, Table
 from sqlalchemy import create_engine
+from sqlalchemy.engine.mock import MockConnection
 from sqlalchemy.orm import sessionmaker
-from django.db.models import Sum, Avg, Count
 
 from breathecode.services.google_cloud import credentials
 from breathecode.utils.sqlalchemy import BigQueryBase
-from google.cloud import bigquery
-from sqlalchemy.engine.mock import MockConnection
-from google.api_core.client_options import ClientOptions
-from google.auth.credentials import AnonymousCredentials
-from google.cloud.bigquery.table import Table, RowIterator
-from google.cloud.bigquery.schema import SchemaField
 
 client = None
 engine = None

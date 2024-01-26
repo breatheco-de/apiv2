@@ -987,6 +987,8 @@ class AcademyCodeRevisionView(APIView):
                 for header in header_keys:
                     headers[str(header)] = response.headers[header]
 
+                headers['App'] = 'Rigobot'
+
                 return HttpResponse(await response.content.read(), status=response.status, headers=headers)
 
     async def add_code_revision(self, request, academy_id, task_id, coderevision_id):
@@ -1023,6 +1025,8 @@ class AcademyCodeRevisionView(APIView):
                 headers = {}
                 for header in header_keys:
                     headers[str(header)] = response.headers[header]
+
+                headers['App'] = 'Rigobot'
 
                 return HttpResponse(await response.content.read(), status=response.status, headers=headers)
 
@@ -1087,6 +1091,8 @@ class AcademyCommitFileView(APIView):
                 for header in header_keys:
                     headers[str(header)] = response.headers[header]
 
+                headers['App'] = 'Rigobot'
+
                 return HttpResponse(await response.content.read(), status=response.status, headers=headers)
 
     async def verify(self, request, academy_id, task_id, commitfile_id, call: callable):
@@ -1130,6 +1136,8 @@ class MeCodeRevisionRateView(APIView):
                 headers = {}
                 for header in header_keys:
                     headers[str(header)] = response.headers[header]
+
+                headers['App'] = 'Rigobot'
 
                 return HttpResponse(await response.content.read(), status=response.status, headers=headers)
 
