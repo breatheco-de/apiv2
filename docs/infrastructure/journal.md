@@ -52,3 +52,12 @@ Side effects:
 - In dev, this prevents the server could getting out of memory.
 - In prod, this helps to have sufficient memory to add a third worker.
 - If the server would have 1000 requests each 10 minutes, this would restart the worker each 60-90 minutes.
+
+## 01/25/2024
+
+- `[prod]` switch `WEB_MAX_REQUESTS` from `6000` to `3000`.
+- `[prod]` switch `WEB_MAX_REQUESTS_JITTER` from `3000` to `1500`.
+
+Reasons for the change:
+
+- Web worker was reaching 841 MB ram.
