@@ -956,8 +956,8 @@ class AcademyCodeRevisionView(APIView):
         for key in request.GET.keys():
             params[key] = request.GET.get(key)
 
-        if task_id and task and task.github_url:
-            params['repo'] = task.github_url.replace('/', '%2F').replace(':', '%3A')
+        if task_id:
+            params['repo'] = task.github_url
 
         url = '/v1/finetuning/coderevision'
 
