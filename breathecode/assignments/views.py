@@ -993,7 +993,7 @@ class AcademyCodeRevisionView(APIView):
 
     async def add_code_revision(self, request, academy_id, task_id, coderevision_id):
         if task_id and not (task := await Task.objects.filter(id=task_id,
-                                                              cohort__academy__id=academy_id).afirst()):
+                                                              cohort__academy__id=academy_id).prefetch_related('user').afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         params = {}
@@ -1004,7 +1004,7 @@ class AcademyCodeRevisionView(APIView):
             params['repo'] = task.github_url
 
         try:
-            s = await service('rigobot')
+            s = await service('rigobot', task.user.id)
 
         except SynchronousOnlyOperation:
             raise ValidationException('Async is not supported by the worker',
