@@ -1,7 +1,6 @@
 import hashlib
 import logging
 import os
-import traceback
 
 from adrf.views import APIView
 from circuitbreaker import CircuitBreakerError
@@ -968,8 +967,12 @@ class AcademyCodeRevisionView(APIView):
         try:
             s = await service('rigobot', task.user.id)
 
-        except SynchronousOnlyOperation:
-            traceback.print_exc()
+        except SynchronousOnlyOperation as e:
+            print('======================================')
+            print('======================================')
+            print('======================================')
+            print(e)
+            print(str(e))
             raise ValidationException('Async is not supported by the worker',
                                       code=500,
                                       slug='no-async-support')
@@ -1008,8 +1011,12 @@ class AcademyCodeRevisionView(APIView):
         try:
             s = await service('rigobot')
 
-        except SynchronousOnlyOperation:
-            traceback.print_exc()
+        except SynchronousOnlyOperation as e:
+            print('======================================')
+            print('======================================')
+            print('======================================')
+            print(e)
+            print(str(e))
             raise ValidationException('Async is not supported by the worker',
                                       code=500,
                                       slug='no-async-support')
@@ -1074,8 +1081,12 @@ class AcademyCommitFileView(APIView):
         try:
             s = await service('rigobot', task.user.id)
 
-        except SynchronousOnlyOperation:
-            traceback.print_exc()
+        except SynchronousOnlyOperation as e:
+            print('======================================')
+            print('======================================')
+            print('======================================')
+            print(e)
+            print(str(e))
             raise ValidationException('Async is not supported by the worker',
                                       code=500,
                                       slug='no-async-support')
@@ -1120,8 +1131,12 @@ class MeCodeRevisionRateView(APIView):
         try:
             s = await service('rigobot', request.user.id)
 
-        except SynchronousOnlyOperation:
-            traceback.print_exc()
+        except SynchronousOnlyOperation as e:
+            print('======================================')
+            print('======================================')
+            print('======================================')
+            print(e)
+            print(str(e))
             raise ValidationException('Async is not supported by the worker',
                                       code=500,
                                       slug='no-async-support')
