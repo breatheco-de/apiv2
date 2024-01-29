@@ -56,12 +56,12 @@ from .permissions.consumers import event_by_url_param, live_class_by_url_param
 from .serializers import (
     AcademyEventSmallSerializer,
     EventBigSerializer,
-    EventPUTSerializer,
     EventbriteWebhookSerializer,
     EventCheckinSerializer,
     EventCheckinSmallSerializer,
     EventJoinSmallSerializer,
     EventPublicBigSerializer,
+    EventPUTSerializer,
     EventSerializer,
     EventSmallSerializer,
     EventSmallSerializerNoAcademy,
@@ -524,7 +524,7 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
         if not isinstance(request.data, list):
 
             # make it a list
-            data_list = [request.data]
+            data_list = [dict(request.data)]
 
             if event_id is None:
                 raise ValidationException('Missing event_id')

@@ -1,19 +1,22 @@
+import logging
 from datetime import timedelta
 from typing import Any
-from breathecode.authenticate.models import Profile, ProfileTranslation
-from breathecode.marketing.actions import validate_marketing_tags
-from breathecode.utils.i18n import translation
-from breathecode.utils.validation_exception import ValidationException
-from .models import (Event, EventType, LiveClass, Organization, EventbriteWebhook, EventCheckin)
+
+from django.db.models.query_utils import Q
+from django.utils import timezone
+from rest_framework import serializers
+from slugify import slugify
+
+import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy
 from breathecode.admissions.serializers import UserPublicSerializer
-from slugify import slugify
-from rest_framework import serializers
-import logging
-from django.utils import timezone
-from django.db.models.query_utils import Q
-import breathecode.activity.tasks as tasks_activity
+from breathecode.authenticate.models import Profile, ProfileTranslation
+from breathecode.marketing.actions import validate_marketing_tags
 from breathecode.utils import serpy
+from breathecode.utils.i18n import translation
+from breathecode.utils.validation_exception import ValidationException
+
+from .models import Event, EventbriteWebhook, EventCheckin, EventType, LiveClass, Organization
 
 logger = logging.getLogger(__name__)
 
@@ -384,9 +387,9 @@ class EventSerializer(serializers.ModelSerializer):
                 translation(lang,
                             en='Missing event type',
                             es='Debes especificar un tipo de evento',
-                            slug='event-type-lang-mismatch'))
+                            slug='no-event-type'))
 
-        if 'lang' in data and data['event_type'].lang != data['lang']:
+        if 'lang' in data and data['event_type'].lang != data.get('lang', 'en'):
             raise ValidationException(
                 translation(lang,
                             en='Event type and event language must match',
