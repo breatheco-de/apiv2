@@ -948,8 +948,8 @@ class MeCodeRevisionView(APIView):
 class AcademyCodeRevisionView(APIView):
 
     async def get_code_revision(self, request, academy_id, task_id, coderevision_id):
-        if task_id and not (task := await Task.objects.filter(id=task_id,
-                                                              cohort__academy__id=academy_id).afirst()):
+        if task_id and not (task := await Task.objects.filter(
+                id=task_id, cohort__academy__id=academy_id).prefetch_related('user').afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         params = {}
@@ -1062,8 +1062,8 @@ class AcademyCodeRevisionView(APIView):
 class AcademyCommitFileView(APIView):
 
     async def get_commit_file(self, request, academy_id, task_id, commitfile_id):
-        if task_id and not (task := await Task.objects.filter(id=task_id,
-                                                              cohort__academy__id=academy_id).afirst()):
+        if task_id and not (task := await Task.objects.filter(
+                id=task_id, cohort__academy__id=academy_id).prefetch_related('user').afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         params = {}
