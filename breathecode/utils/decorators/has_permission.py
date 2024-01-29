@@ -228,8 +228,12 @@ def has_permission(permission: str,
                             'btn_url'] = f'https://4geeks.com/checkout?plan={plan_offer.suggested_plan.slug}'
                     elif subscription is not None and user_plan:
                         renovate_consumables['btn_label'] = 'Get more consumables'
-                        renovate_consumables[
-                            'btn_url'] = f'https://4geeks.com/checkout?mentorship_service_set={user_plan.mentorship_service_set.slug}'
+                        if permission == 'join_mentorship':
+                            renovate_consumables[
+                                'btn_url'] = f'https://4geeks.com/checkout?mentorship_service_set={user_plan.mentorship_service_set.slug}'
+                        elif permission == 'event_join':
+                            renovate_consumables[
+                                'btn_url'] = f'https://4geeks.com/checkout?event_type_set={user_plan.event_type_set.slug}'
 
                     return render_message(request,
                                           str(e),
