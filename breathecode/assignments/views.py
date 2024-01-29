@@ -967,12 +967,7 @@ class AcademyCodeRevisionView(APIView):
         try:
             s = await service('rigobot', task.user.id)
 
-        except SynchronousOnlyOperation as e:
-            print('======================================')
-            print('======================================')
-            print('======================================')
-            print(e)
-            print(str(e))
+        except SynchronousOnlyOperation:
             raise ValidationException('Async is not supported by the worker',
                                       code=500,
                                       slug='no-async-support')
@@ -1011,12 +1006,7 @@ class AcademyCodeRevisionView(APIView):
         try:
             s = await service('rigobot')
 
-        except SynchronousOnlyOperation as e:
-            print('======================================')
-            print('======================================')
-            print('======================================')
-            print(e)
-            print(str(e))
+        except SynchronousOnlyOperation:
             raise ValidationException('Async is not supported by the worker',
                                       code=500,
                                       slug='no-async-support')
@@ -1081,12 +1071,7 @@ class AcademyCommitFileView(APIView):
         try:
             s = await service('rigobot', task.user.id)
 
-        except SynchronousOnlyOperation as e:
-            print('======================================')
-            print('======================================')
-            print('======================================')
-            print(e)
-            print(str(e))
+        except SynchronousOnlyOperation:
             raise ValidationException('Async is not supported by the worker',
                                       code=500,
                                       slug='no-async-support')
@@ -1131,12 +1116,7 @@ class MeCodeRevisionRateView(APIView):
         try:
             s = await service('rigobot', request.user.id)
 
-        except SynchronousOnlyOperation as e:
-            print('======================================')
-            print('======================================')
-            print('======================================')
-            print(e)
-            print(str(e))
+        except SynchronousOnlyOperation:
             raise ValidationException('Async is not supported by the worker',
                                       code=500,
                                       slug='no-async-support')
