@@ -101,7 +101,8 @@ def render(message,
            mentorship_service=None,
            fix_logo=False,
            start_session=False,
-           session_expired=False):
+           session_expired=False,
+           data={}):
     mentor_profile_slug = mentor_profile.slug if mentor_profile else 'asd'
     mentorship_service_slug = mentorship_service.slug if mentorship_service else 'asd'
     environ = {
@@ -125,12 +126,7 @@ def render(message,
     }
     request = WSGIRequest(environ)
 
-    context = {
-        'MESSAGE': message,
-        'BUTTON': None,
-        'BUTTON_TARGET': '_blank',
-        'LINK': None,
-    }
+    context = {'MESSAGE': message, 'BUTTON': None, 'BUTTON_TARGET': '_blank', 'LINK': None, **data}
 
     if start_session:
         context = {
@@ -1340,7 +1336,11 @@ class AuthenticateTestSuite(MentorshipTestCase):
             response = self.client.get(url)
 
             content = self.bc.format.from_bytes(response.content)
-            expected = render('with-consumer-not-enough-consumables')
+            template_data = {}
+
+            template_data['GO_BACK'] = 'Go back to Dashboard'
+            template_data['URL_BACK'] = 'https://4geeks.com/choose-program'
+            expected = render('with-consumer-not-enough-consumables', data=template_data)
 
             # dump error in external files
             if content != expected:
