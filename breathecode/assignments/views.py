@@ -1063,6 +1063,9 @@ class AcademyCommitFileView(APIView):
         if task_id:
             params['repo'] = task.github_url
 
+        if task_id:
+            params['watcher'] = task.user.credentialsgithub.username
+
         url = '/v1/finetuning/commitfile'
 
         if commitfile_id is not None:
