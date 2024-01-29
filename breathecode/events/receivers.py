@@ -11,7 +11,6 @@ from breathecode.admissions.signals import timeslot_saved
 
 logger = logging.getLogger(__name__)
 
-
 # We no longer want to handle the eventbrite integration, its better to do it thru zapier using the rest hooks
 # @receiver(event_saved, sender=Event)
 # def post_save_event(sender: Type[Event], instance: Event, **kwargs: Any):
