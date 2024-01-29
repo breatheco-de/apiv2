@@ -164,6 +164,7 @@ class FormEntrySerializer(serpy.Serializer):
 
 class FormEntryHookSerializer(serpy.Serializer):
     id = serpy.Field()
+    attribution_id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
     sex = serpy.Field()
