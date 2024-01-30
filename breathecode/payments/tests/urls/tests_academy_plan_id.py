@@ -3,9 +3,10 @@ from unittest.mock import MagicMock, call, patch
 
 from django.urls import reverse_lazy
 from rest_framework import status
-from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from breathecode.utils.api_view_extensions.extensions import lookup_extension
+
 from ..mixins import PaymentsTestCase
 
 
@@ -142,7 +143,7 @@ class SignalTestSuite(PaymentsTestCase):
     def test__no_capability(self):
         model = self.bc.database.create(user=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         url = reverse_lazy('payments:academy_plan_id', kwargs={'plan_id': 1})
@@ -169,7 +170,7 @@ class SignalTestSuite(PaymentsTestCase):
             skip_cohort=True,
         )
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         url = reverse_lazy('payments:academy_plan_id', kwargs={'plan_id': 1})
@@ -198,7 +199,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=plan_service_items,
                                         financing_option=2)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         url = reverse_lazy('payments:academy_plan_id', kwargs={'plan_id': 1})
@@ -235,7 +236,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=plan_service_items,
                                         financing_option=2)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         url = reverse_lazy('payments:academy_plan_id', kwargs={'plan_id': 1})
@@ -265,7 +266,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=plan_service_items,
                                         financing_option=2)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         data = {
@@ -322,7 +323,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=plan_service_items,
                                         financing_option=2)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         data = {

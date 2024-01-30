@@ -2,10 +2,12 @@
 Test cases for /academy/:id/member/:id
 """
 import os
+
 from django.template import loader
 from django.urls.base import reverse_lazy
-from rest_framework import status
 from django.utils import timezone
+from rest_framework import status
+
 from ..mixins import ProvisioningTestCase
 
 UTC_NOW = timezone.now()
@@ -146,6 +148,15 @@ def render_successfully(provisioning_bill=None,
         'url':
         f'/v1/provisioning/bill/{provisioning_bill.id}/html?token={token.key}'
     }
+
+    if academy:
+        data['COMPANY_INFO_EMAIL'] = academy.feedback_email
+        data['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
+        data['COMPANY_LOGO'] = academy.logo_url
+        data['COMPANY_NAME'] = academy.name
+
+        if 'heading' not in data:
+            data['heading'] = academy.name
 
     return template.render(data)
 

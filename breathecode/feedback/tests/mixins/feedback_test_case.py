@@ -3,11 +3,21 @@ Collections of mixins used to login in authorize microservice
 """
 import os
 from unittest.mock import call
+
 from rest_framework.test import APITestCase
-from breathecode.tests.mixins import (GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin,
-                                      HeadersMixin, DatetimeMixin, BreathecodeMixin)
+
 from breathecode.authenticate.models import Token
 from breathecode.notify.actions import get_template_content
+from breathecode.tests.mixins import (
+    BreathecodeMixin,
+    CacheMixin,
+    DatetimeMixin,
+    GenerateModelsMixin,
+    GenerateQueriesMixin,
+    HeadersMixin,
+    TokenMixin,
+)
+
 from ...actions import strings
 from ...models import Answer
 
@@ -38,17 +48,18 @@ class FeedbackTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin,
         link = f"https://nps.4geeks.com/{dicts[0]['id']}?token={token}"
 
         args_list = mock.call_args_list
+        academy = model.get('academy', None)
 
-        template = get_template_content(
-            'nps', {
-                'QUESTION': question,
-                'HIGHEST': dicts[0]['highest'],
-                'LOWEST': dicts[0]['lowest'],
-                'SUBJECT': question,
-                'ANSWER_ID': dicts[0]['id'],
-                'BUTTON': strings[lang]['button_label'],
-                'LINK': link,
-            }, ['email'])
+        template = get_template_content('nps', {
+            'QUESTION': question,
+            'HIGHEST': dicts[0]['highest'],
+            'LOWEST': dicts[0]['lowest'],
+            'SUBJECT': question,
+            'ANSWER_ID': dicts[0]['id'],
+            'BUTTON': strings[lang]['button_label'],
+            'LINK': link,
+        }, ['email'],
+                                        academy=academy)
 
         self.assertEqual(args_list, [
             call(f'https://api.mailgun.net/v3/{os.environ.get("MAILGUN_DOMAIN")}/messages',

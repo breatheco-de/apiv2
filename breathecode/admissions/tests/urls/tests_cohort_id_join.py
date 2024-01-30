@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta
 import random
+from datetime import datetime, timedelta
 from unittest.mock import MagicMock, call, patch
 
 from django.urls.base import reverse_lazy
@@ -105,7 +105,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         """Test /cohort/:id/user without auth"""
         url = reverse_lazy('admissions:cohort_id_join', kwargs={'cohort_id': 999})
         model = self.bc.database.create(user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         response = self.client.post(url)
         json = response.json()
@@ -144,7 +144,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             }
 
         model = self.bc.database.create(user=1, cohort=cohort)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('admissions:cohort_id_join', kwargs={'cohort_id': 1})
 
@@ -209,7 +209,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                         cohort_set_cohort=1,
                                         academy=academy,
                                         **extra)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('admissions:cohort_id_join', kwargs={'cohort_id': 1})
 
@@ -290,7 +290,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                         cohort_user=1,
                                         academy=academy,
                                         **extra)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('admissions:cohort_id_join', kwargs={'cohort_id': 1})
 
@@ -366,7 +366,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                         cohort_set_cohort=1,
                                         academy=academy,
                                         **extra)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('admissions:cohort_id_join', kwargs={'cohort_id': 1})
 
@@ -432,7 +432,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                         cohort_set_cohort=1,
                                         academy=academy,
                                         **extra)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('admissions:cohort_id_join', kwargs={'cohort_id': 1})
 
@@ -514,7 +514,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                             cohort_set_cohort=cohort_set_cohorts,
                                             academy=academy,
                                             **extra)
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
 
             url = reverse_lazy('admissions:cohort_id_join', kwargs={'cohort_id': id + 1})
 

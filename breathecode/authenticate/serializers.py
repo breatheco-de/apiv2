@@ -1,25 +1,36 @@
 import hashlib
-from django.db import IntegrityError
 import logging
-import random
 import os
+import random
 import urllib.parse
-import breathecode.notify.actions as notify_actions
-from django.contrib.auth.models import User
 
-from breathecode.utils.i18n import translation
-from .models import (CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile, Token, GitpodUser,
-                     GithubAcademyUser, AcademyAuthSettings, UserSetting)
-from breathecode.authenticate.actions import get_user_settings
-from breathecode.utils import ValidationException, serpy
-from breathecode.admissions.models import Academy, Cohort
-from rest_framework.exceptions import ValidationError
-from rest_framework import serializers
+from django.contrib.auth.models import Permission, User
+from django.db import IntegrityError
 from django.db.models import Q
-from django.contrib.auth.models import Permission
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+
+import breathecode.authenticate.tasks as tasks_authenticate
+import breathecode.notify.actions as notify_actions
+from breathecode.admissions.models import Academy, Cohort
+from breathecode.authenticate.actions import get_user_settings
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
-import breathecode.authenticate.tasks as tasks_authenticate
+from breathecode.utils import ValidationException, serpy
+from breathecode.utils.i18n import translation
+
+from .models import (
+    AcademyAuthSettings,
+    CredentialsGithub,
+    GithubAcademyUser,
+    GitpodUser,
+    Profile,
+    ProfileAcademy,
+    Role,
+    Token,
+    UserInvite,
+    UserSetting,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -767,13 +778,14 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                 url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
                     str(invite.token) + '?' + querystr
 
-                notify_actions.send_email_message(
-                    'welcome_academy', email, {
-                        'email': email,
-                        'subject': 'Welcome to 4Geeks',
-                        'LINK': url,
-                        'FIST_NAME': validated_data['first_name']
-                    })
+                notify_actions.send_email_message('welcome_academy',
+                                                  email, {
+                                                      'email': email,
+                                                      'subject': 'Welcome to 4Geeks',
+                                                      'LINK': url,
+                                                      'FIST_NAME': validated_data['first_name'],
+                                                  },
+                                                  academy=academy)
 
         # add member to the academy (the cohort is inside validated_data
         return super().create({
@@ -904,12 +916,14 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             profile_academy.save()
 
             notify_actions.send_email_message(
-                'academy_invite', email, {
+                'academy_invite',
+                email, {
                     'subject': f'Invitation to study at {academy.name}',
                     'invites': [ProfileAcademySmallSerializer(profile_academy).data],
                     'user': UserSmallSerializer(user).data,
                     'LINK': url,
-                })
+                },
+                academy=academy)
             return profile_academy
 
         plans: list[Plan] = []
@@ -971,13 +985,14 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
                     str(invite.token) + '?' + querystr
 
-                notify_actions.send_email_message(
-                    'welcome_academy', email, {
-                        'email': email,
-                        'subject': 'Welcome to 4Geeks.com',
-                        'LINK': url,
-                        'FIST_NAME': validated_data['first_name']
-                    })
+                notify_actions.send_email_message('welcome_academy',
+                                                  email, {
+                                                      'email': email,
+                                                      'subject': 'Welcome to 4Geeks.com',
+                                                      'LINK': url,
+                                                      'FIST_NAME': validated_data['first_name']
+                                                  },
+                                                  academy=academy)
 
             for plan in plans:
                 plan.invites.add(invite)
@@ -1207,8 +1222,8 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                   'conversion_info', 'asset_slug', 'event_slug')
 
     def validate(self, data: dict[str, str]):
-        from breathecode.payments.models import Plan
         from breathecode.marketing.models import Course
+        from breathecode.payments.models import Plan
 
         country = data['country'] if 'country' in data else None
         forbidden_countries = ['spain']
@@ -1495,12 +1510,15 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 en='4Geeks - Validate account',
                 es='4Geeks - Valida tu cuenta',
             )
+
             notify_actions.send_email_message(
-                'verify_email', self.user.email, {
+                'verify_email',
+                self.user.email, {
                     'SUBJECT': subject,
                     'LANG': lang,
-                    'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{obj.token}'
-                })
+                    'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{obj.token}',
+                },
+                academy=obj.academy)
 
         self.instance.user = self.user
         self.instance.save()

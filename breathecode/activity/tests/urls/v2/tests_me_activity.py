@@ -2,15 +2,14 @@
 Test /answer
 """
 import random
-from uuid import uuid4
-from django.utils import timezone
 from unittest.mock import MagicMock, call, patch
+from uuid import uuid4
 
 from django.urls.base import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
 
 from breathecode.services.google_cloud.big_query import BigQuery
-
 from breathecode.utils.attr_dict import AttrDict
 
 from ...mixins import MediaTestCase
@@ -90,7 +89,7 @@ class MediaTestSuite(MediaTestCase):
     def test_filter_by_kind(self):
         model = self.bc.database.create(user=1, academy=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         kind = self.bc.fake.slug()
 
         url = reverse_lazy('v2:activity:me_activity') + f'?kind={kind}'

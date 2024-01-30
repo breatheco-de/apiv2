@@ -2,12 +2,15 @@
 Tasks tests
 """
 from datetime import timedelta
-from unittest.mock import MagicMock, patch, call
-import breathecode.notify.actions as actions
+from unittest.mock import MagicMock, call, patch
+
 from django.utils import timezone
-from ..mixins import FeedbackTestCase
-from ...utils import strings
+
+import breathecode.notify.actions as actions
+
 from ...tasks import send_mentorship_session_survey
+from ...utils import strings
+from ..mixins import FeedbackTestCase
 
 API_URL = 'http://kenny-was.reborn'
 UTC_NOW = timezone.now()
@@ -263,14 +266,15 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
         ])
 
         self.assertEqual(actions.send_email_message.call_args_list, [
-            call(
-                'nps_survey', model.user.email, {
-                    'SUBJECT': strings['en']['survey_subject'],
-                    'MESSAGE': strings['en']['session']['title'].format(fullname_of_mentor),
-                    'TRACKER_URL': f'{API_URL}/v1/feedback/answer/1/tracker.png',
-                    'BUTTON': strings['en']['button_label'],
-                    'LINK': f'https://nps.4geeks.com/1?token={token.key}'
-                })
+            call('nps_survey',
+                 model.user.email, {
+                     'SUBJECT': strings['en']['survey_subject'],
+                     'MESSAGE': strings['en']['session']['title'].format(fullname_of_mentor),
+                     'TRACKER_URL': f'{API_URL}/v1/feedback/answer/1/tracker.png',
+                     'BUTTON': strings['en']['button_label'],
+                     'LINK': f'https://nps.4geeks.com/1?token={token.key}',
+                 },
+                 academy=model.academy)
         ])
 
         self.bc.check.partial_equality(self.bc.database.list_of('authenticate.Token'),
@@ -317,14 +321,15 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
         ])
 
         self.assertEqual(actions.send_email_message.call_args_list, [
-            call(
-                'nps_survey', model.user.email, {
-                    'SUBJECT': strings['en']['survey_subject'],
-                    'MESSAGE': model.answer.title,
-                    'TRACKER_URL': f'{API_URL}/v1/feedback/answer/1/tracker.png',
-                    'BUTTON': strings['en']['button_label'],
-                    'LINK': f'https://nps.4geeks.com/1?token={token.key}'
-                })
+            call('nps_survey',
+                 model.user.email, {
+                     'SUBJECT': strings['en']['survey_subject'],
+                     'MESSAGE': model.answer.title,
+                     'TRACKER_URL': f'{API_URL}/v1/feedback/answer/1/tracker.png',
+                     'BUTTON': strings['en']['button_label'],
+                     'LINK': f'https://nps.4geeks.com/1?token={token.key}',
+                 },
+                 academy=model.academy)
         ])
 
         self.bc.check.partial_equality(self.bc.database.list_of('authenticate.Token'),

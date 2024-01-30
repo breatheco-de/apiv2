@@ -61,7 +61,7 @@ class AcademyEventTestSuite(EventTestCase):
         self.bc.request.set_headers(academy=1)
 
         model = self.bc.database.create(user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('events:me_event_liveclass')
 
         response = self.client.get(url)
@@ -83,7 +83,7 @@ class AcademyEventTestSuite(EventTestCase):
 
         model = self.bc.database.create(user=1, live_class=1, cohort=1, cohort_time_slot=1, cohort_user=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('events:me_event_liveclass')
 
         response = self.client.get(url)
@@ -108,7 +108,7 @@ class AcademyEventTestSuite(EventTestCase):
 
         model = self.bc.database.create(user=1, live_class=1, cohort=1, cohort_time_slot=1, cohort_user=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         args, kwargs = self.bc.format.call(
             'en',

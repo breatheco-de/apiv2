@@ -1,11 +1,15 @@
 import base64
-from breathecode.authenticate.models import Token
-from urllib.parse import urlencode, parse_qs, urlsplit, urlunsplit
-from django.shortcuts import render
+from typing import Optional
+from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
+
 from django.contrib import messages
-from rest_framework.exceptions import PermissionDenied
-from ..decorators import validate_permission
 from django.http import HttpResponseRedirect
+from django.shortcuts import render
+from rest_framework.exceptions import PermissionDenied
+
+from breathecode.authenticate.models import Academy, Token
+
+from ..decorators import validate_permission
 
 __all__ = ['private_view', 'set_query_parameter', 'render_message']
 
@@ -27,11 +31,27 @@ def set_query_parameter(url, param_name, param_value=''):
     return urlunsplit((scheme, netloc, path, new_query_string, fragment))
 
 
-def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', data=None, status=None):
+def render_message(r,
+                   msg,
+                   btn_label=None,
+                   btn_url=None,
+                   btn_target='_blank',
+                   data=None,
+                   status=None,
+                   academy: Optional[Academy] = None):
     if data is None:
         data = {}
 
     _data = {'MESSAGE': msg, 'BUTTON': btn_label, 'BUTTON_TARGET': btn_target, 'LINK': btn_url}
+
+    if academy:
+        _data['COMPANY_INFO_EMAIL'] = academy.feedback_email
+        _data['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
+        _data['COMPANY_LOGO'] = academy.logo_url
+        _data['COMPANY_NAME'] = academy.name
+
+        if 'heading' not in data:
+            _data['heading'] = academy.name
 
     return render(r, 'message.html', {**_data, **data}, status=status)
 

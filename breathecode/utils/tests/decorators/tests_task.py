@@ -1,10 +1,12 @@
 import re
 from unittest.mock import MagicMock, call
+
 import pytest
-from breathecode.admissions.models import Country
+
 import breathecode.utils.decorators as decorators
-from breathecode.utils.decorators import AbortTask
+from breathecode.admissions.models import Country
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
+from breathecode.utils.decorators import AbortTask
 from breathecode.utils.decorators.task import Task
 
 # enable this file to use the database
@@ -162,6 +164,7 @@ def test_no_task_manager(bc: Breathecode, setup, utc_now, monkeypatch):
             },
             'status': 'SCHEDULED',
             'last_run': utc_now,
+            'started_at': None,
             'task_name': task_name,
             'current_page': 0,
             'total_pages': 1,
@@ -220,6 +223,7 @@ def test_scheduled_task_manager_is_being_exec(bc: Breathecode, setup, utc_now, f
             },
             'status': 'DONE',
             'last_run': utc_now,
+            'started_at': utc_now,
             'task_name': task_name,
             'task_id': id,
             'current_page': 1,
@@ -282,6 +286,7 @@ def test_no_task_manager__it_was_aborted(bc: Breathecode, setup, utc_now, transa
             },
             'status': 'ABORTED',
             'last_run': utc_now,
+            'started_at': utc_now,
             'task_name': task_name,
             'task_id': id,
             'current_page': 1,
@@ -343,7 +348,9 @@ def test_no_task_manager__it_got_an_exception__no_transaction__no_fallback(bc: B
             },
             'status': 'ERROR',
             'last_run': utc_now,
+            'started_at': utc_now,
             'task_name': task_name,
+            'started_at': utc_now,
             'task_id': id,
             'current_page': 1,
             'total_pages': 1,
@@ -414,6 +421,7 @@ def test_no_task_manager__it_got_an_exception__no_transaction__with_fallback(bc:
             'status': 'ERROR',
             'last_run': utc_now,
             'task_name': task_name,
+            'started_at': utc_now,
             'task_id': id,
             'current_page': 1,
             'total_pages': 1,
@@ -476,6 +484,7 @@ def test_no_task_manager__it_got_an_exception__with_transaction__no_fallback(bc:
             },
             'status': 'ERROR',
             'last_run': utc_now,
+            'started_at': utc_now,
             'task_name': task_name,
             'task_id': id,
             'current_page': 1,
@@ -545,6 +554,7 @@ def test_no_task_manager__it_got_an_exception__with_transaction__with_fallback(
             'last_run': utc_now,
             'task_name': task_name,
             'task_id': id,
+            'started_at': utc_now,
             'current_page': 1,
             'total_pages': 1,
             'status_message': 'Unexpected error',

@@ -180,5 +180,4 @@ dump.rdb
 *.key
 *.crt
 *:Zone.Identifier
-
 node_modules/

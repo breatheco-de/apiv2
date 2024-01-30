@@ -3,13 +3,16 @@ Test cases for /academy/student
 """
 import os
 import urllib.parse
-from unittest.mock import MagicMock, call, patch
-from django.urls.base import reverse_lazy
-from rest_framework import status
-from django.utils import timezone, dateparse
 from random import choice
+from unittest.mock import MagicMock, call, patch
+
+from django.urls.base import reverse_lazy
+from django.utils import dateparse, timezone
+from rest_framework import status
+
 import breathecode.notify.actions as actions
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
+
 from ...models import ProfileAcademy
 from ..mixins.new_auth_test_case import AuthTestCase
 
@@ -621,7 +624,7 @@ class StudentGetTestSuite(AuthTestCase):
 
             model = self.bc.database.create(profile_academy=(2, profile_academy), models=base)
             self.bc.request.set_headers(academy=model.academy.id)
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
 
             url = reverse_lazy('authenticate:academy_student') + f'?status={bad_status}'
             response = self.client.get(url)
@@ -641,11 +644,10 @@ class StudentGetTestSuite(AuthTestCase):
             profile_academy = {'status': status}
 
             model = self.bc.database.create(profile_academy=(2, profile_academy), models=base)
-            self.bc.request.set_headers(academy=model.academy.id)
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
 
             url = reverse_lazy('authenticate:academy_student') + f'?status={status.upper()}'
-            response = self.client.get(url)
+            response = self.client.get(url, headers={'academy': model.academy.id})
 
             json = response.json()
             expected = [
@@ -665,11 +667,10 @@ class StudentGetTestSuite(AuthTestCase):
             profile_academy = {'status': status}
 
             model = self.bc.database.create(profile_academy=(2, profile_academy), models=base)
-            self.bc.request.set_headers(academy=model.academy.id)
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
 
             url = reverse_lazy('authenticate:academy_student') + f'?status={status.lower()}'
-            response = self.client.get(url)
+            response = self.client.get(url, headers={'academy': model.academy.id})
 
             json = response.json()
             expected = [
@@ -728,14 +729,14 @@ class StudentPostTestSuite(AuthTestCase):
     def test_academy_student__post__no_user__invite_is_false(self):
         """Test /academy/:id/member"""
         role = 'konan'
-        self.bc.request.set_headers(academy=1)
+
         model = self.bc.database.create(authenticate=True,
                                         role=role,
                                         capability='crud_student',
                                         profile_academy=True)
         url = reverse_lazy('authenticate:academy_student')
         data = {'role': role, 'invite': False}
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, headers={'academy': 1})
         json = response.json()
         expected = {'detail': 'user-not-found', 'status_code': 400}
 
@@ -761,14 +762,14 @@ class StudentPostTestSuite(AuthTestCase):
     def test_academy_student__post__no_invite(self):
         """Test /academy/:id/member"""
         role = 'konan'
-        self.bc.request.set_headers(academy=1)
+
         model = self.bc.database.create(authenticate=True,
                                         role=role,
                                         capability='crud_student',
                                         profile_academy=True)
         url = reverse_lazy('authenticate:academy_student')
         data = {'role': role, 'invite': True}
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, headers={'academy': 1})
         json = response.json()
         expected = {'detail': 'no-email-or-id', 'status_code': 400}
 
@@ -794,7 +795,7 @@ class StudentPostTestSuite(AuthTestCase):
     def test_academy_student__post__exists_profile_academy_with_this_email__is_none(self):
         """Test /academy/:id/member"""
         role = 'student'
-        self.bc.request.set_headers(academy=1)
+
         profile_academy = {'email': None}
         model = self.bc.database.create(authenticate=True,
                                         role=role,
@@ -809,7 +810,7 @@ class StudentPostTestSuite(AuthTestCase):
             'email': model.profile_academy.email,
         }
 
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data, format='json', headers={'academy': 1})
         json = response.json()
         expected = {'detail': 'already-exists-with-this-email', 'status_code': 400}
 
@@ -825,7 +826,7 @@ class StudentPostTestSuite(AuthTestCase):
     def test_academy_student__post__exists_profile_academy_with_this_email__with_email(self):
         """Test /academy/:id/member"""
         role = 'student'
-        self.bc.request.set_headers(academy=1)
+
         profile_academy = {'email': 'dude@dude.dude'}
         model = self.bc.database.create(authenticate=True,
                                         role=role,
@@ -840,7 +841,7 @@ class StudentPostTestSuite(AuthTestCase):
             'email': model.profile_academy.email,
         }
 
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data, format='json', headers={'academy': 1})
         json = response.json()
         expected = {'detail': 'already-exists-with-this-email', 'status_code': 400}
 
@@ -856,14 +857,14 @@ class StudentPostTestSuite(AuthTestCase):
     def test_academy_student__post__user_with_not_student_role(self):
         """Test /academy/:id/member"""
         role = 'konan'
-        self.bc.request.set_headers(academy=1)
+
         model = self.bc.database.create(authenticate=True,
                                         role=role,
                                         capability='crud_student',
                                         profile_academy=True)
         url = reverse_lazy('authenticate:academy_student')
         data = {'role': role, 'user': model['user'].id, 'first_name': 'Kenny', 'last_name': 'McKornick'}
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, headers={'academy': 1})
         json = response.json()
         expected = {'detail': 'already-exists', 'status_code': 400}
 
@@ -895,7 +896,7 @@ class StudentPostTestSuite(AuthTestCase):
         """Test /academy/:id/member"""
 
         role = 'hitman'
-        self.bc.request.set_headers(academy=1)
+
         model = self.bc.database.create(authenticate=True,
                                         role=role,
                                         capability='crud_student',
@@ -909,7 +910,7 @@ class StudentPostTestSuite(AuthTestCase):
             'email': 'dude@dude.dude',
         }
 
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data, format='json', headers={'academy': 1})
         json = response.json()
         expected = {'detail': 'role-not-found', 'status_code': 400}
 
@@ -933,7 +934,7 @@ class StudentPostTestSuite(AuthTestCase):
         """Test /academy/:id/member"""
 
         role = 'student'
-        self.bc.request.set_headers(academy=1)
+
         model = self.bc.database.create(authenticate=True,
                                         role=role,
                                         skip_cohort=True,
@@ -949,7 +950,7 @@ class StudentPostTestSuite(AuthTestCase):
             'cohort': [1],
         }
 
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data, format='json', headers={'academy': 1})
         json = response.json()
         expected = {'detail': 'cohort-not-found', 'status_code': 400}
 
@@ -973,7 +974,7 @@ class StudentPostTestSuite(AuthTestCase):
         """Test /academy/:id/member"""
 
         role = 'student'
-        self.bc.request.set_headers(academy=1)
+
         model = self.bc.database.create(authenticate=True,
                                         role=role,
                                         capability='crud_student',
@@ -988,7 +989,7 @@ class StudentPostTestSuite(AuthTestCase):
             'user': 2,
         }
 
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data, format='json', headers={'academy': 1})
         json = response.json()
         expected = {'detail': 'user-not-found', 'status_code': 400}
 
@@ -1013,7 +1014,7 @@ class StudentPostTestSuite(AuthTestCase):
         """Test /academy/:id/member"""
 
         roles = [{'name': 'konan', 'slug': 'konan'}, {'name': 'student', 'slug': 'student'}]
-        self.bc.request.set_headers(academy=1)
+
         model = self.bc.database.create(role=roles,
                                         user=2,
                                         cohort=1,
@@ -1021,6 +1022,7 @@ class StudentPostTestSuite(AuthTestCase):
                                         profile_academy=1)
 
         self.bc.request.authenticate(model.user[0])
+
         url = reverse_lazy('authenticate:academy_student')
         data = {
             'first_name': 'Kenny',
@@ -1031,7 +1033,7 @@ class StudentPostTestSuite(AuthTestCase):
             'cohort': [1],
         }
 
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data, format='json', headers={'academy': 1})
         json = response.json()
         expected = {
             'address': None,
@@ -1065,32 +1067,33 @@ class StudentPostTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
         assert actions.send_email_message.call_args_list == [
-            call(
-                'academy_invite', model.user[1].email, {
-                    'subject':
-                    f'Invitation to study at {model.academy.name}',
-                    'invites': [{
-                        'id': 2,
-                        'academy': {
-                            'id': 1,
-                            'name': model.academy.name,
-                            'slug': model.academy.slug,
-                            'timezone': None
-                        },
-                        'role': 'student',
-                        'created_at': UTC_NOW
-                    }],
-                    'user': {
-                        'id': 2,
-                        'email': model.user[1].email,
-                        'first_name': model.user[1].first_name,
-                        'last_name': model.user[1].last_name,
-                        'github': None,
-                        'profile': None
-                    },
-                    'LINK':
-                    url,
-                }),
+            call('academy_invite',
+                 model.user[1].email, {
+                     'subject':
+                     f'Invitation to study at {model.academy.name}',
+                     'invites': [{
+                         'id': 2,
+                         'academy': {
+                             'id': 1,
+                             'name': model.academy.name,
+                             'slug': model.academy.slug,
+                             'timezone': None
+                         },
+                         'role': 'student',
+                         'created_at': UTC_NOW
+                     }],
+                     'user': {
+                         'id': 2,
+                         'email': model.user[1].email,
+                         'first_name': model.user[1].first_name,
+                         'last_name': model.user[1].last_name,
+                         'github': None,
+                         'profile': None
+                     },
+                     'LINK':
+                     url,
+                 },
+                 academy=model.academy),
         ]
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
@@ -1105,14 +1108,14 @@ class StudentPostTestSuite(AuthTestCase):
         """Test /academy/:id/member"""
 
         roles = [{'name': 'konan', 'slug': 'konan'}, {'name': 'student', 'slug': 'student'}]
-        self.bc.request.set_headers(academy=1)
+
         model = self.bc.database.create(role=roles,
                                         user=2,
                                         cohort=1,
                                         capability='crud_student',
                                         profile_academy=1)
-
         self.bc.request.authenticate(model.user[0])
+
         url = reverse_lazy('authenticate:academy_student')
         data = {
             'first_name': 'Kenny',
@@ -1124,7 +1127,7 @@ class StudentPostTestSuite(AuthTestCase):
             'plans': [1],
         }
 
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data, format='json', headers={'academy': 1})
         json = response.json()
         expected = {
             'address': None,
@@ -1158,32 +1161,33 @@ class StudentPostTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
         assert actions.send_email_message.call_args_list == [
-            call(
-                'academy_invite', model.user[1].email, {
-                    'subject':
-                    f'Invitation to study at {model.academy.name}',
-                    'invites': [{
-                        'id': 2,
-                        'academy': {
-                            'id': 1,
-                            'name': model.academy.name,
-                            'slug': model.academy.slug,
-                            'timezone': None
-                        },
-                        'role': 'student',
-                        'created_at': UTC_NOW
-                    }],
-                    'user': {
-                        'id': 2,
-                        'email': model.user[1].email,
-                        'first_name': model.user[1].first_name,
-                        'last_name': model.user[1].last_name,
-                        'github': None,
-                        'profile': None
-                    },
-                    'LINK':
-                    url,
-                }),
+            call('academy_invite',
+                 model.user[1].email, {
+                     'subject':
+                     f'Invitation to study at {model.academy.name}',
+                     'invites': [{
+                         'id': 2,
+                         'academy': {
+                             'id': 1,
+                             'name': model.academy.name,
+                             'slug': model.academy.slug,
+                             'timezone': None
+                         },
+                         'role': 'student',
+                         'created_at': UTC_NOW
+                     }],
+                     'user': {
+                         'id': 2,
+                         'email': model.user[1].email,
+                         'first_name': model.user[1].first_name,
+                         'last_name': model.user[1].last_name,
+                         'github': None,
+                         'profile': None
+                     },
+                     'LINK':
+                     url,
+                 },
+                 academy=model.academy),
         ]
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
@@ -1197,7 +1201,7 @@ class StudentPostTestSuite(AuthTestCase):
         """Test /academy/:id/member"""
 
         role = 'student'
-        self.bc.request.set_headers(academy=1)
+
         model = self.bc.database.create(authenticate=True,
                                         role=role,
                                         capability='crud_student',
@@ -1211,7 +1215,7 @@ class StudentPostTestSuite(AuthTestCase):
             'email': 'dude@dude.dude',
         }
 
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data, format='json', headers={'academy': 1})
         json = response.json()
         expected = {
             'address': None,
@@ -1259,12 +1263,14 @@ class StudentPostTestSuite(AuthTestCase):
             }),
         ])
         assert actions.send_email_message.call_args_list == [
-            call('welcome_academy', 'dude@dude.dude', {
-                'email': 'dude@dude.dude',
-                'subject': 'Welcome to 4Geeks.com',
-                'LINK': url,
-                'FIST_NAME': 'Kenny'
-            })
+            call('welcome_academy',
+                 'dude@dude.dude', {
+                     'email': 'dude@dude.dude',
+                     'subject': 'Welcome to 4Geeks.com',
+                     'LINK': url,
+                     'FIST_NAME': 'Kenny'
+                 },
+                 academy=model.academy)
         ]
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
@@ -1278,7 +1284,7 @@ class StudentPostTestSuite(AuthTestCase):
         """Test /academy/:id/member"""
 
         role = 'student'
-        self.bc.request.set_headers(academy=1)
+
         model = self.bc.database.create(authenticate=True,
                                         role=role,
                                         capability='crud_student',
@@ -1293,7 +1299,7 @@ class StudentPostTestSuite(AuthTestCase):
             'plans': [1],
         }
 
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data, format='json', headers={'academy': 1})
         json = response.json()
         expected = {'detail': 'plan-not-found', 'status_code': 400}
 
@@ -1323,7 +1329,7 @@ class StudentPostTestSuite(AuthTestCase):
         """Test /academy/:id/member"""
 
         role = 'student'
-        self.bc.request.set_headers(academy=1)
+
         plan = {'time_of_life': None, 'time_of_life_unit': None}
         model = self.bc.database.create(authenticate=True,
                                         role=role,
@@ -1340,7 +1346,7 @@ class StudentPostTestSuite(AuthTestCase):
             'plans': [1],
         }
 
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data, format='json', headers={'academy': 1})
         json = response.json()
         expected = {
             'address': None,
@@ -1392,12 +1398,14 @@ class StudentPostTestSuite(AuthTestCase):
             }),
         ])
         assert actions.send_email_message.call_args_list == [
-            call('welcome_academy', 'dude@dude.dude', {
-                'email': 'dude@dude.dude',
-                'subject': 'Welcome to 4Geeks.com',
-                'LINK': url,
-                'FIST_NAME': 'Kenny'
-            })
+            call('welcome_academy',
+                 'dude@dude.dude', {
+                     'email': 'dude@dude.dude',
+                     'subject': 'Welcome to 4Geeks.com',
+                     'LINK': url,
+                     'FIST_NAME': 'Kenny'
+                 },
+                 academy=model.academy),
         ]
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [
             self.bc.format.to_dict(model.plan),
@@ -1411,7 +1419,7 @@ class StudentPostTestSuite(AuthTestCase):
         """Test /academy/:id/member"""
 
         role = 'student'
-        self.bc.request.set_headers(academy=1)
+
         user = {'email': 'dude@dude.dude'}
         user_invite = {'email': 'dude2@dude.dude'}
         model = self.bc.database.create(authenticate=True,
@@ -1429,7 +1437,7 @@ class StudentPostTestSuite(AuthTestCase):
             'email': 'dude2@dude.dude',
         }
 
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data, format='json', headers={'academy': 1})
         json = response.json()
         expected = {'detail': 'already-invited', 'status_code': 400}
 
@@ -1457,7 +1465,7 @@ class StudentPostTestSuite(AuthTestCase):
         """Test /academy/:id/member"""
 
         role = 'student'
-        self.bc.request.set_headers(academy=1)
+
         user = {'email': 'dude@dude.dude'}
         user_invite = {'email': 'dude2@dude.dude'}
         model = self.bc.database.create(authenticate=True,
@@ -1477,7 +1485,7 @@ class StudentPostTestSuite(AuthTestCase):
             'email': 'dude2@dude.dude',
         }
 
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data, format='json', headers={'academy': 1})
         json = response.json()
         expected = {
             'address': None,
@@ -1536,12 +1544,14 @@ class StudentPostTestSuite(AuthTestCase):
         ])
 
         assert actions.send_email_message.call_args_list == [
-            call('welcome_academy', 'dude2@dude.dude', {
-                'email': 'dude2@dude.dude',
-                'subject': 'Welcome to 4Geeks.com',
-                'LINK': url,
-                'FIST_NAME': 'Kenny'
-            })
+            call('welcome_academy',
+                 'dude2@dude.dude', {
+                     'email': 'dude2@dude.dude',
+                     'subject': 'Welcome to 4Geeks.com',
+                     'LINK': url,
+                     'FIST_NAME': 'Kenny'
+                 },
+                 academy=model.academy)
         ]
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
@@ -1550,7 +1560,7 @@ class StudentPostTestSuite(AuthTestCase):
         """Test /academy/:id/member"""
 
         role = 'student'
-        self.bc.request.set_headers(academy=1)
+
         user = {'email': 'dude@dude.dude'}
         model = self.bc.database.create(authenticate=True,
                                         user=user,
@@ -1567,7 +1577,7 @@ class StudentPostTestSuite(AuthTestCase):
             'email': 'dude@dude.dude',
         }
 
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data, format='json', headers={'academy': 1})
         json = response.json()
         expected = {'detail': 'already-exists', 'status_code': 400}
 

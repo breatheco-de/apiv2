@@ -58,7 +58,8 @@ def render_message(r,
                    data=None,
                    status=None,
                    go_back=None,
-                   url_back=None):
+                   url_back=None,
+                   academy=None):
     if data is None:
         data = {}
 
@@ -71,13 +72,22 @@ def render_message(r,
         'URL_BACK': url_back
     }
 
+    if academy:
+        _data['COMPANY_INFO_EMAIL'] = academy.feedback_email
+        _data['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
+        _data['COMPANY_LOGO'] = academy.logo_url
+        _data['COMPANY_NAME'] = academy.name
+
+        if 'heading' not in _data:
+            _data['heading'] = academy.name
+
     return render(r, 'message.html', {**_data, **data}, status=status)
 
 
 def has_permission(permission: str,
                    consumer: bool | HasPermissionCallback = False,
                    format='json') -> callable:
-    """This decorator check if the current user can access to the resource through of permissions"""
+    """Check if the current user can access to the resource through of permissions."""
 
     from breathecode.payments.models import Consumable, ConsumptionSession
 

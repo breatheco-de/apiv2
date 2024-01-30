@@ -195,6 +195,7 @@ class Task(object):
                 kwargs['task_manager_id'] = x.id
 
             if not created and x.status == 'SCHEDULED':
+                x.started_at = timezone.now()
                 x.status = 'PENDING'
 
             if not created:

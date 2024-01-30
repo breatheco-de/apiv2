@@ -47,7 +47,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         task = {'github_url': self.bc.fake.url()}
         model = self.bc.database.create(profile_academy=1, task=task)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:me_commitfile_id',
                            kwargs={'commitfile_id': 1}) + '?' + self.bc.format.querystring(query)

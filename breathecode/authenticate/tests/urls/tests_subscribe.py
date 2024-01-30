@@ -2,20 +2,20 @@
 Test /v1/auth/subscribe
 """
 import hashlib
-from datetime import datetime
 import os
 import random
+from datetime import datetime
 from unittest.mock import MagicMock, call, patch
 
+import pytest
 from django.urls.base import reverse_lazy
 from django.utils import timezone
-import pytest
 from rest_framework import status
-
-from breathecode.notify import actions as notify_actions
-from breathecode.authenticate.models import Token
-from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 from rest_framework.test import APIClient
+
+from breathecode.authenticate.models import Token
+from breathecode.notify import actions as notify_actions
+from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 now = timezone.now()
 
@@ -644,15 +644,16 @@ def test_task__post__with_user_invite(bc: Breathecode, client: APIClient, valida
     assert bc.database.list_of('payments.Plan') == []
 
     assert notify_actions.send_email_message.call_args_list == [
-        call(
-            'verify_email', 'pokemon@potato.io', {
-                'LANG':
-                'en',
-                'SUBJECT':
-                '4Geeks - Validate account',
-                'LINK':
-                ('/v1/auth/password/' + hashlib.sha512('pokemon@potato.io'.encode('UTF-8') + b).hexdigest())
-            })
+        call('verify_email',
+             'pokemon@potato.io', {
+                 'LANG':
+                 'en',
+                 'SUBJECT':
+                 '4Geeks - Validate account',
+                 'LINK':
+                 ('/v1/auth/password/' + hashlib.sha512('pokemon@potato.io'.encode('UTF-8') + b).hexdigest())
+             },
+             academy=None)
     ]
 
     user = bc.database.get('auth.User', 1, dict=False)
@@ -810,11 +811,13 @@ def test_task__post__get_in_waiting_list_using_a_plan(bc: Breathecode, client: A
     token = hashlib.sha512('pokemon@potato.io'.encode('UTF-8') + b).hexdigest()
 
     assert notify_actions.send_email_message.call_args_list == [
-        call('verify_email', 'pokemon@potato.io', {
-            'LANG': 'en',
-            'SUBJECT': '4Geeks - Validate account',
-            'LINK': f'/v1/auth/password/{token}'
-        })
+        call('verify_email',
+             'pokemon@potato.io', {
+                 'LANG': 'en',
+                 'SUBJECT': '4Geeks - Validate account',
+                 'LINK': f'/v1/auth/password/{token}',
+             },
+             academy=None)
     ]
 
     User = bc.database.get_model('auth.User')
@@ -959,11 +962,13 @@ def test__post__course_without_syllabus(bc: Breathecode, client: APIClient, vali
     token = hashlib.sha512('pokemon@potato.io'.encode('UTF-8') + b).hexdigest()
 
     assert notify_actions.send_email_message.call_args_list == [
-        call('verify_email', 'pokemon@potato.io', {
-            'LANG': 'en',
-            'SUBJECT': '4Geeks - Validate account',
-            'LINK': f'/v1/auth/password/{token}'
-        })
+        call('verify_email',
+             'pokemon@potato.io', {
+                 'LANG': 'en',
+                 'SUBJECT': '4Geeks - Validate account',
+                 'LINK': f'/v1/auth/password/{token}',
+             },
+             academy=model.academy)
     ]
 
     User = bc.database.get_model('auth.User')
@@ -1045,11 +1050,13 @@ def test__post__course_and_syllabus(bc: Breathecode, client: APIClient, validati
     assert bc.database.list_of('payments.Plan') == []
 
     assert notify_actions.send_email_message.call_args_list == [
-        call('verify_email', 'pokemon@potato.io', {
-            'LANG': 'en',
-            'SUBJECT': '4Geeks - Validate account',
-            'LINK': f'/v1/auth/password/{token}'
-        })
+        call('verify_email',
+             'pokemon@potato.io', {
+                 'LANG': 'en',
+                 'SUBJECT': '4Geeks - Validate account',
+                 'LINK': f'/v1/auth/password/{token}',
+             },
+             academy=model.academy)
     ]
 
     User = bc.database.get_model('auth.User')
@@ -1405,11 +1412,13 @@ def test__post__with_other_invite__cohort__waiting_list(bc: Breathecode, client:
     }]
 
     assert notify_actions.send_email_message.call_args_list == [
-        call('verify_email', 'pokemon@potato.io', {
-            'LANG': 'en',
-            'SUBJECT': '4Geeks - Validate account',
-            'LINK': f'/v1/auth/password/{token}'
-        })
+        call('verify_email',
+             'pokemon@potato.io', {
+                 'LANG': 'en',
+                 'SUBJECT': '4Geeks - Validate account',
+                 'LINK': f'/v1/auth/password/{token}',
+             },
+             academy=model.academy)
     ]
 
     user = bc.database.get('auth.User', 1, dict=False)
@@ -1502,11 +1511,13 @@ def test__post__with_other_invite__syllabus__waiting_list(bc: Breathecode, clien
     }]
 
     assert notify_actions.send_email_message.call_args_list == [
-        call('verify_email', 'pokemon@potato.io', {
-            'LANG': 'en',
-            'SUBJECT': '4Geeks - Validate account',
-            'LINK': f'/v1/auth/password/{token}'
-        })
+        call('verify_email',
+             'pokemon@potato.io', {
+                 'LANG': 'en',
+                 'SUBJECT': '4Geeks - Validate account',
+                 'LINK': f'/v1/auth/password/{token}',
+             },
+             academy=None)
     ]
 
     user = bc.database.get('auth.User', 1, dict=False)
@@ -1620,11 +1631,13 @@ def test_task__put__with_user_invite__cohort_as_none(bc: Breathecode, client: AP
     assert bc.database.list_of('payments.Plan') == []
 
     assert notify_actions.send_email_message.call_args_list == [
-        call('verify_email', 'pokemon@potato.io', {
-            'LANG': 'en',
-            'SUBJECT': '4Geeks - Validate account',
-            'LINK': f'/v1/auth/password/{token}'
-        })
+        call('verify_email',
+             'pokemon@potato.io', {
+                 'LANG': 'en',
+                 'SUBJECT': '4Geeks - Validate account',
+                 'LINK': f'/v1/auth/password/{token}',
+             },
+             academy=None)
     ]
 
     user = bc.database.get('auth.User', 1, dict=False)
@@ -1764,11 +1777,13 @@ def test_task__put__with_user_invite__cohort_found(bc: Breathecode, client: APIC
     }]
 
     assert notify_actions.send_email_message.call_args_list == [
-        call('verify_email', 'pokemon@potato.io', {
-            'LANG': 'en',
-            'SUBJECT': '4Geeks - Validate account',
-            'LINK': f'/v1/auth/password/{token}'
-        })
+        call('verify_email',
+             'pokemon@potato.io', {
+                 'LANG': 'en',
+                 'SUBJECT': '4Geeks - Validate account',
+                 'LINK': f'/v1/auth/password/{token}',
+             },
+             academy=model.academy)
     ]
 
     user = bc.database.get('auth.User', 1, dict=False)
@@ -1860,11 +1875,13 @@ def test_task__put__with_user_invite__cohort_found__academy_available_as_saas__u
     assert bc.database.list_of('payments.Plan') == []
 
     assert notify_actions.send_email_message.call_args_list == [
-        call('verify_email', 'pokemon@potato.io', {
-            'LANG': 'en',
-            'SUBJECT': '4Geeks - Validate account',
-            'LINK': f'/v1/auth/password/{token}'
-        })
+        call('verify_email',
+             'pokemon@potato.io', {
+                 'LANG': 'en',
+                 'SUBJECT': '4Geeks - Validate account',
+                 'LINK': f'/v1/auth/password/{token}',
+             },
+             academy=model.academy)
     ]
 
     user = bc.database.get('auth.User', 1, dict=False)
@@ -2079,11 +2096,13 @@ def test_task__put__with_user_invite__syllabus_found(bc: Breathecode, client: AP
     }]
 
     assert notify_actions.send_email_message.call_args_list == [
-        call('verify_email', 'pokemon@potato.io', {
-            'LANG': 'en',
-            'SUBJECT': '4Geeks - Validate account',
-            'LINK': f'/v1/auth/password/{token}'
-        })
+        call('verify_email',
+             'pokemon@potato.io', {
+                 'LANG': 'en',
+                 'SUBJECT': '4Geeks - Validate account',
+                 'LINK': f'/v1/auth/password/{token}',
+             },
+             academy=model.academy)
     ]
 
     user = bc.database.get('auth.User', 1, dict=False)
@@ -2176,11 +2195,13 @@ def test_task__put__with_user_invite__syllabus_found__academy_available_as_saas_
     assert bc.database.list_of('payments.Plan') == []
 
     assert notify_actions.send_email_message.call_args_list == [
-        call('verify_email', 'pokemon@potato.io', {
-            'LANG': 'en',
-            'SUBJECT': '4Geeks - Validate account',
-            'LINK': f'/v1/auth/password/{token}'
-        })
+        call('verify_email',
+             'pokemon@potato.io', {
+                 'LANG': 'en',
+                 'SUBJECT': '4Geeks - Validate account',
+                 'LINK': f'/v1/auth/password/{token}',
+             },
+             academy=model.academy)
     ]
 
     user = bc.database.get('auth.User', 1, dict=False)
@@ -2495,11 +2516,13 @@ def test_task__put__plan_has_not_waiting_list(bc: Breathecode, client: APIClient
     }]
 
     assert notify_actions.send_email_message.call_args_list == [
-        call('verify_email', 'pokemon@potato.io', {
-            'LANG': 'en',
-            'SUBJECT': '4Geeks - Validate account',
-            'LINK': f'/v1/auth/password/{token}'
-        })
+        call('verify_email',
+             'pokemon@potato.io', {
+                 'LANG': 'en',
+                 'SUBJECT': '4Geeks - Validate account',
+                 'LINK': f'/v1/auth/password/{token}',
+             },
+             academy=model.academy)
     ]
 
     user = bc.database.get('auth.User', 1, dict=False)
@@ -2631,11 +2654,13 @@ def test__put__course_without_syllabus(bc: Breathecode, client: APIClient, valid
     assert bc.database.list_of('payments.Plan') == []
 
     assert notify_actions.send_email_message.call_args_list == [
-        call('verify_email', 'pokemon@potato.io', {
-            'LANG': 'en',
-            'SUBJECT': '4Geeks - Validate account',
-            'LINK': f'/v1/auth/password/{token}'
-        })
+        call('verify_email',
+             'pokemon@potato.io', {
+                 'LANG': 'en',
+                 'SUBJECT': '4Geeks - Validate account',
+                 'LINK': f'/v1/auth/password/{token}',
+             },
+             academy=model.academy)
     ]
 
     User = bc.database.get_model('auth.User')
@@ -2730,11 +2755,13 @@ def test__put__course_and_syllabus(bc: Breathecode, client: APIClient, validatio
     assert bc.database.list_of('payments.Plan') == []
 
     assert notify_actions.send_email_message.call_args_list == [
-        call('verify_email', 'pokemon@potato.io', {
-            'LANG': 'en',
-            'SUBJECT': '4Geeks - Validate account',
-            'LINK': f'/v1/auth/password/{token}'
-        })
+        call('verify_email',
+             'pokemon@potato.io', {
+                 'LANG': 'en',
+                 'SUBJECT': '4Geeks - Validate account',
+                 'LINK': f'/v1/auth/password/{token}',
+             },
+             academy=model.academy)
     ]
 
     User = bc.database.get_model('auth.User')

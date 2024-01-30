@@ -3,11 +3,13 @@ Test /answer
 """
 from unittest.mock import MagicMock, call, patch
 
-from django.urls.base import reverse_lazy
 import pytest
+from django.urls.base import reverse_lazy
 from rest_framework import status
-from ..mixins import AssignmentsTestCase
+
 import breathecode.activity.tasks as activity_tasks
+
+from ..mixins import AssignmentsTestCase
 
 
 def get_serializer(self, task, user):
@@ -115,7 +117,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_id__without_task(self):
         model = self.bc.database.create(user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
         response = self.client.get(url)
@@ -136,7 +138,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_id__with_one_task(self):
         model = self.bc.database.create(user=1, task=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
         response = self.client.get(url)
@@ -180,11 +182,10 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_id__put__without_tasks(self):
-        from breathecode.assignments.tasks import student_task_notification
-        from breathecode.assignments.tasks import teacher_task_notification
+        from breathecode.assignments.tasks import student_task_notification, teacher_task_notification
 
         model = self.bc.database.create(user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
         response = self.client.put(url)
@@ -209,11 +210,10 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_id__put__with_one_task(self):
-        from breathecode.assignments.tasks import student_task_notification
-        from breathecode.assignments.tasks import teacher_task_notification
+        from breathecode.assignments.tasks import student_task_notification, teacher_task_notification
 
         model = self.bc.database.create(user=1, task=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
         data = {'title': 'They killed kennyy'}
@@ -248,8 +248,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_id__put__with_one_task__with_task_status(self):
-        from breathecode.assignments.tasks import student_task_notification
-        from breathecode.assignments.tasks import teacher_task_notification
+        from breathecode.assignments.tasks import student_task_notification, teacher_task_notification
 
         task = {'task_status': 'PENDING', 'user_id': 2}
         model = self.bc.database.create(user=2, task=task)
@@ -283,8 +282,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_id__put__with_one_task__with_live_url(self):
-        from breathecode.assignments.tasks import student_task_notification
-        from breathecode.assignments.tasks import teacher_task_notification
+        from breathecode.assignments.tasks import student_task_notification, teacher_task_notification
 
         task = {'live_url': 'PENDING', 'user_id': 2}
         model = self.bc.database.create(user=2, task=task)
@@ -318,8 +316,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_id__put__with_one_task__with_github_url(self):
-        from breathecode.assignments.tasks import student_task_notification
-        from breathecode.assignments.tasks import teacher_task_notification
+        from breathecode.assignments.tasks import student_task_notification, teacher_task_notification
 
         task = {'github_url': 'PENDING', 'user_id': 2}
         model = self.bc.database.create(user=2, task=task)
@@ -353,8 +350,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_id__put__with_one_task__with_revision_status(self):
-        from breathecode.assignments.tasks import student_task_notification
-        from breathecode.assignments.tasks import teacher_task_notification
+        from breathecode.assignments.tasks import student_task_notification, teacher_task_notification
 
         task = {'revision_status': 'PENDING', 'user_id': 2, 'task_status': 'DONE'}
         model = self.bc.database.create(user=2, task=task)
@@ -383,8 +379,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_id__put__with_one_task__with_revision_status__teacher_auth(self):
-        from breathecode.assignments.tasks import student_task_notification
-        from breathecode.assignments.tasks import teacher_task_notification
+        from breathecode.assignments.tasks import student_task_notification, teacher_task_notification
 
         statuses = ['PENDING', 'APPROVED', 'REJECTED', 'IGNORED']
         for index in range(0, 4):
@@ -447,8 +442,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task_id__put__with_one_task__with_revision_status__staff_auth(self):
-        from breathecode.assignments.tasks import student_task_notification
-        from breathecode.assignments.tasks import teacher_task_notification
+        from breathecode.assignments.tasks import student_task_notification, teacher_task_notification
 
         task = {'revision_status': 'PENDING', 'user_id': 1, 'task_status': 'DONE'}
         cohort_user = {'role': 'STUDENT', 'user_id': 1}
@@ -499,11 +493,10 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_task_status_pending_and_revision_status_pending(self):
         """Test /task with task_status = pending and revision_status = pending should pass"""
 
-        from breathecode.assignments.tasks import student_task_notification
-        from breathecode.assignments.tasks import teacher_task_notification
+        from breathecode.assignments.tasks import student_task_notification, teacher_task_notification
 
         model = self.bc.database.create(task=1, user=1, cohort=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task_id', kwargs={
             'task_id': model.task.id,
@@ -535,11 +528,10 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_task_status_pending_and_revision_status_approved(self):
         """Test /task with task_status = pending and revision_status = approved should fail"""
 
-        from breathecode.assignments.tasks import student_task_notification
-        from breathecode.assignments.tasks import teacher_task_notification
+        from breathecode.assignments.tasks import student_task_notification, teacher_task_notification
 
         model = self.bc.database.create(task=1, user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task_id', kwargs={
             'task_id': model.task.id,
@@ -571,11 +563,10 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_task_status_pending_and_revision_status_approved_both(self):
         """Test /task with task_status = pending and revision_status = approved should fail"""
 
-        from breathecode.assignments.tasks import student_task_notification
-        from breathecode.assignments.tasks import teacher_task_notification
+        from breathecode.assignments.tasks import student_task_notification, teacher_task_notification
 
         model = self.bc.database.create(task=1, user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task_id', kwargs={
             'task_id': model.task.id,
@@ -606,7 +597,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_delete_task_not_found(self):
 
         model = self.bc.database.create(user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
         response = self.client.delete(url)
@@ -624,7 +615,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_delete_task_found_and_deleted(self):
 
         model = self.bc.database.create(user=1, task=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
         response = self.client.delete(url)

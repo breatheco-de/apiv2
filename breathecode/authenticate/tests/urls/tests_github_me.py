@@ -29,7 +29,7 @@ class AuthenticateTestSuite(AuthTestCase):
     def test__delete__not_found(self):
         model = self.bc.database.create(user=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('authenticate:github_me')
         response = self.client.delete(url)
 
@@ -68,7 +68,7 @@ class AuthenticateTestSuite(AuthTestCase):
     def test__delete__found(self):
         model = self.bc.database.create(user=1, credentials_github=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('authenticate:github_me')
         response = self.client.delete(url)
 
@@ -83,7 +83,7 @@ class AuthenticateTestSuite(AuthTestCase):
         profile = {'avatar_url': self.bc.fake.url()}
         model = self.bc.database.create(user=1, credentials_github=1, profile=profile)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('authenticate:github_me')
         response = self.client.delete(url)
 

@@ -1,19 +1,30 @@
-import os, re, requests, json
-from typing import Optional
+import json
+import os
+import re
 from itertools import chain
-from django.utils import timezone
-from breathecode.utils.decorators.task import RetryTask
+from typing import Optional
 
-from breathecode.utils.i18n import translation
-from .models import FormEntry, Tag, Automation, ActiveCampaignAcademy, AcademyAlias
-from rest_framework.exceptions import APIException
-from breathecode.notify.actions import send_email_message
-from breathecode.authenticate.models import CredentialsFacebook
-from breathecode.services.activecampaign import ACOldClient, ActiveCampaign, ActiveCampaignClient, acp_ids, map_ids
-from breathecode.utils.validation_exception import ValidationException
-from breathecode.utils import getLogger
 import numpy as np
+import requests
 from django.db.models import Q
+from django.utils import timezone
+from rest_framework.exceptions import APIException
+
+from breathecode.authenticate.models import CredentialsFacebook
+from breathecode.notify.actions import send_email_message
+from breathecode.services.activecampaign import (
+    ACOldClient,
+    ActiveCampaign,
+    ActiveCampaignClient,
+    acp_ids,
+    map_ids,
+)
+from breathecode.utils import getLogger
+from breathecode.utils.decorators.task import RetryTask
+from breathecode.utils.i18n import translation
+from breathecode.utils.validation_exception import ValidationException
+
+from .models import AcademyAlias, ActiveCampaignAcademy, Automation, FormEntry, Tag
 
 logger = getLogger(__name__)
 
@@ -330,6 +341,11 @@ def register_new_lead(form_entry=None):
         raise ValidationException('FormEntry not found (id: ' + str(form_entry['id']) + ')')
 
     if 'contact-us' == tags[0].slug:
+
+        obj = {}
+        if ac_academy.academy:
+            obj['COMPANY_INFO_EMAIL'] = ac_academy.academy.feedback_email
+
         send_email_message(
             'new_contact',
             ac_academy.academy.marketing_email,
@@ -341,8 +357,10 @@ def register_new_lead(form_entry=None):
                 'data': {
                     **form_entry
                 },
+                **obj,
                 # "data": { **form_entry, **address },
-            })
+            },
+            academy=ac_academy.academy)
 
     is_duplicate = entry.is_duplicate(form_entry)
     # ENV Variable to fake lead storage

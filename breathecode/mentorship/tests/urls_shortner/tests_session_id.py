@@ -3,19 +3,20 @@ Test cases for /academy/:id/member/:id
 """
 from random import randint
 from unittest.mock import MagicMock, call, patch
+
+from django.contrib.messages.storage.fallback import FallbackStorage
+from django.core.handlers.wsgi import WSGIRequest
 from django.http import QueryDict
 from django.template import loader
+from django.test.client import FakePayload
 from django.urls.base import reverse_lazy
-from rest_framework import status
 from django.utils import timezone
-from django.contrib.messages.storage.fallback import FallbackStorage
+from rest_framework import status
 
 from breathecode.mentorship.forms import CloseMentoringSessionForm
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.notify import actions
 from breathecode.tests.mixins.legacy import LegacyAPITestCase
-from django.core.handlers.wsgi import WSGIRequest
-from django.test.client import FakePayload
 
 UTC_NOW = timezone.now()
 CSRF_TOKEN = str(randint(10000, 10000000000000))
@@ -289,6 +290,16 @@ def mentorship_session_serializer(mentor_profile, mentorship_service, academy, u
 def render_close_session(message, mentor_profile, user, token, mentorship_service, academy, fix_logo=False):
     request = None
 
+    context = {}
+    if academy:
+        context['COMPANY_INFO_EMAIL'] = academy.feedback_email
+        context['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
+        context['COMPANY_LOGO'] = academy.logo_url
+        context['COMPANY_NAME'] = academy.name
+
+        if 'heading' not in context:
+            context['heading'] = academy.name
+
     string = loader.render_to_string(
         'close_session.html', {
             'token': token.key,
@@ -298,6 +309,7 @@ def render_close_session(message, mentor_profile, user, token, mentorship_servic
             'SUBJECT': 'Close Mentoring Session',
             'sessions': mentorship_session_serializer(mentor_profile, mentorship_service, academy, user),
             'baseUrl': f'/mentor/session/{mentor_profile.id}',
+            **context,
         }, request)
 
     if fix_logo:
@@ -583,6 +595,7 @@ class TestAuthenticate(LegacyAPITestCase):
                         'BUTTON': f'Finish and review this session',
                         'LINK': f'/mentor/session/4?token={token.key}',
                     },
+                    academy=model.academy,
                 )
             ]
             self.bc.check.calls(actions.send_email_message.call_args_list, calls)

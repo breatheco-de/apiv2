@@ -1,12 +1,13 @@
 import random
 import re
 from datetime import datetime, timedelta
-
-from breathecode.events.caches import EventCache
-from django.urls.base import reverse_lazy
 from unittest.mock import MagicMock, call, patch
 
+from django.urls.base import reverse_lazy
+
+from breathecode.events.caches import EventCache
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
+
 from ..mixins.new_events_tests_case import EventTestCase
 
 
@@ -173,7 +174,7 @@ class AcademyEventTestSuite(EventTestCase):
         url = reverse_lazy('events:me_event_id', kwargs={'event_id': 1})
 
         model = self.bc.database.create(user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         response = self.client.get(url)
         json = response.json()
@@ -193,7 +194,7 @@ class AcademyEventTestSuite(EventTestCase):
         url = reverse_lazy('events:me_event_id', kwargs={'event_id': 1})
 
         model = self.bc.database.create(user=1, event=1, event_type={'icon_url': 'https://www.google.com'})
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         response = self.client.get(url)
         json = response.json()
@@ -222,7 +223,7 @@ class AcademyEventTestSuite(EventTestCase):
                                         event_type_visibility_setting=event_type_visibility_setting,
                                         cohort_user=1,
                                         academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         response = self.client.get(url)
         json = response.json()
@@ -256,7 +257,7 @@ class AcademyEventTestSuite(EventTestCase):
                                         event_type={'icon_url': 'https://www.google.com'},
                                         event_type_visibility_setting=event_type_visibility_setting,
                                         cohort_user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         response = self.client.get(url)
         json = response.json()
@@ -293,7 +294,7 @@ class AcademyEventTestSuite(EventTestCase):
                                         cohort_user=1,
                                         syllabus=1,
                                         syllabus_version=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         response = self.client.get(url)
         json = response.json()
@@ -326,7 +327,7 @@ class AcademyEventTestSuite(EventTestCase):
                                         event_type={'icon_url': 'https://www.google.com'},
                                         event_type_set=1,
                                         subscription=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         response = self.client.get(url)
         json = response.json()
@@ -368,7 +369,7 @@ class AcademyEventTestSuite(EventTestCase):
                                         event_type={'icon_url': 'https://www.google.com'},
                                         event_type_set=1,
                                         plan_financing=plan_financing)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         response = self.client.get(url)
         json = response.json()
