@@ -1,39 +1,43 @@
-from datetime import date
 import hashlib
 import math
 import os
+from datetime import date
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
+
+import pandas as pd
+from circuitbreaker import CircuitBreakerError
+from dateutil.relativedelta import relativedelta
 from django.http import HttpResponse
-from django.shortcuts import redirect
-from breathecode.admissions.models import CohortUser
+from django.shortcuts import redirect, render
+from rest_framework import status
+from rest_framework.parsers import FileUploadParser, MultiPartParser
+from rest_framework.renderers import JSONRenderer
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_csv.renderers import CSVRenderer
+
+from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
-from breathecode.provisioning import tasks
-from breathecode.provisioning.serializers import (GetProvisioningBillSerializer,
-                                                  GetProvisioningUserConsumptionSerializer,
-                                                  ProvisioningBillSerializer, ProvisioningBillHTMLSerializer,
-                                                  ProvisioningUserConsumptionHTMLResumeSerializer,
-                                                  GetProvisioningBillSmallSerializer)
 from breathecode.notify.actions import get_template_content
+from breathecode.provisioning import tasks
+from breathecode.provisioning.serializers import (
+    GetProvisioningBillSerializer,
+    GetProvisioningBillSmallSerializer,
+    GetProvisioningUserConsumptionSerializer,
+    ProvisioningBillHTMLSerializer,
+    ProvisioningBillSerializer,
+    ProvisioningUserConsumptionHTMLResumeSerializer,
+)
+from breathecode.utils import ValidationException, capable_of, cut_csv
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.i18n import translation
 from breathecode.utils.io.file import count_csv_rows
 from breathecode.utils.views import private_view, render_message
-from breathecode.utils import cut_csv
+
 from .actions import get_provisioning_vendor
 from .models import BILL_STATUS, ProvisioningBill, ProvisioningUserConsumption
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework import status
-from breathecode.utils import capable_of, ValidationException
-from rest_framework.parsers import FileUploadParser, MultiPartParser
-import pandas as pd
-from django.shortcuts import render
-from rest_framework_csv.renderers import CSVRenderer
-from rest_framework.renderers import JSONRenderer
-from urllib.parse import urlencode, urlparse, urlunparse, parse_qs
-from dateutil.relativedelta import relativedelta
-from circuitbreaker import CircuitBreakerError
 
 
 @private_view()
@@ -44,60 +48,24 @@ def redirect_new_container(request, token):
     if cohort_id is None: return render_message(request, 'Please specificy a cohort in the URL')
 
     url = request.GET.get('repo', None)
-    if url is None: return render_message(request, 'Please specify a repository in the URL')
+    if url is None:
+        cohort = Cohort.objects.filter(id=cohort_id).first()
+        academy = None
+        if cohort:
+            academy = cohort.academy
+
+        return render_message(request, 'Please specify a repository in the URL', academy=academy)
 
     cu = CohortUser.objects.filter(user=user, cohort_id=cohort_id).first()
-    if cu is None: return render_message(request, f"You don't seem to belong to this cohort {cohort_id}.")
-
-    academy_id = cu.cohort.academy.id
-    pa = ProfileAcademy.objects.filter(user=user, academy__id=academy_id).first()
-    if pa is None:
-        obj = {}
-        if cu.cohort.academy:
-            obj['COMPANY_INFO_EMAIL'] = cu.cohort.academy.feedback_email
+    if cu is None:
+        cohort = Cohort.objects.filter(id=cohort_id).first()
+        academy = None
+        if cohort:
+            academy = cohort.academy
 
         return render_message(request,
-                              f"You don't seem to belong to academy {cu.cohot.academy.name}",
-                              data=obj)
-
-    vendor = None
-    try:
-        vendor = get_provisioning_vendor(user, pa, cu.cohort)
-    except Exception as e:
-        obj = {}
-        if cu.cohort.academy:
-            obj['COMPANY_INFO_EMAIL'] = cu.cohort.academy.feedback_email
-
-        return render_message(request, str(e), data=obj)
-
-    if vendor.name.lower() == 'gitpod':
-        return redirect(f'https://gitpod.io/#{url}')
-    if vendor.name.lower() == 'codespaces':
-        url = url.replace('https://github.com/', '')
-        return redirect(f'https://codespaces.new/?repo={url}')
-
-    obj = {}
-    if cu.cohort.academy:
-        obj['COMPANY_INFO_EMAIL'] = cu.cohort.academy.feedback_email
-
-    return render_message(
-        request,
-        f"Unknown provisioning vendor: '{vendor.name}', please speak with your program manager.",
-        data=obj)
-
-
-@private_view()
-def redirect_workspaces(request, token):
-
-    user = token.user
-    cohort_id = request.GET.get('cohort', None)
-    if cohort_id is None: return render_message(request, 'Please specificy a cohort in the URL')
-
-    url = request.GET.get('repo', None)
-    if url is None: return render_message(request, "Please specificy a repository \"repo\" in the URL")
-
-    cu = CohortUser.objects.filter(user=user, cohort_id=cohort_id).first()
-    if cu is None: return render_message(request, f"You don't seem to belong to this cohort {cohort_id}.")
+                              f"You don't seem to belong to this cohort {cohort_id}.",
+                              academy=academy)
 
     academy_id = cu.cohort.academy.id
     pa = ProfileAcademy.objects.filter(user=user, academy__id=academy_id).first()
@@ -108,17 +76,66 @@ def redirect_workspaces(request, token):
 
         return render_message(request,
                               f"You don't seem to belong to academy {cu.cohort.academy.name}",
-                              data=obj)
+                              academy=cu.cohort.academy)
 
     vendor = None
     try:
         vendor = get_provisioning_vendor(user, pa, cu.cohort)
     except Exception as e:
-        obj = {}
-        if cu.cohort.academy:
-            obj['COMPANY_INFO_EMAIL'] = cu.cohort.academy.feedback_email
+        return render_message(request, str(e), academy=cu.cohort.academy)
 
-        return render_message(request, str(e), data=obj)
+    if vendor.name.lower() == 'gitpod':
+        return redirect(f'https://gitpod.io/#{url}')
+    if vendor.name.lower() == 'codespaces':
+        url = url.replace('https://github.com/', '')
+        return redirect(f'https://codespaces.new/?repo={url}')
+
+    return render_message(
+        request,
+        f"Unknown provisioning vendor: '{vendor.name}', please speak with your program manager.",
+        academy=cu.cohort.academy)
+
+
+@private_view()
+def redirect_workspaces(request, token):
+
+    user = token.user
+    cohort_id = request.GET.get('cohort', None)
+    if cohort_id is None: return render_message(request, 'Please specificy a cohort in the URL')
+
+    url = request.GET.get('repo', None)
+    if url is None:
+        cohort = Cohort.objects.filter(id=cohort_id).first()
+        academy = None
+        if cohort:
+            academy = cohort.academy
+
+        return render_message(request, "Please specificy a repository \"repo\" in the URL", academy=academy)
+
+    cu = CohortUser.objects.filter(user=user, cohort_id=cohort_id).first()
+    if cu is None:
+        cohort = Cohort.objects.filter(id=cohort_id).first()
+        academy = None
+        if cohort:
+            academy = cohort.academy
+
+        return render_message(request,
+                              f"You don't seem to belong to this cohort {cohort_id}.",
+                              academy=academy)
+
+    academy_id = cu.cohort.academy.id
+    pa = ProfileAcademy.objects.filter(user=user, academy__id=academy_id).first()
+    if pa is None:
+        return render_message(request,
+                              f"You don't seem to belong to academy {cu.cohort.academy.name}",
+                              academy=cu.cohort.academy)
+
+    vendor = None
+    try:
+        vendor = get_provisioning_vendor(user, pa, cu.cohort)
+
+    except Exception as e:
+        return render_message(request, str(e), academy=cu.cohort.academy)
 
     return redirect(vendor.workspaces_url)
 

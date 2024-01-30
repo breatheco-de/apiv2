@@ -2,13 +2,15 @@
 Test cases for /academy/:id/member/:id
 """
 from unittest.mock import MagicMock, patch
-from django.template import loader
-from django.urls.base import reverse_lazy
-from rest_framework import status
-from django.utils import timezone
-from ..mixins import MentorshipTestCase
+
 from django.core.handlers.wsgi import WSGIRequest
+from django.template import loader
 from django.test.client import FakePayload
+from django.urls.base import reverse_lazy
+from django.utils import timezone
+from rest_framework import status
+
+from ..mixins import MentorshipTestCase
 
 UTC_NOW = timezone.now()
 
@@ -20,7 +22,7 @@ def format_datetime(self, date):
     return self.bc.datetime.to_iso_string(date)
 
 
-def render(message, mentor_profile=None, token=None, fix_logo=False):
+def render(message, mentor_profile=None, token=None, fix_logo=False, academy=None):
     slug = mentor_profile.slug if mentor_profile else 'asd'
     environ = {
         'HTTP_COOKIE': '',
@@ -43,13 +45,25 @@ def render(message, mentor_profile=None, token=None, fix_logo=False):
     }
     request = WSGIRequest(environ)
 
+    data = {}
+
+    if academy:
+        data['COMPANY_INFO_EMAIL'] = academy.feedback_email
+        data['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
+        data['COMPANY_LOGO'] = academy.logo_url
+        data['COMPANY_NAME'] = academy.name
+
+        if 'heading' not in data:
+            data['heading'] = academy.name
+
     string = loader.render_to_string(
         'message.html',
         {
             'MESSAGE': message,
             'BUTTON': None,
             'BUTTON_TARGET': '_blank',
-            'LINK': None
+            'LINK': None,
+            **data,
         },
         request,
         using=None,
@@ -138,7 +152,11 @@ class AuthenticateTestSuite(MentorshipTestCase):
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render(f'This mentor is not active', model.mentor_profile, model.token, fix_logo=True)
+        expected = render(f'This mentor is not active',
+                          model.mentor_profile,
+                          model.token,
+                          fix_logo=True,
+                          academy=model.academy)
 
         # dump error in external files
         if content != expected:
@@ -170,7 +188,11 @@ class AuthenticateTestSuite(MentorshipTestCase):
             response = self.client.get(url)
 
             content = self.bc.format.from_bytes(response.content)
-            expected = render(f'This mentor is not active', model.mentor_profile, model.token, fix_logo=True)
+            expected = render(f'This mentor is not active',
+                              model.mentor_profile,
+                              model.token,
+                              fix_logo=True,
+                              academy=model.academy)
 
             # dump error in external files
             if content != expected:
@@ -210,7 +232,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 f'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.',
                 model.mentor_profile,
                 model.token,
-                fix_logo=True)
+                fix_logo=True,
+                academy=model.academy)
 
             # dump error in external files
             if content != expected:

@@ -229,13 +229,13 @@ class EventMeView(APIView):
             #DEPRECATED: due we have a new endpoint that manages the EventTypeSet consumables
             if _r == 'true':
                 if single_event is None:
-                    return render_message(request, 'Event not found or you dont have access')
+                    return render_message(request,
+                                          'Event not found or you dont have access',
+                                          academy=single_event.academy)
                 if single_event.live_stream_url is None or single_event.live_stream_url == '':
-                    obj = {}
-                    if single_event.academy:
-                        obj['COMPANY_INFO_EMAIL'] = single_event.academy.feedback_email
-
-                    return render_message(request, 'Event live stream URL is not found', data=obj)
+                    return render_message(request,
+                                          'Event live stream URL is not found',
+                                          academy=single_event.academy)
                 return redirect(single_event.live_stream_url)
 
             serializer = EventBigSerializer(single_event, many=False)
@@ -437,11 +437,10 @@ class AcademyLiveClassJoinView(APIView):
                                   en='Live class has no online meeting url',
                                   es='La clase en vivo no tiene una URL de reunión en línea',
                                   slug='no-meeting-url')
-            obj = {}
-            if live_class.cohort_time_slot.cohort.academy:
-                obj['COMPANY_INFO_EMAIL'] = live_class.cohort_time_slot.cohort.academy.feedback_email
-
-            return render_message(request, message, status=400, data=obj)
+            return render_message(request,
+                                  message,
+                                  status=400,
+                                  academy=live_class.cohort_time_slot.cohort.academy)
 
         return redirect(live_class.cohort_time_slot.cohort.online_meeting_url)
 
@@ -652,12 +651,7 @@ class AcademyEventJoinView(APIView):
                                   en='Event has no live stream url',
                                   es='Evento no tiene url de live stream',
                                   slug='no-live-stream-url')
-
-            obj = {}
-            if event.academy:
-                obj['COMPANY_INFO_EMAIL'] = event.academy.feedback_email
-
-            return render_message(request, message, status=400, data=obj)
+            return render_message(request, message, status=400, academy=event.academy)
 
         return redirect(event.live_stream_url)
 

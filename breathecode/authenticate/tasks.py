@@ -1,13 +1,16 @@
-import logging, os
+import logging
+import os
+
 from celery import shared_task
 from django.contrib.auth.models import User
+
 from breathecode.authenticate.models import UserInvite
 from breathecode.marketing.actions import validate_email
-
-from breathecode.utils.decorators.task import AbortTask, TaskPriority, task, RetryTask
-from breathecode.utils.validation_exception import ValidationException
-from .actions import set_gitpod_user_expiration, add_to_organization, remove_from_organization
 from breathecode.notify import actions as notify_actions
+from breathecode.utils.decorators.task import AbortTask, RetryTask, TaskPriority, task
+from breathecode.utils.validation_exception import ValidationException
+
+from .actions import add_to_organization, remove_from_organization, set_gitpod_user_expiration
 
 API_URL = os.getenv('API_URL', '')
 
@@ -143,10 +146,6 @@ def create_user_from_invite(user_invite_id: int, **_):
     user.first_name = user_invite.first_name or ''
     user.last_name = user_invite.last_name or ''
     user.save()
-
-    obj = {}
-    if user_invite.academy:
-        obj['COMPANY_INFO_EMAIL'] = user_invite.academy.feedback_email
 
     if user_invite.token:
         notify_actions.send_email_message(

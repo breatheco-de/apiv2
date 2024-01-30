@@ -7,9 +7,18 @@ from ..mixins.new_events_tests_case import EventTestCase
 
 
 # IMPORTANT: the loader.render_to_string in a function is inside of function render
-def render_message(message):
+def render_message(message, academy=None):
     request = None
     context = {'MESSAGE': message, 'BUTTON': None, 'BUTTON_TARGET': '_blank', 'LINK': None}
+
+    if academy:
+        context['COMPANY_INFO_EMAIL'] = academy.feedback_email
+        context['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
+        context['COMPANY_LOGO'] = academy.logo_url
+        context['COMPANY_NAME'] = academy.name
+
+        if 'heading' not in context:
+            context['heading'] = academy.name
 
     return loader.render_to_string('message.html', context, request)
 
@@ -93,7 +102,7 @@ class AcademyVenueTestSuite(EventTestCase):
 
         response = self.client.get(url)
         content = self.bc.format.from_bytes(response.content)
-        expected = render_message('no-live-stream-url')
+        expected = render_message('no-live-stream-url', academy=model.academy)
 
         # dump error in external files
         if content != expected:

@@ -8,6 +8,7 @@ from datetime import timedelta
 from urllib.parse import parse_qs, urlencode
 
 import requests
+from circuitbreaker import CircuitBreakerError
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
@@ -19,53 +20,107 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.exceptions import (APIException, PermissionDenied, ValidationError)
+from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
 from rest_framework.parsers import FileUploadParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.schemas.openapi import AutoSchema
 from rest_framework.views import APIView
 
+import breathecode.activity.tasks as tasks_activity
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, CohortUser, Syllabus
+from breathecode.authenticate.actions import get_user_settings
 from breathecode.mentorship.models import MentorProfile
 from breathecode.mentorship.serializers import GETMentorSmallSerializer
 from breathecode.notify.models import SlackTeam
 from breathecode.services.google_cloud import FunctionV1, FunctionV2
-from breathecode.utils import (GenerateLookupsMixin, HeaderLimitOffsetPagination, ValidationException,
-                               capable_of)
-from breathecode.utils.api_view_extensions.api_view_extensions import \
-    APIViewExtensions
+from breathecode.utils import (
+    GenerateLookupsMixin,
+    HeaderLimitOffsetPagination,
+    ValidationException,
+    capable_of,
+)
+from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.decorators.scope import scope
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.i18n import translation
 from breathecode.utils.shorteners import C
-from breathecode.utils.views import (private_view, render_message, set_query_parameter)
+from breathecode.utils.views import private_view, render_message, set_query_parameter
 
-from .actions import (accept_invite_action, generate_academy_token, get_app, get_user_language, resend_invite,
-                      reset_password, set_gitpod_user_expiration, update_gitpod_users,
-                      sync_organization_members, accept_invite)
+from .actions import (
+    accept_invite,
+    accept_invite_action,
+    generate_academy_token,
+    get_app,
+    get_user_language,
+    resend_invite,
+    reset_password,
+    set_gitpod_user_expiration,
+    sync_organization_members,
+    update_gitpod_users,
+)
 from .authentication import ExpiringTokenAuthentication
-from .forms import (InviteForm, LoginForm, PasswordChangeCustomForm, PickPasswordForm, ResetPasswordForm,
-                    SyncGithubUsersForm)
-from .models import (AppUserAgreement, CredentialsFacebook, CredentialsGithub, CredentialsGoogle,
-                     CredentialsSlack, GitpodUser, OptionalScopeSet, Profile, ProfileAcademy, Role, Scope,
-                     Token, UserInvite, GithubAcademyUser, AcademyAuthSettings, UserSetting)
-from .serializers import (AppUserSerializer, AuthSerializer, GetGitpodUserSerializer,
-                          GetProfileAcademySerializer, GetProfileAcademySmallSerializer, GetProfileSerializer,
-                          GitpodUserSmallSerializer, MemberPOSTSerializer, MemberPUTSerializer,
-                          ProfileAcademySmallSerializer, ProfileSerializer, RoleBigSerializer,
-                          RoleSmallSerializer, SmallAppUserAgreementSerializer, StudentPOSTSerializer,
-                          TokenSmallSerializer, UserInviteSerializer, UserInviteShortSerializer,
-                          UserInviteSmallSerializer, UserInviteWaitingListSerializer, UserMeSerializer,
-                          UserSerializer, UserSmallSerializer, UserTinySerializer, GithubUserSerializer,
-                          PUTGithubUserSerializer, AuthSettingsBigSerializer, AcademyAuthSettingsSerializer,
-                          POSTGithubUserSerializer, SettingsSerializer, UserSettingsSerializer)
-
-import breathecode.activity.tasks as tasks_activity
-from breathecode.authenticate.actions import get_user_settings
-from circuitbreaker import CircuitBreakerError
+from .forms import (
+    InviteForm,
+    LoginForm,
+    PasswordChangeCustomForm,
+    PickPasswordForm,
+    ResetPasswordForm,
+    SyncGithubUsersForm,
+)
+from .models import (
+    AcademyAuthSettings,
+    AppUserAgreement,
+    CredentialsFacebook,
+    CredentialsGithub,
+    CredentialsGoogle,
+    CredentialsSlack,
+    GithubAcademyUser,
+    GitpodUser,
+    OptionalScopeSet,
+    Profile,
+    ProfileAcademy,
+    Role,
+    Scope,
+    Token,
+    UserInvite,
+    UserSetting,
+)
+from .serializers import (
+    AcademyAuthSettingsSerializer,
+    AppUserSerializer,
+    AuthSerializer,
+    AuthSettingsBigSerializer,
+    GetGitpodUserSerializer,
+    GetProfileAcademySerializer,
+    GetProfileAcademySmallSerializer,
+    GetProfileSerializer,
+    GithubUserSerializer,
+    GitpodUserSmallSerializer,
+    MemberPOSTSerializer,
+    MemberPUTSerializer,
+    POSTGithubUserSerializer,
+    ProfileAcademySmallSerializer,
+    ProfileSerializer,
+    PUTGithubUserSerializer,
+    RoleBigSerializer,
+    RoleSmallSerializer,
+    SettingsSerializer,
+    SmallAppUserAgreementSerializer,
+    StudentPOSTSerializer,
+    TokenSmallSerializer,
+    UserInviteSerializer,
+    UserInviteShortSerializer,
+    UserInviteSmallSerializer,
+    UserInviteWaitingListSerializer,
+    UserMeSerializer,
+    UserSerializer,
+    UserSettingsSerializer,
+    UserSmallSerializer,
+    UserTinySerializer,
+)
 
 logger = logging.getLogger(__name__)
 APP_URL = os.getenv('APP_URL', '')
@@ -449,7 +504,7 @@ class ConfirmEmailView(APIView):
             if request.META.get('HTTP_ACCEPT') == 'application/json':
                 raise e
 
-            return render_message(request, e.get_message(), status=400)
+            return render_message(request, e.get_message(), status=400, academy=invite.academy)
 
         invite.is_email_validated = True
         invite.save()
@@ -460,7 +515,9 @@ class ConfirmEmailView(APIView):
             return Response(serializer.data)
 
         # If not JSON, return your HTML message.
-        return render_message(request, 'Your email was validated, you can close this page.')
+        return render_message(request,
+                              'Your email was validated, you can close this page.',
+                              academy=invite.academy)
 
 
 class ResendInviteView(APIView):
@@ -1058,27 +1115,23 @@ def save_github_token(request):
                 if url is None or url == '':
                     url = os.getenv('APP_URL', 'https://4geeks.com')
 
-                obj = {}
-                if invite.academy:
-                    obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
-
                 return render_message(
                     request,
                     f'You are still number {invite.id} on the waiting list, we will email you once you are '
                     f'given access <a href="{url}">Back to 4Geeks.com</a>',
-                    data=obj)
+                    academy=invite.academy)
 
             if user_does_not_exists:
-                obj = {}
-                if invite and invite.academy:
-                    obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
+                academy = None
+                if invite:
+                    academy = invite.academy
 
                 return render_message(
                     request,
                     'We could not find in our records the email associated to this github account, '
                     'perhaps you want to signup to the platform first? <a href="' + url +
                     '">Back to 4Geeks.com</a>',
-                    data=obj)
+                    academy=academy)
 
             github_credentials = CredentialsGithub.objects.filter(github_id=github_user['id']).first()
 
@@ -1536,7 +1589,10 @@ def pick_password(request, token):
         user = User.objects.filter(email=invite.email, password='').first() if invite else None
 
     if not user:
-        return render_message(request, 'The link has expired.')
+        academy = None
+        if invite:
+            academy = invite.academy
+        return render_message(request, 'The link has expired.', academy=academy)
 
     form = PickPasswordForm(_dict)
     if request.method == 'POST':
@@ -1671,15 +1727,23 @@ def render_invite(request, token, member_id=None):
 
     lang = get_user_language(request)
 
+    invite = UserInvite.objects.filter(token=token).first()
+    if invite is None or invite.status != 'PENDING':
+        callback_msg = ''
+        if _dict['callback'] != '':
+            callback_msg = ". You can try and login at <a href='" + _dict['callback'] + "'>" + _dict[
+                'callback'] + '</a>'
+
+        academy = None
+        if invite and invite.academy:
+            academy = invite.academy
+
+        return render_message(request,
+                              'Invitation not found with this token or it was already accepted' +
+                              callback_msg,
+                              academy=academy)
+
     if request.method == 'GET':
-        invite = UserInvite.objects.filter(token=token, status='PENDING').first()
-        if invite is None:
-            callback_msg = ''
-            if _dict['callback'] != '':
-                callback_msg = ". You can try and login at <a href='" + _dict['callback'] + "'>" + _dict[
-                    'callback'] + '</a>'
-            return render_message(
-                request, 'Invitation not found with this token or it was already accepted' + callback_msg)
 
         if invite and User.objects.filter(email=invite.email).exists():
             redirect = os.getenv('API_URL') + '/v1/auth/member/invite'
@@ -1694,8 +1758,10 @@ def render_invite(request, token, member_id=None):
         })
 
         obj = {}
-        if invite.academy:
-            obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
+        if invite and invite.academy:
+            obj['COMPANY_LOGO'] = invite.academy.logo_url
+            obj['COMPANY_NAME'] = invite.academy.name
+            obj['heading'] = invite.academy.name
 
         return render(request, 'form_invite.html', {
             'form': form,
@@ -1721,8 +1787,17 @@ def render_invite(request, token, member_id=None):
         except Exception as e:
             form = InviteForm(_dict)
             messages.error(request, str(e))
+
+            obj = {}
+
+            if invite and invite.academy:
+                obj['COMPANY_LOGO'] = invite.academy.logo_url
+                obj['COMPANY_NAME'] = invite.academy.name
+                obj['heading'] = invite.academy.name
+
             return render(request, 'form_invite.html', {
                 'form': form,
+                **obj,
             })
 
         callback = request.POST.get('callback', None)

@@ -1,66 +1,80 @@
-import hashlib, timeago, logging
+import hashlib
+import logging
 import re
-from rest_framework.permissions import AllowAny
+
+import timeago
+from django.contrib import messages
+from django.contrib.auth.models import User
+from django.db.models import Q
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.utils import timezone
-from django.contrib.auth.models import User
-from django.contrib import messages
-from django.http import HttpResponse, HttpResponseRedirect
-from breathecode.mentorship.caches import MentorProfileCache
-from breathecode.services.calendly import Calendly
-from breathecode.authenticate.models import Token
-from breathecode.authenticate.models import ProfileAcademy
-from breathecode.authenticate.actions import get_user_language
-from breathecode.utils.i18n import translation
-
-from breathecode.mentorship.exceptions import ExtendSessionException
-from .permissions.consumers import mentorship_service_by_url_param
-from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from breathecode.utils.decorators import has_permission
-from breathecode.utils.views import private_view, render_message, set_query_parameter
-from breathecode.utils import GenerateLookupsMixin, response_207
-from breathecode.utils.multi_status_response import MultiStatusResponse
-from .models import (MentorProfile, MentorshipService, MentorshipSession, MentorshipBill, SupportAgent,
-                     SupportChannel, CalendlyOrganization)
-from .forms import CloseMentoringSessionForm
-from .actions import close_mentoring_session, render_session, generate_mentor_bills
-from breathecode.mentorship import actions
-from breathecode.notify.actions import get_template_content
-from breathecode.utils.find_by_full_name import query_like_by_full_name
-from .serializers import (
-    GetAcademySmallSerializer,
-    GETServiceSmallSerializer,
-    GETSessionSmallSerializer,
-    GETMentorSmallSerializer,
-    MentorSerializer,
-    MentorUpdateSerializer,
-    SessionPUTSerializer,
-    SessionSerializer,
-    SessionBigSerializer,
-    ServicePOSTSerializer,
-    GETMentorBigSerializer,
-    GETServiceBigSerializer,
-    GETSessionReportSerializer,
-    ServicePUTSerializer,
-    BigBillSerializer,
-    GETBillSmallSerializer,
-    MentorshipBillPUTSerializer,
-    BillSessionSerializer,
-    GETMentorPublicTinySerializer,
-    GETAgentSmallSerializer,
-    GETSupportChannelSerializer,
-    CalendlyOrganizationBigSerializer,
-    CalendlyOrganizationSerializer,
-)
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes, renderer_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import status
-from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination
-from django.db.models import Q
-from .tasks import async_calendly_webhook
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.decorators import renderer_classes
+
+from breathecode.authenticate.actions import get_user_language
+from breathecode.authenticate.models import ProfileAcademy, Token
+from breathecode.mentorship import actions
+from breathecode.mentorship.caches import MentorProfileCache
+from breathecode.mentorship.exceptions import ExtendSessionException
+from breathecode.notify.actions import get_template_content
 from breathecode.renderers import PlainTextRenderer
+from breathecode.services.calendly import Calendly
+from breathecode.utils import (
+    GenerateLookupsMixin,
+    HeaderLimitOffsetPagination,
+    ValidationException,
+    capable_of,
+    response_207,
+)
+from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from breathecode.utils.decorators import has_permission
+from breathecode.utils.find_by_full_name import query_like_by_full_name
+from breathecode.utils.i18n import translation
+from breathecode.utils.multi_status_response import MultiStatusResponse
+from breathecode.utils.views import private_view, render_message, set_query_parameter
+
+from .actions import close_mentoring_session, generate_mentor_bills, render_session
+from .forms import CloseMentoringSessionForm
+from .models import (
+    CalendlyOrganization,
+    MentorProfile,
+    MentorshipBill,
+    MentorshipService,
+    MentorshipSession,
+    SupportAgent,
+    SupportChannel,
+)
+from .permissions.consumers import mentorship_service_by_url_param
+from .serializers import (
+    BigBillSerializer,
+    BillSessionSerializer,
+    CalendlyOrganizationBigSerializer,
+    CalendlyOrganizationSerializer,
+    GetAcademySmallSerializer,
+    GETAgentSmallSerializer,
+    GETBillSmallSerializer,
+    GETMentorBigSerializer,
+    GETMentorPublicTinySerializer,
+    GETMentorSmallSerializer,
+    GETServiceBigSerializer,
+    GETServiceSmallSerializer,
+    GETSessionReportSerializer,
+    GETSessionSmallSerializer,
+    GETSupportChannelSerializer,
+    MentorSerializer,
+    MentorshipBillPUTSerializer,
+    MentorUpdateSerializer,
+    ServicePOSTSerializer,
+    ServicePUTSerializer,
+    SessionBigSerializer,
+    SessionPUTSerializer,
+    SessionSerializer,
+)
+from .tasks import async_calendly_webhook
 
 logger = logging.getLogger(__name__)
 
@@ -122,25 +136,17 @@ def forward_booking_url(request, mentor_slug, token):
     request.session['academy'] = GetAcademySmallSerializer(mentor.academy).data
 
     if mentor.status not in ['ACTIVE', 'UNLISTED']:
-        obj = {}
-        if mentor.academy:
-            obj['COMPANY_INFO_EMAIL'] = mentor.academy.feedback_email
-
-        return render_message(request, 'This mentor is not active', data=obj)
+        return render_message(request, 'This mentor is not active', academy=mentor.academy)
 
     try:
         actions.mentor_is_ready(mentor)
 
     except Exception as e:
         logger.exception(e)
-        obj = {}
-        if mentor.academy:
-            obj['COMPANY_INFO_EMAIL'] = mentor.academy.feedback_email
-
         return render_message(
             request,
             'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.',
-            data=obj)
+            academy=mentor.academy)
 
     booking_url = mentor.booking_url
     if '?' not in booking_url:
@@ -175,25 +181,17 @@ def forward_booking_url_by_service(request, mentor_slug, token):
     request.session['academy'] = GetAcademySmallSerializer(mentor.academy).data
 
     if mentor.status not in ['ACTIVE', 'UNLISTED']:
-        obj = {}
-        if mentor.academy:
-            obj['COMPANY_INFO_EMAIL'] = mentor.academy.feedback_email
-
-        return render_message(request, 'This mentor is not active', data=obj)
+        return render_message(request, 'This mentor is not active', academy=mentor.academy)
 
     try:
         actions.mentor_is_ready(mentor)
 
     except Exception as e:
-        obj = {}
-        if mentor.academy:
-            obj['COMPANY_INFO_EMAIL'] = mentor.academy.feedback_email
-
         logger.exception(e)
         return render_message(
             request,
             'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.',
-            data=obj)
+            academy=mentor.academy)
 
     booking_url = mentor.booking_url
     if '?' not in booking_url:
@@ -225,22 +223,15 @@ def pick_mentorship_service(request, token, mentor_slug):
 
     except Exception as e:
         logger.exception(e)
-        obj = {}
-        if mentor.academy:
-            obj['COMPANY_INFO_EMAIL'] = mentor.academy.feedback_email
 
         return render_message(
             request,
             'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.',
-            data=obj)
+            academy=mentor.academy)
 
     services = mentor.services.all()
     if not services:
-        obj = {}
-        if mentor.academy:
-            obj['COMPANY_INFO_EMAIL'] = mentor.academy.feedback_email
-
-        return render_message(request, 'This mentor is not available on any service', data=obj)
+        return render_message(request, 'This mentor is not available on any service', academy=mentor.academy)
 
     obj = {}
     if mentor.academy:
@@ -309,19 +300,13 @@ class ForwardMeetUrl:
             })
 
     def render_end_session(self, message, btn_url, status=200):
-        obj = {}
-        if self.mentor.academy:
-            obj['COMPANY_INFO_EMAIL'] = self.mentor.academy.feedback_email
-
-        return render_message(
-            self.request,
-            message,
-            btn_label='End Session',
-            btn_url=btn_url,
-            btn_target='_self',
-            status=status,
-            data=obj,
-        )
+        return render_message(self.request,
+                              message,
+                              btn_label='End Session',
+                              btn_url=btn_url,
+                              btn_target='_self',
+                              status=status,
+                              academy=self.mentor.academy)
 
     def get_user_name(self, user, default):
         name = ''
@@ -364,14 +349,10 @@ class ForwardMeetUrl:
         if self.query_params['session'] is not None:
             sessions = MentorshipSession.objects.filter(id=self.query_params['session'])
             if sessions.count() == 0:
-                obj = {}
-                if self.mentor.academy:
-                    obj['COMPANY_INFO_EMAIL'] = self.mentor.academy.feedback_email
-
                 return render_message(self.request,
                                       f'Session with id {self.query_params["session"]} not found',
                                       status=404,
-                                      data=obj)
+                                      academy=mentor.academy)
 
             # set service if is null
             sessions.filter(service__isnull=True).update(service=service)
@@ -404,28 +385,20 @@ class ForwardMeetUrl:
         self.request.session['academy'] = GetAcademySmallSerializer(mentor.academy).data
 
         if mentor.status not in ['ACTIVE', 'UNLISTED']:
-            obj = {}
-            if mentor.academy:
-                obj['COMPANY_INFO_EMAIL'] = mentor.academy.feedback_email
-
             return render_message(self.request,
                                   'This mentor is not active at the moment',
                                   status=400,
-                                  data=obj)
+                                  academy=mentor.academy)
 
         try:
             actions.mentor_is_ready(mentor)
 
         except Exception:
-            obj = {}
-            if mentor.academy:
-                obj['COMPANY_INFO_EMAIL'] = mentor.academy.feedback_email
-
             return render_message(
                 self.request,
                 'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.',
                 status=400,
-                data=obj)
+                academy=mentor.academy)
 
         is_token_of_mentee = mentor.user.id != self.token.user.id
 
@@ -441,14 +414,11 @@ class ForwardMeetUrl:
         session = self.get_session(sessions, mentee)
         if session is None:
             name = self.get_user_name(mentor.user, 'the mentor')
-            obj = {}
-            if mentor.academy:
-                obj['COMPANY_INFO_EMAIL'] = mentor.academy.feedback_email
 
             return render_message(self.request,
                                   f'Impossible to create or retrieve mentoring session with {name}.',
                                   status=400,
-                                  data=obj)
+                                  academy=mentor.academy)
 
         is_mentee_params_set = bool(self.query_params['mentee'])
         is_mentee_params_undefined = self.query_params['mentee'] == 'undefined'
@@ -457,14 +427,10 @@ class ForwardMeetUrl:
         if session.mentee is None and is_mentee_params_set and not is_mentee_params_undefined:
             session.mentee = User.objects.filter(id=self.query_params['mentee']).first()
             if session.mentee is None:
-                obj = {}
-                if mentor.academy:
-                    obj['COMPANY_INFO_EMAIL'] = mentor.academy.feedback_email
-
                 return render_message(
                     self.request, f'Mentee with user id {self.query_params["mentee"]} was not found, '
                     f'<a href="{self.baseUrl}&mentee=undefined">click here to start the session anyway.</a>',
-                    data=obj)
+                    academy=mentor.academy)
 
         # passing a invalid mentee query param
         if session.mentee is None and not is_mentee_params_undefined:
@@ -472,15 +438,11 @@ class ForwardMeetUrl:
 
         # session ended
         if session.status not in ['PENDING', 'STARTED']:
-            obj = {}
-            if mentor.academy:
-                obj['COMPANY_INFO_EMAIL'] = mentor.academy.feedback_email
-
             return render_message(self.request,
                                   f'This mentoring session has ended ({session.status}), would you like '
                                   f'<a href="/mentor/meet/{mentor.slug}">to start a new one?</a>.',
                                   status=400,
-                                  data=obj)
+                                  academy=session.mentor.academy)
         # Who is joining? Set meeting join in dates
         if not is_token_of_mentee:
             # only reset the joined_at it has ben more than 5min and the session has not started yey
@@ -528,16 +490,12 @@ class ForwardMeetUrl:
                 btn_url=f'/mentor/session/{str(session.id)}?token={self.token.key}')
 
         elif session_ends_in_the_pass:
-            obj = {}
-            if mentor.academy:
-                obj['COMPANY_INFO_EMAIL'] = mentor.academy.feedback_email
-
             return render_message(
                 self.request,
                 f'The mentoring session expired {timeago.format(session.ends_at, self.now)} and it '
                 'cannot be extended.',
                 status=400,
-                data=obj)
+                academy=mentor.academy)
 
         # save progress so far, we are about to render the session below
         session.save()
@@ -599,11 +557,9 @@ def end_mentoring_session(request, session_id, token):
                         **obj,
                     })
             else:
-                obj = {}
-                if session.mentor.academy:
-                    obj['COMPANY_INFO_EMAIL'] = session.mentor.academy.feedback_email
-
-                return render_message(request, 'There was a problem ending the mentoring session', data=obj)
+                return render_message(request,
+                                      'There was a problem ending the mentoring session',
+                                      academy=session.mentor.academy)
 
     elif request.method == 'GET':
         session = MentorshipSession.objects.filter(id=session_id).first()

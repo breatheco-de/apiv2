@@ -3,14 +3,15 @@ Test cases for /academy/:id/member/:id
 """
 import random
 from unittest.mock import MagicMock, patch
+
+from django.core.handlers.wsgi import WSGIRequest
 from django.template import loader
+from django.test.client import FakePayload
 from django.urls.base import reverse_lazy
-from rest_framework import status
 from django.utils import timezone
+from rest_framework import status
 
 from ..mixins import MentorshipTestCase
-from django.core.handlers.wsgi import WSGIRequest
-from django.test.client import FakePayload
 
 UTC_NOW = timezone.now()
 URL = 'https://netscape.bankruptcy.story'
@@ -26,7 +27,8 @@ def render(message,
            mentorship_service=None,
            fix_logo=False,
            start_session=False,
-           session_expired=False):
+           session_expired=False,
+           academy=None):
     mentor_profile_slug = mentor_profile.slug if mentor_profile else 'asd'
     mentorship_service_slug = mentorship_service.slug if mentorship_service else 'asd'
     environ = {
@@ -56,6 +58,15 @@ def render(message,
         'BUTTON_TARGET': '_blank',
         'LINK': None,
     }
+
+    if academy:
+        context['COMPANY_INFO_EMAIL'] = academy.feedback_email
+        context['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
+        context['COMPANY_LOGO'] = academy.logo_url
+        context['COMPANY_NAME'] = academy.name
+
+        if 'heading' not in context:
+            context['heading'] = academy.name
 
     if start_session:
         context = {
@@ -197,7 +208,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
 
         content = self.bc.format.from_bytes(response.content)
         expected = render(
-            'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.')
+            'This mentor is not ready, please contact the mentor directly or anyone from the academy staff.',
+            academy=model.academy)
 
         # dump error in external files
         if content != expected:
@@ -227,7 +239,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render(f'This mentor is not available on any service')
+        expected = render(f'This mentor is not available on any service', academy=model.academy)
 
         # dump error in external files
         if content != expected:

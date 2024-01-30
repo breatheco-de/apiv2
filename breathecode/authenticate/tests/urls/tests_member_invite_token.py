@@ -2,18 +2,21 @@
 Test cases for /academy/:id/member/:id
 """
 import os
-from django.core.handlers.wsgi import WSGIRequest
-from unittest.mock import MagicMock, patch
-from django.template import loader
-from django.urls.base import reverse_lazy
-import pytest
-from rest_framework import status
-from django.http.request import HttpRequest
 from random import randint
-from breathecode.authenticate.forms import InviteForm
-from ..mixins.new_auth_test_case import AuthTestCase
-from breathecode.payments.tasks import build_plan_financing
+from unittest.mock import MagicMock, patch
+
+import pytest
+from django.core.handlers.wsgi import WSGIRequest
+from django.http.request import HttpRequest
+from django.template import loader
 from django.test.client import FakePayload
+from django.urls.base import reverse_lazy
+from rest_framework import status
+
+from breathecode.authenticate.forms import InviteForm
+from breathecode.payments.tasks import build_plan_financing
+
+from ..mixins.new_auth_test_case import AuthTestCase
 
 CSRF_TOKEN = str(randint(10000, 10000000000000))
 render_to_string = loader.render_to_string
@@ -77,7 +80,7 @@ def render_page_with_user_invite(model, arguments={}):
     return loader.render_to_string('form_invite.html', {'form': form, 'csrf_token': CSRF_TOKEN}, request)
 
 
-def render_page_post_form(token, arguments={}, messages=[]):
+def render_page_post_form(token, academy=None, arguments={}, messages=[]):
     request = HttpRequest()
     environ = {
         'HTTP_COOKIE': '',
@@ -107,6 +110,11 @@ def render_page_post_form(token, arguments={}, messages=[]):
         'form': form,
         'csrf_token': CSRF_TOKEN,
     }
+
+    if academy:
+        context['COMPANY_LOGO'] = academy.logo_url
+        context['COMPANY_NAME'] = academy.name
+        context['heading'] = academy.name
 
     if messages:
         context['messages'] = messages
@@ -179,7 +187,7 @@ class AuthenticateTestSuite(AuthTestCase):
         expected = render_page_without_invites()
 
         # dump error in external files
-        if content != expected:
+        if content != expected or True:
             with open('content.html', 'w') as f:
                 f.write(content)
 
@@ -298,10 +306,7 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.post(url, data)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_page_post_form(
-            token='invalid',
-            messages=[Message('alert-danger', 'Invalid or expired invitation invalid')],
-            arguments={})
+        expected = render_page_without_invites()
 
         # dump error in external files
         if content != expected:
@@ -1019,6 +1024,7 @@ class AuthenticateTestSuite(AuthTestCase):
         content = self.bc.format.from_bytes(response.content)
         expected = render_page_post_form(
             token=model.user_invite.token,
+            academy=model.academy,
             messages=[
                 Message('alert-danger',
                         'Unexpected error occurred with invite, please contact the staff of 4geeks')

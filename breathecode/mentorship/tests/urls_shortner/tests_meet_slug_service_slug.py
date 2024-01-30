@@ -1,22 +1,24 @@
 """
 Test cases for /academy/:id/member/:id
 """
-from datetime import timedelta
 import random
-import timeago
+from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
+
+import timeago
+from django.core.handlers.wsgi import WSGIRequest
 from django.template import loader
+from django.test.client import FakePayload
 from django.urls.base import reverse_lazy
-from rest_framework import status
 from django.utils import timezone
+from rest_framework import status
+
 from breathecode.mentorship.exceptions import ExtendSessionException
 from breathecode.mentorship.models import MentorshipSession
-
-from breathecode.tests.mocks.requests import apply_requests_request_mock
-from ..mixins import MentorshipTestCase
-from django.core.handlers.wsgi import WSGIRequest
 from breathecode.payments import tasks
-from django.test.client import FakePayload
+from breathecode.tests.mocks.requests import apply_requests_request_mock
+
+from ..mixins import MentorshipTestCase
 
 UTC_NOW = timezone.now()
 URL = 'https://netscape.bankruptcy.story'
@@ -101,7 +103,8 @@ def render(message,
            mentorship_service=None,
            fix_logo=False,
            start_session=False,
-           session_expired=False):
+           session_expired=False,
+           academy=None):
     mentor_profile_slug = mentor_profile.slug if mentor_profile else 'asd'
     mentorship_service_slug = mentorship_service.slug if mentorship_service else 'asd'
     environ = {
@@ -148,6 +151,15 @@ def render(message,
             'BUTTON_TARGET': '_self',
             'LINK': f'/mentor/session/{mentorship_session.id}?token={token.key}&extend=true',
         }
+
+    if academy:
+        context['COMPANY_INFO_EMAIL'] = academy.feedback_email
+        context['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
+        context['COMPANY_LOGO'] = academy.logo_url
+        context['COMPANY_NAME'] = academy.name
+
+        if 'heading' not in context:
+            context['heading'] = academy.name
 
     string = loader.render_to_string(
         'message.html',
@@ -538,7 +550,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
         expected = render(f'This mentor is not active at the moment',
                           model.mentor_profile,
                           model.token,
-                          fix_logo=True)
+                          fix_logo=True,
+                          academy=model.academy)
 
         # dump error in external files
         if content != expected:
@@ -584,7 +597,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
             expected = render(f'This mentor is not active at the moment',
                               model.mentor_profile,
                               model.token,
-                              fix_logo=True)
+                              fix_logo=True,
+                              academy=model.academy)
 
             # dump error in external files
             if content != expected:
@@ -637,7 +651,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 'staff.',
                 model.mentor_profile,
                 model.token,
-                fix_logo=True)
+                fix_logo=True,
+                academy=model.academy)
 
             # dump error in external files
             if content != expected:
@@ -936,7 +951,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 'here to start the session anyway.</a>',
                 model.mentor_profile,
                 base.token,
-                fix_logo=True)
+                fix_logo=True,
+                academy=model.academy)
 
             # dump error in external files
             if content != expected:
@@ -1023,7 +1039,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
                     f'<a href="/mentor/meet/{model.mentor_profile.slug}">to start a new one?</a>.',
                     model.mentor_profile,
                     base.token,
-                    fix_logo=True)
+                    fix_logo=True,
+                    academy=model.academy)
 
                 # dump error in external files
                 if content != expected:
@@ -1627,7 +1644,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 base.token,
                 mentorship_session=model.mentorship_session,
                 fix_logo=True,
-                session_expired=True)
+                session_expired=True,
+                academy=model.academy)
 
             # dump error in external files
             if content != expected:
@@ -1734,7 +1752,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
                     token,
                     mentorship_session=model.mentorship_session,
                     fix_logo=True,
-                    session_expired=True)
+                    session_expired=True,
+                    academy=model.academy)
 
                 # dump error in external files
                 if content != expected:
@@ -1835,7 +1854,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
                                   token,
                                   mentorship_session=model.mentorship_session,
                                   fix_logo=True,
-                                  session_expired=True)
+                                  session_expired=True,
+                                  academy=model.academy)
 
                 # dump error in external files
                 if content != expected:
@@ -1939,7 +1959,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
                                   model.mentor_profile,
                                   token,
                                   mentorship_session=model.mentorship_session,
-                                  fix_logo=True)
+                                  fix_logo=True,
+                                  academy=model.academy)
 
                 # dump error in external files
                 if content != expected:
@@ -2468,7 +2489,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
                                   model.mentor_profile,
                                   base.token,
                                   mentorship_session=model.mentorship_session,
-                                  fix_logo=True)
+                                  fix_logo=True,
+                                  academy=model.academy)
 
                 # dump error in external files
                 if content != expected:
