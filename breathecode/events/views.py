@@ -564,8 +564,8 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
             if 'id' not in data:
                 raise ValidationException(
                     translation(lang,
-                                en=f'Event id not found',
-                                es=f'No encontró el id del evento',
+                                en='Event id not found',
+                                es='No encontró el id del evento',
                                 slug='event-id-not-found'))
 
             instance = Event.objects.filter(id=data['id'], academy__id=academy_id).first()

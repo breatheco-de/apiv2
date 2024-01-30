@@ -1,13 +1,12 @@
 import logging
 from typing import Any, Type
+
 from django.dispatch import receiver
-from breathecode.admissions.models import CohortTimeSlot
-from breathecode.events.signals import event_saved
-from breathecode.events.models import Event
-from .tasks import async_export_event_to_eventbrite
-from breathecode.events import tasks
 from django.utils import timezone
+
+from breathecode.admissions.models import CohortTimeSlot
 from breathecode.admissions.signals import timeslot_saved
+from breathecode.events import tasks
 
 logger = logging.getLogger(__name__)
 
