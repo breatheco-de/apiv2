@@ -1004,7 +1004,7 @@ class AcademyCodeRevisionView(APIView):
             params['repo'] = task.github_url
 
         try:
-            s = await service('rigobot', task.user.id)
+            s = await service('rigobot', request.user.id)
 
         except SynchronousOnlyOperation:
             raise ValidationException('Async is not supported by the worker',
