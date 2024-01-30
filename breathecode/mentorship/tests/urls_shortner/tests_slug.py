@@ -75,18 +75,29 @@ def render(message, mentor_profile=None, token=None, fix_logo=False, academy=Non
     return string
 
 
-def render_successfully(mentor_profile, user, fix_logo=False):
+def render_successfully(mentor_profile, user, fix_logo=False, academy=None):
     request = None
     booking_url = mentor_profile.booking_url
     if not booking_url.endswith('?'):
         booking_url += '?'
 
-    string = loader.render_to_string('book_session.html', {
+    data = {
         'SUBJECT': 'Mentoring Session',
         'mentor': mentor_profile,
         'mentee': user,
         'booking_url': booking_url,
-    }, request)
+    }
+
+    if academy:
+        data['COMPANY_INFO_EMAIL'] = academy.feedback_email
+        data['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
+        data['COMPANY_LOGO'] = academy.logo_url
+        data['COMPANY_NAME'] = academy.name
+
+        if 'heading' not in data:
+            data['heading'] = academy.name
+
+    string = loader.render_to_string('book_session.html', data, request)
 
     if fix_logo:
         return string.replace('src="/static/assets/logo.png"', 'src="/static/icons/picture.png"')
@@ -273,7 +284,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
             response = self.client.get(url)
 
             content = self.bc.format.from_bytes(response.content)
-            expected = render_successfully(model.mentor_profile, model.user, fix_logo=True)
+            expected = render_successfully(model.mentor_profile,
+                                           model.user,
+                                           fix_logo=True,
+                                           academy=model.academy)
 
             # dump error in external files
             if content != expected:

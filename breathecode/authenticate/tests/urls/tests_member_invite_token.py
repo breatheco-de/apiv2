@@ -122,11 +122,22 @@ def render_page_post_form(token, academy=None, arguments={}, messages=[]):
     return loader.render_to_string('form_invite.html', context, request)
 
 
-def render_page_post_successfully():
+def render_page_post_successfully(academy=None):
     request = None
+
+    obj = {}
+    if academy:
+        obj['COMPANY_INFO_EMAIL'] = academy.feedback_email
+        obj['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
+        obj['COMPANY_LOGO'] = academy.logo_url
+        obj['COMPANY_NAME'] = academy.name
+
+        if 'heading' not in obj:
+            obj['heading'] = academy.name
 
     return loader.render_to_string('message.html', {
         'MESSAGE': 'Welcome to 4Geeks, you can go ahead and log in',
+        **obj,
     }, request)
 
 
@@ -582,7 +593,7 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.post(url, data)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_page_post_successfully()
+        expected = render_page_post_successfully(model.academy)
 
         # dump error in external files
         if content != expected:
@@ -654,7 +665,7 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.post(url, data)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_page_post_successfully()
+        expected = render_page_post_successfully(model.academy)
 
         # dump error in external files
         if content != expected:
@@ -729,7 +740,7 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.post(url, data)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_page_post_successfully()
+        expected = render_page_post_successfully(model.academy)
 
         # dump error in external files
         if content != expected:
@@ -794,7 +805,7 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.post(url, data)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_page_post_successfully()
+        expected = render_page_post_successfully(model.academy)
 
         # dump error in external files
         if content != expected:
@@ -852,7 +863,7 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.post(url, data)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_page_post_successfully()
+        expected = render_page_post_successfully(model.academy)
 
         # dump error in external files
         if content != expected:
@@ -907,7 +918,7 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.post(url, data)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_page_post_successfully()
+        expected = render_page_post_successfully(model.academy)
 
         # dump error in external files
         if content != expected:
@@ -966,7 +977,7 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.post(url, data)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_page_post_successfully()
+        expected = render_page_post_successfully(model.academy)
 
         # dump error in external files
         if content != expected:

@@ -1,15 +1,18 @@
+import json
+import logging
 import re
-from breathecode.notify.actions import send_email_message, send_slack
-import logging, json
+
+from django.db.models import Avg, QuerySet
 from django.utils import timezone
-from django.db.models import Avg
-from breathecode.utils import ValidationException
-from breathecode.authenticate.models import Token
-from .models import Answer, Survey, Review, ReviewPlatform
-from .utils import strings
+
 from breathecode.admissions.models import CohortUser
-from django.db.models import QuerySet
+from breathecode.authenticate.models import Token
+from breathecode.notify.actions import send_email_message, send_slack
+from breathecode.utils import ValidationException
+
 from . import tasks
+from .models import Answer, Review, ReviewPlatform, Survey
+from .utils import strings
 
 logger = logging.getLogger(__name__)
 
@@ -131,10 +134,6 @@ def send_question(user, cohort=None):
     answer.token_id = token_id
     answer.save()
 
-    obj = {}
-    if cu.cohort and cu.cohort.academy:
-        obj['COMPANY_INFO_EMAIL'] = cu.cohort.academy.feedback_email
-
     data = {
         'QUESTION': question['title'],
         'HIGHEST': answer.highest,
@@ -143,14 +142,17 @@ def send_question(user, cohort=None):
         'ANSWER_ID': answer.id,
         'BUTTON': strings[answer.cohort.language.lower()]['button_label'],
         'LINK': f'https://nps.4geeks.com/{answer.id}?token={token.key}',
-        **obj,
     }
 
     if user.email:
-        send_email_message('nps', user.email, data)
+        send_email_message('nps', user.email, data, academy=answer.cohort.academy)
 
     if hasattr(user, 'slackuser') and hasattr(answer.cohort.academy, 'slackteam'):
-        send_slack('nps', user.slackuser, answer.cohort.academy.slackteam, data=data)
+        send_slack('nps',
+                   user.slackuser,
+                   answer.cohort.academy.slackteam,
+                   data=data,
+                   academy=answer.cohort.academy)
 
     # keep track of sent survays until they get answered
     if not question_was_sent_previously:

@@ -100,16 +100,13 @@ def async_accept_user_from_waiting_list(user_invite_id: int) -> None:
     invite.process_message = f'Registered as User with id {user.id}'
     invite.save()
 
-    obj = {}
-    if invite.academy:
-        obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
-
     notify_actions.send_email_message(
-        'pick_password', user.email, {
+        'pick_password',
+        user.email, {
             'SUBJECT': 'Set your password at 4Geeks',
             'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{invite.token}',
-            **obj,
-        })
+        },
+        academy=invite.academy)
 
 
 @task(priority=TaskPriority.OAUTH_CREDENTIALS.value)
@@ -124,7 +121,7 @@ def create_user_from_invite(user_invite_id: int, **_):
     logger.info('Running create_user_from_invite task')
 
     if not (user_invite := UserInvite.objects.filter(id=user_invite_id).only(
-            'email', 'first_name', 'last_name', 'status', 'user_id', 'token').first()):
+            'email', 'first_name', 'last_name', 'status', 'user_id', 'token', 'academy__id').first()):
         raise RetryTask('User invite not found')
 
     if user_invite.status != 'ACCEPTED':
@@ -149,7 +146,9 @@ def create_user_from_invite(user_invite_id: int, **_):
 
     if user_invite.token:
         notify_actions.send_email_message(
-            'pick_password', user.email, {
+            'pick_password',
+            user.email, {
                 'SUBJECT': 'Set your password at 4Geeks',
                 'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{user_invite.token}'
-            })
+            },
+            academy=user_invite.academy)

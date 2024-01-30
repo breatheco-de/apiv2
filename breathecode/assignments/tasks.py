@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 @shared_task(bind=True, priority=TaskPriority.NOTIFICATION.value)
 def student_task_notification(self, task_id):
-    """Notify if the task was change"""
+    """Notify if the task was change."""
     logger.info('Starting student_task_notification')
 
     task = Task.objects.filter(id=task_id).first()
@@ -30,15 +30,16 @@ def student_task_notification(self, task_id):
     subject = NOTIFICATION_STRINGS[language]['student']['subject'].format(title=task.title)
     details = NOTIFICATION_STRINGS[language]['student'][revision_status]
 
-    obj = {}
+    academy = None
     if task.cohort:
-        obj['COMPANY_INFO_EMAIL'] = task.cohort.academy.feedback_email
+        academy = task.cohort.academy
 
-    actions.send_email_message('diagnostic', task.user.email, {
-        'subject': subject,
-        'details': details,
-        **obj,
-    })
+    actions.send_email_message('diagnostic',
+                               task.user.email, {
+                                   'subject': subject,
+                                   'details': details,
+                               },
+                               academy=academy)
 
 
 @shared_task(bind=True, priority=TaskPriority.NOTIFICATION.value)
@@ -68,15 +69,16 @@ def teacher_task_notification(self, task_id):
         title=task.title,
         url=f'{url}/cohort/{task.cohort.slug}/assignments')
 
-    obj = {}
+    academy = None
     if task.cohort:
-        obj['COMPANY_INFO_EMAIL'] = task.cohort.academy.feedback_email
+        academy = task.cohort.academy
 
-    actions.send_email_message('diagnostic', task.user.email, {
-        'subject': subject,
-        'details': details,
-        **obj,
-    })
+    actions.send_email_message('diagnostic',
+                               task.user.email, {
+                                   'subject': subject,
+                                   'details': details,
+                               },
+                               academy=academy)
 
 
 @shared_task(bind=False, priority=TaskPriority.ACADEMY.value)

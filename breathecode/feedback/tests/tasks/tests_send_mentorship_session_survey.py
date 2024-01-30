@@ -266,15 +266,15 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
         ])
 
         self.assertEqual(actions.send_email_message.call_args_list, [
-            call(
-                'nps_survey', model.user.email, {
-                    'SUBJECT': strings['en']['survey_subject'],
-                    'MESSAGE': strings['en']['session']['title'].format(fullname_of_mentor),
-                    'TRACKER_URL': f'{API_URL}/v1/feedback/answer/1/tracker.png',
-                    'BUTTON': strings['en']['button_label'],
-                    'LINK': f'https://nps.4geeks.com/1?token={token.key}',
-                    'COMPANY_INFO_EMAIL': None,
-                })
+            call('nps_survey',
+                 model.user.email, {
+                     'SUBJECT': strings['en']['survey_subject'],
+                     'MESSAGE': strings['en']['session']['title'].format(fullname_of_mentor),
+                     'TRACKER_URL': f'{API_URL}/v1/feedback/answer/1/tracker.png',
+                     'BUTTON': strings['en']['button_label'],
+                     'LINK': f'https://nps.4geeks.com/1?token={token.key}',
+                 },
+                 academy=model.academy)
         ])
 
         self.bc.check.partial_equality(self.bc.database.list_of('authenticate.Token'),
@@ -321,15 +321,15 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
         ])
 
         self.assertEqual(actions.send_email_message.call_args_list, [
-            call(
-                'nps_survey', model.user.email, {
-                    'SUBJECT': strings['en']['survey_subject'],
-                    'MESSAGE': model.answer.title,
-                    'TRACKER_URL': f'{API_URL}/v1/feedback/answer/1/tracker.png',
-                    'BUTTON': strings['en']['button_label'],
-                    'LINK': f'https://nps.4geeks.com/1?token={token.key}',
-                    'COMPANY_INFO_EMAIL': None,
-                })
+            call('nps_survey',
+                 model.user.email, {
+                     'SUBJECT': strings['en']['survey_subject'],
+                     'MESSAGE': model.answer.title,
+                     'TRACKER_URL': f'{API_URL}/v1/feedback/answer/1/tracker.png',
+                     'BUTTON': strings['en']['button_label'],
+                     'LINK': f'https://nps.4geeks.com/1?token={token.key}',
+                 },
+                 academy=model.academy)
         ])
 
         self.bc.check.partial_equality(self.bc.database.list_of('authenticate.Token'),

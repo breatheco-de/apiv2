@@ -1,14 +1,15 @@
 import os
-import breathecode.notify.actions as actions
-from unittest.mock import MagicMock, patch, call
+from datetime import timedelta
+from unittest.mock import MagicMock, call, patch
+
 from django.urls.base import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
 
+import breathecode.notify.actions as actions
 from breathecode.tests.mocks.requests import apply_requests_post_mock
+
 from ..mixins.new_auth_test_case import AuthTestCase
-from rest_framework import status
-from django.utils import timezone
-from datetime import timedelta
 
 
 def generate_user_invite(self, model, user_invite, arguments={}):
@@ -75,6 +76,7 @@ def generate_profile_academy(self, model, profile_academy, arguments={}):
 
 def generate_send_email_message(self, model):
     email = None
+    academy = None
 
     if 'profile_academy' in model:
         email = model.profile_academy.user.email
@@ -82,33 +84,37 @@ def generate_send_email_message(self, model):
     elif 'user_invite' in model:
         email = model.user_invite.email
 
+    if 'academy' in model:
+        academy = model.academy
+
     return [
-        call(
-            'academy_invite', email, {
-                'subject':
-                f'Invitation to study at {model.academy.name}',
-                'invites': [{
-                    'id': model.profile_academy.id,
-                    'academy': {
-                        'id': model.academy.id,
-                        'name': model.academy.name,
-                        'slug': model.academy.slug,
-                        'timezone': model.academy.timezone,
-                    },
-                    'role': model.role.slug,
-                    'created_at': model.profile_academy.created_at,
-                }],
-                'user': {
-                    'id': model.user.id,
-                    'email': model.user.email,
-                    'first_name': model.user.first_name,
-                    'last_name': model.user.last_name,
-                    'github': None,
-                    'profile': None
-                },
-                'LINK':
-                'http://localhost:8000/v1/auth/academy/html/invite',
-            }),
+        call('academy_invite',
+             email, {
+                 'subject':
+                 f'Invitation to study at {model.academy.name}',
+                 'invites': [{
+                     'id': model.profile_academy.id,
+                     'academy': {
+                         'id': model.academy.id,
+                         'name': model.academy.name,
+                         'slug': model.academy.slug,
+                         'timezone': model.academy.timezone,
+                     },
+                     'role': model.role.slug,
+                     'created_at': model.profile_academy.created_at,
+                 }],
+                 'user': {
+                     'id': model.user.id,
+                     'email': model.user.email,
+                     'first_name': model.user.first_name,
+                     'last_name': model.user.last_name,
+                     'github': None,
+                     'profile': None
+                 },
+                 'LINK':
+                 'http://localhost:8000/v1/auth/academy/html/invite',
+             },
+             academy=academy),
     ]
 
 

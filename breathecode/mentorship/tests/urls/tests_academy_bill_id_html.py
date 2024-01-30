@@ -3,10 +3,12 @@ Test cases for /academy/:id/member/:id
 """
 import os
 import urllib.parse
+
 from django.template import loader
 from django.urls.base import reverse_lazy
-from rest_framework import status
 from django.utils import timezone
+from rest_framework import status
+
 from ..mixins import MentorshipTestCase
 
 UTC_NOW = timezone.now()
@@ -327,6 +329,15 @@ def render_successfully(self, mentorship_bill, mentor_profile, mentorship_servic
         'status':
         status_map[mentorship_bill.status],
     }
+
+    if academy:
+        data['COMPANY_INFO_EMAIL'] = academy.feedback_email
+        data['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
+        data['COMPANY_LOGO'] = academy.logo_url
+        data['COMPANY_NAME'] = academy.name
+
+        if 'heading' not in data:
+            data['heading'] = academy.name
 
     return template.render(data)
 

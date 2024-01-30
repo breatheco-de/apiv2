@@ -297,6 +297,15 @@ def render_pick_session(mentor_profile, user, token, academy, mentorship_service
         'baseUrl': base_url,
     }
 
+    if academy:
+        context['COMPANY_INFO_EMAIL'] = academy.feedback_email
+        context['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
+        context['COMPANY_LOGO'] = academy.logo_url
+        context['COMPANY_NAME'] = academy.name
+
+        if 'heading' not in context:
+            context['heading'] = academy.name
+
     string = loader.render_to_string('pick_session.html', context, request)
 
     if fix_logo:
@@ -793,7 +802,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 model.mentor_profile,
                 model.token,
                 fix_logo=True,
-                start_session=True)
+                start_session=True,
+                academy=model.academy)
 
             # dump error in external files
             if content != expected:
@@ -1200,7 +1210,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 model.mentor_profile,
                 base.token,
                 fix_logo=True,
-                start_session=True)
+                start_session=True,
+                academy=model.academy)
 
             # dump error in external files
             if content != expected:
@@ -1357,7 +1368,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             response = self.client.get(url)
 
             content = self.bc.format.from_bytes(response.content)
-            expected = render('with-consumer-not-enough-consumables')
+            expected = render('with-consumer-not-enough-consumables', academy=None)
 
             # dump error in external files
             if content != expected:
@@ -1449,7 +1460,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 model.mentor_profile,
                 base.token,
                 fix_logo=True,
-                start_session=True)
+                start_session=True,
+                academy=model.academy)
 
             # dump error in external files
             if content != expected:

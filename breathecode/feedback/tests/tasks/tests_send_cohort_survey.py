@@ -135,16 +135,16 @@ class SendCohortSurvey(FeedbackTestCase):
                          [call(model.user, model.survey, status='SENT')])
         token = self.bc.database.get('authenticate.Token', 1, dict=False)
         self.assertEqual(actions.send_email_message.call_args_list, [
-            call(
-                'nps_survey', model.user.email, {
-                    'SUBJECT': 'We need your feedback',
-                    'MESSAGE':
-                    'Please take 5 minutes to give us feedback about your experience at the academy so far.',
-                    'TRACKER_URL': f'https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png',
-                    'BUTTON': 'Answer the question',
-                    'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}',
-                    'COMPANY_INFO_EMAIL': None,
-                })
+            call('nps_survey',
+                 model.user.email, {
+                     'SUBJECT': 'We need your feedback',
+                     'MESSAGE':
+                     'Please take 5 minutes to give us feedback about your experience at the academy so far.',
+                     'TRACKER_URL': f'https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png',
+                     'BUTTON': 'Answer the question',
+                     'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}',
+                 },
+                 academy=model.academy)
         ])
 
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'API_URL': 'https://hello.com'})))
@@ -178,15 +178,16 @@ class SendCohortSurvey(FeedbackTestCase):
             token = self.bc.database.get('authenticate.Token', model.survey.id, dict=False)
             self.assertEqual(actions.send_email_message.call_args_list, [
                 call(
-                    'nps_survey', model.user.email, {
+                    'nps_survey',
+                    model.user.email, {
                         'SUBJECT': 'We need your feedback',
                         'MESSAGE':
                         'Please take 5 minutes to give us feedback about your experience at the academy so far.',
                         'TRACKER_URL': f'https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png',
                         'BUTTON': 'Answer the question',
                         'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}',
-                        'COMPANY_INFO_EMAIL': None,
-                    })
+                    },
+                    academy=model.academy)
             ])
 
             logging.Logger.info.call_args_list = []
@@ -247,20 +248,21 @@ class SendCohortSurvey(FeedbackTestCase):
                             f'https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png',
                             'BUTTON': 'Answer the question',
                             'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}',
-                            'COMPANY_INFO_EMAIL': None,
-                        })
+                        },
+                        academy=model.academy)
                 ]))
             self.assertEqual(actions.send_email_message.call_args_list, [
                 call(
-                    'nps_survey', model.user.email, {
+                    'nps_survey',
+                    model.user.email, {
                         'SUBJECT': 'We need your feedback',
                         'MESSAGE':
                         'Please take 5 minutes to give us feedback about your experience at the academy so far.',
                         'TRACKER_URL': f'https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png',
                         'BUTTON': 'Answer the question',
                         'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}',
-                        'COMPANY_INFO_EMAIL': None,
-                    })
+                    },
+                    academy=model.academy)
             ])
 
             logging.Logger.info.call_args_list = []

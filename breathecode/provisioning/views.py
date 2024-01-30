@@ -460,11 +460,29 @@ def render_html_bill(request, token, id=None):
                       status=403)
 
     item = ProvisioningBill.objects.filter(id=id, academy__isnull=False).first()
+
     if item is None:
-        return render(request, 'message.html', {
-            'MESSAGE':
-            translation(lang, en='Bill not found', es='Factura no encontrada', slug='bill-not-found')
-        })
+        obj = {}
+        if item.academy:
+            obj['COMPANY_INFO_EMAIL'] = item.academy.feedback_email
+            obj['COMPANY_LEGAL_NAME'] = item.academy.legal_name or item.academy.name
+            obj['COMPANY_LOGO'] = item.academy.logo_url
+            obj['COMPANY_NAME'] = item.academy.name
+
+            if 'heading' not in obj:
+                obj['heading'] = item.academy.name
+
+        return render(
+            request, 'message.html', {
+                'MESSAGE':
+                translation(
+                    lang,
+                    en='Bill not found',
+                    es='Factura no encontrada',
+                    slug='bill-not-found',
+                    **obj,
+                )
+            })
 
     status_map = {
         'DUE': 'UNDER_REVIEW',
@@ -510,7 +528,7 @@ def render_html_bill(request, token, id=None):
         'url': url,
         'COMPANY_INFO_EMAIL': item.academy.feedback_email,
     }
-    template = get_template_content('provisioning_invoice', data)
+    template = get_template_content('provisioning_invoice', data, academy=item.academy)
     return HttpResponse(template['html'])
 
 

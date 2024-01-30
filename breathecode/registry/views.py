@@ -426,7 +426,7 @@ def get_config(request, asset_slug):
         if asset.author is not None:
             to = asset.author.email
 
-        send_email_message('message', to=to, data=data)
+        send_email_message('message', to=to, data=data, academy=asset.academy)
         raise ValidationException(f'Config file invalid or not found for {asset.url}',
                                   code=404,
                                   slug='config_not_found')

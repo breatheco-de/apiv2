@@ -1738,12 +1738,14 @@ class MemberPostTestSuite(AuthTestCase):
             }),
         ])
         self.assertEqual(actions.send_email_message.call_args_list, [
-            call('welcome_academy', 'dude@dude.dude', {
-                'email': 'dude@dude.dude',
-                'subject': 'Welcome to 4Geeks',
-                'LINK': url,
-                'FIST_NAME': 'Kenny'
-            })
+            call('welcome_academy',
+                 'dude@dude.dude', {
+                     'email': 'dude@dude.dude',
+                     'subject': 'Welcome to 4Geeks',
+                     'LINK': url,
+                     'FIST_NAME': 'Kenny'
+                 },
+                 academy=model.academy)
         ])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
@@ -1933,14 +1935,14 @@ class MemberPostTestSuite(AuthTestCase):
         ])
 
         self.assertEqual(actions.send_email_message.call_args_list, [
-            call(
-                'welcome_academy', 'dude2@dude.dude', {
-                    'email': 'dude2@dude.dude',
-                    'subject': 'Welcome to 4Geeks',
-                    'LINK': url,
-                    'FIST_NAME': 'Kenny',
-                    'COMPANY_INFO_EMAIL': None,
-                })
+            call('welcome_academy',
+                 'dude2@dude.dude', {
+                     'email': 'dude2@dude.dude',
+                     'subject': 'Welcome to 4Geeks',
+                     'LINK': url,
+                     'FIST_NAME': 'Kenny',
+                 },
+                 academy=model.academy)
         ])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())

@@ -245,9 +245,9 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
                      'SCORE': model.answer.score,
                      'COMMENTS': model.answer.comment,
                      'ACADEMY': model.answer.academy.name,
-                     'COMPANY_INFO_EMAIL': model.academy.feedback_email,
                      'LINK': f'https://www.whatever.com/feedback/surveys/{model.answer.academy.slug}/1'
-                 })
+                 },
+                 academy=model.academy)
         ])
         self.assertEqual(actions.calculate_survey_scores.call_args_list, [call(1)])
         self.assertEqual(actions.calculate_survey_response_rate.call_args_list, [call(1)])
@@ -300,9 +300,9 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
                      'SCORE': model.answer.score,
                      'COMMENTS': model.answer.comment,
                      'ACADEMY': model.answer.academy.name,
-                     'COMPANY_INFO_EMAIL': model.academy.feedback_email,
                      'LINK': f'https://www.whatever.com/feedback/surveys/{model.answer.academy.slug}/1'
-                 })
+                 },
+                 academy=model.academy)
         ])
         self.assertEqual(actions.calculate_survey_scores.call_args_list, [call(1)])
         self.assertEqual(actions.calculate_survey_response_rate.call_args_list, [call(1)])
@@ -356,9 +356,9 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
                      'SCORE': model.answer.score,
                      'COMMENTS': model.answer.comment,
                      'ACADEMY': model.answer.academy.name,
-                     'COMPANY_INFO_EMAIL': model.academy.feedback_email,
                      'LINK': f'https://www.whatever.com/feedback/surveys/{model.answer.academy.slug}/1'
-                 })
+                 },
+                 academy=model.academy)
         ])
         self.assertEqual(actions.calculate_survey_scores.call_args_list, [call(1)])
         self.assertEqual(actions.calculate_survey_response_rate.call_args_list, [call(1)])

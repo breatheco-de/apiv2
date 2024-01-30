@@ -107,18 +107,15 @@ def render_html_bill(request, token, id=None):
     serializer = BigBillSerializer(item, many=False)
     status_map = {'DUE': 'UNDER_REVIEW', 'APPROVED': 'READY_TO_PAY', 'PAID': 'ALREADY PAID'}
 
-    obj = {}
-    if item.academy:
-        obj['COMPANY_INFO_EMAIL'] = item.academy.feedback_email
-
     data = {
         **serializer.data,
-        'status': status_map[serializer.data['status']],
-        'title': f'Mentor { serializer.data["mentor"]["user"]["first_name"] } '
+        'status':
+        status_map[serializer.data['status']],
+        'title':
+        f'Mentor { serializer.data["mentor"]["user"]["first_name"] } '
         f'{ serializer.data["mentor"]["user"]["last_name"] } - Invoice { item.id }',
-        **obj,
     }
-    template = get_template_content('mentorship_invoice', data)
+    template = get_template_content('mentorship_invoice', data, academy=item.academy)
     return HttpResponse(template['html'])
 
 
@@ -155,6 +152,12 @@ def forward_booking_url(request, mentor_slug, token):
     obj = {}
     if mentor.academy:
         obj['COMPANY_INFO_EMAIL'] = mentor.academy.feedback_email
+        obj['COMPANY_LEGAL_NAME'] = mentor.academy.legal_name or mentor.academy.name
+        obj['COMPANY_LOGO'] = mentor.academy.logo_url
+        obj['COMPANY_NAME'] = mentor.academy.name
+
+        if 'heading' not in obj:
+            obj['heading'] = mentor.academy.name
 
     return render(
         request, 'book_session.html', {
@@ -200,6 +203,12 @@ def forward_booking_url_by_service(request, mentor_slug, token):
     obj = {}
     if mentor.academy:
         obj['COMPANY_INFO_EMAIL'] = mentor.academy.feedback_email
+        obj['COMPANY_LEGAL_NAME'] = mentor.academy.legal_name or mentor.academy.name
+        obj['COMPANY_LOGO'] = mentor.academy.logo_url
+        obj['COMPANY_NAME'] = mentor.academy.name
+
+        if 'heading' not in obj:
+            obj['heading'] = mentor.academy.name
 
     return render(
         request, 'book_session.html', {
@@ -236,6 +245,12 @@ def pick_mentorship_service(request, token, mentor_slug):
     obj = {}
     if mentor.academy:
         obj['COMPANY_INFO_EMAIL'] = mentor.academy.feedback_email
+        obj['COMPANY_LEGAL_NAME'] = mentor.academy.legal_name or mentor.academy.name
+        obj['COMPANY_LOGO'] = mentor.academy.logo_url
+        obj['COMPANY_NAME'] = mentor.academy.name
+
+        if 'heading' not in obj:
+            obj['heading'] = mentor.academy.name
 
     return render(request, 'pick_service.html', {
         'token': token.key,
@@ -273,6 +288,12 @@ class ForwardMeetUrl:
         obj = {}
         if self.mentor.academy:
             obj['COMPANY_INFO_EMAIL'] = self.mentor.academy.feedback_email
+            obj['COMPANY_LEGAL_NAME'] = self.mentor.academy.legal_name or self.mentor.academy.name
+            obj['COMPANY_LOGO'] = self.mentor.academy.logo_url
+            obj['COMPANY_NAME'] = self.mentor.academy.name
+
+            if 'heading' not in obj:
+                obj['heading'] = self.mentor.academy.name
 
         return render(
             self.request, 'pick_session.html', {
@@ -289,6 +310,12 @@ class ForwardMeetUrl:
         obj = {}
         if mentor.academy:
             obj['COMPANY_INFO_EMAIL'] = mentor.academy.feedback_email
+            obj['COMPANY_LEGAL_NAME'] = mentor.academy.legal_name or mentor.academy.name
+            obj['COMPANY_LOGO'] = mentor.academy.logo_url
+            obj['COMPANY_NAME'] = mentor.academy.name
+
+            if 'heading' not in obj:
+                obj['heading'] = mentor.academy.name
 
         return render(
             self.request, 'pick_mentee.html', {
@@ -333,6 +360,12 @@ class ForwardMeetUrl:
         obj = {}
         if session.mentor.academy:
             obj['COMPANY_INFO_EMAIL'] = session.mentor.academy.feedback_email
+            obj['COMPANY_LEGAL_NAME'] = session.mentor.academy.legal_name or session.mentor.academy.name
+            obj['COMPANY_LOGO'] = session.mentor.academy.logo_url
+            obj['COMPANY_NAME'] = session.mentor.academy.name
+
+            if 'heading' not in obj:
+                obj['heading'] = session.mentor.academy.name
 
         return render(
             self.request, 'message.html', {
@@ -544,6 +577,12 @@ def end_mentoring_session(request, session_id, token):
                 obj = {}
                 if session.mentor.academy:
                     obj['COMPANY_INFO_EMAIL'] = session.mentor.academy.feedback_email
+                    obj['COMPANY_LEGAL_NAME'] = session.mentor.academy.legal_name or session.mentor.academy.name
+                    obj['COMPANY_LOGO'] = session.mentor.academy.logo_url
+                    obj['COMPANY_NAME'] = session.mentor.academy.name
+
+                    if 'heading' not in obj:
+                        obj['heading'] = session.mentor.academy.name
 
                 return render(
                     request, 'close_session.html', {
@@ -587,6 +626,12 @@ def end_mentoring_session(request, session_id, token):
             obj = {}
             if session.mentor.academy:
                 obj['COMPANY_INFO_EMAIL'] = session.mentor.academy.feedback_email
+                obj['COMPANY_LEGAL_NAME'] = session.mentor.academy.legal_name or session.mentor.academy.name
+                obj['COMPANY_LOGO'] = session.mentor.academy.logo_url
+                obj['COMPANY_NAME'] = session.mentor.academy.name
+
+                if 'heading' not in obj:
+                    obj['heading'] = session.mentor.academy.name
 
             return render(
                 request, 'close_session.html', {
@@ -618,6 +663,16 @@ def end_mentoring_session(request, session_id, token):
     if msg is not None and msg != '':
         messages.info(request, msg)
 
+    obj = {}
+    if session.mentor.academy:
+        obj['COMPANY_INFO_EMAIL'] = session.mentor.academy.feedback_email
+        obj['COMPANY_LEGAL_NAME'] = session.mentor.academy.legal_name or session.mentor.academy.name
+        obj['COMPANY_LOGO'] = session.mentor.academy.logo_url
+        obj['COMPANY_NAME'] = session.mentor.academy.name
+
+        if 'heading' not in obj:
+            obj['heading'] = session.mentor.academy.name
+
     return render(
         request, 'form.html', {
             'form': form,
@@ -625,7 +680,8 @@ def end_mentoring_session(request, session_id, token):
             'btn_lable': 'End Mentoring Session'
             if session.status in ['PENDING', 'STARTED'] else 'Mentoring session already ended',
             'intro': 'Please fill the following information to formally end the session',
-            'title': 'End Mentoring Session'
+            'title': 'End Mentoring Session',
+            **obj,
         })
 
 

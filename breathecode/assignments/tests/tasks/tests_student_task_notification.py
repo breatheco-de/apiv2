@@ -82,12 +82,12 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
         self.assertEqual(send_email_message.call_args_list, [
-            call(
-                'diagnostic', model.user.email, {
-                    'subject': f'Your task "{model.task.title}" has been reviewed',
-                    'details': 'Your task has been marked as pending',
-                    'COMPANY_INFO_EMAIL': None,
-                })
+            call('diagnostic',
+                 model.user.email, {
+                     'subject': f'Your task "{model.task.title}" has been reviewed',
+                     'details': 'Your task has been marked as pending',
+                 },
+                 academy=model.academy)
         ])
 
         self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
@@ -114,12 +114,12 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
         self.assertEqual(send_email_message.call_args_list, [
-            call(
-                'diagnostic', model.user.email, {
-                    'subject': f'Your task "{model.task.title}" has been reviewed',
-                    'details': 'Your task has been marked as pending',
-                    'COMPANY_INFO_EMAIL': None,
-                })
+            call('diagnostic',
+                 model.user.email, {
+                     'subject': f'Your task "{model.task.title}" has been reviewed',
+                     'details': 'Your task has been marked as pending',
+                 },
+                 academy=model.academy)
         ])
 
         self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
@@ -147,12 +147,12 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
         self.assertEqual(send_email_message.call_args_list, [
-            call(
-                'diagnostic', model.user.email, {
-                    'subject': f'Tu tarea "{model.task.title}" ha sido revisada',
-                    'details': 'Tu tarea se ha marcado como pendiente',
-                    'COMPANY_INFO_EMAIL': None,
-                })
+            call('diagnostic',
+                 model.user.email, {
+                     'subject': f'Tu tarea "{model.task.title}" ha sido revisada',
+                     'details': 'Tu tarea se ha marcado como pendiente',
+                 },
+                 academy=model.academy)
         ])
 
         self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
@@ -183,12 +183,12 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
         self.assertEqual(send_email_message.call_args_list, [
-            call(
-                'diagnostic', model.user.email, {
-                    'subject': f'Your task "{model.task.title}" has been reviewed',
-                    'details': 'Your task has been marked as approved',
-                    'COMPANY_INFO_EMAIL': None,
-                })
+            call('diagnostic',
+                 model.user.email, {
+                     'subject': f'Your task "{model.task.title}" has been reviewed',
+                     'details': 'Your task has been marked as approved',
+                 },
+                 academy=model.academy)
         ])
 
         self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
@@ -215,12 +215,12 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
         self.assertEqual(send_email_message.call_args_list, [
-            call(
-                'diagnostic', model.user.email, {
-                    'subject': f'Your task "{model.task.title}" has been reviewed',
-                    'details': 'Your task has been marked as approved',
-                    'COMPANY_INFO_EMAIL': None,
-                })
+            call('diagnostic',
+                 model.user.email, {
+                     'subject': f'Your task "{model.task.title}" has been reviewed',
+                     'details': 'Your task has been marked as approved',
+                 },
+                 academy=model.academy)
         ])
 
         self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
@@ -248,12 +248,12 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
         self.assertEqual(send_email_message.call_args_list, [
-            call(
-                'diagnostic', model.user.email, {
-                    'subject': f'Tu tarea "{model.task.title}" ha sido revisada',
-                    'details': 'Tu tarea se ha marcado como aprobada',
-                    'COMPANY_INFO_EMAIL': None,
-                })
+            call('diagnostic',
+                 model.user.email, {
+                     'subject': f'Tu tarea "{model.task.title}" ha sido revisada',
+                     'details': 'Tu tarea se ha marcado como aprobada',
+                 },
+                 academy=model.academy)
         ])
 
         self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
@@ -284,12 +284,12 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
         self.assertEqual(send_email_message.call_args_list, [
-            call(
-                'diagnostic', model.user.email, {
-                    'subject': f'Your task "{model.task.title}" has been reviewed',
-                    'details': 'Your task has been marked as rejected',
-                    'COMPANY_INFO_EMAIL': None,
-                })
+            call('diagnostic',
+                 model.user.email, {
+                     'subject': f'Your task "{model.task.title}" has been reviewed',
+                     'details': 'Your task has been marked as rejected',
+                 },
+                 academy=model.academy)
         ])
 
         self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
@@ -316,12 +316,12 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
         self.assertEqual(send_email_message.call_args_list, [
-            call(
-                'diagnostic', model.user.email, {
-                    'subject': f'Your task "{model.task.title}" has been reviewed',
-                    'details': 'Your task has been marked as rejected',
-                    'COMPANY_INFO_EMAIL': None,
-                })
+            call('diagnostic',
+                 model.user.email, {
+                     'subject': f'Your task "{model.task.title}" has been reviewed',
+                     'details': 'Your task has been marked as rejected',
+                 },
+                 academy=model.academy)
         ])
 
         self.assertEqual(str(Logger.info.call_args_list), str([call('Starting student_task_notification')]))
@@ -349,12 +349,12 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
         self.assertEqual(send_email_message.call_args_list, [
-            call(
-                'diagnostic', model.user.email, {
-                    'subject': f'Tu tarea "{model.task.title}" ha sido revisada',
-                    'details': 'Tu tarea se ha marcado como rechazada',
-                    'COMPANY_INFO_EMAIL': None,
-                })
+            call('diagnostic',
+                 model.user.email, {
+                     'subject': f'Tu tarea "{model.task.title}" ha sido revisada',
+                     'details': 'Tu tarea se ha marcado como rechazada',
+                 },
+                 academy=model.academy)
         ])
 
         self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])

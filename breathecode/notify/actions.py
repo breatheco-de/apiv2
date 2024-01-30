@@ -1,15 +1,20 @@
-from rest_framework.exceptions import APIException
-import os, logging, json
+import json
+import logging
+import os
+
+import requests
 from django.template.loader import get_template
 from django.utils import timezone
-from pyfcm import FCMNotification
-from breathecode.services.slack import client
-from breathecode.admissions.models import Cohort, CohortUser
-from breathecode.utils import ValidationException
-from .models import Device, SlackChannel, SlackTeam, SlackUser, SlackUserTeam
-import requests
-from twilio.rest import Client
 from premailer import transform
+from pyfcm import FCMNotification
+from rest_framework.exceptions import APIException
+from twilio.rest import Client
+
+from breathecode.admissions.models import Cohort, CohortUser
+from breathecode.services.slack import client
+from breathecode.utils import ValidationException
+
+from .models import Device, SlackChannel, SlackTeam, SlackUser, SlackUserTeam
 
 push_service = None
 FIREBASE_KEY = os.getenv('FIREBASE_KEY', None)
@@ -19,7 +24,7 @@ if FIREBASE_KEY is not None and FIREBASE_KEY != '':
 logger = logging.getLogger(__name__)
 
 
-def send_email_message(template_slug, to, data=None, force=False, inline_css=False):
+def send_email_message(template_slug, to, data=None, force=False, inline_css=False, academy=None):
 
     if data is None:
         data = {}
@@ -31,7 +36,10 @@ def send_email_message(template_slug, to, data=None, force=False, inline_css=Fal
         to = [to]
 
     if os.getenv('EMAIL_NOTIFICATIONS_ENABLED', False) == 'TRUE' or force:
-        template = get_template_content(template_slug, data, ['email'], inline_css=inline_css)
+        template = get_template_content(template_slug,
+                                        data, ['email'],
+                                        inline_css=inline_css,
+                                        academy=academy)
 
         result = requests.post(f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages",
                                auth=('api', os.environ.get('MAILGUN_API_KEY', '')),
@@ -56,12 +64,12 @@ def send_email_message(template_slug, to, data=None, force=False, inline_css=Fal
         return True
 
 
-def send_sms(slug, phone_number, data=None):
+def send_sms(slug, phone_number, data=None, academy=None):
 
     if data is None:
         data = {}
 
-    template = get_template_content(slug, data, ['sms'])
+    template = get_template_content(slug, data, ['sms'], academy=academy)
     # Your Account Sid and Auth Token from twilio.com/console
     # DANGER! This is insecure. See http://twil.io/secure
     twillio_sid = os.environ.get('TWILLIO_SID')
@@ -76,10 +84,19 @@ def send_sms(slug, phone_number, data=None):
 
 
 # entity can be a cohort or a user
-def send_slack(slug, slackuser=None, team=None, slackchannel=None, data=None):
+def send_slack(slug, slackuser=None, team=None, slackchannel=None, data=None, academy=None):
 
     if data is None:
         data = {}
+
+    if academy:
+        data['COMPANY_INFO_EMAIL'] = academy.feedback_email
+        data['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
+        data['COMPANY_LOGO'] = academy.logo_url
+        data['COMPANY_NAME'] = academy.name
+
+        if 'heading' not in data:
+            data['heading'] = academy.name
 
     remitent_id = None
     if slackuser is None and slackchannel is None:
@@ -115,7 +132,7 @@ def send_slack(slug, slackuser=None, team=None, slackchannel=None, data=None):
 
 
 # if would like to specify slack channel or user id and team
-def send_slack_raw(slug, token, channel_id, data=None):
+def send_slack_raw(slug, token, channel_id, data=None, academy=None):
     logger.debug(f'Sending slack message to {str(channel_id)}')
 
     if data is None:
@@ -125,7 +142,7 @@ def send_slack_raw(slug, token, channel_id, data=None):
         if 'slack_payload' in data:
             payload = data['slack_payload']
         else:
-            template = get_template_content(slug, data, ['slack'])
+            template = get_template_content(slug, data, ['slack'], academy=academy)
             payload = json.loads(template['slack'])
             if 'blocks' in payload:
                 payload = payload['blocks']
@@ -149,13 +166,13 @@ def send_slack_raw(slug, token, channel_id, data=None):
         return False
 
 
-def send_fcm(slug, registration_ids, data=None):
+def send_fcm(slug, registration_ids, data=None, academy=None):
 
     if data is None:
         data = {}
 
     if (len(registration_ids) > 0 and push_service):
-        template = get_template_content(slug, data, ['email', 'fms'])
+        template = get_template_content(slug, data, ['email', 'fms'], academy=academy)
 
         if 'fms' not in template:
             raise APIException('The template ' + slug + ' does not seem to have a valid FMS version')
@@ -189,7 +206,7 @@ def send_fcm_notification(slug, user_id, data=None):
     send_fcm(slug, registration_ids, data)
 
 
-def get_template_content(slug, data=None, formats=None, inline_css=False):
+def get_template_content(slug, data=None, formats=None, inline_css=False, academy=None):
 
     if data is None:
         data = {}
@@ -205,10 +222,20 @@ def get_template_content(slug, data=None, formats=None, inline_css=False):
         'style__danger': '#ffcccc',
         'style__secondary': '#ededed',
     }
+
     z = con.copy()  # start with x's keys and values
     z.update(data)
 
     templates = {}
+
+    if academy:
+        z['COMPANY_INFO_EMAIL'] = academy.feedback_email
+        z['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
+        z['COMPANY_LOGO'] = academy.logo_url
+        z['COMPANY_NAME'] = academy.name
+
+        if 'heading' not in z:
+            z['heading'] = academy.name
 
     if formats is None or 'email' in formats:
         if 'SUBJECT' in z:
@@ -275,7 +302,6 @@ def sync_slack_team_channel(team_id):
     channels = data['channels']
     while 'response_metadata' in data and 'next_cursor' in data['response_metadata'] and data[
             'response_metadata']['next_cursor'] != '':
-        print('Next cursor: ', data['response_metadata']['next_cursor'])
         data = api.get(
             'conversations.list', {
                 'limit': 300,
@@ -325,7 +351,6 @@ def sync_slack_team_users(team_id):
     members = data['members']
     while 'response_metadata' in data and 'next_cursor' in data['response_metadata'] and data[
             'response_metadata']['next_cursor'] != '':
-        print('Next cursor: ', data['response_metadata']['next_cursor'])
         data = api.get('users.list', {'limit': 300, 'cursor': data['response_metadata']['next_cursor']})
         members = members + data['members']
 

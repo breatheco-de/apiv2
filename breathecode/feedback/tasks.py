@@ -1,18 +1,20 @@
-from datetime import timedelta
 import os
-from breathecode.authenticate.models import Token
-from breathecode.utils import ValidationException
+from datetime import timedelta
+
 from celery import shared_task
-from django.utils import timezone
-from breathecode.notify import actions as notify_actions
-from breathecode.utils.decorators.task import TaskPriority
-from .utils import strings
-from breathecode.utils import getLogger
-from breathecode.admissions.models import CohortUser, Cohort
 from django.contrib.auth.models import User
-from .models import Survey, Answer
+from django.utils import timezone
+
+from breathecode.admissions.models import Cohort, CohortUser
+from breathecode.authenticate.models import Token
 from breathecode.mentorship.models import MentorshipSession
+from breathecode.notify import actions as notify_actions
+from breathecode.utils import ValidationException, getLogger
+from breathecode.utils.decorators.task import TaskPriority
+
 from . import actions
+from .models import Answer, Survey
+from .utils import strings
 
 # Get an instance of a logger
 logger = getLogger(__name__)
@@ -172,10 +174,6 @@ def send_cohort_survey(self, user_id, survey_id):
         logger.info(message)
         raise Exception(message)
 
-    obj = {}
-    if cu.cohort and cu.cohort.academy:
-        obj['COMPANY_INFO_EMAIL'] = cu.cohort.academy.feedback_email
-
     token, created = Token.get_or_create(user, token_type='temporal', hours_length=48)
     data = {
         'SUBJECT': strings[survey.lang]['survey_subject'],
@@ -183,15 +181,17 @@ def send_cohort_survey(self, user_id, survey_id):
         'TRACKER_URL': f'{api_url()}/v1/feedback/survey/{survey_id}/tracker.png',
         'BUTTON': strings[survey.lang]['button_label'],
         'LINK': f'https://nps.4geeks.com/survey/{survey_id}?token={token.key}',
-        **obj,
     }
 
     if user.email:
-
-        notify_actions.send_email_message('nps_survey', user.email, data)
+        notify_actions.send_email_message('nps_survey', user.email, data, academy=survey.cohort.academy)
 
     if hasattr(user, 'slackuser') and hasattr(survey.cohort.academy, 'slackteam'):
-        notify_actions.send_slack('nps_survey', user.slackuser, survey.cohort.academy.slackteam, data=data)
+        notify_actions.send_slack('nps_survey',
+                                  user.slackuser,
+                                  survey.cohort.academy.slackteam,
+                                  data=data,
+                                  academy=survey.cohort.academy)
 
 
 @shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
@@ -266,10 +266,6 @@ def process_answer_received(self, answer_id):
 
         # TODO: instead of sending, use notifications system to be built on the breathecode.admin app.
         if list_of_emails:
-            obj = {}
-            if answer.academy:
-                obj['COMPANY_INFO_EMAIL'] = answer.academy.feedback_email
-
             notify_actions.send_email_message(
                 'negative_answer',
                 list_of_emails,
@@ -281,8 +277,8 @@ def process_answer_received(self, answer_id):
                     'COMMENTS': answer.comment,
                     'ACADEMY': answer.academy.name,
                     'LINK': f'{admin_url}/feedback/surveys/{answer.academy.slug}/{answer.survey.id}',
-                    **obj,
-                })
+                },
+                academy=answer.academy)
 
     return True
 
@@ -338,10 +334,6 @@ def send_mentorship_session_survey(self, session_id):
 
     token, _ = Token.get_or_create(session.mentee, token_type='temporal', hours_length=48)
 
-    obj = {}
-    if session.mentor.academy:
-        obj['COMPANY_INFO_EMAIL'] = session.mentor.academy.feedback_email
-
     # lazyload api url in test environment
     api_url = API_URL if ENV != 'test' else os.getenv('API_URL', '')
     data = {
@@ -350,10 +342,12 @@ def send_mentorship_session_survey(self, session_id):
         'TRACKER_URL': f'{api_url}/v1/feedback/answer/{answer.id}/tracker.png',
         'BUTTON': strings[answer.lang.lower()]['button_label'],
         'LINK': f'https://nps.4geeks.com/{answer.id}?token={token.key}',
-        **obj,
     }
 
     if session.mentee.email:
-        if notify_actions.send_email_message('nps_survey', session.mentee.email, data):
+        if notify_actions.send_email_message('nps_survey',
+                                             session.mentee.email,
+                                             data,
+                                             academy=session.mentor.academy):
             answer.sent_at = timezone.now()
             answer.save()

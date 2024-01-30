@@ -556,23 +556,16 @@ class ResendInviteView(APIView):
             raise ValidationException(errors, code=400)
 
         if not invite.is_email_validated and invite_answered:
-            obj = {}
-            if invite.academy:
-                obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
-
             notify_actions.send_email_message(
-                'verify_email', invite.email, {
+                'verify_email',
+                invite.email, {
                     'SUBJECT': 'Verify your 4Geeks account',
                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/confirmation/{invite.token}',
-                    **obj,
-                })
+                },
+                academy=invite.academy)
 
         if not invite_answered:
-            obj = {}
-            if invite.academy:
-                obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
-
-            resend_invite(invite.token, invite.email, invite.first_name, extra=obj)
+            resend_invite(invite.token, invite.email, invite.first_name, academy=invite.academy)
 
         invite.sent_at = timezone.now()
         invite.save()
@@ -678,12 +671,14 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         if (invite is None and profile_academy is not None and profile_academy.status == 'INVITED'
                 and (profile_academy.user.email or invite.email)):
             notify_actions.send_email_message(
-                'academy_invite', profile_academy.user.email or invite.email, {
+                'academy_invite',
+                profile_academy.user.email or invite.email, {
                     'subject': f'Invitation to study at {profile_academy.academy.name}',
                     'invites': [ProfileAcademySmallSerializer(profile_academy).data],
                     'user': UserSmallSerializer(profile_academy.user).data,
                     'LINK': os.getenv('API_URL') + '/v1/auth/academy/html/invite',
-                })
+                },
+                academy=profile_academy.academy)
             serializer = GetProfileAcademySerializer(profile_academy)
             return Response(serializer.data)
 
@@ -705,7 +700,7 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
                                       code=400,
                                       slug='without-email')
 
-        resend_invite(invite.token, email, invite.first_name)
+        resend_invite(invite.token, email, invite.first_name, academy=invite.academy)
 
         invite.sent_at = timezone.now()
         invite.save()
@@ -1307,7 +1302,6 @@ def save_slack_token(request):
 
         slack_data = resp.json()
         if 'access_token' not in slack_data:
-            print('Slack response body', slack_data)
             raise APIException('Slack error status: ' + slack_data['error'])
 
         slack_data = resp.json()
@@ -1603,6 +1597,12 @@ def pick_password(request, token):
             obj = {}
             if invite and invite.academy:
                 obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
+                obj['COMPANY_LEGAL_NAME'] = invite.academy.legal_name or invite.academy.name
+                obj['COMPANY_LOGO'] = invite.academy.logo_url
+                obj['COMPANY_NAME'] = invite.academy.name
+
+                if 'heading' not in obj:
+                    obj['heading'] = invite.academy.name
 
             messages.error(request, 'Passwords don\'t match')
             return render(request, 'form.html', {'form': form, **obj})
@@ -1611,6 +1611,12 @@ def pick_password(request, token):
             obj = {}
             if invite and invite.academy:
                 obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
+                obj['COMPANY_LEGAL_NAME'] = invite.academy.legal_name or invite.academy.name
+                obj['COMPANY_LOGO'] = invite.academy.logo_url
+                obj['COMPANY_NAME'] = invite.academy.name
+
+                if 'heading' not in obj:
+                    obj['heading'] = invite.academy.name
 
             messages.error(request, "Password can't be empty")
             return render(request, 'form.html', {'form': form, **obj})
@@ -1621,6 +1627,12 @@ def pick_password(request, token):
             obj = {}
             if invite and invite.academy:
                 obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
+                obj['COMPANY_LEGAL_NAME'] = invite.academy.legal_name or invite.academy.name
+                obj['COMPANY_LOGO'] = invite.academy.logo_url
+                obj['COMPANY_NAME'] = invite.academy.name
+
+                if 'heading' not in obj:
+                    obj['heading'] = invite.academy.name
 
             messages.error(request, 'Password must contain 8 characters with lowercase, uppercase and '
                            'symbols')
@@ -1644,6 +1656,12 @@ def pick_password(request, token):
                 obj = {}
                 if invite and invite.academy:
                     obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
+                    obj['COMPANY_LEGAL_NAME'] = invite.academy.legal_name or invite.academy.name
+                    obj['COMPANY_LOGO'] = invite.academy.logo_url
+                    obj['COMPANY_NAME'] = invite.academy.name
+
+                    if 'heading' not in obj:
+                        obj['heading'] = invite.academy.name
 
                 return render(request, 'message.html', {
                     'MESSAGE': 'You password has been reset successfully, you can close this window.',
@@ -1662,11 +1680,7 @@ class PasswordResetView(APIView):
         if profile_academy is None:
             raise ValidationException('Member not found', 400)
 
-        obj = {}
-        if profile_academy.academy:
-            obj['COMPANY_INFO_EMAIL'] = profile_academy.academy.feedback_email
-
-        if reset_password([profile_academy.user], extra=obj):
+        if reset_password([profile_academy.user], academy=profile_academy.academy):
 
             token = Token.objects.filter(user=profile_academy.user, token_type='temporal').first()
             serializer = TokenSmallSerializer(token)
@@ -1759,9 +1773,13 @@ def render_invite(request, token, member_id=None):
 
         obj = {}
         if invite and invite.academy:
+            obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
+            obj['COMPANY_LEGAL_NAME'] = invite.academy.legal_name or invite.academy.name
             obj['COMPANY_LOGO'] = invite.academy.logo_url
             obj['COMPANY_NAME'] = invite.academy.name
-            obj['heading'] = invite.academy.name
+
+            if 'heading' not in obj:
+                obj['heading'] = invite.academy.name
 
         return render(request, 'form_invite.html', {
             'form': form,
@@ -1789,11 +1807,14 @@ def render_invite(request, token, member_id=None):
             messages.error(request, str(e))
 
             obj = {}
-
             if invite and invite.academy:
+                obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
+                obj['COMPANY_LEGAL_NAME'] = invite.academy.legal_name or invite.academy.name
                 obj['COMPANY_LOGO'] = invite.academy.logo_url
                 obj['COMPANY_NAME'] = invite.academy.name
-                obj['heading'] = invite.academy.name
+
+                if 'heading' not in obj:
+                    obj['heading'] = invite.academy.name
 
             return render(request, 'form_invite.html', {
                 'form': form,
@@ -1810,8 +1831,20 @@ def render_invite(request, token, member_id=None):
             else:
                 return HttpResponseRedirect(redirect_to=uri)
         else:
-            return render(request, 'message.html',
-                          {'MESSAGE': 'Welcome to 4Geeks, you can go ahead and log in'})
+            obj = {}
+            if invite and invite.academy:
+                obj['COMPANY_INFO_EMAIL'] = invite.academy.feedback_email
+                obj['COMPANY_LEGAL_NAME'] = invite.academy.legal_name or invite.academy.name
+                obj['COMPANY_LOGO'] = invite.academy.logo_url
+                obj['COMPANY_NAME'] = invite.academy.name
+
+                if 'heading' not in obj:
+                    obj['heading'] = invite.academy.name
+
+            return render(request, 'message.html', {
+                'MESSAGE': 'Welcome to 4Geeks, you can go ahead and log in',
+                **obj,
+            })
 
 
 @private_view()

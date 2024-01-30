@@ -315,6 +315,13 @@ def join_live_class(request, token, live_class, lang):
         obj = {}
         if live_class.cohort_time_slot.cohort.academy:
             obj['COMPANY_INFO_EMAIL'] = live_class.cohort_time_slot.cohort.academy.feedback_email
+            obj['COMPANY_LEGAL_NAME'] = (live_class.cohort_time_slot.cohort.academy.legal_name
+                                         or live_class.cohort_time_slot.cohort.academy.name)
+            obj['COMPANY_LOGO'] = live_class.cohort_time_slot.cohort.academy.logo_url
+            obj['COMPANY_NAME'] = live_class.cohort_time_slot.cohort.academy.name
+
+            if 'heading' not in obj:
+                obj['heading'] = live_class.cohort_time_slot.cohort.academy.name
 
         return render(request, 'countdown.html', {
             'token': token.key,
@@ -844,6 +851,12 @@ def join_event(request, token, event):
         obj = {}
         if event.academy:
             obj['COMPANY_INFO_EMAIL'] = event.academy.feedback_email
+            obj['COMPANY_LEGAL_NAME'] = event.academy.legal_name or event.academy.name
+            obj['COMPANY_LOGO'] = event.academy.logo_url
+            obj['COMPANY_NAME'] = event.academy.name
+
+            if 'heading' not in obj:
+                obj['heading'] = event.academy.name
 
         return render(request, 'countdown.html', {
             'token': token.key,

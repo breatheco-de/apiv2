@@ -62,12 +62,18 @@ def serializer(live_class):
 
 
 # IMPORTANT: the loader.render_to_string in a function is inside of function render
-def render_countdown(live_class, token):
+def render_countdown(live_class, token, academy=None):
     request = None
     context = {
         'event': serializer(live_class),
         'token': token.key,
     }
+
+    if academy:
+        context['COMPANY_INFO_EMAIL'] = academy.feedback_email
+        context['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
+        context['COMPANY_LOGO'] = academy.logo_url
+        context['COMPANY_NAME'] = academy.name
 
     return loader.render_to_string('countdown.html', context, request)
 
@@ -570,7 +576,7 @@ class AcademyEventTestSuite(EventTestCase):
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_countdown(model.live_class, model.token)
+        expected = render_countdown(model.live_class, model.token, academy=model.academy)
 
         # dump error in external files
         if content != expected:

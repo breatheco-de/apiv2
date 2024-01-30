@@ -1067,34 +1067,33 @@ class StudentPostTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
         assert actions.send_email_message.call_args_list == [
-            call(
-                'academy_invite', model.user[1].email, {
-                    'subject':
-                    f'Invitation to study at {model.academy.name}',
-                    'invites': [{
-                        'id': 2,
-                        'academy': {
-                            'id': 1,
-                            'name': model.academy.name,
-                            'slug': model.academy.slug,
-                            'timezone': None
-                        },
-                        'role': 'student',
-                        'created_at': UTC_NOW
-                    }],
-                    'user': {
-                        'id': 2,
-                        'email': model.user[1].email,
-                        'first_name': model.user[1].first_name,
-                        'last_name': model.user[1].last_name,
-                        'github': None,
-                        'profile': None
-                    },
-                    'LINK':
-                    url,
-                    'COMPANY_INFO_EMAIL':
-                    None,
-                }),
+            call('academy_invite',
+                 model.user[1].email, {
+                     'subject':
+                     f'Invitation to study at {model.academy.name}',
+                     'invites': [{
+                         'id': 2,
+                         'academy': {
+                             'id': 1,
+                             'name': model.academy.name,
+                             'slug': model.academy.slug,
+                             'timezone': None
+                         },
+                         'role': 'student',
+                         'created_at': UTC_NOW
+                     }],
+                     'user': {
+                         'id': 2,
+                         'email': model.user[1].email,
+                         'first_name': model.user[1].first_name,
+                         'last_name': model.user[1].last_name,
+                         'github': None,
+                         'profile': None
+                     },
+                     'LINK':
+                     url,
+                 },
+                 academy=model.academy),
         ]
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
@@ -1162,34 +1161,33 @@ class StudentPostTestSuite(AuthTestCase):
 
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
         assert actions.send_email_message.call_args_list == [
-            call(
-                'academy_invite', model.user[1].email, {
-                    'subject':
-                    f'Invitation to study at {model.academy.name}',
-                    'invites': [{
-                        'id': 2,
-                        'academy': {
-                            'id': 1,
-                            'name': model.academy.name,
-                            'slug': model.academy.slug,
-                            'timezone': None
-                        },
-                        'role': 'student',
-                        'created_at': UTC_NOW
-                    }],
-                    'user': {
-                        'id': 2,
-                        'email': model.user[1].email,
-                        'first_name': model.user[1].first_name,
-                        'last_name': model.user[1].last_name,
-                        'github': None,
-                        'profile': None
-                    },
-                    'LINK':
-                    url,
-                    'COMPANY_INFO_EMAIL':
-                    None,
-                }),
+            call('academy_invite',
+                 model.user[1].email, {
+                     'subject':
+                     f'Invitation to study at {model.academy.name}',
+                     'invites': [{
+                         'id': 2,
+                         'academy': {
+                             'id': 1,
+                             'name': model.academy.name,
+                             'slug': model.academy.slug,
+                             'timezone': None
+                         },
+                         'role': 'student',
+                         'created_at': UTC_NOW
+                     }],
+                     'user': {
+                         'id': 2,
+                         'email': model.user[1].email,
+                         'first_name': model.user[1].first_name,
+                         'last_name': model.user[1].last_name,
+                         'github': None,
+                         'profile': None
+                     },
+                     'LINK':
+                     url,
+                 },
+                 academy=model.academy),
         ]
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
@@ -1265,12 +1263,14 @@ class StudentPostTestSuite(AuthTestCase):
             }),
         ])
         assert actions.send_email_message.call_args_list == [
-            call('welcome_academy', 'dude@dude.dude', {
-                'email': 'dude@dude.dude',
-                'subject': 'Welcome to 4Geeks.com',
-                'LINK': url,
-                'FIST_NAME': 'Kenny'
-            })
+            call('welcome_academy',
+                 'dude@dude.dude', {
+                     'email': 'dude@dude.dude',
+                     'subject': 'Welcome to 4Geeks.com',
+                     'LINK': url,
+                     'FIST_NAME': 'Kenny'
+                 },
+                 academy=model.academy)
         ]
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 
@@ -1398,12 +1398,14 @@ class StudentPostTestSuite(AuthTestCase):
             }),
         ])
         assert actions.send_email_message.call_args_list == [
-            call('welcome_academy', 'dude@dude.dude', {
-                'email': 'dude@dude.dude',
-                'subject': 'Welcome to 4Geeks.com',
-                'LINK': url,
-                'FIST_NAME': 'Kenny'
-            })
+            call('welcome_academy',
+                 'dude@dude.dude', {
+                     'email': 'dude@dude.dude',
+                     'subject': 'Welcome to 4Geeks.com',
+                     'LINK': url,
+                     'FIST_NAME': 'Kenny'
+                 },
+                 academy=model.academy),
         ]
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [
             self.bc.format.to_dict(model.plan),
@@ -1542,12 +1544,14 @@ class StudentPostTestSuite(AuthTestCase):
         ])
 
         assert actions.send_email_message.call_args_list == [
-            call('welcome_academy', 'dude2@dude.dude', {
-                'email': 'dude2@dude.dude',
-                'subject': 'Welcome to 4Geeks.com',
-                'LINK': url,
-                'FIST_NAME': 'Kenny'
-            })
+            call('welcome_academy',
+                 'dude2@dude.dude', {
+                     'email': 'dude2@dude.dude',
+                     'subject': 'Welcome to 4Geeks.com',
+                     'LINK': url,
+                     'FIST_NAME': 'Kenny'
+                 },
+                 academy=model.academy)
         ]
         self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
 

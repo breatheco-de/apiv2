@@ -1,23 +1,38 @@
 from datetime import datetime
-from rest_framework.response import Response
-from .serializers import (BillSerializer, SmallIssueSerializer, BigBillSerializer,
-                          SmallFreelancerMemberSerializer, BigProjectSerializer, BigInvoiceSerializer,
-                          SmallBillSerializer)
-from rest_framework.permissions import AllowAny
-from rest_framework import status
+
 from django.db.models import Q
+from django.http import HttpResponse
+from rest_framework import serializers, status
 from rest_framework.decorators import api_view, permission_classes
-from .actions import generate_freelancer_bill, generate_project_invoice
-from .models import (Bill, Freelancer, Issue, BILL_STATUS, AcademyFreelanceProject, FreelanceProjectMember,
-                     ProjectInvoice)
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 from rest_framework.views import APIView
-from breathecode.utils.views import private_view
+
 from breathecode.notify.actions import get_template_content
+from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import capable_of
 from breathecode.utils.validation_exception import ValidationException
-from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from django.http import HttpResponse
-from rest_framework import serializers
+from breathecode.utils.views import private_view
+
+from .actions import generate_freelancer_bill, generate_project_invoice
+from .models import (
+    BILL_STATUS,
+    AcademyFreelanceProject,
+    Bill,
+    FreelanceProjectMember,
+    Freelancer,
+    Issue,
+    ProjectInvoice,
+)
+from .serializers import (
+    BigBillSerializer,
+    BigInvoiceSerializer,
+    BigProjectSerializer,
+    BillSerializer,
+    SmallBillSerializer,
+    SmallFreelancerMemberSerializer,
+    SmallIssueSerializer,
+)
 
 
 @private_view()
@@ -73,19 +88,17 @@ def render_html_bill(request, id=None):
         serializer = BigBillSerializer(item, many=False)
         status_map = {'DUE': 'UNDER_REVIEW', 'APPROVED': 'READY_TO_PAY', 'PAID': 'ALREADY PAID'}
 
-        obj = {}
-        if item.academy:
-            obj['COMPANY_INFO_EMAIL'] = item.academy.feedback_email
-
         data = {
             **serializer.data,
-            'issues': SmallIssueSerializer(item.issue_set.all(), many=True).data,
-            'status': status_map[serializer.data['status']],
-            'title': f'Freelancer { serializer.data["freelancer"]["user"]["first_name"] } '
+            'issues':
+            SmallIssueSerializer(item.issue_set.all(), many=True).data,
+            'status':
+            status_map[serializer.data['status']],
+            'title':
+            f'Freelancer { serializer.data["freelancer"]["user"]["first_name"] } '
             f'{ serializer.data["freelancer"]["user"]["last_name"] } - Invoice { item.id }',
-            **obj,
         }
-        template = get_template_content('invoice', data)
+        template = get_template_content('invoice', data, academy=item.academy)
         return HttpResponse(template['html'])
 
 

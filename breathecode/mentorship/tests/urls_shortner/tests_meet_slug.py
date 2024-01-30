@@ -101,7 +101,7 @@ def render(message,
     return string
 
 
-def render_pick_service(mentor_profile, token, mentorship_services=[], fix_logo=False):
+def render_pick_service(mentor_profile, token, mentorship_services=[], fix_logo=False, academy=None):
     environ = {
         'HTTP_COOKIE': '',
         'PATH_INFO': f'/mentor/meet/{mentor_profile.slug}',
@@ -131,6 +131,15 @@ def render_pick_service(mentor_profile, token, mentorship_services=[], fix_logo=
         'mentor': mentor_profile,
         'baseUrl': base_url,
     }
+
+    if academy:
+        context['COMPANY_INFO_EMAIL'] = academy.feedback_email
+        context['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
+        context['COMPANY_LOGO'] = academy.logo_url
+        context['COMPANY_NAME'] = academy.name
+
+        if 'heading' not in context:
+            context['heading'] = academy.name
 
     string = loader.render_to_string('pick_service.html', context, request)
 
@@ -273,7 +282,9 @@ class AuthenticateTestSuite(MentorshipTestCase):
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_pick_service(model.mentor_profile, model.token, [model.mentorship_service])
+        expected = render_pick_service(model.mentor_profile,
+                                       model.token, [model.mentorship_service],
+                                       academy=model.academy)
 
         # dump error in external files
         if content != expected:
