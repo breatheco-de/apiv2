@@ -49,9 +49,6 @@ class TaskManager(models.Model):
         return self.task_module + '.' + self.task_name + ' ' + str(self.arguments)
 
     def clean(self) -> None:
-        # if self.task_id is None:
-        #     self.task_id = ''
-
         if self.started_at is None and self.status == PENDING:
             self.started_at = timezone.now()
 
