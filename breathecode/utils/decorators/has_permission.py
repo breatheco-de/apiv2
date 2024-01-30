@@ -196,9 +196,12 @@ def has_permission(permission: str,
                 if format == 'html':
                     from breathecode.payments.models import PlanFinancing, PlanOffer, Subscription
 
+                    logger.debug('Rendering template')
                     service = None
                     if 'service_slug' in kwargs:
                         service = kwargs['service_slug']
+
+                    logger.debug(f'Service: {service}')
 
                     renovate_consumables = {}
 
@@ -210,6 +213,7 @@ def has_permission(permission: str,
                     user_plan = None
 
                     if subscription is not None:
+                        logger.debug('subscription found')
                         user_plan = subscription.plans.first()
                     else:
                         plan_financing = PlanFinancing.objects.filter(
@@ -217,9 +221,11 @@ def has_permission(permission: str,
                               plans__mentorship_service_set__mentorship_services__slug=service)
                             | Q(user=request.user, plans__event_type_set__event_types__slug=service)).first()
                         if plan_financing is not None:
+                            logger.debug('plan_financing found')
                             user_plan = plan_financing.plans.first()
 
                     if user_plan:
+                        logger.debug(f'User plan: {user_plan.slug}')
                         plan_offer = PlanOffer.objects.filter(original_plan__slug=user_plan.slug).first()
 
                     if plan_offer is not None:
