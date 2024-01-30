@@ -44,9 +44,9 @@ def consumption_session(live_class, cohort_set, user, consumable, data={}):
 
 
 # IMPORTANT: the loader.render_to_string in a function is inside of function render
-def render_message(message):
+def render_message(message, data={}):
     request = None
-    context = {'MESSAGE': message, 'BUTTON': None, 'BUTTON_TARGET': '_blank', 'LINK': None}
+    context = {'MESSAGE': message, 'BUTTON': None, 'BUTTON_TARGET': '_blank', 'LINK': None, **data}
 
     return loader.render_to_string('message.html', context, request)
 
@@ -124,7 +124,12 @@ class AcademyEventTestSuite(EventTestCase):
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_message('not-enough-consumables')
+
+        template_data = {}
+        template_data['GO_BACK'] = 'Go back to Dashboard'
+        template_data['URL_BACK'] = 'https://4geeks.com/choose-program'
+
+        expected = render_message('not-enough-consumables', data=template_data)
 
         # dump error in external files
         if content != expected:
@@ -394,7 +399,11 @@ class AcademyEventTestSuite(EventTestCase):
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_message('with-consumer-not-enough-consumables')
+        template_data = {}
+
+        template_data['GO_BACK'] = 'Go back to Dashboard'
+        template_data['URL_BACK'] = 'https://4geeks.com/choose-program'
+        expected = render_message('with-consumer-not-enough-consumables', data=template_data)
 
         # dump error in external files
         if content != expected:
