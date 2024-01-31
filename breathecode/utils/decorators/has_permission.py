@@ -207,10 +207,16 @@ def has_permission(permission: str,
                     from breathecode.payments.models import PlanFinancing, PlanOffer, Subscription
 
                     logger.debug('Rendering template')
+                    print('Rendering template')
                     service = None
                     if 'service_slug' in kwargs:
                         service = kwargs['service_slug']
 
+                    print('MENTORSHIP SERVICE')
+                    print('MENTORSHIP SERVICE')
+                    print('MENTORSHIP SERVICE')
+                    print('MENTORSHIP SERVICE')
+                    print(f'Service: {service}')
                     logger.debug(f'Service: {service}')
 
                     renovate_consumables = {}
@@ -224,6 +230,7 @@ def has_permission(permission: str,
 
                     if subscription is not None:
                         logger.debug('subscription found')
+                        print('subscription found')
                         user_plan = subscription.plans.first()
                     else:
                         plan_financing = PlanFinancing.objects.filter(
@@ -232,17 +239,21 @@ def has_permission(permission: str,
                             | Q(user=request.user, plans__event_type_set__event_types__slug=service)).first()
                         if plan_financing is not None:
                             logger.debug('plan_financing found')
+                            print('plan_financing found')
                             user_plan = plan_financing.plans.first()
 
                     if user_plan:
                         logger.debug(f'User plan: {user_plan.slug}')
+                        print(f'User plan: {user_plan.slug}')
                         plan_offer = PlanOffer.objects.filter(original_plan__slug=user_plan.slug).first()
 
                     if plan_offer is not None:
+                        logger.debug('Plan_offer found')
+                        print('Plan_offer found')
                         renovate_consumables['btn_label'] = 'Get more consumables'
                         renovate_consumables[
                             'btn_url'] = f'https://4geeks.com/checkout?plan={plan_offer.suggested_plan.slug}'
-                    elif subscription is not None and user_plan:
+                    elif user_plan is not None:
                         renovate_consumables['btn_label'] = 'Get more consumables'
                         if permission == 'join_mentorship':
                             renovate_consumables[
