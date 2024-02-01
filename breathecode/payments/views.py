@@ -1039,6 +1039,9 @@ class CardView(APIView):
 
             s.add_payment_method(request.user, token)
 
+        except ValidationException as e:
+            raise e
+
         except Exception as e:
             raise ValidationException(str(e), code=400)
 
