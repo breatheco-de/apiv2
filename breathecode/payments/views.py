@@ -1042,6 +1042,9 @@ class CardView(APIView):
         except ValidationException as e:
             raise e
 
+        except PaymentException as e:
+            raise e
+
         except Exception as e:
             raise ValidationException(str(e), code=400)
 
