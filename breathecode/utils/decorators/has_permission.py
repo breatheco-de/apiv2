@@ -207,45 +207,31 @@ def has_permission(permission: str,
                     from breathecode.payments.models import PlanFinancing, PlanOffer, Subscription
                     from breathecode.events.models import Event
 
-                    print('kwargs')
-                    print(kwargs)
-
-                    logger.debug('Rendering template')
-                    print('Rendering template')
                     service = None
-                    print('???')
+
                     if 'service_slug' in kwargs:
                         service = kwargs['service_slug']
+
                     if 'event_id' in kwargs:
-                        print('!!!!!!')
                         event_id = kwargs['event_id']
                         event = Event.objects.filter(id=event_id).first()
                         if event is not None:
-                            print('event.event_type')
-                            print(event.event_type)
                             service = event.event_type.slug
+
                     if 'event' in kwargs:
-                        print('!!!!!!')
                         event = kwargs['event']
-                        print('event.event_type')
-                        print(event.event_type)
                         service = event.event_type.slug
 
                     if 'mentorship_service' in kwargs:
                         service = kwargs['mentorship_service'].slug
-
-                    print('MENTORSHIP SERVICE')
-                    print('MENTORSHIP SERVICE')
-                    print('MENTORSHIP SERVICE')
-                    print('MENTORSHIP SERVICE')
-                    print(f'Service: {service}')
-                    logger.debug(f'Service: {service}')
 
                     renovate_consumables = {}
                     subscription = None
                     plan_financing = None
                     mentorship_service_set = None
                     event_type_set = None
+                    plan_offer = None
+                    user_plan = None
 
                     if permission == 'join_mentorship':
                         subscription = Subscription.objects.filter(
@@ -261,14 +247,7 @@ def has_permission(permission: str,
                             event_type_set = subscription.selected_event_type_set.slug
                             user_plan = subscription.plans.first()
 
-                    plan_offer = None
-                    user_plan = None
-
-                    if subscription is not None:
-                        logger.debug('subscription found')
-                        print('subscription found')
-                        # user_plan = subscription.plans.first()
-                    else:
+                    if subscription is None:
                         if permission == 'join_mentorship':
                             plan_financing = PlanFinancing.objects.filter(
                                 user=request.user,
@@ -284,19 +263,10 @@ def has_permission(permission: str,
                                 event_type_set = plan_financing.selected_event_type_set.slug
                                 user_plan = plan_financing.plans.first()
 
-                        if plan_financing is not None:
-                            logger.debug('plan_financing found')
-                            print('plan_financing found')
-                            # user_plan = plan_financing.plans.first()
-
                     if user_plan:
-                        logger.debug(f'User plan: {user_plan.slug}')
-                        print(f'User plan: {user_plan.slug}')
                         plan_offer = PlanOffer.objects.filter(original_plan__slug=user_plan.slug).first()
 
                     if plan_offer is not None:
-                        logger.debug('Plan_offer found')
-                        print('Plan_offer found')
                         renovate_consumables['btn_label'] = 'Get more consumables'
                         renovate_consumables[
                             'btn_url'] = f'https://4geeks.com/checkout?plan={plan_offer.suggested_plan.slug}'
