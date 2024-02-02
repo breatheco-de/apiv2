@@ -1007,7 +1007,7 @@ class AcademyEventCheckinView(APIView):
 @renderer_classes([PlainTextRenderer])
 def eventbrite_webhook(request, organization_id):
     if actions.is_eventbrite_enabled() is False:
-        return Response('ok', content_type='text/plain')
+        return Response('Eventbrite integration is disabled, to activate add env variable EVENTBRITE=TRUE', content_type='text/plain')
 
     webhook = Eventbrite.add_webhook_to_log(request.data, organization_id)
 
