@@ -1442,7 +1442,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
             expected_keys = [
                 'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'conversion_url',
                 'landing_url', 'user_agent', 'plan', 'location', 'internal_cta_placement',
-                'internal_cta_content', 'internal_cta_campaign'
+                'internal_cta_content', 'internal_cta_campaign', 'internal_ad_placement'
             ]
 
             for key in conversion_info.keys():
