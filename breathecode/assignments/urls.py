@@ -34,7 +34,7 @@ urlpatterns = [
     path('academy/task/<int:task_id>/commitfile',
          AcademyCommitFileView.as_view(),
          name='academy_task_id_commitfile'),
-    path('academy/commitfile/<int:commitfile_id>',
+    path('academy/task/<int:task_id>/commitfile/<int:commitfile_id>',
          AcademyCommitFileView.as_view(),
          name='academy_commitfile_id'),
     path('me/coderevision', MeCodeRevisionView.as_view(), name='me_coderevision'),

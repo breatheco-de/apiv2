@@ -95,7 +95,7 @@ def render_preview_html(request, asset_slug):
         return render_message(request, 'Quiz cannot be previewed')
 
     readme = asset.get_readme(parse=True)
-    return render(
+    response = render(
         request, readme['frontmatter']['format'] + '.html', {
             **AssetBigSerializer(asset).data, 'html': readme['html'],
             'theme': request.GET.get('theme', 'light'),
@@ -104,6 +104,11 @@ def render_preview_html(request, asset_slug):
             readme['frontmatter']['inlining']['css'][0] if 'inlining' in readme['frontmatter'] else None,
             'frontmatter': readme['frontmatter'].items()
         })
+  
+    # Set Content-Security-Policy header
+    response['Content-Security-Policy'] = "frame-ancestors 'self' https://4geeks.com"
+
+    return response
 
 
 @api_view(['GET'])

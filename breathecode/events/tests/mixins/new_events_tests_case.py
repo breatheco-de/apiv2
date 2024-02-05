@@ -54,6 +54,7 @@ class EventTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQuerie
             'url': model['event'].url,
             'venue': model['event'].venue,
             'host': model['event'].host,
+            'asset_slug': model['event'].asset_slug,
             'capacity': model['event'].capacity,
             'sync_with_eventbrite': model['event'].sync_with_eventbrite,
             'eventbrite_sync_description': model['event'].eventbrite_sync_description,
