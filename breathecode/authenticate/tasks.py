@@ -1,21 +1,24 @@
-import logging, os
+import logging
+import os
+
 from celery import shared_task
 from django.contrib.auth.models import User
+
 from breathecode.authenticate.models import UserInvite
 from breathecode.marketing.actions import validate_email
-
-from breathecode.utils.decorators.task import AbortTask, TaskPriority, task, RetryTask
-from breathecode.utils.validation_exception import ValidationException
-from .actions import set_gitpod_user_expiration, add_to_organization, remove_from_organization
 from breathecode.notify import actions as notify_actions
+from breathecode.utils.decorators.task import AbortTask, RetryTask, TaskPriority, task
+from breathecode.utils.validation_exception import ValidationException
+
+from .actions import add_to_organization, remove_from_organization, set_gitpod_user_expiration
 
 API_URL = os.getenv('API_URL', '')
 
 logger = logging.getLogger(__name__)
 
 
-@task(bind=True)
-def async_validate_email_invite(self, invite_id, task_manager_id, **_):
+@task(priority=TaskPriority.REALTIME.value)
+def async_validate_email_invite(invite_id, **_):
     logger.debug(f'Validating email for invite {invite_id}')
     user_invite = UserInvite.objects.filter(id=invite_id).first()
 
