@@ -9,6 +9,8 @@ from slugify import slugify
 
 import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy
+from breathecode.registry.models import Asset
+from breathecode.registry.serializers import AssetSmallSerializer
 from breathecode.admissions.serializers import UserPublicSerializer
 from breathecode.authenticate.models import Profile, ProfileTranslation
 from breathecode.marketing.actions import validate_marketing_tags
@@ -186,6 +188,14 @@ class EventSmallSerializer(EventTinySerializer):
     asset_slug = serpy.Field()
     host_user = UserSerializer(required=False)
     author = UserSerializer(required=False)
+    asset = serpy.MethodField()
+
+    def get_asset(self, obj):
+        if obj.asset_slug is not None:
+            asset = Asset.objects.filter(slug=obj.asset_slug).first()
+            if asset is not None:
+                return AssetSmallSerializer(asset, many=False).data
+        return None
 
 
 class EventJoinSmallSerializer(EventSmallSerializer):
