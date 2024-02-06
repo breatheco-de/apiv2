@@ -112,7 +112,7 @@ class Task(object):
 
         self.parent_decorator = celery.shared_task(*args, **kwargs)
 
-    def get_fn_desc(self, function: Callable) -> tuple[str, str] or tuple[None, None]:
+    def get_fn_desc(self, function: Callable) -> tuple[str, str] | tuple[None, None]:
         if not function:
             return None, None
 
@@ -235,7 +235,7 @@ class Task(object):
                     except CircuitBreakerError as e:
                         x.status_message = str(e)[:255]
 
-                        #TODO: things in this implementation
+                        #TODO: think in this implementation
                         if x.attempts >= RETRIES_LIMIT:
                             logger.exception(str(e))
                             x.status = 'ERROR'
