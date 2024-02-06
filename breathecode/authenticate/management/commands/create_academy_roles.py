@@ -462,6 +462,7 @@ ROLES = [
             'read_freelancer_bill',
             'read_keywordcluster',
             'crud_academyservice',
+            'crud_event',
             'crud_mentorship_session',
             'read_calendly_organization',
         ],
