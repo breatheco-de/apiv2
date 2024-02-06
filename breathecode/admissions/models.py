@@ -522,13 +522,14 @@ class CohortUser(models.Model):
     def save(self, *args, **kwargs):
         # check the fields before saving
         self.full_clean()
+        on_create = self.pk is None
 
         # If the CohortUser is being created (Not modified)
-        if self.id is None and self.educational_status is None:
+        if on_create and self.educational_status is None:
             self.educational_status = ACTIVE
 
         edu_status_updated = False
-        if self.pk is None or self.__old_edu_status != self.educational_status:
+        if on_create or self.__old_edu_status != self.educational_status:
             edu_status_updated = True
 
         result = super().save(*args, **kwargs)  # Call the "real" save() method.
@@ -537,6 +538,9 @@ class CohortUser(models.Model):
             signals.student_edu_status_updated.send(instance=self, sender=self.__class__)
 
         signals.cohort_log_saved.send(instance=self, sender=self.__class__)
+
+        if on_create:
+            signals.cohort_user_created.send(instance=self, sender=self.__class__)
 
         return result
 

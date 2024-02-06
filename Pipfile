@@ -52,6 +52,7 @@ mccabe = "*"
 pep8-naming = "*"
 flake8-bugbear = "*"
 pytest-gevent = "*"
+pytest-asyncio = "*"
 
 [packages]
 django = "~=5.0.1"

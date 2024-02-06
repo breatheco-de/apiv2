@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import hashlib
 import logging
@@ -8,6 +9,7 @@ from datetime import timedelta
 from urllib.parse import parse_qs, urlencode
 
 import requests
+from adrf.decorators import api_view
 from circuitbreaker import CircuitBreakerError
 from django.conf import settings
 from django.contrib import messages
@@ -19,7 +21,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.authtoken.views import ObtainAuthToken
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import permission_classes
 from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
 from rest_framework.parsers import FileUploadParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -43,7 +45,7 @@ from breathecode.utils import (
 )
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
-from breathecode.utils.decorators.scope import scope
+from breathecode.utils.decorators.scope import ascope, scope
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.i18n import translation
 from breathecode.utils.shorteners import C
@@ -52,6 +54,7 @@ from breathecode.utils.views import private_view, render_message, set_query_para
 from .actions import (
     accept_invite,
     accept_invite_action,
+    aget_app,
     generate_academy_token,
     get_app,
     get_user_language,
@@ -77,6 +80,7 @@ from .models import (
     CredentialsGithub,
     CredentialsGoogle,
     CredentialsSlack,
+    FirstPartyWebhookLog,
     GithubAcademyUser,
     GitpodUser,
     OptionalScopeSet,
@@ -2540,18 +2544,44 @@ class AppUserAgreementView(APIView):
 # app/webhook
 @api_view(['POST'])
 @permission_classes([AllowAny])
-@scope(['webhook'], mode='signature')
-def app_webhook(request, app: dict):
-    # {'type': 'user:updated', 'kind': 'user', 'data': {'id': 1, 'name': 'John'}}
-    # {'type': 'bug', 'kind': 'bug', 'url': 'https://xyz.io/bug/123'}
+@ascope(['webhook'], mode='jwt')
+async def app_webhook(request, app: dict, token: dict):
 
-    # save the webhook
-    ...
+    async def process_webhook(data):
+        nonlocal app, token
 
-    # send the webhook to celery
-    ...
+        app = await aget_app(app.id)
+        external_id = data.get('id', None)
+        kwargs = {
+            'app': app,
+            'user_id': token.sub,
+            'external_id': external_id,
+            'type': data.get('type', 'unknown'),
+        }
+        if external_id:
+            x, created = await FirstPartyWebhookLog.objects.aget_or_create(**kwargs,
+                                                                           defaults={
+                                                                               'data': data.get('data', None)
+                                                                           })
+            if not created:
+                x.data = data.get('data', None)
+                await x.asave()
 
-    return Response({'message': 'ok'})
+        else:
+            kwargs['data'] = data.get('data', None)
+            await FirstPartyWebhookLog.objects.acreate(**kwargs)
+
+    data = request.data if isinstance(request.data, list) else [request.data]
+
+    to_process = []
+
+    for x in data:
+        p = process_webhook(x)
+        to_process.append(p)
+
+    await asyncio.gather(*to_process)
+
+    return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
 @private_view()

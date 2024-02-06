@@ -1,26 +1,31 @@
-from datetime import datetime
 import re
+from datetime import datetime
 from typing import Any
-from django.contrib.auth.models import User, Group, Permission
-from django.core.exceptions import MultipleObjectsReturned
-from django.conf import settings
-from django.db.models import Q
-from django.db import models
-from django.utils.translation import gettext_lazy as _
+
 import rest_framework.authtoken.models
-from django.utils import timezone
-from django.core.validators import RegexValidator
-from django.contrib.contenttypes.models import ContentType
 from django import forms
+from django.conf import settings
+from django.contrib.auth.models import Group, Permission, User
+from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import MultipleObjectsReturned
+from django.core.validators import RegexValidator
+from django.db import models
+from django.db.models import Q
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from slugify import slugify
 
-from breathecode.authenticate.exceptions import (BadArguments, InvalidTokenType, TokenNotFound,
-                                                 TryToGetOrCreateAOneTimeToken)
-from breathecode.utils.validators import validate_language_code
-from .signals import academy_invite_accepted
 from breathecode.admissions.models import Academy, Cohort
-
 from breathecode.authenticate import signals
+from breathecode.authenticate.exceptions import (
+    BadArguments,
+    InvalidTokenType,
+    TokenNotFound,
+    TryToGetOrCreateAOneTimeToken,
+)
+from breathecode.utils.validators import validate_language_code
+
+from .signals import academy_invite_accepted
 
 __all__ = [
     'User', 'Group', 'ContentType', 'Permission', 'UserProxy', 'Profile', 'Capability', 'Role', 'UserInvite',
@@ -774,11 +779,108 @@ class CredentialsGoogle(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
 
+class FirstPartyCredentials(models.Model):
+    """First party credentials for 4geeks, like Rigobot."""
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='credentials')
+    rigobot_id = models.IntegerField(blank=True, null=True, default=None)
+    health_status = models.JSONField(default=dict(),
+                                     blank=True,
+                                     help_text='Health status of each credentials')
+
+    def clean(self) -> None:
+        if self.rigobot_id and self.rigobot_id < 1:
+            raise forms.ValidationError('Rigobot ID must be a positive integer')
+
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        from breathecode.authenticate import tasks
+
+        self.full_clean()
+
+        super().save(*args, **kwargs)
+
+        to_check = []
+
+        if self.rigobot_id and ('rigobot' not in self.health_status or self.health_status['rigobot']['id']
+                                != self.rigobot_id or self.health_status['rigobot']['status'] != 'HEALTHY'):
+            to_check.append('rigobot')
+
+        if to_check:
+            tasks.check_credentials.delay(self.user.id, to_check)
+
+
+# SENT = 'SENT'
+WEBHOOK_STATUSES = (
+    (PENDING, 'Pending'),
+    # (SENT, 'Sent'),
+    (DONE, 'Done'),
+    (ERROR, 'Error'),
+)
+
+
+class FirstPartyWebhookLog(models.Model):
+    """First party credentials for 4geeks, like Rigobot."""
+
+    app = models.ForeignKey(App,
+                            on_delete=models.CASCADE,
+                            help_text='App that triggered or will receive the webhook')
+
+    type = models.CharField(max_length=50, blank=True, default='unknown', help_text='Type of the webhook')
+
+    user_id = models.IntegerField(default=None,
+                                  null=True,
+                                  blank=True,
+                                  help_text='User ID who triggered the webhook')
+    external_id = models.IntegerField(default=None,
+                                      null=True,
+                                      blank=True,
+                                      help_text='External ID where the webhook was triggered')
+
+    url = models.URLField(default=None, null=True, blank=True, help_text='URL to consult the content')
+    data = models.JSONField(default=dict, blank=True, null=True, help_text='Data received')
+
+    processed = models.BooleanField(default=False,
+                                    blank=True,
+                                    help_text='If true, the webhook has been processed')
+    attempts = models.IntegerField(default=0,
+                                   blank=True,
+                                   help_text='Number of attempts to process the webhook')
+
+    status = models.CharField(max_length=9, choices=WEBHOOK_STATUSES, default=PENDING, blank=True)
+    status_text = models.CharField(max_length=255, default=None, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def clean(self) -> None:
+        if self.data and not isinstance(self.data, dict) and not isinstance(self.data, list):
+            raise forms.ValidationError('Data must be a dictionary or a list')
+
+        if self.app.slug == 'breathecode':
+            raise forms.ValidationError('You can\'t use breathecode as app')
+
+        if self.attempts < 0:
+            raise forms.ValidationError('Attempts must be a positive integer')
+
+        if self.user_id and self.user_id < 1:
+            raise forms.ValidationError('User ID must be a positive integer')
+
+        if self.type is None:
+            self.type = 'unknown'
+
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+
+        super().save(*args, **kwargs)
+
+
 class Token(rest_framework.authtoken.models.Token):
-    '''
-    create multi token per user - override default rest_framework Token class
-    replace model one-to-one relationship with foreign key
-    '''
+    """Bearer Token that support different types like `'login'`, `'temporal'` or `'permanent'`."""
+
     key = models.CharField(max_length=40, db_index=True, unique=True)
     #Foreign key relationship to user for many-to-one relationship
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
@@ -805,7 +907,7 @@ class Token(rest_framework.authtoken.models.Token):
 
     @staticmethod
     def delete_expired_tokens() -> None:
-        """Delete expired tokens"""
+        """Delete expired tokens."""
         utc_now = timezone.now()
         Token.objects.filter(expires_at__lt=utc_now).delete()
 

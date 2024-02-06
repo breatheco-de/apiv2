@@ -165,6 +165,12 @@ class AsyncService(Service):
 
         return self.session.post(url, data=data, **kwargs, headers=headers)
 
+    def awebhook(self, *, data: Any = None, **kwargs: Any) -> ClientResponse:
+        url = self.app.webhook_url
+        headers = self._authenticate('post', data=data, **kwargs)
+
+        return self.session.post(url, data=data, **kwargs, headers=headers)
+
     def aput(self, url: str, *, data: Any = None, **kwargs: Any) -> ClientResponse:
         url = self.app.app_url + self._fix_url(url)
         headers = self._authenticate('put', data=data, **kwargs)

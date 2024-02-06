@@ -4,10 +4,11 @@ import os
 from celery import shared_task
 from django.contrib.auth.models import User
 
-from breathecode.authenticate.models import UserInvite
+from breathecode.authenticate.models import FirstPartyCredentials, FirstPartyWebhookLog, UserInvite
 from breathecode.marketing.actions import validate_email
 from breathecode.notify import actions as notify_actions
 from breathecode.utils.decorators.task import AbortTask, RetryTask, TaskPriority, task
+from breathecode.utils.service import Service
 from breathecode.utils.validation_exception import ValidationException
 
 from .actions import add_to_organization, remove_from_organization, set_gitpod_user_expiration
@@ -152,3 +153,82 @@ def create_user_from_invite(user_invite_id: int, **_):
                 'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{user_invite.token}'
             },
             academy=user_invite.academy)
+
+
+@task(priority=TaskPriority.REALTIME.value)
+def check_credentials(user_id: int, check=None, **_):
+
+    def error(credentials):
+        credentials.health_status = {'rigobot': {'id': credentials.rigobot_id, 'status': 'NOT_FOUND'}}
+        credentials.rigobot_id = None
+        credentials.save()
+
+    logger.info('Running check_credentials task')
+
+    if check is None:
+        raise AbortTask('Nothing to check')
+
+    if not (credentials := FirstPartyCredentials.objects.filter(user__id=user_id).only(
+            'health_status', 'rigobot_id', 'user__email').first()):
+        raise RetryTask('FirstPartyCredentials not found')
+
+    # maybe with a for loop it should be better
+    if 'rigobot' in check:
+        if credentials.rigobot_id is None:
+            if 'rigobot' in credentials.health_status:
+                del credentials.health_status['rigobot']
+                credentials.save()
+
+            return
+
+        else:
+            s = Service('rigobot')
+            response = s.get(f'/v1/auth/app/user/?email={credentials.user.email}&id={credentials.rigobot_id}')
+
+            if response.status_code != 200:
+                return error(credentials)
+
+            json = response.json()
+            if not isinstance(json, list) or len(json) == 0:
+                return error(credentials)
+
+            else:
+                credentials.health_status = {'rigobot': {'id': credentials.rigobot_id, 'status': 'HEALTHY'}}
+                credentials.save()
+
+
+@task(priority=TaskPriority.REALTIME.value)
+def import_external_user(webhook_id: int, **_):
+    logger.info('Running check_credentials task')
+
+    webhook = FirstPartyWebhookLog.objects.filter(id=webhook_id).first()
+    if webhook is None:
+        raise AbortTask('Webhook not found')
+
+    if webhook.data is None or not isinstance(webhook.data, dict):
+        logger.error(f'Webhook {webhook.type} requires a data field as json')
+        return
+
+    errors = []
+    for field in ['id', 'email', 'first_name', 'last_name']:
+        if field not in webhook.data:
+            errors.append(field)
+
+    if len(errors) > 0:
+        format = ', '.join(['data.' + x for x in errors])
+        logger.error(
+            f'Webhook {webhook.type} requires a data field as json with the following fields: {format}')
+        return
+
+    if User.objects.filter(credentials__rigobot_id=webhook.data['id']).exists():
+        return
+
+    user = User.objects.filter(email=webhook.data['email']).first()
+    if user is None:
+        user = User.objects.create(email=webhook.data['email'],
+                                   username=webhook.data['email'],
+                                   first_name=webhook.data['first_name'],
+                                   last_name=webhook.data['last_name'],
+                                   is_active=True)
+
+        FirstPartyCredentials.objects.get_or_create(user=user, rigobot_id=webhook.data['id'])

@@ -1,4 +1,5 @@
 import datetime as dt
+import functools
 import hashlib
 import hmac
 import logging
@@ -7,6 +8,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 import jwt
+from asgiref.sync import sync_to_async
 from django.utils import timezone
 from rest_framework.views import APIView
 
@@ -202,6 +204,7 @@ def scope(scopes: Optional[list] = None, mode: Optional[str] = None) -> callable
 
     def decorator(function: callable) -> callable:
 
+        @functools.wraps(function)
         def wrapper(*args, **kwargs):
 
             if isinstance(scopes, list) == False:
@@ -236,6 +239,62 @@ def scope(scopes: Optional[list] = None, mode: Optional[str] = None) -> callable
                 authorization = authorization.replace('Signature ', '')
                 app = signature_schema(request, scopes, authorization, mode == 'signature')
                 return function(*args, **kwargs, app=AttrDict(**app))
+
+            else:
+                raise ValidationException('Unknown auth schema or this schema is forbidden',
+                                          code=401,
+                                          slug='unknown-auth-schema')
+
+        return wrapper
+
+    return decorator
+
+
+def ascope(scopes: Optional[list] = None, mode: Optional[str] = None) -> callable:
+    """Check if the app has access to the scope provided."""
+
+    if scopes is None:
+        scopes = []
+
+    def decorator(function: callable) -> callable:
+
+        @functools.wraps(function)
+        async def wrapper(*args, **kwargs):
+
+            if isinstance(scopes, list) == False:
+                raise ProgrammingError('Permission must be a list')
+
+            if len([x for x in scopes if not isinstance(x, str)]):
+                raise ProgrammingError('Permission must be a list of strings')
+
+            try:
+                if hasattr(args[0], '__class__') and isinstance(args[0], APIView):
+                    request = args[1]
+
+                elif hasattr(args[0], 'user'):
+                    request = args[0]
+
+                else:
+                    raise IndexError()
+
+            except IndexError:
+                raise ProgrammingError('Missing request information, use this decorator with DRF View')
+
+            authorization = request.headers.get('Authorization', '')
+            if not authorization:
+                raise ValidationException('Unauthorized', code=401, slug='no-authorization-header')
+
+            if authorization.startswith('Link ') and mode != 'signature':
+                authorization = authorization.replace('Link ', '')
+                app, token = await sync_to_async(link_schema)(request, scopes, authorization,
+                                                              mode == 'signature')
+                return await function(*args, **kwargs, token=AttrDict(**token), app=AttrDict(**app))
+
+            elif authorization.startswith('Signature ') and mode != 'jwt':
+                authorization = authorization.replace('Signature ', '')
+                app = await sync_to_async(signature_schema)(request, scopes, authorization,
+                                                            mode == 'signature')
+                return await function(*args, **kwargs, app=AttrDict(**app))
 
             else:
                 raise ValidationException('Unknown auth schema or this schema is forbidden',

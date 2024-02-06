@@ -1,10 +1,11 @@
 """
 Collections of mixins used to login in authorize microservice
 """
-from breathecode.tests.mixins.models_mixin import ModelsMixin
-from breathecode.tests.mixins.headers_mixin import HeadersMixin
 from breathecode.tests.mixins import DateFormatterMixin
-from .utils import is_valid, create_models, just_one, get_list
+from breathecode.tests.mixins.headers_mixin import HeadersMixin
+from breathecode.tests.mixins.models_mixin import ModelsMixin
+
+from .utils import create_models, get_list, is_valid, just_one
 
 
 class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
@@ -37,6 +38,8 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                                      legacy_key=False,
                                      app_required_scope=False,
                                      app_optional_scope=False,
+                                     first_party_webhook_log=False,
+                                     first_party_credentials=False,
                                      profile_kwargs={},
                                      device_id_kwargs={},
                                      capability_kwargs={},
@@ -111,7 +114,8 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             models['scope'] = create_models(scope, 'authenticate.Scope', **kargs)
 
         if not 'app' in models and (is_valid(app) or is_valid(app_user_agreement) or is_valid(legacy_key)
-                                    or is_valid(app_required_scope) or is_valid(app_optional_scope)):
+                                    or is_valid(app_required_scope) or is_valid(app_optional_scope)
+                                    or is_valid(first_party_webhook_log)):
             kargs = {
                 'public_key': None,
                 'private_key': '',
@@ -326,6 +330,24 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                                                                   **kargs,
                                                                   **credentials_quick_books_kwargs
                                                               })
+
+        if not 'first_party_credentials' in models and is_valid(first_party_credentials):
+            kargs = {}
+
+            if 'user' in models:
+                kargs['user'] = just_one(models['user'])
+
+            models['first_party_credentials'] = create_models(first_party_credentials,
+                                                              'authenticate.FirstPartyCredentials', **kargs)
+
+        if not 'first_party_webhook_log' in models and is_valid(first_party_webhook_log):
+            kargs = {}
+
+            if 'app' in models:
+                kargs['app'] = just_one(models['app'])
+
+            models['first_party_webhook_log'] = create_models(first_party_webhook_log,
+                                                              'authenticate.FirstPartyWebhookLog', **kargs)
 
         if not 'token' in models and is_valid(token):
             kargs = {}

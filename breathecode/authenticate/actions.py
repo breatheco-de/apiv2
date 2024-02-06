@@ -13,6 +13,7 @@ from random import randint
 from typing import Optional
 
 import jwt
+from asgiref.sync import sync_to_async
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat, PublicFormat
 from django.contrib.auth.models import User
@@ -25,12 +26,14 @@ from breathecode.admissions.models import Academy, CohortUser
 from breathecode.services.github import Github
 from breathecode.utils import ValidationException
 from breathecode.utils.i18n import translation
+from breathecode.utils.service import service
 
 from .models import (
     AcademyAuthSettings,
     App,
     CredentialsGithub,
     DeviceId,
+    FirstPartyWebhookLog,
     GithubAcademyUser,
     GitpodUser,
     ProfileAcademy,
@@ -941,6 +944,10 @@ def get_app(pk: str | int) -> App:
     return app
 
 
+async def aget_app(pk: str | int) -> App:
+    return await sync_to_async(get_app)(pk)
+
+
 def accept_invite_action(data=None, token=None, lang='en'):
     from breathecode.payments import tasks as payments_tasks
     from breathecode.payments.models import Bag, Invoice, Plan
@@ -1057,3 +1064,54 @@ def accept_invite_action(data=None, token=None, lang='en'):
     invite.save()
 
     return invite
+
+
+async def send_webhook(app: str | int | App,
+                       type: str,
+                       data: Optional[dict | list] = None,
+                       user: Optional[str | int | User] = None):
+
+    if not isinstance(app, App):
+        app = await aget_app(app)
+
+    if user and not isinstance(user, User):
+        user = await User.objects.filter(id=user).afirst()
+        if user is None:
+            raise Exception('User not found')
+
+    x = await FirstPartyWebhookLog.objects.acreate(app=app, type=type, data=data)
+    payload = {
+        'type': type,
+        'external_id': x.id,
+        'data': data,
+    }
+
+    user_id = None
+    if user:
+        user_id = user.id
+
+    try:
+        s = await service('rigobot', user_id)
+
+    except Exception as e:
+        x.delete()
+        raise e
+
+    async with s:
+        async with s.awebhook(payload) as response:
+            if response.status != 200:
+                msg = f'Error calling webhook {app.webhook_url} with status {response.status}'
+
+                # this has relation with a reveived signal not implemented yet
+                x.processed = True
+                x.status = 'ERROR'
+                x.status_text = msg
+                x.save()
+
+                raise Exception(msg)
+
+    # this has relation with a reveived signal not implemented yet
+    x.processed = True
+    # this will keep PENDING in the future
+    x.status = 'DONE'
+    x.save()
