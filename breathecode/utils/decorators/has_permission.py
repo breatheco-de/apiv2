@@ -5,7 +5,7 @@ from typing import Callable, Optional, TypedDict
 
 from django.contrib.auth.models import AnonymousUser
 from django.core.handlers.wsgi import WSGIRequest
-from django.db.models import Q, QuerySet, Sum
+from django.db.models import QuerySet, Sum
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
@@ -204,8 +204,8 @@ def has_permission(permission: str,
                     raise e
 
                 if format == 'html':
-                    from breathecode.payments.models import PlanFinancing, PlanOffer, Subscription
                     from breathecode.events.models import Event
+                    from breathecode.payments.models import PlanFinancing, PlanOffer, Subscription
 
                     service = None
 
