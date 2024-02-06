@@ -205,62 +205,79 @@ def has_permission(permission: str,
 
                 if format == 'html':
                     from breathecode.payments.models import PlanFinancing, PlanOffer, Subscription
+                    from breathecode.events.models import Event
 
-                    logger.debug('Rendering template')
-                    print('Rendering template')
                     service = None
+
                     if 'service_slug' in kwargs:
                         service = kwargs['service_slug']
 
-                    print('MENTORSHIP SERVICE')
-                    print('MENTORSHIP SERVICE')
-                    print('MENTORSHIP SERVICE')
-                    print('MENTORSHIP SERVICE')
-                    print(f'Service: {service}')
-                    logger.debug(f'Service: {service}')
+                    if 'event_id' in kwargs:
+                        event_id = kwargs['event_id']
+                        event = Event.objects.filter(id=event_id).first()
+                        if event is not None:
+                            service = event.event_type.slug
+
+                    if 'event' in kwargs:
+                        event = kwargs['event']
+                        service = event.event_type.slug
+
+                    if 'mentorship_service' in kwargs:
+                        service = kwargs['mentorship_service'].slug
 
                     renovate_consumables = {}
-
-                    subscription = Subscription.objects.filter(
-                        Q(user=request.user, plans__mentorship_service_set__mentorship_services__slug=service)
-                        | Q(user=request.user, plans__event_type_set__event_types__slug=service)).first()
-
+                    subscription = None
+                    plan_financing = None
+                    mentorship_service_set = None
+                    event_type_set = None
                     plan_offer = None
                     user_plan = None
 
-                    if subscription is not None:
-                        logger.debug('subscription found')
-                        print('subscription found')
-                        user_plan = subscription.plans.first()
-                    else:
-                        plan_financing = PlanFinancing.objects.filter(
-                            Q(user=request.user,
-                              plans__mentorship_service_set__mentorship_services__slug=service)
-                            | Q(user=request.user, plans__event_type_set__event_types__slug=service)).first()
-                        if plan_financing is not None:
-                            logger.debug('plan_financing found')
-                            print('plan_financing found')
-                            user_plan = plan_financing.plans.first()
+                    if permission == 'join_mentorship':
+                        subscription = Subscription.objects.filter(
+                            user=request.user,
+                            selected_mentorship_service_set__mentorship_services__slug=service).first()
+                        if subscription is not None:
+                            mentorship_service_set = subscription.selected_mentorship_service_set.slug
+                            user_plan = subscription.plans.first()
+                    elif permission == 'event_join':
+                        subscription = Subscription.objects.filter(
+                            user=request.user, selected_event_type_set__event_types__slug=service).first()
+                        if subscription is not None:
+                            event_type_set = subscription.selected_event_type_set.slug
+                            user_plan = subscription.plans.first()
+
+                    if subscription is None:
+                        if permission == 'join_mentorship':
+                            plan_financing = PlanFinancing.objects.filter(
+                                user=request.user,
+                                selected_mentorship_service_set__mentorship_services__slug=service).first()
+                            if plan_financing is not None:
+                                mentorship_service_set = plan_financing.selected_mentorship_service_set.slug
+                                user_plan = plan_financing.plans.first()
+                        elif permission == 'event_join':
+                            plan_financing = PlanFinancing.objects.filter(
+                                user=request.user,
+                                selected_event_type_set__event_types__slug=service).first()
+                            if plan_financing is not None:
+                                event_type_set = plan_financing.selected_event_type_set.slug
+                                user_plan = plan_financing.plans.first()
 
                     if user_plan:
-                        logger.debug(f'User plan: {user_plan.slug}')
-                        print(f'User plan: {user_plan.slug}')
                         plan_offer = PlanOffer.objects.filter(original_plan__slug=user_plan.slug).first()
 
                     if plan_offer is not None:
-                        logger.debug('Plan_offer found')
-                        print('Plan_offer found')
                         renovate_consumables['btn_label'] = 'Get more consumables'
                         renovate_consumables[
                             'btn_url'] = f'https://4geeks.com/checkout?plan={plan_offer.suggested_plan.slug}'
-                    elif user_plan is not None:
+                    elif subscription is not None or plan_financing is not None:
                         renovate_consumables['btn_label'] = 'Get more consumables'
                         if permission == 'join_mentorship':
                             renovate_consumables[
-                                'btn_url'] = f'https://4geeks.com/checkout?mentorship_service_set={user_plan.mentorship_service_set.slug}'
+                                'btn_url'] = f'https://4geeks.com/checkout?mentorship_service_set={mentorship_service_set}'
                         elif permission == 'event_join':
                             renovate_consumables[
-                                'btn_url'] = f'https://4geeks.com/checkout?event_type_set={user_plan.event_type_set.slug}'
+                                'btn_url'] = f'https://4geeks.com/checkout?event_type_set={event_type_set}'
 
                     return render_message(request,
                                           str(e),

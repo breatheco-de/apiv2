@@ -131,14 +131,15 @@ class AcademyEventTestSuite(EventTestCase):
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables(self):
         event_type_model = model = self.bc.database.create(event_type_set=1)
-        model = self.bc.database.create(user=1,
-                                        token=1,
-                                        plan={
-                                            'is_renewable': False,
-                                            'event_type_set': event_type_model.event_type_set
-                                        },
-                                        service=1,
-                                        subscription=1)
+        model = self.bc.database.create(
+            user=1,
+            token=1,
+            plan={
+                'is_renewable': False,
+                'event_type_set': event_type_model.event_type_set
+            },
+            service=1,
+            subscription={'selected_event_type_set': event_type_model.event_type_set})
         querystring = self.bc.format.to_querystring({'token': model.token.key})
 
         url = reverse_lazy('events:me_event_id_join', kwargs={'event_id': 1}) + f'?{querystring}'
