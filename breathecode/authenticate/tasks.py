@@ -35,12 +35,20 @@ def async_validate_email_invite(invite_id, **_):
     try:
         print(11)
         email_status = validate_email(user_invite.email, 'en')
+        print(111)
         if email_status['score'] <= 0.60:
+            print(112)
             user_invite.status = 'REJECTED'
+            print(113)
             user_invite.process_status = 'ERROR'
+            print(114)
             user_invite.process_message = 'Your email is invalid'
+            print(115)
+        print(116)
         user_invite.email_quality = email_status['score']
+        print(117)
         user_invite.email_status = email_status
+        print(118)
 
     except ValidationException as e:
         print(12, e)
