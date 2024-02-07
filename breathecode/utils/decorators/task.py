@@ -241,6 +241,9 @@ class Task(object):
                         if x.attempts >= RETRIES_LIMIT:
                             logger.exception(str(e))
                             x.status = 'ERROR'
+                            x.exception_module = e.__class__.__module__
+                            x.exception_name = e.__class__.__name__
+
                             x.save()
 
                         else:
@@ -261,6 +264,9 @@ class Task(object):
                                 logger.exception(str(e))
 
                             x.status = 'ERROR'
+                            x.exception_module = e.__class__.__module__
+                            x.exception_name = e.__class__.__name__
+
                             x.save()
 
                         else:
@@ -297,6 +303,9 @@ class Task(object):
                 if error:
                     x.status = 'ERROR'
                     x.status_message = error
+                    x.exception_module = exception.__class__.__module__
+                    x.exception_name = exception.__class__.__name__
+
                     x.save()
 
                     # fallback
@@ -327,6 +336,9 @@ class Task(object):
                     if x.attempts >= RETRIES_LIMIT:
                         logger.exception(str(e))
                         x.status = 'ERROR'
+                        x.exception_module = e.__class__.__module__
+                        x.exception_name = e.__class__.__name__
+
                         x.save()
 
                     else:
@@ -347,6 +359,9 @@ class Task(object):
                             logger.exception(str(e))
 
                         x.status = 'ERROR'
+                        x.exception_module = e.__class__.__module__
+                        x.exception_name = e.__class__.__name__
+
                         x.save()
 
                     else:
@@ -375,6 +390,9 @@ class Task(object):
                 except Exception as e:
                     x.status = 'ERROR'
                     x.status_message = str(e)[:255]
+                    x.exception_module = e.__class__.__module__
+                    x.exception_name = e.__class__.__name__
+
                     x.save()
 
                     logger.exception(str(e))

@@ -56,7 +56,7 @@ class LockManager(models.Manager):
             lock_key = f"{class_name}_lock:{'_'.join(lock_key_elements)}"
 
             try:
-                with Lock(redis_client, lock_key, timeout=2, blocking_timeout=2):
+                with Lock(redis_client, lock_key, timeout=30, blocking_timeout=30):
                     with transaction.atomic():
                         instance, created = super().get_or_create(**kwargs)
             except LockError:

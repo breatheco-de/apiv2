@@ -1,6 +1,5 @@
-from django.db import models
-
 from django.contrib.auth.models import User
+from django.db import models
 
 PENDING = 'PENDING'
 DONE = 'DONE'
@@ -32,6 +31,9 @@ class TaskManager(models.Model):
 
     reverse_module = models.CharField(max_length=200, blank=True, null=True)
     reverse_name = models.CharField(max_length=200, blank=True, null=True)
+
+    exception_module = models.CharField(max_length=200, blank=True, null=True)
+    exception_name = models.CharField(max_length=200, blank=True, null=True)
 
     arguments = models.JSONField(default=dict, blank=True, null=True)
     status = models.CharField(max_length=20, choices=TASK_STATUS, default=PENDING)

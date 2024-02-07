@@ -45,7 +45,7 @@ def clean_cache(model_cls):
     if not have_descriptor and is_a_dependency:
         if is_test() is False:
             conn = get_redis_connection('default')
-            my_lock = Lock(conn, f'cache:descriptor:{key}', timeout=0.4, blocking_timeout=0.4)
+            my_lock = Lock(conn, f'cache:descriptor:{key}', timeout=30, blocking_timeout=30)
 
             if my_lock.acquire(blocking=True):
 
