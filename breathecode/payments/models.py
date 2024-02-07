@@ -1,33 +1,30 @@
 from __future__ import annotations
+
 import logging
-
 import math
-from datetime import timedelta
 import os
+from datetime import timedelta
 from typing import Optional
-from django.contrib.auth.models import Group, User
-from django.db import models
-from django.utils import timezone
-from django.db.models import Q
-from django.contrib.auth.models import Permission
-from django.db.models import QuerySet
 
-from breathecode.admissions.models import DRAFT, Academy, Cohort, Country
-from breathecode.authenticate.models import App, UserInvite
-from breathecode.events.models import EventType
-from breathecode.authenticate.actions import get_user_settings
-from breathecode.mentorship.models import MentorshipService
 from currencies import Currency as CurrencyFormatter
 from django import forms
+from django.contrib.auth.models import Group, Permission, User
 from django.core.handlers.wsgi import WSGIRequest
-from breathecode.payments import signals
-from breathecode.utils.validation_exception import ValidationException
-
-from breathecode.utils.validators.language import validate_language_code
-from breathecode.utils.i18n import translation
-from breathecode.utils.locking import LockManager
+from django.db import models
+from django.db.models import Q, QuerySet
+from django.utils import timezone
 
 import breathecode.activity.tasks as tasks_activity
+from breathecode.admissions.models import DRAFT, Academy, Cohort, Country
+from breathecode.authenticate.actions import get_user_settings
+from breathecode.authenticate.models import App, UserInvite
+from breathecode.events.models import EventType
+from breathecode.mentorship.models import MentorshipService
+from breathecode.payments import signals
+from breathecode.utils.i18n import translation
+from breathecode.utils.locking import LockManager
+from breathecode.utils.validation_exception import ValidationException
+from breathecode.utils.validators.language import validate_language_code
 
 # https://devdocs.prestashop-project.org/1.7/webservice/resources/warehouses/
 
@@ -1051,19 +1048,22 @@ class SubscriptionServiceItem(models.Model):
         return str(self.service_item)
 
 
-class AppService(models.Model):
-    app = models.ForeignKey(App,
-                            on_delete=models.CASCADE,
-                            help_text='Subscription',
-                            null=True,
-                            blank=True,
-                            default=None)
-    service = models.SlugField(help_text='Microservice slug')
+class ServiceSet(models.Model):
+    _lang = 'en'
 
-    def clean(self) -> None:
-        if self.__class__.objects.filter(app=self.app, service=self.service).exists():
-            raise forms.ValidationError('App service already exists')
-        return super().clean()
+    slug = models.SlugField(
+        max_length=100,
+        unique=True,
+        db_index=True,
+        help_text='A human-readable identifier, it must be unique and it can only contain letters, '
+        'numbers and hyphens')
+    academy = models.ForeignKey(Academy,
+                                on_delete=models.CASCADE,
+                                help_text='Academy',
+                                null=True,
+                                blank=True,
+                                default=None)
+    services = models.ManyToManyField(to=Service, blank=True, help_text='Services')
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -1071,7 +1071,17 @@ class AppService(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
-        return self.app.slug + ' -> ' + self.service
+        return self.academy.name + ' -> ' + self.slug
+
+
+class ServiceSetTranslation(models.Model):
+    service_set = models.ForeignKey(ServiceSet, on_delete=models.CASCADE, help_text='Service set')
+    lang = models.CharField(max_length=5,
+                            validators=[validate_language_code],
+                            help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US')
+    title = models.CharField(max_length=60, help_text='Title of the cohort set')
+    description = models.CharField(max_length=255, help_text='Description of the cohort set')
+    short_description = models.CharField(max_length=255, help_text='Short description of the cohort set')
 
 
 class Consumable(AbstractServiceItem):
@@ -1105,12 +1115,12 @@ class Consumable(AbstractServiceItem):
         blank=True,
         null=True,
         help_text='Mentorship service set which the consumable belongs to')
-    app_service = models.ForeignKey(AppService,
+    service_set = models.ForeignKey(ServiceSet,
                                     on_delete=models.CASCADE,
                                     default=None,
                                     blank=True,
                                     null=True,
-                                    help_text='App service which the consumable belongs to')
+                                    help_text='Service set which the consumable belongs to')
 
     valid_until = models.DateTimeField(
         null=True,
@@ -1199,7 +1209,7 @@ class Consumable(AbstractServiceItem):
         resources = [self.cohort_set]
 
         if self.id:
-            resources += [self.event_type_set, self.mentorship_service_set, self.app_service]
+            resources += [self.event_type_set, self.mentorship_service_set, self.service_set]
 
         how_many_resources_are_set = len([
             r for r in resources
