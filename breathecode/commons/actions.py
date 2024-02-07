@@ -1,11 +1,12 @@
 import functools
 import logging
 import os
+
 from django_redis import get_redis_connection
 from redis.lock import Lock
-from breathecode.utils import Cache
 
-from breathecode.utils.cache import CACHE_DESCRIPTORS, CACHE_DEPENDENCIES
+from breathecode.utils import Cache
+from breathecode.utils.cache import CACHE_DEPENDENCIES, CACHE_DESCRIPTORS
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ def clean_cache(model_cls):
     if not have_descriptor and is_a_dependency:
         if is_test() is False:
             conn = get_redis_connection('default')
-            my_lock = Lock(conn, f'cache:descriptor:{key}', timeout=3, blocking_timeout=3)
+            my_lock = Lock(conn, f'cache:descriptor:{key}', timeout=0.4, blocking_timeout=0.4)
 
             if my_lock.acquire(blocking=True):
 
