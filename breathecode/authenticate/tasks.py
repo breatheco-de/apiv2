@@ -23,7 +23,7 @@ def async_validate_email_invite(invite_id, **_):
     user_invite = UserInvite.objects.filter(id=invite_id).first()
 
     if user_invite is None:
-        raise AbortTask(f'UserInvite {invite_id} not found')
+        raise RetryTask(f'UserInvite {invite_id} not found')
 
     try:
         email_status = validate_email(user_invite.email, 'en')
