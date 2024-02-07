@@ -1,4 +1,5 @@
 import copy
+import functools
 import importlib
 import inspect
 import logging
@@ -160,6 +161,7 @@ class Task(object):
 
         self.function = function
 
+        @functools.wraps(function)
         def wrapper(*args, **kwargs):
             task_module, task_name = self.get_fn_desc(function)
             reverse_module, reverse_name = self.get_fn_desc(self.reverse)
@@ -389,12 +391,7 @@ class Task(object):
 
             return res
 
-        w = copy.deepcopy(wrapper)
-
-        w.__name__ = function.__name__
-        w.__module__ = function.__module__
-
-        self.instance = self.parent_decorator(w)
+        self.instance = self.parent_decorator(wrapper)
         return self.instance
 
 
