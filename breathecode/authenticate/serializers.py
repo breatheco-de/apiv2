@@ -1,25 +1,36 @@
 import hashlib
-from django.db import IntegrityError
 import logging
-import random
 import os
+import random
 import urllib.parse
-import breathecode.notify.actions as notify_actions
-from django.contrib.auth.models import User
 
-from breathecode.utils.i18n import translation
-from .models import (CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile, Token, GitpodUser,
-                     GithubAcademyUser, AcademyAuthSettings, UserSetting)
-from breathecode.authenticate.actions import get_user_settings
-from breathecode.utils import ValidationException, serpy
-from breathecode.admissions.models import Academy, Cohort
-from rest_framework.exceptions import ValidationError
-from rest_framework import serializers
+from django.contrib.auth.models import Permission, User
+from django.db import IntegrityError
 from django.db.models import Q
-from django.contrib.auth.models import Permission
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+
+import breathecode.authenticate.tasks as tasks_authenticate
+import breathecode.notify.actions as notify_actions
+from breathecode.admissions.models import Academy, Cohort
+from breathecode.authenticate.actions import get_user_settings
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
-import breathecode.authenticate.tasks as tasks_authenticate
+from breathecode.utils import ValidationException, serpy
+from breathecode.utils.i18n import translation
+
+from .models import (
+    AcademyAuthSettings,
+    CredentialsGithub,
+    GithubAcademyUser,
+    GitpodUser,
+    Profile,
+    ProfileAcademy,
+    Role,
+    Token,
+    UserInvite,
+    UserSetting,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -1207,8 +1218,8 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                   'conversion_info', 'asset_slug', 'event_slug')
 
     def validate(self, data: dict[str, str]):
-        from breathecode.payments.models import Plan
         from breathecode.marketing.models import Course
+        from breathecode.payments.models import Plan
 
         country = data['country'] if 'country' in data else None
         forbidden_countries = ['spain']
@@ -1442,12 +1453,22 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, *args, **kwargs):
+        print('====================2')
+        print('====================2')
+        print('====================2')
+        print('====================2')
+        print('====================2')
+        print('====================2')
         instance = super().create(*args, **kwargs)
 
+        print(21)
         if self.plan:
+            print(22)
             self.plan.invites.add(instance)
 
+        print(23)
         if self.course:
+            print(24)
             self.course.invites.add(instance)
 
         # if self.user:
@@ -1456,21 +1477,39 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         #                                       related_type='auth.UserInvite',
         #                                       related_id=instance.id)
 
+        print(25)
         tasks_authenticate.async_validate_email_invite.delay(instance.id)
         return instance
 
     def update(self, *args, **kwargs):
+        print('====================3')
+        print('====================3')
+        print('====================3')
+        print('====================3')
+        print('====================3')
+        print('====================3')
         instance = super().update(*args, **kwargs)
 
+        print(31)
         if self.plan:
+            print(32)
             self.plan.invites.add(instance)
 
+        print(33)
         if self.course:
+            print(34)
             self.course.invites.add(instance)
 
+        print(35)
         return instance
 
     def get_access_token(self, obj: UserInvite):
+        print('====================4')
+        print('====================4')
+        print('====================4')
+        print('====================4')
+        print('====================4')
+        print('====================4')
         lang = self.context.get('lang', 'en')
 
         if obj.status != 'ACCEPTED':
@@ -1509,6 +1548,12 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         return token.key
 
     def get_plans(self, obj: UserInvite):
+        print('====================5')
+        print('====================5')
+        print('====================5')
+        print('====================5')
+        print('====================5')
+        print('====================5')
         from breathecode.payments.serializers import GetPlanSmallSerializer
 
         return GetPlanSmallSerializer(obj.plans.all(), many=True).data

@@ -216,6 +216,15 @@ class Task(object):
                 t = args[0]
                 t.task_manager = x
 
+            if x.task_name == 'async_validate_email_invite':
+                print('====================0')
+                print('====================0')
+                print('====================0')
+                print(vars(x))
+                print('====================0')
+                print('====================0')
+                print('====================0')
+
             if self.is_transaction == True:
                 error = None
                 with transaction.atomic():
