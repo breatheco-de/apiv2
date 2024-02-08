@@ -19,6 +19,7 @@ from slugify import slugify
 import breathecode.activity.tasks as tasks_activity
 import breathecode.assignments.tasks as tasks
 from breathecode.admissions.models import Cohort, CohortUser
+from breathecode.assignments.permissions.consumers import code_revision_service
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy, Token
 from breathecode.utils import (
@@ -927,8 +928,7 @@ class MeCodeRevisionView(APIView):
 
         return resource
 
-    # TODO: removed the consumer param code_revision_service because it has to be refactored https://github.com/breatheco-de/breatheco-de/issues/6688
-    @has_permission('add_code_review')
+    @has_permission('add_code_review', consumer=code_revision_service)
     def post(self, request, task_id):
         lang = get_user_language(request)
         params = {}

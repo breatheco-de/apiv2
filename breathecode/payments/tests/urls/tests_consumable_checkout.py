@@ -654,7 +654,7 @@ class SignalTestSuite(PaymentsTestCase):
                 data={
                     'mentorship_service_set_id': 1,
                     'service_item_id': 1,
-                    'app_service_id': None,
+                    'service_set_id': None,
                     'user_id': 1,
                     'how_many': how_many,
                 }),
@@ -733,7 +733,7 @@ class SignalTestSuite(PaymentsTestCase):
                 data={
                     'event_type_set_id': 1,
                     'service_item_id': 1,
-                    'app_service_id': None,
+                    'service_set_id': None,
                     'user_id': 1,
                     'how_many': how_many,
                 }),
