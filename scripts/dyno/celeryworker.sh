@@ -14,7 +14,13 @@ export REMAP_SIGTERM=SIGQUIT;
 # it will be used by upload_activities
 export CELERY_MAX_WORKERS=$CELERY_MAX_WORKERS;
 
+if [ "$CELERY_POOL" == "gevent" ] || [ "$CELERY_POOL" == "prefork" ]; then
+    SCALING="--autoscale=$CELERY_MIN_WORKERS,$CELERY_MAX_WORKERS"
+else
+    SCALING="--concurrency=$CELERY_MAX_WORKERS"
+fi
+
 newrelic-admin run-program bin/start-pgbouncer-stunnel \
     celery -A breathecode.celery worker --loglevel=$LOG_LEVEL \
         --prefetch-multiplier=$CELERY_PREFETCH_MULTIPLIER --pool=$CELERY_POOL \
-        --autoscale=$CELERY_MIN_WORKERS,$CELERY_MAX_WORKERS
+        $SCALING
