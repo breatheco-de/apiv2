@@ -132,3 +132,4 @@ uvicorn = "*"
 django-storages = {extras = ["google"], version = "*"}
 aiohttp = {extras = ["speedups"], version = "*"}
 aiodns = "*"
+eventlet = "*"

@@ -26,7 +26,12 @@ if os.getenv('ENV') == 'test':
 # - namespace='CELERY' means all celery-related configuration keys
 #   should have a `CELERY_` prefix.
 app.config_from_object('django.conf:settings')
-app.conf.update(BROKER_URL=REDIS_URL, CELERY_RESULT_BACKEND=REDIS_URL, namespace='CELERY', result_expires=10)
+app.conf.update(broker_url=REDIS_URL,
+                result_backend=REDIS_URL,
+                namespace='CELERY',
+                result_expires=10,
+                worker_max_memory_per_child=int(os.getenv('CELERY_MAX_MEMORY_PER_WORKER', '470000')),
+                worker_max_tasks_per_child=int(os.getenv('CELERY_MAX_TASKS_PER_WORKER', '1000')))
 
 # Load task modules from all registered Django app configs.
 app.autodiscover_tasks()

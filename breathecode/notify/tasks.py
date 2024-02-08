@@ -1,17 +1,21 @@
+import json
+import logging
+import os
 from datetime import datetime
-import logging, os, requests, json
+from decimal import Decimal
+
+import requests
 from celery import shared_task
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils import timezone
 
-from breathecode.utils.decorators import task, AbortTask, TaskPriority
-from .actions import sync_slack_team_channel, sync_slack_team_users
-from breathecode.services.slack.client import Slack
-from breathecode.mentorship.models import MentorshipSession
 from breathecode.authenticate.models import Token
-from decimal import Decimal
-
+from breathecode.mentorship.models import MentorshipSession
 from breathecode.notify import actions
+from breathecode.services.slack.client import Slack
+from breathecode.utils.decorators import AbortTask, TaskPriority, task
+
+from .actions import sync_slack_team_channel, sync_slack_team_users
 
 
 def get_api_url():
@@ -39,13 +43,15 @@ def send_mentorship_starting_notification(session_id):
     token, created = Token.get_or_create(session.mentor.user, token_type='temporal', hours_length=2)
 
     actions.send_email_message(
-        'message', session.mentor.user.email, {
+        'message',
+        session.mentor.user.email, {
             'SUBJECT': 'Mentorship session starting',
             'MESSAGE':
             f'Mentee {session.mentee.first_name} {session.mentee.last_name} is joining your session, please come back to this email when the session is over to marke it as completed',
             'BUTTON': 'Finish and review this session',
             'LINK': f'{get_api_url()}/mentor/session/{session.id}?token={token.key}',
-        })
+        },
+        academy=session.mentor.academy)
 
     return True
 

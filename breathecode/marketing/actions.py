@@ -364,6 +364,11 @@ def register_new_lead(form_entry=None):
         raise ValidationException('FormEntry not found (id: ' + str(form_entry['id']) + ')')
 
     if 'contact-us' == tags[0].slug:
+
+        obj = {}
+        if ac_academy.academy:
+            obj['COMPANY_INFO_EMAIL'] = ac_academy.academy.feedback_email
+
         send_email_message(
             'new_contact',
             ac_academy.academy.marketing_email,
@@ -375,8 +380,10 @@ def register_new_lead(form_entry=None):
                 'data': {
                     **form_entry
                 },
+                **obj,
                 # "data": { **form_entry, **address },
-            })
+            },
+            academy=ac_academy.academy)
 
     is_duplicate = entry.is_duplicate(form_entry)
     # ENV Variable to fake lead storage

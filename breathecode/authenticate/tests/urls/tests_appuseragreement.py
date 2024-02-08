@@ -1,14 +1,16 @@
 """
 Test cases for /user
 """
-from datetime import timedelta
 import random
+from datetime import timedelta
 from unittest.mock import MagicMock, patch
+
 from django.urls.base import reverse_lazy
-from rest_framework import status
 from django.utils import timezone
+from rest_framework import status
 
 from breathecode.tests.mixins.breathecode_mixin.breathecode import fake
+
 from ..mixins.new_auth_test_case import AuthTestCase
 
 UTC_NOW = timezone.now()
@@ -46,7 +48,7 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:appuseragreement')
 
         model = self.bc.database.create(user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         response = self.client.get(url)
         json = response.json()
         expected = []
@@ -67,7 +69,7 @@ class AuthenticateTestSuite(AuthTestCase):
         app = {'agreement_version': version}
         app_user_agreements = [{'agreement_version': version, 'app_id': x + 1} for x in range(2)]
         model = self.bc.database.create(user=1, app=(2, app), app_user_agreement=app_user_agreements)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         response = self.client.get(url)
         json = response.json()
         expected = [
@@ -94,7 +96,7 @@ class AuthenticateTestSuite(AuthTestCase):
         app = {'agreement_version': version1}
         app_user_agreements = [{'agreement_version': version2, 'app_id': x + 1} for x in range(2)]
         model = self.bc.database.create(user=1, app=(2, app), app_user_agreement=app_user_agreements)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         response = self.client.get(url)
         json = response.json()
         expected = [

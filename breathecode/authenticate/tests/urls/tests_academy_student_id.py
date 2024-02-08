@@ -2,9 +2,12 @@
 Test cases for /academy/:id/member/:id
 """
 from unittest.mock import MagicMock, patch
-from breathecode.services import datetime_to_iso_format
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
+from breathecode.services import datetime_to_iso_format
+
 from ..mixins.new_auth_test_case import AuthTestCase
 
 
@@ -409,7 +412,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.bc.request.set_headers(academy=1)
         model = self.generate_models(role=role, user=1, capability='crud_student', profile_academy=True)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': '1'})
 
         data = {'role': 'nut'}
@@ -435,7 +438,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.bc.request.set_headers(academy=1)
         model = self.generate_models(role=role, user=1, capability='crud_student', profile_academy=True)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': '1'})
 
         data = {}

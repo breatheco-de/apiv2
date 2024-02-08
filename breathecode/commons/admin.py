@@ -1,6 +1,8 @@
 from django.contrib import admin
-from .models import TaskManager, TaskWatcher
+
 from breathecode.commons import tasks
+
+from .models import TaskManager, TaskWatcher
 
 
 def cancel(modeladmin, request, queryset):
@@ -40,7 +42,10 @@ class TaskManagerAdmin(admin.ModelAdmin):
 
     @admin.display(description='Duration (ms)')
     def get_duration(self, obj):
-        duration = obj.updated_at - obj.created_at
+        if obj.started_at is None:
+            return 'No started'
+
+        duration = obj.updated_at - obj.started_at
         # Calculating duration in milliseconds
         duration_ms = duration.total_seconds() * 1000
         return f'{int(duration_ms)} ms'

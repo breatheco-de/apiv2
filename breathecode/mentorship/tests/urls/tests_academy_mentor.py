@@ -209,7 +209,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     def test__get__without_academy_header(self):
         model = self.bc.database.create(user=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_mentor')
         response = self.client.get(url)
@@ -231,7 +231,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         model = self.bc.database.create(user=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_mentor')
         response = self.client.get(url)
@@ -256,7 +256,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_mentor')
         response = self.client.get(url)
@@ -280,7 +280,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_mentor')
         response = self.client.get(url)
@@ -309,7 +309,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_mentor')
         response = self.client.get(url)
@@ -340,7 +340,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=model.academy.id)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_mentor') + f'?services={self.bc.fake.slug()}'
         response = self.client.get(url)
@@ -368,7 +368,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=model.academy.id)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_mentor') + f'?service={slug}'
         response = self.client.get(url)
@@ -481,7 +481,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                             profile_academy=1)
 
             self.bc.request.set_headers(academy=model.academy.id)
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
 
             url = reverse_lazy('mentorship:academy_mentor') + f'?status={bad_statuses}'
             response = self.client.get(url)
@@ -521,7 +521,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                             profile_academy=1)
 
             self.bc.request.set_headers(academy=model.academy.id)
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
 
             url = reverse_lazy('mentorship:academy_mentor') + f'?status={first_status},{second_status}'
             response = self.client.get(url)
@@ -564,7 +564,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=model.academy.id)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_mentor') + f'?syllabus={slug}'
         response = self.client.get(url)
@@ -597,7 +597,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         profile_academy=profile_academy)
 
         self.bc.request.set_headers(academy=model.academy.id)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_mentor') + f'?syllabus={slug}'
         response = self.client.get(url)
@@ -629,7 +629,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_mentor')
         self.client.get(url)
@@ -653,7 +653,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         model = self.bc.database.create(user=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_mentor')
         response = self.client.post(url)
@@ -678,7 +678,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_mentor')
         response = self.client.post(url)
@@ -700,7 +700,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_mentor')
         data = {'slug': 'mirai-nikki', 'name': 'Mirai Nikki'}
@@ -732,7 +732,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         mentorship_service=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_mentor')
         data = {
@@ -785,7 +785,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         mentorship_service=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_mentor')
         data = {
@@ -839,7 +839,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                             mentor_profile=mentor_profile)
 
             self.bc.request.set_headers(academy=model.academy.id)
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
 
             url = reverse_lazy('mentorship:academy_mentor_id', kwargs={'mentor_id': model.mentor_profile.id})
 
@@ -879,7 +879,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         mentorship_service=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_mentor')
         data = {'slug': 'mirai-nikki', 'price_per_hour': 20, 'services': [1], 'user': 1}
@@ -904,7 +904,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         mentorship_service=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_mentor')
         data = {

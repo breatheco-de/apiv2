@@ -1,15 +1,15 @@
-from datetime import timedelta
 import math
 import random
+from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
-from rest_framework.authtoken.models import Token
 
 from django.urls import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
+from rest_framework.authtoken.models import Token
 
 from breathecode.payments import signals
 
-from django.utils import timezone
 from ..mixins import PaymentsTestCase
 
 UTC_NOW = timezone.now()
@@ -214,7 +214,7 @@ class SignalTestSuite(PaymentsTestCase):
 
     def test__with_auth__without_service_items(self):
         model = self.bc.database.create(user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:serviceitem')
         response = self.client.get(url)
@@ -240,7 +240,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=plan_service_items,
                                         service_item_feature=service_item_features)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:serviceitem')
         response = self.client.get(url)
@@ -279,7 +279,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=1,
                                         service_item_feature=service_item_features)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:serviceitem')
         response = self.client.get(url)
@@ -311,7 +311,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         service_item_feature=service_item_features)
 
         self.bc.request.set_headers(accept_language='es')
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:serviceitem')
         response = self.client.get(url)
@@ -346,7 +346,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=plan_service_items,
                                         service_item_feature=service_item_features)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:serviceitem') + '?plan=1'
         response = self.client.get(url)

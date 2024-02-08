@@ -5,21 +5,20 @@ import logging
 import random
 from unittest.mock import MagicMock, call, patch
 
+from dateutil.relativedelta import relativedelta
 from django.utils import timezone
+
 from breathecode.payments import tasks
 from breathecode.payments.actions import calculate_relative_delta
 
 from ...tasks import renew_consumables
-
 from ..mixins import PaymentsTestCase
-from dateutil.relativedelta import relativedelta
 
 UTC_NOW = timezone.now()
 
 
 def consumable_item(data={}):
     return {
-        'app_service_id': None,
         'cohort_set_id': None,
         'event_type_set_id': None,
         'how_many': -1,
@@ -30,6 +29,7 @@ def consumable_item(data={}):
         'user_id': 0,
         'valid_until': UTC_NOW,
         'sort_priority': 1,
+        'service_set_id': None,
         **data,
     }
 
