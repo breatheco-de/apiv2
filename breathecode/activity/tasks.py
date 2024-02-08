@@ -175,7 +175,7 @@ def upload_activities(self, task_manager_id: int, **_):
 
         while True:
             try:
-                with Lock(client, f'lock:activity:worker-{worker}', timeout=3, blocking_timeout=3):
+                with Lock(client, f'lock:activity:worker-{worker}', timeout=30, blocking_timeout=30):
                     worker_key = f'activity:worker-{worker}'
                     data = cache.get(worker_key)
                     cache.delete(worker_key)
@@ -313,7 +313,7 @@ def add_activity(user_id: int,
     workers = actions.get_workers_amount()
 
     try:
-        with Lock(client, 'lock:activity:current-worker', timeout=3, blocking_timeout=3):
+        with Lock(client, 'lock:activity:current-worker', timeout=30, blocking_timeout=30):
             current_worker_key = 'activity:current-worker'
             worker = cache.get(current_worker_key)
             if worker is None or int(worker) == workers:
@@ -326,7 +326,7 @@ def add_activity(user_id: int,
         worker = 0
 
     try:
-        with Lock(client, f'lock:activity:worker-{worker}', timeout=3, blocking_timeout=3):
+        with Lock(client, f'lock:activity:worker-{worker}', timeout=30, blocking_timeout=30):
             worker_storage_key = f'activity:worker-{worker}'
             data = cache.get(worker_storage_key)
 

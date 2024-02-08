@@ -120,6 +120,8 @@ def db_item(data={}):
         'last_run': ...,
         'reverse_module': None,
         'reverse_name': None,
+        'exception_module': None,
+        'exception_name': None,
         'status': 'DONE',
         'status_message': None,
         'task_module': 'breathecode.commons.tasks',
@@ -355,6 +357,8 @@ def test_no_task_manager__it_got_an_exception__no_transaction__no_fallback(bc: B
             'current_page': 1,
             'total_pages': 1,
             'status_message': 'Unexpected error',
+            'exception_module': 'breathecode.utils.tests.decorators.tests_task',
+            'exception_name': 'CustomException',
         }),
     ]
 
@@ -426,6 +430,8 @@ def test_no_task_manager__it_got_an_exception__no_transaction__with_fallback(bc:
             'current_page': 1,
             'total_pages': 1,
             'status_message': 'Unexpected error',
+            'exception_module': 'breathecode.utils.tests.decorators.tests_task',
+            'exception_name': 'CustomException',
         }),
     ]
 
@@ -490,6 +496,8 @@ def test_no_task_manager__it_got_an_exception__with_transaction__no_fallback(bc:
             'current_page': 1,
             'total_pages': 1,
             'status_message': 'Unexpected error',
+            'exception_module': 'breathecode.utils.tests.decorators.tests_task',
+            'exception_name': 'CustomException',
         }),
     ]
 
@@ -558,6 +566,8 @@ def test_no_task_manager__it_got_an_exception__with_transaction__with_fallback(
             'current_page': 1,
             'total_pages': 1,
             'status_message': 'Unexpected error',
+            'exception_module': 'breathecode.utils.tests.decorators.tests_task',
+            'exception_name': 'CustomException',
         }),
     ]
 

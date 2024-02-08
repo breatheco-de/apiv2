@@ -1,4 +1,4 @@
-import copy
+import functools
 import importlib
 import inspect
 import logging
@@ -112,7 +112,7 @@ class Task(object):
 
         self.parent_decorator = celery.shared_task(*args, **kwargs)
 
-    def get_fn_desc(self, function: Callable) -> tuple[str, str] or tuple[None, None]:
+    def get_fn_desc(self, function: Callable) -> tuple[str, str] | tuple[None, None]:
         if not function:
             return None, None
 
@@ -160,6 +160,7 @@ class Task(object):
 
         self.function = function
 
+        @functools.wraps(function)
         def wrapper(*args, **kwargs):
             task_module, task_name = self.get_fn_desc(function)
             reverse_module, reverse_name = self.get_fn_desc(self.reverse)
@@ -216,6 +217,15 @@ class Task(object):
                 t = args[0]
                 t.task_manager = x
 
+            if x.task_name == 'async_validate_email_invite':
+                print('====================0')
+                print('====================0')
+                print('====================0')
+                print(vars(x))
+                print('====================0')
+                print('====================0')
+                print('====================0')
+
             if self.is_transaction == True:
                 error = None
                 with transaction.atomic():
@@ -236,10 +246,13 @@ class Task(object):
                     except CircuitBreakerError as e:
                         x.status_message = str(e)[:255]
 
-                        #TODO: things in this implementation
+                        #TODO: think in this implementation
                         if x.attempts >= RETRIES_LIMIT:
                             logger.exception(str(e))
                             x.status = 'ERROR'
+                            x.exception_module = e.__class__.__module__
+                            x.exception_name = e.__class__.__name__
+
                             x.save()
 
                         else:
@@ -260,6 +273,9 @@ class Task(object):
                                 logger.exception(str(e))
 
                             x.status = 'ERROR'
+                            x.exception_module = e.__class__.__module__
+                            x.exception_name = e.__class__.__name__
+
                             x.save()
 
                         else:
@@ -296,6 +312,9 @@ class Task(object):
                 if error:
                     x.status = 'ERROR'
                     x.status_message = error
+                    x.exception_module = exception.__class__.__module__
+                    x.exception_name = exception.__class__.__name__
+
                     x.save()
 
                     # fallback
@@ -326,6 +345,9 @@ class Task(object):
                     if x.attempts >= RETRIES_LIMIT:
                         logger.exception(str(e))
                         x.status = 'ERROR'
+                        x.exception_module = e.__class__.__module__
+                        x.exception_name = e.__class__.__name__
+
                         x.save()
 
                     else:
@@ -346,6 +368,9 @@ class Task(object):
                             logger.exception(str(e))
 
                         x.status = 'ERROR'
+                        x.exception_module = e.__class__.__module__
+                        x.exception_name = e.__class__.__name__
+
                         x.save()
 
                     else:
@@ -374,6 +399,9 @@ class Task(object):
                 except Exception as e:
                     x.status = 'ERROR'
                     x.status_message = str(e)[:255]
+                    x.exception_module = e.__class__.__module__
+                    x.exception_name = e.__class__.__name__
+
                     x.save()
 
                     logger.exception(str(e))
@@ -390,12 +418,7 @@ class Task(object):
 
             return res
 
-        w = copy.deepcopy(wrapper)
-
-        w.__name__ = function.__name__
-        w.__module__ = function.__module__
-
-        self.instance = self.parent_decorator(w)
+        self.instance = self.parent_decorator(wrapper)
         return self.instance
 
 

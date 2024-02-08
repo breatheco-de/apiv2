@@ -971,8 +971,8 @@ class MeCodeRevisionView(APIView):
 class AcademyCodeRevisionView(APIView):
 
     async def get_code_revision(self, request, academy_id, task_id, coderevision_id):
-        if task_id and not (task := await Task.objects.filter(id=task_id,
-                                                              cohort__academy__id=academy_id).afirst()):
+        if task_id and not (task := await Task.objects.filter(
+                id=task_id, cohort__academy__id=academy_id).prefetch_related('user').afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         params = {}
@@ -988,7 +988,7 @@ class AcademyCodeRevisionView(APIView):
             url = f'{url}/{coderevision_id}'
 
         try:
-            s = await service('rigobot')
+            s = await service('rigobot', task.user.id)
 
         except SynchronousOnlyOperation:
             raise ValidationException('Async is not supported by the worker',
@@ -1010,11 +1010,13 @@ class AcademyCodeRevisionView(APIView):
                 for header in header_keys:
                     headers[str(header)] = response.headers[header]
 
+                headers['App'] = 'Rigobot'
+
                 return HttpResponse(await response.content.read(), status=response.status, headers=headers)
 
     async def add_code_revision(self, request, academy_id, task_id, coderevision_id):
-        if task_id and not (task := await Task.objects.filter(id=task_id,
-                                                              cohort__academy__id=academy_id).afirst()):
+        if task_id and not (task := await Task.objects.filter(
+                id=task_id, cohort__academy__id=academy_id).prefetch_related('user').afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         params = {}
@@ -1025,7 +1027,7 @@ class AcademyCodeRevisionView(APIView):
             params['repo'] = task.github_url
 
         try:
-            s = await service('rigobot')
+            s = await service('rigobot', request.user.id)
 
         except SynchronousOnlyOperation:
             raise ValidationException('Async is not supported by the worker',
@@ -1046,6 +1048,8 @@ class AcademyCodeRevisionView(APIView):
                 headers = {}
                 for header in header_keys:
                     headers[str(header)] = response.headers[header]
+
+                headers['App'] = 'Rigobot'
 
                 return HttpResponse(await response.content.read(), status=response.status, headers=headers)
 
@@ -1071,8 +1075,8 @@ class AcademyCodeRevisionView(APIView):
 class AcademyCommitFileView(APIView):
 
     async def get_commit_file(self, request, academy_id, task_id, commitfile_id):
-        if task_id and not (task := await Task.objects.filter(id=task_id,
-                                                              cohort__academy__id=academy_id).afirst()):
+        if task_id and not (task := await Task.objects.filter(
+                id=task_id, cohort__academy__id=academy_id).prefetch_related('user').afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         params = {}
@@ -1088,7 +1092,7 @@ class AcademyCommitFileView(APIView):
             url = f'{url}/{commitfile_id}'
 
         try:
-            s = await service('rigobot')
+            s = await service('rigobot', task.user.id)
 
         except SynchronousOnlyOperation:
             raise ValidationException('Async is not supported by the worker',
@@ -1109,6 +1113,8 @@ class AcademyCommitFileView(APIView):
                 headers = {}
                 for header in header_keys:
                     headers[str(header)] = response.headers[header]
+
+                headers['App'] = 'Rigobot'
 
                 return HttpResponse(await response.content.read(), status=response.status, headers=headers)
 
@@ -1153,6 +1159,8 @@ class MeCodeRevisionRateView(APIView):
                 headers = {}
                 for header in header_keys:
                     headers[str(header)] = response.headers[header]
+
+                headers['App'] = 'Rigobot'
 
                 return HttpResponse(await response.content.read(), status=response.status, headers=headers)
 
