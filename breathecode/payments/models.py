@@ -17,7 +17,7 @@ from django.utils import timezone
 import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import DRAFT, Academy, Cohort, Country
 from breathecode.authenticate.actions import get_user_settings
-from breathecode.authenticate.models import App, UserInvite
+from breathecode.authenticate.models import UserInvite
 from breathecode.events.models import EventType
 from breathecode.mentorship.models import MentorshipService
 from breathecode.payments import signals

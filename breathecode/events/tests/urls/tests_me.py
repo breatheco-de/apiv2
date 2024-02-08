@@ -82,6 +82,7 @@ def get_serializer(self,
 
     return {
         'academy': academy_serialized,
+        'asset': None,
         'author': {
             'id': user.id,
             'first_name': user.first_name,
