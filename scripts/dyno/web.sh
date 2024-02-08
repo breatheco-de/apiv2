@@ -24,7 +24,7 @@ else
     export SERVER_TYPE=wsgi;
 fi
 
-# newrelic-admin run-program bin/start-pgbouncer-stunnel \
+newrelic-admin run-program bin/start-pgbouncer-stunnel \
     gunicorn breathecode.$SERVER_TYPE --timeout $WEB_TIMEOUT --workers $WEB_WORKERS \
         --worker-connections $WEB_WORKER_CONNECTION --worker-class $WEB_WORKER_CLASS \
         --max-requests $WEB_MAX_REQUESTS --max-requests-jitter $WEB_MAX_REQUESTS_JITTER \
