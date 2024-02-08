@@ -1185,6 +1185,15 @@ def save_github_token(request):
             if not token:
                 token, created = Token.get_or_create(user=user, token_type='login')
 
+            #register user in rigobot
+            rigobot_resp = requests.get(
+                f'https://rigobot.herokuapp.com/v1/auth/me/token?breathecode_token={token.key}', timeout=2)
+
+            if resp.status_code == 200:
+                logger.debug('User registered on rigobot')
+            else:
+                logger.error('Failed user registration on rigobot')
+
             return HttpResponseRedirect(redirect_to=url + '?token=' + token.key)
 
         else:
