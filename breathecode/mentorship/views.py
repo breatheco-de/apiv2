@@ -876,7 +876,7 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
 
         if 'syllabus' in self.request.GET:
             param = self.request.GET.get('syllabus')
-            lookup['syllabus__slug'] = param
+            lookup['syllabus__slug__in'] = [s.strip().upper() for s in param.split(',')]
 
         like = request.GET.get('like', None)
         if like is not None:
