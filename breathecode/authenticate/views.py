@@ -1186,10 +1186,14 @@ def save_github_token(request):
                 token, created = Token.get_or_create(user=user, token_type='login')
 
             #register user in rigobot
-            rigobot_resp = requests.get(
-                f'https://rigobot.herokuapp.com/v1/auth/me/token?breathecode_token={token.key}', timeout=2)
+            rigobot_payload = {'organization': '4geeks', 'user_token': token.key}
+            headers = {'Content-Type': 'application/json'}
+            rigobot_resp = requests.post('https://rigobot.herokuapp.com/v1/auth/invite',
+                                         timeout=2,
+                                         headers=headers,
+                                         json=rigobot_payload)
 
-            if resp.status_code == 200:
+            if rigobot_resp.status_code == 200:
                 logger.debug('User registered on rigobot')
             else:
                 logger.error('Failed user registration on rigobot')
