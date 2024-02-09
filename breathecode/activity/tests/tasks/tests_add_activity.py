@@ -1,18 +1,20 @@
 import logging
-from typing import Optional
-import pytest
+import os
 import pickle
+import random
+from typing import Optional
+from unittest.mock import MagicMock, call
+
+import pytest
+import zstandard
+from django.core.cache import cache
+from django.utils import timezone
 from google.cloud import bigquery
 
-from unittest.mock import MagicMock, call
-from django.utils import timezone
-import zstandard
 from breathecode.activity import actions
-from breathecode.activity.tasks import add_activity
-from django.core.cache import cache
-
-from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 from breathecode.activity.management.commands.upload_activities import Command
+from breathecode.activity.tasks import add_activity
+from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 UTC_NOW = timezone.now()
 
@@ -98,6 +100,18 @@ def get_attrs_from_meta(meta: dict):
 def test_type_and_no_id_or_slug(bc: Breathecode):
     kind = bc.fake.slug()
 
+    cache.set(
+        'workers', {
+            0: [{
+                'pid': os.getpid(),
+                'created_at': timezone.now()
+            }],
+            1: [{
+                'pid': os.getpid() + random.randint(1, 100),
+                'created_at': timezone.now()
+            }],
+        })
+
     add_activity.delay(1, kind, related_type='auth.User')
 
     assert logging.Logger.info.call_args_list == [call(f'Executing add_activity related to {kind}')]
@@ -115,6 +129,18 @@ def test_type_and_no_id_or_slug(bc: Breathecode):
 def test_type_with_id_and_slug(bc: Breathecode):
     kind = bc.fake.slug()
 
+    cache.set(
+        'workers', {
+            0: [{
+                'pid': os.getpid(),
+                'created_at': timezone.now()
+            }],
+            1: [{
+                'pid': os.getpid() + random.randint(1, 100),
+                'created_at': timezone.now()
+            }],
+        })
+
     add_activity.delay(1, kind, related_id=1, related_slug='slug')
 
     assert logging.Logger.info.call_args_list == [call(f'Executing add_activity related to {kind}')]
@@ -131,6 +157,18 @@ def test_adding_the_resource_with_id_and_no_meta(bc: Breathecode, decompress_and
     kind = bc.fake.slug()
 
     logging.Logger.info.call_args_list = []
+
+    cache.set(
+        'workers', {
+            0: [{
+                'pid': os.getpid(),
+                'created_at': timezone.now()
+            }],
+            1: [{
+                'pid': os.getpid() + random.randint(1, 100),
+                'created_at': timezone.now()
+            }],
+        })
 
     add_activity.delay(1, kind, related_type='auth.User', related_id=1)
 
@@ -180,6 +218,18 @@ def test_adding_the_resource_with_slug_and_no_meta(bc: Breathecode, decompress_a
     logging.Logger.info.call_args_list = []
 
     related_slug = bc.fake.slug()
+
+    cache.set(
+        'workers', {
+            0: [{
+                'pid': os.getpid(),
+                'created_at': timezone.now()
+            }],
+            1: [{
+                'pid': os.getpid() + random.randint(1, 100),
+                'created_at': timezone.now()
+            }],
+        })
 
     add_activity.delay(1, kind, related_type='auth.User', related_slug=related_slug)
 
@@ -236,7 +286,18 @@ def test_adding_the_resource_with_meta(bc: Breathecode, set_activity_meta, decom
 
     logging.Logger.info.call_args_list = []
 
-    # with patch('breathecode.activity.actions.get_activity_meta', MagicMock(return_value=meta)):
+    cache.set(
+        'workers', {
+            0: [{
+                'pid': os.getpid(),
+                'created_at': timezone.now()
+            }],
+            1: [{
+                'pid': os.getpid() + random.randint(1, 100),
+                'created_at': timezone.now()
+            }],
+        })
+
     add_activity.delay(1, kind, related_type='auth.User', related_id=1)
 
     assert actions.get_activity_meta.call_args_list == [
@@ -296,7 +357,18 @@ def test_adding_the_resource_with_meta__it_fails(bc: Breathecode, set_activity_m
 
     set_activity_meta(exc=exc)
 
-    # with patch('breathecode.activity.actions.get_activity_meta', MagicMock(return_value=meta)):
+    cache.set(
+        'workers', {
+            0: [{
+                'pid': os.getpid(),
+                'created_at': timezone.now()
+            }],
+            1: [{
+                'pid': os.getpid() + random.randint(1, 100),
+                'created_at': timezone.now()
+            }],
+        })
+
     add_activity.delay(1, kind, related_type='auth.User', related_id=1)
 
     assert actions.get_activity_meta.call_args_list == [
@@ -309,7 +381,7 @@ def test_adding_the_resource_with_meta__it_fails(bc: Breathecode, set_activity_m
     assert cache.get('activity:worker-0') is None
 
 
-def test_adding_the_resource_with_meta__called_two_times(bc: Breathecode, set_activity_meta,
+def test_adding_the_resource_with_meta__called_two_times(bc: Breathecode, monkeypatch, set_activity_meta,
                                                          decompress_and_parse):
     kind = bc.fake.slug()
 
@@ -323,9 +395,33 @@ def test_adding_the_resource_with_meta__called_two_times(bc: Breathecode, set_ac
 
     logging.Logger.info.call_args_list = []
 
-    # with patch('breathecode.activity.actions.get_activity_meta', MagicMock(return_value=meta)):
+    cache.set(
+        'workers', {
+            0: [{
+                'pid': os.getpid(),
+                'created_at': timezone.now()
+            }],
+            1: [{
+                'pid': os.getpid() + random.randint(1, 100),
+                'created_at': timezone.now()
+            }],
+        })
+
     add_activity.delay(1, kind, related_type='auth.User', related_id=1)
+    cache.set(
+        'workers', {
+            0: [{
+                'pid': os.getpid() + random.randint(1, 100),
+                'created_at': timezone.now()
+            }],
+            1: [{
+                'pid': os.getpid(),
+                'created_at': timezone.now()
+            }],
+        })
+
     add_activity.delay(1, kind, related_type='auth.User', related_id=1)
+    assert logging.Logger.error.call_args_list == []
 
     assert actions.get_activity_meta.call_args_list == [
         call(kind, 'auth.User', 1, None),

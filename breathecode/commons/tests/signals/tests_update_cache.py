@@ -1,29 +1,30 @@
 import gzip
+import json
 import os
 import random
 import re
-import json
 from unittest.mock import MagicMock, call
-from django.core.cache import cache
+
+import brotli
+import django.contrib.auth.models as auth_models
 import pytest
+from django.core.cache import cache
+
+import breathecode.admissions.models as admissions_models
+import breathecode.assignments.models as assignment_models
+import breathecode.authenticate.models as authenticate_models
+import breathecode.certificate.models as certificate_models
+import breathecode.events.models as event_models
+import breathecode.events.models as events_models
+import breathecode.feedback.models as feedback_models
+import breathecode.marketing.models as marketing_models
+import breathecode.notify.models as notify_models
+import breathecode.payments.models as payments_models
+import breathecode.provisioning.models as provisioning_models
 from breathecode.admissions.caches import CohortCache
 from breathecode.events.caches import EventCache
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 from breathecode.utils.cache import CACHE_DESCRIPTORS, Cache
-import brotli
-
-import django.contrib.auth.models as auth_models
-import breathecode.assignments.models as assignment_models
-import breathecode.events.models as event_models
-import breathecode.admissions.models as admissions_models
-import breathecode.certificate.models as certificate_models
-import breathecode.payments.models as payments_models
-import breathecode.marketing.models as marketing_models
-import breathecode.feedback.models as feedback_models
-import breathecode.provisioning.models as provisioning_models
-import breathecode.authenticate.models as authenticate_models
-import breathecode.events.models as events_models
-import breathecode.notify.models as notify_models
 
 # this fix a problem caused by the geniuses at pytest-xdist
 random.seed(os.getenv('RANDOM_SEED'))
