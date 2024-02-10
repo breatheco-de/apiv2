@@ -62,7 +62,7 @@ def get_workers_amount():
     return dynos * workers
 
 
-if os.getenv('ENV') != 'test' and (WORKER := os.getenv('CELERY_POOL', '')) not in ['prefork']:
+if os.getenv('ENV') != 'test' and (WORKER := os.getenv('CELERY_POOL', 'prefork')) not in ['prefork']:
     raise ValueError(f'CELERY_POOL must be "prefork" but got {WORKER} that is not supported yet.')
 
 
@@ -82,6 +82,7 @@ def worker_process_init_handler(**kwargs):
     is_django_redis = hasattr(cache, 'delete_pattern')
     if is_django_redis:
         from redis.lock import Lock
+
     else:
 
         class Lock:
