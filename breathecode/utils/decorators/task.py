@@ -2,6 +2,7 @@ import functools
 import importlib
 import inspect
 import logging
+import traceback
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any, Callable
@@ -302,6 +303,8 @@ class Task(object):
                         return
 
                     except Exception as e:
+                        traceback.print_exc()
+
                         transaction.savepoint_rollback(sid)
 
                         error = str(e)[:255]
@@ -397,6 +400,8 @@ class Task(object):
                     return
 
                 except Exception as e:
+                    traceback.print_exc()
+
                     x.status = 'ERROR'
                     x.status_message = str(e)[:255]
                     x.exception_module = e.__class__.__module__
