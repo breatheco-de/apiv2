@@ -1340,6 +1340,105 @@ class AuthenticateTestSuite(MentorshipTestCase):
 
             template_data['GO_BACK'] = 'Go back to Dashboard'
             template_data['URL_BACK'] = 'https://4geeks.com/choose-program'
+            template_data['BUTTON'] = 'Get a plan'
+            template_data['LINK'] = 'https://4geeks.com/checkout?plan=basic'
+            expected = render('You must get a plan in order to access this service', data=template_data)
+
+            # dump error in external files
+            if content != expected:
+                with open('content.html', 'w') as f:
+                    f.write(content)
+
+                with open('expected.html', 'w') as f:
+                    f.write(expected)
+
+            self.assertEqual(content, expected)
+            self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
+            self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
+                self.bc.format.to_dict(model.mentor_profile),
+            ])
+            self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+            self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
+
+            # teardown
+            self.bc.database.delete('mentorship.MentorProfile')
+            self.bc.database.delete('auth.Permission')
+            self.bc.database.delete('auth.User')
+
+    @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'DAILY_API_URL': URL,
+               'DAILY_API_KEY': API_KEY,
+           })))
+    @patch('requests.request',
+           apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
+               'name': ROOM_NAME,
+               'url': ROOM_URL,
+           })]))
+    @patch('breathecode.mentorship.permissions.flags.Release.enable_consume_mentorships',
+           MagicMock(return_value=True))
+    def test_with_mentor_profile__academy_available_as_saas__flag_eq_true__mentee_with_no_consumables_with_subcription(
+            self):
+        cases = [{
+            'status': x,
+            'online_meeting_url': self.bc.fake.url(),
+            'booking_url': self.bc.fake.url(),
+        } for x in ['ACTIVE', 'UNLISTED']]
+        permission = {'codename': 'join_mentorship'}
+
+        id = 0
+        for mentor_profile in cases:
+            id += 1
+
+            user = {'first_name': '', 'last_name': ''}
+            base = self.bc.database.create(user=user,
+                                           token=1,
+                                           group=1,
+                                           permission=permission,
+                                           mentorship_service_set=1)
+
+            mentorship_session = {'mentee_id': None}
+            academy = {'available_as_saas': True}
+            model = self.bc.database.create(mentor_profile=mentor_profile,
+                                            mentorship_session=mentorship_session,
+                                            user=user,
+                                            mentorship_service=1,
+                                            academy=academy,
+                                            plan={
+                                                'is_renewable': False,
+                                                'mentorship_service_set': base.mentorship_service_set
+                                            },
+                                            service=1,
+                                            subscription={
+                                                'user': base.user,
+                                                'selected_mentorship_service_set': base.mentorship_service_set
+                                            })
+
+            model.mentorship_session.mentee = None
+            model.mentorship_session.save()
+            model.subscription.selected_mentorship_service_set.mentorship_services.add(
+                model.mentorship_service)
+            model.subscription.save()
+
+            querystring = self.bc.format.to_querystring({
+                'token': base.token.key,
+            })
+            url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
+                               kwargs={
+                                   'mentor_slug': model.mentor_profile.slug,
+                                   'service_slug': model.mentorship_service.slug
+                               }) + f'?{querystring}'
+            response = self.client.get(url)
+
+            content = self.bc.format.from_bytes(response.content)
+            template_data = {}
+
+            template_data['GO_BACK'] = 'Go back to Dashboard'
+            template_data['URL_BACK'] = 'https://4geeks.com/choose-program'
+            template_data['BUTTON'] = 'Get more consumables'
+            template_data[
+                'LINK'] = f'https://4geeks.com/checkout?mentorship_service_set={base.mentorship_service_set.slug}'
             expected = render('with-consumer-not-enough-consumables', data=template_data)
 
             # dump error in external files
