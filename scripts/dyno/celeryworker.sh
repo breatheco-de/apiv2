@@ -28,8 +28,10 @@ num_processes=$(((current_timestamp + $RANDOM) % 100))
 
 # generate a random pid
 for ((i=1; i<=$num_processes; i++)); do
-    true
+    true &
 done
+
+wait
 
 newrelic-admin run-program bin/start-pgbouncer-stunnel \
     celery -A breathecode.celery worker --loglevel=$LOG_LEVEL \
