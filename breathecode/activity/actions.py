@@ -1,6 +1,9 @@
 import functools
 import os
-from typing import Any, Optional
+from datetime import datetime
+from typing import Any, Optional, TypedDict
+
+from django.core.cache import cache
 
 from breathecode.utils.decorators.task import AbortTask, RetryTask
 
@@ -631,3 +634,40 @@ def get_workers_amount():
     dynos = int(os.getenv('CELERY_DYNOS') or 1)
     workers = int(os.getenv('CELERY_MAX_WORKERS') or 1)
     return dynos * workers
+
+
+class Worker(TypedDict):
+    pid: int
+    created_at: datetime
+
+
+Workers = dict[int, list[Worker]]
+
+
+def get_current_worker_number() -> int:
+    """
+    Return the current worker number for the calling process.
+
+    Assumes the worker data is stored in the cache.
+    """
+
+    if os.getenv('CELERY_POOL', '') == 'gevent':
+        from gevent import getcurrent
+        worker_pid = id(getcurrent())
+    else:
+        worker_pid = os.getpid()
+
+    # Retrieve worker data from the cache
+    workers_data: Workers = cache.get('workers', {})
+
+    if not workers_data:
+        return 0
+
+    # Find the worker number for the current process
+    for worker_number, worker_processes in workers_data.items():
+        for worker_process in worker_processes:
+            if worker_process['pid'] == worker_pid:
+                return worker_number
+
+    # If the process is not found, return None or raise an exception based on your requirements
+    return 0

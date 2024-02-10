@@ -1,11 +1,11 @@
 """
 Test /answer
 """
-from django.utils import timezone
 from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
 from django.urls.base import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
 
 from breathecode.services.google_cloud import Datastore
@@ -64,7 +64,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__without_profile_academy(self):
         model = self.bc.database.create(user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task')
         response = self.client.get(url)
@@ -87,7 +87,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__without_data(self):
         model = self.bc.database.create(user=1, profile_academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task')
         response = self.client.get(url)
@@ -107,7 +107,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__one_task__cohort_null(self):
         model = self.bc.database.create(profile_academy=1, task=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task')
         response = self.client.get(url)
@@ -127,7 +127,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__two_tasks(self):
         model = self.bc.database.create(profile_academy=1, task=2)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task')
         response = self.client.get(url)
@@ -147,7 +147,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_academy__found_zero__academy_not_exists(self):
         model = self.bc.database.create(profile_academy=1, task=1, cohort=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?academy=they-killed-kenny'
         response = self.client.get(url)
@@ -163,7 +163,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_academy__found_one(self):
         model = self.bc.database.create(profile_academy=1, task=1, cohort=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + f'?academy={model.academy.slug}'
         response = self.client.get(url)
@@ -179,7 +179,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_academy__found_one__cohort_null(self):
         model = self.bc.database.create(profile_academy=1, task=1, skip_cohort=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?academy=they-killed-kenny'
         response = self.client.get(url)
@@ -195,7 +195,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_academy__found_two(self):
         model = self.bc.database.create(profile_academy=1, task=2, cohort=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + f'?academy={model.academy.slug}'
         response = self.client.get(url)
@@ -211,7 +211,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_academy__found_two__cohort_null(self):
         model = self.bc.database.create(profile_academy=1, task=2, skip_cohort=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?academy=they-killed-kenny'
         response = self.client.get(url)
@@ -231,7 +231,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_user__found_zero__user_not_exists(self):
         model = self.bc.database.create(profile_academy=1, task=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?user=2'
         response = self.client.get(url)
@@ -247,7 +247,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_user__found_one(self):
         model = self.bc.database.create(profile_academy=1, task=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?user=1'
         response = self.client.get(url)
@@ -263,7 +263,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_user__found_two(self):
         model = self.bc.database.create(profile_academy=1, task=2, cohort=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?user=1'
         response = self.client.get(url)
@@ -300,7 +300,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_cohort__id__found_zero__cohort_not_exists(self):
         model = self.bc.database.create(profile_academy=1, task=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?cohort=2'
         response = self.client.get(url)
@@ -316,7 +316,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_cohort__slug__found_zero__cohort_not_exists(self):
         model = self.bc.database.create(profile_academy=1, task=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?cohort=they-killed-kenny'
         response = self.client.get(url)
@@ -332,7 +332,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_cohort__id__found_one(self):
         model = self.bc.database.create(profile_academy=1, task=1, cohort=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?cohort=1'
         response = self.client.get(url)
@@ -348,7 +348,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_cohort__slug__found_one(self):
         model = self.bc.database.create(profile_academy=1, task=1, cohort=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + f'?cohort={model.cohort.slug}'
         response = self.client.get(url)
@@ -364,7 +364,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_cohort__id__found_two(self):
         model = self.bc.database.create(profile_academy=1, task=2, cohort=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?cohort=1'
         response = self.client.get(url)
@@ -380,7 +380,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_cohort__slug__found_two(self):
         model = self.bc.database.create(profile_academy=1, task=2, cohort=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + f'?cohort={model.cohort.slug}'
         response = self.client.get(url)
@@ -397,7 +397,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_task__query_cohort__id__found_two__related_to_two_users(self):
         tasks = [{'cohort_id': 1}, {'cohort_id': 2}]
         model = self.bc.database.create(profile_academy=1, user=1, task=tasks, cohort=2)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?cohort=1,2'
         response = self.client.get(url)
@@ -414,7 +414,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_task__query_cohort__slug__found_two__related_to_two_users(self):
         tasks = [{'cohort_id': 1}, {'cohort_id': 2}]
         model = self.bc.database.create(profile_academy=1, user=1, task=tasks, cohort=2)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + f'?cohort={model.cohort[0].slug},{model.cohort[1].slug}'
         response = self.client.get(url)
@@ -434,7 +434,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_stu_cohort__id__found_zero__cohort_not_exists(self):
         model = self.bc.database.create(profile_academy=1, task=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?stu_cohort=2'
         response = self.client.get(url)
@@ -450,7 +450,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_stu_cohort__slug__found_zero__cohort_not_exists(self):
         model = self.bc.database.create(profile_academy=1, task=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?stu_cohort=they-killed-kenny'
         response = self.client.get(url)
@@ -467,7 +467,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_stu_cohort__id__found_one(self):
         model = self.bc.database.create(profile_academy=1, task=1, cohort=1, cohort_user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?stu_cohort=1'
         response = self.client.get(url)
@@ -484,7 +484,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_stu_cohort__slug__found_one(self):
         model = self.bc.database.create(profile_academy=1, task=1, cohort=1, cohort_user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + f'?stu_cohort={model.cohort.slug}'
         response = self.client.get(url)
@@ -501,7 +501,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_stu_cohort__id__found_two(self):
         model = self.bc.database.create(profile_academy=1, task=2, cohort=1, cohort_user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?stu_cohort=1'
         response = self.client.get(url)
@@ -518,7 +518,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_stu_cohort__slug__found_two(self):
         model = self.bc.database.create(profile_academy=1, task=2, cohort=1, cohort_user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + f'?stu_cohort={model.cohort.slug}'
         response = self.client.get(url)
@@ -584,7 +584,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_edu_status__found_zero__edu_status_not_exists(self):
         model = self.bc.database.create(profile_academy=1, task=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?edu_status=ACTIVE'
         response = self.client.get(url)
@@ -602,7 +602,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_task__query_edu_status__found_one(self):
         cohort_user = {'user_id': 1, 'educational_status': 'ACTIVE'}
         model = self.bc.database.create(profile_academy=1, task=1, cohort=1, cohort_user=cohort_user)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + f'?edu_status={model.cohort_user.educational_status}'
         response = self.client.get(url)
@@ -620,7 +620,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_task__query_edu_status__found_two(self):
         cohort_user = {'user_id': 1, 'educational_status': 'ACTIVE'}
         model = self.bc.database.create(profile_academy=1, task=2, cohort=1, cohort_user=cohort_user)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + f'?edu_status={model.cohort_user.educational_status}'
         response = self.client.get(url)
@@ -672,7 +672,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_teacher__found_zero__academy_not_exists(self):
         model = self.bc.database.create(profile_academy=1, task=1, cohort=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?teacher=1'
         response = self.client.get(url)
@@ -700,7 +700,7 @@ class MediaTestSuite(AssignmentsTestCase):
             },
         ]
         model = self.bc.database.create(profile_academy=1, task=1, cohort=1, cohort_user=cohort_users)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + f'?teacher=1'
         response = self.client.get(url)
@@ -743,7 +743,7 @@ class MediaTestSuite(AssignmentsTestCase):
                                         user=1,
                                         cohort=2,
                                         cohort_user=cohort_users)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + f'?teacher=1'
         response = self.client.get(url)
@@ -764,7 +764,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_task__query_task_status__found_zero__task_status_not_exists(self):
         task = {'task_status': 'PENDING'}
         model = self.bc.database.create(profile_academy=1, task=task)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?task_status=DONE'
         response = self.client.get(url)
@@ -781,7 +781,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_task__query_task_status__found_one(self):
         task = {'user_id': 1, 'task_status': 'DONE'}
         model = self.bc.database.create(profile_academy=1, task=task)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?task_status=DONE'
         response = self.client.get(url)
@@ -799,7 +799,7 @@ class MediaTestSuite(AssignmentsTestCase):
         tasks = [{'user_id': 1, 'task_status': 'DONE'}, {'user_id': 1, 'task_status': 'DONE'}]
         model = self.bc.database.create(profile_academy=1, task=tasks)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?task_status=DONE'
         response = self.client.get(url)
@@ -816,7 +816,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_task__query_task_status__found_two__related_to_two_task_status(self):
         tasks = [{'task_status': 'DONE'}, {'task_status': 'PENDING'}]
         model = self.bc.database.create(profile_academy=1, user=1, task=tasks)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + f'?task_status=DONE,PENDING'
         response = self.client.get(url)
@@ -837,7 +837,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_task__query_revision_status__found_zero__revision_status_not_exists(self):
         task = {'revision_status': 'PENDING'}
         model = self.bc.database.create(profile_academy=1, task=task)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?revision_status=APPROVED'
         response = self.client.get(url)
@@ -854,7 +854,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_task__query_revision_status__found_one(self):
         task = {'user_id': 1, 'revision_status': 'APPROVED'}
         model = self.bc.database.create(profile_academy=1, task=task)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?revision_status=APPROVED'
         response = self.client.get(url)
@@ -871,7 +871,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_task__query_revision_status__found_two(self):
         tasks = [{'user_id': 1, 'revision_status': 'APPROVED'}, {'user_id': 1, 'revision_status': 'APPROVED'}]
         model = self.bc.database.create(profile_academy=1, task=tasks)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?revision_status=APPROVED'
         response = self.client.get(url)
@@ -888,7 +888,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_task__query_revision_status__found_two__related_to_two_revision_status(self):
         tasks = [{'revision_status': 'APPROVED'}, {'revision_status': 'PENDING'}]
         model = self.bc.database.create(profile_academy=1, user=1, task=tasks)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + f'?revision_status=APPROVED,PENDING'
         response = self.client.get(url)
@@ -909,7 +909,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_task__query_task_type__found_zero__task_type_not_exists(self):
         task = {'task_type': 'QUIZ'}
         model = self.bc.database.create(profile_academy=1, task=task)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?task_type=PROJECT'
         response = self.client.get(url)
@@ -926,7 +926,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_task__query_task_type__found_one(self):
         task = {'user_id': 1, 'task_type': 'PROJECT'}
         model = self.bc.database.create(profile_academy=1, task=task)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?task_type=PROJECT'
         response = self.client.get(url)
@@ -943,7 +943,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_task__query_task_type__found_two(self):
         tasks = [{'user_id': 1, 'task_type': 'PROJECT'}, {'user_id': 1, 'task_type': 'PROJECT'}]
         model = self.bc.database.create(profile_academy=1, task=tasks)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?task_type=PROJECT'
         response = self.client.get(url)
@@ -960,7 +960,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_task__query_revision_status__found_two__related_to_two_revision_status(self):
         tasks = [{'task_type': 'PROJECT'}, {'task_type': 'QUIZ'}]
         model = self.bc.database.create(profile_academy=1, user=1, task=tasks)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + f'?task_type=PROJECT,QUIZ'
         response = self.client.get(url)

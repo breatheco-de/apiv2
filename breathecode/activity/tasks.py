@@ -175,7 +175,7 @@ def upload_activities(self, task_manager_id: int, **_):
 
         while True:
             try:
-                with Lock(client, f'lock:activity:worker-{worker}', timeout=3, blocking_timeout=3):
+                with Lock(client, f'lock:activity:worker-{worker}', timeout=30, blocking_timeout=30):
                     worker_key = f'activity:worker-{worker}'
                     data = cache.get(worker_key)
                     cache.delete(worker_key)
@@ -310,23 +310,10 @@ def add_activity(user_id: int,
     if IS_DJANGO_REDIS:
         client = get_redis_connection('default')
 
-    workers = actions.get_workers_amount()
+    worker = actions.get_current_worker_number()
 
     try:
-        with Lock(client, 'lock:activity:current-worker', timeout=3, blocking_timeout=3):
-            current_worker_key = 'activity:current-worker'
-            worker = cache.get(current_worker_key)
-            if worker is None or int(worker) == workers:
-                worker = 0
-
-            worker = int(worker)
-            data = cache.set(current_worker_key, str(worker + 1))
-
-    except LockError:
-        worker = 0
-
-    try:
-        with Lock(client, f'lock:activity:worker-{worker}', timeout=3, blocking_timeout=3):
+        with Lock(client, f'lock:activity:worker-{worker}', timeout=30, blocking_timeout=30):
             worker_storage_key = f'activity:worker-{worker}'
             data = cache.get(worker_storage_key)
 

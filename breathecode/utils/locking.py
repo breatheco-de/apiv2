@@ -24,12 +24,14 @@ bag, created = Bag.objects.get_or_create(
 )
 """
 
-from django.db import models, transaction
 import os
-from redis.lock import Lock
+
+from django.db import models, transaction
 from redis.exceptions import LockError
-from breathecode.utils import getLogger
+from redis.lock import Lock
+
 from breathecode.setup import get_redis
+from breathecode.utils import getLogger
 
 logger = getLogger(__name__)
 ENV = os.getenv('ENV', '')
@@ -54,7 +56,7 @@ class LockManager(models.Manager):
             lock_key = f"{class_name}_lock:{'_'.join(lock_key_elements)}"
 
             try:
-                with Lock(redis_client, lock_key, timeout=10, blocking_timeout=10):
+                with Lock(redis_client, lock_key, timeout=30, blocking_timeout=30):
                     with transaction.atomic():
                         instance, created = super().get_or_create(**kwargs)
             except LockError:

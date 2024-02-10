@@ -3,16 +3,18 @@ Test /v1/marketing/upload
 """
 import random
 from unittest.mock import MagicMock, Mock, PropertyMock, call, patch
+
+import pandas as pd
 from django.urls.base import reverse_lazy
+from django.utils import dateparse, timezone
 from rest_framework import status
 
+from breathecode.marketing.views import MIME_ALLOW
+from breathecode.provisioning import tasks
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from breathecode.utils.api_view_extensions.extensions import lookup_extension
+
 from ..mixins import ProvisioningTestCase
-from breathecode.marketing.views import MIME_ALLOW
-import pandas as pd
-from django.utils import timezone, dateparse
-from breathecode.provisioning import tasks
 
 UTC_NOW = timezone.now()
 
@@ -47,7 +49,7 @@ class MarketingTestSuite(ProvisioningTestCase):
     def test_upload_without_capability(self):
 
         model = self.bc.database.create(user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         self.headers(academy=1,
                      accept='application/json',
@@ -74,7 +76,7 @@ class MarketingTestSuite(ProvisioningTestCase):
                                         profile_academy=1,
                                         role=1,
                                         capability='crud_provisioning_bill')
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         self.headers(academy=1)
 
@@ -101,7 +103,7 @@ class MarketingTestSuite(ProvisioningTestCase):
                                         role=1,
                                         capability='crud_provisioning_bill',
                                         provisioning_bill=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         self.headers(academy=1)
 
@@ -128,7 +130,7 @@ class MarketingTestSuite(ProvisioningTestCase):
                                         role=1,
                                         capability='crud_provisioning_bill',
                                         provisioning_bill=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         self.headers(academy=1)
 
@@ -160,7 +162,7 @@ class MarketingTestSuite(ProvisioningTestCase):
                                         role=1,
                                         capability='crud_provisioning_bill',
                                         provisioning_bill=provisioning_bill)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         self.headers(academy=1)
 
@@ -189,7 +191,7 @@ class MarketingTestSuite(ProvisioningTestCase):
                                         role=1,
                                         capability='crud_provisioning_bill',
                                         provisioning_bill=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         self.headers(academy=1)
 

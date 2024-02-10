@@ -2,13 +2,14 @@
 This file just can contains duck tests refert to AcademyInviteView
 """
 from unittest.mock import MagicMock, patch
+
 from django.urls.base import reverse_lazy
-from rest_framework import status
-from ..mixins.new_auth_test_case import AuthTestCase
 from rest_framework import status
 from rest_framework.response import Response
 
 from breathecode.utils import capable_of
+
+from ..mixins.new_auth_test_case import AuthTestCase
 
 
 @capable_of('invite_resend')
@@ -81,7 +82,7 @@ class MemberGetDuckTestSuite(AuthTestCase):
                                         } for id in range(1, 4)])
 
         for n in range(1, 4):
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
             self.bc.request.set_headers(academy=1)
 
             url = reverse_lazy('authenticate:academy_invite_id', kwargs={'invite_id': n})
@@ -158,7 +159,7 @@ class MemberPutDuckTestSuite(AuthTestCase):
                                         } for id in range(1, 4)])
 
         for n in range(1, 4):
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
             self.bc.request.set_headers(academy=1)
 
             url = reverse_lazy('authenticate:academy_invite_id', kwargs={'invite_id': n})

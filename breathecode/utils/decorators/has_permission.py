@@ -6,7 +6,7 @@ from typing import Callable, Optional, TypedDict
 
 from django.contrib.auth.models import AnonymousUser
 from django.core.handlers.wsgi import WSGIRequest
-from django.db.models import Q, QuerySet, Sum
+from django.db.models import QuerySet, Sum
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
@@ -59,7 +59,8 @@ def render_message(r,
                    data=None,
                    status=None,
                    go_back=None,
-                   url_back=None):
+                   url_back=None,
+                   academy=None):
     if data is None:
         data = {}
 
@@ -72,13 +73,22 @@ def render_message(r,
         'URL_BACK': url_back
     }
 
+    if academy:
+        _data['COMPANY_INFO_EMAIL'] = academy.feedback_email
+        _data['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
+        _data['COMPANY_LOGO'] = academy.logo_url
+        _data['COMPANY_NAME'] = academy.name
+
+        if 'heading' not in _data:
+            _data['heading'] = academy.name
+
     return render(r, 'message.html', {**_data, **data}, status=status)
 
 
 def has_permission(permission: str,
                    consumer: bool | HasPermissionCallback = False,
                    format='json') -> callable:
-    """This decorator check if the current user can access to the resource through of permissions"""
+    """Check if the current user can access to the resource through of permissions."""
 
     from breathecode.payments.models import Consumable, ConsumptionSession
 
@@ -195,8 +205,8 @@ def has_permission(permission: str,
                     raise e
 
                 if format == 'html':
-                    from breathecode.payments.models import PlanFinancing, PlanOffer, Subscription
                     from breathecode.events.models import Event
+                    from breathecode.payments.models import PlanFinancing, PlanOffer, Subscription
 
                     service = None
 

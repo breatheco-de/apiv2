@@ -86,8 +86,12 @@ def delete_tokens(users=None, status='expired'):
     return count
 
 
-def reset_password(users=None):
+def reset_password(users=None, extra=None, academy=None):
     from breathecode.notify.actions import send_email_message
+
+    if extra is None:
+        extra = {}
+
     if users is None or len(users) == 0:
         raise Exception('Missing users')
 
@@ -95,25 +99,33 @@ def reset_password(users=None):
         token, created = Token.get_or_create(user, token_type='temporal')
 
         # returns true or false if the email was send
-        return send_email_message(
-            'pick_password', user.email, {
-                'SUBJECT': 'You asked to reset your password at 4Geeks',
-                'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
-            })
+        return send_email_message('pick_password',
+                                  user.email, {
+                                      'SUBJECT': 'You asked to reset your password at 4Geeks',
+                                      'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}',
+                                      **extra,
+                                  },
+                                  academy=academy)
 
     return True
 
 
-def resend_invite(token=None, email=None, first_name=None):
+def resend_invite(token=None, email=None, first_name=None, extra=None, academy=None):
+    if extra is None:
+        extra = {}
+
     params = {'callback': 'https://admin.4geeks.com'}
     querystr = urllib.parse.urlencode(params)
     url = os.getenv('API_URL', '') + '/v1/auth/member/invite/' + str(token) + '?' + querystr
-    notify_actions.send_email_message('welcome_academy', email, {
-        'email': email,
-        'subject': 'Invitation to join 4Geeks',
-        'LINK': url,
-        'FIST_NAME': first_name
-    })
+    notify_actions.send_email_message('welcome_academy',
+                                      email, {
+                                          'email': email,
+                                          'subject': 'Invitation to join 4Geeks',
+                                          'LINK': url,
+                                          'FIST_NAME': first_name,
+                                          **extra,
+                                      },
+                                      academy=academy)
 
 
 def server_id():

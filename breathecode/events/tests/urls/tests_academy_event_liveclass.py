@@ -2,9 +2,9 @@ from unittest.mock import MagicMock, call, patch
 
 from django.urls.base import reverse_lazy
 
-from ..mixins.new_events_tests_case import EventTestCase
-
 from breathecode.utils.api_view_extensions.extensions import lookup_extension
+
+from ..mixins.new_events_tests_case import EventTestCase
 
 
 def cohort_serializer(cohort):
@@ -64,7 +64,7 @@ class AcademyEventTestSuite(EventTestCase):
     def test_zero_live_classes(self):
         model = self.bc.database.create(user=1, profile_academy=1, role=1, capability='start_or_end_class')
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
         url = reverse_lazy('events:academy_event_liveclass')
 
@@ -94,7 +94,7 @@ class AcademyEventTestSuite(EventTestCase):
                                         role=1,
                                         capability='start_or_end_class')
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
         url = reverse_lazy('events:academy_event_liveclass')
 
@@ -128,7 +128,7 @@ class AcademyEventTestSuite(EventTestCase):
                                         role=1,
                                         capability='start_or_end_class')
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         args, kwargs = self.bc.format.call(

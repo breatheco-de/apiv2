@@ -140,11 +140,12 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(self.all_user_dict(), [{**self.model_to_dict(model, 'user')}])
 
         self.assertEqual(mock.call_args_list, [
-            call(
-                'pick_password', model['user'].email, {
-                    'SUBJECT': 'You asked to reset your password at 4Geeks',
-                    'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
-                })
+            call('pick_password',
+                 model['user'].email, {
+                     'SUBJECT': 'You asked to reset your password at 4Geeks',
+                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
+                 },
+                 academy=None)
         ])
 
     @patch('breathecode.notify.actions.send_email_message')
@@ -166,11 +167,12 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(self.all_user_dict(), [{**self.model_to_dict(model, 'user')}])
 
         self.assertEqual(mock.call_args_list, [
-            call(
-                'pick_password', model['user'].email, {
-                    'SUBJECT': 'You asked to reset your password at 4Geeks',
-                    'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
-                })
+            call('pick_password',
+                 model['user'].email, {
+                     'SUBJECT': 'You asked to reset your password at 4Geeks',
+                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
+                 },
+                 academy=None)
         ])
 
     @patch('breathecode.notify.actions.send_email_message')
@@ -210,11 +212,12 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(self.all_user_dict(), [{**self.model_to_dict(model, 'user')}])
 
         self.assertEqual(mock.call_args_list, [
-            call(
-                'pick_password', model['user'].email, {
-                    'SUBJECT': 'You asked to reset your password at 4Geeks',
-                    'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
-                })
+            call('pick_password',
+                 model['user'].email, {
+                     'SUBJECT': 'You asked to reset your password at 4Geeks',
+                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
+                 },
+                 academy=None)
         ])
 
     @patch('breathecode.notify.actions.send_email_message')
@@ -236,9 +239,10 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(self.all_user_dict(), [{**self.model_to_dict(model, 'user')}])
 
         self.assertEqual(mock.call_args_list, [
-            call(
-                'pick_password', model['user'].email, {
-                    'SUBJECT': 'You asked to reset your password at 4Geeks',
-                    'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
-                })
+            call('pick_password',
+                 model['user'].email, {
+                     'SUBJECT': 'You asked to reset your password at 4Geeks',
+                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
+                 },
+                 academy=None)
         ])

@@ -1,13 +1,17 @@
-import pytz
 import datetime
+from logging import Logger
 from random import choice
 from unittest.mock import MagicMock, call, patch
-from breathecode.authenticate.tasks import async_accept_user_from_waiting_list
-from logging import Logger
+
+import pytz
+
 # from datetime import datetime
 from django.utils import timezone
-from ..mixins.new_auth_test_case import AuthTestCase
+
+from breathecode.authenticate.tasks import async_accept_user_from_waiting_list
 from breathecode.notify import actions as notify_actions
+
+from ..mixins.new_auth_test_case import AuthTestCase
 
 
 class ModelProfileAcademyTestSuite(AuthTestCase):
@@ -146,11 +150,12 @@ class ModelProfileAcademyTestSuite(AuthTestCase):
         self.assertEqual(
             str(notify_actions.send_email_message.call_args_list),
             str([
-                call(
-                    'pick_password', model.user_invite.email, {
-                        'SUBJECT': 'Set your password at 4Geeks',
-                        'LINK': f'http://localhost:8000/v1/auth/password/{model.user_invite.token}'
-                    })
+                call('pick_password',
+                     model.user_invite.email, {
+                         'SUBJECT': 'Set your password at 4Geeks',
+                         'LINK': f'http://localhost:8000/v1/auth/password/{model.user_invite.token}'
+                     },
+                     academy=None)
             ]))
 
     """

@@ -5,18 +5,19 @@ import logging
 import random
 from unittest.mock import MagicMock, call, patch
 
-from django.utils import timezone
 import pytest
+from dateutil.relativedelta import relativedelta
+from django.utils import timezone
+from mixer.backend.django import mixer
+from rest_framework.test import APIClient
+
+import breathecode.activity.tasks as activity_tasks
+from breathecode.notify import actions as notify_actions
+from breathecode.payments.services import Stripe
+from breathecode.tests.mixins.breathecode_mixin import Breathecode
 from breathecode.tests.mixins.legacy import LegacyAPITestCase
 
 from ...tasks import charge_subscription
-from breathecode.notify import actions as notify_actions
-from dateutil.relativedelta import relativedelta
-from mixer.backend.django import mixer
-from breathecode.payments.services import Stripe
-from rest_framework.test import APIClient
-from breathecode.tests.mixins.breathecode_mixin import Breathecode
-import breathecode.activity.tasks as activity_tasks
 from ..mixins import PaymentsTestCase
 
 UTC_NOW = timezone.now()
@@ -237,13 +238,14 @@ class PaymentsTestSuite(PaymentsTestCase):
             },
         ])
         self.assertEqual(notify_actions.send_email_message.call_args_list, [
-            call(
-                'message', model.user.email, {
-                    'SUBJECT': 'Your 4Geeks subscription was successfully renewed',
-                    'MESSAGE': 'The amount was $0.0',
-                    'BUTTON': 'See the invoice',
-                    'LINK': '/subscription/1'
-                })
+            call('message',
+                 model.user.email, {
+                     'SUBJECT': 'Your 4Geeks subscription was successfully renewed',
+                     'MESSAGE': 'The amount was $0.0',
+                     'BUTTON': 'See the invoice',
+                     'LINK': '/subscription/1'
+                 },
+                 academy=model.academy)
         ])
         self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
             call(1, 'bag_created', related_type='payments.Bag', related_id=1),
@@ -298,13 +300,14 @@ class PaymentsTestSuite(PaymentsTestCase):
             },
         ])
         self.assertEqual(notify_actions.send_email_message.call_args_list, [
-            call(
-                'message', model.user.email, {
-                    'SUBJECT': 'Your 4Geeks subscription could not be renewed',
-                    'MESSAGE': 'Please update your payment methods',
-                    'BUTTON': 'Please update your payment methods',
-                    'LINK': '/subscription/1'
-                })
+            call('message',
+                 model.user.email, {
+                     'SUBJECT': 'Your 4Geeks subscription could not be renewed',
+                     'MESSAGE': 'Please update your payment methods',
+                     'BUTTON': 'Please update your payment methods',
+                     'LINK': '/subscription/1'
+                 },
+                 academy=model.academy)
         ])
         self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
             call(1, 'bag_created', related_type='payments.Bag', related_id=1),

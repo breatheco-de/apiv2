@@ -1,15 +1,17 @@
-from datetime import datetime, timedelta
 import os
 import random
+from datetime import datetime, timedelta
 from unittest.mock import MagicMock, call, patch
-from breathecode.events.caches import EventCache
-from django.urls.base import reverse_lazy
-from django.template import loader
 
-from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
-from ..mixins.new_events_tests_case import EventTestCase
+from django.template import loader
+from django.urls.base import reverse_lazy
 from django.utils import timezone
+
+from breathecode.events.caches import EventCache
 from breathecode.payments import tasks
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
+
+from ..mixins.new_events_tests_case import EventTestCase
 
 UTC_NOW = timezone.now()
 
@@ -75,12 +77,18 @@ def serializer(event):
 
 
 # IMPORTANT: the loader.render_to_string in a function is inside of function render
-def render_countdown(event, token):
+def render_countdown(event, token, academy=None):
     request = None
     context = {
         'event': serializer(event),
         'token': token.key,
     }
+
+    if academy:
+        context['COMPANY_INFO_EMAIL'] = academy.feedback_email
+        context['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
+        context['COMPANY_LOGO'] = academy.logo_url
+        context['COMPANY_NAME'] = academy.name
 
     return loader.render_to_string('countdown.html', context, request)
 
@@ -1285,7 +1293,7 @@ class AcademyEventTestSuite(EventTestCase):
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_countdown(model.event, model.token)
+        expected = render_countdown(model.event, model.token, academy=model.academy)
 
         # dump error in external files
         if content != expected:
@@ -1373,7 +1381,7 @@ class AcademyEventTestSuite(EventTestCase):
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_countdown(model.event, model.token)
+        expected = render_countdown(model.event, model.token, academy=model.academy)
 
         # dump error in external files
         if content != expected:

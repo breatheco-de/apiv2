@@ -1,89 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{ heading|default:"4Geeks" }} - {{ intro|default:"" }}</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
-        integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
-</head>
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+      integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z"
+      crossorigin="anonymous"
+    />
+  </head>
 
-<body class="{% if request.method == 'GET' %}get{% endif %}">
+  <body class="{% if request.method == 'GET' %}get{% endif %}">
     <style>
-        h1 {
-            font-size: 30px;
-        }
+      h1 {
+        font-size: 30px;
+      }
 
-        header {
-            text-align: center;
-            margin-top: 50px;
-        }
+      header {
+        text-align: center;
+        margin-top: 50px;
+      }
 
-        header img {
-            max-height: 60px;
-            margin-bottom: 20px;
-        }
+      header img {
+        max-height: 60px;
+        margin-bottom: 20px;
+      }
 
-        ul {
-            padding: 0;
-        }
+      ul {
+        padding: 0;
+      }
 
-        ul li {
-            list-style: none;
-        }
+      ul li {
+        list-style: none;
+      }
 
-        .errorlist {
-            background: #f9c1b3;
-            border-radius: 5px;
-            padding: 10px;
-        }
+      .errorlist {
+        background: #f9c1b3;
+        border-radius: 5px;
+        padding: 10px;
+      }
 
-        .get .errorlist {
-            display: none;
-        }
+      .get .errorlist {
+        display: none;
+      }
 
-        .helptext {
-            background: #d6f4ff;
-            font-size: 80%;
-            padding: 10px;
-            display: block;
-            margin-bottom: 10px;
-            border-radius: 5px;
-        }
+      .helptext {
+        background: #d6f4ff;
+        font-size: 80%;
+        padding: 10px;
+        display: block;
+        margin-bottom: 10px;
+        border-radius: 5px;
+      }
 
-        .helptext ul {
-            margin: 0;
-        }
+      .helptext ul {
+        margin: 0;
+      }
 
-        .btn {
-            background: #BFBFBF;
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0px;
-            border: 0;
-            border-radius: 5px;
-        }
+      .btn {
+        background: #bfbfbf;
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0px;
+        border: 0;
+        border-radius: 5px;
+      }
 
-        .btn-primary {
-            background: #1952fc;
-            color: white;
-        }
+      .btn-primary {
+        background: #1952fc;
+        color: white;
+      }
 
-        .btn-secondary {
-            background: #BFBFBF;
-            color: grey;
-        }
+      .btn-secondary {
+        background: #bfbfbf;
+        color: grey;
+      }
 
-        .text-center {
-            text-align: center;
-        }
+      .text-center {
+        text-align: center;
+      }
     </style>
     <header>
-        <img class="img-responsive" src="https://github.com/4GeeksAcademy/website-v2/blob/21472605d93b1d57a034ed246cb5ac9b876ef1fa/static/images/4Geeks-logo.png?raw=true" />
+      <img
+        class="img-responsive"
+        src="{{ COMPANY_LOGO|default:'https://github.com/4GeeksAcademy/website-v2/blob/21472605d93b1d57a034ed246cb5ac9b876ef1fa/static/images/4Geeks-logo.png?raw=true' }}"
+      />
     </header>
-    {% block content %}
-    {% endblock %}
-</body>
-
+    {% block content %} {% endblock %}
+  </body>
 </html>

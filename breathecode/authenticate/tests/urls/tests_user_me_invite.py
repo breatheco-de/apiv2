@@ -1,11 +1,13 @@
 """
 Set of tests for MeInviteView, this include duck tests
 """
+from random import choice
 from unittest.mock import MagicMock, patch
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from random import choice
 from rest_framework.response import Response
+
 from ..mixins.new_auth_test_case import AuthTestCase
 
 
@@ -105,7 +107,7 @@ class AuthenticateTestSuite(AuthTestCase):
         model = self.bc.database.create(user=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('authenticate:user_me_invite')
         response = self.client.get(url)
@@ -126,7 +128,7 @@ class AuthenticateTestSuite(AuthTestCase):
         model = self.bc.database.create(user=1, user_invite=user_invite)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('authenticate:user_me_invite')
         response = self.client.get(url)
@@ -149,7 +151,7 @@ class AuthenticateTestSuite(AuthTestCase):
         model = self.bc.database.create(user=user, user_invite=user_invite)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('authenticate:user_me_invite')
         response = self.client.get(url)
@@ -173,7 +175,7 @@ class AuthenticateTestSuite(AuthTestCase):
         model = self.bc.database.create(user=user, user_invite=user_invites)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('authenticate:user_me_invite')
         response = self.client.get(url)
@@ -197,7 +199,7 @@ class AuthenticateTestSuite(AuthTestCase):
         model = self.bc.database.create(user=user, user_invite=user_invites)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('authenticate:user_me_invite') + f'?status={",".join(statuses)}'
         response = self.client.get(url)

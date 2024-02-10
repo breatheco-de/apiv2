@@ -5,13 +5,14 @@ import os
 import random
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
+import numpy as np
 from django.urls.base import reverse_lazy
 from rest_framework import status
 
-from breathecode.services.google_cloud.storage import Storage, File
+from breathecode.services.google_cloud.storage import File, Storage
 from breathecode.tests.mocks.requests import apply_requests_request_mock
+
 from ..mixins.new_auth_test_case import AuthTestCase
-import numpy as np
 
 SHAPE_OF_URL = 'https://us-central1-labor-day-story.cloudfunctions.net/shape-of-image'
 
@@ -128,7 +129,7 @@ class AuthenticateTestSuite(AuthTestCase):
     def test__without_permission(self):
         model = self.bc.database.create(user=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('authenticate:profile_me_picture')
         response = self.client.put(url)
 
@@ -167,7 +168,7 @@ class AuthenticateTestSuite(AuthTestCase):
         permission = {'codename': 'update_my_profile'}
         model = self.bc.database.create(user=1, permission=permission)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('authenticate:profile_me_picture')
         data = {}
         response = self.client.put(url, data)
@@ -220,7 +221,7 @@ class AuthenticateTestSuite(AuthTestCase):
         permission = {'codename': 'update_my_profile'}
         model = self.bc.database.create(user=1, permission=permission)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('authenticate:profile_me_picture')
         response = self.client.put(url, {'name': self.filename, 'file': file})
 
@@ -275,7 +276,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
             model = self.bc.database.create(user=1, permission=base.permission, profile=1)
 
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
             url = reverse_lazy('authenticate:profile_me_picture')
             response = self.client.put(url, {'name': 'filename.lbs', 'file': file})
 
@@ -346,7 +347,7 @@ class AuthenticateTestSuite(AuthTestCase):
         profile = {'avatar_url': f'https://blabla.bla/{self.bc.random.string(size=64, lower=True)}-100x100'}
         model = self.bc.database.create(user=1, permission=permission, profile=profile)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('authenticate:profile_me_picture')
         response = self.client.put(url, {'name': 'filename.lbs', 'file': file})
 
@@ -416,7 +417,7 @@ class AuthenticateTestSuite(AuthTestCase):
         profile = {'avatar_url': f'https://blabla.bla/{self.bc.random.string(size=64, lower=True)}-100x100'}
         model = self.bc.database.create(user=1, permission=permission, profile=profile)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('authenticate:profile_me_picture')
         response = self.client.put(url, {'name': 'filename.lbs', 'file': file})
 

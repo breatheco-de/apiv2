@@ -2,12 +2,14 @@
 Test cases for /academy/:id/member/:id
 """
 from unittest.mock import MagicMock, patch
-from breathecode.services import datetime_to_iso_format
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from rest_framework.response import Response
 
+from breathecode.services import datetime_to_iso_format
 from breathecode.utils import capable_of
+
 from ..mixins.new_auth_test_case import AuthTestCase
 
 
@@ -90,7 +92,7 @@ class MemberGetDuckTestSuite(AuthTestCase):
                                         } for id in range(1, 4)])
 
         for n in range(1, 4):
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
             self.bc.request.set_headers(academy=1)
 
             url = reverse_lazy('authenticate:academy_id_member_id',
@@ -209,7 +211,7 @@ class MemberPutDuckTestSuite(AuthTestCase):
                                         } for id in range(1, 4)])
 
         for n in range(1, 4):
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
             self.bc.request.set_headers(academy=1)
 
             url = reverse_lazy('authenticate:academy_id_member_id',
@@ -299,7 +301,7 @@ class MemberDeleteDuckTestSuite(AuthTestCase):
                                         } for id in range(1, 4)])
 
         for n in range(1, 4):
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
             self.bc.request.set_headers(academy=1)
 
             url = reverse_lazy('authenticate:academy_id_member_id',

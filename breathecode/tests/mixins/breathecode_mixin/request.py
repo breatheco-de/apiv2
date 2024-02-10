@@ -55,7 +55,7 @@ class Request:
         model = self.bc.database.create(user=1)
 
         # that setup the request to use the credential of user passed
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         ```
 
         Keywords arguments:

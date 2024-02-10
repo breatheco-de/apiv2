@@ -1,23 +1,35 @@
 import logging
-from datetime import datetime, timedelta
 import os
+from datetime import datetime, timedelta
 from typing import Any, Optional
+
+from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 
 from breathecode.authenticate.actions import get_user_settings
-
 from breathecode.notify import actions as notify_actions
 from breathecode.payments import actions
 from breathecode.payments.services.stripe import Stripe
-from dateutil.relativedelta import relativedelta
-from breathecode.payments.signals import consume_service
-from breathecode.utils.decorators import task, AbortTask, RetryTask, TaskPriority
+from breathecode.payments.signals import consume_service, reimburse_service_units
+from breathecode.utils.decorators import AbortTask, RetryTask, TaskPriority, task
 from breathecode.utils.i18n import translation
 
-from .models import (AbstractIOweYou, Bag, CohortSet, Consumable, ConsumptionSession, Invoice, Plan,
-                     PlanFinancing, PlanServiceItem, PlanServiceItemHandler, Service, ServiceStockScheduler,
-                     Subscription, SubscriptionServiceItem)
-from breathecode.payments.signals import reimburse_service_units
+from .models import (
+    AbstractIOweYou,
+    Bag,
+    CohortSet,
+    Consumable,
+    ConsumptionSession,
+    Invoice,
+    Plan,
+    PlanFinancing,
+    PlanServiceItem,
+    PlanServiceItemHandler,
+    Service,
+    ServiceStockScheduler,
+    Subscription,
+    SubscriptionServiceItem,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -277,13 +289,14 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                              en='Please update your payment methods',
                              es='Por favor actualiza tus métodos de pago')
 
-        notify_actions.send_email_message(
-            'message', subscription.user.email, {
-                'SUBJECT': subject,
-                'MESSAGE': message,
-                'BUTTON': button,
-                'LINK': f'{get_app_url()}/subscription/{subscription.id}',
-            })
+        notify_actions.send_email_message('message',
+                                          subscription.user.email, {
+                                              'SUBJECT': subject,
+                                              'MESSAGE': message,
+                                              'BUTTON': button,
+                                              'LINK': f'{get_app_url()}/subscription/{subscription.id}',
+                                          },
+                                          academy=subscription.academy)
 
         bag.delete()
 
@@ -308,13 +321,14 @@ def charge_subscription(self, subscription_id: int, **_: Any):
 
     button = translation(settings.lang, en='See the invoice', es='Ver la factura')
 
-    notify_actions.send_email_message(
-        'message', invoice.user.email, {
-            'SUBJECT': subject,
-            'MESSAGE': message,
-            'BUTTON': button,
-            'LINK': f'{get_app_url()}/subscription/{subscription.id}',
-        })
+    notify_actions.send_email_message('message',
+                                      invoice.user.email, {
+                                          'SUBJECT': subject,
+                                          'MESSAGE': message,
+                                          'BUTTON': button,
+                                          'LINK': f'{get_app_url()}/subscription/{subscription.id}',
+                                      },
+                                      academy=subscription.academy)
 
     renew_subscription_consumables.delay(subscription.id)
 
@@ -390,13 +404,14 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                              en='Please update your payment methods',
                              es='Por favor actualiza tus métodos de pago')
 
-        notify_actions.send_email_message(
-            'message', plan_financing.user.email, {
-                'SUBJECT': subject,
-                'MESSAGE': message,
-                'BUTTON': button,
-                'LINK': f'{get_app_url()}/plan-financing/{plan_financing.id}',
-            })
+        notify_actions.send_email_message('message',
+                                          plan_financing.user.email, {
+                                              'SUBJECT': subject,
+                                              'MESSAGE': message,
+                                              'BUTTON': button,
+                                              'LINK': f'{get_app_url()}/plan-financing/{plan_financing.id}',
+                                          },
+                                          academy=plan_financing.academy)
 
         bag.delete()
 
@@ -418,13 +433,14 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
     button = translation(settings.lang, en='See the invoice', es='Ver la factura')
 
-    notify_actions.send_email_message(
-        'message', invoice.user.email, {
-            'SUBJECT': subject,
-            'MESSAGE': message,
-            'BUTTON': button,
-            'LINK': f'{get_app_url()}/plan-financing/{plan_financing.id}',
-        })
+    notify_actions.send_email_message('message',
+                                      invoice.user.email, {
+                                          'SUBJECT': subject,
+                                          'MESSAGE': message,
+                                          'BUTTON': button,
+                                          'LINK': f'{get_app_url()}/plan-financing/{plan_financing.id}',
+                                      },
+                                      academy=plan_financing.academy)
 
     renew_plan_financing_consumables.delay(plan_financing.id)
 
