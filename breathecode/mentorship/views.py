@@ -882,7 +882,7 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
         if like is not None:
             items = query_like_by_full_name(like=like, items=items, prefix='user__')
 
-        items = items.filter(**lookup)
+        items = items.filter(**lookup).distinct()
         items = handler.queryset(items)
         serializer = GETMentorSmallSerializer(items, many=True)
 
