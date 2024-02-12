@@ -876,13 +876,13 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
 
         if 'syllabus' in self.request.GET:
             param = self.request.GET.get('syllabus')
-            lookup['syllabus__slug'] = param
+            lookup['syllabus__slug__in'] = [s.strip() for s in param.split(',')]
 
         like = request.GET.get('like', None)
         if like is not None:
             items = query_like_by_full_name(like=like, items=items, prefix='user__')
 
-        items = items.filter(**lookup)
+        items = items.filter(**lookup).distinct()
         items = handler.queryset(items)
         serializer = GETMentorSmallSerializer(items, many=True)
 
