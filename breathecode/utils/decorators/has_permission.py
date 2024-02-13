@@ -1,3 +1,4 @@
+import os
 import logging
 import traceback
 from datetime import datetime, timedelta
@@ -278,6 +279,12 @@ def has_permission(permission: str,
                         elif permission == 'event_join':
                             renovate_consumables[
                                 'btn_url'] = f'https://4geeks.com/checkout?event_type_set={event_type_set}'
+                    else:
+                        if permission == 'join_mentorship' or permission == 'event_join':
+                            e = 'You must get a plan in order to access this service'
+                            renovate_consumables['btn_label'] = 'Get a plan'
+                            plan = os.getenv('BASE_PLAN', 'basic')
+                            renovate_consumables['btn_url'] = f'https://4geeks.com/checkout?plan={plan}'
 
                     return render_message(request,
                                           str(e),
