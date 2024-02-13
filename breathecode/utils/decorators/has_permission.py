@@ -208,6 +208,10 @@ def has_permission(permission: str,
                     from breathecode.events.models import Event
                     from breathecode.payments.models import PlanFinancing, PlanOffer, Subscription
 
+                    token = None
+                    if 'token' in kwargs and kwargs['token'] is not None:
+                        token = kwargs['token'].key
+
                     service = None
 
                     if 'service_slug' in kwargs:
@@ -270,21 +274,22 @@ def has_permission(permission: str,
                     if plan_offer is not None:
                         renovate_consumables['btn_label'] = 'Get more consumables'
                         renovate_consumables[
-                            'btn_url'] = f'https://4geeks.com/checkout?plan={plan_offer.suggested_plan.slug}'
+                            'btn_url'] = f'https://4geeks.com/checkout?plan={plan_offer.suggested_plan.slug}&token={token}'
                     elif subscription is not None or plan_financing is not None:
                         renovate_consumables['btn_label'] = 'Get more consumables'
                         if permission == 'join_mentorship':
                             renovate_consumables[
-                                'btn_url'] = f'https://4geeks.com/checkout?mentorship_service_set={mentorship_service_set}'
+                                'btn_url'] = f'https://4geeks.com/checkout?mentorship_service_set={mentorship_service_set}&token={token}'
                         elif permission == 'event_join':
                             renovate_consumables[
-                                'btn_url'] = f'https://4geeks.com/checkout?event_type_set={event_type_set}'
+                                'btn_url'] = f'https://4geeks.com/checkout?event_type_set={event_type_set}&token={token}'
                     else:
                         if permission == 'join_mentorship' or permission == 'event_join':
                             e = 'You must get a plan in order to access this service'
                             renovate_consumables['btn_label'] = 'Get a plan'
                             plan = os.getenv('BASE_PLAN', 'basic')
-                            renovate_consumables['btn_url'] = f'https://4geeks.com/checkout?plan={plan}'
+                            renovate_consumables[
+                                'btn_url'] = f'https://4geeks.com/checkout?plan={plan}&token={token}'
 
                     return render_message(request,
                                           str(e),
