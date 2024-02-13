@@ -26,7 +26,7 @@ from breathecode.admissions.models import Academy, CohortUser
 from breathecode.services.github import Github
 from breathecode.utils import ValidationException
 from breathecode.utils.i18n import translation
-from breathecode.utils.service import Service, service
+from breathecode.utils.service import Service
 
 from .models import (
     AcademyAuthSettings,
