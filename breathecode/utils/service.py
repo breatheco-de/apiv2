@@ -1,25 +1,103 @@
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, Optional, Type
+from typing import Any, Coroutine, Optional, Type
 
 import aiohttp
 import requests
 from aiohttp.client_reqrep import ClientResponse
 from asgiref.sync import sync_to_async
+from django.core.exceptions import SynchronousOnlyOperation
+from django.http import HttpResponse, StreamingHttpResponse
 
 __all__ = ['Service']
 
 
 class Service:
+    session: aiohttp.ClientSession
 
-    def __init__(self, app_pk: str | int, user_pk: Optional[str | int] = None, *, mode: Optional[str] = None):
-        from breathecode.authenticate.actions import get_app
-
-        self.app = get_app(app_pk)
-
+    def __init__(self,
+                 app_pk: str | int,
+                 user_pk: Optional[str | int] = None,
+                 *,
+                 mode: Optional[str] = None,
+                 proxy: bool = False):
+        self.app_pk = app_pk
         self.user_pk = user_pk
         self.mode = mode
+        self.to_close = []
+        self.proxy = proxy
+        self.banned_keys = [
+            'Transfer-Encoding', 'Content-Encoding', 'Keep-Alive', 'Connection', 'Content-Length', 'Upgrade'
+        ]
+
+    def __enter__(self) -> 'Service':
+        from breathecode.authenticate.actions import get_app
+        from breathecode.authenticate.models import App
+        from breathecode.utils import ValidationException
+
+        self.sync = True
+
+        if isinstance(self.app_pk, App):
+            self.app = self.app_pk
+            return self
+
+        try:
+            self.app = get_app(self.app_pk)
+
+        except Exception:
+            if self.proxy:
+                raise ValidationException(f'App {self.app_pk} not found', code=404, slug='app-not-found')
+
+            raise AppNotFound(f'App {self.app_pk} not found')
+
+        return self
+
+    def __exit__(self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException],
+                 exc_tb: Optional[TracebackType]) -> None:
+        pass
+
+    async def __aenter__(self) -> 'Service':
+        from breathecode.authenticate.actions import get_app
+        from breathecode.authenticate.models import App
+        from breathecode.utils import ValidationException
+
+        self.sync = False
+
+        if isinstance(self.app_pk, App):
+            self.app = self.app_pk
+
+        else:
+            try:
+                self.app = await sync_to_async(get_app)(self.app_pk)
+
+            except SynchronousOnlyOperation as e:
+                if self.proxy:
+                    raise ValidationException('Async is not supported by the worker',
+                                              code=500,
+                                              slug='no-async-support')
+
+                raise e
+
+            except Exception:
+                if self.proxy:
+                    raise ValidationException(f'App {self.app_pk} not found', code=404, slug='app-not-found')
+
+                raise AppNotFound(f'App {self.app_pk} not found')
+
+        self.session = aiohttp.ClientSession()
+
+        # this should be extended
+        await self.session.__aenter__()
+
+        return self
+
+    async def __aexit__(self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException],
+                        exc_tb: Optional[TracebackType]):
+        for obj in self.to_close:
+            await obj.__aexit__()
+
+        await self.session.__aexit__()
 
     def _sign(self, method, params=None, data=None, json=None, **kwargs) -> requests.Request:
         from breathecode.authenticate.actions import get_signature
@@ -68,45 +146,250 @@ class Service:
 
         return url
 
+    def _proxy(self, response: requests.Response, stream: bool) -> StreamingHttpResponse:
+        header_keys = [x for x in response.headers.keys() if x not in self.banned_keys]
+
+        if stream:
+            resource = StreamingHttpResponse(
+                response.raw,
+                status=response.status_code,
+                reason=response.reason,
+            )
+
+            for header in header_keys:
+                resource[header] = response.headers[header]
+
+            return resource
+
+        headers = {}
+
+        for header in header_keys:
+            headers[header] = response.headers[header]
+
+        return HttpResponse(response.content, status=response.status_code, headers=headers)
+
+    # django does not support StreamingHttpResponse with aiohttp due to django would have to close the response
+    async def _aproxy(self, response: Coroutine[Any, Any, ClientResponse]) -> HttpResponse:
+        r = await response
+
+        header_keys = [x for x in r.headers.keys() if x not in self.banned_keys]
+
+        headers = {}
+        for header in header_keys:
+            headers[str(header)] = r.headers[header]
+
+        return HttpResponse(await r.content.read(), status=r.status, headers=headers)
+
     def get(self, url, params=None, **kwargs):
         url = self.app.app_url + self._fix_url(url)
+
+        if self.sync is False:
+            params = kwargs.pop('params', None)
+
         headers = self._authenticate('get', params=params, **kwargs)
-        return requests.get(url, params=params, **kwargs, headers=headers)
+
+        if self.sync:
+            res = requests.get(url, params=params, **kwargs, headers=headers)
+
+            if self.proxy:
+                return self._proxy(res, kwargs.get('stream', False))
+
+            return res
+
+        obj = self.session.get(url, params=params, **kwargs, headers=headers)
+        self.to_close.append(obj)
+
+        res = obj.__aenter__()
+
+        # wraps client response to be used within django views
+        if self.proxy:
+            return self._aproxy(res)
+
+        return res
 
     def options(self, url, **kwargs):
         url = self.app.app_url + self._fix_url(url)
         headers = self._authenticate('options', **kwargs)
-        return requests.options(url, **kwargs, headers=headers)
+
+        if self.sync:
+            res = requests.options(url, **kwargs, headers=headers)
+
+            if self.proxy:
+                return self._proxy(res, kwargs.get('stream', False))
+
+            return res
+
+        obj = self.session.options(url, **kwargs, headers=headers)
+        self.to_close.append(obj)
+
+        res = obj.__aenter__()
+
+        # wraps client response to be used within django views
+        if self.proxy:
+            return self._aproxy(res)
+
+        return res
 
     def head(self, url, **kwargs):
         url = self.app.app_url + self._fix_url(url)
         headers = self._authenticate('head', **kwargs)
-        return requests.head(url, **kwargs, headers=headers)
+
+        if self.sync:
+            res = requests.head(url, **kwargs, headers=headers)
+
+            if self.proxy:
+                return self._proxy(res, kwargs.get('stream', False))
+
+            return res
+
+        obj = self.session.head(url, **kwargs, headers=headers)
+        self.to_close.append(obj)
+
+        res = obj.__aenter__()
+
+        # wraps client response to be used within django views
+        if self.proxy:
+            return self._aproxy(res)
+
+        return res
 
     def post(self, url, data=None, json=None, **kwargs):
         url = self.app.app_url + self._fix_url(url)
         headers = self._authenticate('post', data=data, json=json, **kwargs)
-        return requests.post(url, data=data, json=json, **kwargs, headers=headers)
+
+        if self.sync:
+            res = requests.post(url, data=data, json=json, **kwargs, headers=headers)
+
+            if self.proxy:
+                return self._proxy(res, kwargs.get('stream', False))
+
+            return res
+
+        obj = self.session.post(url, data=data, json=json, **kwargs, headers=headers)
+        self.to_close.append(obj)
+
+        res = obj.__aenter__()
+
+        # wraps client response to be used within django views
+        if self.proxy:
+            return self._aproxy(res)
+
+        return res
+
+    def webhook(self, url, data=None, json=None, **kwargs):
+        url = self.app.webhook_url
+        headers = self._authenticate('post', data=data, json=json, **kwargs)
+
+        if self.sync:
+            res = requests.post(url, data=data, json=json, **kwargs, headers=headers)
+
+            if self.proxy:
+                return self._proxy(res, kwargs.get('stream', False))
+
+            return res
+
+        obj = self.session.post(url, data=data, json=json, **kwargs, headers=headers)
+        self.to_close.append(obj)
+
+        res = obj.__aenter__()
+
+        # wraps client response to be used within django views
+        if self.proxy:
+            return self._aproxy(res)
+
+        return res
 
     def put(self, url, data=None, **kwargs):
         url = self.app.app_url + self._fix_url(url)
         headers = self._authenticate('put', data=data, **kwargs)
-        return requests.put(url, data=data, **kwargs, headers=headers)
+
+        if self.sync:
+            res = requests.put(url, data=data, **kwargs, headers=headers)
+
+            if self.proxy:
+                return self._proxy(res, kwargs.get('stream', False))
+
+            return res
+
+        obj = self.session.put(url, data=data, **kwargs, headers=headers)
+        self.to_close.append(obj)
+
+        res = obj.__aenter__()
+
+        # wraps client response to be used within django views
+        if self.proxy:
+            return self._aproxy(res)
+
+        return res
 
     def patch(self, url, data=None, **kwargs):
         url = self.app.app_url + self._fix_url(url)
         headers = self._authenticate('patch', data=data, **kwargs)
-        return requests.patch(url, data=data, **kwargs, headers=headers)
+
+        if self.sync:
+            res = requests.patch(url, data=data, **kwargs, headers=headers)
+
+            if self.proxy:
+                return self._proxy(res, kwargs.get('stream', False))
+
+            return res
+
+        obj = self.session.patch(url, data=data, **kwargs, headers=headers)
+        self.to_close.append(obj)
+
+        res = obj.__aenter__()
+
+        # wraps client response to be used within django views
+        if self.proxy:
+            return self._aproxy(res)
+
+        return res
 
     def delete(self, url, **kwargs):
         url = self.app.app_url + self._fix_url(url)
         headers = self._authenticate('delete', **kwargs)
-        return requests.delete(url, **kwargs, headers=headers)
+
+        if self.sync:
+            res = requests.delete(url, **kwargs, headers=headers)
+
+            if self.proxy:
+                return self._proxy(res, kwargs.get('stream', False))
+
+            return res
+
+        obj = self.session.delete(url, **kwargs, headers=headers)
+        self.to_close.append(obj)
+
+        res = obj.__aenter__()
+
+        # wraps client response to be used within django views
+        if self.proxy:
+            return self._aproxy(res)
+
+        return res
 
     def request(self, method, url, **kwargs):
         url = self.app.app_url + self._fix_url(url)
         headers = self._authenticate(method, **kwargs)
-        return requests.request(method, url, **kwargs, headers=headers)
+
+        if self.sync:
+            res = requests.request(method, url, **kwargs, headers=headers)
+
+            if self.proxy:
+                return self._proxy(res, kwargs.get('stream', False))
+
+            return res
+
+        obj = self.session.request(method, url, **kwargs, headers=headers)
+        self.to_close.append(obj)
+
+        res = obj.__aenter__()
+
+        # wraps client response to be used within django views
+        if self.proxy:
+            return self._aproxy(res)
+
+        return res
 
 
 class AppNotFound(Exception):
@@ -146,68 +429,13 @@ class AsyncService(Service):
 
     async def __aexit__(self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException],
                         exc_tb: Optional[TracebackType]):
-        await self.session.close()
+        for obj in self.to_close:
+            await obj.__aexit__()
 
-    def aget(self, url: str, *, allow_redirects: bool = True, **kwargs: Any) -> ClientResponse:
-        url = self.app.app_url + self._fix_url(url)
-        params = kwargs.pop('params', None)
-        headers = self._authenticate('get', params=params, **kwargs)
-
-        return self.session.get(url,
-                                allow_redirects=allow_redirects,
-                                **kwargs,
-                                headers=headers,
-                                params=params)
-
-    def apost(self, url: str, *, data: Any = None, **kwargs: Any) -> ClientResponse:
-        url = self.app.app_url + self._fix_url(url)
-        headers = self._authenticate('post', data=data, **kwargs)
-
-        return self.session.post(url, data=data, **kwargs, headers=headers)
+        await self.session.__aexit__()
 
     def awebhook(self, *, data: Any = None, **kwargs: Any) -> ClientResponse:
         url = self.app.webhook_url
         headers = self._authenticate('post', data=data, **kwargs)
 
         return self.session.post(url, data=data, **kwargs, headers=headers)
-
-    def aput(self, url: str, *, data: Any = None, **kwargs: Any) -> ClientResponse:
-        url = self.app.app_url + self._fix_url(url)
-        headers = self._authenticate('put', data=data, **kwargs)
-
-        return self.session.put(url, data=data, **kwargs, headers=headers)
-
-    def apatch(self, url: str, *, data: Any = None, **kwargs: Any) -> ClientResponse:
-        url = self.app.app_url + self._fix_url(url)
-        headers = self._authenticate('patch', data=data, **kwargs)
-
-        return self.session.patch(url, data=data, **kwargs, headers=headers)
-
-    def adelete(self, url: str, **kwargs: Any) -> ClientResponse:
-        url = self.app.app_url + self._fix_url(url)
-        headers = self._authenticate('delete', **kwargs)
-
-        return self.session.delete(url, **kwargs, headers=headers)
-
-    def aoptions(self, url: str, *, allow_redirects: bool = True, **kwargs: Any) -> ClientResponse:
-        url = self.app.app_url + self._fix_url(url)
-        headers = self._authenticate('options', **kwargs)
-
-        return self.session.options(url, allow_redirects=allow_redirects, **kwargs, headers=headers)
-
-    def ahead(self, url: str, *, allow_redirects: bool = True, **kwargs: Any) -> ClientResponse:
-        url = self.app.app_url + self._fix_url(url)
-        headers = self._authenticate('head', **kwargs)
-
-        return self.session.head(url, allow_redirects=allow_redirects, **kwargs, headers=headers)
-
-    def arequest(self, method: str, url: str, **kwargs: Any) -> ClientResponse:
-        url = self.app.app_url + self._fix_url(url)
-        headers = self._authenticate(method, **kwargs)
-
-        return self.session.request(method, url, **kwargs, headers=headers)
-
-
-async def service(app_pk: str | int, user_pk: Optional[str | int] = None, *, mode: Optional[str] = None):
-    s = AsyncService(app_pk, user_pk, mode=mode)
-    return s

@@ -26,7 +26,7 @@ from breathecode.admissions.models import Academy, CohortUser
 from breathecode.services.github import Github
 from breathecode.utils import ValidationException
 from breathecode.utils.i18n import translation
-from breathecode.utils.service import service
+from breathecode.utils.service import Service, service
 
 from .models import (
     AcademyAuthSettings,
@@ -1066,6 +1066,10 @@ def accept_invite_action(data=None, token=None, lang='en'):
     return invite
 
 
+class WebhookException(Exception):
+    pass
+
+
 async def send_webhook(app: str | int | App,
                        type: str,
                        data: Optional[dict | list] = None,
@@ -1091,14 +1095,8 @@ async def send_webhook(app: str | int | App,
         user_id = user.id
 
     try:
-        s = await service('rigobot', user_id)
-
-    except Exception as e:
-        x.delete()
-        raise e
-
-    async with s:
-        async with s.awebhook(payload) as response:
+        async with Service('rigobot', user_id, proxy=True) as s:
+            response = await s.webhook(payload)
             if response.status != 200:
                 msg = f'Error calling webhook {app.webhook_url} with status {response.status}'
 
@@ -1108,7 +1106,14 @@ async def send_webhook(app: str | int | App,
                 x.status_text = msg
                 x.save()
 
-                raise Exception(msg)
+                raise WebhookException(msg)
+
+    except WebhookException as e:
+        raise e
+
+    except Exception as e:
+        x.delete()
+        raise e
 
     # this has relation with a reveived signal not implemented yet
     x.processed = True

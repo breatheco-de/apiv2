@@ -182,19 +182,25 @@ def check_credentials(user_id: int, check=None, **_):
             return
 
         else:
-            s = Service('rigobot')
-            response = s.get(f'/v1/auth/app/user/?email={credentials.user.email}&id={credentials.rigobot_id}')
+            with Service('rigobot') as s:
+                response = s.get(
+                    f'/v1/auth/app/user/?email={credentials.user.email}&id={credentials.rigobot_id}')
 
-            if response.status_code != 200:
-                return error(credentials)
+                if response.status_code != 200:
+                    return error(credentials)
 
-            json = response.json()
-            if not isinstance(json, list) or len(json) == 0:
-                return error(credentials)
+                json = response.json()
+                if not isinstance(json, list) or len(json) == 0:
+                    return error(credentials)
 
-            else:
-                credentials.health_status = {'rigobot': {'id': credentials.rigobot_id, 'status': 'HEALTHY'}}
-                credentials.save()
+                else:
+                    credentials.health_status = {
+                        'rigobot': {
+                            'id': credentials.rigobot_id,
+                            'status': 'HEALTHY'
+                        }
+                    }
+                    credentials.save()
 
 
 @task(priority=TaskPriority.REALTIME.value)
