@@ -55,7 +55,7 @@ pytest-gevent = "*"
 pytest-asyncio = "*"
 
 [packages]
-django = "~=5.0.1"
+django = "~=5.0.2"
 djangorestframework = "~=3.14.0"
 serpy = "*"
 gunicorn = "*"
@@ -127,9 +127,10 @@ circuitbreaker = "*"
 kombu = "*"
 zstandard = "*"
 psycopg = {extras = ["pool", "binary"], version = "*"}
-cryptography = "~=41.0.7"
+cryptography = "*"
 adrf = "*"
 uvicorn = "*"
 django-storages = {extras = ["google"], version = "*"}
 aiohttp = {extras = ["speedups"], version = "*"}
 aiodns = "*"
+eventlet = "*"

@@ -2,6 +2,7 @@
 
 WEB_WORKER_CONNECTION=${WEB_WORKER_CONNECTION:-200}
 WEB_WORKER_CLASS=${WEB_WORKER_CLASS:-uvicorn.workers.UvicornWorker}
+CELERY_POOL=${CELERY_POOL:-prefork}
 WEB_WORKERS=${WEB_WORKERS:-2}
 WEB_TIMEOUT=${WEB_TIMEOUT:-29}
 WEB_MAX_REQUESTS=${WEB_MAX_REQUESTS:-6000}
@@ -11,6 +12,7 @@ SSR=${SSR:-0}
 
 export NEW_RELIC_METADATA_COMMIT=$HEROKU_SLUG_COMMIT;
 export CORALOGIX_SUBSYSTEM=web;
+export CELERY_POOL=$CELERY_POOL;
 
 if [ "$WEB_PRELOAD" = "1" ]; then
     GUNICORN_PARAMS="--preload"
@@ -24,7 +26,7 @@ else
     export SERVER_TYPE=wsgi;
 fi
 
-# newrelic-admin run-program bin/start-pgbouncer-stunnel \
+newrelic-admin run-program bin/start-pgbouncer-stunnel \
     gunicorn breathecode.$SERVER_TYPE --timeout $WEB_TIMEOUT --workers $WEB_WORKERS \
         --worker-connections $WEB_WORKER_CONNECTION --worker-class $WEB_WORKER_CLASS \
         --max-requests $WEB_MAX_REQUESTS --max-requests-jitter $WEB_MAX_REQUESTS_JITTER \

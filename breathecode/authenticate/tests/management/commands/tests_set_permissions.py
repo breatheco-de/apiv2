@@ -2,8 +2,7 @@ from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import Group
 
-from breathecode.authenticate.management.commands.set_permissions import \
-    Command
+from breathecode.authenticate.management.commands.set_permissions import Command
 
 from ...mixins.new_auth_test_case import AuthTestCase
 
@@ -72,16 +71,15 @@ class TokenTestSuite(AuthTestCase):
         # the behavior of permissions is not exact, this changes every time you add a model
         self.latest_content_type_id = content_type.id
         self.latest_permission_id = permission.id
-        self.job_content_type_id = self.latest_content_type_id - 46
-        self.can_delete_job_permission_id = self.latest_permission_id - 185
+        self.job_content_type_id = self.latest_content_type_id - 47
+        self.can_delete_job_permission_id = self.latest_permission_id - 189
 
     """
     🔽🔽🔽 format of PERMISSIONS
     """
 
     def test__format__permissions(self):
-        from breathecode.authenticate.management.commands.set_permissions import \
-            PERMISSIONS
+        from breathecode.authenticate.management.commands.set_permissions import PERMISSIONS
 
         for permission in PERMISSIONS:
             self.assertRegex(permission['name'], r'^[a-zA-Z ]+$')
@@ -94,8 +92,7 @@ class TokenTestSuite(AuthTestCase):
     """
 
     def test__format__groups(self):
-        from breathecode.authenticate.management.commands.set_permissions import \
-            GROUPS
+        from breathecode.authenticate.management.commands.set_permissions import GROUPS
 
         for group in GROUPS:
             self.assertRegex(group['name'], r'^[a-zA-Z ]+$')

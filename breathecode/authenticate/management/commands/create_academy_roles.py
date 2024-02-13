@@ -462,6 +462,7 @@ ROLES = [
             'read_freelancer_bill',
             'read_keywordcluster',
             'crud_academyservice',
+            'crud_event',
             'crud_mentorship_session',
             'read_calendly_organization',
         ],
@@ -727,7 +728,7 @@ def extend_roles(roles: list[RoleType]) -> None:
     roles.append({
         'slug': 'homework_reviewer',
         'name': 'Homework Reviewer',
-        'caps': extend(roles, ['assistant'])
+        'caps': extend(roles, ['assistant']) + ['crud_student']
     })
     roles.append({
         'slug': 'teacher',

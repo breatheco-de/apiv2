@@ -1457,12 +1457,22 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, *args, **kwargs):
+        print('====================2')
+        print('====================2')
+        print('====================2')
+        print('====================2')
+        print('====================2')
+        print('====================2')
         instance = super().create(*args, **kwargs)
 
+        print(21)
         if self.plan:
+            print(22)
             self.plan.invites.add(instance)
 
+        print(23)
         if self.course:
+            print(24)
             self.course.invites.add(instance)
 
         # if self.user:
@@ -1471,21 +1481,39 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         #                                       related_type='auth.UserInvite',
         #                                       related_id=instance.id)
 
+        print(25)
         tasks_authenticate.async_validate_email_invite.delay(instance.id)
         return instance
 
     def update(self, *args, **kwargs):
+        print('====================3')
+        print('====================3')
+        print('====================3')
+        print('====================3')
+        print('====================3')
+        print('====================3')
         instance = super().update(*args, **kwargs)
 
+        print(31)
         if self.plan:
+            print(32)
             self.plan.invites.add(instance)
 
+        print(33)
         if self.course:
+            print(34)
             self.course.invites.add(instance)
 
+        print(35)
         return instance
 
     def get_access_token(self, obj: UserInvite):
+        print('====================4')
+        print('====================4')
+        print('====================4')
+        print('====================4')
+        print('====================4')
+        print('====================4')
         lang = self.context.get('lang', 'en')
 
         if obj.status != 'ACCEPTED':
@@ -1527,6 +1555,12 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         return token.key
 
     def get_plans(self, obj: UserInvite):
+        print('====================5')
+        print('====================5')
+        print('====================5')
+        print('====================5')
+        print('====================5')
+        print('====================5')
         from breathecode.payments.serializers import GetPlanSmallSerializer
 
         return GetPlanSmallSerializer(obj.plans.all(), many=True).data

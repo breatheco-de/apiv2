@@ -615,6 +615,44 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
         self.bc.database.delete('mentorship.MentorProfile')
 
+    def test__get__with_two_mentor_profile_with_two_syllabus__passing__syllabus(self):
+        slug_1 = self.bc.fake.slug()
+        slug_2 = self.bc.fake.slug()
+        syllabus = [{'slug': slug_1}, {'slug': slug_2}]
+        profile_academy = {
+            'first_name': self.bc.fake.first_name(),
+            'last_name': self.bc.fake.last_name(),
+            'email': self.bc.fake.email(),
+        }
+        model_syllabus = self.bc.database.create(syllabus=syllabus)
+        model = self.bc.database.create(
+            user=1,
+            role=1,
+            capability='read_mentorship_mentor',
+            mentor_profile={'syllabus': [model_syllabus.syllabus[0], model_syllabus.syllabus[1]]},
+            mentorship_service=1,
+            syllabus=syllabus,
+            profile_academy=profile_academy)
+
+        self.bc.request.set_headers(academy=model.academy.id)
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy('mentorship:academy_mentor') + f'?syllabus={slug_1},{slug_2}'
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = [
+            get_serializer(self, model.mentor_profile, model.mentorship_service, model.user),
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
+            self.bc.format.to_dict(model.mentor_profile),
+        ])
+
+        self.bc.database.delete('mentorship.MentorProfile')
+
     """
     🔽🔽🔽 Spy the extensions
     """

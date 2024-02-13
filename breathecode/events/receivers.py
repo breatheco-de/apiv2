@@ -10,13 +10,6 @@ from breathecode.events import tasks
 
 logger = logging.getLogger(__name__)
 
-# We no longer want to handle the eventbrite integration, its better to do it thru zapier using the rest hooks
-# @receiver(event_saved, sender=Event)
-# def post_save_event(sender: Type[Event], instance: Event, **kwargs: Any):
-#     logger.debug('Procesing event save')
-#     if instance.sync_with_eventbrite and instance.eventbrite_sync_status == 'PENDING':
-#         async_export_event_to_eventbrite.delay(instance.id)
-
 
 @receiver(timeslot_saved, sender=CohortTimeSlot)
 def post_save_cohort_time_slot(sender: Type[CohortTimeSlot], instance: CohortTimeSlot, **kwargs: Any):

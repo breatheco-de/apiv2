@@ -18,32 +18,52 @@ API_URL = os.getenv('API_URL', '')
 logger = logging.getLogger(__name__)
 
 
-@task(bind=True)
-def async_validate_email_invite(self, invite_id, task_manager_id, **_):
+@task(priority=TaskPriority.REALTIME.value)
+def async_validate_email_invite(invite_id, **_):
     logger.debug(f'Validating email for invite {invite_id}')
+
+    print('====================1')
+    print('====================1')
+    print('====================1')
+    print('====================1')
+    print('====================1')
+    print('====================1')
     user_invite = UserInvite.objects.filter(id=invite_id).first()
 
     if user_invite is None:
-        raise AbortTask(f'UserInvite {invite_id} not found')
+        raise RetryTask(f'UserInvite {invite_id} not found')
 
     try:
+        print(11)
         email_status = validate_email(user_invite.email, 'en')
+        print(111)
         if email_status['score'] <= 0.60:
+            print(112)
             user_invite.status = 'REJECTED'
+            print(113)
             user_invite.process_status = 'ERROR'
+            print(114)
             user_invite.process_message = 'Your email is invalid'
+            print(115)
+        print(116)
         user_invite.email_quality = email_status['score']
+        print(117)
         user_invite.email_status = email_status
+        print(118)
 
     except ValidationException as e:
+        print(12, e)
         user_invite.status = 'REJECTED'
         user_invite.process_status = 'ERROR'
         user_invite.process_message = str(e)
 
-    except Exception:
+    except Exception as e:
+        print(13, e)
         raise RetryTask(f'Retrying email validation for invite {invite_id}')
 
+    print(14)
     user_invite.save()
+    print(15)
 
     return True
 

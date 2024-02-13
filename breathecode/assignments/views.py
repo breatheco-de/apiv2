@@ -19,6 +19,7 @@ from slugify import slugify
 import breathecode.activity.tasks as tasks_activity
 import breathecode.assignments.tasks as tasks
 from breathecode.admissions.models import Cohort, CohortUser
+from breathecode.assignments.permissions.consumers import code_revision_service
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy, Token
 from breathecode.utils import (
@@ -33,7 +34,7 @@ from breathecode.utils.decorators import has_permission
 from breathecode.utils.decorators.capable_of import acapable_of
 from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
-from breathecode.utils.service import Service, service
+from breathecode.utils.service import Service
 
 from .actions import deliver_task, sync_cohort_tasks
 from .caches import TaskCache
@@ -912,8 +913,7 @@ class MeCodeRevisionView(APIView):
         with Service('rigobot', request.user.id, proxy=True) as s:
             return s.get('/v1/finetuning/me/coderevision', params=params, stream=True)
 
-    # TODO: removed the consumer param code_revision_service because it has to be refactored https://github.com/breatheco-de/breatheco-de/issues/6688
-    @has_permission('add_code_review')
+    @has_permission('add_code_review', consumer=code_revision_service)
     def post(self, request, task_id):
         lang = get_user_language(request)
         params = {}
