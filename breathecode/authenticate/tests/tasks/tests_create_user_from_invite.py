@@ -1,10 +1,11 @@
-from datetime import datetime
-import pytest
 import logging
+from datetime import datetime
 from unittest.mock import MagicMock, call
+
+import pytest
+
 from breathecode.authenticate.tasks import create_user_from_invite
 from breathecode.notify import actions as notify_actions
-
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 
@@ -114,8 +115,10 @@ def test_invite_accepted(bc: Breathecode, fake):
 
     assert logging.Logger.error.call_args_list == []
     assert notify_actions.send_email_message.call_args_list == [
-        call('pick_password', email, {
-            'SUBJECT': 'Set your password at 4Geeks',
-            'LINK': '/v1/auth/password/' + model.user_invite.token
-        })
+        call('pick_password',
+             email, {
+                 'SUBJECT': 'Set your password at 4Geeks',
+                 'LINK': '/v1/auth/password/' + model.user_invite.token
+             },
+             academy=None)
     ]

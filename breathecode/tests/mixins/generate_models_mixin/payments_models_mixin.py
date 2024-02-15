@@ -41,7 +41,8 @@ class PaymentsModelsMixin(ModelsMixin):
                                  provisioning_price=False,
                                  cohort_set=False,
                                  cohort_set_translation=False,
-                                 app_service=False,
+                                 service_set=False,
+                                 service_set_translation=False,
                                  models={},
                                  **kwargs):
         """Generate models"""
@@ -397,13 +398,28 @@ class PaymentsModelsMixin(ModelsMixin):
             models['subscription_service_item'] = create_models(subscription_service_item,
                                                                 'payments.SubscriptionServiceItem', **kargs)
 
-        if not 'app_service' in models and is_valid(app_service):
+        if not 'service_set' in models and (is_valid(service_set) or is_valid(service_set_translation)):
             kargs = {}
 
-            if 'app' in models:
-                kargs['app'] = just_one(models['app'])
+            if 'service' in models:
+                kargs['services'] = get_list(models['service'])
 
-            models['app_service'] = create_models(app_service, 'payments.AppService', **kargs)
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
+            models['service_set'] = create_models(service_set, 'payments.ServiceSet', **kargs)
+
+        if not 'service_set_translation' in models and is_valid(service_set_translation):
+            kargs = {}
+
+            if 'service_set' in models:
+                kargs['service_set'] = get_list(models['service_set'])
+
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
+            models['service_set_translation'] = create_models(service_set_translation,
+                                                              'payments.ServiceSetTranslation', **kargs)
 
         if not 'consumable' in models and (is_valid(consumable) or is_valid(consumption_session)):
             kargs = {}
@@ -423,8 +439,8 @@ class PaymentsModelsMixin(ModelsMixin):
             if 'event_type_set' in models:
                 kargs['event_type_set'] = just_one(models['event_type_set'])
 
-            if 'app_service' in models:
-                kargs['app_service'] = just_one(models['app_service'])
+            if 'service_set' in models:
+                kargs['service_set'] = just_one(models['service_set'])
 
             models['consumable'] = create_models(consumable, 'payments.Consumable', **kargs)
 

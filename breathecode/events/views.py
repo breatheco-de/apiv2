@@ -56,12 +56,12 @@ from .permissions.consumers import event_by_url_param, live_class_by_url_param
 from .serializers import (
     AcademyEventSmallSerializer,
     EventBigSerializer,
-    EventPUTSerializer,
     EventbriteWebhookSerializer,
     EventCheckinSerializer,
     EventCheckinSmallSerializer,
     EventJoinSmallSerializer,
     EventPublicBigSerializer,
+    EventPUTSerializer,
     EventSerializer,
     EventSmallSerializer,
     EventSmallSerializerNoAcademy,
@@ -230,9 +230,13 @@ class EventMeView(APIView):
             #DEPRECATED: due we have a new endpoint that manages the EventTypeSet consumables
             if _r == 'true':
                 if single_event is None:
-                    return render_message(request, 'Event not found or you dont have access')
+                    return render_message(request,
+                                          'Event not found or you dont have access',
+                                          academy=single_event.academy)
                 if single_event.live_stream_url is None or single_event.live_stream_url == '':
-                    return render_message(request, 'Event live stream URL is not found')
+                    return render_message(request,
+                                          'Event live stream URL is not found',
+                                          academy=single_event.academy)
                 return redirect(single_event.live_stream_url)
 
             serializer = EventBigSerializer(single_event, many=False)
@@ -309,9 +313,21 @@ def join_live_class(request, token, live_class, lang):
     now = timezone.now()
 
     if live_class.starting_at > now:
+        obj = {}
+        if live_class.cohort_time_slot.cohort.academy:
+            obj['COMPANY_INFO_EMAIL'] = live_class.cohort_time_slot.cohort.academy.feedback_email
+            obj['COMPANY_LEGAL_NAME'] = (live_class.cohort_time_slot.cohort.academy.legal_name
+                                         or live_class.cohort_time_slot.cohort.academy.name)
+            obj['COMPANY_LOGO'] = live_class.cohort_time_slot.cohort.academy.logo_url
+            obj['COMPANY_NAME'] = live_class.cohort_time_slot.cohort.academy.name
+
+            if 'heading' not in obj:
+                obj['heading'] = live_class.cohort_time_slot.cohort.academy.name
+
         return render(request, 'countdown.html', {
             'token': token.key,
             'event': LiveClassJoinSerializer(live_class).data,
+            **obj,
         })
 
     return redirect(live_class.cohort_time_slot.cohort.online_meeting_url)
@@ -429,7 +445,10 @@ class AcademyLiveClassJoinView(APIView):
                                   en='Live class has no online meeting url',
                                   es='La clase en vivo no tiene una URL de reunión en línea',
                                   slug='no-meeting-url')
-            return render_message(request, message, status=400)
+            return render_message(request,
+                                  message,
+                                  status=400,
+                                  academy=live_class.cohort_time_slot.cohort.academy)
 
         return redirect(live_class.cohort_time_slot.cohort.online_meeting_url)
 
@@ -524,7 +543,7 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
         if not isinstance(request.data, list):
 
             # make it a list
-            data_list = [request.data]
+            data_list = [dict(request.data)]
 
             if event_id is None:
                 raise ValidationException('Missing event_id')
@@ -545,8 +564,8 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
             if 'id' not in data:
                 raise ValidationException(
                     translation(lang,
-                                en=f'Event id not found',
-                                es=f'No encontró el id del evento',
+                                en='Event id not found',
+                                es='No encontró el id del evento',
                                 slug='event-id-not-found'))
 
             instance = Event.objects.filter(id=data['id'], academy__id=academy_id).first()
@@ -661,7 +680,7 @@ class AcademyEventJoinView(APIView):
                                   en='Event has no live stream url',
                                   es='Evento no tiene url de live stream',
                                   slug='no-live-stream-url')
-            return render_message(request, message, status=400)
+            return render_message(request, message, status=400, academy=event.academy)
 
         return redirect(event.live_stream_url)
 
@@ -851,9 +870,20 @@ def join_event(request, token, event):
     now = timezone.now()
 
     if event.starting_at > now:
+        obj = {}
+        if event.academy:
+            obj['COMPANY_INFO_EMAIL'] = event.academy.feedback_email
+            obj['COMPANY_LEGAL_NAME'] = event.academy.legal_name or event.academy.name
+            obj['COMPANY_LOGO'] = event.academy.logo_url
+            obj['COMPANY_NAME'] = event.academy.name
+
+            if 'heading' not in obj:
+                obj['heading'] = event.academy.name
+
         return render(request, 'countdown.html', {
             'token': token.key,
             'event': EventJoinSmallSerializer(event).data,
+            **obj,
         })
 
     # if the event is happening right now and I have not joined yet
@@ -1007,7 +1037,8 @@ class AcademyEventCheckinView(APIView):
 @renderer_classes([PlainTextRenderer])
 def eventbrite_webhook(request, organization_id):
     if actions.is_eventbrite_enabled() is False:
-        return Response('ok', content_type='text/plain')
+        return Response('Eventbrite integration is disabled, to activate add env variable EVENTBRITE=TRUE',
+                        content_type='text/plain')
 
     webhook = Eventbrite.add_webhook_to_log(request.data, organization_id)
 

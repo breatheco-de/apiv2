@@ -1,19 +1,30 @@
-import os, re, requests, json
-from typing import Optional
+import json
+import os
+import re
 from itertools import chain
-from django.utils import timezone
-from breathecode.utils.decorators.task import RetryTask
+from typing import Optional
 
-from breathecode.utils.i18n import translation
-from .models import FormEntry, Tag, Automation, ActiveCampaignAcademy, AcademyAlias
-from rest_framework.exceptions import APIException
-from breathecode.notify.actions import send_email_message
-from breathecode.authenticate.models import CredentialsFacebook
-from breathecode.services.activecampaign import ACOldClient, ActiveCampaign, ActiveCampaignClient, acp_ids, map_ids
-from breathecode.utils.validation_exception import ValidationException
-from breathecode.utils import getLogger
 import numpy as np
+import requests
 from django.db.models import Q
+from django.utils import timezone
+from rest_framework.exceptions import APIException
+
+from breathecode.authenticate.models import CredentialsFacebook
+from breathecode.notify.actions import send_email_message
+from breathecode.services.activecampaign import (
+    ACOldClient,
+    ActiveCampaign,
+    ActiveCampaignClient,
+    acp_ids,
+    map_ids,
+)
+from breathecode.utils import getLogger
+from breathecode.utils.decorators.task import RetryTask
+from breathecode.utils.i18n import translation
+from breathecode.utils.validation_exception import ValidationException
+
+from .models import AcademyAlias, ActiveCampaignAcademy, Automation, FormEntry, Tag
 
 logger = getLogger(__name__)
 
@@ -71,20 +82,34 @@ def validate_email(email, lang):
     }
     """
 
+    print('====================6')
+    print('====================6')
+    print('====================6')
+    print('====================6')
+    print('====================6')
+    print('====================6')
+
     resp = requests.get(
         f'https://emailvalidation.abstractapi.com/v1/?api_key={MAIL_ABSTRACT_KEY}&email={email}', timeout=10)
+    print(61)
     data = resp.json()
+    print(62)
 
     if 'error' in data:
+        print(63)
         if 'message' in data['error']:
+            print(64)
             raise Exception(data['error']['message'])
+        print(65)
         raise ValidationException(
             translation(lang,
                         en='Error while validating email address',
                         es='Se ha producido un error validando tu dirección de correo electrónico',
                         slug='email-validation-error'))
 
+    print(66)
     if 'is_disposable_email' in data and data['is_disposable_email']['value'] == True:
+        print(67)
         raise ValidationException(
             translation(
                 lang,
@@ -94,8 +119,10 @@ def validate_email(email, lang):
                 'Parece que estás utilizando un proveedor de correos electronicos temporales. Por favor cambia tu dirección de correo electrónico.',
                 slug='disposable-email'))
 
+    print(67)
     if (('is_mx_found' in data and data['is_mx_found']['value'] == False)
             or ('is_smtp_valid' in data and data['is_smtp_valid']['value'] == False)):
+        print(68)
         raise ValidationException(
             translation(
                 lang,
@@ -104,7 +131,9 @@ def validate_email(email, lang):
                 'El correo electrónico que haz especificado parece inválido, por favor corrige tu correo electronico',
                 slug='invalid-email'))
 
+    print(69)
     if 'quality_score' in data and float(data['quality_score']) <= 0.60:
+        print(610)
         raise ValidationException(translation(
             lang,
             en=
@@ -114,10 +143,14 @@ def validate_email(email, lang):
             slug='invalid-email'),
                                   data=data)
 
+    print(611)
     email_quality = float(data['quality_score'])
+    print(612)
     data['email_quality'] = email_quality
+    print(613)
     split_email = email.split('@')
 
+    print(614)
     email_status = {
         'email': email,
         'user': split_email[0],
@@ -132,6 +165,7 @@ def validate_email(email, lang):
         'score': email_quality
     }
 
+    print(615)
     return email_status
 
 
@@ -330,6 +364,11 @@ def register_new_lead(form_entry=None):
         raise ValidationException('FormEntry not found (id: ' + str(form_entry['id']) + ')')
 
     if 'contact-us' == tags[0].slug:
+
+        obj = {}
+        if ac_academy.academy:
+            obj['COMPANY_INFO_EMAIL'] = ac_academy.academy.feedback_email
+
         send_email_message(
             'new_contact',
             ac_academy.academy.marketing_email,
@@ -341,8 +380,10 @@ def register_new_lead(form_entry=None):
                 'data': {
                     **form_entry
                 },
+                **obj,
                 # "data": { **form_entry, **address },
-            })
+            },
+            academy=ac_academy.academy)
 
     is_duplicate = entry.is_duplicate(form_entry)
     # ENV Variable to fake lead storage
@@ -495,6 +536,7 @@ def sync_automations(ac_academy):
 
     if 'automations' not in response:
         logger.error('Invalid automations incoming from AC')
+        logger.debug(response)
         return False
 
     automations = response['automations']
@@ -503,7 +545,8 @@ def sync_automations(ac_academy):
         count = count + 100
         response = client.tags.list_all_tags(limit=100, offset=count)
         if 'automations' not in response:
-            logger.error('Invalid automations incoming from AC')
+            logger.error('Invalid automations incoming from AC pagination')
+            logger.debug(response)
             return False
         automations = automations + response['automations']
 

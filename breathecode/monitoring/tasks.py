@@ -1,11 +1,13 @@
-from django.utils import timezone
-from celery import shared_task
-
-from breathecode.utils.decorators.task import TaskPriority
-from .actions import run_script, run_endpoint_diagnostic, download_csv
-from .models import MonitorScript, Endpoint
-from breathecode.notify.actions import send_email_message, send_slack_raw
 import logging
+
+from celery import shared_task
+from django.utils import timezone
+
+from breathecode.notify.actions import send_email_message, send_slack_raw
+from breathecode.utils.decorators.task import TaskPriority
+
+from .actions import download_csv, run_endpoint_diagnostic, run_script
+from .models import Endpoint, MonitorScript
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
@@ -29,21 +31,27 @@ def test_endpoint(self, endpoint_id):
 
     if result['status'] != 'OPERATIONAL':
         if endpoint.application.notify_email:
+
             send_email_message(
-                'diagnostic', endpoint.application.notify_email, {
+                'diagnostic',
+                endpoint.application.notify_email, {
                     'subject': f'Errors found on app {endpoint.application.title} endpoint {endpoint.url}',
-                    'details': result['details']
-                })
+                    'details': result['details'],
+                },
+                academy=endpoint.application.academy)
 
         if (endpoint.application.notify_slack_channel and endpoint.application.academy
                 and hasattr(endpoint.application.academy, 'slackteam')
                 and hasattr(endpoint.application.academy.slackteam.owner, 'credentialsslack')):
+
             send_slack_raw(
-                'diagnostic', endpoint.application.academy.slackteam.owner.credentialsslack.token,
+                'diagnostic',
+                endpoint.application.academy.slackteam.owner.credentialsslack.token,
                 endpoint.application.notify_slack_channel.slack_id, {
                     'subject': f'Errors found on app {endpoint.application.title} endpoint {endpoint.url}',
                     **result,
-                })
+                },
+                academy=endpoint.application.academy)
 
 
 @shared_task(bind=True, priority=TaskPriority.MONITORING.value)
@@ -84,20 +92,25 @@ def execute_scripts(self, script_id):
             )
         else:
             logger.debug(f'Sending script notification report to {email}')
-            send_email_message('diagnostic', email, {
-                'subject': subject,
-                'details': result['text'],
-                'button': result['btn']
-            })
+
+            send_email_message('diagnostic',
+                               email, {
+                                   'subject': subject,
+                                   'details': result['text'],
+                                   'button': result['btn'],
+                               },
+                               academy=script.application.academy)
 
         if (app.notify_slack_channel and app.academy and hasattr(app.academy, 'slackteam')
                 and hasattr(app.academy.slackteam.owner, 'credentialsslack')):
             try:
-                send_slack_raw('diagnostic', app.academy.slackteam.owner.credentialsslack.token,
+                send_slack_raw('diagnostic',
+                               app.academy.slackteam.owner.credentialsslack.token,
                                app.notify_slack_channel.slack_id, {
                                    'subject': subject,
                                    **result,
-                               })
+                               },
+                               academy=script.application.academy)
             except Exception:
                 return False
         return False

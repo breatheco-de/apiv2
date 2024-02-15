@@ -1,12 +1,15 @@
 """
 Test /academy/survey
 """
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import MagicMock, call, patch
+
 from django.urls.base import reverse_lazy
-from rest_framework import status
-from ..mixins import FeedbackTestCase
-import breathecode.feedback.actions as actions
 from django.utils import timezone
+from rest_framework import status
+
+import breathecode.feedback.actions as actions
+
+from ..mixins import FeedbackTestCase
 
 now = timezone.now()
 
@@ -642,7 +645,7 @@ class SurveyTestSuite(FeedbackTestCase):
 
         model = self.generate_models(user=1, profile_academy=True, survey=2, capability='crud_survey', role=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('feedback:academy_survey')
 
         response = self.client.delete(url)
@@ -668,7 +671,7 @@ class SurveyTestSuite(FeedbackTestCase):
                                          answer=answer)
             self.headers(academy=model.academy.id)
 
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
 
             url = reverse_lazy('feedback:academy_survey') + f'?id={model.survey.id}'
             response = self.client.delete(url)
@@ -691,7 +694,7 @@ class SurveyTestSuite(FeedbackTestCase):
                                      role=1,
                                      answer=answer)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('feedback:academy_survey') + '?id=1'
         response = self.client.delete(url)

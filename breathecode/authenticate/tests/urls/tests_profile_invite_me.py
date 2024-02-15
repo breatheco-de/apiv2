@@ -2,9 +2,12 @@
 Test cases for /academy/:id/member/:id
 """
 from unittest.mock import MagicMock, patch
-from breathecode.services import datetime_to_iso_format
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
+from breathecode.services import datetime_to_iso_format
+
 from ..mixins.new_auth_test_case import AuthTestCase
 
 
@@ -108,7 +111,7 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_profile_invite_me__without_data(self):
         model = self.bc.database.create(user=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('authenticate:profile_invite_me')
         response = self.client.get(url)
 
@@ -128,7 +131,7 @@ class AuthenticateTestSuite(AuthTestCase):
         user = {'email': 'user@dotdotdotdot.dot'}
         model = self.bc.database.create(user=user, user_invite=user_invite)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('authenticate:profile_invite_me')
         response = self.client.get(url)
 
@@ -169,7 +172,7 @@ class AuthenticateTestSuite(AuthTestCase):
         user = {'email': 'user@dotdotdotdot.dot'}
         model = self.bc.database.create(user=user, user_invite=(2, user_invite))
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('authenticate:profile_invite_me')
         response = self.client.get(url)
 
@@ -209,7 +212,7 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_profile_invite_me__with_one_mentor_profile(self):
         model = self.bc.database.create(user=1, mentor_profile=1, mentorship_service=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('authenticate:profile_invite_me')
         response = self.client.get(url)
 
@@ -232,7 +235,7 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_profile_invite_me__with_two_mentor_profiles(self):
         model = self.bc.database.create(user=1, mentor_profile=2, mentorship_service=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('authenticate:profile_invite_me')
         response = self.client.get(url)
 
@@ -256,7 +259,7 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_profile_invite_me__with_one_profile_academy(self):
         model = self.bc.database.create(user=1, profile_academy=1, role='potato')
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('authenticate:profile_invite_me')
         response = self.client.get(url)
 
@@ -319,7 +322,7 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_profile_invite_me__with_two_profile_academies(self):
         model = self.bc.database.create(user=1, profile_academy=2, role='potato')
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('authenticate:profile_invite_me')
         response = self.client.get(url)
 

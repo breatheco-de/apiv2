@@ -5,17 +5,18 @@ import logging
 import random
 from unittest.mock import MagicMock, call, patch
 
-from django.utils import timezone
 import pytest
+from dateutil.relativedelta import relativedelta
+from django.utils import timezone
+from mixer.backend.django import mixer
+
+import breathecode.activity.tasks as activity_tasks
+from breathecode.notify import actions as notify_actions
 from breathecode.payments import tasks
+from breathecode.payments.services import Stripe
 
 from ...tasks import charge_plan_financing
-from breathecode.notify import actions as notify_actions
 from ..mixins import PaymentsTestCase
-from dateutil.relativedelta import relativedelta
-from mixer.backend.django import mixer
-from breathecode.payments.services import Stripe
-import breathecode.activity.tasks as activity_tasks
 
 UTC_NOW = timezone.now()
 
@@ -241,13 +242,14 @@ class PaymentsTestSuite(PaymentsTestCase):
             },
         ])
         self.assertEqual(notify_actions.send_email_message.call_args_list, [
-            call(
-                'message', model.user.email, {
-                    'SUBJECT': 'Your installment at 4Geeks was successfully charged',
-                    'MESSAGE': 'The amount was $0.0',
-                    'BUTTON': 'See the invoice',
-                    'LINK': '/plan-financing/1'
-                })
+            call('message',
+                 model.user.email, {
+                     'SUBJECT': 'Your installment at 4Geeks was successfully charged',
+                     'MESSAGE': 'The amount was $0.0',
+                     'BUTTON': 'See the invoice',
+                     'LINK': '/plan-financing/1'
+                 },
+                 academy=model.academy)
         ])
         self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
             call(1, 'bag_created', related_type='payments.Bag', related_id=1),
@@ -301,14 +303,16 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'status': 'PAYMENT_ISSUE',
             },
         ])
+        from breathecode.admissions.models import Academy
         self.assertEqual(notify_actions.send_email_message.call_args_list, [
-            call(
-                'message', model.user.email, {
-                    'SUBJECT': 'Your 4Geeks subscription could not be renewed',
-                    'MESSAGE': 'Please update your payment methods',
-                    'BUTTON': 'Please update your payment methods',
-                    'LINK': '/plan-financing/1'
-                })
+            call('message',
+                 model.user.email, {
+                     'SUBJECT': 'Your 4Geeks subscription could not be renewed',
+                     'MESSAGE': 'Please update your payment methods',
+                     'BUTTON': 'Please update your payment methods',
+                     'LINK': '/plan-financing/1'
+                 },
+                 academy=model.academy)
         ])
         self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
             call(1, 'bag_created', related_type='payments.Bag', related_id=1),

@@ -1,10 +1,12 @@
 """
 Test /academy/survey
 """
-from unittest.mock import patch, MagicMock, call
-from ..mixins import FeedbackTestCase
+from unittest.mock import MagicMock, call, patch
+
 from breathecode.feedback.tasks import process_answer_received
+
 from ... import actions
+from ..mixins import FeedbackTestCase
 
 
 def apply_get_env(configuration={}):
@@ -100,8 +102,9 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
            MagicMock(wraps=actions.calculate_survey_response_rate))
     def test_survey_answered_task_with_survey_score_seven(self):
 
-        from breathecode.notify.actions import send_email_message
         import logging
+
+        from breathecode.notify.actions import send_email_message
 
         answer = {'score': 7, 'status': 'ANSWERED'}
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
@@ -136,8 +139,9 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
            MagicMock(wraps=actions.calculate_survey_response_rate))
     def test_survey_answered_task_with_survey_score_seven__with_academy(self):
 
-        from breathecode.notify.actions import send_email_message
         import logging
+
+        from breathecode.notify.actions import send_email_message
 
         answer = {'score': 7, 'status': 'ANSWERED'}
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
@@ -173,8 +177,10 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
     def test_survey_answered_task_with_survey_score_seven__with_academy__with_user__without_system_email__without_feedback_email(
             self):
 
+        import logging
+        import os
+
         from breathecode.notify.actions import send_email_message
-        import logging, os
 
         answer_kwargs = {'score': 7}
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
@@ -217,8 +223,9 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
     def test_survey_answered_task_with_survey_score_seven__with_academy__with_user__without_system_email__with_feedback_email(
             self):
 
-        from breathecode.notify.actions import send_email_message
         import logging
+
+        from breathecode.notify.actions import send_email_message
 
         answer_kwargs = {'score': 7}
         academy_kwargs = {'feedback_email': 'someone@email.com'}
@@ -239,7 +246,8 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
                      'COMMENTS': model.answer.comment,
                      'ACADEMY': model.answer.academy.name,
                      'LINK': f'https://www.whatever.com/feedback/surveys/{model.answer.academy.slug}/1'
-                 })
+                 },
+                 academy=model.academy)
         ])
         self.assertEqual(actions.calculate_survey_scores.call_args_list, [call(1)])
         self.assertEqual(actions.calculate_survey_response_rate.call_args_list, [call(1)])
@@ -270,8 +278,10 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
     def test_survey_answered_task_with_survey_score_seven__with_academy__with_user__with_system_email__without_feedback_email(
             self):
 
+        import logging
+        import os
+
         from breathecode.notify.actions import send_email_message
-        import logging, os
 
         answer_kwargs = {'score': 7}
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
@@ -291,7 +301,8 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
                      'COMMENTS': model.answer.comment,
                      'ACADEMY': model.answer.academy.name,
                      'LINK': f'https://www.whatever.com/feedback/surveys/{model.answer.academy.slug}/1'
-                 })
+                 },
+                 academy=model.academy)
         ])
         self.assertEqual(actions.calculate_survey_scores.call_args_list, [call(1)])
         self.assertEqual(actions.calculate_survey_response_rate.call_args_list, [call(1)])
@@ -322,8 +333,10 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
     def test_survey_answered_task_with_survey_score_seven__with_academy__with_user__with_system_email__with_feedback_email(
             self):
 
+        import logging
+        import os
+
         from breathecode.notify.actions import send_email_message
-        import logging, os
 
         answer_kwargs = {'score': 7}
         academy_kwargs = {'feedback_email': 'someone@email.com'}
@@ -344,7 +357,8 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
                      'COMMENTS': model.answer.comment,
                      'ACADEMY': model.answer.academy.name,
                      'LINK': f'https://www.whatever.com/feedback/surveys/{model.answer.academy.slug}/1'
-                 })
+                 },
+                 academy=model.academy)
         ])
         self.assertEqual(actions.calculate_survey_scores.call_args_list, [call(1)])
         self.assertEqual(actions.calculate_survey_response_rate.call_args_list, [call(1)])
@@ -369,8 +383,9 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
            MagicMock(wraps=actions.calculate_survey_response_rate))
     def test_survey_answered_task_with_survey_score_ten__with_academy__with_user(self):
 
-        from breathecode.notify.actions import send_email_message
         import logging
+
+        from breathecode.notify.actions import send_email_message
 
         answer = {'score': 10, 'status': 'ANSWERED'}
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):

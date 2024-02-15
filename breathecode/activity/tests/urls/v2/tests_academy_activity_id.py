@@ -2,15 +2,14 @@
 Test /answer
 """
 import random
-from uuid import uuid4
-from django.utils import timezone
 from unittest.mock import MagicMock, call, patch
+from uuid import uuid4
 
 from django.urls.base import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
 
 from breathecode.services.google_cloud.big_query import BigQuery
-
 from breathecode.utils.attr_dict import AttrDict
 
 from ...mixins import MediaTestCase
@@ -74,7 +73,7 @@ class MediaTestSuite(MediaTestCase):
                                         capability='read_activity',
                                         role=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         url = reverse_lazy('v2:activity:academy_activity_id', kwargs={'activity_id': '1234'})

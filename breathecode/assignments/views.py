@@ -19,6 +19,7 @@ from slugify import slugify
 import breathecode.activity.tasks as tasks_activity
 import breathecode.assignments.tasks as tasks
 from breathecode.admissions.models import Cohort, CohortUser
+from breathecode.assignments.permissions.consumers import code_revision_service
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy, Token
 from breathecode.utils import (
@@ -814,7 +815,17 @@ def deliver_assignment_view(request, task_id, token):
         if 'callback' in _dict and _dict['callback'] != '':
             return HttpResponseRedirect(redirect_to=_dict['callback'] + '?msg=The task has been delivered')
         else:
-            return render(request, 'message.html', {'message': 'The task has been delivered'})
+            obj = {}
+            if task.cohort:
+                obj['COMPANY_INFO_EMAIL'] = task.cohort.academy.feedback_email
+                obj['COMPANY_LEGAL_NAME'] = task.cohort.academy.legal_name or task.cohort.academy.name
+                obj['COMPANY_LOGO'] = task.cohort.academy.logo_url
+                obj['COMPANY_NAME'] = task.cohort.academy.name
+
+                if 'heading' not in obj:
+                    obj['heading'] = task.cohort.academy.name
+
+            return render(request, 'message.html', {'message': 'The task has been delivered', **obj})
     else:
         task = Task.objects.filter(id=task_id).first()
         if task is None:
@@ -827,7 +838,19 @@ def deliver_assignment_view(request, task_id, token):
         _dict['token'] = token
         _dict['task_name'] = task.title
         _dict['task_id'] = task.id
+
         form = DeliverAssigntmentForm(_dict)
+
+        data = {}
+        if task.cohort:
+            data['COMPANY_INFO_EMAIL'] = task.cohort.academy.feedback_email
+            data['COMPANY_LEGAL_NAME'] = task.cohort.academy.legal_name or task.cohort.academy.name
+            data['COMPANY_LOGO'] = task.cohort.academy.logo_url
+            data['COMPANY_NAME'] = task.cohort.academy.name
+
+            if 'heading' not in data:
+                data['heading'] = task.cohort.academy.name
+
     return render(
         request,
         'form.html',
@@ -835,7 +858,8 @@ def deliver_assignment_view(request, task_id, token):
             'form': form,
             # 'heading': 'Deliver project assignment',
             'intro': 'Please fill the following information to deliver your assignment',
-            'btn_lable': 'Deliver Assignment'
+            'btn_lable': 'Deliver Assignment',
+            **data,
         })
 
 
@@ -935,8 +959,7 @@ class MeCodeRevisionView(APIView):
 
         return resource
 
-    # TODO: removed the consumer param code_revision_service because it has to be refactored https://github.com/breatheco-de/breatheco-de/issues/6688
-    @has_permission('add_code_review')
+    @has_permission('add_code_review', consumer=code_revision_service)
     def post(self, request, task_id):
         lang = get_user_language(request)
         params = {}

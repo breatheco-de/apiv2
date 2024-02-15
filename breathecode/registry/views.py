@@ -1,45 +1,90 @@
+import logging
+import os
 import re
-import requests, logging, os
 from pathlib import Path
-from django.shortcuts import redirect, render
-from django.db.models import Q, Count
-from django.http import HttpResponse
-from django.core.validators import URLValidator
-from .tasks import async_pull_from_github
-from breathecode.services.seo import SEOAnalyzer
-from breathecode.utils.i18n import translation
-from breathecode.authenticate.actions import get_user_language
-from .models import (Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory,
-                     AssetKeyword, AssetComment, SEOReport, OriginalityScan, ContentVariable)
 
-from .actions import (AssetThumbnailGenerator, test_asset, pull_from_github, push_to_github,
-                      clean_asset_readme, scan_asset_originality)
-from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from breathecode.notify.actions import send_email_message
-from breathecode.authenticate.models import ProfileAcademy
-from .caches import (AssetCache, AssetCommentCache, KeywordCache, TechnologyCache, CategoryCache,
-                     ContentVariableCache)
-
-from rest_framework.permissions import AllowAny
-from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerializer, AssetTechnologySerializer,
-                          PostAssetSerializer, AssetCategorySerializer, AssetKeywordSerializer,
-                          AcademyAssetSerializer, AssetPUTSerializer, AcademyCommentSerializer,
-                          PostAssetCommentSerializer, PutAssetCommentSerializer, AssetBigTechnologySerializer,
-                          TechnologyPUTSerializer, KeywordSmallSerializer, KeywordClusterBigSerializer,
-                          PostKeywordClusterSerializer, PostKeywordSerializer, PUTKeywordSerializer,
-                          AssetKeywordBigSerializer, PUTCategorySerializer, POSTCategorySerializer,
-                          KeywordClusterMidSerializer, SEOReportSerializer, OriginalityScanSerializer,
-                          VariableSmallSerializer, AssetAndTechnologySerializer,
-                          AssetBigAndTechnologyPublishedSerializer)
-from breathecode.utils import ValidationException, capable_of, GenerateLookupsMixin
-from breathecode.utils.views import render_message
-from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.views import APIView
-from rest_framework import status
-from django.http import HttpResponseRedirect
-from django.views.decorators.clickjacking import xframe_options_exempt
+import requests
 from circuitbreaker import CircuitBreakerError
+from django.core.validators import URLValidator
+from django.db.models import Count, Q
+from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import redirect, render
+from django.views.decorators.clickjacking import xframe_options_exempt
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from breathecode.authenticate.actions import get_user_language
+from breathecode.authenticate.models import ProfileAcademy
+from breathecode.notify.actions import send_email_message
+from breathecode.services.seo import SEOAnalyzer
+from breathecode.utils import GenerateLookupsMixin, ValidationException, capable_of
+from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from breathecode.utils.i18n import translation
+from breathecode.utils.views import render_message
+
+from .actions import (
+    AssetThumbnailGenerator,
+    clean_asset_readme,
+    pull_from_github,
+    push_to_github,
+    scan_asset_originality,
+    test_asset,
+)
+from .caches import (
+    AssetCache,
+    AssetCommentCache,
+    CategoryCache,
+    ContentVariableCache,
+    KeywordCache,
+    TechnologyCache,
+)
+from .models import (
+    Asset,
+    AssetAlias,
+    AssetCategory,
+    AssetComment,
+    AssetErrorLog,
+    AssetKeyword,
+    AssetTechnology,
+    ContentVariable,
+    KeywordCluster,
+    OriginalityScan,
+    SEOReport,
+)
+from .serializers import (
+    AcademyAssetSerializer,
+    AcademyCommentSerializer,
+    AssetAndTechnologySerializer,
+    AssetBigAndTechnologyPublishedSerializer,
+    AssetBigSerializer,
+    AssetBigTechnologySerializer,
+    AssetCategorySerializer,
+    AssetKeywordBigSerializer,
+    AssetKeywordSerializer,
+    AssetMidSerializer,
+    AssetPUTSerializer,
+    AssetSerializer,
+    AssetTechnologySerializer,
+    KeywordClusterBigSerializer,
+    KeywordClusterMidSerializer,
+    KeywordSmallSerializer,
+    OriginalityScanSerializer,
+    PostAssetCommentSerializer,
+    PostAssetSerializer,
+    POSTCategorySerializer,
+    PostKeywordClusterSerializer,
+    PostKeywordSerializer,
+    PutAssetCommentSerializer,
+    PUTCategorySerializer,
+    PUTKeywordSerializer,
+    SEOReportSerializer,
+    TechnologyPUTSerializer,
+    VariableSmallSerializer,
+)
+from .tasks import async_pull_from_github
 
 logger = logging.getLogger(__name__)
 
@@ -62,8 +107,9 @@ def forward_asset_url(request, asset_slug=None):
         if not asset.external and asset.asset_type == 'LESSON':
             slug = Path(asset.readme_url).stem
             url = 'https://4geeks.com/en/lesson/' + slug + '?plain=true'
+
             if ENV == 'development':
-                return render_message(request, 'Redirect to: ' + url)
+                return render_message(request, 'Redirect to: ' + url, academy=asset.academy)
             else:
                 return HttpResponseRedirect(redirect_to=url)
 
@@ -80,7 +126,8 @@ def forward_asset_url(request, asset_slug=None):
                       asset=asset,
                       asset_type=asset.asset_type,
                       status_text=msg).save()
-        return render_message(request, msg)
+
+        return render_message(request, msg, academy=asset.academy)
 
 
 @api_view(['GET'])
@@ -92,7 +139,7 @@ def render_preview_html(request, asset_slug):
         return render_message(request, f'Asset with slug {asset_slug} not found')
 
     if asset.asset_type == 'QUIZ':
-        return render_message(request, 'Quiz cannot be previewed')
+        return render_message(request, 'Quiz cannot be previewed', academy=asset.academy)
 
     readme = asset.get_readme(parse=True)
     response = render(
@@ -104,7 +151,7 @@ def render_preview_html(request, asset_slug):
             readme['frontmatter']['inlining']['css'][0] if 'inlining' in readme['frontmatter'] else None,
             'frontmatter': readme['frontmatter'].items()
         })
-  
+
     # Set Content-Security-Policy header
     response['Content-Security-Policy'] = "frame-ancestors 'self' https://4geeks.com"
 
@@ -384,7 +431,7 @@ def get_config(request, asset_slug):
         if asset.author is not None:
             to = asset.author.email
 
-        send_email_message('message', to=to, data=data)
+        send_email_message('message', to=to, data=data, academy=asset.academy)
         raise ValidationException(f'Config file invalid or not found for {asset.url}',
                                   code=404,
                                   slug='config_not_found')

@@ -4,19 +4,19 @@ This file contains test over AcademyInviteView, if it change, the duck tests wil
 import os
 import random
 import re
-from unittest.mock import MagicMock, patch, call
+from datetime import timedelta
+from unittest.mock import MagicMock, call, patch
+
 from django.urls.base import reverse_lazy
-from rest_framework import status
-from ..mixins.new_auth_test_case import AuthTestCase
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 
-from breathecode.utils import capable_of
-from breathecode.tests.mocks import apply_requests_post_mock
-
-from datetime import timedelta
-from django.utils import timezone
 from breathecode.notify import actions
+from breathecode.tests.mocks import apply_requests_post_mock
+from breathecode.utils import capable_of
+
+from ..mixins.new_auth_test_case import AuthTestCase
 
 UTC_NOW = timezone.now()
 
@@ -103,17 +103,18 @@ class AuthenticateTestSuite(AuthTestCase):
         ])
 
         self.bc.check.calls(actions.send_email_message.call_args_list, [
-            call(
-                'welcome_academy', model.user_invite.email, {
-                    'email':
-                    model.user_invite.email,
-                    'subject':
-                    'Invitation to join 4Geeks',
-                    'LINK': (os.getenv('API_URL', '') + '/v1/auth/member/invite/' + model.user_invite.token +
-                             '?callback=https%3A%2F%2Fadmin.4geeks.com'),
-                    'FIST_NAME':
-                    model.user_invite.first_name
-                })
+            call('welcome_academy',
+                 model.user_invite.email, {
+                     'email':
+                     model.user_invite.email,
+                     'subject':
+                     'Invitation to join 4Geeks',
+                     'LINK': (os.getenv('API_URL', '') + '/v1/auth/member/invite/' + model.user_invite.token +
+                              '?callback=https%3A%2F%2Fadmin.4geeks.com'),
+                     'FIST_NAME':
+                     model.user_invite.first_name
+                 },
+                 academy=None)
         ])
 
     # Given: 1 UserInvite
@@ -150,17 +151,18 @@ class AuthenticateTestSuite(AuthTestCase):
         ])
 
         self.bc.check.calls(actions.send_email_message.call_args_list, [
-            call(
-                'welcome_academy', model.user_invite.email, {
-                    'email':
-                    model.user_invite.email,
-                    'subject':
-                    'Invitation to join 4Geeks',
-                    'LINK': (os.getenv('API_URL', '') + '/v1/auth/member/invite/' + model.user_invite.token +
-                             '?callback=https%3A%2F%2Fadmin.4geeks.com'),
-                    'FIST_NAME':
-                    model.user_invite.first_name
-                })
+            call('welcome_academy',
+                 model.user_invite.email, {
+                     'email':
+                     model.user_invite.email,
+                     'subject':
+                     'Invitation to join 4Geeks',
+                     'LINK': (os.getenv('API_URL', '') + '/v1/auth/member/invite/' + model.user_invite.token +
+                              '?callback=https%3A%2F%2Fadmin.4geeks.com'),
+                     'FIST_NAME':
+                     model.user_invite.first_name
+                 },
+                 academy=None)
         ])
 
     # Given: 1 UserInvite
@@ -252,11 +254,12 @@ class AuthenticateTestSuite(AuthTestCase):
                          }])
 
         self.bc.check.calls(actions.send_email_message.call_args_list, [
-            call(
-                'verify_email', model.user_invite.email, {
-                    'SUBJECT': 'Verify your 4Geeks account',
-                    'LINK': os.getenv('API_URL', '') + f'/v1/auth/confirmation/{model.user_invite.token}'
-                }),
+            call('verify_email',
+                 model.user_invite.email, {
+                     'SUBJECT': 'Verify your 4Geeks account',
+                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/confirmation/{model.user_invite.token}'
+                 },
+                 academy=None),
         ])
 
     # Given: 1 UserInvite

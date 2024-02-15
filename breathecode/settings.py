@@ -386,22 +386,17 @@ DJANGO_REDIS_IGNORE_EXCEPTIONS = True
 if IS_REDIS_WITH_SSL_ON_HEROKU:
     CACHES['default']['OPTIONS'] = {
         'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        'SOCKET_CONNECT_TIMEOUT': 0.2,  # seconds
-        'SOCKET_TIMEOUT': 0.2,  # seconds
         'PICKLE_VERSION': -1,
         # "IGNORE_EXCEPTIONS": True,
         'CONNECTION_POOL_KWARGS': {
             'ssl_cert_reqs': None,
             'max_connections': int(os.getenv('REDIS_MAX_CONNECTIONS', 500)),
-            'retry_on_timeout': False,
         },
     }
 elif IS_REDIS_WITH_SSL:
     redis_ca_cert_path, redis_user_cert_path, redis_user_private_key_path = configure_redis()
     CACHES['default']['OPTIONS'] = {
         'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        'SOCKET_CONNECT_TIMEOUT': 0.2,  # seconds
-        'SOCKET_TIMEOUT': 0.2,  # seconds
         'PICKLE_VERSION': -1,
         # "IGNORE_EXCEPTIONS": True,
         'CONNECTION_POOL_KWARGS': {
@@ -410,7 +405,6 @@ elif IS_REDIS_WITH_SSL:
             'ssl_certfile': redis_user_cert_path,
             'ssl_keyfile': redis_user_private_key_path,
             'max_connections': int(os.getenv('REDIS_MAX_CONNECTIONS', 500)),
-            'retry_on_timeout': False,
         }
     }
 
