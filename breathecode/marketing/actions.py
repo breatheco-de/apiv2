@@ -545,7 +545,7 @@ def sync_automations(ac_academy):
         count = count + 100
         response = client.tags.list_all_tags(limit=100, offset=count)
         if 'automations' not in response:
-            logger.error('Invalid automations incoming from AC')
+            logger.error('Invalid automations incoming from AC pagination')
             logger.debug(response)
             return False
         automations = automations + response['automations']
