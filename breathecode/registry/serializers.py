@@ -202,6 +202,7 @@ class AssetSerializer(serpy.Serializer):
     preview = serpy.Field()
     external = serpy.Field()
     solution_video_url = serpy.Field()
+    solution_url = serpy.Field()
     intro_video_url = serpy.Field()
     published_at = serpy.Field()
 
