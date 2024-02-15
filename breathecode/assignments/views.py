@@ -153,6 +153,37 @@ def sync_cohort_tasks_view(request, cohort_id=None):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class AssignmentTelemetryView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    # @capable_of('read_assignment_telemetry')
+    # def get(self, request, academy_id=None):
+
+    #     learnpack_payload = request.body
+    #     items = AssetComment.objects.filter(asset__academy__id=academy_id)
+    #     lookup = {}
+
+    #     serializer = AcademyCommentSerializer(items, many=True)
+    #     return handler.response(serializer.data)
+
+    @capable_of('crud_assignment_telemetry')
+    def post(self, request, academy_id=None):
+
+        webhook = LearnPack.add_webhook_to_log(request.data)
+
+        if webhook:
+            tasks.async_learnpack_webhook.delay(webhook.id)
+        else:
+            logger.debug('One request cannot be parsed, maybe you should update `LearnPack'
+                         '.add_webhook_to_log`')
+            logger.debug(request.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response('ok', content_type='text/plain')
+
+
 class FinalProjectScreenshotView(APIView):
 
     def upload(self, request, update=False):
@@ -992,8 +1023,8 @@ class AcademyCodeRevisionView(APIView):
                 return HttpResponse(await response.content.read(), status=response.status, headers=headers)
 
     async def add_code_revision(self, request, academy_id, task_id, coderevision_id):
-        if task_id and not (task := await Task.objects.filter(id=task_id,
-                                                              cohort__academy__id=academy_id).prefetch_related('user').afirst()):
+        if task_id and not (task := await Task.objects.filter(
+                id=task_id, cohort__academy__id=academy_id).prefetch_related('user').afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         params = {}

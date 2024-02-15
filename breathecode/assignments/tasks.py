@@ -6,6 +6,7 @@ from celery import shared_task
 
 import breathecode.notify.actions as actions
 from breathecode.admissions.models import CohortUser
+from breathecode.assignments.models import LearnPackWebhook
 from breathecode.assignments.actions import NOTIFICATION_STRINGS, task_is_valid_for_notifications
 from breathecode.utils.decorators.task import TaskPriority
 from breathecode.utils.service import Service
@@ -34,6 +35,33 @@ def student_task_notification(self, task_id):
         'subject': subject,
         'details': details,
     })
+
+
+@shared_task(bind=True, priority=TaskPriority.ACTIVITY.value)
+def async_learnpack_webhook(self, webhook_id):
+    logger.debug('Starting async_learnpack_webhook')
+    status = 'ok'
+
+    webhook = LearnPackWebhook.objects.filter(id=webhook_id).first()
+    if webhook:
+        try:
+            client = LearnPack()
+            client.execute_action(webhook_id)
+        except Exception as e:
+            logger.debug('LearnPack Telemetry exception')
+            logger.debug(str(e))
+            status = 'error'
+
+    else:
+        message = f'Webhook {webhook_id} not found'
+        webhook.status = 'ERROR'
+        webhook.status_text = message
+        webhook.save()
+
+        logger.debug(message)
+        status = 'error'
+
+    logger.debug(f'LearnPack telemetry status: {status}')
 
 
 @shared_task(bind=True, priority=TaskPriority.NOTIFICATION.value)
