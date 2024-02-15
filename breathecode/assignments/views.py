@@ -16,6 +16,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from slugify import slugify
 
+from breathecode.services.learnpack import LearnPack
 import breathecode.activity.tasks as tasks_activity
 import breathecode.assignments.tasks as tasks
 from breathecode.admissions.models import Cohort, CohortUser
@@ -169,7 +170,7 @@ class AssignmentTelemetryView(APIView, GenerateLookupsMixin):
     #     serializer = AcademyCommentSerializer(items, many=True)
     #     return handler.response(serializer.data)
 
-    @capable_of('crud_assignment_telemetry')
+    @has_permission('upload_assignment_telemetry')
     def post(self, request, academy_id=None):
 
         webhook = LearnPack.add_webhook_to_log(request.data)

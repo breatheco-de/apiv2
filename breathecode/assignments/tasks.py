@@ -5,6 +5,7 @@ import re
 from celery import shared_task
 
 import breathecode.notify.actions as actions
+from breathecode.services.learnpack import LearnPack
 from breathecode.admissions.models import CohortUser
 from breathecode.assignments.models import LearnPackWebhook
 from breathecode.assignments.actions import NOTIFICATION_STRINGS, task_is_valid_for_notifications

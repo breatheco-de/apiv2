@@ -70,6 +70,11 @@ PERMISSIONS = [
         'description': 'Upload provisioning activity',
         'codename': 'upload_provisioning_activity',
     },
+    {
+        'name': 'Upload assignment telemetry',
+        'description': 'Upload assignment telementry from learnpack',
+        'codename': 'upload_assignment_telemetry',
+    },
 ]
 
 GROUPS = [
@@ -84,8 +89,10 @@ GROUPS = [
         'inherit': []
     },
     {
-        'name': 'Student',
-        'permissions': ['get_my_certificate', 'get_containers', 'get_my_mentoring_sessions'],
+        'name':
+        'Student',
+        'permissions':
+        ['get_my_certificate', 'get_containers', 'get_my_mentoring_sessions', 'upload_assignment_telemetry'],
         'inherit': []
     },
     {

@@ -69,7 +69,17 @@ class Task(models.Model):
     _current_task_status = None
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    telemetry = models.ForeignKey(AssignmentTelemetry, on_delete=models.CASCADE)
+
+    telemetry = models.ForeignKey(
+        AssignmentTelemetry,
+        on_delete=models.CASCADE,
+        default=None,
+        null=True,
+        blank=True,
+        help_text=
+        'Learnpack telemetry json will be stored and shared among all the assignments form the same associalted_slug'
+    )
+
     associated_slug = models.SlugField(max_length=150, db_index=True)
     title = models.CharField(max_length=150, db_index=True)
 
@@ -186,7 +196,7 @@ class FinalProject(models.Model):
 
 # PENDING = 'PENDING'
 # DONE = 'DONE'
-# ERROR='ERROR'
+ERROR = 'ERROR'
 LEARNPACK_WEBHOOK_STATUS = (
     (PENDING, 'Pending'),
     (DONE, 'Done'),
@@ -194,19 +204,23 @@ LEARNPACK_WEBHOOK_STATUS = (
 )
 
 
-class LearnpackWebhook(models.Model):
+class LearnPackWebhook(models.Model):
 
     is_streaming = models.BooleanField()
     event = models.CharField(max_length=15)
     payload = models.JSONField(blank=True, null=True, default=None, help_text='Will be set by learnpack')
     student = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, default=None)
-    telemetry = models.ForeignKey(AssignmentTelemetry, on_delete=models.CASCADE)
+    telemetry = models.ForeignKey(AssignmentTelemetry,
+                                  on_delete=models.CASCADE,
+                                  blank=True,
+                                  null=True,
+                                  default=None)
 
     status = models.CharField(max_length=9, choices=LEARNPACK_WEBHOOK_STATUS, default=PENDING)
-    status_text = models.CharField(max_length=255, default=None, null=True, blank=True)
+    status_text = models.TextField(default=None, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
-    def __str__(self):
-        return f'Learnpack event {self.event} {self.status} => Student: {self.student.id}'
+    # def __str__(self):
+    #     return f'Learnpack event {self.event} {self.status} => Student: {self.student.id}'

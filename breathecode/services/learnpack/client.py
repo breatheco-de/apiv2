@@ -5,7 +5,7 @@ import traceback
 import urllib
 
 import breathecode.services.learnpack.actions as actions
-from breathecode.assignments.models import LearnpackWebhook
+from breathecode.assignments.models import LearnPackWebhook
 
 logger = logging.getLogger(__name__)
 
@@ -35,31 +35,34 @@ class LearnPack:
         #  "data": {}
         # }
 
-        webhook = LearnpackWebhook.objects.filter(id=webhook_id).first()
+        webhook = LearnPackWebhook.objects.filter(id=webhook_id).first()
         if not webhook:
             raise Exception('Invalid webhook')
 
-        if not webhook.event:
-            raise Exception('Impossible to determine learnpack event')
+        try:
 
-        if not webhook.payload:
-            raise Exception('Impossible to retrive webhook payload')
+            if not webhook.event:
+                raise Exception('Impossible to determine learnpack event')
 
-        if 'slug' not in webhook.payload:
-            raise Exception('Impossible to retrive learnpack exercise slug')
+            if not webhook.payload:
+                raise Exception('Impossible to retrive webhook payload')
 
-        if 'user_id' not in webhook.payload:
-            raise Exception('Impossible to retrive learnpack user id')
-        else:
-            user_id = webhook.payload['user_id']
-            user = User.objects.filter(id=user_id).first()
-            if user is None:
-                raise Exception('Learnpack student with user id {user_id} not found')
+            if 'slug' not in webhook.payload:
+                raise Exception('Impossible to retrive learnpack exercise slug')
+
+            if 'user_id' not in webhook.payload:
+                raise Exception('Impossible to retrive learnpack user id')
             else:
-                webhook.student = user
+                user_id = webhook.payload['user_id']
+                user = User.objects.filter(id=user_id).first()
+                if user is None:
+                    raise Exception(f'Learnpack student with user id {user_id} not found')
+                else:
+                    webhook.student = user
 
-        logger.debug(f'Executing => {webhook.event}')
-        if hasattr(actions, webhook.event):
+            logger.debug(f'Executing => {webhook.event}')
+            if not hasattr(actions, webhook.event):
+                raise f'Learnpack telemetry event `{webhook.event}` is not implemented'
 
             logger.debug('Action found')
             fn = getattr(actions, webhook.event)
@@ -78,15 +81,12 @@ class LearnPack:
                 webhook.status_text = ''.join(traceback.format_exception(None, e, e.__traceback__))
                 webhook.save()
 
-        else:
-            message = f'Learnpack telemetry event `{webhook.event}` is not implemented'
-            logger.debug(message)
-
+        except Exception as e:
             webhook.status = 'ERROR'
-            webhook.status_text = message
+            webhook.status_text = str(e)
             webhook.save()
 
-            raise Exception(message)
+            raise e
 
     @staticmethod
     def add_webhook_to_log(payload: dict):
