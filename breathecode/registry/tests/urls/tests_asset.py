@@ -54,6 +54,8 @@ def get_serializer(asset, data={}):
         asset.readme_url,
         'solution_video_url':
         asset.solution_video_url,
+        'solution_url':
+        asset.solution_url,
         'status':
         asset.status,
         'url':
