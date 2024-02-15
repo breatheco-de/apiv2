@@ -536,6 +536,7 @@ def sync_automations(ac_academy):
 
     if 'automations' not in response:
         logger.error('Invalid automations incoming from AC')
+        logger.debug(response)
         return False
 
     automations = response['automations']
