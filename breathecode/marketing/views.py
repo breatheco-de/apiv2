@@ -40,6 +40,7 @@ from .serializers import (
     ActiveCampaignAcademyBigSerializer,
     ActiveCampaignAcademySerializer,
     FormEntryHookSerializer,
+    PUTAutomationSerializer,
 )
 from breathecode.services.activecampaign import ActiveCampaign
 from .actions import convert_data_frame, sync_tags, sync_automations, validate_email
@@ -494,7 +495,7 @@ class AcademyAutomationView(APIView, GenerateLookupsMixin):
     """
     extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
-    @capable_of('read_lead')
+    @capable_of('read_tag')
     def get(self, request, format=None, academy_id=None):
         handler = self.extensions(request)
         items = Automation.objects.filter(ac_academy__academy__id=academy_id)
@@ -511,6 +512,45 @@ class AcademyAutomationView(APIView, GenerateLookupsMixin):
         items = handler.queryset(items)
         serializer = AutomationSmallSerializer(items, many=True)
         return handler.response(serializer.data)
+
+    @capable_of('crud_tag')
+    def put(self, request, automation_id=None, academy_id=None):
+        many = isinstance(request.data, list)
+        if not many:
+            automation = Automation.objects.filter(id=automation_id,
+                                                   ac_academy__academy__id=academy_id).first()
+            if automation is None:
+                raise ValidationException(f'Automation {automation_id} not found for this academy',
+                                          slug='automation-not-found')
+        else:
+            automation = []
+            index = -1
+            for x in request.data:
+                index = index + 1
+
+                if 'id' not in x:
+                    raise ValidationException('Cannot determine automation in '
+                                              f'index {index}',
+                                              slug='without-id')
+
+                instance = Automation.objects.filter(id=x['id'], ac_academy__academy__id=academy_id).first()
+
+                if not instance:
+                    raise ValidationException(f'Automation({x["id"]}) does not exist on this academy',
+                                              code=404,
+                                              slug='not-found')
+                automation.append(instance)
+        serializer = PUTAutomationSerializer(automation,
+                                             data=request.data,
+                                             context={
+                                                 'request': request,
+                                                 'academy': academy_id
+                                             },
+                                             many=many)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AcademyAppView(APIView, GenerateLookupsMixin):
