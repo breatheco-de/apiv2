@@ -504,6 +504,7 @@ HOOK_EVENTS = {
 
     # and custom events, make sure to trigger them at notify.receivers.py
     'cohort_user.edu_status_updated': 'admissions.CohortUser.edu_status_updated',
+    'cohort.cohort_stage_updated': 'admissions.Cohort.cohort_stage_updated',
     'user_invite.invite_status_updated': 'authenticate.UserInvite.invite_status_updated',
     'asset.asset_status_updated': 'registry.Asset.asset_status_updated',
     'event.event_status_updated': 'events.Event.event_status_updated',

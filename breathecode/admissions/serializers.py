@@ -423,6 +423,28 @@ class CohortUserHookSerializer(serpy.Serializer):
     created_at = serpy.Field()
 
 
+class CohortHookSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    language = serpy.Field()
+    kickoff_date = serpy.Field()
+    ending_date = serpy.Field()
+    intro_video = serpy.Field()
+    current_day = serpy.Field()
+    current_module = serpy.Field()
+    remote_available = serpy.Field()
+    online_meeting_url = serpy.Field()
+    history_log = serpy.Field()
+    syllabus_version = SyllabusVersionSmallSerializer(required=False)
+    academy = GetAcademySerializer()
+    stage = serpy.Field()
+    is_hidden_on_prework = serpy.Field()
+    available_as_saas = serpy.Field()
+
+
 class GetCohortUserSerializer(serpy.Serializer):
     """The serializer schema definition."""
     id = serpy.Field()
