@@ -165,6 +165,7 @@ def forward_booking_url(request, mentor_slug, token):
             'mentor': mentor,
             'mentee': token.user,
             'booking_url': booking_url,
+            'LOGO_IN_CONTENT': True,
             **obj,
         })
 

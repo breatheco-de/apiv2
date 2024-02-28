@@ -86,6 +86,7 @@ def render_successfully(mentor_profile, user, fix_logo=False, academy=None):
         'mentor': mentor_profile,
         'mentee': user,
         'booking_url': booking_url,
+        'LOGO_IN_CONTENT': True,
     }
 
     if academy:
