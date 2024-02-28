@@ -844,6 +844,7 @@ class CourseTranslation(models.Model):
     lang = models.CharField(max_length=5, validators=[validate_language_code])
     title = models.CharField(max_length=60)
     description = models.CharField(max_length=255)
+    short_description = models.CharField(max_length=120, null=True, default=None, blank=True)
     landing_url = models.URLField(
         default=None,
         null=True,

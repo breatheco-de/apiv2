@@ -360,6 +360,7 @@ class GetSyllabusSmallSerializer(serpy.Serializer):
 class GetCourseTranslationSerializer(serpy.Serializer):
     title = serpy.Field()
     description = serpy.Field()
+    short_description = serpy.Field()
     lang = serpy.Field()
     course_modules = serpy.Field()
     landing_url = serpy.Field()
