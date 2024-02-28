@@ -510,6 +510,15 @@ class PUTTagSerializer(serializers.ModelSerializer):
         list_serializer_class = TagListSerializer
 
 
+class PUTAutomationSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(required=False)
+
+    class Meta:
+        model = Automation
+        exclude = ('acp_id', 'ac_academy', 'created_at', 'updated_at', 'entered', 'exited')
+        list_serializer_class = TagListSerializer
+
+
 class ActiveCampaignAcademySerializer(serializers.ModelSerializer):
 
     class Meta:

@@ -709,8 +709,17 @@ def extend_roles(roles: list[RoleType]) -> None:
         'Growth Manager',
         'caps':
         extend(roles, ['staff', 'community_manager']) + [
-            'crud_media', 'read_activity', 'read_lead', 'read_won_lead', 'crud_review', 'crud_shortlink',
-            'crud_tag', 'crud_keyword', 'crud_keywordcluster', 'crud_asset', 'read_category'
+            'crud_media',
+            'read_activity',
+            'read_lead',
+            'read_won_lead',
+            'crud_review',
+            'crud_shortlink',
+            'crud_tag',
+            'crud_keyword',
+            'crud_keywordcluster',
+            'crud_asset',
+            'read_category',
         ]
     })
     roles.append({

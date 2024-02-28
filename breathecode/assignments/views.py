@@ -16,6 +16,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from slugify import slugify
 
+from breathecode.services.learnpack import LearnPack
 import breathecode.activity.tasks as tasks_activity
 import breathecode.assignments.tasks as tasks
 from breathecode.admissions.models import Cohort, CohortUser
@@ -152,6 +153,37 @@ def sync_cohort_tasks_view(request, cohort_id=None):
 
     serializer = TaskGETSerializer(syncronized, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AssignmentTelemetryView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    # @capable_of('read_assignment_telemetry')
+    # def get(self, request, academy_id=None):
+
+    #     learnpack_payload = request.body
+    #     items = AssetComment.objects.filter(asset__academy__id=academy_id)
+    #     lookup = {}
+
+    #     serializer = AcademyCommentSerializer(items, many=True)
+    #     return handler.response(serializer.data)
+
+    @has_permission('upload_assignment_telemetry')
+    def post(self, request, academy_id=None):
+
+        webhook = LearnPack.add_webhook_to_log(request.data)
+
+        if webhook:
+            tasks.async_learnpack_webhook.delay(webhook.id)
+        else:
+            logger.debug('One request cannot be parsed, maybe you should update `LearnPack'
+                         '.add_webhook_to_log`')
+            logger.debug(request.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response('ok', content_type='text/plain')
 
 
 class FinalProjectScreenshotView(APIView):
