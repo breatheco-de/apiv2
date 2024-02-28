@@ -165,6 +165,7 @@ def put_serializer(academy, category, asset, data={}):
         'seo_keywords': [],
         'slug': asset.slug,
         'solution_video_url': None,
+        'solution_url': None,
         'status': 'NOT_STARTED',
         'status_text': None,
         'sync_status': None,

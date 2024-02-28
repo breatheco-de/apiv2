@@ -150,7 +150,8 @@ class AcademyEventTestSuite(EventTestCase):
 
         event_type_set = event_type_model.event_type_set
         template_data['BUTTON'] = 'Get more consumables'
-        template_data['LINK'] = f'https://4geeks.com/checkout?event_type_set={event_type_set.slug}'
+        template_data[
+            'LINK'] = f'https://4geeks.com/checkout?event_type_set={event_type_set.slug}&token={model.token.key}'
         template_data['GO_BACK'] = 'Go back to Dashboard'
         template_data['URL_BACK'] = 'https://4geeks.com/choose-program'
 
@@ -504,7 +505,7 @@ class AcademyEventTestSuite(EventTestCase):
 
         sugested = model.plan_offer.suggested_plan.slug
         template_data['BUTTON'] = 'Get more consumables'
-        template_data['LINK'] = f'https://4geeks.com/checkout?plan={sugested}'
+        template_data['LINK'] = f'https://4geeks.com/checkout?plan={sugested}&token={model.token.key}'
         template_data['GO_BACK'] = 'Go back to Dashboard'
         template_data['URL_BACK'] = 'https://4geeks.com/choose-program'
         content = self.bc.format.from_bytes(response.content)
