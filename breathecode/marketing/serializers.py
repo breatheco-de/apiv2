@@ -223,6 +223,7 @@ class FormEntryHookSerializer(serpy.Serializer):
     ac_expected_cohort_date = serpy.Field()
 
     cohort = serpy.MethodField(required=False)
+    is_won = serpy.MethodField(required=False)
 
     def get_cohort(self, obj):
         _cohort = Cohort.objects.filter(slug=obj.ac_expected_cohort).first()
@@ -230,6 +231,9 @@ class FormEntryHookSerializer(serpy.Serializer):
             return _cohort
 
         return CohortHookSerializer(_cohort).data
+    
+    def is_won(self, obj):
+        return obj.deal_status == 'WON'
 
 
 class FormEntrySmallSerializer(serpy.Serializer):
