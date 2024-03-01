@@ -14,13 +14,15 @@ from django.utils import timezone
 from django_redis import get_redis_connection
 from google.cloud import bigquery
 from redis.exceptions import LockError
+from task_manager.core.exceptions import AbortTask, RetryTask
+from task_manager.django.decorators import task
 
 from breathecode.activity import actions
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.admissions.utils.cohort_log import CohortDayLog
 from breathecode.services.google_cloud.big_query import BigQuery
 from breathecode.utils import NDB
-from breathecode.utils.decorators import AbortTask, RetryTask, TaskPriority, task
+from breathecode.utils.decorators import TaskPriority
 from breathecode.utils.redis import Lock
 
 from .models import StudentActivity
@@ -42,8 +44,7 @@ API_URL = os.getenv('API_URL', '')
 logger = logging.getLogger(__name__)
 
 ISO_STRING_PATTERN = re.compile(
-    r'^\d{4}-(0[1-9]|1[0-2])-([12]\d|0[1-9]|3[01])T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\.\d{6}(Z|\+\d{2}:\d{2})?$'
-)
+    r'^\d{4}-(0[1-9]|1[0-2])-([12]\d|0[1-9]|3[01])T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)\.\d{6}(Z|\+\d{2}:\d{2})?$')
 
 
 @shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
@@ -78,8 +79,7 @@ def get_attendancy_log(self, cohort_id: int):
         return
 
     client = NDB(StudentActivity)
-    attendance = client.fetch(
-        [StudentActivity.cohort == cohort.slug, StudentActivity.slug == 'classroom_attendance'])
+    attendance = client.fetch([StudentActivity.cohort == cohort.slug, StudentActivity.slug == 'classroom_attendance'])
     unattendance = client.fetch(
         [StudentActivity.cohort == cohort.slug, StudentActivity.slug == 'classroom_unattendance'])
 
@@ -269,10 +269,7 @@ def upload_activities(self, task_manager_id: int, **_):
 
     for struct in new_structs:
         new_schema.append(
-            bigquery.SchemaField(struct,
-                                 bigquery.enums.SqlTypeNames.STRUCT,
-                                 'NULLABLE',
-                                 fields=new_structs[struct]))
+            bigquery.SchemaField(struct, bigquery.enums.SqlTypeNames.STRUCT, 'NULLABLE', fields=new_structs[struct]))
 
     try:
         if new_schema:
@@ -303,8 +300,7 @@ def add_activity(user_id: int,
             'If related_type is provided, either related_id or related_slug must be provided, but not both.')
 
     if not related_type and (related_id or related_slug):
-        raise AbortTask(
-            'If related_type is not provided, both related_id and related_slug must also be absent.')
+        raise AbortTask('If related_type is not provided, both related_id and related_slug must also be absent.')
 
     client = None
     if IS_DJANGO_REDIS:
@@ -335,8 +331,7 @@ def add_activity(user_id: int,
                                          fields=[
                                              bigquery.SchemaField('type', bigquery.enums.SqlTypeNames.STRING,
                                                                   'NULLABLE'),
-                                             bigquery.SchemaField('id', bigquery.enums.SqlTypeNames.INT64,
-                                                                  'NULLABLE'),
+                                             bigquery.SchemaField('id', bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
                                              bigquery.SchemaField('slug', bigquery.enums.SqlTypeNames.STRING,
                                                                   'NULLABLE'),
                                          ]),
@@ -383,10 +378,7 @@ def add_activity(user_id: int,
                 fields.append(bigquery.SchemaField(key, t))
                 res['data']['meta'][key] = meta[key]
 
-            meta_field = bigquery.SchemaField('meta',
-                                              bigquery.enums.SqlTypeNames.STRUCT,
-                                              'NULLABLE',
-                                              fields=fields)
+            meta_field = bigquery.SchemaField('meta', bigquery.enums.SqlTypeNames.STRUCT, 'NULLABLE', fields=fields)
             # meta_field = bigquery.SchemaField('meta', 'STRUCT', 'NULLABLE', fields=fields)
             res['schema'].append(meta_field)
             # res['schema']['meta'] = meta_field

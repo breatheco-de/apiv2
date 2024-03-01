@@ -3,10 +3,10 @@ Test cases for /user
 """
 import pytest
 from django.urls.base import reverse_lazy
+from linked_services.django.actions import reset_app_cache
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from breathecode.authenticate.actions import reset_app_cache
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 
@@ -61,8 +61,7 @@ def db_item(data={}):
         },
     ]),
 ])
-def test_webhook_not_registered(bc: Breathecode, client: APIClient, how_many, webhook_id, webhook_type,
-                                user_id, data):
+def test_webhook_not_registered(bc: Breathecode, client: APIClient, how_many, webhook_id, webhook_type, user_id, data):
     app = {'require_an_agreement': False}
     model = bc.database.create(user=2, app=app)
 
@@ -112,7 +111,7 @@ def test_webhook_not_registered(bc: Breathecode, client: APIClient, how_many, we
                 'data': data,
             }),
         ]
-    assert bc.database.list_of('authenticate.FirstPartyWebHookLog') == db
+    assert bc.database.list_of('linked_services.FirstPartyWebhookLog') == db
 
 
 @pytest.mark.parametrize(
@@ -131,8 +130,7 @@ def test_webhook_not_registered(bc: Breathecode, client: APIClient, how_many, we
             },
         ]),
     ])
-def test_webhook_registered(bc: Breathecode, client: APIClient, how_many, webhook_id, webhook_type, user_id,
-                            data):
+def test_webhook_registered(bc: Breathecode, client: APIClient, how_many, webhook_id, webhook_type, user_id, data):
     app = {'require_an_agreement': False}
     first_party_webhook_log = {
         'external_id': webhook_id,
@@ -196,4 +194,4 @@ def test_webhook_registered(bc: Breathecode, client: APIClient, how_many, webhoo
                 'data': data,
             }),
         ]
-    assert bc.database.list_of('authenticate.FirstPartyWebHookLog') == db
+    assert bc.database.list_of('linked_services.FirstPartyWebhookLog') == db

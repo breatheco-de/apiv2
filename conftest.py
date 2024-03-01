@@ -2,21 +2,32 @@ import importlib
 import os
 import random
 from unittest.mock import MagicMock, patch
-import pytest
-from scripts.utils.environment import reset_environment, test_environment
-from breathecode.utils.exceptions import TestError
+
 import numpy as np
-from PIL import Image
-from faker import Faker
-from urllib3.connectionpool import HTTPConnectionPool
-from django.db.models.signals import ModelSignal
-from breathecode.notify.utils.hook_manager import HookManagerClass
-from django.utils import timezone
+import pytest
 from django.core.cache import cache
-from rest_framework.test import APIClient
+from django.db.models.signals import (
+    ModelSignal,
+    m2m_changed,
+    post_delete,
+    post_init,
+    post_migrate,
+    post_save,
+    pre_delete,
+    pre_init,
+    pre_migrate,
+    pre_save,
+)
 from django.dispatch.dispatcher import Signal
-from django.db.models.signals import (pre_init, post_init, pre_save, post_save, pre_delete, post_delete,
-                                      m2m_changed, pre_migrate, post_migrate)
+from django.utils import timezone
+from faker import Faker
+from PIL import Image
+from rest_framework.test import APIClient
+from urllib3.connectionpool import HTTPConnectionPool
+
+from breathecode.notify.utils.hook_manager import HookManagerClass
+from breathecode.utils.exceptions import TestError
+from scripts.utils.environment import reset_environment, test_environment
 
 # set ENV as test before run django
 os.environ['ENV'] = 'test'
@@ -182,12 +193,13 @@ def dont_wait_for_rescheduling_tasks():
     You can re-enable it within a test by calling the provided wrapper.
     """
 
-    with patch('breathecode.utils.decorators.task.RETRIES_LIMIT', 2):
-        with patch('breathecode.utils.decorators.task.Task.reattempt_settings',
-                   lambda *args, **kwargs: dict()):
-            with patch('breathecode.utils.decorators.task.Task.circuit_breaker_settings',
-                       lambda *args, **kwargs: dict()):
-                yield
+    from task_manager.core.settings import set_settings
+
+    set_settings(RETRIES_LIMIT=2)
+
+    with patch('task_manager.core.decorators.Task.reattempt_settings', lambda *args, **kwargs: dict()):
+        with patch('task_manager.core.decorators.Task.circuit_breaker_settings', lambda *args, **kwargs: dict()):
+            yield
 
 
 @pytest.fixture(autouse=True)
@@ -234,15 +246,15 @@ def signals():
     }
 
     signal_files = [
-        '.'.join(x.replace(root_directory + separator, '').replace('.py', '').split(separator))
-        for x in signal_files if 'breathecode' in x
+        '.'.join(x.replace(root_directory + separator, '').replace('.py', '').split(separator)) for x in signal_files
+        if 'breathecode' in x
     ]
 
     for module_path in signal_files:
         module = importlib.import_module(module_path)
         signals = [
-            x for x in dir(module) if x[0] != '_' and (
-                isinstance(getattr(module, x), Signal) or isinstance(getattr(module, x), ModelSignal))
+            x for x in dir(module)
+            if x[0] != '_' and (isinstance(getattr(module, x), Signal) or isinstance(getattr(module, x), ModelSignal))
         ]
 
         for signal_path in signals:

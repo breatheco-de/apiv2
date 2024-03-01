@@ -1,5 +1,5 @@
-from ...models import App, Scope, AppRequiredScope, AppOptionalScope
 from django.core.management.base import BaseCommand
+from linked_services.django.models import App, AppOptionalScope, AppRequiredScope, Scope
 
 # if it does not require an agreement, add scopes is not necessary
 APPS = [

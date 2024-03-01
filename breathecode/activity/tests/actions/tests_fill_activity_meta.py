@@ -3,8 +3,10 @@ Test /answer
 """
 
 from django.utils import timezone
+from task_manager.core.exceptions import RetryTask
+
 from breathecode.activity.actions import FillActivityMeta
-from breathecode.utils.decorators.task import AbortTask, RetryTask
+
 from ..mixins import MediaTestCase
 
 UTC_NOW = timezone.now()

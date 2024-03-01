@@ -10,6 +10,7 @@ from django.db.models import Q
 from django.http import HttpResponse, HttpResponseRedirect, StreamingHttpResponse
 from django.shortcuts import render
 from django.utils import timezone
+from linked_services.django.service import Service
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import PermissionDenied
@@ -22,19 +23,12 @@ from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.assignments.permissions.consumers import code_revision_service
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy, Token
-from breathecode.utils import (
-    GenerateLookupsMixin,
-    ValidationException,
-    capable_of,
-    num_to_roman,
-    response_207,
-)
+from breathecode.utils import GenerateLookupsMixin, ValidationException, capable_of, num_to_roman, response_207
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.decorators.capable_of import acapable_of
 from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
-from breathecode.utils.service import Service
 
 from .actions import deliver_task, sync_cohort_tasks
 from .caches import TaskCache
@@ -70,8 +64,7 @@ class TaskTeacherView(APIView):
         items = Task.objects.all()
         logger.debug(f'Found {items.count()} tasks')
 
-        profile_ids = ProfileAcademy.objects.filter(user=request.user.id).values_list('academy__id',
-                                                                                      flat=True)
+        profile_ids = ProfileAcademy.objects.filter(user=request.user.id).values_list('academy__id', flat=True)
         if not profile_ids:
             raise ValidationException(
                 'The quest user must belong to at least one academy to be able to request student tasks',
@@ -461,8 +454,7 @@ class TaskMeAttachmentView(APIView):
         for index in range(0, len(files)):
             file = files[index]
             if file.content_type not in mime_allow:
-                raise ValidationException(
-                    f'You can upload only files on the following formats: {",".join(mime_allow)}')
+                raise ValidationException(f'You can upload only files on the following formats: {",".join(mime_allow)}')
 
         for index in range(0, len(files)):
             file = files[index]
@@ -663,12 +655,7 @@ class TaskMeView(APIView):
         if isinstance(request.data, list) == False:
             payload = [request.data]
 
-        serializer = PostTaskSerializer(data=payload,
-                                        context={
-                                            'request': request,
-                                            'user_id': user_id
-                                        },
-                                        many=True)
+        serializer = PostTaskSerializer(data=payload, context={'request': request, 'user_id': user_id}, many=True)
         if serializer.is_valid():
             tasks = serializer.save()
             # tasks.teacher_task_notification.delay(serializer.data['id'])
@@ -689,21 +676,16 @@ class TaskMeView(APIView):
                 raise ValidationException('Task not found', code=404, slug='task-not-found')
 
             if item.user.id != request.user.id:
-                raise ValidationException('Task not found for this user',
-                                          code=400,
-                                          slug='task-not-found-for-this-user')
+                raise ValidationException('Task not found for this user', code=400, slug='task-not-found-for-this-user')
 
             item.delete()
 
         else:  # task_id is None:
             ids = request.GET.get('id', '')
             if ids == '':
-                raise ValidationException('Missing querystring propery id for bulk delete tasks',
-                                          slug='missing-id')
+                raise ValidationException('Missing querystring propery id for bulk delete tasks', slug='missing-id')
 
-            ids_to_delete = [
-                int(id.strip()) if id.strip().isnumeric() else id.strip() for id in ids.split(',')
-            ]
+            ids_to_delete = [int(id.strip()) if id.strip().isnumeric() else id.strip() for id in ids.split(',')]
 
             all = Task.objects.filter(id__in=ids_to_delete)
             do_not_belong = all.exclude(user__id=request.user.id)
@@ -727,10 +709,7 @@ class TaskMeView(APIView):
 
             if ids_to_delete:
                 responses.append(
-                    MultiStatusResponse('Task not found',
-                                        code=404,
-                                        slug='task-not-found',
-                                        queryset=ids_to_delete))
+                    MultiStatusResponse('Task not found', code=404, slug='task-not-found', queryset=ids_to_delete))
 
             if do_not_belong or ids_to_delete:
                 response = response_207(responses, 'associated_slug')
@@ -849,9 +828,7 @@ class SubtaskMeView(APIView):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         if not isinstance(request.data, list):
-            raise ValidationException('Subtasks json must be an array of tasks',
-                                      code=404,
-                                      slug='json-as-array')
+            raise ValidationException('Subtasks json must be an array of tasks', code=404, slug='json-as-array')
 
         subtasks_ids = []
         for t in request.data:
@@ -862,24 +839,19 @@ class SubtaskMeView(APIView):
             else:
                 try:
                     found = subtasks_ids.index(t['id'])
-                    raise ValidationException(
-                        f'Duplicated subtask id {t["id"]} for the assignment on position {found}',
-                        code=404,
-                        slug='duplicated-subtask-unique-id')
+                    raise ValidationException(f'Duplicated subtask id {t["id"]} for the assignment on position {found}',
+                                              code=404,
+                                              slug='duplicated-subtask-unique-id')
                 except Exception:
                     subtasks_ids.append(t['id'])
 
             if not 'status' in t:
-                raise ValidationException('All substasks must have a status',
-                                          code=404,
-                                          slug='missing-subtask-status')
+                raise ValidationException('All substasks must have a status', code=404, slug='missing-subtask-status')
             elif t['status'] not in ['DONE', 'PENDING']:
                 raise ValidationException('Subtask status must be DONE or PENDING, received: ' + t['status'])
 
             if not 'label' in t:
-                raise ValidationException('All substasks must have a label',
-                                          code=404,
-                                          slug='missing-task-label')
+                raise ValidationException('All substasks must have a label', code=404, slug='missing-task-label')
 
         item.subtasks = request.data
         item.save()
@@ -942,8 +914,7 @@ class AcademyCodeRevisionView(APIView):
 
     @acapable_of('read_assignment')
     async def get(self, request, academy_id=None, task_id=None, coderevision_id=None):
-        if task_id and not (task := await Task.objects.filter(id=task_id,
-                                                              cohort__academy__id=academy_id).afirst()):
+        if task_id and not (task := await Task.objects.filter(id=task_id, cohort__academy__id=academy_id).afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         params = {}
@@ -958,13 +929,14 @@ class AcademyCodeRevisionView(APIView):
         if coderevision_id is not None:
             url = f'{url}/{coderevision_id}'
 
+        print('GETTING', 's')
         async with Service('rigobot', proxy=True) as s:
+            print('GETTING', s)
             return await s.get(url, params=params)
 
     @acapable_of('crud_assignment')
     async def post(self, request, academy_id, task_id=None):
-        if task_id and not (task := await Task.objects.filter(id=task_id,
-                                                              cohort__academy__id=academy_id).afirst()):
+        if task_id and not (task := await Task.objects.filter(id=task_id, cohort__academy__id=academy_id).afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         params = {}
@@ -982,8 +954,7 @@ class AcademyCommitFileView(APIView):
 
     @acapable_of('read_assignment')
     async def get(self, request, academy_id, task_id=None, commitfile_id=None):
-        if task_id and not (task := await Task.objects.filter(id=task_id,
-                                                              cohort__academy__id=academy_id).afirst()):
+        if task_id and not (task := await Task.objects.filter(id=task_id, cohort__academy__id=academy_id).afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         params = {}

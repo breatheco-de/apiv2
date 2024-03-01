@@ -9,6 +9,7 @@ import requests
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework.exceptions import APIException
+from task_manager.core.exceptions import RetryTask
 
 from breathecode.authenticate.models import CredentialsFacebook
 from breathecode.notify.actions import send_email_message
@@ -20,7 +21,6 @@ from breathecode.services.activecampaign import (
     map_ids,
 )
 from breathecode.utils import getLogger
-from breathecode.utils.decorators.task import RetryTask
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
 
@@ -89,8 +89,8 @@ def validate_email(email, lang):
     print('====================6')
     print('====================6')
 
-    resp = requests.get(
-        f'https://emailvalidation.abstractapi.com/v1/?api_key={MAIL_ABSTRACT_KEY}&email={email}', timeout=10)
+    resp = requests.get(f'https://emailvalidation.abstractapi.com/v1/?api_key={MAIL_ABSTRACT_KEY}&email={email}',
+                        timeout=10)
     print(61)
     data = resp.json()
     print(62)
@@ -113,8 +113,7 @@ def validate_email(email, lang):
         raise ValidationException(
             translation(
                 lang,
-                en=
-                'It seems you are using a disposable email service. Please provide a different email address',
+                en='It seems you are using a disposable email service. Please provide a different email address',
                 es=
                 'Parece que estás utilizando un proveedor de correos electronicos temporales. Por favor cambia tu dirección de correo electrónico.',
                 slug='disposable-email'))
@@ -127,8 +126,7 @@ def validate_email(email, lang):
             translation(
                 lang,
                 en='The email you have provided seems invalid, please provide a different email address.',
-                es=
-                'El correo electrónico que haz especificado parece inválido, por favor corrige tu correo electronico',
+                es='El correo electrónico que haz especificado parece inválido, por favor corrige tu correo electronico',
                 slug='invalid-email'))
 
     print(69)
@@ -136,8 +134,7 @@ def validate_email(email, lang):
         print(610)
         raise ValidationException(translation(
             lang,
-            en=
-            'The email address seems to have poor quality. Are you able to provide a different email address?',
+            en='The email address seems to have poor quality. Are you able to provide a different email address?',
             es=
             'El correo electrónico que haz especificado parece de mala calidad. ¿Podrías especificarnos otra dirección?',
             slug='invalid-email'),
@@ -304,8 +301,7 @@ def register_new_lead(form_entry=None):
 
     if (automations is None or len(automations) == 0) and len(tags) > 0:
         if tags[0].automation is None:
-            raise ValidationException(
-                'No automation was specified and the the specified tag has no automation either')
+            raise ValidationException('No automation was specified and the the specified tag has no automation either')
 
         automations = [tags[0].automation.acp_id]
 
@@ -373,8 +369,7 @@ def register_new_lead(form_entry=None):
             'new_contact',
             ac_academy.academy.marketing_email,
             {
-                'subject':
-                f"New contact from the website {form_entry['first_name']} {form_entry['last_name']}",
+                'subject': f"New contact from the website {form_entry['first_name']} {form_entry['last_name']}",
                 'full_name': form_entry['first_name'] + ' ' + form_entry['last_name'],
                 'client_comments': form_entry['client_comments'],
                 'data': {
@@ -571,8 +566,8 @@ def save_get_geolocal(contact, form_entry=None):
 
     if 'latitude' not in form_entry or 'longitude' not in form_entry:
         return False
-    if form_entry['latitude'] == '' or form_entry['longitude'] == '' or form_entry[
-            'latitude'] is None or form_entry['longitude'] is None:
+    if form_entry['latitude'] == '' or form_entry['longitude'] == '' or form_entry['latitude'] is None or form_entry[
+            'longitude'] is None:
         return False
 
     result = {}
@@ -653,10 +648,7 @@ STARTS_WITH_COMMA_PATTERN = re.compile(r'^,')
 ENDS_WITH_COMMA_PATTERN = re.compile(r',$')
 
 
-def validate_marketing_tags(tags: str,
-                            academy_id: int,
-                            types: Optional[list] = None,
-                            lang: str = 'en') -> None:
+def validate_marketing_tags(tags: str, academy_id: int, types: Optional[list] = None, lang: str = 'en') -> None:
     if tags.find(',,') != -1:
         raise ValidationException(
             translation(lang,
@@ -721,9 +713,7 @@ def delete_tag(tag, include_other_academies=False):
 
     ac_academy = tag.ac_academy
     if ac_academy is None:
-        raise ValidationException(f'Invalid ac_academy for this tag {tag.slug}',
-                                  code=400,
-                                  slug='invalid-ac_academy')
+        raise ValidationException(f'Invalid ac_academy for this tag {tag.slug}', code=400, slug='invalid-ac_academy')
 
     client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
     try:

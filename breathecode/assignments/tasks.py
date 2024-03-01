@@ -3,12 +3,12 @@ import os
 import re
 
 from celery import shared_task
+from linked_services.django.service import Service
 
 import breathecode.notify.actions as actions
 from breathecode.admissions.models import CohortUser
 from breathecode.assignments.actions import NOTIFICATION_STRINGS, task_is_valid_for_notifications
-from breathecode.utils.decorators.task import TaskPriority
-from breathecode.utils.service import Service
+from breathecode.utils import TaskPriority
 
 from .models import Task
 
@@ -107,9 +107,7 @@ def set_cohort_user_assignments(task_id: int):
     user_history_log['delivered_assignments'] = user_history_log.get('delivered_assignments', [])
     user_history_log['pending_assignments'] = user_history_log.get('pending_assignments', [])
 
-    user_history_log['pending_assignments'] = [
-        x for x in user_history_log['pending_assignments'] if x['id'] != task.id
-    ]
+    user_history_log['pending_assignments'] = [x for x in user_history_log['pending_assignments'] if x['id'] != task.id]
 
     user_history_log['delivered_assignments'] = [
         x for x in user_history_log['delivered_assignments'] if x['id'] != task.id

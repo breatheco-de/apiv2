@@ -4,9 +4,9 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.db.models import Q
 from django.utils import timezone
+from linked_services.django.models import FirstPartyWebhookLog
 
 from breathecode.authenticate import tasks
-from breathecode.authenticate.models import FirstPartyWebhookLog
 
 logger = logging.getLogger(__name__)
 

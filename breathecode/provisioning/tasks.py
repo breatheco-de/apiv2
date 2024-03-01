@@ -1,21 +1,26 @@
-from datetime import datetime
-from io import BytesIO
 import logging
 import math
 import os
+from datetime import datetime
+from io import BytesIO
 from typing import Any
-from dateutil.relativedelta import relativedelta
-import pytz
 
 import pandas as pd
-from breathecode.payments.services.stripe import Stripe
-from breathecode.utils.decorators import task, AbortTask, RetryTask, TaskPriority
-
-from breathecode.provisioning import actions
-from breathecode.provisioning.models import ProvisioningBill, ProvisioningConsumptionEvent, ProvisioningUserConsumption
-from breathecode.services.google_cloud.storage import Storage
+import pytz
+from dateutil.relativedelta import relativedelta
 from django.utils import timezone
+from task_manager.core.exceptions import AbortTask, RetryTask
+from task_manager.django.decorators import task
 
+from breathecode.payments.services.stripe import Stripe
+from breathecode.provisioning import actions
+from breathecode.provisioning.models import (
+    ProvisioningBill,
+    ProvisioningConsumptionEvent,
+    ProvisioningUserConsumption,
+)
+from breathecode.services.google_cloud.storage import Storage
+from breathecode.utils.decorators import TaskPriority
 from breathecode.utils.io.file import cut_csv
 
 logger = logging.getLogger(__name__)
@@ -30,8 +35,8 @@ def get_stripe_price_id():
 
 
 MONTHS = [
-    'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October',
-    'November', 'December'
+    'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November',
+    'December'
 ]
 
 PANDAS_ROWS_LIMIT = 100
@@ -58,8 +63,7 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
 
     elif bills[0].vendor.name == 'Codespaces':
         fields = [
-            'Username', 'Date', 'Product', 'SKU', 'Quantity', 'Unit Type', 'Price Per Unit ($)', 'Multiplier',
-            'Owner'
+            'Username', 'Date', 'Product', 'SKU', 'Quantity', 'Unit Type', 'Price Per Unit ($)', 'Multiplier', 'Owner'
         ]
 
     storage = Storage()
@@ -196,9 +200,7 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
         handler = actions.add_gitpod_activity
 
     if not handler:
-        fields = [
-            'Username', 'Date', 'Product', 'SKU', 'Quantity', 'Unit Type', 'Price Per Unit ($)', 'Multiplier'
-        ]
+        fields = ['Username', 'Date', 'Product', 'SKU', 'Quantity', 'Unit Type', 'Price Per Unit ($)', 'Multiplier']
 
     if not handler and len(df.keys().intersection(fields)) == len(fields):
         handler = actions.add_codespaces_activity

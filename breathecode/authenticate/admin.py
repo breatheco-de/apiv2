@@ -1,23 +1,49 @@
-import base64, os, urllib.parse, logging, datetime
-from django.contrib import admin
-from django.utils import timezone
-from django.contrib.auth.admin import UserAdmin
-from django.contrib import messages
-from .actions import (delete_tokens, generate_academy_token, set_gitpod_user_expiration, reset_password,
-                      sync_organization_members)
-from django.utils.html import format_html
-from .models import (App, AppOptionalScope, AppRequiredScope, AppUserAgreement, CredentialsGithub, DeviceId,
-                     LegacyKey, OptionalScopeSet, Scope, Token, UserProxy, Profile, CredentialsSlack,
-                     ProfileAcademy, Role, CredentialsFacebook, Capability, UserInvite, CredentialsGoogle,
-                     AcademyProxy, GitpodUser, GithubAcademyUser, AcademyAuthSettings, GithubAcademyUserLog,
-                     UserSetting)
-from .tasks import async_set_gitpod_user_expiration
-from breathecode.utils.admin import change_field
+import base64
+import datetime
+import logging
+import os
+import urllib.parse
+
+from django.contrib import admin, messages
 from django.contrib.admin import SimpleListFilter
-from breathecode.utils.datetime_integer import from_now
-from django.db.models import QuerySet, Q
+from django.contrib.auth.admin import UserAdmin
+from django.db.models import Q, QuerySet
+from django.utils import timezone
+from django.utils.html import format_html
+
 import breathecode.marketing.actions as marketing_actions
+from breathecode.utils.admin import change_field
+from breathecode.utils.datetime_integer import from_now
+
 from . import tasks
+from .actions import (
+    delete_tokens,
+    generate_academy_token,
+    reset_password,
+    set_gitpod_user_expiration,
+    sync_organization_members,
+)
+from .models import (
+    AcademyAuthSettings,
+    AcademyProxy,
+    Capability,
+    CredentialsFacebook,
+    CredentialsGithub,
+    CredentialsGoogle,
+    CredentialsSlack,
+    DeviceId,
+    GithubAcademyUser,
+    GithubAcademyUserLog,
+    GitpodUser,
+    Profile,
+    ProfileAcademy,
+    Role,
+    Token,
+    UserInvite,
+    UserProxy,
+    UserSetting,
+)
+from .tasks import async_set_gitpod_user_expiration
 
 logger = logging.getLogger(__name__)
 
@@ -245,9 +271,8 @@ def recalculate_expiration(modeladmin, request, queryset):
     for gpu in gp_users:
         gpu = set_gitpod_user_expiration(gpu.id)
         if gpu is None:
-            messages.add_message(
-                request, messages.ERROR,
-                f'Error: Gitpod user {gpu.github_username} {gpu.assignee_id} could not be processed')
+            messages.add_message(request, messages.ERROR,
+                                 f'Error: Gitpod user {gpu.github_username} {gpu.assignee_id} could not be processed')
         else:
             messages.add_message(
                 request, messages.INFO,
@@ -293,8 +318,8 @@ class GitpodUserAdmin(admin.ModelAdmin):
     list_display = ('github_username', 'expiration', 'user', 'assignee_id', 'expires_at')
     search_fields = ['github_username', 'user__email', 'user__first_name', 'user__last_name', 'assignee_id']
     actions = [
-        async_recalculate_expiration, recalculate_expiration, extend_expiration_2_weeks,
-        extend_expiration_4_months, mark_as_expired
+        async_recalculate_expiration, recalculate_expiration, extend_expiration_2_weeks, extend_expiration_4_months,
+        mark_as_expired
     ]
 
     def expiration(self, obj):
@@ -355,12 +380,10 @@ class UsernameFilter(SimpleListFilter):
 
 @admin.register(GithubAcademyUser)
 class GithubAcademyUserAdmin(admin.ModelAdmin):
-    list_display = ('id', 'academy', 'user', 'github', 'storage_status', 'storage_action', 'created_at',
-                    'updated_at')
+    list_display = ('id', 'academy', 'user', 'github', 'storage_status', 'storage_action', 'created_at', 'updated_at')
     search_fields = ['username', 'user__email', 'user__first_name', 'user__last_name']
     actions = [
-        mark_as_pending_delete, mark_as_pending_add, mark_as_ignore, clear_storage_log,
-        look_for_github_credentials
+        mark_as_pending_delete, mark_as_pending_add, mark_as_ignore, clear_storage_log, look_for_github_credentials
     ]
     list_filter = ('academy', 'storage_status', 'storage_action', UsernameFilter)
     raw_id_fields = ['user']
@@ -374,8 +397,8 @@ class GithubAcademyUserAdmin(admin.ModelAdmin):
 
 @admin.register(GithubAcademyUserLog)
 class GithubAcademyUserLogAdmin(admin.ModelAdmin):
-    list_display = ('academy_user', 'academy_name', 'storage_status', 'storage_action', 'created_at',
-                    'valid_until', 'updated_at')
+    list_display = ('academy_user', 'academy_name', 'storage_status', 'storage_action', 'created_at', 'valid_until',
+                    'updated_at')
     search_fields = [
         'academy_user__username', 'academy_user__user__email', 'academy_user__user__first_name',
         'academy_user__user__last_name'
@@ -399,8 +422,7 @@ def sync_github_members(modeladmin, request, queryset):
             sync_organization_members(s.academy.id)
         except Exception as e:
             logger.error(f'Error while syncing organization members for {s.academy.name}: ' + str(e))
-            messages.error(request,
-                           f'Error while syncing organization members for {s.academy.name}: ' + str(e))
+            messages.error(request, f'Error while syncing organization members for {s.academy.name}: ' + str(e))
 
 
 def activate_github_sync(modeladmin, request, queryset):
@@ -417,8 +439,7 @@ def clean_errors(modeladmin, request, queryset):
 
 @admin.register(AcademyAuthSettings)
 class AcademyAuthSettingsAdmin(admin.ModelAdmin):
-    list_display = ('academy', 'github_is_sync', 'github_errors', 'github_username', 'github_owner',
-                    'authenticate')
+    list_display = ('academy', 'github_is_sync', 'github_errors', 'github_username', 'github_owner', 'authenticate')
     search_fields = ['academy__slug', 'academy__name', 'github__username', 'academy__id']
     actions = (clean_errors, activate_github_sync, deactivate_github_sync, sync_github_members)
     raw_id_fields = ['github_owner']
@@ -444,57 +465,3 @@ class AcademyAuthSettingsAdmin(admin.ModelAdmin):
         return format_html(
             f"<a href='/v1/auth/github?user={obj.github_owner.id}&url={self.github_callback}&scope={scopes}'>connect owner</a>"
         )
-
-
-@admin.register(Scope)
-class ScopeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug')
-    search_fields = ['name', 'slug']
-    actions = []
-
-
-@admin.register(App)
-class AppAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug', 'algorithm', 'strategy', 'schema', 'agreement_version',
-                    'require_an_agreement')
-    search_fields = ['name', 'slug']
-    list_filter = ['algorithm', 'strategy', 'schema', 'require_an_agreement']
-
-
-@admin.register(AppRequiredScope)
-class AppRequiredScopeAdmin(admin.ModelAdmin):
-    list_display = ('app', 'scope', 'agreed_at')
-    search_fields = ['app__name', 'app__slug', 'scope__name', 'scope__slug']
-    list_filter = ['app', 'scope']
-
-
-@admin.register(AppOptionalScope)
-class AppOptionalScopeAdmin(admin.ModelAdmin):
-    list_display = ('app', 'scope', 'agreed_at')
-    search_fields = ['app__name', 'app__slug', 'scope__name', 'scope__slug']
-    list_filter = ['app', 'scope']
-
-
-@admin.register(LegacyKey)
-class LegacyKeyAdmin(admin.ModelAdmin):
-    list_display = ('app', 'algorithm', 'strategy', 'schema')
-    search_fields = ['app__name', 'app__slug']
-    list_filter = ['algorithm', 'strategy', 'schema']
-    actions = []
-
-
-@admin.register(OptionalScopeSet)
-class OptionalScopeSetAdmin(admin.ModelAdmin):
-    list_display = ('id', )
-    search_fields = ['optional_scopes__name', 'optional_scopes__slug']
-    actions = []
-
-
-@admin.register(AppUserAgreement)
-class AppUserAgreementAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'app', 'optional_scope_set', 'agreement_version')
-    search_fields = [
-        'user__username', 'user__email', 'user__first_name', 'user__last_name', 'app__name', 'app__slug'
-    ]
-    list_filter = ['app']
-    actions = []

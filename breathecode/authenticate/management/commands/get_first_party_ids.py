@@ -4,9 +4,9 @@ from typing import TypedDict
 from django.contrib.auth.models import User, UserManager
 from django.core.management.base import BaseCommand
 from django.db.models import Q
+from linked_services.django.service import Service
 
 from breathecode.authenticate.actions import aget_app
-from breathecode.utils.service import Service
 
 from ...models import App, FirstPartyCredentials
 
@@ -20,10 +20,7 @@ class Command(BaseCommand):
     help = 'Get first-party IDs for specified apps'
 
     def add_arguments(self, parser) -> None:
-        parser.add_argument('app_names',
-                            nargs='+',
-                            type=str,
-                            help='List of app names for which to get first-party IDs')
+        parser.add_argument('app_names', nargs='+', type=str, help='List of app names for which to get first-party IDs')
 
     def handle(self, *args, **options) -> None:
         self.app_names = options['app_names']

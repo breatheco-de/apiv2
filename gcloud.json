@@ -1,0 +1,17 @@
+[
+    {
+        "origin": [
+            "https://breathecode.herokuapp.com/*",
+            "https://breathecode-test.herokuapp.com/*",
+            "https://4geeks.com/*",
+            "https://dev.4geeks.com/*",
+            "https://4geeksacademy.com/*",
+            "https://dev.4geeksacademy.com/*",
+            "https://admin.4geeks.com/*",
+            "https://dev.admin.4geeks.com/*"
+        ],
+        "method": ["GET", "PUT", "POST", "DELETE", "HEAD"],
+        "headers": ["x-custom-header"],
+        "maxAgeSeconds": 3600
+    }
+]

@@ -31,6 +31,7 @@ class AuthMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                              provisioning_container=False,
                              app_user_agreement=False,
                              first_party_credentials=False,
+                             task_watcher=False,
                              profile_academy='',
                              user_kwargs={},
                              group_kwargs={},
@@ -41,10 +42,7 @@ class AuthMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
 
         if not 'permission' in models and is_valid(permission):
             kargs = {}
-            models['permission'] = create_models(permission, 'auth.Permission', **{
-                **kargs,
-                **permission_kwargs
-            })
+            models['permission'] = create_models(permission, 'auth.Permission', **{**kargs, **permission_kwargs})
 
         if not 'group' in models and is_valid(group):
             kargs = {}
@@ -55,12 +53,12 @@ class AuthMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             models['group'] = create_models(group, 'auth.Group', **{**kargs, **group_kwargs})
 
         if not 'user' in models and (is_valid(user) or is_valid(authenticate) or is_valid(profile_academy)
-                                     or is_valid(manual_authenticate) or is_valid(cohort_user)
-                                     or is_valid(task) or is_valid(slack_team) or is_valid(mentor_profile)
-                                     or is_valid(consumable) or is_valid(invoice) or is_valid(subscription)
-                                     or is_valid(bag) or is_valid(user_setting)
-                                     or is_valid(consumption_session) or is_valid(provisioning_container)
-                                     or is_valid(app_user_agreement) or is_valid(first_party_credentials)):
+                                     or is_valid(manual_authenticate) or is_valid(cohort_user) or is_valid(task)
+                                     or is_valid(slack_team) or is_valid(mentor_profile) or is_valid(consumable)
+                                     or is_valid(invoice) or is_valid(subscription) or is_valid(bag)
+                                     or is_valid(user_setting) or is_valid(consumption_session)
+                                     or is_valid(provisioning_container) or is_valid(app_user_agreement)
+                                     or is_valid(first_party_credentials) or is_valid(task_watcher)):
             kargs = {}
 
             if 'group' in models:

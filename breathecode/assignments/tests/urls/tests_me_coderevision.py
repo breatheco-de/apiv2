@@ -6,9 +6,8 @@ import random
 from unittest.mock import MagicMock, call, patch
 
 from django.urls.base import reverse_lazy
+from linked_services.django.service import Service
 from rest_framework import status
-
-from breathecode.utils.service import Service
 
 from ..mixins import AssignmentsTestCase
 
@@ -51,7 +50,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         url = reverse_lazy('assignments:me_coderevision') + '?' + self.bc.format.querystring(query)
 
-        with patch.multiple('breathecode.utils.service.Service',
+        with patch.multiple('linked_services.core.service.Service',
                             __init__=MagicMock(return_value=None),
                             get=MagicMock(return_value=mock)):
             response = self.client.get(url)
@@ -86,7 +85,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         url = reverse_lazy('assignments:me_coderevision') + '?' + self.bc.format.querystring(query)
 
-        with patch.multiple('breathecode.utils.service.Service',
+        with patch.multiple('linked_services.core.service.Service',
                             __init__=MagicMock(return_value=None),
                             get=MagicMock(return_value=mock)):
             response = self.client.get(url)

@@ -5,13 +5,15 @@ from typing import Any, Optional
 
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
+from task_manager.core.exceptions import AbortTask, RetryTask
+from task_manager.django.decorators import task
 
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.notify import actions as notify_actions
 from breathecode.payments import actions
 from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import consume_service, reimburse_service_units
-from breathecode.utils.decorators import AbortTask, RetryTask, TaskPriority, task
+from breathecode.utils.decorators import TaskPriority
 from breathecode.utils.i18n import translation
 
 from .models import (
@@ -68,9 +70,8 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     # it needs to be paid
     if (scheduler.plan_handler and scheduler.plan_handler.subscription
             and scheduler.plan_handler.subscription.next_payment_at < utc_now):
-        raise AbortTask(
-            f'The subscription {scheduler.plan_handler.subscription.id} needs to be paid to renew the '
-            'consumables')
+        raise AbortTask(f'The subscription {scheduler.plan_handler.subscription.id} needs to be paid to renew the '
+                        'consumables')
 
     # is over
     if (scheduler.plan_handler and scheduler.plan_handler.plan_financing
@@ -80,19 +81,16 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     # it needs to be paid
     if (scheduler.plan_handler and scheduler.plan_handler.plan_financing
             and scheduler.plan_handler.plan_financing.next_payment_at < utc_now):
-        raise AbortTask(
-            f'The plan financing {scheduler.plan_handler.plan_financing.id} needs to be paid to renew '
-            'the consumables')
+        raise AbortTask(f'The plan financing {scheduler.plan_handler.plan_financing.id} needs to be paid to renew '
+                        'the consumables')
 
     if (scheduler.plan_handler and scheduler.plan_handler.plan_financing
             and scheduler.plan_handler.handler.plan.time_of_life
             and scheduler.plan_handler.handler.plan.time_of_life_unit
-            and scheduler.plan_handler.plan_financing.created_at +
-            actions.calculate_relative_delta(scheduler.plan_handler.handler.plan.time_of_life,
-                                             scheduler.plan_handler.handler.plan.time_of_life_unit)
+            and scheduler.plan_handler.plan_financing.created_at + actions.calculate_relative_delta(
+                scheduler.plan_handler.handler.plan.time_of_life, scheduler.plan_handler.handler.plan.time_of_life_unit)
             < utc_now):
-        logger.info(
-            f'The services related to PlanFinancing {scheduler.plan_handler.plan_financing.id} is over')
+        logger.info(f'The services related to PlanFinancing {scheduler.plan_handler.plan_financing.id} is over')
         return
 
     # is over
@@ -103,9 +101,8 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     # it needs to be paid
     if (scheduler.subscription_handler and scheduler.subscription_handler.subscription
             and scheduler.subscription_handler.subscription.next_payment_at < utc_now):
-        raise AbortTask(
-            f'The subscription {scheduler.subscription_handler.subscription.id} needs to be paid to renew '
-            'the consumables')
+        raise AbortTask(f'The subscription {scheduler.subscription_handler.subscription.id} needs to be paid to renew '
+                        'the consumables')
 
     if (scheduler.valid_until and scheduler.valid_until - timedelta(days=1) < utc_now):
         logger.info(f'The scheduler {scheduler.id} don\'t needs to be renewed')
@@ -134,8 +131,7 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
         service_item = scheduler.subscription_handler.service_item
         resource_valid_until = scheduler.subscription_handler.subscription.valid_until
 
-        selected_lookup = get_resource_lookup(scheduler.subscription_handler.subscription,
-                                              service_item.service)
+        selected_lookup = get_resource_lookup(scheduler.subscription_handler.subscription, service_item.service)
 
     unit = service_item.renew_at
     unit_type = service_item.renew_at_unit
@@ -305,8 +301,8 @@ def charge_subscription(self, subscription_id: int, **_: Any):
         return
 
     subscription.paid_at = utc_now
-    subscription.next_payment_at = utc_now + actions.calculate_relative_delta(
-        subscription.pay_every, subscription.pay_every_unit)
+    subscription.next_payment_at = utc_now + actions.calculate_relative_delta(subscription.pay_every,
+                                                                              subscription.pay_every_unit)
 
     subscription.invoices.add(invoice)
 
@@ -453,8 +449,7 @@ def build_service_stock_scheduler_from_subscription(self,
                                                     **_: Any):
     """Build service stock scheduler for a subscription."""
 
-    logger.info(
-        f'Starting build_service_stock_scheduler_from_subscription for subscription {subscription_id}')
+    logger.info(f'Starting build_service_stock_scheduler_from_subscription for subscription {subscription_id}')
 
     k = {
         'subscription': 'user__id',
@@ -480,8 +475,7 @@ def build_service_stock_scheduler_from_subscription(self,
         },
     }
 
-    if not (subscription := Subscription.objects.filter(id=subscription_id, **
-                                                        additional_args['subscription']).first()):
+    if not (subscription := Subscription.objects.filter(id=subscription_id, **additional_args['subscription']).first()):
         raise RetryTask(f'Subscription with id {subscription_id} not found')
 
     utc_now = timezone.now()
@@ -513,8 +507,7 @@ def build_service_stock_scheduler_from_subscription(self,
             if subscription.valid_until and valid_until > subscription.valid_until:
                 valid_until = subscription.valid_until
 
-            handler, _ = PlanServiceItemHandler.objects.get_or_create(subscription=subscription,
-                                                                      handler=handler)
+            handler, _ = PlanServiceItemHandler.objects.get_or_create(subscription=subscription, handler=handler)
 
             ServiceStockScheduler.objects.get_or_create(plan_handler=handler)
 
@@ -529,8 +522,7 @@ def build_service_stock_scheduler_from_plan_financing(self,
                                                       **_: Any):
     """Build service stock scheduler for a plan financing."""
 
-    logger.info(
-        f'Starting build_service_stock_scheduler_from_plan_financing for subscription {plan_financing_id}')
+    logger.info(f'Starting build_service_stock_scheduler_from_plan_financing for subscription {plan_financing_id}')
 
     k = {
         'plan_financing': 'user__id',
@@ -553,8 +545,8 @@ def build_service_stock_scheduler_from_plan_financing(self,
         },
     }
 
-    if not (plan_financing := PlanFinancing.objects.filter(id=plan_financing_id,
-                                                           **additional_args['plan_financing']).first()):
+    if not (plan_financing := PlanFinancing.objects.filter(id=plan_financing_id, **
+                                                           additional_args['plan_financing']).first()):
         raise RetryTask(f'PlanFinancing with id {plan_financing_id} not found')
 
     for plan in plan_financing.plans.all():
@@ -573,8 +565,7 @@ def build_service_stock_scheduler_from_plan_financing(self,
             if plan_financing.valid_until and valid_until > plan_financing.valid_until:
                 valid_until = plan_financing.valid_until
 
-            handler, _ = PlanServiceItemHandler.objects.get_or_create(plan_financing=plan_financing,
-                                                                      handler=handler)
+            handler, _ = PlanServiceItemHandler.objects.get_or_create(plan_financing=plan_financing, handler=handler)
 
             ServiceStockScheduler.objects.get_or_create(plan_handler=handler)
 
@@ -622,8 +613,7 @@ def build_subscription(self, bag_id: int, invoice_id: int, start_date: Optional[
                                                selected_event_type_set=event_type_set,
                                                selected_mentorship_service_set=mentorship_service_set,
                                                valid_until=None,
-                                               next_payment_at=subscription_start_at +
-                                               relativedelta(months=months),
+                                               next_payment_at=subscription_start_at + relativedelta(months=months),
                                                status='ACTIVE')
 
     subscription.plans.set(bag.plans.all())
@@ -831,8 +821,7 @@ def build_consumables_from_bag(bag_id: int, **_: Any):
             kwargs['event_type_set'] = event_type_set
 
         if not kwargs:
-            raise AbortTask(
-                f'Bag with id {bag_id} have a resource associated opposite to the service item type')
+            raise AbortTask(f'Bag with id {bag_id} have a resource associated opposite to the service item type')
 
         consumables.append(
             Consumable(service_item=service_item,
@@ -855,8 +844,7 @@ def refund_mentoring_session(session_id: int, **_: Any):
     logger.info(f'Starting refund_mentoring_session for mentoring session {session_id}')
 
     if not (mentorship_session := MentorshipSession.objects.filter(
-            id=session_id, mentee__isnull=False, service__isnull=False, status__in=['FAILED', 'IGNORED'
-                                                                                    ]).first()):
+            id=session_id, mentee__isnull=False, service__isnull=False, status__in=['FAILED', 'IGNORED']).first()):
         raise AbortTask(f'MentoringSession with id {session_id} not found or is invalid')
 
     mentee = mentorship_session.mentee
@@ -886,8 +874,7 @@ def refund_mentoring_session(session_id: int, **_: Any):
 @task(bind=False, priority=TaskPriority.ACADEMY.value)
 def add_cohort_set_to_subscription(subscription_id: int, cohort_set_id: int, **_: Any):
     logger.info(
-        f'Starting add_cohort_set_to_subscription for subscription {subscription_id} cohort_set {cohort_set_id}'
-    )
+        f'Starting add_cohort_set_to_subscription for subscription {subscription_id} cohort_set {cohort_set_id}')
 
     subscription = Subscription.objects.filter(id=subscription_id).exclude(
         status__in=['CANCELLED', 'DEPRECATED']).first()
@@ -912,8 +899,7 @@ def add_cohort_set_to_subscription(subscription_id: int, cohort_set_id: int, **_
 @task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def update_subscription_service_stock_schedulers(plan_id: int, subscription_id: int, **_: Any):
     plan = Plan.objects.filter(id=plan_id).only('id').prefetch_related('service_items').first()
-    subscription = Subscription.objects.filter(plans__id=subscription_id).only('id',
-                                                                               'next_payment_at').first()
+    subscription = Subscription.objects.filter(plans__id=subscription_id).only('id', 'next_payment_at').first()
 
     for plan_service_item in PlanServiceItem.objects.filter(plan=plan).prefetch_related('service_item'):
         service_item = plan_service_item.service_item
@@ -943,8 +929,7 @@ def update_subscription_service_stock_schedulers(plan_id: int, subscription_id: 
 @task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def update_plan_financing_service_stock_schedulers(plan_id: int, subscription_id: int, **_: Any):
     plan = Plan.objects.filter(id=plan_id).only('id').prefetch_related('service_items').first()
-    plan_financing = PlanFinancing.objects.filter(plans__id=subscription_id).only('id',
-                                                                                  'next_payment_at').first()
+    plan_financing = PlanFinancing.objects.filter(plans__id=subscription_id).only('id', 'next_payment_at').first()
 
     for plan_service_item in PlanServiceItem.objects.filter(plan=plan).prefetch_related('service_item'):
         service_item = plan_service_item.service_item

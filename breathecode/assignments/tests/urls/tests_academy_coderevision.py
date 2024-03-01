@@ -9,10 +9,10 @@ import aiohttp
 import pytest
 from django.core.exceptions import SynchronousOnlyOperation
 from django.urls.base import reverse_lazy
+from linked_services.django.actions import reset_app_cache
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from breathecode.authenticate.actions import reset_app_cache
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 
@@ -57,8 +57,7 @@ def patch_get(monkeypatch):
     def handler(expected, code, headers):
 
         reader = StreamReaderMock(json.dumps(expected).encode())
-        monkeypatch.setattr('aiohttp.ClientSession.get',
-                            MagicMock(return_value=ResponseMock(reader, code, headers)))
+        monkeypatch.setattr('aiohttp.ClientSession.get', MagicMock(return_value=ResponseMock(reader, code, headers)))
 
     yield handler
 
@@ -69,8 +68,7 @@ def patch_post(monkeypatch):
     def handler(expected, code, headers):
 
         reader = StreamReaderMock(json.dumps(expected).encode())
-        monkeypatch.setattr('aiohttp.ClientSession.post',
-                            MagicMock(return_value=ResponseMock(reader, code, headers)))
+        monkeypatch.setattr('aiohttp.ClientSession.post', MagicMock(return_value=ResponseMock(reader, code, headers)))
 
     yield handler
 
@@ -78,17 +76,16 @@ def patch_post(monkeypatch):
 @pytest.fixture
 def get_jwt(bc: Breathecode, monkeypatch):
     token = bc.random.string(lower=True, upper=True, symbol=True, number=True, size=20)
-    monkeypatch.setattr('breathecode.authenticate.actions.get_jwt', MagicMock(return_value=token))
+    monkeypatch.setattr('linked_services.django.actions.get_jwt', MagicMock(return_value=token))
     yield token
 
 
 @pytest.fixture(params=[
-    ('breathecode.utils.service.AsyncService.__init__', Exception, 'Async is not supported by the worker',
+    ('linked_services.django.service.Service.__init__', Exception, 'Async is not supported by the worker',
      'app-not-found', 404, True),
-    ('breathecode.utils.service.AsyncService.__init__', SynchronousOnlyOperation, 'App rigobot not found',
+    ('linked_services.django.service.Service.__init__', SynchronousOnlyOperation, 'App rigobot not found',
      'no-async-support', 500, True),
-    ('breathecode.utils.service.AsyncService.aget', Exception, 'random exc', 'Unexpected error: random exc',
-     500, False),
+    ('linked_services.django.service.Service.get', Exception, 'random exc', 'Unexpected error: random exc', 500, False),
 ])
 def get_exc(request, monkeypatch):
     path, exc, message, slug, code, is_async = request.param
@@ -130,12 +127,12 @@ def get_exc(request, monkeypatch):
 
 
 @pytest.fixture(params=[
-    ('breathecode.utils.service.AsyncService.__init__', Exception, 'Async is not supported by the worker',
+    ('linked_services.django.service.Service.__init__', Exception, 'Async is not supported by the worker',
      'app-not-found', 404, True),
-    ('breathecode.utils.service.AsyncService.__init__', SynchronousOnlyOperation, 'App rigobot not found',
+    ('linked_services.django.service.Service.__init__', SynchronousOnlyOperation, 'App rigobot not found',
      'no-async-support', 500, True),
-    ('breathecode.utils.service.AsyncService.apost', Exception, 'random exc', 'Unexpected error: random exc',
-     500, False),
+    ('linked_services.django.service.Service.post', Exception, 'random exc', 'Unexpected error: random exc', 500,
+     False),
 ])
 def post_exc(request, monkeypatch):
     path, exc, message, slug, code, is_async = request.param
@@ -325,6 +322,7 @@ def test__post__raise_an_exception(bc: Breathecode, client: APIClient, post_exc)
                                    'slug': 'rigobot',
                                    'app_url': bc.fake.url()
                                })
+
     client.force_authenticate(model.user)
 
     url = reverse_lazy('assignments:academy_coderevision')

@@ -159,7 +159,7 @@ def test_no_data(bc: Breathecode, apply_patch):
     assert get_cache('activity:worker-0') == None
     assert get_cache('activity:worker-1') == None
 
-    task = bc.database.get('commons.TaskManager', 1, dict=False)
+    task = bc.database.get('task_manager.TaskManager', 1, dict=False)
 
     assert get_cache(f'activity:backup:{task.id}') == None
 
@@ -245,7 +245,7 @@ def test_with_data_in_both_workers(bc: Breathecode, fake, apply_patch, get_schem
     assert get_cache('activity:worker-0') == None
     assert get_cache('activity:worker-1') == None
 
-    task = bc.database.get('commons.TaskManager', 1, dict=False)
+    task = bc.database.get('task_manager.TaskManager', 1, dict=False)
 
     assert get_cache(f'activity:backup:{task.id}') == None
 
@@ -260,18 +260,17 @@ def test_with_data_in_both_workers(bc: Breathecode, fake, apply_patch, get_schem
                 bigquery.SchemaField('kind', 'STRING', 'NULLABLE'),
                 bigquery.SchemaField('user_id', 'INTEGER', 'NULLABLE'),
                 bigquery.SchemaField('timestamp', 'TIMESTAMP', 'NULLABLE'),
-                bigquery.SchemaField(
-                    'meta',
-                    'RECORD',
-                    'NULLABLE',
-                    fields=(
-                        bigquery.SchemaField(attr1, bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
-                        bigquery.SchemaField(attr2, bigquery.enums.SqlTypeNames.BOOL, 'NULLABLE'),
-                        bigquery.SchemaField(attr3, bigquery.enums.SqlTypeNames.FLOAT64, 'NULLABLE'),
-                        bigquery.SchemaField(attr4, bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
-                        bigquery.SchemaField('knife', 'BOOL', 'NULLABLE'),
-                        bigquery.SchemaField('pistol', 'FLOAT64', 'NULLABLE'),
-                    )),
+                bigquery.SchemaField('meta',
+                                     'RECORD',
+                                     'NULLABLE',
+                                     fields=(
+                                         bigquery.SchemaField(attr1, bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
+                                         bigquery.SchemaField(attr2, bigquery.enums.SqlTypeNames.BOOL, 'NULLABLE'),
+                                         bigquery.SchemaField(attr3, bigquery.enums.SqlTypeNames.FLOAT64, 'NULLABLE'),
+                                         bigquery.SchemaField(attr4, bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
+                                         bigquery.SchemaField('knife', 'BOOL', 'NULLABLE'),
+                                         bigquery.SchemaField('pistol', 'FLOAT64', 'NULLABLE'),
+                                     )),
                 bigquery.SchemaField('related',
                                      'RECORD',
                                      'NULLABLE',

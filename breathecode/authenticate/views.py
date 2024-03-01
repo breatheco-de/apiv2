@@ -1,4 +1,3 @@
-import asyncio
 import base64
 import hashlib
 import logging
@@ -19,6 +18,7 @@ from django.db.models import Q
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.utils import timezone
+from linked_services.django.models import AppUserAgreement
 from rest_framework import status
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.decorators import permission_classes
@@ -37,15 +37,10 @@ from breathecode.mentorship.models import MentorProfile
 from breathecode.mentorship.serializers import GETMentorSmallSerializer
 from breathecode.notify.models import SlackTeam
 from breathecode.services.google_cloud import FunctionV1, FunctionV2
-from breathecode.utils import (
-    GenerateLookupsMixin,
-    HeaderLimitOffsetPagination,
-    ValidationException,
-    capable_of,
-)
+from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, ValidationException, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
-from breathecode.utils.decorators.scope import ascope, scope
+from breathecode.utils.decorators.scope import scope
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.i18n import translation
 from breathecode.utils.shorteners import C
@@ -54,9 +49,7 @@ from breathecode.utils.views import private_view, render_message, set_query_para
 from .actions import (
     accept_invite,
     accept_invite_action,
-    aget_app,
     generate_academy_token,
-    get_app,
     get_user_language,
     resend_invite,
     reset_password,
@@ -75,19 +68,15 @@ from .forms import (
 )
 from .models import (
     AcademyAuthSettings,
-    AppUserAgreement,
     CredentialsFacebook,
     CredentialsGithub,
     CredentialsGoogle,
     CredentialsSlack,
-    FirstPartyWebhookLog,
     GithubAcademyUser,
     GitpodUser,
-    OptionalScopeSet,
     Profile,
     ProfileAcademy,
     Role,
-    Scope,
     Token,
     UserInvite,
     UserSetting,
@@ -182,13 +171,11 @@ class AcademyTokenView(ObtainAuthToken):
         academy = Academy.objects.get(id=academy_id)
         academy_user = User.objects.filter(username=academy.slug).first()
         if academy_user is None:
-            raise ValidationException('No academy token has been generated yet',
-                                      slug='academy-token-not-found')
+            raise ValidationException('No academy token has been generated yet', slug='academy-token-not-found')
 
         token = Token.objects.filter(user=academy_user, token_type='permanent').first()
         if token is None:
-            raise ValidationException('No academy token has been generated yet',
-                                      slug='academy-token-not-found')
+            raise ValidationException('No academy token has been generated yet', slug='academy-token-not-found')
 
         return Response({
             'token': token.key,
@@ -321,8 +308,7 @@ class MemberView(APIView, GenerateLookupsMixin):
             if user_id_or_email.isnumeric():
                 item = ProfileAcademy.objects.filter(user__id=user_id_or_email, academy_id=academy_id).first()
             else:
-                item = ProfileAcademy.objects.filter(user__email=user_id_or_email,
-                                                     academy_id=academy_id).first()
+                item = ProfileAcademy.objects.filter(user__email=user_id_or_email, academy_id=academy_id).first()
 
             if item is None:
                 raise ValidationException('Profile not found for this user and academy',
@@ -358,11 +344,7 @@ class MemberView(APIView, GenerateLookupsMixin):
 
     @capable_of('crud_member')
     def post(self, request, academy_id=None):
-        serializer = MemberPOSTSerializer(data=request.data,
-                                          context={
-                                              'academy_id': academy_id,
-                                              'request': request
-                                          })
+        serializer = MemberPOSTSerializer(data=request.data, context={'academy_id': academy_id, 'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -387,9 +369,7 @@ class MemberView(APIView, GenerateLookupsMixin):
         if user_id_or_email.isnumeric():
             already = ProfileAcademy.objects.filter(user__id=user_id_or_email, academy_id=academy_id).first()
         else:
-            raise ValidationException('User id must be a numeric value',
-                                      code=400,
-                                      slug='user-id-is-not-numeric')
+            raise ValidationException('User id must be a numeric value', code=400, slug='user-id-is-not-numeric')
 
         request_data = {**request.data, 'user': user_id_or_email, 'academy': academy_id}
         if already:
@@ -399,11 +379,7 @@ class MemberView(APIView, GenerateLookupsMixin):
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
-            serializer = MemberPOSTSerializer(data=request_data,
-                                              context={
-                                                  'academy_id': academy_id,
-                                                  'request': request
-                                              })
+            serializer = MemberPOSTSerializer(data=request_data, context={'academy_id': academy_id, 'request': request})
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -519,9 +495,7 @@ class ConfirmEmailView(APIView):
             return Response(serializer.data)
 
         # If not JSON, return your HTML message.
-        return render_message(request,
-                              'Your email was validated, you can close this page.',
-                              academy=invite.academy)
+        return render_message(request, 'Your email was validated, you can close this page.', academy=invite.academy)
 
 
 class ResendInviteView(APIView):
@@ -597,14 +571,12 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             if profile is None:
                 raise ValidationException('Profile not found', code=404, slug='profile-academy-not-found')
 
-            invite = UserInvite.objects.filter(academy__id=academy_id, email=profile.email,
-                                               status='PENDING').first()
+            invite = UserInvite.objects.filter(academy__id=academy_id, email=profile.email, status='PENDING').first()
 
             if invite is None and profile.status != 'INVITED':
-                raise ValidationException(
-                    'No pending invite was found for this user and academy',
-                    code=404,
-                    slug='user-invite-and-profile-academy-with-status-invited-not-found')
+                raise ValidationException('No pending invite was found for this user and academy',
+                                          code=404,
+                                          slug='user-invite-and-profile-academy-with-status-invited-not-found')
 
             # IMPORTANT: both serializers need to include "invite_url" property to have a consistent response
             if invite is not None:
@@ -674,15 +646,14 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         if (invite is None and profile_academy is not None and profile_academy.status == 'INVITED'
                 and (profile_academy.user.email or invite.email)):
-            notify_actions.send_email_message(
-                'academy_invite',
-                profile_academy.user.email or invite.email, {
-                    'subject': f'Invitation to study at {profile_academy.academy.name}',
-                    'invites': [ProfileAcademySmallSerializer(profile_academy).data],
-                    'user': UserSmallSerializer(profile_academy.user).data,
-                    'LINK': os.getenv('API_URL') + '/v1/auth/academy/html/invite',
-                },
-                academy=profile_academy.academy)
+            notify_actions.send_email_message('academy_invite',
+                                              profile_academy.user.email or invite.email, {
+                                                  'subject': f'Invitation to study at {profile_academy.academy.name}',
+                                                  'invites': [ProfileAcademySmallSerializer(profile_academy).data],
+                                                  'user': UserSmallSerializer(profile_academy.user).data,
+                                                  'LINK': os.getenv('API_URL') + '/v1/auth/academy/html/invite',
+                                              },
+                                              academy=profile_academy.academy)
             serializer = GetProfileAcademySerializer(profile_academy)
             return Response(serializer.data)
 
@@ -700,9 +671,7 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         email = (profile_academy and profile_academy.user and profile_academy.user.email) or invite.email
         if not email:
-            raise ValidationException('Impossible to determine the email of user',
-                                      code=400,
-                                      slug='without-email')
+            raise ValidationException('Impossible to determine the email of user', code=400, slug='without-email')
 
         resend_invite(invite.token, email, invite.first_name, academy=invite.academy)
 
@@ -722,11 +691,9 @@ class StudentView(APIView, GenerateLookupsMixin):
         if user_id_or_email is not None:
             profile = None
             if user_id_or_email.isnumeric():
-                profile = ProfileAcademy.objects.filter(academy__id=academy_id,
-                                                        user__id=user_id_or_email).first()
+                profile = ProfileAcademy.objects.filter(academy__id=academy_id, user__id=user_id_or_email).first()
             else:
-                profile = ProfileAcademy.objects.filter(academy__id=academy_id,
-                                                        user__email=user_id_or_email).first()
+                profile = ProfileAcademy.objects.filter(academy__id=academy_id, user__email=user_id_or_email).first()
 
             if profile is None:
                 raise ValidationException('Profile not found', code=404, slug='profile-academy-not-found')
@@ -757,11 +724,7 @@ class StudentView(APIView, GenerateLookupsMixin):
     @capable_of('crud_student')
     def post(self, request, academy_id=None):
 
-        serializer = StudentPOSTSerializer(data=request.data,
-                                           context={
-                                               'academy_id': academy_id,
-                                               'request': request
-                                           })
+        serializer = StudentPOSTSerializer(data=request.data, context={'academy_id': academy_id, 'request': request})
 
         if serializer.is_valid():
             serializer.save()
@@ -771,24 +734,20 @@ class StudentView(APIView, GenerateLookupsMixin):
     @capable_of('crud_student')
     def put(self, request, academy_id=None, user_id_or_email=None):
         if not user_id_or_email.isnumeric():
-            raise ValidationException('User id must be a numeric value',
-                                      code=404,
-                                      slug='user-id-is-not-numeric')
+            raise ValidationException('User id must be a numeric value', code=404, slug='user-id-is-not-numeric')
 
         student = ProfileAcademy.objects.filter(user__id=user_id_or_email, academy__id=academy_id).first()
 
         if student and student.role.slug != 'student':
-            raise ValidationException(
-                f'This endpoint can only update student profiles (not {student.role.slug})',
-                code=400,
-                slug='trying-to-change-a-staff')
+            raise ValidationException(f'This endpoint can only update student profiles (not {student.role.slug})',
+                                      code=400,
+                                      slug='trying-to-change-a-staff')
 
         request_data = {**request.data, 'user': user_id_or_email, 'academy': academy_id, 'role': 'student'}
         if 'role' in request.data:
-            raise ValidationException(
-                'The student role cannot be updated with this endpoint, user /member instead.',
-                code=400,
-                slug='trying-to-change-role')
+            raise ValidationException('The student role cannot be updated with this endpoint, user /member instead.',
+                                      code=400,
+                                      slug='trying-to-change-role')
 
         if not student:
             raise ValidationException('The user is not a student in this academy',
@@ -820,12 +779,7 @@ class LoginView(ObtainAuthToken):
 
         tasks_activity.add_activity.delay(user.id, 'login', related_type='auth.User', related_id=user.id)
 
-        return Response({
-            'token': token.key,
-            'user_id': user.pk,
-            'email': user.email,
-            'expires_at': token.expires_at
-        })
+        return Response({'token': token.key, 'user_id': user.pk, 'email': user.email, 'expires_at': token.expires_at})
 
 
 @api_view(['GET'])
@@ -946,9 +900,7 @@ def get_user_by_id_or_email(request, id_or_email):
         query = User.objects.filter(email=id_or_email).first()
 
     if query is None:
-        raise ValidationException('User with that id or email does not exists',
-                                  slug='user-dont-exists',
-                                  code=404)
+        raise ValidationException('User with that id or email does not exists', slug='user-dont-exists', code=404)
 
     users = UserSmallSerializer(query, many=False)
     return Response(users.data)
@@ -1049,10 +1001,7 @@ def save_github_token(request):
         'code': code,
     }
     headers = {'Accept': 'application/json'}
-    resp = requests.post('https://github.com/login/oauth/access_token',
-                         data=payload,
-                         headers=headers,
-                         timeout=2)
+    resp = requests.post('https://github.com/login/oauth/access_token', data=payload, headers=headers, timeout=2)
     if resp.status_code == 200:
 
         logger.debug('Github responded with 200')
@@ -1090,10 +1039,9 @@ def save_github_token(request):
                 token = Token.get_valid(token)
                 if not token:
                     logger.debug('Token not found or is expired')
-                    raise ValidationException(
-                        'Token was not found or is expired, please use a different token',
-                        code=404,
-                        slug='token-not-found')
+                    raise ValidationException('Token was not found or is expired, please use a different token',
+                                              code=404,
+                                              slug='token-not-found')
                 user = User.objects.filter(auth_token=token.id).first()
             else:
                 # for the token to become null for easier management
@@ -1115,8 +1063,7 @@ def save_github_token(request):
                     url = os.getenv('APP_URL', 'https://4geeks.com')
 
                 return render_message(
-                    request,
-                    f'You are still number {invite.id} on the waiting list, we will email you once you are '
+                    request, f'You are still number {invite.id} on the waiting list, we will email you once you are '
                     f'given access <a href="{url}">Back to 4Geeks.com</a>',
                     academy=invite.academy)
 
@@ -1125,12 +1072,11 @@ def save_github_token(request):
                 if invite:
                     academy = invite.academy
 
-                return render_message(
-                    request,
-                    'We could not find in our records the email associated to this github account, '
-                    'perhaps you want to signup to the platform first? <a href="' + url +
-                    '">Back to 4Geeks.com</a>',
-                    academy=academy)
+                return render_message(request,
+                                      'We could not find in our records the email associated to this github account, '
+                                      'perhaps you want to signup to the platform first? <a href="' + url +
+                                      '">Back to 4Geeks.com</a>',
+                                      academy=academy)
 
             github_credentials = CredentialsGithub.objects.filter(github_id=github_user['id']).first()
 
@@ -1174,8 +1120,7 @@ def save_github_token(request):
             student_role = Role.objects.get(slug='student')
             cus = CohortUser.objects.filter(user=user, role='STUDENT')
             for cu in cus:
-                profile_academy = ProfileAcademy.objects.filter(user=cu.user,
-                                                                academy=cu.cohort.academy).first()
+                profile_academy = ProfileAcademy.objects.filter(user=cu.user, academy=cu.cohort.academy).first()
                 if profile_academy is None:
                     profile_academy = ProfileAcademy(user=cu.user,
                                                      academy=cu.cohort.academy,
@@ -1199,7 +1144,7 @@ def save_github_token(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_slack_token(request):
-    """Generate stack redirect url for authorize"""
+    """Generate stack redirect url for authorize."""
     url = request.query_params.get('url', None)
     if url is None:
         raise ValidationError('No callback URL specified')
@@ -1220,9 +1165,9 @@ def get_slack_token(request):
 
     # Missing scopes!! admin.invites:write, identify
     scopes = ('app_mentions:read', 'channels:history', 'channels:join', 'channels:read', 'chat:write',
-              'chat:write.customize', 'commands', 'files:read', 'files:write', 'groups:history',
-              'groups:read', 'groups:write', 'incoming-webhook', 'team:read', 'users:read',
-              'users:read.email', 'users.profile:read', 'users:read')
+              'chat:write.customize', 'commands', 'files:read', 'files:write', 'groups:history', 'groups:read',
+              'groups:write', 'incoming-webhook', 'team:read', 'users:read', 'users:read.email', 'users.profile:read',
+              'users:read')
 
     query_string = f'a={academy}&url={url}&user={user_id}'.encode('utf-8')
     payload = str(base64.urlsafe_b64encode(query_string), 'utf-8')
@@ -1247,7 +1192,7 @@ def get_slack_token(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def save_slack_token(request):
-    """Get Slack token and redirect to authorization route"""
+    """Get Slack token and redirect to authorization route."""
     logger.debug('Slack callback just landed')
 
     error = request.query_params.get('error', False)
@@ -1312,8 +1257,7 @@ def save_slack_token(request):
         logger.debug(slack_data)
 
         # delete all previous credentials for the same team and cohort
-        CredentialsSlack.objects.filter(app_id=slack_data['app_id'],
-                                        team_id=slack_data['team']['id'],
+        CredentialsSlack.objects.filter(app_id=slack_data['app_id'], team_id=slack_data['team']['id'],
                                         user__id=user.id).delete()
         credentials = CredentialsSlack(
             user=user,
@@ -1340,7 +1284,7 @@ def save_slack_token(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_facebook_token(request):
-    """Generate stack redirect url for authorize"""
+    """Generate stack redirect url for authorize."""
     url = request.query_params.get('url', None)
     if url is None:
         raise ValidationError('No callback URL specified')
@@ -1390,7 +1334,7 @@ def get_facebook_token(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def save_facebook_token(request):
-    """Save facebook token"""
+    """Save facebook token."""
     logger.debug('Facebook callback just landed')
     error = request.query_params.get('error_code', False)
     error_description = request.query_params.get('error_message', '')
@@ -1556,8 +1500,7 @@ def reset_password_view(request):
             logger.debug('No users with ' + _dict['email'] + ' email to reset password')
 
         if 'callback' in _dict and _dict['callback'] != '':
-            return HttpResponseRedirect(redirect_to=_dict['callback'] +
-                                        '?msg=Check your email for a password reset!')
+            return HttpResponseRedirect(redirect_to=_dict['callback'] + '?msg=Check your email for a password reset!')
         else:
             return render(request, 'message.html', {'MESSAGE': 'Check your email for a password reset!'})
     else:
@@ -1650,8 +1593,7 @@ def pick_password(request, token):
             if token_instance:
                 token_instance.delete()
 
-            UserInvite.objects.filter(email=user.email,
-                                      is_email_validated=False).update(is_email_validated=True)
+            UserInvite.objects.filter(email=user.email, is_email_validated=False).update(is_email_validated=True)
 
             callback = request.POST.get('callback', None)
             if callback is not None and callback != '':
@@ -1749,16 +1691,14 @@ def render_invite(request, token, member_id=None):
     if invite is None or invite.status != 'PENDING':
         callback_msg = ''
         if _dict['callback'] != '':
-            callback_msg = ". You can try and login at <a href='" + _dict['callback'] + "'>" + _dict[
-                'callback'] + '</a>'
+            callback_msg = ". You can try and login at <a href='" + _dict['callback'] + "'>" + _dict['callback'] + '</a>'
 
         academy = None
         if invite and invite.academy:
             academy = invite.academy
 
         return render_message(request,
-                              'Invitation not found with this token or it was already accepted' +
-                              callback_msg,
+                              'Invitation not found with this token or it was already accepted' + callback_msg,
                               academy=academy)
 
     if request.method == 'GET':
@@ -1917,8 +1857,8 @@ def login_html_view(request):
                 msg = 'Must include "username" and "password".'
                 raise Exception(msg, code=403)
 
-            if user and not UserInvite.objects.filter(
-                    email__iexact=email, status='ACCEPTED', is_email_validated=True).exists():
+            if user and not UserInvite.objects.filter(email__iexact=email, status='ACCEPTED',
+                                                      is_email_validated=True).exists():
                 raise Exception('You need to validate your email first')
 
             token, _ = Token.get_or_create(user=user, token_type='login')
@@ -1933,8 +1873,7 @@ def login_html_view(request):
     else:
         url = request.GET.get('url', None)
         if url is None or url == '':
-            messages.error(request,
-                           "You must specify a 'url' (querystring) to redirect to after successful login")
+            messages.error(request, "You must specify a 'url' (querystring) to redirect to after successful login")
 
     return render(request, 'login.html', {'form': form, 'redirect_url': request.GET.get('url', None)})
 
@@ -1955,8 +1894,7 @@ def get_google_token(request, token=None):
     except Exception:
         pass
 
-    token = Token.get_valid(
-        token)  # IMPORTANT!! you can only connect to google with temporal short lasting tokens
+    token = Token.get_valid(token)  # IMPORTANT!! you can only connect to google with temporal short lasting tokens
     if token is None or token.token_type != 'temporal':
         raise ValidationException('Invalid or inactive token', code=403, slug='invalid-token')
 
@@ -2096,9 +2034,7 @@ class GithubUserView(APIView, GenerateLookupsMixin):
 
         items = GithubAcademyUser.objects.filter(**lookups, academy_id=academy_id)
         if items.count() == 0:
-            raise ValidationException('Github User not found for this academy',
-                                      code=404,
-                                      slug='githubuser-not-found')
+            raise ValidationException('Github User not found for this academy', code=404, slug='githubuser-not-found')
 
         valid = []
         for gu in items:
@@ -2128,12 +2064,10 @@ class GithubUserView(APIView, GenerateLookupsMixin):
                 es='Debes especificar la cohort y el usuario debe estar activo en ella'),
                                       slug='user-not-found')
         if 'user' not in body:
-            raise ValidationException(translation(en='You must specify the user',
-                                                  es='Debes especificar el usuario'),
+            raise ValidationException(translation(en='You must specify the user', es='Debes especificar el usuario'),
                                       slug='user-not-found')
 
-        cu = CohortUser.objects.filter(user=body['user'], cohort=body['cohort'],
-                                       educational_status='ACTIVE').first()
+        cu = CohortUser.objects.filter(user=body['user'], cohort=body['cohort'], educational_status='ACTIVE').first()
         if cu is None:
             raise ValidationException(translation(
                 en='You must specify the cohort the user belongs to, and it must be active on it',
@@ -2246,9 +2180,7 @@ class GitpodUserView(APIView, GenerateLookupsMixin):
 
         item = GitpodUser.objects.filter(id=gitpoduser_id, academy_id=academy_id).first()
         if item is None:
-            raise ValidationException('Gitpod User not found for this academy',
-                                      code=404,
-                                      slug='gitpoduser-not-found')
+            raise ValidationException('Gitpod User not found for this academy', code=404, slug='gitpoduser-not-found')
 
         if request.data is None or ('expires_at' in request.data and request.data['expires_at'] is None):
             item.expires_at = None
@@ -2455,8 +2387,7 @@ class ProfileMePictureView(APIView):
                         raise ValidationException(translation(
                             lang,
                             en='The circuit breaker is open due to an error, please try again later',
-                            es=
-                            'El circuit breaker está abierto debido a un error, por favor intente más tarde',
+                            es='El circuit breaker está abierto debido a un error, por favor intente más tarde',
                             slug='circuit-breaker-open'),
                                                   slug='circuit-breaker-open',
                                                   data={'service': 'Google Cloud Storage'},
@@ -2539,133 +2470,3 @@ class AppUserAgreementView(APIView):
         serializer = SmallAppUserAgreementSerializer(items, many=True)
 
         return handler.response(serializer.data)
-
-
-# app/webhook
-@api_view(['POST'])
-@permission_classes([AllowAny])
-@ascope(['webhook'], mode='jwt')
-async def app_webhook(request, app: dict, token: dict):
-
-    async def process_webhook(data):
-        nonlocal app, token
-
-        app = await aget_app(app.id)
-        external_id = data.get('id', None)
-        kwargs = {
-            'app': app,
-            'user_id': token.sub,
-            'external_id': external_id,
-            'type': data.get('type', 'unknown'),
-        }
-        if external_id:
-            x, created = await FirstPartyWebhookLog.objects.aget_or_create(**kwargs,
-                                                                           defaults={
-                                                                               'data': data.get('data', None)
-                                                                           })
-            if not created:
-                x.data = data.get('data', None)
-                await x.asave()
-
-        else:
-            kwargs['data'] = data.get('data', None)
-            await FirstPartyWebhookLog.objects.acreate(**kwargs)
-
-    data = request.data if isinstance(request.data, list) else [request.data]
-
-    to_process = []
-
-    for x in data:
-        p = process_webhook(x)
-        to_process.append(p)
-
-    await asyncio.gather(*to_process)
-
-    return Response(None, status=status.HTTP_204_NO_CONTENT)
-
-
-@private_view()
-def authorize_view(request, token=None, app_slug=None):
-    try:
-        app = get_app(app_slug)
-
-    except Exception:
-        return render_message(request,
-                              'App not found',
-                              btn_label='Continue to 4Geeks',
-                              btn_url=APP_URL,
-                              status=404)
-
-    if not app.require_an_agreement:
-        return render_message(request,
-                              'App not found',
-                              btn_label='Continue to 4Geeks',
-                              btn_url=APP_URL,
-                              status=404)
-
-    agreement = AppUserAgreement.objects.filter(app=app, user=request.user).first()
-    selected_scopes = [x.slug
-                       for x in agreement.optional_scope_set.optional_scopes.all()] if agreement else []
-
-    required_scopes = Scope.objects.filter(m2m_required_scopes__app=app)
-    optional_scopes = Scope.objects.filter(m2m_optional_scopes__app=app)
-
-    new_scopes = [
-        x.slug for x in Scope.objects.filter(
-            Q(m2m_required_scopes__app=app, m2m_required_scopes__agreed_at__gt=agreement.agreed_at),
-            Q(m2m_optional_scopes__app=app, m2m_optional_scopes__agreed_at__gt=agreement.agreed_at))
-    ] if agreement else []
-
-    if request.method == 'GET':
-        return render(
-            request, 'authorize.html', {
-                'app': app,
-                'required_scopes': required_scopes,
-                'optional_scopes': optional_scopes,
-                'selected_scopes': selected_scopes,
-                'new_scopes': new_scopes,
-                'reject_url': app.redirect_url + '?app=4geeks&status=rejected',
-            })
-
-    if request.method == 'POST':
-        items = set()
-        for key in request.POST:
-            if key == 'csrfmiddlewaretoken':
-                continue
-
-            items.add(key)
-
-        items = sorted(list(items))
-        query = Q()
-
-        for item in items:
-            query |= Q(optional_scopes__slug=item)
-
-        created = False
-        cache = OptionalScopeSet.objects.filter(query).first()
-        if cache is None or cache.optional_scopes.count() != len(items):
-            cache = OptionalScopeSet()
-            cache.save()
-
-            created = True
-
-            for s in items:
-                scope = Scope.objects.filter(slug=s).first()
-                cache.optional_scopes.add(scope)
-
-        if (agreement := AppUserAgreement.objects.filter(app=app, user=request.user).first()):
-            if created:
-                agreement.agreed_at = timezone.now()
-
-            agreement.optional_scope_set = cache
-            agreement.agreement_version = app.agreement_version
-            agreement.save()
-
-        else:
-            agreement = AppUserAgreement.objects.create(app=app,
-                                                        user=request.user,
-                                                        agreed_at=timezone.now(),
-                                                        agreement_version=app.agreement_version,
-                                                        optional_scope_set=cache)
-
-        return redirect(app.redirect_url + '?app=4geeks&status=authorized')

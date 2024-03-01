@@ -19,8 +19,11 @@ import dj_database_url
 import django_heroku
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
+from linked_services.core import settings
 
 from breathecode.setup import configure_redis
+
+settings.set_settings(app_name='4geeks')
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -77,6 +80,8 @@ INSTALLED_APPS = [
     'breathecode.provisioning',
     'explorer',
     'graphene_django',
+    'task_manager',
+    'linked_services',
 ]
 
 GRAPHENE = {'SCHEMA': 'breathecode.schema.schema'}
@@ -85,18 +90,12 @@ if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or ENVIRONMENT == 'test':
     INSTALLED_APPS.append('breathecode.cypress')
 
 REST_FRAMEWORK = {
-    'DEFAULT_SCHEMA_CLASS':
-    'rest_framework.schemas.openapi.AutoSchema',
-    'DEFAULT_VERSIONING_CLASS':
-    'rest_framework.versioning.NamespaceVersioning',
-    'DEFAULT_PAGINATION_CLASS':
-    'breathecode.utils.HeaderLimitOffsetPagination',
-    'EXCEPTION_HANDLER':
-    'breathecode.utils.breathecode_exception_handler',
-    'PAGE_SIZE':
-    100,
-    'DEFAULT_VERSION':
-    'v1',
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.openapi.AutoSchema',
+    'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.NamespaceVersioning',
+    'DEFAULT_PAGINATION_CLASS': 'breathecode.utils.HeaderLimitOffsetPagination',
+    'EXCEPTION_HANDLER': 'breathecode.utils.breathecode_exception_handler',
+    'PAGE_SIZE': 100,
+    'DEFAULT_VERSION': 'v1',
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'breathecode.authenticate.authentication.ExpiringTokenAuthentication',
     ],
@@ -138,8 +137,7 @@ if os.getenv('GOOGLE_APPLICATION_CREDENTIALS') and (GS_BUCKET_NAME := os.getenv(
 
     resolve_gcloud_credentials()
 
-    GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
-        os.getenv('GOOGLE_APPLICATION_CREDENTIALS'))
+    GS_CREDENTIALS = service_account.Credentials.from_service_account_file(os.getenv('GOOGLE_APPLICATION_CREDENTIALS'))
 
     GS_PROJECT_ID = os.getenv('GOOGLE_PROJECT_ID', '')
     GS_IS_GZIPPED = True

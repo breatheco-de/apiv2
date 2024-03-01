@@ -7,9 +7,9 @@ from logging import Logger
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+from linked_services.django.service import Service
 
 from breathecode.assignments import signals
-from breathecode.utils.service import Service
 
 from ...tasks import set_cohort_user_assignments
 from ..mixins import AssignmentsTestCase
@@ -296,7 +296,7 @@ class MediaTestSuite(AssignmentsTestCase):
         ])
         self.assertEqual(Logger.error.call_args_list, [call('Rigobot error: App not found')])
 
-    @patch.multiple('breathecode.utils.service.Service',
+    @patch.multiple('linked_services.core.service.Service',
                     __init__=MagicMock(return_value=None),
                     post=MagicMock(),
                     put=MagicMock())
@@ -362,15 +362,14 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(Logger.error.call_args_list, [])
         self.bc.check.calls(Service.__init__.call_args_list, [call('rigobot', 1)])
         self.bc.check.calls(Service.post.call_args_list, [])
-        self.bc.check.calls(Service.put.call_args_list, [
-            call('/v1/finetuning/me/repository/',
-                 json={
-                     'url': model.task.github_url,
-                     'activity_status': 'INACTIVE'
-                 })
-        ])
+        self.bc.check.calls(
+            Service.put.call_args_list,
+            [call('/v1/finetuning/me/repository/', json={
+                'url': model.task.github_url,
+                'activity_status': 'INACTIVE'
+            })])
 
-    @patch.multiple('breathecode.utils.service.Service',
+    @patch.multiple('linked_services.core.service.Service',
                     __init__=MagicMock(return_value=None),
                     post=MagicMock(),
                     put=MagicMock())

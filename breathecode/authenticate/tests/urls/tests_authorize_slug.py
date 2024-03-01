@@ -1,17 +1,19 @@
 """
 Test cases for /academy/:id/member/:id
 """
-from datetime import timedelta
 import os
 import random
+from datetime import timedelta
 from unittest.mock import MagicMock, patch
-from django.template import loader
-from django.urls.base import reverse_lazy
-from rest_framework import status
-from ..mixins.new_auth_test_case import AuthTestCase
+
 from django.core.handlers.wsgi import WSGIRequest
-from django.utils import timezone
+from django.template import loader
 from django.test.client import FakePayload
+from django.urls.base import reverse_lazy
+from django.utils import timezone
+from rest_framework import status
+
+from ..mixins.new_auth_test_case import AuthTestCase
 
 UTC_NOW = timezone.now()
 
@@ -116,7 +118,7 @@ class GetTestSuite(AuthTestCase):
         self.assertEqual(content, expected)
         self.assertEqual(response.url, f'/v1/auth/view/login?attempt=1&url={hash}')
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
-        self.assertEqual(self.bc.database.list_of('authenticate.App'), [])
+        self.assertEqual(self.bc.database.list_of('linked_services.App'), [])
 
     # When: app not found
     # Then: return 404
@@ -140,7 +142,7 @@ class GetTestSuite(AuthTestCase):
 
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(self.bc.database.list_of('authenticate.App'), [])
+        self.assertEqual(self.bc.database.list_of('linked_services.App'), [])
 
     # When: app does not require an agreement
     # Then: return 404
@@ -151,8 +153,7 @@ class GetTestSuite(AuthTestCase):
         fix_data([model.app])
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
-        url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug
-                                                                  }) + f'?{querystring}'
+        url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug}) + f'?{querystring}'
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
@@ -168,7 +169,7 @@ class GetTestSuite(AuthTestCase):
 
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(self.bc.database.list_of('authenticate.App'), [
+        self.assertEqual(self.bc.database.list_of('linked_services.App'), [
             self.bc.format.to_dict(model.app),
         ])
 
@@ -182,8 +183,7 @@ class GetTestSuite(AuthTestCase):
         fix_data([model.app])
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
-        url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug
-                                                                  }) + f'?{querystring}'
+        url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug}) + f'?{querystring}'
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
@@ -199,7 +199,7 @@ class GetTestSuite(AuthTestCase):
 
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('authenticate.App'), [
+        self.assertEqual(self.bc.database.list_of('linked_services.App'), [
             self.bc.format.to_dict(model.app),
         ])
 
@@ -247,8 +247,7 @@ class GetTestSuite(AuthTestCase):
         fix_data([model.app], model.scope)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
-        url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug
-                                                                  }) + f'?{querystring}'
+        url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug}) + f'?{querystring}'
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
@@ -267,7 +266,7 @@ class GetTestSuite(AuthTestCase):
 
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('authenticate.App'), [
+        self.assertEqual(self.bc.database.list_of('linked_services.App'), [
             self.bc.format.to_dict(model.app),
         ])
 
@@ -321,8 +320,7 @@ class GetTestSuite(AuthTestCase):
         fix_data([model.app], model.scope)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
-        url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug
-                                                                  }) + f'?{querystring}'
+        url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug}) + f'?{querystring}'
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
@@ -342,7 +340,7 @@ class GetTestSuite(AuthTestCase):
 
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('authenticate.App'), [
+        self.assertEqual(self.bc.database.list_of('linked_services.App'), [
             self.bc.format.to_dict(model.app),
         ])
 
@@ -396,8 +394,7 @@ class GetTestSuite(AuthTestCase):
         fix_data([model.app], model.scope)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
-        url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug
-                                                                  }) + f'?{querystring}'
+        url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug}) + f'?{querystring}'
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
@@ -417,7 +414,7 @@ class GetTestSuite(AuthTestCase):
 
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('authenticate.App'), [
+        self.assertEqual(self.bc.database.list_of('linked_services.App'), [
             self.bc.format.to_dict(model.app),
         ])
 
@@ -442,7 +439,7 @@ class PostTestSuite(AuthTestCase):
         self.assertEqual(content, expected)
         self.assertEqual(response.url, f'/v1/auth/view/login?attempt=1&url={hash}')
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
-        self.assertEqual(self.bc.database.list_of('authenticate.App'), [])
+        self.assertEqual(self.bc.database.list_of('linked_services.App'), [])
 
     # When: app not found
     # Then: return 404
@@ -466,7 +463,7 @@ class PostTestSuite(AuthTestCase):
 
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(self.bc.database.list_of('authenticate.App'), [])
+        self.assertEqual(self.bc.database.list_of('linked_services.App'), [])
 
     # When: app does not require an agreement
     # Then: return 404
@@ -477,8 +474,7 @@ class PostTestSuite(AuthTestCase):
         fix_data([model.app])
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
-        url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug
-                                                                  }) + f'?{querystring}'
+        url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug}) + f'?{querystring}'
         response = self.client.post(url)
 
         content = self.bc.format.from_bytes(response.content)
@@ -494,7 +490,7 @@ class PostTestSuite(AuthTestCase):
 
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(self.bc.database.list_of('authenticate.App'), [
+        self.assertEqual(self.bc.database.list_of('linked_services.App'), [
             {
                 **self.bc.format.to_dict(model.app),
                 'agreement_version': 1,
@@ -532,8 +528,7 @@ class PostTestSuite(AuthTestCase):
         fix_data([model.app], model.scope)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
-        url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug
-                                                                  }) + f'?{querystring}'
+        url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug}) + f'?{querystring}'
 
         data = {
             slug1: 'on',
@@ -555,14 +550,14 @@ class PostTestSuite(AuthTestCase):
         self.assertEqual(content, expected)
         self.assertEqual(response.url, model.app.redirect_url + '?app=4geeks&status=authorized')
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
-        self.assertEqual(self.bc.database.list_of('authenticate.App'), [
+        self.assertEqual(self.bc.database.list_of('linked_services.App'), [
             {
                 **self.bc.format.to_dict(model.app),
                 'agreement_version': 1,
             },
         ])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.AppUserAgreement'), [
+        self.assertEqual(self.bc.database.list_of('linked_services.AppUserAgreement'), [
             app_user_agreement_item(model.app, model.user, data={
                 'id': 1,
                 'optional_scope_set_id': 1,
@@ -602,8 +597,7 @@ class PostTestSuite(AuthTestCase):
         fix_data([model.app], model.scope)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
-        url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug
-                                                                  }) + f'?{querystring}'
+        url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug}) + f'?{querystring}'
 
         data = {
             slug1: 'on',
@@ -625,14 +619,14 @@ class PostTestSuite(AuthTestCase):
         self.assertEqual(content, expected)
         self.assertEqual(response.url, model.app.redirect_url + '?app=4geeks&status=authorized')
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
-        self.assertEqual(self.bc.database.list_of('authenticate.App'), [
+        self.assertEqual(self.bc.database.list_of('linked_services.App'), [
             {
                 **self.bc.format.to_dict(model.app),
                 'agreement_version': 1,
             },
         ])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.AppUserAgreement'), [
+        self.assertEqual(self.bc.database.list_of('linked_services.AppUserAgreement'), [
             self.bc.format.to_dict(model.app_user_agreement),
         ])
 
@@ -671,8 +665,7 @@ class PostTestSuite(AuthTestCase):
         fix_data([model.app], model.scope)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
-        url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug
-                                                                  }) + f'?{querystring}'
+        url = reverse_lazy('authenticate:authorize_slug', kwargs={'app_slug': model.app.slug}) + f'?{querystring}'
 
         data = {
             slug1: 'on',
@@ -694,14 +687,14 @@ class PostTestSuite(AuthTestCase):
         self.assertEqual(content, expected)
         self.assertEqual(response.url, model.app.redirect_url + '?app=4geeks&status=authorized')
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
-        self.assertEqual(self.bc.database.list_of('authenticate.App'), [
+        self.assertEqual(self.bc.database.list_of('linked_services.App'), [
             {
                 **self.bc.format.to_dict(model.app),
                 'agreement_version': 1,
             },
         ])
 
-        self.assertEqual(self.bc.database.list_of('authenticate.AppUserAgreement'), [
+        self.assertEqual(self.bc.database.list_of('linked_services.AppUserAgreement'), [
             {
                 **self.bc.format.to_dict(model.app_user_agreement),
                 'agreed_at': UTC_NOW,
