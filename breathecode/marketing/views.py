@@ -1190,8 +1190,7 @@ class CourseView(APIView):
         lang = get_user_language(request)
 
         if course_slug:
-            item = Course.objects.filter(slug=course_slug).annotate(
-                lang=Value(lang, output_field=CharField())).exclude(status='DELETED').exclude(
+            item = Course.objects.filter(slug=course_slug).exclude(status='DELETED').exclude(
                     visibility='PRIVATE').first()
 
             if not item:
@@ -1201,7 +1200,7 @@ class CourseView(APIView):
                                                       slug='course-not-found'),
                                           code=404)
 
-            serializer = GetCourseSerializer(item, context={'lang': lang}, many=False)
+            serializer = GetCourseSerializer(item, many=False)
             return handler.response(serializer.data)
 
         items = Course.objects.filter().exclude(status='DELETED').exclude(visibility='PRIVATE').exclude(
@@ -1232,8 +1231,6 @@ class CourseView(APIView):
 
             items = items.filter(query)
 
-        items = items.annotate(lang=Value(lang, output_field=CharField()))
-
         items = handler.queryset(items)
-        serializer = GetCourseSmallSerializer(items, context={'lang': lang}, many=True)
+        serializer = GetCourseSmallSerializer(items, many=True)
         return handler.response(serializer.data)
