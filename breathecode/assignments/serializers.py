@@ -292,7 +292,7 @@ class PostFinalProjectSerializer(serializers.ModelSerializer):
         if 'cohort' not in data or data['cohort'] is None:
             raise ValidationException('Missing cohort id for this project')
         else:
-            total_students = CohortUser.objects.filter(user__id__in=data['members'],
+            total_students = CohortUser.objects.filter(user__id__in=[m.id for m in data['members'],
                                                        cohort__id=data['cohort'].id,
                                                        role='STUDENT').count()
             if 'members' in data and len(data['members']) != total_students:
@@ -347,7 +347,7 @@ class PUTFinalProjectSerializer(serializers.ModelSerializer):
                                                        role='STUDENT').count()
             if len(data['members']) != total_students:
                 raise ValidationException(
-                    f'All members of this project must belong to the cohort {data["cohort"].name}')
+                    f'All members of this project must belong to the cohort {data["cohort"].name} - {total_students}')
 
         # the teacher shouldn't be allowed to approve a project that isn't done
         if ('project_status' in data and 'revision_status' in data and data['project_status'] == 'PENDING'
