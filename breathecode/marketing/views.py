@@ -1187,20 +1187,22 @@ class CourseView(APIView):
         if cache is not None:
             return cache
 
-        user_lang = get_user_language(request)
+        lang = request.GET.get('lang')
+        if lang is None:
+            lang = get_user_language(request)
 
         if course_slug:
             item = Course.objects.filter(slug=course_slug).exclude(status='DELETED').exclude(
                     visibility='PRIVATE').first()
 
             if not item:
-                raise ValidationException(translation(user_lang,
+                raise ValidationException(translation(lang,
                                                       en='Course not found',
                                                       es='Curso no encontrado',
                                                       slug='course-not-found'),
                                           code=404)
 
-            serializer = GetCourseSerializer(item, many=False)
+            serializer = GetCourseSerializer(item, context={'lang': lang}, many=False)
             return handler.response(serializer.data)
 
         items = Course.objects.filter().exclude(status='DELETED').exclude(visibility='PRIVATE').exclude(
@@ -1209,9 +1211,6 @@ class CourseView(APIView):
         if academy := request.GET.get('academy'):
             args, kwargs = self.get_lookup('academy', academy)
             items = items.filter(*args, **kwargs)
-
-        if lang := request.GET.get('lang'):
-            items = items.filter(lang__contains=lang)
 
         if syllabus := request.GET.get('syllabus'):
             args, kwargs = self.get_lookup('syllabus', syllabus)
@@ -1235,5 +1234,5 @@ class CourseView(APIView):
             items = items.filter(query)
 
         items = handler.queryset(items)
-        serializer = GetCourseSmallSerializer(items, many=True)
+        serializer = GetCourseSmallSerializer(items, context={'lang': lang}, many=True)
         return handler.response(serializer.data)
