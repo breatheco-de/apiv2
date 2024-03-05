@@ -6,6 +6,7 @@ import random
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+import requests
 from django.core.exceptions import SynchronousOnlyOperation
 from django.urls.base import reverse_lazy
 from linked_services.django.actions import reset_app_cache
@@ -59,11 +60,9 @@ def test__get__no_tasks(bc: Breathecode, client: APIClient):
     url = reverse_lazy('assignments:me_task_id_coderevision', kwargs={'task_id': 1
                                                                       }) + '?' + bc.format.querystring(query)
 
-    with patch.multiple('linked_services.core.service.Service',
-                        __init__=MagicMock(return_value=None),
-                        get=MagicMock(return_value=mock)):
+    with patch.multiple('requests', get=MagicMock(return_value=mock)):
         response = client.get(url)
-        bc.check.calls(Service.get.call_args_list, [])
+        bc.check.calls(requests.get.call_args_list, [])
 
     assert response.getvalue().decode('utf-8') == '{"detail":"task-not-found","status_code":404}'
     assert response.status_code == 404
@@ -94,11 +93,9 @@ def test__get__no_github_accounts(bc: Breathecode, client: APIClient):
     url = reverse_lazy('assignments:me_task_id_coderevision', kwargs={'task_id': 1
                                                                       }) + '?' + bc.format.querystring(query)
 
-    with patch.multiple('linked_services.core.service.Service',
-                        __init__=MagicMock(return_value=None),
-                        get=MagicMock(return_value=mock)):
+    with patch.multiple('requests', get=MagicMock(return_value=mock)):
         response = client.get(url)
-        bc.check.calls(Service.get.call_args_list, [])
+        bc.check.calls(requests.get.call_args_list, [])
 
     assert response.getvalue().decode('utf-8') == '{"detail":"github-account-not-connected","status_code":400}'
     assert response.status_code == 400
@@ -136,19 +133,22 @@ def test__get__auth(bc: Breathecode, client: APIClient):
     url = reverse_lazy('assignments:me_task_id_coderevision', kwargs={'task_id': 1
                                                                       }) + '?' + bc.format.querystring(query)
 
-    with patch.multiple('linked_services.core.service.Service',
-                        __init__=MagicMock(return_value=None),
-                        get=MagicMock(return_value=mock)):
-        response = client.get(url)
-        bc.check.calls(Service.get.call_args_list, [
-            call('/v1/finetuning/me/coderevision',
-                 params={
-                     **query,
-                     'repo': model.task.github_url,
-                     'github_username': model.credentials_github.username,
-                 },
-                 stream=True),
-        ])
+    token = bc.random.string(lower=True, upper=True, symbol=True, number=True, size=20)
+    with patch('linked_services.django.actions.get_jwt', MagicMock(return_value=token)):
+        with patch.multiple('requests', get=MagicMock(return_value=mock)):
+            response = client.get(url)
+            assert requests.get.call_args_list == [
+                call(
+                    model.app.app_url + '/v1/finetuning/me/coderevision',
+                    params={
+                        **query,
+                        'repo': model.task.github_url,
+                        'github_username': model.credentials_github.username,
+                    },
+                    stream=True,
+                    headers={'Authorization': f'Link App=4geeks,Token={token}'},
+                ),
+            ]
 
     assert response.getvalue().decode('utf-8') == json.dumps(expected)
     assert response.status_code == code
@@ -179,11 +179,9 @@ def test__post__no_consumables(bc: Breathecode, client: APIClient):
     url = reverse_lazy('assignments:me_task_id_coderevision', kwargs={'task_id': 1
                                                                       }) + '?' + bc.format.querystring(query)
 
-    with patch.multiple('linked_services.core.service.Service',
-                        __init__=MagicMock(return_value=None),
-                        post=MagicMock(return_value=mock)):
+    with patch.multiple('requests', post=MagicMock(return_value=mock)):
         response = client.post(url)
-        bc.check.calls(Service.post.call_args_list, [])
+        bc.check.calls(requests.post.call_args_list, [])
 
     assert response.getvalue().decode('utf-8') == '{"detail":"not-enough-consumables","status_code":402}'
     assert response.status_code == 402
@@ -223,11 +221,9 @@ def test__post__no_consumables(bc: Breathecode, client: APIClient):
     url = reverse_lazy('assignments:me_task_id_coderevision', kwargs={'task_id': 1
                                                                       }) + '?' + bc.format.querystring(query)
 
-    with patch.multiple('linked_services.core.service.Service',
-                        __init__=MagicMock(return_value=None),
-                        post=MagicMock(return_value=mock)):
+    with patch.multiple('requests', post=MagicMock(return_value=mock)):
         response = client.post(url)
-        bc.check.calls(Service.post.call_args_list, [])
+        bc.check.calls(requests.post.call_args_list, [])
 
     assert response.getvalue().decode('utf-8') == '{"detail":"with-consumer-not-enough-consumables","status_code":402}'
     assert response.status_code == 402
@@ -268,11 +264,9 @@ def test__post__no_tasks(bc: Breathecode, client: APIClient):
     url = reverse_lazy('assignments:me_task_id_coderevision', kwargs={'task_id': 1
                                                                       }) + '?' + bc.format.querystring(query)
 
-    with patch.multiple('linked_services.core.service.Service',
-                        __init__=MagicMock(return_value=None),
-                        post=MagicMock(return_value=mock)):
+    with patch.multiple('requests', post=MagicMock(return_value=mock)):
         response = client.post(url)
-        bc.check.calls(Service.post.call_args_list, [])
+        bc.check.calls(requests.post.call_args_list, [])
 
     assert response.getvalue().decode('utf-8') == '{"detail":"task-not-found","status_code":404}'
     assert response.status_code == 404
@@ -315,11 +309,9 @@ def test__post__no_github_accounts(bc: Breathecode, client: APIClient):
     url = reverse_lazy('assignments:me_task_id_coderevision', kwargs={'task_id': 1
                                                                       }) + '?' + bc.format.querystring(query)
 
-    with patch.multiple('linked_services.core.service.Service',
-                        __init__=MagicMock(return_value=None),
-                        post=MagicMock(return_value=mock)):
+    with patch.multiple('requests', post=MagicMock(return_value=mock)):
         response = client.post(url)
-        bc.check.calls(Service.post.call_args_list, [])
+        bc.check.calls(requests.post.call_args_list, [])
 
     assert response.getvalue().decode('utf-8') == '{"detail":"github-account-not-connected","status_code":400}'
     assert response.status_code == 400
@@ -364,20 +356,24 @@ def test__post__auth(bc: Breathecode, client: APIClient):
     url = reverse_lazy('assignments:me_task_id_coderevision', kwargs={'task_id': 1
                                                                       }) + '?' + bc.format.querystring(query)
 
-    with patch.multiple('linked_services.core.service.Service',
-                        __init__=MagicMock(return_value=None),
-                        post=MagicMock(return_value=mock)):
-        response = client.post(url, query, format='json')
-        bc.check.calls(Service.post.call_args_list, [
-            call('/v1/finetuning/coderevision/',
-                 data=query,
-                 params={
-                     **query,
-                     'repo': model.task.github_url,
-                     'github_username': model.credentials_github.username,
-                 },
-                 stream=True),
-        ])
+    token = bc.random.string(lower=True, upper=True, symbol=True, number=True, size=20)
+    with patch('linked_services.django.actions.get_jwt', MagicMock(return_value=token)):
+        with patch.multiple('requests', post=MagicMock(return_value=mock)):
+            response = client.post(url, query, format='json')
+            assert requests.post.call_args_list == [
+                call(
+                    model.app.app_url + '/v1/finetuning/coderevision/',
+                    data=query,
+                    json=None,
+                    params={
+                        **query,
+                        'repo': model.task.github_url,
+                        'github_username': model.credentials_github.username,
+                    },
+                    stream=True,
+                    headers={'Authorization': f'Link App=4geeks,Token={token}'},
+                ),
+            ]
 
     assert response.getvalue().decode('utf-8') == json.dumps(expected)
     assert response.status_code == code

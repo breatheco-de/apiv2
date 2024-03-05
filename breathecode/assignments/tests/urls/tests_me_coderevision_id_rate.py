@@ -70,12 +70,10 @@ def get_jwt(bc: Breathecode, monkeypatch):
 
 
 @pytest.fixture(params=[
-    ('linked_services.django.service.Service.__init__', Exception, 'Async is not supported by the worker',
-     'app-not-found', 404, True),
-    ('linked_services.django.service.Service.__init__', SynchronousOnlyOperation, 'App rigobot not found',
-     'no-async-support', 500, True),
-    ('linked_services.django.service.Service.post', Exception, 'random exc', 'Unexpected error: random exc', 500,
-     False),
+    ('linked_services.core.service.Service.__aenter__', Exception, 'App rigobot not found', 'app-not-found', 404, True),
+    ('linked_services.core.service.Service.__aenter__', SynchronousOnlyOperation,
+     'Async is not supported by the worker', 'no-async-support', 500, True),
+    ('aiohttp.ClientSession.post', Exception, 'random exc', 'unexpected-error', 500, False),
 ])
 def post_exc(request, monkeypatch):
     path, exc, message, slug, code, is_async = request.param
@@ -179,6 +177,7 @@ def test_auth(bc: Breathecode, client: APIClient, patch_post, get_jwt):
 
     assert aiohttp.ClientSession.post.call_args_list == [
         call(f'{model.app.app_url}/v1/finetuning/rate/coderevision/1',
+             json=None,
              data=query,
              headers={'Authorization': f'Link App=4geeks,Token={get_jwt}'})
     ]

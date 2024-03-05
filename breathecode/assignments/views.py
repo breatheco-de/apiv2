@@ -929,9 +929,7 @@ class AcademyCodeRevisionView(APIView):
         if coderevision_id is not None:
             url = f'{url}/{coderevision_id}'
 
-        print('GETTING', 's')
         async with Service('rigobot', proxy=True) as s:
-            print('GETTING', s)
             return await s.get(url, params=params)
 
     @acapable_of('crud_assignment')

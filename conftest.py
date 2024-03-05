@@ -377,9 +377,12 @@ def patch_request(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
-def clean_environment():
+def clean_environment(fake):
     reset_environment()
     test_environment()
+
+    os.environ['APP_URL'] = fake.url()
+    os.environ['LOGIN_URL'] = fake.url()
 
 
 @pytest.fixture(autouse=True)
