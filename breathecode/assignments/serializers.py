@@ -297,7 +297,7 @@ class PostFinalProjectSerializer(serializers.ModelSerializer):
                                                        role='STUDENT').count()
             if 'members' in data and len(data['members']) != total_students:
                 raise ValidationException(
-                    f'Project members must be students on this cohort {data["cohort"].name} - {total_students} - {len(data['members'])}')
+                    f'Project members must be students on this cohort {data["cohort"].name} - {total_students} - {len(data["members"])}')
 
         if 'repo_url' not in data:
             raise ValidationException('Missing repository URL')
