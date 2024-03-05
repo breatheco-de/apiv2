@@ -386,9 +386,9 @@ class GetCourseSmallSerializer(serpy.Serializer):
     def get_course_translation(self, obj):
         query_args = []
         query_kwargs = {'course': obj}
-        # obj.lang = obj.lang or 'en'
+        obj.lang = obj.lang or 'en'
 
-        # query_args.append(Q(lang=obj.lang) | Q(lang=obj.lang[:2]) | Q(lang__startswith=obj.lang[:2]))
+        query_args.append(Q(lang=obj.lang) | Q(lang=obj.lang[:2]) | Q(lang__startswith=obj.lang[:2]))
 
         item = CourseTranslation.objects.filter(*query_args, **query_kwargs).first()
         if item:
