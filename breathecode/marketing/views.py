@@ -1192,7 +1192,8 @@ class CourseView(APIView):
             lang = get_user_language(request)
 
         if course_slug:
-            item = Course.objects.filter(slug=course_slug).exclude(status='DELETED').exclude(
+            item = Course.objects.filter(slug=course_slug).annotate(
+                lang=Value(lang, output_field=CharField())).exclude(status='DELETED').exclude(
                     visibility='PRIVATE').first()
 
             if not item:
@@ -1232,6 +1233,8 @@ class CourseView(APIView):
                 query |= Q(technologies__icontains=technology)
 
             items = items.filter(query)
+
+        items = items.annotate(lang=Value(lang, output_field=CharField()))
 
         items = handler.queryset(items)
         serializer = GetCourseSmallSerializer(items, context={'lang': lang}, many=True)
