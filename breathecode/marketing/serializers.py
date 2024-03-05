@@ -115,14 +115,13 @@ class GetCohortSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
-    kickoff_date = serpy.Field()
-    ending_date = serpy.Field()
 
 class CohortHookSerializer(GetCohortSmallSerializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     schedule = SyllabusScheduleHookSerializer(required=False)
-
+    kickoff_date = serpy.Field()
+    ending_date = serpy.Field()
 
 class TagSmallSerializer(serpy.Serializer):
     id = serpy.Field()
