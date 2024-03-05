@@ -25,6 +25,7 @@ from breathecode.authenticate.actions import get_user_language, server_id
 from breathecode.events import actions
 from breathecode.events.caches import EventCache, LiveClassCache
 from breathecode.renderers import PlainTextRenderer
+import breathecode.activity.tasks as tasks_activity
 from breathecode.services.eventbrite import Eventbrite
 from breathecode.utils import (
     DatetimeInteger,
@@ -897,6 +898,11 @@ def join_event(request, token, event):
         checkin.status = 'DONE'
         checkin.attended_at = now
         checkin.save()
+
+        tasks_activity.add_activity.delay(checkin.attendee.id,
+                                          'event_checkin_assisted',
+                                          related_type='events.EventCheckin',
+                                          related_id=checkin.id)
 
     return redirect(event.live_stream_url)
 
