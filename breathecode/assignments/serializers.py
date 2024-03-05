@@ -292,7 +292,7 @@ class PostFinalProjectSerializer(serializers.ModelSerializer):
         if 'cohort' not in data or data['cohort'] is None:
             raise ValidationException('Missing cohort id for this project')
         else:
-            total_students = CohortUser.objects.filter(user__id__in=[m.id for m in data['members'],
+            total_students = CohortUser.objects.filter(user__id__in=[m.id for m in data['members']],
                                                        cohort__id=data['cohort'].id,
                                                        role='STUDENT').count()
             if 'members' in data and len(data['members']) != total_students:
