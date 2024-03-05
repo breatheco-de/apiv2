@@ -927,7 +927,7 @@ class MeCodeRevisionView(APIView):
         for key in request.GET.keys():
             params[key] = request.GET.get(key)
 
-        if task_id and not (task := Task.objects.filter(id=task_id, user__id=request.user.id).first()):
+        if task_id and not (task := Task.objects.filter(id=task_id, user__id=request.user.id).exclude(github_url=None).first()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         elif not hasattr(request.user, 'credentialsgithub'):
@@ -1004,7 +1004,7 @@ class AcademyCodeRevisionView(APIView):
 
     async def get_code_revision(self, request, academy_id, task_id, coderevision_id):
         if task_id and not (task := await Task.objects.filter(
-                id=task_id, cohort__academy__id=academy_id).prefetch_related('user').afirst()):
+                id=task_id, cohort__academy__id=academy_id).exclude(github_url=None).prefetch_related('user').afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         params = {}
