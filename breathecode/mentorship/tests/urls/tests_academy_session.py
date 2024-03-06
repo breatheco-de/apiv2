@@ -268,10 +268,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
 
     def test__get__without_data(self):
-        model = self.bc.database.create(user=1,
-                                        role=1,
-                                        capability='read_mentorship_session',
-                                        profile_academy=1)
+        model = self.bc.database.create(user=1, role=1, capability='read_mentorship_session', profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
         self.client.force_authenticate(model.user)
@@ -427,9 +424,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             response = self.client.get(url)
 
             json = response.json()
-            mentorship_session_list = sorted(model.mentorship_session,
-                                             key=lambda x: x.created_at,
-                                             reverse=True)
+            mentorship_session_list = sorted(model.mentorship_session, key=lambda x: x.created_at, reverse=True)
             expected = [
                 get_serializer(self,
                                mentorship_session_list[0],
@@ -927,10 +922,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
 
     def test__post__missing_fields(self):
-        model = self.bc.database.create(user=1,
-                                        role=1,
-                                        capability='crud_mentorship_session',
-                                        profile_academy=1)
+        model = self.bc.database.create(user=1, role=1, capability='crud_mentorship_session', profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
         self.client.force_authenticate(model.user)
@@ -1378,10 +1370,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
     def test__put__without_id(self):
-        model = self.bc.database.create(user=1,
-                                        role=1,
-                                        capability='crud_mentorship_session',
-                                        profile_academy=1)
+        model = self.bc.database.create(user=1, role=1, capability='crud_mentorship_session', profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
         self.client.force_authenticate(model.user)

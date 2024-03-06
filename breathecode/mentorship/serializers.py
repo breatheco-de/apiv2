@@ -477,8 +477,7 @@ class BillSessionSerializer(serpy.Serializer):
         if obj.started_at is None or obj.mentor_joined_at is None:
             return None
 
-        if obj.started_at > obj.mentor_joined_at and (obj.started_at - obj.mentor_joined_at).seconds > (60 *
-                                                                                                        4):
+        if obj.started_at > obj.mentor_joined_at and (obj.started_at - obj.mentor_joined_at).seconds > (60 * 4):
             return f'The mentor joined {duration_to_str(obj.started_at - obj.mentor_joined_at)} after. <br />'
         else:
             return None
@@ -509,8 +508,7 @@ class ServicePOSTSerializer(serializers.ModelSerializer):
 
         academy = Academy.objects.filter(id=self.context['academy_id']).first()
         if academy is None:
-            raise ValidationException(f'Academy {self.context["academy"]} not found',
-                                      slug='academy-not-found')
+            raise ValidationException(f'Academy {self.context["academy"]} not found', slug='academy-not-found')
 
         return {**data, 'academy': academy}
 
@@ -526,8 +524,7 @@ class ServicePUTSerializer(serializers.ModelSerializer):
 
         academy = Academy.objects.filter(id=self.context['academy_id']).first()
         if academy is None:
-            raise ValidationException(f'Academy {self.context["academy"]} not found',
-                                      slug='academy-not-found')
+            raise ValidationException(f'Academy {self.context["academy"]} not found', slug='academy-not-found')
 
         if 'slug' in data:
             raise ValidationException('The service slug cannot be updated', slug='service-cannot-be-updated')
@@ -593,9 +590,7 @@ class MentorUpdateSerializer(serializers.ModelSerializer):
     slug = serializers.CharField(required=False)
     price_per_hour = serializers.FloatField(required=False)
 
-    services = serializers.PrimaryKeyRelatedField(queryset=MentorshipService.objects.all(),
-                                                  required=False,
-                                                  many=True)
+    services = serializers.PrimaryKeyRelatedField(queryset=MentorshipService.objects.all(), required=False, many=True)
 
     class Meta:
         model = MentorProfile
@@ -603,8 +598,7 @@ class MentorUpdateSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         lang = data.get('lang', 'en')
-        if 'status' in data and data['status'] in ['ACTIVE', 'UNLISTED'
-                                                   ] and self.instance.status != data['status']:
+        if 'status' in data and data['status'] in ['ACTIVE', 'UNLISTED'] and self.instance.status != data['status']:
             try:
                 actions.mentor_is_ready(self.instance)
             except Exception as e:
@@ -655,9 +649,7 @@ class SessionListSerializer(serializers.ListSerializer):
 
         instance_hash = {index: instance for index, instance in enumerate(instances)}
 
-        result = [
-            self.child.update(instance_hash[index], attrs) for index, attrs in enumerate(validated_data)
-        ]
+        result = [self.child.update(instance_hash[index], attrs) for index, attrs in enumerate(validated_data)]
 
         return result
 
@@ -753,36 +745,30 @@ class SessionSerializer(SessionPUTSerializer):
         service = None
         if 'service' in data and data['service'] and isinstance(data['service'],
                                                                 str) and not data['service'].isnumeric():
-            service = MentorshipService.objects.filter(academy=self.context['academy_id'],
-                                                       slug=data['service']).first()
+            service = MentorshipService.objects.filter(academy=self.context['academy_id'], slug=data['service']).first()
         else:
-            service = MentorshipService.objects.filter(academy=self.context['academy_id'],
-                                                       id=data['service']).first()
+            service = MentorshipService.objects.filter(academy=self.context['academy_id'], id=data['service']).first()
         if service is None:
             raise ValidationException(f'Service {data["service"]} not found', slug='service-not-found')
 
         mentor = None
-        if 'mentor' in data and data['mentor'] and isinstance(data['mentor'],
-                                                              str) and not data['mentor'].isnumeric():
+        if 'mentor' in data and data['mentor'] and isinstance(data['mentor'], str) and not data['mentor'].isnumeric():
             mentor = MentorProfile.objects.filter(academy=self.context['academy_id'],
                                                   user__email=data['mentor']).first()
         else:
-            mentor = MentorProfile.objects.filter(academy=self.context['academy_id'],
-                                                  id=data['mentor']).first()
+            mentor = MentorProfile.objects.filter(academy=self.context['academy_id'], id=data['mentor']).first()
         if mentor is None:
             raise ValidationException(f'Mentor {data["mentor"]} not found', slug='mentor-not-found')
 
         mentee = None
         if 'mentee' in data:
             if not data['mentee'].isnumeric():
-                mentee = Consumable.objects.filter(
-                    mentorship_service_set__mentorship_services__id=data['service'],
-                    user__email=data['mentee']).first()
+                mentee = Consumable.objects.filter(mentorship_service_set__mentorship_services__id=data['service'],
+                                                   user__email=data['mentee']).first()
 
             else:
-                mentee = Consumable.objects.filter(
-                    mentorship_service_set__mentorship_services__id=data['service'],
-                    user__id=data['mentee']).first()
+                mentee = Consumable.objects.filter(mentorship_service_set__mentorship_services__id=data['service'],
+                                                   user__id=data['mentee']).first()
 
             if mentee is None:
                 raise ValidationException(translation(
@@ -794,21 +780,20 @@ class SessionSerializer(SessionPUTSerializer):
             mentee = mentee.user
 
         if mentee is not None and mentor.id == mentee.id:
-            raise ValidationException(translation(
-                lang,
-                en='Mentee and mentor cannot be the same person in the same session',
-                es='El mentor y el estudiante no pueden ser la misma persona',
-                slug='mentor-mentee-same-person'),
+            raise ValidationException(translation(lang,
+                                                  en='Mentee and mentor cannot be the same person in the same session',
+                                                  es='El mentor y el estudiante no pueden ser la misma persona',
+                                                  slug='mentor-mentee-same-person'),
                                       code=400)
 
-        calendly_organization = CalendlyOrganization.objects.filter(
-            academy=self.context['academy_id']).first()
+        calendly_organization = CalendlyOrganization.objects.filter(academy=self.context['academy_id']).first()
         if calendly_organization is not None:
             max_sessions = calendly_organization.max_concurrent_sessions
             if max_sessions is not None and max_sessions > 0:
-                total_service_mentorships = MentorshipSession.objects.filter(
-                    academy=self.context['academy_id'], status='PENDING', mentee=mentee,
-                    service=service).count()
+                total_service_mentorships = MentorshipSession.objects.filter(academy=self.context['academy_id'],
+                                                                             status='PENDING',
+                                                                             mentee=mentee,
+                                                                             service=service).count()
                 if max_sessions <= total_service_mentorships:
                     raise ValidationException(translation(
                         lang,
@@ -828,9 +813,7 @@ class MentorshipBillPUTListSerializer(serializers.ListSerializer):
 
         instance_hash = {index: instance for index, instance in enumerate(instances)}
 
-        result = [
-            self.child.update(instance_hash[index], attrs) for index, attrs in enumerate(validated_data)
-        ]
+        result = [self.child.update(instance_hash[index], attrs) for index, attrs in enumerate(validated_data)]
 
         return result
 
@@ -847,8 +830,7 @@ class MentorshipBillPUTSerializer(serializers.ModelSerializer):
 
         academy = Academy.objects.filter(id=self.context['academy_id']).first()
         if academy is None:
-            raise ValidationException(f'Academy {self.context["academy_id"]} not found',
-                                      slug='academy-not-found')
+            raise ValidationException(f'Academy {self.context["academy_id"]} not found', slug='academy-not-found')
 
         return {**data, 'academy': academy}
 
@@ -865,19 +847,16 @@ class CalendlyOrganizationSerializer(serializers.ModelSerializer):
             ValidationException(
                 translation(
                     self.context['lang'],
-                    en=
-                    'You need to specify the access token to be used by the calendly organization credentials',
-                    es=
-                    'Por favor especifíca el access_token para conectar la organización con el API de calendly',
+                    en='You need to specify the access token to be used by the calendly organization credentials',
+                    es='Por favor especifíca el access_token para conectar la organización con el API de calendly',
                     slug='missing-access-token'))
 
         if 'username' not in data:
             ValidationException(
-                translation(
-                    self.context['lang'],
-                    en='You need to specify the organization calendly username or handle',
-                    es='Por favor especifíca el nombre de usuario o handle para la organizacion en calendly',
-                    slug='missing-access-token'))
+                translation(self.context['lang'],
+                            en='You need to specify the organization calendly username or handle',
+                            es='Por favor especifíca el nombre de usuario o handle para la organizacion en calendly',
+                            slug='missing-access-token'))
 
         academy = Academy.objects.get(pk=self.context['academy_id'])
 

@@ -48,12 +48,7 @@ class Github:
             }
 
         url = self.HOST + action_name
-        resp = requests.request(method=method_name,
-                                url=url,
-                                headers=self.headers,
-                                params=params,
-                                json=json,
-                                timeout=2)
+        resp = requests.request(method=method_name, url=url, headers=self.headers, params=params, json=json, timeout=2)
 
         if resp.status_code >= 200 and resp.status_code < 300:
             data = None
@@ -74,8 +69,7 @@ class Github:
             except Exception:
                 pass
 
-            raise Exception(
-                f'Unable to communicate with Github API for {action_name}, error: {error_message}')
+            raise Exception(f'Unable to communicate with Github API for {action_name}, error: {error_message}')
 
     def get_machines_types(self, repo_name):
         return self.get(f'/repos/{self.org}/{repo_name}/codespaces/machines')

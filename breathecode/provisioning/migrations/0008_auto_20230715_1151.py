@@ -15,8 +15,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='ProvisioningConsumptionEvent',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('registered_at',
                  models.DateTimeField(
                      help_text='When the activity happened, this field comes form the provisioning vendor')),
@@ -25,16 +24,14 @@ class Migration(migrations.Migration):
                 ('quantity', models.FloatField()),
                 ('repository_url', models.URLField()),
                 ('task_associated_slug',
-                 models.SlugField(
-                     help_text='What assignment was the the student trying to complete with this',
-                     max_length=100)),
+                 models.SlugField(help_text='What assignment was the the student trying to complete with this',
+                                  max_length=100)),
             ],
         ),
         migrations.CreateModel(
             name='ProvisioningConsumptionKind',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('product_name', models.CharField(max_length=100)),
                 ('sku', models.CharField(max_length=100)),
             ],
@@ -42,16 +39,14 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='ProvisioningUserConsumption',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('username',
-                 models.CharField(
-                     help_text='Native username in the provisioning platform, E.g: github username',
-                     max_length=80)),
+                 models.CharField(help_text='Native username in the provisioning platform, E.g: github username',
+                                  max_length=80)),
                 ('hash', models.CharField(blank=True, default=None, max_length=64, null=True)),
                 ('status',
-                 models.CharField(choices=[('PENDING', 'Pending'), ('PERSISTED', 'Persisted'),
-                                           ('IGNORED', 'Ignored'), ('ERROR', 'Error')],
+                 models.CharField(choices=[('PENDING', 'Pending'), ('PERSISTED', 'Persisted'), ('IGNORED', 'Ignored'),
+                                           ('ERROR', 'Error')],
                                   default='PENDING',
                                   max_length=20)),
                 ('status_text', models.CharField(max_length=255)),
@@ -59,8 +54,7 @@ class Migration(migrations.Migration):
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('bills', models.ManyToManyField(blank=True, to='provisioning.ProvisioningBill')),
-                ('events', models.ManyToManyField(blank=True,
-                                                  to='provisioning.ProvisioningConsumptionEvent')),
+                ('events', models.ManyToManyField(blank=True, to='provisioning.ProvisioningConsumptionEvent')),
                 ('kind',
                  models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
                                    to='provisioning.provisioningconsumptionkind')),
@@ -69,24 +63,18 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='ProvisioningPrice',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('unit_type', models.CharField(max_length=100)),
-                ('price_per_unit',
-                 models.FloatField(help_text='Price paid to the provisioning vendor, E.g: Github')),
+                ('price_per_unit', models.FloatField(help_text='Price paid to the provisioning vendor, E.g: Github')),
                 ('multiplier',
-                 models.FloatField(blank=True,
-                                   default=1,
-                                   help_text='To increase price in a certain percentage')),
-                ('currency',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='payments.currency')),
+                 models.FloatField(blank=True, default=1, help_text='To increase price in a certain percentage')),
+                ('currency', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='payments.currency')),
             ],
         ),
         migrations.AddField(
             model_name='provisioningconsumptionevent',
             name='price',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
-                                    to='provisioning.provisioningprice'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='provisioning.provisioningprice'),
         ),
         migrations.AddField(
             model_name='provisioningconsumptionevent',

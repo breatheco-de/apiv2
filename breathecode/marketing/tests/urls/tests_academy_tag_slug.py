@@ -36,10 +36,7 @@ class TestTagSlugView(MarketingTestCase):
     def test_tag_slug__without_academy_header(self):
         """Test /tag/:slug without academy header"""
         url = reverse_lazy('marketing:academy_tag_slug', kwargs={'tag_slug': 'slug'})
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_tag',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_tag', role='potato')
 
         response = self.client.put(url)
         json = response.json()
@@ -57,10 +54,7 @@ class TestTagSlugView(MarketingTestCase):
         """Test /tag/:slug without data"""
         self.headers(academy=1)
         url = reverse_lazy('marketing:academy_tag_slug', kwargs={'tag_slug': 'slug'})
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_tag',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_tag', role='potato')
 
         response = self.client.put(url)
         json = response.json()
@@ -86,10 +80,7 @@ class TestTagSlugView(MarketingTestCase):
             active_campaign_academy=True,
         )
 
-        tag_model = self.generate_models(tag={
-            'ac_academy': model.active_campaign_academy,
-            'slug': 'tag_slug'
-        })
+        tag_model = self.generate_models(tag={'ac_academy': model.active_campaign_academy, 'slug': 'tag_slug'})
 
         url = reverse_lazy('marketing:academy_tag_slug', kwargs={'tag_slug': 'tag_slug'})
         data = {
@@ -117,10 +108,7 @@ class TestTagSlugView(MarketingTestCase):
             active_campaign_academy=True,
         )
 
-        tag_model = self.generate_models(tag={
-            'ac_academy': model.active_campaign_academy,
-            'slug': 'tag_slug'
-        })
+        tag_model = self.generate_models(tag={'ac_academy': model.active_campaign_academy, 'slug': 'tag_slug'})
 
         url = reverse_lazy('marketing:academy_tag')
         data = [{
@@ -148,10 +136,7 @@ class TestTagSlugView(MarketingTestCase):
             active_campaign_academy=True,
         )
 
-        tag_model = self.generate_models(tag={
-            'ac_academy': model.active_campaign_academy,
-            'slug': 'tag_slug'
-        })
+        tag_model = self.generate_models(tag={'ac_academy': model.active_campaign_academy, 'slug': 'tag_slug'})
 
         url = reverse_lazy('marketing:academy_tag')
         data = [{

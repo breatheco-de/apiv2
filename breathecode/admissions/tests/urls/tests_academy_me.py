@@ -42,11 +42,10 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         response = self.client.put(url, {}, format='json')
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_put__without_capability(self):
@@ -58,11 +57,10 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         response = self.client.put(url, data, format='json')
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': "You (user: 1) don't have this capability: crud_my_academy for academy 1",
-                'status_code': 403
-            })
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: crud_my_academy for academy 1",
+            'status_code': 403
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     """

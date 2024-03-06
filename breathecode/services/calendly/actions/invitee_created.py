@@ -49,8 +49,9 @@ def invitee_created(self, webhook, payload: dict):
     mentor_email = event['event_memberships'][0]['user_email']
     mentor_uuid = urlparse(event['event_memberships'][0]['user']).path.split('/')[-1]
 
-    mentor = MentorProfile.objects.filter(academy=academy).filter(
-        Q(calendly_uuid=mentor_uuid) | Q(email=mentor_email) | Q(user__email=mentor_email)).first()
+    mentor = MentorProfile.objects.filter(
+        academy=academy).filter(Q(calendly_uuid=mentor_uuid) | Q(email=mentor_email)
+                                | Q(user__email=mentor_email)).first()
     if mentor is None:
         raise Exception(f'Mentor not found with uuid {mentor_uuid} and email {mentor_email}')
 

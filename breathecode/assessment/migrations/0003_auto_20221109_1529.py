@@ -13,8 +13,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='assessment',
             name='is_instant_feedback',
-            field=models.BooleanField(
-                default=True, help_text='If true, users will know immediately if their answer was correct'),
+            field=models.BooleanField(default=True,
+                                      help_text='If true, users will know immediately if their answer was correct'),
         ),
         migrations.AlterField(
             model_name='question',

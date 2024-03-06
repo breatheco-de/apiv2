@@ -89,8 +89,7 @@ class ActionTestfetchToApiTestCase(CareerTestCase):
             assert False
         except Exception as e:
             self.assertEqual(str(e), ('without-spider'))
-            self.assertEqual(Logger.debug.call_args_list,
-                             [call('First you must specify a spider (fetch_to_api)')])
+            self.assertEqual(Logger.debug.call_args_list, [call('First you must specify a spider (fetch_to_api)')])
 
     @patch(REQUESTS_PATH['get'],
            apply_requests_get_mock([(200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA)]))

@@ -33,11 +33,10 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         response = self.client.put(url, {})
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
@@ -85,9 +84,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, {'status_code': 400, 'detail': 'Specified cohort not be found'})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
@@ -104,10 +101,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
 
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': 1})
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_cohort', role='potato')
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -122,9 +116,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
@@ -141,10 +133,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
 
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': 1})
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_cohort', role='potato')
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -163,9 +152,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
@@ -182,10 +169,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
 
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': 1})
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_cohort', role='potato')
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -334,9 +318,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
@@ -379,9 +361,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
@@ -428,9 +408,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
@@ -478,9 +456,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
@@ -643,8 +619,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                 'recurrent':
                 syllabus_schedule_time_slot.recurrent,
                 'starting_at':
-                DatetimeInteger.to_iso_string(model.academy.timezone,
-                                              syllabus_schedule_time_slot.starting_at),
+                DatetimeInteger.to_iso_string(model.academy.timezone, syllabus_schedule_time_slot.starting_at),
             } for syllabus_schedule_time_slot in model2.syllabus_schedule_time_slot],
             'schedule': {
                 'id': model2.syllabus_schedule.id,
@@ -988,8 +963,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                 'recurrent':
                 syllabus_schedule_time_slot.recurrent,
                 'starting_at':
-                DatetimeInteger.to_iso_string(model.academy.timezone,
-                                              syllabus_schedule_time_slot.starting_at),
+                DatetimeInteger.to_iso_string(model.academy.timezone, syllabus_schedule_time_slot.starting_at),
             } for syllabus_schedule_time_slot in model2.syllabus_schedule_time_slot],
             'schedule': {
                 'id': model2.syllabus_schedule.id,
@@ -1517,9 +1491,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
     """
@@ -1551,10 +1523,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call([
-                'CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension',
-                'SortExtension'
-            ]),
+            call(['CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension', 'SortExtension']),
         ])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())

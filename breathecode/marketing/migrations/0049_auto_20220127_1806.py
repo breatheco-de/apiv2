@@ -19,20 +19,18 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='tag',
             name='automation',
-            field=models.ForeignKey(
-                blank=True,
-                default=None,
-                help_text='Leads that contain this tag will be asociated to this automation',
-                null=True,
-                on_delete=django.db.models.deletion.CASCADE,
-                to='marketing.automation'),
+            field=models.ForeignKey(blank=True,
+                                    default=None,
+                                    help_text='Leads that contain this tag will be asociated to this automation',
+                                    null=True,
+                                    on_delete=django.db.models.deletion.CASCADE,
+                                    to='marketing.automation'),
         ),
         migrations.AlterField(
             model_name='tag',
             name='tag_type',
             field=models.CharField(
-                choices=[('STRONG', 'Strong'), ('SOFT', 'Soft'), ('DISCOVERY', 'Discovery'),
-                         ('OTHER', 'Other')],
+                choices=[('STRONG', 'Strong'), ('SOFT', 'Soft'), ('DISCOVERY', 'Discovery'), ('OTHER', 'Other')],
                 default='OTHER',
                 help_text=
                 "The STRONG tags in a lead will determine to witch automation it does unless there is an 'automation' property on the lead JSON",

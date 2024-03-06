@@ -119,28 +119,21 @@ def get_rating(obj):
 
 def get_serializer(self, mentorship_session, mentor_profile, mentorship_service, user, data={}):
     return {
-        'accounted_duration':
-        mentorship_session.accounted_duration,
-        'billed_str':
-        get_billed_str(mentorship_session),
-        'duration_string':
-        get_duration_string(mentorship_session),
+        'accounted_duration': mentorship_session.accounted_duration,
+        'billed_str': get_billed_str(mentorship_session),
+        'duration_string': get_duration_string(mentorship_session),
         'ended_at':
         self.bc.datetime.to_iso_string(mentorship_session.ended_at) if mentorship_session.ended_at else None,
-        'extra_time':
-        get_extra_time(mentorship_session),
-        'id':
-        mentorship_session.id,
-        'mentee_joined':
-        get_mente_joined(mentorship_session),
+        'extra_time': get_extra_time(mentorship_session),
+        'id': mentorship_session.id,
+        'mentee_joined': get_mente_joined(mentorship_session),
         'mentee': {
             'email': user.email,
             'first_name': user.first_name,
             'id': user.id,
             'last_name': user.last_name,
         },
-        'mentee_left_at':
-        mentorship_session.mentee_left_at,
+        'mentee_left_at': mentorship_session.mentee_left_at,
         'mentor': {
             'booking_url':
             mentor_profile.booking_url,
@@ -208,34 +201,23 @@ def get_serializer(self, mentorship_session, mentor_profile, mentorship_service,
                 'last_name': user.last_name,
             }
         },
-        'mentor_joined_at':
-        mentorship_session.mentor_joined_at,
-        'mentor_late':
-        get_mentor_late(mentorship_session),
-        'mentor_left_at':
-        mentorship_session.mentor_left_at,
-        'rating':
-        get_rating(mentorship_session),
+        'mentor_joined_at': mentorship_session.mentor_joined_at,
+        'mentor_late': get_mentor_late(mentorship_session),
+        'mentor_left_at': mentorship_session.mentor_left_at,
+        'rating': get_rating(mentorship_session),
         'started_at':
-        self.bc.datetime.to_iso_string(mentorship_session.started_at)
-        if mentorship_session.started_at else None,
-        'status':
-        mentorship_session.status,
-        'status_message':
-        mentorship_session.status_message,
-        'suggested_accounted_duration':
-        mentorship_session.suggested_accounted_duration,
-        'summary':
-        mentorship_session.summary,
-        'tooltip':
-        get_tooltip(mentorship_session),
+        self.bc.datetime.to_iso_string(mentorship_session.started_at) if mentorship_session.started_at else None,
+        'status': mentorship_session.status,
+        'status_message': mentorship_session.status_message,
+        'suggested_accounted_duration': mentorship_session.suggested_accounted_duration,
+        'summary': mentorship_session.summary,
+        'tooltip': get_tooltip(mentorship_session),
         **data,
     }
 
 
 def mentor_profile_columns(data={}):
-    token = hashlib.sha1(
-        (str(data['slug'] if 'slug' in data else '') + str(UTC_NOW)).encode('UTF-8')).hexdigest()
+    token = hashlib.sha1((str(data['slug'] if 'slug' in data else '') + str(UTC_NOW)).encode('UTF-8')).hexdigest()
     return {
         'bio': None,
         'booking_url': None,
@@ -316,10 +298,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
 
     def test__get__without_data(self):
-        model = self.bc.database.create(user=1,
-                                        role=1,
-                                        capability='read_mentorship_session',
-                                        profile_academy=1)
+        model = self.bc.database.create(user=1, role=1, capability='read_mentorship_session', profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
         self.client.force_authenticate(model.user)
@@ -469,15 +448,12 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.bc.request.set_headers(academy=model.academy.id)
             self.client.force_authenticate(model.user)
 
-            url = (reverse_lazy('mentorship:academy_mentor_id_session',
-                                kwargs={'mentor_id': model.mentor_profile.id}) +
+            url = (reverse_lazy('mentorship:academy_mentor_id_session', kwargs={'mentor_id': model.mentor_profile.id}) +
                    f'?status={first_status},{second_status}')
             response = self.client.get(url)
 
             json = response.json()
-            mentorship_session_list = sorted(model.mentorship_session,
-                                             key=lambda x: x.created_at,
-                                             reverse=True)
+            mentorship_session_list = sorted(model.mentorship_session, key=lambda x: x.created_at, reverse=True)
             expected = [
                 get_serializer(self,
                                mentorship_session_list[0],

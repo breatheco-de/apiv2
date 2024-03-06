@@ -161,9 +161,7 @@ class AuthenticateTestSuite(ProvisioningTestCase):
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_successfully(provisioning_bills=[model.provisioning_bill[0]],
-                                       token=model.token,
-                                       data={})
+        expected = render_successfully(provisioning_bills=[model.provisioning_bill[0]], token=model.token, data={})
         # dump error in external files
         if content != expected:
             with open('content.html', 'w') as f:

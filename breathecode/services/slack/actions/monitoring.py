@@ -19,10 +19,7 @@ class Monitoring:
         e.paused_until = selected_date
         e.save()
 
-        return {
-            'text': '✅ The endpoint test has been snoozed until ' + selected_date,
-            'response_type': 'ephemeral'
-        }
+        return {'text': '✅ The endpoint test has been snoozed until ' + selected_date, 'response_type': 'ephemeral'}
 
     # disable script until specific time
     @action(only='staff')
@@ -51,15 +48,13 @@ def render_snooze_text_endpoint(endpoints):
                 f'*App:* {e.application.title} \n *URL:* {e.url} \n *Status:* {e.status} \n *Details:* {e.status_text}',
             },
             'accessory': {
-                'type':
-                'datepicker',
+                'type': 'datepicker',
                 'placeholder': {
                     'type': 'plain_text',
                     'text': 'Select a date to snooze',
                     'emoji': True
                 },
-                'action_id':
-                json.dumps({
+                'action_id': json.dumps({
                     'class': 'monitoring',
                     'method': 'snooze_test_endpoint',
                     'endpoint_id': e.id

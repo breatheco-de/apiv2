@@ -48,8 +48,8 @@ def get_pending_sessions_or_create(token, mentor, service, mentee=None):
     if mentor.user.id == token.user.id:
         unfinished_sessions = MentorshipSession.objects.filter(mentor__id=mentor.id,
                                                                service__id=service.id,
-                                                               status__in=['PENDING', 'STARTED'
-                                                                           ]).exclude(id__in=pending_sessions)
+                                                               status__in=['PENDING',
+                                                                           'STARTED']).exclude(id__in=pending_sessions)
         # if it has unishined meetings with already started
         if unfinished_sessions.count() > 0:
             pending_sessions += unfinished_sessions.values_list('pk', flat=True)
@@ -59,8 +59,7 @@ def get_pending_sessions_or_create(token, mentor, service, mentee=None):
         unfinished_sessions = MentorshipSession.objects.filter(mentor__id=mentor.id,
                                                                mentee__isnull=True,
                                                                service__id=service.id,
-                                                               status__in=['PENDING'
-                                                                           ]).order_by('-mentor_joined_at')
+                                                               status__in=['PENDING']).order_by('-mentor_joined_at')
 
         if unfinished_sessions.count() > 0:
             # grab the last one the mentor joined
@@ -69,11 +68,9 @@ def get_pending_sessions_or_create(token, mentor, service, mentee=None):
             # close the rest
             close_mentoring_sessions(
                 unfinished_sessions.exclude(id=last_one.id), {
-                    'summary':
-                    'Automatically closed, not enough information on the meeting the mentor forgot to '
+                    'summary': 'Automatically closed, not enough information on the meeting the mentor forgot to '
                     'specify the mentee and the mentee never joined',
-                    'status':
-                    'FAILED',
+                    'status': 'FAILED',
                 })
 
     # return all the collected pending sessions
@@ -200,9 +197,8 @@ def get_accounted_time(_session):
                     return response
                 else:
                     response['accounted_duration'] = session.service.duration
-                    response['status_message'] = (
-                        'The session never ended, accounting for the standard duration '
-                        f'{duration_to_str(response["accounted_duration"])}.')
+                    response['status_message'] = ('The session never ended, accounting for the standard duration '
+                                                  f'{duration_to_str(response["accounted_duration"])}.')
                     return response
 
             if session.started_at > session.ended_at:
@@ -314,18 +310,15 @@ def generate_mentor_bills(mentor, reset=False):
         sessions_of_month = unpaid_sessions.filter(started_at__month=month, started_at__year=year)
 
         start_at = datetime.datetime(year, month, 1, 0, 0, 0, 0, tzinfo=pytz.UTC)
-        end_at = datetime.datetime(year, month, 1, 0, 0, 0, 0, tzinfo=pytz.UTC) + relativedelta(
-            months=1) - datetime.timedelta(microseconds=1)
+        end_at = datetime.datetime(year, month, 1, 0, 0, 0, 0,
+                                   tzinfo=pytz.UTC) + relativedelta(months=1) - datetime.timedelta(microseconds=1)
 
         open_bill = None
         if recalculate_bills:
             open_bill = recalculate_bills.filter(started_at__month=month, started_at__year=year).first()
 
         if open_bill is None:
-            open_bill = MentorshipBill(mentor=mentor,
-                                       academy=mentor.academy,
-                                       started_at=start_at,
-                                       ended_at=end_at)
+            open_bill = MentorshipBill(mentor=mentor, academy=mentor.academy, started_at=start_at, ended_at=end_at)
             open_bill.save()
         else:
             open_bill.status = 'DUE'
@@ -377,16 +370,13 @@ def mentor_is_ready(mentor: MentorProfile):
 
     if mentor.online_meeting_url is None or mentor.online_meeting_url == '':
         raise Exception(
-            f'Mentor {mentor.name} does not have backup online_meeting_url, update the value before activating.'
-        )
+            f'Mentor {mentor.name} does not have backup online_meeting_url, update the value before activating.')
 
     elif mentor.booking_url is None or 'https://calendly.com' not in mentor.booking_url:
-        raise Exception(
-            f'Mentor {mentor.name} booking_url must point to calendly, update the value before activating.')
+        raise Exception(f'Mentor {mentor.name} booking_url must point to calendly, update the value before activating.')
 
     elif len(mentor.syllabus.all()) == 0:
-        raise Exception(
-            f'Mentor {mentor.name} has no syllabus associated, update the value before activating.')
+        raise Exception(f'Mentor {mentor.name} has no syllabus associated, update the value before activating.')
 
     elif 'no-booking-url' not in mentor.availability_report and 'bad-booking-url' in mentor.availability_report:
         raise Exception(f'Mentor {mentor.name} booking URL is failing.')

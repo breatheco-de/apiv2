@@ -13,11 +13,10 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='provisioningbill',
             name='title',
-            field=models.CharField(
-                blank=True,
-                default=None,
-                help_text="This title should describe what the Bill is about. I.e.: April's bill.",
-                max_length=40,
-                null=True),
+            field=models.CharField(blank=True,
+                                   default=None,
+                                   help_text="This title should describe what the Bill is about. I.e.: April's bill.",
+                                   max_length=40,
+                                   null=True),
         ),
     ]

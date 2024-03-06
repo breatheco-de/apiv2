@@ -22,9 +22,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='EventTypeSet',
             fields=[
-                ('id',
-                 models.BigAutoField(auto_created=True, primary_key=True, serialize=False,
-                                     verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('slug',
                  models.SlugField(
                      help_text=
@@ -35,8 +33,7 @@ class Migration(migrations.Migration):
                  models.ForeignKey(help_text='Academy owner',
                                    on_delete=django.db.models.deletion.CASCADE,
                                    to='admissions.academy')),
-                ('event_types',
-                 models.ManyToManyField(blank=True, help_text='Event types', to='events.EventType')),
+                ('event_types', models.ManyToManyField(blank=True, help_text='Event types', to='events.EventType')),
             ],
         ),
         migrations.RemoveField(
@@ -50,10 +47,9 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='bag',
             name='selected_mentorship_service_sets',
-            field=models.ManyToManyField(
-                blank=True,
-                help_text='Selected mentorship service sets for the plans of services',
-                to='payments.MentorshipServiceSet'),
+            field=models.ManyToManyField(blank=True,
+                                         help_text='Selected mentorship service sets for the plans of services',
+                                         to='payments.MentorshipServiceSet'),
         ),
         migrations.AddField(
             model_name='planfinancing',
@@ -133,12 +129,11 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='bag',
             name='chosen_period',
-            field=models.CharField(
-                choices=[('NO_SET', 'No set'), ('MONTH', 'Month'), ('QUARTER', 'Quarter'), ('HALF', 'Half'),
-                         ('YEAR', 'Year')],
-                default='NO_SET',
-                help_text='Chosen period used to calculate the amount and build the subscription',
-                max_length=7),
+            field=models.CharField(choices=[('NO_SET', 'No set'), ('MONTH', 'Month'), ('QUARTER', 'Quarter'),
+                                            ('HALF', 'Half'), ('YEAR', 'Year')],
+                                   default='NO_SET',
+                                   help_text='Chosen period used to calculate the amount and build the subscription',
+                                   max_length=7),
         ),
         migrations.AlterField(
             model_name='bag',
@@ -159,8 +154,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='bag',
             name='how_many_installments',
-            field=models.IntegerField(
-                default=0, help_text='How many installments to collect and build the plan financing'),
+            field=models.IntegerField(default=0,
+                                      help_text='How many installments to collect and build the plan financing'),
         ),
         migrations.AlterField(
             model_name='bag',
@@ -187,8 +182,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='bag',
             name='status',
-            field=models.CharField(choices=[('RENEWAL', 'Renewal'), ('CHECKING', 'Checking'),
-                                            ('PAID', 'Paid')],
+            field=models.CharField(choices=[('RENEWAL', 'Renewal'), ('CHECKING', 'Checking'), ('PAID', 'Paid')],
                                    default='CHECKING',
                                    help_text='Bag status',
                                    max_length=8),
@@ -344,8 +338,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='consumptionsession',
             name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('DONE', 'Done'),
-                                            ('CANCELLED', 'Cancelled')],
+            field=models.CharField(choices=[('PENDING', 'Pending'), ('DONE', 'Done'), ('CANCELLED', 'Cancelled')],
                                    default='PENDING',
                                    help_text='Status of the session',
                                    max_length=12),
@@ -365,15 +358,12 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='currency',
             name='code',
-            field=models.CharField(help_text='ISO 4217 currency code (e.g. USD, EUR, MXN)',
-                                   max_length=3,
-                                   unique=True),
+            field=models.CharField(help_text='ISO 4217 currency code (e.g. USD, EUR, MXN)', max_length=3, unique=True),
         ),
         migrations.AlterField(
             model_name='currency',
             name='decimals',
-            field=models.IntegerField(default=0,
-                                      help_text='Number of decimals (e.g. 2 for USD and EUR, 0 for JPY)'),
+            field=models.IntegerField(default=0, help_text='Number of decimals (e.g. 2 for USD and EUR, 0 for JPY)'),
         ),
         migrations.AlterField(
             model_name='currency',
@@ -420,8 +410,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='financingoption',
             name='how_many_months',
-            field=models.IntegerField(
-                default=1, help_text='How many months and installments to collect (e.g. 1, 2, 3, ...)'),
+            field=models.IntegerField(default=1,
+                                      help_text='How many months and installments to collect (e.g. 1, 2, 3, ...)'),
         ),
         migrations.AlterField(
             model_name='financingoption',
@@ -438,9 +428,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='invoice',
             name='bag',
-            field=models.ForeignKey(help_text='Bag',
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='payments.bag'),
+            field=models.ForeignKey(help_text='Bag', on_delete=django.db.models.deletion.CASCADE, to='payments.bag'),
         ),
         migrations.AlterField(
             model_name='invoice',
@@ -575,9 +563,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='plan',
             name='status',
-            field=models.CharField(choices=[('DRAFT', 'Draft'), ('ACTIVE', 'Active'),
-                                            ('UNLISTED', 'Unlisted'), ('DELETED', 'Deleted'),
-                                            ('DISCONTINUED', 'Discontinued')],
+            field=models.CharField(choices=[('DRAFT', 'Draft'), ('ACTIVE', 'Active'), ('UNLISTED', 'Unlisted'),
+                                            ('DELETED', 'Deleted'), ('DISCONTINUED', 'Discontinued')],
                                    default='DRAFT',
                                    help_text='Status',
                                    max_length=12),
@@ -594,8 +581,7 @@ class Migration(migrations.Migration):
             model_name='plan',
             name='time_of_life_unit',
             field=models.CharField(blank=True,
-                                   choices=[('DAY', 'Day'), ('WEEK', 'Week'), ('MONTH', 'Month'),
-                                            ('YEAR', 'Year')],
+                                   choices=[('DAY', 'Day'), ('WEEK', 'Week'), ('MONTH', 'Month'), ('YEAR', 'Year')],
                                    default='MONTH',
                                    help_text='Timelife unit (e.g. DAY, WEEK, MONTH or YEAR)',
                                    max_length=10,
@@ -609,8 +595,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='plan',
             name='trial_duration_unit',
-            field=models.CharField(choices=[('DAY', 'Day'), ('WEEK', 'Week'), ('MONTH', 'Month'),
-                                            ('YEAR', 'Year')],
+            field=models.CharField(choices=[('DAY', 'Day'), ('WEEK', 'Week'), ('MONTH', 'Month'), ('YEAR', 'Year')],
                                    default='MONTH',
                                    help_text='Trial duration unit (e.g. DAY, WEEK, MONTH or YEAR)',
                                    max_length=10),
@@ -630,8 +615,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='planfinancing',
             name='monthly_price',
-            field=models.FloatField(
-                default=0, help_text='Monthly price, we keep this to avoid we changes him/her amount'),
+            field=models.FloatField(default=0,
+                                    help_text='Monthly price, we keep this to avoid we changes him/her amount'),
         ),
         migrations.AlterField(
             model_name='planfinancing',
@@ -641,10 +626,9 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='planfinancing',
             name='plan_expires_at',
-            field=models.DateTimeField(
-                default=None,
-                help_text='Plan expires at, after this date the plan will not be renewed',
-                null=True),
+            field=models.DateTimeField(default=None,
+                                       help_text='Plan expires at, after this date the plan will not be renewed',
+                                       null=True),
         ),
         migrations.AlterField(
             model_name='planfinancing',
@@ -689,8 +673,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='planoffer',
             name='from_syllabus',
-            field=models.ManyToManyField(help_text='Syllabus from which the plan is offered',
-                                         to='admissions.Syllabus'),
+            field=models.ManyToManyField(help_text='Syllabus from which the plan is offered', to='admissions.Syllabus'),
         ),
         migrations.AlterField(
             model_name='planoffer',
@@ -714,10 +697,9 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='planoffertranslation',
             name='lang',
-            field=models.CharField(
-                help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US',
-                max_length=5,
-                validators=[breathecode.utils.validators.language.validate_language_code]),
+            field=models.CharField(help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US',
+                                   max_length=5,
+                                   validators=[breathecode.utils.validators.language.validate_language_code]),
         ),
         migrations.AlterField(
             model_name='planoffertranslation',
@@ -748,17 +730,14 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='planserviceitem',
             name='cohorts',
-            field=models.ManyToManyField(
-                blank=True,
-                help_text='Available cohorts to be sold in this this service and plan',
-                to='admissions.Cohort'),
+            field=models.ManyToManyField(blank=True,
+                                         help_text='Available cohorts to be sold in this this service and plan',
+                                         to='admissions.Cohort'),
         ),
         migrations.AlterField(
             model_name='planserviceitem',
             name='plan',
-            field=models.ForeignKey(help_text='Plan',
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='payments.plan'),
+            field=models.ForeignKey(help_text='Plan', on_delete=django.db.models.deletion.CASCADE, to='payments.plan'),
         ),
         migrations.AlterField(
             model_name='planserviceitem',
@@ -802,10 +781,9 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='plantranslation',
             name='lang',
-            field=models.CharField(
-                help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US',
-                max_length=5,
-                validators=[breathecode.utils.validators.language.validate_language_code]),
+            field=models.CharField(help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US',
+                                   max_length=5,
+                                   validators=[breathecode.utils.validators.language.validate_language_code]),
         ),
         migrations.AlterField(
             model_name='plantranslation',
@@ -822,10 +800,9 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='service',
             name='groups',
-            field=models.ManyToManyField(
-                blank=True,
-                help_text='Groups that can access the customer that bought this service',
-                to='auth.Group'),
+            field=models.ManyToManyField(blank=True,
+                                         help_text='Groups that can access the customer that bought this service',
+                                         to='auth.Group'),
         ),
         migrations.AlterField(
             model_name='service',
@@ -863,8 +840,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='service',
             name='trial_duration_unit',
-            field=models.CharField(choices=[('DAY', 'Day'), ('WEEK', 'Week'), ('MONTH', 'Month'),
-                                            ('YEAR', 'Year')],
+            field=models.CharField(choices=[('DAY', 'Day'), ('WEEK', 'Week'), ('MONTH', 'Month'), ('YEAR', 'Year')],
                                    default='MONTH',
                                    help_text='Trial duration unit (e.g. DAY, WEEK, MONTH or YEAR)',
                                    max_length=10),
@@ -884,14 +860,12 @@ class Migration(migrations.Migration):
             name='renew_at',
             field=models.IntegerField(
                 default=1,
-                help_text='Renew at (e.g. 1, 2, 3, ...) it going to be used to build the balance of customer'
-            ),
+                help_text='Renew at (e.g. 1, 2, 3, ...) it going to be used to build the balance of customer'),
         ),
         migrations.AlterField(
             model_name='serviceitem',
             name='renew_at_unit',
-            field=models.CharField(choices=[('DAY', 'Day'), ('WEEK', 'Week'), ('MONTH', 'Month'),
-                                            ('YEAR', 'Year')],
+            field=models.CharField(choices=[('DAY', 'Day'), ('WEEK', 'Week'), ('MONTH', 'Month'), ('YEAR', 'Year')],
                                    default='MONTH',
                                    help_text='Renew at unit (e.g. DAY, WEEK, MONTH or YEAR)',
                                    max_length=10),
@@ -919,10 +893,9 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='serviceitemfeature',
             name='lang',
-            field=models.CharField(
-                help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US',
-                max_length=5,
-                validators=[breathecode.utils.validators.language.validate_language_code]),
+            field=models.CharField(help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US',
+                                   max_length=5,
+                                   validators=[breathecode.utils.validators.language.validate_language_code]),
         ),
         migrations.AlterField(
             model_name='serviceitemfeature',
@@ -964,11 +937,10 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='servicestockscheduler',
             name='valid_until',
-            field=models.DateTimeField(
-                blank=True,
-                default=None,
-                help_text='Valid until, after this date the consumables will be renewed',
-                null=True),
+            field=models.DateTimeField(blank=True,
+                                       default=None,
+                                       help_text='Valid until, after this date the consumables will be renewed',
+                                       null=True),
         ),
         migrations.AlterField(
             model_name='servicetranslation',
@@ -978,10 +950,9 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='servicetranslation',
             name='lang',
-            field=models.CharField(
-                help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US',
-                max_length=5,
-                validators=[breathecode.utils.validators.language.validate_language_code]),
+            field=models.CharField(help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US',
+                                   max_length=5,
+                                   validators=[breathecode.utils.validators.language.validate_language_code]),
         ),
         migrations.AlterField(
             model_name='servicetranslation',
@@ -1030,8 +1001,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='subscription',
             name='pay_every_unit',
-            field=models.CharField(choices=[('DAY', 'Day'), ('WEEK', 'Week'), ('MONTH', 'Month'),
-                                            ('YEAR', 'Year')],
+            field=models.CharField(choices=[('DAY', 'Day'), ('WEEK', 'Week'), ('MONTH', 'Month'), ('YEAR', 'Year')],
                                    default='MONTH',
                                    help_text='Pay every unit (e.g. DAY, WEEK, MONTH or YEAR)',
                                    max_length=10),
@@ -1079,11 +1049,10 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='subscription',
             name='valid_until',
-            field=models.DateTimeField(
-                blank=True,
-                default=None,
-                help_text='Valid until, after this date the subscription will be destroyed',
-                null=True),
+            field=models.DateTimeField(blank=True,
+                                       default=None,
+                                       help_text='Valid until, after this date the subscription will be destroyed',
+                                       null=True),
         ),
         migrations.AlterField(
             model_name='subscriptionserviceitem',
@@ -1116,20 +1085,16 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='MentorshipServiceSetTranslation',
             fields=[
-                ('id',
-                 models.BigAutoField(auto_created=True, primary_key=True, serialize=False,
-                                     verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('lang',
-                 models.CharField(
-                     help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US',
-                     max_length=5,
-                     validators=[breathecode.utils.validators.language.validate_language_code])),
+                 models.CharField(help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US',
+                                  max_length=5,
+                                  validators=[breathecode.utils.validators.language.validate_language_code])),
                 ('title', models.CharField(help_text='Title of the mentorship service set', max_length=60)),
-                ('description',
-                 models.CharField(help_text='Description of the mentorship service set', max_length=255)),
+                ('description', models.CharField(help_text='Description of the mentorship service set',
+                                                 max_length=255)),
                 ('short_description',
-                 models.CharField(help_text='Short description of the mentorship service set',
-                                  max_length=255)),
+                 models.CharField(help_text='Short description of the mentorship service set', max_length=255)),
                 ('mentorship_service_set',
                  models.ForeignKey(help_text='Mentorship service set',
                                    on_delete=django.db.models.deletion.CASCADE,
@@ -1139,17 +1104,13 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='EventTypeSetTranslation',
             fields=[
-                ('id',
-                 models.BigAutoField(auto_created=True, primary_key=True, serialize=False,
-                                     verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('lang',
-                 models.CharField(
-                     help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US',
-                     max_length=5,
-                     validators=[breathecode.utils.validators.language.validate_language_code])),
+                 models.CharField(help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US',
+                                  max_length=5,
+                                  validators=[breathecode.utils.validators.language.validate_language_code])),
                 ('title', models.CharField(help_text='Title of the event type set', max_length=60)),
-                ('description', models.CharField(help_text='Description of the event type set',
-                                                 max_length=255)),
+                ('description', models.CharField(help_text='Description of the event type set', max_length=255)),
                 ('short_description',
                  models.CharField(help_text='Short description of the event type set', max_length=255)),
                 ('event_type_set',

@@ -31,16 +31,14 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='downloadable',
             name='destination_status',
-            field=models.CharField(choices=[('ACTIVE', 'Active'), ('NOT_FOUND', 'Not found'),
-                                            ('ERROR', 'Error')],
+            field=models.CharField(choices=[('ACTIVE', 'Active'), ('NOT_FOUND', 'Not found'), ('ERROR', 'Error')],
                                    default='ACTIVE',
                                    max_length=15),
         ),
         migrations.AlterField(
             model_name='shortlink',
             name='destination_status',
-            field=models.CharField(choices=[('ACTIVE', 'Active'), ('NOT_FOUND', 'Not found'),
-                                            ('ERROR', 'Error')],
+            field=models.CharField(choices=[('ACTIVE', 'Active'), ('NOT_FOUND', 'Not found'), ('ERROR', 'Error')],
                                    default='ACTIVE',
                                    max_length=15),
         ),

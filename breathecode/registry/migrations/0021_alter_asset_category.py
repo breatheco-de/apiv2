@@ -14,9 +14,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='asset',
             name='category',
-            field=models.ForeignKey(choices=[('PROJECT', 'Project'), ('EXERCISE', 'Exercise'),
-                                             ('QUIZ', 'Quiz'), ('LESSON', 'Lesson'), ('VIDEO', 'Video'),
-                                             ('ARTICLE', 'Article')],
+            field=models.ForeignKey(choices=[('PROJECT', 'Project'), ('EXERCISE', 'Exercise'), ('QUIZ', 'Quiz'),
+                                             ('LESSON', 'Lesson'), ('VIDEO', 'Video'), ('ARTICLE', 'Article')],
                                     null=True,
                                     on_delete=django.db.models.deletion.SET_NULL,
                                     to='registry.assetcategory'),

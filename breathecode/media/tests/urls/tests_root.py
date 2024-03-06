@@ -70,10 +70,7 @@ class MediaTestSuite(MediaTestCase):
     def test_root__without_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        models = self.generate_models(authenticate=True,
-                                      profile_academy=True,
-                                      capability='read_media',
-                                      role='potato')
+        models = self.generate_models(authenticate=True, profile_academy=True, capability='read_media', role='potato')
         url = reverse_lazy('media:root')
         response = self.client.get(url)
         json = response.json()
@@ -136,35 +133,29 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, [{
-            'categories': [{
-                'id': 1,
-                'medias': 1,
-                'name': model['category'].name,
-                'slug': model['category'].slug,
-            }],
-            'hash':
-            model['media'].hash,
-            'hits':
-            model['media'].hits,
-            'id':
-            model['media'].id,
-            'mime':
-            model['media'].mime,
-            'name':
-            model['media'].name,
-            'slug':
-            model['media'].slug,
-            'thumbnail':
-            f'{model.media.url}-thumbnail',
-            'url':
-            model['media'].url,
-            'academy': {
-                'id': model['academy'].id,
-                'slug': model['academy'].slug,
-                'name': model['academy'].name,
-            }
-        }])
+        self.assertEqual(
+            json,
+            [{
+                'categories': [{
+                    'id': 1,
+                    'medias': 1,
+                    'name': model['category'].name,
+                    'slug': model['category'].slug,
+                }],
+                'hash': model['media'].hash,
+                'hits': model['media'].hits,
+                'id': model['media'].id,
+                'mime': model['media'].mime,
+                'name': model['media'].name,
+                'slug': model['media'].slug,
+                'thumbnail': f'{model.media.url}-thumbnail',
+                'url': model['media'].url,
+                'academy': {
+                    'id': model['academy'].id,
+                    'slug': model['academy'].slug,
+                    'name': model['academy'].name,
+                }
+            }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
@@ -208,35 +199,29 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, [{
-            'categories': [{
-                'id': 1,
-                'medias': 1,
-                'name': model['category'].name,
-                'slug': model['category'].slug,
-            }],
-            'hash':
-            model['media'].hash,
-            'hits':
-            model['media'].hits,
-            'id':
-            model['media'].id,
-            'mime':
-            model['media'].mime,
-            'name':
-            model['media'].name,
-            'slug':
-            model['media'].slug,
-            'thumbnail':
-            f'{model.media.url}-thumbnail',
-            'url':
-            model['media'].url,
-            'academy': {
-                'id': model['academy'].id,
-                'slug': model['academy'].slug,
-                'name': model['academy'].name,
-            }
-        }])
+        self.assertEqual(
+            json,
+            [{
+                'categories': [{
+                    'id': 1,
+                    'medias': 1,
+                    'name': model['category'].name,
+                    'slug': model['category'].slug,
+                }],
+                'hash': model['media'].hash,
+                'hits': model['media'].hits,
+                'id': model['media'].id,
+                'mime': model['media'].mime,
+                'name': model['media'].name,
+                'slug': model['media'].slug,
+                'thumbnail': f'{model.media.url}-thumbnail',
+                'url': model['media'].url,
+                'academy': {
+                    'id': model['academy'].id,
+                    'slug': model['academy'].slug,
+                    'name': model['academy'].name,
+                }
+            }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
@@ -247,16 +232,11 @@ class MediaTestSuite(MediaTestCase):
         """Test /answer without auth"""
         self.headers(academy=1)
 
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_media',
-                                    role='potato')
+        base = self.generate_models(authenticate=True, profile_academy=True, capability='read_media', role='potato')
 
         del base['academy']
 
-        models = [
-            self.generate_models(academy=True, media=True, category=True, models=base) for _ in range(0, 2)
-        ]
+        models = [self.generate_models(academy=True, media=True, category=True, models=base) for _ in range(0, 2)]
 
         ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
 
@@ -337,35 +317,29 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, [{
-            'categories': [{
-                'id': 1,
-                'medias': 1,
-                'name': model['category'].name,
-                'slug': model['category'].slug,
-            }],
-            'hash':
-            model['media'].hash,
-            'hits':
-            model['media'].hits,
-            'id':
-            model['media'].id,
-            'mime':
-            model['media'].mime,
-            'name':
-            model['media'].name,
-            'slug':
-            model['media'].slug,
-            'thumbnail':
-            f'{model.media.url}-thumbnail',
-            'url':
-            model['media'].url,
-            'academy': {
-                'id': model['academy'].id,
-                'slug': model['academy'].slug,
-                'name': model['academy'].name,
-            }
-        }])
+        self.assertEqual(
+            json,
+            [{
+                'categories': [{
+                    'id': 1,
+                    'medias': 1,
+                    'name': model['category'].name,
+                    'slug': model['category'].slug,
+                }],
+                'hash': model['media'].hash,
+                'hits': model['media'].hits,
+                'id': model['media'].id,
+                'mime': model['media'].mime,
+                'name': model['media'].name,
+                'slug': model['media'].slug,
+                'thumbnail': f'{model.media.url}-thumbnail',
+                'url': model['media'].url,
+                'academy': {
+                    'id': model['academy'].id,
+                    'slug': model['academy'].slug,
+                    'name': model['academy'].name,
+                }
+            }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
@@ -376,10 +350,7 @@ class MediaTestSuite(MediaTestCase):
         """Test /answer without auth"""
         self.headers(academy=1)
 
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_media',
-                                    role='potato')
+        base = self.generate_models(authenticate=True, profile_academy=True, capability='read_media', role='potato')
 
         models = [self.generate_models(media=True, category=True, models=base) for _ in range(0, 2)]
 
@@ -461,35 +432,29 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, [{
-            'categories': [{
-                'id': 1,
-                'medias': 1,
-                'name': model['category'].name,
-                'slug': model['category'].slug,
-            }],
-            'hash':
-            model['media'].hash,
-            'hits':
-            model['media'].hits,
-            'id':
-            model['media'].id,
-            'mime':
-            model['media'].mime,
-            'name':
-            model['media'].name,
-            'slug':
-            model['media'].slug,
-            'thumbnail':
-            f'{model.media.url}-thumbnail',
-            'url':
-            model['media'].url,
-            'academy': {
-                'id': model['academy'].id,
-                'slug': model['academy'].slug,
-                'name': model['academy'].name,
-            }
-        }])
+        self.assertEqual(
+            json,
+            [{
+                'categories': [{
+                    'id': 1,
+                    'medias': 1,
+                    'name': model['category'].name,
+                    'slug': model['category'].slug,
+                }],
+                'hash': model['media'].hash,
+                'hits': model['media'].hits,
+                'id': model['media'].id,
+                'mime': model['media'].mime,
+                'name': model['media'].name,
+                'slug': model['media'].slug,
+                'thumbnail': f'{model.media.url}-thumbnail',
+                'url': model['media'].url,
+                'academy': {
+                    'id': model['academy'].id,
+                    'slug': model['academy'].slug,
+                    'name': model['academy'].name,
+                }
+            }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
@@ -500,17 +465,13 @@ class MediaTestSuite(MediaTestCase):
         """Test /answer without auth"""
         self.headers(academy=1)
 
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_media',
-                                    role='potato')
+        base = self.generate_models(authenticate=True, profile_academy=True, capability='read_media', role='potato')
 
         models = [self.generate_models(media=True, category=True, models=base) for _ in range(0, 2)]
 
         ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
 
-        url = (reverse_lazy('media:root') + '?name=' + models[0]['media'].name + ',' +
-               models[1]['media'].name)
+        url = (reverse_lazy('media:root') + '?name=' + models[0]['media'].name + ',' + models[1]['media'].name)
         response = self.client.get(url)
         json = response.json()
         self.assertEqual(json, [{
@@ -586,35 +547,29 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, [{
-            'categories': [{
-                'id': 1,
-                'medias': 1,
-                'name': model['category'].name,
-                'slug': model['category'].slug,
-            }],
-            'hash':
-            model['media'].hash,
-            'hits':
-            model['media'].hits,
-            'id':
-            model['media'].id,
-            'mime':
-            model['media'].mime,
-            'name':
-            model['media'].name,
-            'slug':
-            model['media'].slug,
-            'thumbnail':
-            f'{model.media.url}-thumbnail',
-            'url':
-            model['media'].url,
-            'academy': {
-                'id': model['academy'].id,
-                'slug': model['academy'].slug,
-                'name': model['academy'].name,
-            }
-        }])
+        self.assertEqual(
+            json,
+            [{
+                'categories': [{
+                    'id': 1,
+                    'medias': 1,
+                    'name': model['category'].name,
+                    'slug': model['category'].slug,
+                }],
+                'hash': model['media'].hash,
+                'hits': model['media'].hits,
+                'id': model['media'].id,
+                'mime': model['media'].mime,
+                'name': model['media'].name,
+                'slug': model['media'].slug,
+                'thumbnail': f'{model.media.url}-thumbnail',
+                'url': model['media'].url,
+                'academy': {
+                    'id': model['academy'].id,
+                    'slug': model['academy'].slug,
+                    'name': model['academy'].name,
+                }
+            }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
@@ -625,17 +580,13 @@ class MediaTestSuite(MediaTestCase):
         """Test /answer without auth"""
         self.headers(academy=1)
 
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_media',
-                                    role='potato')
+        base = self.generate_models(authenticate=True, profile_academy=True, capability='read_media', role='potato')
 
         models = [self.generate_models(media=True, category=True, models=base) for _ in range(0, 2)]
 
         ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
 
-        url = (reverse_lazy('media:root') + '?slug=' + models[0]['media'].slug + ',' +
-               models[1]['media'].slug)
+        url = (reverse_lazy('media:root') + '?slug=' + models[0]['media'].slug + ',' + models[1]['media'].slug)
         response = self.client.get(url)
         json = response.json()
         expected = [{
@@ -712,35 +663,29 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, [{
-            'categories': [{
-                'id': 1,
-                'medias': 1,
-                'name': model['category'].name,
-                'slug': model['category'].slug,
-            }],
-            'hash':
-            model['media'].hash,
-            'hits':
-            model['media'].hits,
-            'id':
-            model['media'].id,
-            'mime':
-            model['media'].mime,
-            'name':
-            model['media'].name,
-            'slug':
-            model['media'].slug,
-            'thumbnail':
-            f'{model.media.url}-thumbnail',
-            'url':
-            model['media'].url,
-            'academy': {
-                'id': model['academy'].id,
-                'slug': model['academy'].slug,
-                'name': model['academy'].name,
-            }
-        }])
+        self.assertEqual(
+            json,
+            [{
+                'categories': [{
+                    'id': 1,
+                    'medias': 1,
+                    'name': model['category'].name,
+                    'slug': model['category'].slug,
+                }],
+                'hash': model['media'].hash,
+                'hits': model['media'].hits,
+                'id': model['media'].id,
+                'mime': model['media'].mime,
+                'name': model['media'].name,
+                'slug': model['media'].slug,
+                'thumbnail': f'{model.media.url}-thumbnail',
+                'url': model['media'].url,
+                'academy': {
+                    'id': model['academy'].id,
+                    'slug': model['academy'].slug,
+                    'name': model['academy'].name,
+                }
+            }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
@@ -751,17 +696,13 @@ class MediaTestSuite(MediaTestCase):
         """Test /answer without auth"""
         self.headers(academy=1)
 
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_media',
-                                    role='potato')
+        base = self.generate_models(authenticate=True, profile_academy=True, capability='read_media', role='potato')
 
         models = [self.generate_models(media=True, category=True, models=base) for _ in range(0, 2)]
 
         ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
 
-        url = (reverse_lazy('media:root') + '?id=' + str(models[0]['media'].id) + ',' +
-               str(models[1]['media'].id))
+        url = (reverse_lazy('media:root') + '?id=' + str(models[0]['media'].id) + ',' + str(models[1]['media'].id))
         response = self.client.get(url)
         json = response.json()
         self.assertEqual(json, [{
@@ -837,35 +778,29 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, [{
-            'categories': [{
-                'id': 1,
-                'medias': 1,
-                'name': model['category'].name,
-                'slug': model['category'].slug,
-            }],
-            'hash':
-            model['media'].hash,
-            'hits':
-            model['media'].hits,
-            'id':
-            model['media'].id,
-            'mime':
-            model['media'].mime,
-            'name':
-            model['media'].name,
-            'slug':
-            model['media'].slug,
-            'thumbnail':
-            f'{model.media.url}-thumbnail',
-            'url':
-            model['media'].url,
-            'academy': {
-                'id': model['academy'].id,
-                'slug': model['academy'].slug,
-                'name': model['academy'].name,
-            }
-        }])
+        self.assertEqual(
+            json,
+            [{
+                'categories': [{
+                    'id': 1,
+                    'medias': 1,
+                    'name': model['category'].name,
+                    'slug': model['category'].slug,
+                }],
+                'hash': model['media'].hash,
+                'hits': model['media'].hits,
+                'id': model['media'].id,
+                'mime': model['media'].mime,
+                'name': model['media'].name,
+                'slug': model['media'].slug,
+                'thumbnail': f'{model.media.url}-thumbnail',
+                'url': model['media'].url,
+                'academy': {
+                    'id': model['academy'].id,
+                    'slug': model['academy'].slug,
+                    'name': model['academy'].name,
+                }
+            }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
@@ -876,10 +811,7 @@ class MediaTestSuite(MediaTestCase):
         """Test /answer without auth"""
         self.headers(academy=1)
 
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_media',
-                                    role='potato')
+        base = self.generate_models(authenticate=True, profile_academy=True, capability='read_media', role='potato')
 
         models = [self.generate_models(media=True, category=True, models=base) for _ in range(0, 2)]
 
@@ -898,10 +830,7 @@ class MediaTestSuite(MediaTestCase):
         """Test /answer without auth"""
         self.headers(academy=1)
 
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_media',
-                                    role='potato')
+        base = self.generate_models(authenticate=True, profile_academy=True, capability='read_media', role='potato')
 
         categories = [self.generate_models(category=True).category for _ in range(0, 2)]
 
@@ -910,9 +839,7 @@ class MediaTestSuite(MediaTestCase):
 
         media_kwargs = {'categories': [x.id for x in categories]}
 
-        models = [
-            self.generate_models(media=True, models=base, media_kwargs=media_kwargs) for _ in range(0, 2)
-        ]
+        models = [self.generate_models(media=True, models=base, media_kwargs=media_kwargs) for _ in range(0, 2)]
 
         ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
 
@@ -999,35 +926,29 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, [{
-            'categories': [{
-                'id': 1,
-                'medias': 1,
-                'name': model['category'].name,
-                'slug': model['category'].slug,
-            }],
-            'hash':
-            model['media'].hash,
-            'hits':
-            model['media'].hits,
-            'id':
-            model['media'].id,
-            'mime':
-            model['media'].mime,
-            'name':
-            model['media'].name,
-            'slug':
-            model['media'].slug,
-            'thumbnail':
-            f'{model.media.url}-thumbnail',
-            'url':
-            model['media'].url,
-            'academy': {
-                'id': model['academy'].id,
-                'slug': model['academy'].slug,
-                'name': model['academy'].name,
-            }
-        }])
+        self.assertEqual(
+            json,
+            [{
+                'categories': [{
+                    'id': 1,
+                    'medias': 1,
+                    'name': model['category'].name,
+                    'slug': model['category'].slug,
+                }],
+                'hash': model['media'].hash,
+                'hits': model['media'].hits,
+                'id': model['media'].id,
+                'mime': model['media'].mime,
+                'name': model['media'].name,
+                'slug': model['media'].slug,
+                'thumbnail': f'{model.media.url}-thumbnail',
+                'url': model['media'].url,
+                'academy': {
+                    'id': model['academy'].id,
+                    'slug': model['academy'].slug,
+                    'name': model['academy'].name,
+                }
+            }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
@@ -1073,35 +994,29 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, [{
-            'categories': [{
-                'id': 1,
-                'medias': 1,
-                'name': model['category'].name,
-                'slug': model['category'].slug,
-            }],
-            'hash':
-            model['media'].hash,
-            'hits':
-            model['media'].hits,
-            'id':
-            model['media'].id,
-            'mime':
-            model['media'].mime,
-            'name':
-            model['media'].name,
-            'slug':
-            model['media'].slug,
-            'thumbnail':
-            f'{model.media.url}-thumbnail',
-            'url':
-            model['media'].url,
-            'academy': {
-                'id': model['academy'].id,
-                'slug': model['academy'].slug,
-                'name': model['academy'].name,
-            }
-        }])
+        self.assertEqual(
+            json,
+            [{
+                'categories': [{
+                    'id': 1,
+                    'medias': 1,
+                    'name': model['category'].name,
+                    'slug': model['category'].slug,
+                }],
+                'hash': model['media'].hash,
+                'hits': model['media'].hits,
+                'id': model['media'].id,
+                'mime': model['media'].mime,
+                'name': model['media'].name,
+                'slug': model['media'].slug,
+                'thumbnail': f'{model.media.url}-thumbnail',
+                'url': model['media'].url,
+                'academy': {
+                    'id': model['academy'].id,
+                    'slug': model['academy'].slug,
+                    'name': model['academy'].name,
+                }
+            }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
@@ -1123,35 +1038,29 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, [{
-            'categories': [{
-                'id': 1,
-                'medias': 1,
-                'name': model['category'].name,
-                'slug': model['category'].slug,
-            }],
-            'hash':
-            model['media'].hash,
-            'hits':
-            model['media'].hits,
-            'id':
-            model['media'].id,
-            'mime':
-            model['media'].mime,
-            'name':
-            model['media'].name,
-            'slug':
-            model['media'].slug,
-            'thumbnail':
-            f'{model.media.url}-thumbnail',
-            'url':
-            model['media'].url,
-            'academy': {
-                'id': model['academy'].id,
-                'slug': model['academy'].slug,
-                'name': model['academy'].name,
-            },
-        }])
+        self.assertEqual(
+            json,
+            [{
+                'categories': [{
+                    'id': 1,
+                    'medias': 1,
+                    'name': model['category'].name,
+                    'slug': model['category'].slug,
+                }],
+                'hash': model['media'].hash,
+                'hits': model['media'].hits,
+                'id': model['media'].id,
+                'mime': model['media'].mime,
+                'name': model['media'].name,
+                'slug': model['media'].slug,
+                'thumbnail': f'{model.media.url}-thumbnail',
+                'url': model['media'].url,
+                'academy': {
+                    'id': model['academy'].id,
+                    'slug': model['academy'].slug,
+                    'name': model['academy'].name,
+                },
+            }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
@@ -1166,14 +1075,10 @@ class MediaTestSuite(MediaTestCase):
         """Test /answer without auth"""
         self.headers(academy=1)
         media_kwargs = {'name': 'Freyja'}
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_media',
-                                    role='potato')
+        base = self.generate_models(authenticate=True, profile_academy=True, capability='read_media', role='potato')
 
         models = [
-            self.generate_models(media=True, category=True, models=base, media_kwargs=media_kwargs)
-            for _ in range(2)
+            self.generate_models(media=True, category=True, models=base, media_kwargs=media_kwargs) for _ in range(2)
         ]
 
         ordened_models = sorted(models, key=lambda x: x['media'].id, reverse=True)
@@ -1306,10 +1211,7 @@ class MediaTestSuite(MediaTestCase):
     def test_root__delete__two_media(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='crud_media',
-                                    role='potato')
+        base = self.generate_models(authenticate=True, profile_academy=True, capability='crud_media', role='potato')
 
         for _ in range(0, 2):
             self.generate_models(media=True, models=base)
@@ -1327,10 +1229,7 @@ class MediaTestSuite(MediaTestCase):
     def test_root__spy_extensions(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        models = self.generate_models(authenticate=True,
-                                      profile_academy=True,
-                                      capability='read_media',
-                                      role='potato')
+        models = self.generate_models(authenticate=True, profile_academy=True, capability='read_media', role='potato')
 
         url = reverse_lazy('media:root')
         self.client.get(url)
@@ -1346,10 +1245,7 @@ class MediaTestSuite(MediaTestCase):
     def test_root__spy_extension_arguments(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        models = self.generate_models(authenticate=True,
-                                      profile_academy=True,
-                                      capability='read_media',
-                                      role='potato')
+        models = self.generate_models(authenticate=True, profile_academy=True, capability='read_media', role='potato')
 
         url = reverse_lazy('media:root')
         self.client.get(url)

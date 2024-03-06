@@ -114,15 +114,13 @@ def process_github_webhook(request, subscription_token):
     if subscription is None:
         raise ValidationException(f'Subscription not found with token {subscription_token}')
 
-    academy_slugs = set([subscription.owner.slug] +
-                        [academy.slug for academy in subscription.shared_with.all()])
+    academy_slugs = set([subscription.owner.slug] + [academy.slug for academy in subscription.shared_with.all()])
     payload = request.data.copy()
     payload['scope'] = request.headers['X-GitHub-Event']
 
     if subscription.repository != payload['repository']['html_url']:
-        raise ValidationException(
-            'Webhook was called from a different repository than its original subscription: ' +
-            payload['repository']['html_url'])
+        raise ValidationException('Webhook was called from a different repository than its original subscription: ' +
+                                  payload['repository']['html_url'])
 
     for academy_slug in academy_slugs:
         webhook = add_github_webhook(payload, academy_slug)

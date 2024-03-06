@@ -36,8 +36,8 @@ class AcademyEventTestSuite(MentorshipTestCase):
         contexts = serializer(model.mentorship_service)
 
         self.assertEqual(LaunchDarkly.context.call_args_list, [
-            call('1', f'{model.mentorship_service.name} ({model.mentorship_service.slug})',
-                 'mentoring-service', contexts),
+            call('1', f'{model.mentorship_service.name} ({model.mentorship_service.slug})', 'mentoring-service',
+                 contexts),
         ])
 
         self.assertEqual(result, value)

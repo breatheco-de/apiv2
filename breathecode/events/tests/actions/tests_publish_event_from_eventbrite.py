@@ -167,8 +167,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         Logger.info.call_args_list = []
 
         publish_event_from_eventbrite({'id': '1', 'status': 'they-killed-kenny'}, model.organization)
-        self.bc.check.calls(Logger.info.call_args_list,
-                            [call('The events with the eventbrite id `1` were saved')])
+        self.bc.check.calls(Logger.info.call_args_list, [call('The events with the eventbrite id `1` were saved')])
         self.bc.check.calls(Logger.error.call_args_list, [])
 
         self.assertEqual(self.bc.database.list_of('events.Organization'), [

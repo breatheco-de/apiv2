@@ -384,8 +384,8 @@ class TestAuthenticate(LegacyAPITestCase):
         model = self.bc.database.create(user=1, token=1, mentorship_session=1)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
-        url = reverse_lazy('mentorship_shortner:session_id',
-                           kwargs={'session_id': model.mentorship_session.id}) + f'?{querystring}'
+        url = reverse_lazy('mentorship_shortner:session_id', kwargs={'session_id': model.mentorship_session.id
+                                                                     }) + f'?{querystring}'
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
@@ -426,8 +426,8 @@ class TestAuthenticate(LegacyAPITestCase):
             'message': message,
         })
 
-        url = reverse_lazy('mentorship_shortner:session_id',
-                           kwargs={'session_id': model.mentorship_session.id}) + f'?{querystring}'
+        url = reverse_lazy('mentorship_shortner:session_id', kwargs={'session_id': model.mentorship_session.id
+                                                                     }) + f'?{querystring}'
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
@@ -476,8 +476,8 @@ class TestAuthenticate(LegacyAPITestCase):
                                             mentorship_service=1)
 
             querystring = self.bc.format.to_querystring({'token': model.token.key})
-            url = reverse_lazy('mentorship_shortner:session_id',
-                               kwargs={'session_id': model.mentorship_session[0].id}) + f'?{querystring}'
+            url = reverse_lazy('mentorship_shortner:session_id', kwargs={'session_id': model.mentorship_session[0].id
+                                                                         }) + f'?{querystring}'
             response = self.client.get(url)
 
             content = self.bc.format.from_bytes(response.content)
@@ -540,8 +540,8 @@ class TestAuthenticate(LegacyAPITestCase):
                                             mentorship_service=1)
 
             querystring = self.bc.format.to_querystring({'token': model.token.key})
-            url = reverse_lazy('mentorship_shortner:session_id',
-                               kwargs={'session_id': model.mentorship_session[0].id}) + f'?{querystring}'
+            url = reverse_lazy('mentorship_shortner:session_id', kwargs={'session_id': model.mentorship_session[0].id
+                                                                         }) + f'?{querystring}'
             response = self.client.get(url)
 
             content = self.bc.format.from_bytes(response.content)
@@ -688,12 +688,7 @@ class TestAuthenticate(LegacyAPITestCase):
         response = self.client.post(url, data, format='multipart')
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_form(self,
-                               model.mentorship_session,
-                               model.token,
-                               data=data,
-                               post=True,
-                               fix_logo=False)
+        expected = render_form(self, model.mentorship_session, model.token, data=data, post=True, fix_logo=False)
 
         # dump error in external files
         if content != expected:
@@ -794,12 +789,7 @@ class TestAuthenticate(LegacyAPITestCase):
             response = self.client.post(url, data, format='multipart')
 
             content = self.bc.format.from_bytes(response.content)
-            expected = render_form(self,
-                                   model.mentorship_session,
-                                   model.token,
-                                   data=data,
-                                   post=True,
-                                   fix_logo=False)
+            expected = render_form(self, model.mentorship_session, model.token, data=data, post=True, fix_logo=False)
 
             # dump error in external files
             if content != expected:

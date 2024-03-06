@@ -25,14 +25,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='ProfileTranslation',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('lang',
-                 models.CharField(
-                     help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US',
-                     max_length=5,
-                     unique=True,
-                     validators=[breathecode.utils.validators.language.validate_language_code])),
+                 models.CharField(help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US',
+                                  max_length=5,
+                                  unique=True,
+                                  validators=[breathecode.utils.validators.language.validate_language_code])),
                 ('bio',
                  models.CharField(
                      help_text=

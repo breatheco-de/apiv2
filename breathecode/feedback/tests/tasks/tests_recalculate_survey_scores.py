@@ -45,8 +45,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores', MagicMock(return_value=get_scores()))
-    @patch('breathecode.feedback.actions.calculate_survey_response_rate',
-           MagicMock(return_value=RESPONSE_RATE))
+    @patch('breathecode.feedback.actions.calculate_survey_response_rate', MagicMock(return_value=RESPONSE_RATE))
     def test_with_zero_surveys(self):
         recalculate_survey_scores.delay(1)
 
@@ -64,8 +63,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores', MagicMock(return_value=get_scores()))
-    @patch('breathecode.feedback.actions.calculate_survey_response_rate',
-           MagicMock(return_value=RESPONSE_RATE))
+    @patch('breathecode.feedback.actions.calculate_survey_response_rate', MagicMock(return_value=RESPONSE_RATE))
     def test_with_one_surveys(self):
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
             model = self.bc.database.create(survey=1)

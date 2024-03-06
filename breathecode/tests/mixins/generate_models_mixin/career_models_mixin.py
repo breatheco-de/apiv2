@@ -80,10 +80,7 @@ class CareerModelsMixin(ModelsMixin):
         if not 'career_tag' in models and is_valid(career_tag):
             kargs = {}
 
-            models['career_tag'] = create_models(career_tag, 'career.CareerTag', **{
-                **kargs,
-                **career_tag_kwargs
-            })
+            models['career_tag'] = create_models(career_tag, 'career.CareerTag', **{**kargs, **career_tag_kwargs})
 
         if not 'location' in models and is_valid(location):
             kargs = {}

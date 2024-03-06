@@ -41,10 +41,7 @@ class AcademyCohortTestSuite(EventTestCase):
     def test_ical_cohorts__without_events(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
-        model = self.generate_models(academy=True,
-                                     skip_cohort=True,
-                                     device_id=True,
-                                     device_id_kwargs=device_id_kwargs)
+        model = self.generate_models(academy=True, skip_cohort=True, device_id=True, device_id_kwargs=device_id_kwargs)
 
         url = reverse_lazy('events:ical_cohorts')
         args = {'academy': '1'}
@@ -112,10 +109,7 @@ class AcademyCohortTestSuite(EventTestCase):
             'ending_date': timezone.now() + timedelta(weeks=10 * 52),
             'kickoff_date': datetime.today().isoformat()
         }
-        model = self.generate_models(academy=True,
-                                     cohort=cohort,
-                                     device_id=True,
-                                     device_id_kwargs=device_id_kwargs)
+        model = self.generate_models(academy=True, cohort=cohort, device_id=True, device_id_kwargs=device_id_kwargs)
         url = reverse_lazy('events:ical_cohorts')
         args = {'academy': '1'}
         response = self.client.get(url + '?' + urllib.parse.urlencode(args))
@@ -336,8 +330,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTSTAMP:{self.datetime_to_ical(cohort.created_at)}',
             f'UID:breathecode_cohort_{cohort.id}_{key}',
             f'LOCATION:{academy.name}',
-            self.line_limit(
-                f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
             'END:VEVENT',
             'END:VCALENDAR',
             '',
@@ -352,10 +345,7 @@ class AcademyCohortTestSuite(EventTestCase):
     def test_ical_cohorts__with_two(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
-        base = self.generate_models(academy=True,
-                                    device_id=True,
-                                    skip_cohort=True,
-                                    device_id_kwargs=device_id_kwargs)
+        base = self.generate_models(academy=True, device_id=True, skip_cohort=True, device_id_kwargs=device_id_kwargs)
 
         cohort = {
             'kickoff_date': datetime.today().isoformat(),
@@ -421,10 +411,7 @@ class AcademyCohortTestSuite(EventTestCase):
         cohort_user_kwargs = {'role': 'TEACHER'}
         cohort_kwargs = {'ending_date': timezone.now()}
         device_id_kwargs = {'name': 'server'}
-        base = self.generate_models(academy=True,
-                                    device_id=True,
-                                    skip_cohort=True,
-                                    device_id_kwargs=device_id_kwargs)
+        base = self.generate_models(academy=True, device_id=True, skip_cohort=True, device_id_kwargs=device_id_kwargs)
 
         models = [
             self.generate_models(user=True,
@@ -472,8 +459,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTSTAMP:{self.datetime_to_ical(cohort1.created_at)}',
             f'UID:breathecode_cohort_{cohort1.id}_{key}',
             f'LOCATION:{academy1.name}',
-            self.line_limit(
-                f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
             'END:VEVENT',
 
             # =================================================================
@@ -485,8 +471,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTSTAMP:{self.datetime_to_ical(cohort2.created_at)}',
             f'UID:breathecode_cohort_{cohort2.id}_{key}',
             f'LOCATION:{academy2.name}',
-            self.line_limit(
-                f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
             'END:VEVENT',
             'END:VCALENDAR',
             '',
@@ -577,8 +562,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTSTAMP:{self.datetime_to_ical(cohort1.created_at)}',
             f'UID:breathecode_cohort_{cohort1.id}_{key}',
             f'LOCATION:{academy1.name}',
-            self.line_limit(
-                f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
             'END:VEVENT',
 
             # =================================================================
@@ -590,8 +574,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTSTAMP:{self.datetime_to_ical(cohort2.created_at)}',
             f'UID:breathecode_cohort_{cohort2.id}_{key}',
             f'LOCATION:{academy2.name}',
-            self.line_limit(
-                f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
             'END:VEVENT',
 
             # =================================================================
@@ -603,8 +586,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTSTAMP:{self.datetime_to_ical(cohort3.created_at)}',
             f'UID:breathecode_cohort_{cohort3.id}_{key}',
             f'LOCATION:{academy3.name}',
-            self.line_limit(
-                f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'),
             'END:VEVENT',
 
             # =================================================================
@@ -616,8 +598,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTSTAMP:{self.datetime_to_ical(cohort4.created_at)}',
             f'UID:breathecode_cohort_{cohort4.id}_{key}',
             f'LOCATION:{academy4.name}',
-            self.line_limit(
-                f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'),
             'END:VEVENT',
             'END:VCALENDAR',
             '',
@@ -711,8 +692,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTSTAMP:{self.datetime_to_ical(cohort1.created_at)}',
             f'UID:breathecode_cohort_{cohort1.id}_{key}',
             f'LOCATION:{academy1.name}',
-            self.line_limit(
-                f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
             'END:VEVENT',
 
             # =================================================================
@@ -724,8 +704,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTSTAMP:{self.datetime_to_ical(cohort2.created_at)}',
             f'UID:breathecode_cohort_{cohort2.id}_{key}',
             f'LOCATION:{academy2.name}',
-            self.line_limit(
-                f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
             'END:VEVENT',
 
             # =================================================================
@@ -737,8 +716,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTSTAMP:{self.datetime_to_ical(cohort3.created_at)}',
             f'UID:breathecode_cohort_{cohort3.id}_{key}',
             f'LOCATION:{academy3.name}',
-            self.line_limit(
-                f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'),
             'END:VEVENT',
 
             # =================================================================
@@ -750,8 +728,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTSTAMP:{self.datetime_to_ical(cohort4.created_at)}',
             f'UID:breathecode_cohort_{cohort4.id}_{key}',
             f'LOCATION:{academy4.name}',
-            self.line_limit(
-                f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'),
             'END:VEVENT',
             'END:VCALENDAR',
             '',
@@ -805,16 +782,10 @@ class AcademyCohortTestSuite(EventTestCase):
                                              minute=30,
                                              tzinfo=gettz('Europe/Madrid'))
 
-        last_timeslot_ending_at = datetime(year=2030,
-                                           month=10,
-                                           day=6,
-                                           hour=6,
-                                           minute=30,
-                                           tzinfo=gettz('Europe/Madrid'))
+        last_timeslot_ending_at = datetime(year=2030, month=10, day=6, hour=6, minute=30, tzinfo=gettz('Europe/Madrid'))
         key = model.device_id.key
 
-        starting_at = DatetimeInteger.to_datetime(model.cohort_time_slot.timezone,
-                                                  model.cohort_time_slot.starting_at)
+        starting_at = DatetimeInteger.to_datetime(model.cohort_time_slot.timezone, model.cohort_time_slot.starting_at)
 
         starting_at_fixed = self.datetime_to_ical(fix_datetime_weekday(model.cohort.kickoff_date,
                                                                        starting_at,
@@ -823,9 +794,7 @@ class AcademyCohortTestSuite(EventTestCase):
 
         ending_at = DatetimeInteger.to_datetime(timeslot.timezone, timeslot.ending_at)
 
-        ending_at_fixed = self.datetime_to_ical(fix_datetime_weekday(model.cohort.kickoff_date,
-                                                                     ending_at,
-                                                                     next=True),
+        ending_at_fixed = self.datetime_to_ical(fix_datetime_weekday(model.cohort.kickoff_date, ending_at, next=True),
                                                 utc=False)
 
         expected = '\r\n'.join([

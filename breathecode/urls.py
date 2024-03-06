@@ -72,8 +72,7 @@ urlpatterns_docs = [
          name='openapi-schema'),
     path('admin/doc/', include('django.contrib.admindocs.urls')),
     path('swagger/',
-         TemplateView.as_view(template_name='swagger-ui.html', extra_context={'schema_url':
-                                                                              'openapi-schema'}),
+         TemplateView.as_view(template_name='swagger-ui.html', extra_context={'schema_url': 'openapi-schema'}),
          name='swagger-ui'),
     path('redoc/',
          TemplateView.as_view(template_name='redoc.html', extra_context={'schema_url': 'openapi-schema'}),
@@ -87,8 +86,7 @@ urlpatterns_django = [
 ]
 
 urlpatterns_static = static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-urlpatterns = (urlpatterns_apps + urlpatterns_app_openapi + urlpatterns_docs + urlpatterns_django +
-               urlpatterns_static)
+urlpatterns = (urlpatterns_apps + urlpatterns_app_openapi + urlpatterns_docs + urlpatterns_django + urlpatterns_static)
 
 for version in versions:
     x = path(f'{version}/', include((versions[version], version), namespace=version))

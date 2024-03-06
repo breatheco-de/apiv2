@@ -54,10 +54,7 @@ class AuthenticateTestSuite(AuthTestCase):
         app = {'require_an_agreement': False}
         credentials_githubs = [{'user_id': x + 1} for x in range(2)]
         profiles = [{'user_id': x + 1} for x in range(2)]
-        model = self.bc.database.create(user=2,
-                                        app=app,
-                                        profile=profiles,
-                                        credentials_github=credentials_githubs)
+        model = self.bc.database.create(user=2, app=app, profile=profiles, credentials_github=credentials_githubs)
         self.bc.request.sign_jwt_link(model.app, 1)
 
         url = reverse_lazy('authenticate:app_user_id', kwargs={'user_id': 1})
@@ -76,10 +73,7 @@ class AuthenticateTestSuite(AuthTestCase):
         app = {'require_an_agreement': False}
         credentials_githubs = [{'user_id': x + 1} for x in range(2)]
         profiles = [{'user_id': x + 1} for x in range(2)]
-        model = self.bc.database.create(user=2,
-                                        app=app,
-                                        profile=profiles,
-                                        credentials_github=credentials_githubs)
+        model = self.bc.database.create(user=2, app=app, profile=profiles, credentials_github=credentials_githubs)
         self.bc.request.sign_jwt_link(model.app, 1)
 
         url = reverse_lazy('authenticate:app_user_id', kwargs={'user_id': 2})
@@ -103,10 +97,7 @@ class AuthenticateTestSuite(AuthTestCase):
         app = {'require_an_agreement': False}
         credentials_githubs = [{'user_id': x + 1} for x in range(2)]
         profiles = [{'user_id': x + 1} for x in range(2)]
-        model = self.bc.database.create(user=2,
-                                        app=app,
-                                        profile=profiles,
-                                        credentials_github=credentials_githubs)
+        model = self.bc.database.create(user=2, app=app, profile=profiles, credentials_github=credentials_githubs)
         self.bc.request.sign_jwt_link(model.app)
 
         for user in model.user:
@@ -126,10 +117,7 @@ class AuthenticateTestSuite(AuthTestCase):
         app = {'require_an_agreement': False, 'require_an_agreement': True}
         credentials_github = {'user_id': 1}
         profile = {'user_id': 1}
-        model = self.bc.database.create(user=1,
-                                        app=app,
-                                        profile=profile,
-                                        credentials_github=credentials_github)
+        model = self.bc.database.create(user=1, app=app, profile=profile, credentials_github=credentials_github)
         self.bc.request.sign_jwt_link(model.app)
 
         url = reverse_lazy('authenticate:app_user_id', kwargs={'user_id': 1})

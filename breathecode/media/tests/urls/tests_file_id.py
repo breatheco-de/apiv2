@@ -101,11 +101,10 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(response.url, model['media'].url)
         self.assertEqual(response.status_code, status.HTTP_301_MOVED_PERMANENTLY)
-        self.assertEqual(self.all_media_dict(),
-                         [{
-                             **self.model_to_dict(model, 'media'),
-                             'hits': model['media'].hits + 1,
-                         }])
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model, 'media'),
+            'hits': model['media'].hits + 1,
+        }])
         self.assertEqual(self.all_media_resolution_dict(), [])
 
     @patch(
@@ -125,11 +124,10 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(response.getvalue().decode('utf-8'), 'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(),
-                         [{
-                             **self.model_to_dict(model, 'media'),
-                             'hits': model['media'].hits + 1,
-                         }])
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model, 'media'),
+            'hits': model['media'].hits + 1,
+        }])
         self.assertEqual(self.all_media_resolution_dict(), [])
 
     """
@@ -194,11 +192,10 @@ class MediaTestSuite(MediaTestCase):
                  timeout=2)
         ])
 
-        self.assertEqual(self.all_media_dict(),
-                         [{
-                             **self.model_to_dict(model, 'media'),
-                             'hits': model['media'].hits + 1,
-                         }])
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model, 'media'),
+            'hits': model['media'].hits + 1,
+        }])
 
         self.assertEqual(self.all_media_resolution_dict(), [{
             'hash': model.media.hash,
@@ -233,18 +230,16 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(response.status_code, status.HTTP_301_MOVED_PERMANENTLY)
 
         self.assertEqual(mock.call_args_list, [])
-        self.assertEqual(self.all_media_dict(),
-                         [{
-                             **self.model_to_dict(model, 'media'),
-                             'hits': model['media'].hits + 1,
-                         }])
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model, 'media'),
+            'hits': model['media'].hits + 1,
+        }])
 
-        self.assertEqual(
-            self.all_media_resolution_dict(),
-            [{
-                **self.model_to_dict(model, 'media_resolution'),
-                'hits': model['media_resolution'].hits + 1,
-            }])
+        self.assertEqual(self.all_media_resolution_dict(),
+                         [{
+                             **self.model_to_dict(model, 'media_resolution'),
+                             'hits': model['media_resolution'].hits + 1,
+                         }])
 
     @patch(
         'os.getenv',
@@ -287,11 +282,10 @@ class MediaTestSuite(MediaTestCase):
                  timeout=2)
         ])
 
-        self.assertEqual(self.all_media_dict(),
-                         [{
-                             **self.model_to_dict(model, 'media'),
-                             'hits': model['media'].hits + 1,
-                         }])
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model, 'media'),
+            'hits': model['media'].hits + 1,
+        }])
 
         self.assertEqual(self.all_media_resolution_dict(), [])
 
@@ -310,8 +304,7 @@ class MediaTestSuite(MediaTestCase):
         with patch('google.oauth2.id_token.fetch_id_token') as token_mock:
             token_mock.return_value = 'blablabla'
 
-            with patch(REQUESTS_PATH['request'],
-                       apply_requests_request_mock([bad_server_response()])) as mock:
+            with patch(REQUESTS_PATH['request'], apply_requests_request_mock([bad_server_response()])) as mock:
                 url = reverse_lazy('media:file_id', kwargs={'media_id': 1}) + '?width=1000'
                 response = self.client.get(url)
                 json = response.json()
@@ -337,11 +330,10 @@ class MediaTestSuite(MediaTestCase):
                  timeout=2)
         ])
 
-        self.assertEqual(self.all_media_dict(),
-                         [{
-                             **self.model_to_dict(model, 'media'),
-                             'hits': model['media'].hits + 1,
-                         }])
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model, 'media'),
+            'hits': model['media'].hits + 1,
+        }])
 
         self.assertEqual(self.all_media_resolution_dict(), [])
 
@@ -407,11 +399,10 @@ class MediaTestSuite(MediaTestCase):
                  timeout=2)
         ])
 
-        self.assertEqual(self.all_media_dict(),
-                         [{
-                             **self.model_to_dict(model, 'media'),
-                             'hits': model['media'].hits + 1,
-                         }])
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model, 'media'),
+            'hits': model['media'].hits + 1,
+        }])
 
         self.assertEqual(self.all_media_resolution_dict(), [{
             'hash': model.media.hash,
@@ -446,18 +437,16 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(response.status_code, status.HTTP_301_MOVED_PERMANENTLY)
 
         self.assertEqual(mock.call_args_list, [])
-        self.assertEqual(self.all_media_dict(),
-                         [{
-                             **self.model_to_dict(model, 'media'),
-                             'hits': model['media'].hits + 1,
-                         }])
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model, 'media'),
+            'hits': model['media'].hits + 1,
+        }])
 
-        self.assertEqual(
-            self.all_media_resolution_dict(),
-            [{
-                **self.model_to_dict(model, 'media_resolution'),
-                'hits': model['media_resolution'].hits + 1,
-            }])
+        self.assertEqual(self.all_media_resolution_dict(),
+                         [{
+                             **self.model_to_dict(model, 'media_resolution'),
+                             'hits': model['media_resolution'].hits + 1,
+                         }])
 
     @patch(
         'os.getenv',
@@ -500,11 +489,10 @@ class MediaTestSuite(MediaTestCase):
                  timeout=2)
         ])
 
-        self.assertEqual(self.all_media_dict(),
-                         [{
-                             **self.model_to_dict(model, 'media'),
-                             'hits': model['media'].hits + 1,
-                         }])
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model, 'media'),
+            'hits': model['media'].hits + 1,
+        }])
 
         self.assertEqual(self.all_media_resolution_dict(), [])
 
@@ -523,8 +511,7 @@ class MediaTestSuite(MediaTestCase):
         with patch('google.oauth2.id_token.fetch_id_token') as token_mock:
             token_mock.return_value = 'blablabla'
 
-            with patch(REQUESTS_PATH['request'],
-                       apply_requests_request_mock([bad_server_response()])) as mock:
+            with patch(REQUESTS_PATH['request'], apply_requests_request_mock([bad_server_response()])) as mock:
                 url = reverse_lazy('media:file_id', kwargs={'media_id': 1}) + '?height=1000'
                 response = self.client.get(url)
                 json = response.json()
@@ -550,10 +537,9 @@ class MediaTestSuite(MediaTestCase):
                  timeout=2)
         ])
 
-        self.assertEqual(self.all_media_dict(),
-                         [{
-                             **self.model_to_dict(model, 'media'),
-                             'hits': model['media'].hits + 1,
-                         }])
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model, 'media'),
+            'hits': model['media'].hits + 1,
+        }])
 
         self.assertEqual(self.all_media_resolution_dict(), [])

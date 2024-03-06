@@ -131,11 +131,7 @@ class SendCohortSurvey(FeedbackTestCase):
             c = statuses[n]
             cohort_users = [{'educational_status': c}, {'role': 'TEACHER', 'educational_status': c}]
 
-            model = self.bc.database.create(cohort=1,
-                                            user=1,
-                                            survey=1,
-                                            cohort_user=cohort_users,
-                                            syllabus_version=1)
+            model = self.bc.database.create(cohort=1, user=1, survey=1, cohort_user=cohort_users, syllabus_version=1)
 
             generate_user_cohort_survey_answers(model.user, model.survey, status='OPENED')
 

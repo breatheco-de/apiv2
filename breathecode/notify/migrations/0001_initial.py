@@ -19,8 +19,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='SlackTeam',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('slack_id', models.CharField(max_length=50)),
                 ('name', models.CharField(max_length=100)),
                 ('sync_status',
@@ -38,8 +37,7 @@ class Migration(migrations.Migration):
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('academy',
-                 models.OneToOneField(blank=True,
-                                      on_delete=django.db.models.deletion.CASCADE,
+                 models.OneToOneField(blank=True, on_delete=django.db.models.deletion.CASCADE,
                                       to='admissions.academy')),
                 ('credentials',
                  models.OneToOneField(blank=True,
@@ -54,8 +52,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='SlackUser',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('slack_id', models.CharField(max_length=50)),
                 ('status_text', models.CharField(blank=True, max_length=255, null=True)),
                 ('status_emoji', models.CharField(blank=True, max_length=100, null=True)),
@@ -74,8 +71,7 @@ class Migration(migrations.Migration):
                                   null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('team', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
-                                           to='notify.slackteam')),
+                ('team', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='notify.slackteam')),
                 ('user',
                  models.ForeignKey(blank=True,
                                    null=True,
@@ -86,8 +82,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='SlackChannel',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('slack_id', models.CharField(max_length=50)),
                 ('name', models.CharField(blank=True, max_length=100, null=True)),
                 ('topic', models.CharField(blank=True, max_length=255, null=True)),
@@ -109,15 +104,13 @@ class Migration(migrations.Migration):
                                    null=True,
                                    on_delete=django.db.models.deletion.CASCADE,
                                    to=settings.AUTH_USER_MODEL)),
-                ('team', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
-                                           to='notify.slackteam')),
+                ('team', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='notify.slackteam')),
             ],
         ),
         migrations.CreateModel(
             name='Device',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('registration_id', models.TextField(unique=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),

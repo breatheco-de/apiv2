@@ -15,8 +15,7 @@ class Migration(migrations.Migration):
             name='bio',
             field=models.CharField(
                 blank=True,
-                help_text=
-                "User biography in user's language. Will be used if there are no ProfileTranslations.",
+                help_text="User biography in user's language. Will be used if there are no ProfileTranslations.",
                 max_length=255,
                 null=True),
         ),

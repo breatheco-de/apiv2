@@ -96,11 +96,10 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED,
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED,
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     """
@@ -217,8 +216,7 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = get_serializer(self, model.mentor_profile, model.academy, model.mentorship_service,
-                                  model.user)
+        expected = get_serializer(self, model.mentor_profile, model.academy, model.mentorship_service, model.user)
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -240,8 +238,7 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = get_serializer(self, model.mentor_profile, model.academy, model.mentorship_service,
-                                  model.user)
+        expected = get_serializer(self, model.mentor_profile, model.academy, model.mentorship_service, model.user)
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -273,29 +270,20 @@ class AuthenticateTestSuite(AuthTestCase):
                     'name': model.academy.name,
                     'slug': model.academy.slug,
                 },
-                'address':
-                model.profile_academy.address,
-                'created_at':
-                self.bc.datetime.to_iso_string(model.profile_academy.created_at),
-                'email':
-                model.profile_academy.email,
-                'first_name':
-                model.profile_academy.first_name,
-                'id':
-                model.profile_academy.id,
-                'invite_url':
-                'https://dot.dot/v1/auth/academy/html/invite',
-                'last_name':
-                model.profile_academy.last_name,
-                'phone':
-                model.profile_academy.phone,
+                'address': model.profile_academy.address,
+                'created_at': self.bc.datetime.to_iso_string(model.profile_academy.created_at),
+                'email': model.profile_academy.email,
+                'first_name': model.profile_academy.first_name,
+                'id': model.profile_academy.id,
+                'invite_url': 'https://dot.dot/v1/auth/academy/html/invite',
+                'last_name': model.profile_academy.last_name,
+                'phone': model.profile_academy.phone,
                 'role': {
                     'id': 'potato',
                     'name': 'potato',
                     'slug': 'potato',
                 },
-                'status':
-                model.profile_academy.status,
+                'status': model.profile_academy.status,
                 'user': {
                     'email': model.user.email,
                     'first_name': model.user.first_name,

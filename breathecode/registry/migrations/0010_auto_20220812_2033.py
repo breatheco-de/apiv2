@@ -36,10 +36,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='assetkeyword',
             name='optimization_rating',
-            field=models.FloatField(blank=True,
-                                    default=None,
-                                    help_text='Automatically filled (1 to 100)',
-                                    null=True),
+            field=models.FloatField(blank=True, default=None, help_text='Automatically filled (1 to 100)', null=True),
         ),
         migrations.AddField(
             model_name='keywordcluster',
@@ -70,9 +67,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='keywordcluster',
             name='optimization_rating',
-            field=models.FloatField(blank=True,
-                                    default=None,
-                                    help_text='Automatically filled (1 to 100)',
-                                    null=True),
+            field=models.FloatField(blank=True, default=None, help_text='Automatically filled (1 to 100)', null=True),
         ),
     ]

@@ -10,12 +10,7 @@ class SEOAnalyzer:
     asset = None
     excluded = []
     shared_state = {}
-    influence = {
-        'general_structure': 0.2,
-        'keyword_density': 0.375,
-        'internal_linking': 0.375,
-        'images_use': 0.05
-    }
+    influence = {'general_structure': 0.2, 'keyword_density': 0.375, 'internal_linking': 0.375, 'images_use': 0.05}
 
     def __init__(self, asset, exclude=None):
 
@@ -32,8 +27,7 @@ class SEOAnalyzer:
         for slug in self.influence:
             total_influence += self.influence[slug]
         if total_influence != 1:
-            raise Exception(
-                f'Total influence from all SEO reports should sum 1 but its {str(total_influence)}')
+            raise Exception(f'Total influence from all SEO reports should sum 1 but its {str(total_influence)}')
 
     def _get_actions(self):
         actions = []

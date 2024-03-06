@@ -219,8 +219,7 @@ class AcademyBillView(APIView):
                 item.save()
                 bill = item
 
-            return Response(f"Bills' status successfully updated to {bill_status}",
-                            status=status.HTTP_201_CREATED)
+            return Response(f"Bills' status successfully updated to {bill_status}", status=status.HTTP_201_CREATED)
 
         item = Bill.objects.filter(id=bill_id, academy__id=academy_id).first()
         if item is None:
@@ -393,9 +392,7 @@ class AcademyProjectInvoiceView(APIView):
 
         project = AcademyFreelanceProject.objects.filter(id=project_id, academy__id=academy_id).first()
         if project is None:
-            raise ValidationException('This project does not exist for this academy',
-                                      code=404,
-                                      slug='not-found')
+            raise ValidationException('This project does not exist for this academy', code=404, slug='not-found')
 
         invoices = generate_project_invoice(project)
         serializer = BigInvoiceSerializer(invoices, many=True)

@@ -14,8 +14,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='cohortset',
             name='cohorts',
-            field=models.ManyToManyField(blank=True,
-                                         through='payments.CohortSetCohort',
-                                         to='admissions.Cohort'),
+            field=models.ManyToManyField(blank=True, through='payments.CohortSetCohort', to='admissions.Cohort'),
         ),
     ]

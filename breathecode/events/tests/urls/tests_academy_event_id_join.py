@@ -70,10 +70,7 @@ class AcademyVenueTestSuite(EventTestCase):
     def test_no_live_classes(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_event_id_join', kwargs={'event_id': 1})
-        model = self.bc.database.create(user=1,
-                                        profile_academy=1,
-                                        capability='start_or_end_event',
-                                        role='potato')
+        model = self.bc.database.create(user=1, profile_academy=1, capability='start_or_end_event', role='potato')
 
         self.client.force_authenticate(model.user)
 

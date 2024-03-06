@@ -6,9 +6,7 @@ from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
 from rest_framework.exceptions import ValidationError
 
-__all__ = [
-    'UserProxy', 'CohortProxy', 'Device', 'SlackTeam', 'SlackUser', 'SlackUserTeam', 'SlackChannel', 'Hook'
-]
+__all__ = ['UserProxy', 'CohortProxy', 'Device', 'SlackTeam', 'SlackUser', 'SlackUserTeam', 'SlackChannel', 'Hook']
 AUTH_USER_MODEL = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
 if getattr(settings, 'HOOK_CUSTOM_MODEL', None) is None:
     settings.HOOK_CUSTOM_MODEL = 'notify.Hook'
@@ -59,12 +57,11 @@ class SlackTeam(models.Model):
                                    choices=SYNC_STATUS,
                                    default=INCOMPLETED,
                                    help_text='Automatically set when synqued from slack')
-    sync_message = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        default=None,
-        help_text='Contains any success or error messages depending on the status')
+    sync_message = models.CharField(max_length=100,
+                                    blank=True,
+                                    null=True,
+                                    default=None,
+                                    help_text='Contains any success or error messages depending on the status')
     synqued_at = models.DateTimeField(default=None, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -96,12 +93,11 @@ class SlackUserTeam(models.Model):
     slack_team = models.ForeignKey(SlackTeam, on_delete=models.CASCADE)
 
     sync_status = models.CharField(max_length=15, choices=SYNC_STATUS, default=INCOMPLETED)
-    sync_message = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        default=None,
-        help_text='Contains any success or error messages depending on the status')
+    sync_message = models.CharField(max_length=100,
+                                    blank=True,
+                                    null=True,
+                                    default=None,
+                                    help_text='Contains any success or error messages depending on the status')
     synqued_at = models.DateTimeField(default=None, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -120,12 +116,11 @@ class SlackChannel(models.Model):
     purpose = models.CharField(max_length=500, blank=True, null=True)
 
     sync_status = models.CharField(max_length=15, choices=SYNC_STATUS, default=INCOMPLETED)
-    sync_message = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        default=None,
-        help_text='Contains any success or error messages depending on the status')
+    sync_message = models.CharField(max_length=100,
+                                    blank=True,
+                                    null=True,
+                                    default=None,
+                                    help_text='Contains any success or error messages depending on the status')
     synqued_at = models.DateTimeField(default=None, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)

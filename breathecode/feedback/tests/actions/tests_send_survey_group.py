@@ -74,20 +74,18 @@ class AnswerTestSuite(FeedbackTestCase):
 
             self.assertEqual(result, expected)
 
-            self.assertEqual(self.bc.database.list_of('feedback.Survey'), [{
-                **survey, 'sent_at':
-                UTC_NOW,
-                'status':
-                'SENT',
-                'status_json':
-                '{'
-                f'"success": ["Survey scheduled to send for {model.user.email}"], "error": []'
-                '}'
-            }])
+            self.assertEqual(
+                self.bc.database.list_of('feedback.Survey'),
+                [{
+                    **survey, 'sent_at': UTC_NOW,
+                    'status': 'SENT',
+                    'status_json': '{'
+                    f'"success": ["Survey scheduled to send for {model.user.email}"], "error": []'
+                    '}'
+                }])
 
             self.bc.database.delete('feedback.Survey')
-            self.assertEqual(tasks.send_cohort_survey.delay.call_args_list,
-                             [call(model.user.id, model.survey.id)])
+            self.assertEqual(tasks.send_cohort_survey.delay.call_args_list, [call(model.user.id, model.survey.id)])
             tasks.send_cohort_survey.delay.call_args_list = []
 
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
@@ -112,8 +110,7 @@ class AnswerTestSuite(FeedbackTestCase):
 
             expected = {
                 'success': [],
-                'error':
-                [f"Survey NOT sent to {model.user.email} because it's not an active or graduated student"]
+                'error': [f"Survey NOT sent to {model.user.email} because it's not an active or graduated student"]
             }
 
             self.assertEqual(result, expected)
@@ -154,8 +151,7 @@ class AnswerTestSuite(FeedbackTestCase):
 
         expected = {
             'success': [f'Survey scheduled to send for {model.user.email}'],
-            'error':
-            [f"Survey NOT sent to {model.user.email} because it's not an active or graduated student"]
+            'error': [f"Survey NOT sent to {model.user.email} because it's not an active or graduated student"]
         }
 
         self.assertEqual(result, expected)
@@ -173,8 +169,7 @@ class AnswerTestSuite(FeedbackTestCase):
         }])
 
         self.bc.database.delete('feedback.Survey')
-        self.assertEqual(tasks.send_cohort_survey.delay.call_args_list,
-                         [call(model.user.id, model.survey.id)])
+        self.assertEqual(tasks.send_cohort_survey.delay.call_args_list, [call(model.user.id, model.survey.id)])
         tasks.send_cohort_survey.delay.call_args_list = []
 
     @patch('breathecode.feedback.tasks.send_cohort_survey.delay', MagicMock())
@@ -199,8 +194,7 @@ class AnswerTestSuite(FeedbackTestCase):
 
         expected = {
             'success': [],
-            'error':
-            [f"Survey NOT sent to {model.user.email} because it's not an active or graduated student"]
+            'error': [f"Survey NOT sent to {model.user.email} because it's not an active or graduated student"]
         }
 
         self.assertEqual(result, expected)

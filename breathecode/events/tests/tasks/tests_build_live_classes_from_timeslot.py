@@ -80,11 +80,10 @@ class AcademyEventTestSuite(EventTestCase):
             'kickoff_date': base_date - timedelta(weeks=3 * 10),
         }
 
-        starting_at = self.bc.datetime.to_datetime_integer('America/New_York',
-                                                           base_date - timedelta(weeks=3 * 4))
+        starting_at = self.bc.datetime.to_datetime_integer('America/New_York', base_date - timedelta(weeks=3 * 4))
 
-        ending_at = self.bc.datetime.to_datetime_integer(
-            'America/New_York', base_date - timedelta(weeks=3 * 4) + timedelta(hours=3))
+        ending_at = self.bc.datetime.to_datetime_integer('America/New_York',
+                                                         base_date - timedelta(weeks=3 * 4) + timedelta(hours=3))
 
         cohort_time_slot = {
             'starting_at': starting_at,
@@ -113,15 +112,14 @@ class AcademyEventTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(logging.Logger, 'debug', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=DATE))
-    @patch('breathecode.events.models.LiveClass._get_hash',
-           MagicMock(side_effect=[
-               'r1',
-               'r2',
-               'r3',
-               'r4',
-               'r5',
-               'r6',
-           ]))
+    @patch('breathecode.events.models.LiveClass._get_hash', MagicMock(side_effect=[
+        'r1',
+        'r2',
+        'r3',
+        'r4',
+        'r5',
+        'r6',
+    ]))
     def test_one_cohort_time_slot_with_ending_date_in_the_future__weekly(self):
         base_date = DATE
         cohort = {
@@ -131,11 +129,10 @@ class AcademyEventTestSuite(EventTestCase):
             'kickoff_date': base_date - timedelta(weeks=3 * 2),
         }
 
-        starting_at = self.bc.datetime.to_datetime_integer('America/New_York',
-                                                           base_date - timedelta(weeks=3 * 4))
+        starting_at = self.bc.datetime.to_datetime_integer('America/New_York', base_date - timedelta(weeks=3 * 4))
 
-        ending_at = self.bc.datetime.to_datetime_integer(
-            'America/New_York', base_date - timedelta(weeks=3 * 4) + timedelta(hours=3))
+        ending_at = self.bc.datetime.to_datetime_integer('America/New_York',
+                                                         base_date - timedelta(weeks=3 * 4) + timedelta(hours=3))
 
         cohort_time_slot = {
             'starting_at': starting_at,
@@ -214,15 +211,14 @@ class AcademyEventTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(logging.Logger, 'debug', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=DATE))
-    @patch('breathecode.events.models.LiveClass._get_hash',
-           MagicMock(side_effect=[
-               'r1',
-               'r2',
-               'r3',
-               'r4',
-               'r5',
-               'r6',
-           ]))
+    @patch('breathecode.events.models.LiveClass._get_hash', MagicMock(side_effect=[
+        'r1',
+        'r2',
+        'r3',
+        'r4',
+        'r5',
+        'r6',
+    ]))
     def test_one_cohort_time_slot_with_ending_date_in_the_future__monthly(self):
         base_date = DATE
         cohort = {
@@ -232,11 +228,10 @@ class AcademyEventTestSuite(EventTestCase):
             'kickoff_date': base_date - timedelta(weeks=3 * 2),
         }
 
-        starting_at = self.bc.datetime.to_datetime_integer('America/New_York',
-                                                           base_date - timedelta(weeks=3 * 4))
+        starting_at = self.bc.datetime.to_datetime_integer('America/New_York', base_date - timedelta(weeks=3 * 4))
 
-        ending_at = self.bc.datetime.to_datetime_integer(
-            'America/New_York', base_date - timedelta(weeks=3 * 4) + timedelta(hours=3))
+        ending_at = self.bc.datetime.to_datetime_integer('America/New_York',
+                                                         base_date - timedelta(weeks=3 * 4) + timedelta(hours=3))
 
         cohort_time_slot = {
             'starting_at': starting_at,
@@ -275,15 +270,14 @@ class AcademyEventTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(logging.Logger, 'debug', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=DATE))
-    @patch('breathecode.events.models.LiveClass._get_hash',
-           MagicMock(side_effect=[
-               'r1',
-               'r2',
-               'r3',
-               'r4',
-               'r5',
-               'r6',
-           ]))
+    @patch('breathecode.events.models.LiveClass._get_hash', MagicMock(side_effect=[
+        'r1',
+        'r2',
+        'r3',
+        'r4',
+        'r5',
+        'r6',
+    ]))
     def test_one_cohort_time_slot_with_ending_date_in_the_future__daily(self):
         base_date = DATE
         cohort = {

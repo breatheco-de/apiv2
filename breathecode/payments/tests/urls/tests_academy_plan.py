@@ -45,13 +45,7 @@ def financing_option_serializer(financing_option, currency):
     }
 
 
-def get_serializer(event,
-                   currency,
-                   service=None,
-                   academy=None,
-                   service_items=[],
-                   financing_options=[],
-                   cohorts=[]):
+def get_serializer(event, currency, service=None, academy=None, service_items=[], financing_options=[], cohorts=[]):
     if service_items:
         service_items = [service_item_serializer(x, service) for x in service_items]
 
@@ -86,13 +80,7 @@ def get_serializer(event,
     }
 
 
-def post_serializer(currency,
-                    service=None,
-                    academy=None,
-                    service_items=[],
-                    financing_options=[],
-                    cohorts=[],
-                    data={}):
+def post_serializer(currency, service=None, academy=None, service_items=[], financing_options=[], cohorts=[], data={}):
 
     return {
         'id': 0,

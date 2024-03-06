@@ -1,7 +1,7 @@
 from slugify import slugify
 
-from .models import (Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology, KeywordCluster,
-                     AssetCategory, ContentVariable)
+from .models import (Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology, KeywordCluster, AssetCategory,
+                     ContentVariable)
 from django.utils import timezone
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.admissions.models import Academy
@@ -173,9 +173,7 @@ class AssetHookSerializer(serpy.Serializer):
     seo_keywords = serpy.MethodField()
 
     def get_technologies(self, obj):
-        _s = list(
-            map(lambda t: t.slug,
-                obj.technologies.filter(parent__isnull=True).order_by('sort_priority')))
+        _s = list(map(lambda t: t.slug, obj.technologies.filter(parent__isnull=True).order_by('sort_priority')))
         return ','.join(_s)
 
     def get_seo_keywords(self, obj):
@@ -223,9 +221,7 @@ class AssetSerializer(serpy.Serializer):
         return result
 
     def get_technologies(self, obj):
-        _s = list(
-            map(lambda t: t.slug,
-                obj.technologies.filter(parent__isnull=True).order_by('sort_priority')))
+        _s = list(map(lambda t: t.slug, obj.technologies.filter(parent__isnull=True).order_by('sort_priority')))
         return _s
 
     def get_seo_keywords(self, obj):
@@ -456,15 +452,13 @@ class PostAssetSerializer(serializers.ModelSerializer):
 
         if 'category' not in data or data['category'] is None:
             if 'all_translations' not in validated_data or len(validated_data['all_translations']) == 0:
-                raise ValidationException(
-                    'No category was specified and we could not retrieve it from any translation',
-                    slug='no-category')
+                raise ValidationException('No category was specified and we could not retrieve it from any translation',
+                                          slug='no-category')
 
             asset_translation = Asset.objects.filter(slug=validated_data['all_translations'][0]).first()
             if asset_translation is None or asset_translation.category is None:
-                raise ValidationException(
-                    'No category was specified and we could not retrieve it from any translation',
-                    slug='no-category')
+                raise ValidationException('No category was specified and we could not retrieve it from any translation',
+                                          slug='no-category')
 
             category_translation = asset_translation.category.all_translations.filter(
                 lang=validated_data['lang']).first()
@@ -483,8 +477,7 @@ class PostAssetSerializer(serializers.ModelSerializer):
             raise ValidationException('Asset alias already exists with this slug')
 
         if 'readme' in validated_data:
-            raise ValidationException(
-                'Property readme is read only, please update property readme_raw instead')
+            raise ValidationException('Property readme is read only, please update property readme_raw instead')
 
         return validated_data
 
@@ -671,8 +664,7 @@ class PutAssetCommentSerializer(serializers.ModelSerializer):
 
         if self.instance.owner is not None and self.instance.owner.id == session_user.id:
             if 'resolved' in data and data['resolved'] != self.instance.resolved:
-                raise ValidationException(
-                    'You cannot update the resolved property if you are the Asset Comment owner')
+                raise ValidationException('You cannot update the resolved property if you are the Asset Comment owner')
 
         return validated_data
 
@@ -683,9 +675,7 @@ class AssetListSerializer(serializers.ListSerializer):
 
         instance_hash = {index: instance for index, instance in enumerate(instances)}
 
-        result = [
-            self.child.update(instance_hash[index], attrs) for index, attrs in enumerate(validated_data)
-        ]
+        result = [self.child.update(instance_hash[index], attrs) for index, attrs in enumerate(validated_data)]
 
         return result
 
@@ -722,9 +712,7 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                 if key != 'status' and data[key] != getattr(self.instance, key):
                     raise ValidationException('You are only allowed to change the status of this asset',
                                               status.HTTP_400_BAD_REQUEST)
-            if 'status' in data and data['status'] not in [
-                    'DRAFT', 'WRITING', 'NOT_STARTED', 'OPTIMIZED', 'PLANNING'
-            ]:
+            if 'status' in data and data['status'] not in ['DRAFT', 'WRITING', 'NOT_STARTED', 'OPTIMIZED', 'PLANNING']:
                 raise ValidationException(
                     'You can only set the status to not started, draft, writing, optimized, or planning',
                     status.HTTP_400_BAD_REQUEST)
@@ -732,17 +720,15 @@ class AssetPUTSerializer(serializers.ModelSerializer):
             if self.instance.author is None and data['status'] != 'NOT_STARTED':
                 data['author'] = session_user
             elif self.instance.author.id != session_user.id:
-                raise ValidationException('You can only update card assigned to yourself',
-                                          status.HTTP_400_BAD_REQUEST)
+                raise ValidationException('You can only update card assigned to yourself', status.HTTP_400_BAD_REQUEST)
 
         if 'status' in data and data['status'] == 'PUBLISHED':
             if self.instance.test_status not in ['OK', 'WARNING']:
                 raise ValidationException('This asset has to pass tests successfully before publishing',
                                           status.HTTP_400_BAD_REQUEST)
 
-        if 'visibility' in data and data['visibility'] in [
-                'PUBLIC', 'UNLISTED', 'PRIVATE'
-        ] and self.instance.test_status not in ['OK', 'WARNING']:
+        if 'visibility' in data and data['visibility'] in ['PUBLIC', 'UNLISTED', 'PRIVATE'
+                                                           ] and self.instance.test_status not in ['OK', 'WARNING']:
             raise ValidationException('This asset has to pass tests successfully before publishing', code=400)
 
         if 'slug' in data:

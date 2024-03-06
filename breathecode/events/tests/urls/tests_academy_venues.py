@@ -23,10 +23,7 @@ class AcademyVenueTestSuite(EventTestCase):
 
         response = self.client.get(url)
         json = response.json()
-        expected = {
-            'detail': "You (user: 1) don't have this capability: read_event for academy 1",
-            'status_code': 403
-        }
+        expected = {'detail': "You (user: 1) don't have this capability: read_event for academy 1", 'status_code': 403}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 403)

@@ -15,15 +15,13 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='ChatBot',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=100, unique=True)),
                 ('slug', models.SlugField(max_length=100, unique=True)),
                 ('description', models.TextField(blank=True, default=None, null=True)),
                 ('api_key', models.CharField(blank=True, max_length=250)),
                 ('api_organization', models.CharField(blank=True, max_length=250)),
-                ('academy',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
+                ('academy', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
                 ('syllabus', models.ManyToManyField(blank=True, to='admissions.Syllabus')),
             ],
         ),

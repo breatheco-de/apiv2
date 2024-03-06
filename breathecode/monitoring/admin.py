@@ -125,8 +125,8 @@ class CustomForm(forms.ModelForm):
 @admin.register(MonitorScript)
 class MonitorScriptAdmin(admin.ModelAdmin):
     form = CustomForm
-    list_display = ('script_slug', 'application', 'current_status', 'frequency_delta', 'status_code',
-                    'paused_until', 'last_run')
+    list_display = ('script_slug', 'application', 'current_status', 'frequency_delta', 'status_code', 'paused_until',
+                    'last_run')
     actions = [run_single_script]
     list_filter = ['status', 'application__title']
 
@@ -159,8 +159,7 @@ class CSVDownloadAdmin(admin.ModelAdmin):
 
     def download(self, obj):
         if obj.status == 'DONE':
-            return format_html(
-                f"<a href='/v1/monitoring/download/{obj.id}?raw=true' target='_blank'>download</span>")
+            return format_html(f"<a href='/v1/monitoring/download/{obj.id}?raw=true' target='_blank'>download</span>")
         return format_html('nothing to download')
 
 

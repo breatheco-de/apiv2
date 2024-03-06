@@ -16,8 +16,8 @@ from django.db.models import QuerySet
 from breathecode.activity.tasks import get_attendancy_log
 
 from breathecode.marketing.tasks import add_cohort_slug_as_acp_tag, add_cohort_task_to_student
-from .models import (Academy, SyllabusSchedule, Cohort, CohortUser, Country, City, SyllabusVersion,
-                     UserAdmissions, Syllabus, CohortTimeSlot, SyllabusScheduleTimeSlot)
+from .models import (Academy, SyllabusSchedule, Cohort, CohortUser, Country, City, SyllabusVersion, UserAdmissions,
+                     Syllabus, CohortTimeSlot, SyllabusScheduleTimeSlot)
 from .actions import ImportCohortTimeSlots, test_syllabus
 from .tasks import async_test_syllabus
 from breathecode.assignments.actions import sync_student_tasks
@@ -126,9 +126,7 @@ class CohortUserAdmin(admin.ModelAdmin):
     list_display = ('get_student', 'cohort', 'role', 'educational_status', 'finantial_status', 'created_at')
     list_filter = ['role', 'educational_status', 'finantial_status']
     raw_id_fields = ['user', 'cohort']
-    actions = [
-        make_assistant, make_teacher, make_student, make_edu_stat_active, add_student_tag_to_active_campaign
-    ]
+    actions = [make_assistant, make_teacher, make_student, make_edu_stat_active, add_student_tag_to_active_campaign]
 
     def get_student(self, obj):
         return obj.user.first_name + ' ' + obj.user.last_name + '(' + obj.user.email + ')'
@@ -170,8 +168,7 @@ def sync_timeslots(modeladmin, request, queryset):
         if len(ids) > 0:
             count += 1
 
-    messages.add_message(request, messages.INFO,
-                         f'{count} of {cohorts.count()} cohorts timeslots were updated')
+    messages.add_message(request, messages.INFO, f'{count} of {cohorts.count()} cohorts timeslots were updated')
 
 
 class CohortForm(forms.ModelForm):
@@ -194,8 +191,8 @@ def get_attendancy_logs(modeladmin, request, queryset):
 
 
 cohort_actions = [
-    sync_tasks, mark_as_ended, mark_as_started, mark_as_inactive, sync_timeslots,
-    add_cohort_slug_to_active_campaign, get_attendancy_logs
+    sync_tasks, mark_as_ended, mark_as_started, mark_as_inactive, sync_timeslots, add_cohort_slug_to_active_campaign,
+    get_attendancy_logs
 ]
 
 if os.getenv('ENVIRONMENT') == 'DEVELOPMENT':
@@ -295,8 +292,8 @@ def pull_from_github(modeladmin, request, queryset):
 
             headers = {'Authorization': f'token {credentials.token}'}
             response = requests.get(
-                f'https://api.github.com/repos/{matches[0][0]}/{matches[0][1]}/contents/{matches[0][3]}?ref='
-                + matches[0][2],
+                f'https://api.github.com/repos/{matches[0][0]}/{matches[0][1]}/contents/{matches[0][3]}?ref=' +
+                matches[0][2],
                 headers=headers,
                 timeout=2)
             if response.status_code == 200:
@@ -304,19 +301,17 @@ def pull_from_github(modeladmin, request, queryset):
                 syl.json = json.loads(base64.b64decode(_file['content']).decode())
                 syl.save()
             else:
-                logger.error(
-                    f'Error {response.status_code} updating syllabus from github, make sure you have the '
-                    'correct access rights to the repository')
+                logger.error(f'Error {response.status_code} updating syllabus from github, make sure you have the '
+                             'correct access rights to the repository')
                 messages.error(
-                    request,
-                    f'Error {response.status_code} updating syllabus from github, make sure you have the '
+                    request, f'Error {response.status_code} updating syllabus from github, make sure you have the '
                     'correct access rights to the repository')
 
 
 @admin.register(Syllabus)
 class SyllabusAdmin(admin.ModelAdmin):
-    list_display = ('slug', 'name', 'academy_owner', 'private', 'github_url', 'duration_in_hours',
-                    'duration_in_days', 'week_hours', 'logo')
+    list_display = ('slug', 'name', 'academy_owner', 'private', 'github_url', 'duration_in_hours', 'duration_in_days',
+                    'week_hours', 'logo')
     actions = [pull_from_github]
 
 

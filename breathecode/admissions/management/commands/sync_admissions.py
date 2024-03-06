@@ -22,12 +22,7 @@ class Command(BaseCommand):
             action='store_true',
             help='Delete and add again',
         )
-        parser.add_argument('--limit',
-                            action='store',
-                            dest='limit',
-                            type=int,
-                            default=0,
-                            help='How many to import')
+        parser.add_argument('--limit', action='store', dest='limit', type=int, default=0, help='How many to import')
 
     def handle(self, *args, **options):
         try:
@@ -155,8 +150,7 @@ class Command(BaseCommand):
             # if limited number of sync options
             if limit and limit > 0 and total > limit:
                 self.stdout.write(
-                    self.style.SUCCESS(
-                        f'Stopped at {total} because there was a limit on the command arguments'))
+                    self.style.SUCCESS(f'Stopped at {total} because there was a limit on the command arguments'))
                 return
 
             user = User.objects.filter(email=_student['email']).first()
@@ -190,8 +184,7 @@ class Command(BaseCommand):
     def teachers(self, options):
 
         if options['override']:
-            ids = CohortUser.objects.filter(role__in=['STUDENT', 'ASSISTANT']).values_list('user__id',
-                                                                                           flat=True)
+            ids = CohortUser.objects.filter(role__in=['STUDENT', 'ASSISTANT']).values_list('user__id', flat=True)
             User.objects.filter(id__in=ids).delete()
 
         limit = False
@@ -208,8 +201,7 @@ class Command(BaseCommand):
             # if limited number of sync options
             if limit and limit > 0 and total > limit:
                 self.stdout.write(
-                    self.style.SUCCESS(
-                        f'Stopped at {total} because there was a limit on the command arguments'))
+                    self.style.SUCCESS(f'Stopped at {total} because there was a limit on the command arguments'))
                 return
 
             user = User.objects.filter(email=_teacher['email']).first()
@@ -227,8 +219,7 @@ class Command(BaseCommand):
         academy = Academy.objects.filter(slug=_cohort['location_slug']).first()
         if academy is None:
             raise CommandError(f"Academy {_cohort['location_slug']} does not exist")
-        syllabus = Syllabus.objects.filter(
-            certificate__slug=_cohort['profile_slug']).order_by('-version').first()
+        syllabus = Syllabus.objects.filter(certificate__slug=_cohort['profile_slug']).order_by('-version').first()
         if syllabus is None:
             raise CommandError(f"syllabus for certificate {_cohort['profile_slug']} does not exist")
 
@@ -282,8 +273,7 @@ class Command(BaseCommand):
             cohort.ending_date = datetime.strptime(data['ending_date'],
                                                    DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC'))
 
-        syllabus = Syllabus.objects.filter(
-            certificate__slug=data['profile_slug']).order_by('-version').first()
+        syllabus = Syllabus.objects.filter(certificate__slug=data['profile_slug']).order_by('-version').first()
         if syllabus is None:
             raise CommandError(f"syllabus for certificate {data['profile_slug']} does not exist")
         cohort.syllabus = syllabus

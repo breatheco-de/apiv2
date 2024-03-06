@@ -15,8 +15,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Organizacion',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('eventbrite_id', models.CharField(blank=True, max_length=30)),
                 ('eventbrite_key', models.CharField(blank=True, default=None, max_length=255, null=True)),
                 ('name', models.CharField(blank=True, default=None, max_length=100, null=True)),

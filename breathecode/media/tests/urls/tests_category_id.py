@@ -62,10 +62,7 @@ class MediaTestSuite(MediaTestCase):
     def test_category_id_without_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        models = self.generate_models(authenticate=True,
-                                      profile_academy=True,
-                                      capability='read_media',
-                                      role='potato')
+        models = self.generate_models(authenticate=True, profile_academy=True, capability='read_media', role='potato')
         url = reverse_lazy('media:category_id', kwargs={'category_id': 1})
         response = self.client.get(url)
         json = response.json()

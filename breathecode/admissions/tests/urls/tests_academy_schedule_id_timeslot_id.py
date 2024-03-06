@@ -18,28 +18,19 @@ class CohortUserTestSuite(AdmissionsTestCase):
     """
 
     def test_schedule_time_slot__without_auth(self):
-        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id',
-                           kwargs={
-                               'certificate_id': 1,
-                               'timeslot_id': 1
-                           })
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id', kwargs={'certificate_id': 1, 'timeslot_id': 1})
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_schedule_time_slot__without_academy_header(self):
         model = self.generate_models(authenticate=True)
-        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id',
-                           kwargs={
-                               'certificate_id': 1,
-                               'timeslot_id': 1
-                           })
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id', kwargs={'certificate_id': 1, 'timeslot_id': 1})
         response = self.client.get(url)
         json = response.json()
 
@@ -54,19 +45,14 @@ class CohortUserTestSuite(AdmissionsTestCase):
     def test_schedule_time_slot__without_capabilities(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True)
-        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id',
-                           kwargs={
-                               'certificate_id': 1,
-                               'timeslot_id': 1
-                           })
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id', kwargs={'certificate_id': 1, 'timeslot_id': 1})
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': "You (user: 1) don't have this capability: read_certificate for academy 1",
-                'status_code': 403,
-            })
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: read_certificate for academy 1",
+            'status_code': 403,
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.all_syllabus_schedule_time_slot_dict(), [])
 
@@ -80,11 +66,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='read_certificate',
                                      role='potato')
-        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id',
-                           kwargs={
-                               'certificate_id': 1,
-                               'timeslot_id': 1
-                           })
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id', kwargs={'certificate_id': 1, 'timeslot_id': 1})
         response = self.client.get(url)
         json = response.json()
         expected = {
@@ -121,11 +103,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      syllabus_schedule_time_slot=True,
                                      syllabus_schedule_time_slot_kwargs=schedule_time_slot_kwargs)
 
-        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id',
-                           kwargs={
-                               'certificate_id': 1,
-                               'timeslot_id': 1
-                           })
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id', kwargs={'certificate_id': 1, 'timeslot_id': 1})
         response = self.client.get(url)
         json = response.json()
         expected = {
@@ -156,11 +134,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_certificate',
                                      role='potato')
-        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id',
-                           kwargs={
-                               'certificate_id': 1,
-                               'timeslot_id': 1
-                           })
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id', kwargs={'certificate_id': 1, 'timeslot_id': 1})
         data = {}
         response = self.client.put(url, data, format='json')
         json = response.json()
@@ -181,11 +155,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      syllabus=True,
                                      syllabus_schedule=True)
-        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id',
-                           kwargs={
-                               'certificate_id': 1,
-                               'timeslot_id': 1
-                           })
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id', kwargs={'certificate_id': 1, 'timeslot_id': 1})
         data = {}
         response = self.client.put(url, data, format='json')
         json = response.json()
@@ -207,11 +177,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      syllabus=True,
                                      syllabus_schedule=True,
                                      syllabus_schedule_time_slot=True)
-        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id',
-                           kwargs={
-                               'certificate_id': 1,
-                               'timeslot_id': 1
-                           })
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id', kwargs={'certificate_id': 1, 'timeslot_id': 1})
         data = {}
         response = self.client.put(url, data, format='json')
         json = response.json()
@@ -234,11 +200,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      syllabus_schedule=True,
                                      syllabus_schedule_time_slot=True,
                                      academy_kwargs=academy_kwargs)
-        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id',
-                           kwargs={
-                               'certificate_id': 1,
-                               'timeslot_id': 1
-                           })
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id', kwargs={'certificate_id': 1, 'timeslot_id': 1})
         data = {}
         response = self.client.put(url, data, format='json')
         json = response.json()
@@ -270,11 +232,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      syllabus_schedule=True,
                                      academy_kwargs=academy_kwargs)
 
-        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id',
-                           kwargs={
-                               'certificate_id': 1,
-                               'timeslot_id': 1
-                           })
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id', kwargs={'certificate_id': 1, 'timeslot_id': 1})
 
         recurrency_type = random.choice(['DAILY', 'WEEKLY', 'MONTHLY'])
         data = {
@@ -321,11 +279,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      syllabus_schedule=True,
                                      academy_kwargs=academy_kwargs)
 
-        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id',
-                           kwargs={
-                               'certificate_id': 1,
-                               'timeslot_id': 1
-                           })
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id', kwargs={'certificate_id': 1, 'timeslot_id': 1})
 
         recurrency_type = random.choice(['DAILY', 'WEEKLY', 'MONTHLY'])
         data = {
@@ -365,11 +319,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_certificate',
                                      role='potato')
-        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id',
-                           kwargs={
-                               'certificate_id': 1,
-                               'timeslot_id': 1
-                           })
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id', kwargs={'certificate_id': 1, 'timeslot_id': 1})
         response = self.client.delete(url)
         json = response.json()
         expected = {
@@ -388,11 +338,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      capability='crud_certificate',
                                      role='potato',
                                      syllabus_schedule_time_slot=True)
-        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id',
-                           kwargs={
-                               'certificate_id': 1,
-                               'timeslot_id': 1
-                           })
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot_id', kwargs={'certificate_id': 1, 'timeslot_id': 1})
         response = self.client.delete(url)
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)

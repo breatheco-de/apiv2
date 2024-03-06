@@ -63,9 +63,7 @@ def redirect_new_container(request, token):
         if cohort:
             academy = cohort.academy
 
-        return render_message(request,
-                              f"You don't seem to belong to this cohort {cohort_id}.",
-                              academy=academy)
+        return render_message(request, f"You don't seem to belong to this cohort {cohort_id}.", academy=academy)
 
     academy_id = cu.cohort.academy.id
     pa = ProfileAcademy.objects.filter(user=user, academy__id=academy_id).first()
@@ -90,10 +88,9 @@ def redirect_new_container(request, token):
         url = url.replace('https://github.com/', '')
         return redirect(f'https://codespaces.new/?repo={url}')
 
-    return render_message(
-        request,
-        f"Unknown provisioning vendor: '{vendor.name}', please speak with your program manager.",
-        academy=cu.cohort.academy)
+    return render_message(request,
+                          f"Unknown provisioning vendor: '{vendor.name}', please speak with your program manager.",
+                          academy=cu.cohort.academy)
 
 
 @private_view()
@@ -119,9 +116,7 @@ def redirect_workspaces(request, token):
         if cohort:
             academy = cohort.academy
 
-        return render_message(request,
-                              f"You don't seem to belong to this cohort {cohort_id}.",
-                              academy=academy)
+        return render_message(request, f"You don't seem to belong to this cohort {cohort_id}.", academy=academy)
 
     academy_id = cu.cohort.academy.id
     pa = ProfileAcademy.objects.filter(user=user, academy__id=academy_id).first()
@@ -251,8 +246,8 @@ class UploadView(APIView):
         if format_error:
             # codespaces
             fields = [
-                'Username', 'Date', 'Product', 'SKU', 'Quantity', 'Unit Type', 'Price Per Unit ($)',
-                'Multiplier', 'Owner'
+                'Username', 'Date', 'Product', 'SKU', 'Quantity', 'Unit Type', 'Price Per Unit ($)', 'Multiplier',
+                'Owner'
             ]
 
         if format_error and len(df.keys().intersection(fields)) == len(fields):
@@ -289,12 +284,11 @@ class UploadView(APIView):
         # Think about uploading correct files and leaving out incorrect ones
         if format_error:
             raise ValidationException(
-                translation(
-                    lang,
-                    en='CSV file from unknown source or the format has changed and this code must be updated',
-                    es='Archivo CSV de fuente desconocida o el formato ha cambiado y este código debe ser '
-                    'actualizado',
-                    slug='csv-from-unknown-source'))
+                translation(lang,
+                            en='CSV file from unknown source or the format has changed and this code must be updated',
+                            es='Archivo CSV de fuente desconocida o el formato ha cambiado y este código debe ser '
+                            'actualizado',
+                            slug='csv-from-unknown-source'))
 
         # upload file section
         try:
@@ -384,21 +378,19 @@ def render_html_all_bills(request, token):
     lang = get_user_language(request)
     academy_ids = {
         x.academy.id
-        for x in ProfileAcademy.objects.filter(user=request.user,
-                                               role__capabilities__slug='read_provisioning_bill')
+        for x in ProfileAcademy.objects.filter(user=request.user, role__capabilities__slug='read_provisioning_bill')
     }
 
     if not academy_ids:
-        return render(
-            request,
-            'message.html', {
-                'MESSAGE':
-                translation(lang,
-                            en="You don't have the capabilities to read provisioning bills in this academy",
-                            es='No tienes capacidads para leer provisioning bills en esta academia',
-                            slug='no-access')
-            },
-            status=403)
+        return render(request,
+                      'message.html', {
+                          'MESSAGE':
+                          translation(lang,
+                                      en="You don't have the capabilities to read provisioning bills in this academy",
+                                      es='No tienes capacidads para leer provisioning bills en esta academia',
+                                      slug='no-access')
+                      },
+                      status=403)
 
     status_mapper = {}
     for key, value in BILL_STATUS:
@@ -444,8 +436,7 @@ def render_html_bill(request, token, id=None):
     lang = get_user_language(request)
     academy_ids = {
         x.academy.id
-        for x in ProfileAcademy.objects.filter(user=request.user,
-                                               role__capabilities__slug='crud_provisioning_bill')
+        for x in ProfileAcademy.objects.filter(user=request.user, role__capabilities__slug='crud_provisioning_bill')
     }
 
     if not academy_ids:
@@ -472,24 +463,18 @@ def render_html_bill(request, token, id=None):
             if 'heading' not in obj:
                 obj['heading'] = item.academy.name
 
-        return render(
-            request, 'message.html', {
-                'MESSAGE':
-                translation(
-                    lang,
-                    en='Bill not found',
-                    es='Factura no encontrada',
-                    slug='bill-not-found',
-                    **obj,
-                )
-            })
+        return render(request, 'message.html', {
+            'MESSAGE':
+            translation(
+                lang,
+                en='Bill not found',
+                es='Factura no encontrada',
+                slug='bill-not-found',
+                **obj,
+            )
+        })
 
-    status_map = {
-        'DUE': 'UNDER_REVIEW',
-        'APPROVED': 'READY_TO_PAY',
-        'PAID': 'ALREADY PAID',
-        'PENDING': 'PENDING'
-    }
+    status_map = {'DUE': 'UNDER_REVIEW', 'APPROVED': 'READY_TO_PAY', 'PAID': 'ALREADY PAID', 'PENDING': 'PENDING'}
     status_mapper = {}
     for key, value in BILL_STATUS:
         status_mapper[key] = value
@@ -546,9 +531,7 @@ class AcademyBillView(APIView):
             bill = ProvisioningBill.objects.filter(academy__id=academy_id, id=bill_id).first()
 
             if bill is None:
-                raise ValidationException('Provisioning Bill not found',
-                                          code=404,
-                                          slug='provisioning_bill-not-found')
+                raise ValidationException('Provisioning Bill not found', code=404, slug='provisioning_bill-not-found')
 
             serializer = GetProvisioningBillSerializer(bill, many=False)
             return Response(serializer.data)

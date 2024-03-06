@@ -23,10 +23,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='asset',
             name='optimization_rating',
-            field=models.FloatField(blank=True,
-                                    default=None,
-                                    help_text='Automatically filled (1 to 100)',
-                                    null=True),
+            field=models.FloatField(blank=True, default=None, help_text='Automatically filled (1 to 100)', null=True),
         ),
         migrations.AddField(
             model_name='asset',
@@ -67,11 +64,9 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='SEOReport',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('report_type',
-                 models.CharField(help_text='Must be one of the services.seo.action script names',
-                                  max_length=40)),
+                 models.CharField(help_text='Must be one of the services.seo.action script names', max_length=40)),
                 ('status',
                  models.CharField(choices=[('PENDING', 'Pending'), ('ERROR', 'Error'), ('OK', 'Ok'),
                                            ('WARNING', 'Warning')],
@@ -80,13 +75,9 @@ class Migration(migrations.Migration):
                                   max_length=20)),
                 ('log', models.TextField(blank=True, default=None, null=True)),
                 ('rating',
-                 models.FloatField(blank=True,
-                                   default=None,
-                                   help_text='Automatically filled (1 to 100)',
-                                   null=True)),
+                 models.FloatField(blank=True, default=None, help_text='Automatically filled (1 to 100)', null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('asset', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
-                                            to='registry.asset')),
+                ('asset', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='registry.asset')),
             ],
         ),
     ]

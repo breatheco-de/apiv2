@@ -16,14 +16,13 @@ class Migration(migrations.Migration):
             field=models.JSONField(
                 blank=True,
                 default=None,
-                help_text=
-                'The cohort history will save attendancy and information about progress on each class',
+                help_text='The cohort history will save attendancy and information about progress on each class',
                 null=True),
         ),
         migrations.AlterField(
             model_name='cohort',
             name='current_day',
-            field=models.IntegerField(
-                default=1, help_text='Each day the teacher takes attendancy and increases the day in one'),
+            field=models.IntegerField(default=1,
+                                      help_text='Each day the teacher takes attendancy and increases the day in one'),
         ),
     ]

@@ -13,8 +13,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='userinvite',
             name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('REJECTED', 'Rejected'),
-                                            ('ACCEPTED', 'Accepted'), ('WAITING_LIST', 'Waiting list')],
+            field=models.CharField(choices=[('PENDING', 'Pending'), ('REJECTED', 'Rejected'), ('ACCEPTED', 'Accepted'),
+                                            ('WAITING_LIST', 'Waiting list')],
                                    default='PENDING',
                                    max_length=15),
         ),

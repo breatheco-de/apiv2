@@ -47,8 +47,7 @@ class GetAssessmentView(APIView):
             if lang is not None and item.lang != lang:
                 item = item.translations.filter(lang=lang).first()
                 if item is None:
-                    raise ValidationException(f"Language '{lang}' not found for assesment {assessment_slug}",
-                                              404)
+                    raise ValidationException(f"Language '{lang}' not found for assesment {assessment_slug}", 404)
 
             serializer = GetAssessmentBigSerializer(item, many=False)
             return Response(serializer.data, status=status.HTTP_200_OK)

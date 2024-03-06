@@ -6,12 +6,11 @@ from django import forms
 from breathecode.utils.admin import change_field
 from breathecode.services.seo import SEOAnalyzer
 
-from .models import (Asset, AssetTechnology, AssetAlias, AssetErrorLog, KeywordCluster, AssetCategory,
-                     AssetKeyword, AssetComment, SEOReport, AssetImage, OriginalityScan,
-                     CredentialsOriginality, SyllabusVersionProxy, ContentVariable)
-from .tasks import (async_pull_from_github, async_test_asset, async_download_readme_images,
-                    async_remove_img_from_cloud, async_upload_image_to_bucket,
-                    async_update_frontend_asset_cache)
+from .models import (Asset, AssetTechnology, AssetAlias, AssetErrorLog, KeywordCluster, AssetCategory, AssetKeyword,
+                     AssetComment, SEOReport, AssetImage, OriginalityScan, CredentialsOriginality, SyllabusVersionProxy,
+                     ContentVariable)
+from .tasks import (async_pull_from_github, async_test_asset, async_download_readme_images, async_remove_img_from_cloud,
+                    async_upload_image_to_bucket, async_update_frontend_asset_cache)
 from .actions import (get_user_from_github_username, AssetThumbnailGenerator, scan_asset_originality,
                       add_syllabus_translations, clean_asset_readme)
 
@@ -114,8 +113,7 @@ def generate_spanish_translation(modeladmin, request, queryset):
     for old in assets:
         old_id = old.id
         if old.lang not in ['us', 'en']:
-            messages.error(request,
-                           f'Error in {old.slug}: Can only generate trasnlations for english lessons')
+            messages.error(request, f'Error in {old.slug}: Can only generate trasnlations for english lessons')
             continue
 
         new_asset = old.all_translations.filter(
@@ -249,10 +247,9 @@ class AssetForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(AssetForm, self).__init__(*args, **kwargs)
-        self.fields['all_translations'].queryset = Asset.objects.filter(
-            asset_type=self.instance.asset_type).order_by('slug')  # or something else
-        self.fields['technologies'].queryset = AssetTechnology.objects.all().order_by(
+        self.fields['all_translations'].queryset = Asset.objects.filter(asset_type=self.instance.asset_type).order_by(
             'slug')  # or something else
+        self.fields['technologies'].queryset = AssetTechnology.objects.all().order_by('slug')  # or something else
         self.fields['assets_related'].queryset = Asset.objects.exclude(pk=self.instance.pk)
 
 
@@ -330,8 +327,8 @@ class AssetAdmin(admin.ModelAdmin):
     filter_horizontal = ('technologies', 'all_translations', 'seo_keywords')
     list_display = ('main', 'current_status', 'alias', 'techs', 'url_path')
     list_filter = [
-        'asset_type', 'status', 'sync_status', 'test_status', 'lang', 'external', AssessmentFilter,
-        WithKeywordFilter, WithDescription, IsMarkdown
+        'asset_type', 'status', 'sync_status', 'test_status', 'lang', 'external', AssessmentFilter, WithKeywordFilter,
+        WithDescription, IsMarkdown
     ]
     raw_id_fields = ['author', 'owner']
     actions = [
@@ -354,8 +351,8 @@ class AssetAdmin(admin.ModelAdmin):
         async_generate_thumbnail,
         download_and_replace_images,
         reset_4geeks_com_cache,
-    ] + change_field(['DRAFT', 'NOT_STARTED', 'PUBLISHED', 'OPTIMIZED'], name='status') + change_field(
-        ['us', 'es'], name='lang')
+    ] + change_field(['DRAFT', 'NOT_STARTED', 'PUBLISHED', 'OPTIMIZED'], name='status') + change_field(['us', 'es'],
+                                                                                                       name='lang')
 
     def get_form(self, request, obj=None, **kwargs):
 
@@ -531,8 +528,7 @@ def mark_technologies_as_unlisted(modeladmin, request, queryset):
 @admin.register(AssetTechnology)
 class AssetTechnologyAdmin(admin.ModelAdmin):
     search_fields = ['title', 'slug']
-    list_display = ('id', 'get_slug', 'title', 'parent', 'featured_asset', 'description', 'visibility',
-                    'is_deprecated')
+    list_display = ('id', 'get_slug', 'title', 'parent', 'featured_asset', 'description', 'visibility', 'is_deprecated')
     list_filter = (ParentFilter, VisibilityFilter, IsDeprecatedFilter)
     raw_id_fields = ['parent', 'featured_asset']
 
@@ -543,8 +539,7 @@ class AssetTechnologyAdmin(admin.ModelAdmin):
         if obj.parent is None:
             parent = '🤰🏻'
 
-        return format_html(parent + ' ' +
-                           f'<a href="/admin/registry/assettechnology/{obj.id}/change/">{obj.slug}</a>')
+        return format_html(parent + ' ' + f'<a href="/admin/registry/assettechnology/{obj.id}/change/">{obj.slug}</a>')
 
 
 @admin.register(AssetAlias)
@@ -564,14 +559,12 @@ def make_alias(modeladmin, request, queryset):
         if e.slug != AssetErrorLog.SLUG_NOT_FOUND:
             messages.error(
                 request,
-                f'Error: You can only make alias for {AssetErrorLog.SLUG_NOT_FOUND} errors and it was {e.slug}'
-            )
+                f'Error: You can only make alias for {AssetErrorLog.SLUG_NOT_FOUND} errors and it was {e.slug}')
 
         if e.asset is None:
             messages.error(
                 request,
-                f'Error: Cannot make alias to fix error {e.slug} ({e.id}), please assign asset before trying to fix it'
-            )
+                f'Error: Cannot make alias to fix error {e.slug} ({e.id}), please assign asset before trying to fix it')
 
         else:
             alias = AssetAlias.objects.filter(slug=e.path).first()
@@ -586,8 +579,7 @@ def make_alias(modeladmin, request, queryset):
                 continue
 
             if alias.asset.id != e.asset.id:
-                messages.error(
-                    request, f'Slug {e.path} already exists for a different asset {alias.asset.asset_type}')
+                messages.error(request, f'Slug {e.path} already exists for a different asset {alias.asset.asset_type}')
 
 
 def change_status_fixed_including_similar(modeladmin, request, queryset):

@@ -135,10 +135,7 @@ class FinalProjectTestSuite(AssignmentsTestCase):
 
         project_cohort = helper_models['cohort']
 
-        models = self.bc.database.create(final_project={
-            'members': [helper_models['user']],
-            'cohort': project_cohort
-        })
+        models = self.bc.database.create(final_project={'members': [helper_models['user']], 'cohort': project_cohort})
 
         self.bc.request.authenticate(helper_models['user'])
         url = reverse_lazy('assignments:user_me_project', kwargs={'project_id': 1})

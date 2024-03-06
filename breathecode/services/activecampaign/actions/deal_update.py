@@ -27,9 +27,8 @@ def deal_update(ac_cls, webhook, payload: dict, acp_ids):
         entry = FormEntry.objects.filter(email=payload['deal[contact_email]'],
                                          storage_status='PERSISTED').order_by('-created_at').first()
     if entry is None:
-        raise Exception(
-            f'Impossible to find formentry with deal {payload["deal[id]"]} for webhook {webhook.id} -> '
-            f'{webhook.webhook_type} ')
+        raise Exception(f'Impossible to find formentry with deal {payload["deal[id]"]} for webhook {webhook.id} -> '
+                        f'{webhook.webhook_type} ')
 
     entry.ac_deal_id = payload['deal[id]']
 
@@ -46,8 +45,7 @@ def deal_update(ac_cls, webhook, payload: dict, acp_ids):
 
         entry.deal_status = status[payload['deal[status]']]
         entry.ac_deal_owner_id = payload['deal[owner]']
-        entry.ac_deal_owner_full_name = payload['deal[owner_firstname]'] + ' ' + payload[
-            'deal[owner_lastname]']
+        entry.ac_deal_owner_full_name = payload['deal[owner_firstname]'] + ' ' + payload['deal[owner_lastname]']
 
         entry.ac_deal_amount = float(payload['deal[value_raw]'])
         entry.ac_deal_currency_code = payload['deal[currency]']

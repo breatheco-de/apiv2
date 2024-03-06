@@ -10,22 +10,15 @@ from ..mixins import AdmissionsTestCase
 
 def get_serializer(self, syllabus_schedule_time_slot):
     return {
-        'id':
-        syllabus_schedule_time_slot.id,
-        'schedule':
-        syllabus_schedule_time_slot.schedule.id,
-        'starting_at':
-        self.integer_to_iso(syllabus_schedule_time_slot.timezone, syllabus_schedule_time_slot.starting_at),
-        'ending_at':
-        self.integer_to_iso(syllabus_schedule_time_slot.timezone, syllabus_schedule_time_slot.ending_at),
-        'recurrent':
-        syllabus_schedule_time_slot.recurrent,
-        'recurrency_type':
-        syllabus_schedule_time_slot.recurrency_type,
-        'created_at':
-        self.datetime_to_iso(syllabus_schedule_time_slot.created_at),
-        'updated_at':
-        self.datetime_to_iso(syllabus_schedule_time_slot.updated_at),
+        'id': syllabus_schedule_time_slot.id,
+        'schedule': syllabus_schedule_time_slot.schedule.id,
+        'starting_at': self.integer_to_iso(syllabus_schedule_time_slot.timezone,
+                                           syllabus_schedule_time_slot.starting_at),
+        'ending_at': self.integer_to_iso(syllabus_schedule_time_slot.timezone, syllabus_schedule_time_slot.ending_at),
+        'recurrent': syllabus_schedule_time_slot.recurrent,
+        'recurrency_type': syllabus_schedule_time_slot.recurrency_type,
+        'created_at': self.datetime_to_iso(syllabus_schedule_time_slot.created_at),
+        'updated_at': self.datetime_to_iso(syllabus_schedule_time_slot.updated_at),
     }
 
 
@@ -40,11 +33,10 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test__without_academy_header(self):
@@ -68,11 +60,10 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': "You (user: 1) don't have this capability: read_certificate for academy 1",
-                'status_code': 403,
-            })
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: read_certificate for academy 1",
+            'status_code': 403,
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.all_syllabus_schedule_time_slot_dict(), [])
 
@@ -143,8 +134,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     def test__recurrency_type_in_querystring__found(self):
         statuses = ['DAILY', 'WEEKLY', 'MONTHLY']
         cases = [(x, x, random.choice([y for y in statuses if x != y]))
-                 for x in statuses] + [(x, x.lower(), random.choice([y for y in statuses if x != y]))
-                                       for x in statuses]
+                 for x in statuses] + [(x, x.lower(), random.choice([y for y in statuses if x != y])) for x in statuses]
 
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,

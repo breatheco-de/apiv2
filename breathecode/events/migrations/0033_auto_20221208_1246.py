@@ -25,34 +25,25 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='EventTypeSyllabus',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('event_type',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='events.eventtype')),
-                ('syllabus',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.syllabus')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('event_type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='events.eventtype')),
+                ('syllabus', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.syllabus')),
             ],
         ),
         migrations.CreateModel(
             name='EventTypeCohort',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('cohort',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.cohort')),
-                ('event_type',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='events.eventtype')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('cohort', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.cohort')),
+                ('event_type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='events.eventtype')),
             ],
         ),
         migrations.CreateModel(
             name='EventTypeAcademy',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('academy',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
-                ('event_type',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='events.eventtype')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('academy', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
+                ('event_type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='events.eventtype')),
             ],
         ),
         migrations.AddField(
@@ -66,14 +57,11 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='eventtype',
             name='shared_with_cohorts',
-            field=models.ManyToManyField(blank=True, through='events.EventTypeCohort',
-                                         to='admissions.Cohort'),
+            field=models.ManyToManyField(blank=True, through='events.EventTypeCohort', to='admissions.Cohort'),
         ),
         migrations.AddField(
             model_name='eventtype',
             name='shared_with_syllabus',
-            field=models.ManyToManyField(blank=True,
-                                         through='events.EventTypeSyllabus',
-                                         to='admissions.Syllabus'),
+            field=models.ManyToManyField(blank=True, through='events.EventTypeSyllabus', to='admissions.Syllabus'),
         ),
     ]

@@ -20,8 +20,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Organization',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('eventbrite_id', models.CharField(blank=True, max_length=30, unique=True)),
                 ('eventbrite_key', models.CharField(blank=True, default=None, max_length=255, null=True)),
                 ('name', models.CharField(blank=True, default=None, max_length=100, null=True)),
@@ -29,8 +28,7 @@ class Migration(migrations.Migration):
                  models.CharField(
                      choices=[('PENDING', 'Pending'), ('PERSISTED', 'Persisted'), ('ERROR', 'Error')],
                      default='PENDING',
-                     help_text=
-                     'One of: PENDING, PERSISTED or ERROR depending on how the eventbrite sync status',
+                     help_text='One of: PENDING, PERSISTED or ERROR depending on how the eventbrite sync status',
                      max_length=9)),
                 ('sync_desc', models.TextField(blank=True, default=None, max_length=255, null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),

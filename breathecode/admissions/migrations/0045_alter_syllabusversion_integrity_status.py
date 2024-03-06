@@ -13,8 +13,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='syllabusversion',
             name='integrity_status',
-            field=models.CharField(choices=[('ERROR', 'Error'), ('PENDING', 'Pending'),
-                                            ('WARNING', 'Warning'), ('OK', 'Ok')],
+            field=models.CharField(choices=[('ERROR', 'Error'), ('PENDING', 'Pending'), ('WARNING', 'Warning'),
+                                            ('OK', 'Ok')],
                                    default='PENDING',
                                    max_length=15),
         ),

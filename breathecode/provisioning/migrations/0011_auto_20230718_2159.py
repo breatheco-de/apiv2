@@ -13,9 +13,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='provisioninguserconsumption',
             name='events',
-            field=models.ManyToManyField(blank=True,
-                                         editable=False,
-                                         to='provisioning.ProvisioningConsumptionEvent'),
+            field=models.ManyToManyField(blank=True, editable=False, to='provisioning.ProvisioningConsumptionEvent'),
         ),
         migrations.DeleteModel(name='ProvisioningActivity', ),
     ]

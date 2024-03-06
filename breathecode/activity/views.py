@@ -40,8 +40,7 @@ ACTIVITIES = {
     'exercise_success': 'When student successfully tests exercise',
     'registration': 'When student successfully joins breathecode',
     'educational_status_change': 'Student cohort changes like: starts, drop, postpone, etc',
-    'educational_note':
-    'Notes that can be added by teachers, TA\'s or anyone involved in the student education',
+    'educational_note': 'Notes that can be added by teachers, TA\'s or anyone involved in the student education',
     'career_note': 'Notes related to the student career',
 }
 
@@ -79,8 +78,7 @@ class ActivityViewMixin(APIView):
         except Exception:
             raise ValidationException('Cohort not found', slug='cohort-not-found')
 
-        slug = Cohort.objects.filter(academy__id=academy_id, pk=cohort_id).values_list('slug',
-                                                                                       flat=True).first()
+        slug = Cohort.objects.filter(academy__id=academy_id, pk=cohort_id).values_list('slug', flat=True).first()
         if not slug:
             raise ValidationException('Cohort not found', slug='cohort-not-found')
 
@@ -174,8 +172,7 @@ class ActivityTypeView(APIView):
     def get(self, request, activity_slug=None, academy_id=None):
         if activity_slug:
             if activity_slug not in ACTIVITIES:
-                raise ValidationException(f'Activity type {activity_slug} not found',
-                                          slug='activity-not-found')
+                raise ValidationException(f'Activity type {activity_slug} not found', slug='activity-not-found')
 
             res = self.get_activity_object(activity_slug)
             return Response(res)
@@ -270,8 +267,7 @@ class ActivityClassroomView(APIView, HeaderLimitOffsetPagination):
     @capable_of('classroom_activity')
     def post(self, request, cohort_id=None, academy_id=None):
 
-        cu = CohortUser.objects.filter(
-            user__id=request.user.id).filter(Q(role='TEACHER') | Q(role='ASSISTANT'))
+        cu = CohortUser.objects.filter(user__id=request.user.id).filter(Q(role='TEACHER') | Q(role='ASSISTANT'))
 
         if cohort_id.isnumeric():
             cu = cu.filter(cohort__id=cohort_id)
@@ -281,8 +277,7 @@ class ActivityClassroomView(APIView, HeaderLimitOffsetPagination):
         cu = cu.first()
         if cu is None:
             raise ValidationException(
-                'Only teachers or assistants from this cohort can report classroom activities on the student timeline'
-            )
+                'Only teachers or assistants from this cohort can report classroom activities on the student timeline')
 
         data = request.data
         if isinstance(data, list) == False:
@@ -292,8 +287,7 @@ class ActivityClassroomView(APIView, HeaderLimitOffsetPagination):
         for activity in data:
             student_id = activity['user_id']
             del activity['user_id']
-            cohort_user = CohortUser.objects.filter(role='STUDENT',
-                                                    user__id=student_id,
+            cohort_user = CohortUser.objects.filter(role='STUDENT', user__id=student_id,
                                                     cohort__id=cu.cohort.id).first()
             if cohort_user is None:
                 raise ValidationException('Student not found in this cohort', slug='not-found-in-cohort')
@@ -422,8 +416,7 @@ class StudentActivityView(APIView, HeaderLimitOffsetPagination):
     def get(self, request, student_id=None, academy_id=None):
         from breathecode.services.google_cloud import Datastore
 
-        cohort_user = CohortUser.objects.filter(role='STUDENT',
-                                                user__id=student_id,
+        cohort_user = CohortUser.objects.filter(role='STUDENT', user__id=student_id,
                                                 cohort__academy__id=academy_id).first()
         if cohort_user is None:
             raise ValidationException(
@@ -494,9 +487,8 @@ class StudentActivityView(APIView, HeaderLimitOffsetPagination):
         for activity in data:
 
             if 'cohort' not in activity:
-                raise ValidationException(
-                    'Every activity specified for each student must have a cohort (slug)',
-                    slug='missing-cohort')
+                raise ValidationException('Every activity specified for each student must have a cohort (slug)',
+                                          slug='missing-cohort')
             elif activity['cohort'].isnumeric():
                 raise ValidationException('Cohort must be a slug, not a numeric ID', slug='invalid-cohort')
 

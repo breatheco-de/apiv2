@@ -22,12 +22,7 @@ class Response:
 
 WIDTH = randint(0, 2000)
 HEIGHT = randint(0, 2000)
-FUNCTION_GOOD_RESPONSE = Response({
-    'status_code': 200,
-    'message': 'Ok',
-    'width': WIDTH,
-    'height': HEIGHT
-}, 200)
+FUNCTION_GOOD_RESPONSE = Response({'status_code': 200, 'message': 'Ok', 'width': WIDTH, 'height': HEIGHT}, 200)
 FUNCTION_BAD_RESPONSE = Response({'status_code': 400, 'message': 'Bad response'}, 400)
 
 
@@ -136,15 +131,14 @@ class RegistryTestSuite(RegistryTestCase):
                 call(region='us-central1', project_id='labor-day-story', name='resize-image'),
             ])
 
-            self.assertEqual(
-                str(FunctionV1.call.call_args_list),
-                str([
-                    call({
-                        **kwargs,
-                        'filename': model.media.hash,
-                        'bucket': 'bucket-name',
-                    }),
-                ]))
+            self.assertEqual(str(FunctionV1.call.call_args_list),
+                             str([
+                                 call({
+                                     **kwargs,
+                                     'filename': model.media.hash,
+                                     'bucket': 'bucket-name',
+                                 }),
+                             ]))
 
             # teardown
             self.bc.database.delete('media.MediaResolution')

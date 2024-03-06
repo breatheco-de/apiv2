@@ -52,23 +52,17 @@ def get_my_event_types(_user):
                         and i_owe_you.selected_cohort_set.cohorts.first().academy not in academies):
                     academies.append(i_owe_you.selected_cohort_set.cohorts.first().academy)
 
-                if i_owe_you.selected_cohort_set and i_owe_you.selected_cohort_set.cohorts.first(
-                ) not in cohorts:
+                if i_owe_you.selected_cohort_set and i_owe_you.selected_cohort_set.cohorts.first() not in cohorts:
                     cohorts.append(i_owe_you.selected_cohort_set.cohorts.first())
 
-                if (i_owe_you.selected_cohort_set
-                        and i_owe_you.selected_cohort_set.cohorts.first().syllabus_version
-                        and i_owe_you.selected_cohort_set.cohorts.first().syllabus_version.syllabus
-                        not in syllabus):
+                if (i_owe_you.selected_cohort_set and i_owe_you.selected_cohort_set.cohorts.first().syllabus_version
+                        and i_owe_you.selected_cohort_set.cohorts.first().syllabus_version.syllabus not in syllabus):
                     syllabus.append({
-                        'syllabus':
-                        i_owe_you.selected_cohort_set.cohorts.first().syllabus_version.syllabus,
-                        'academy':
-                        i_owe_you.selected_cohort_set.cohorts.first().academy,
+                        'syllabus': i_owe_you.selected_cohort_set.cohorts.first().syllabus_version.syllabus,
+                        'academy': i_owe_you.selected_cohort_set.cohorts.first().academy,
                     })
 
-                if (i_owe_you.selected_event_type_set
-                        and i_owe_you.selected_event_type_set.academy not in academies):
+                if (i_owe_you.selected_event_type_set and i_owe_you.selected_event_type_set.academy not in academies):
                     academies.append(i_owe_you.selected_event_type_set.academy)
 
                 if (i_owe_you.selected_mentorship_service_set
@@ -285,8 +279,8 @@ def export_event_description_to_eventbrite(event: Event) -> None:
 
     try:
         structured_content = client.get_event_description(eventbrite_id)
-        result = client.create_or_update_event_description(eventbrite_id,
-                                                           structured_content['page_version_number'], payload)
+        result = client.create_or_update_event_description(eventbrite_id, structured_content['page_version_number'],
+                                                           payload)
 
         if not result['modules']:
             error = 'Could not create event description in eventbrite'
@@ -623,10 +617,7 @@ def update_timeslots_out_of_range(start: datetime, end: datetime, timeslots: Que
     return sorted(lists, key=lambda x: (x['starting_at'], x['ending_at']))
 
 
-def fix_datetime_weekday(current: datetime,
-                         timeslot: datetime,
-                         prev: bool = False,
-                         next: bool = False) -> datetime:
+def fix_datetime_weekday(current: datetime, timeslot: datetime, prev: bool = False, next: bool = False) -> datetime:
     if not prev and not next:
         raise Exception('You should provide a prev or next argument')
 

@@ -1081,12 +1081,7 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
         (1, 9545799, True),
     ])
     def test_generate_certificate__lang_es(self, current_day, duration_in_days, never_ends):
-        cohort_kwargs = {
-            'stage': 'ENDED',
-            'current_day': current_day,
-            'language': 'es',
-            'never_ends': never_ends
-        }
+        cohort_kwargs = {'stage': 'ENDED', 'current_day': current_day, 'language': 'es', 'never_ends': never_ends}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
         syllabus_kwargs = {'duration_in_days': duration_in_days}
         model = self.generate_models(user=True,

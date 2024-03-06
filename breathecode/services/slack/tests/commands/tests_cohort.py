@@ -67,12 +67,7 @@ class SlackTestSuite(SlackTestCase):
                                 academy=1,
                                 slack_team=slack_team)
 
-        data = {
-            'text': 'cohort <@fdd2325|244372eew>',
-            'user_id': 'name',
-            'team_id': 'team',
-            'channel_id': 'test'
-        }
+        data = {'text': 'cohort <@fdd2325|244372eew>', 'user_id': 'name', 'team_id': 'team', 'channel_id': 'test'}
         with self.assertRaisesMessage(SlackException, 'cohort-not-found'):
             result = execute(users=['fdd2325'], context=data)
 
@@ -96,12 +91,7 @@ class SlackTestSuite(SlackTestCase):
                                         cohort_user=cohort_user,
                                         slack_channel=slack_channel)
 
-        data = {
-            'text': 'cohort <@percybrown|244372eew>',
-            'user_id': 'name',
-            'team_id': 'team',
-            'channel_id': 'test'
-        }
+        data = {'text': 'cohort <@percybrown|244372eew>', 'user_id': 'name', 'team_id': 'team', 'channel_id': 'test'}
         expected = {
             'blocks': [{
                 'type': 'section',
@@ -151,12 +141,7 @@ class SlackTestSuite(SlackTestCase):
 
         teacher_role = ', '.join([cu.user.first_name + ' ' + cu.user.last_name for cu in teachers])
 
-        data = {
-            'text': 'cohort <@percybrown|244372eew>',
-            'user_id': 'name',
-            'team_id': 'team',
-            'channel_id': 'test'
-        }
+        data = {'text': 'cohort <@percybrown|244372eew>', 'user_id': 'name', 'team_id': 'team', 'channel_id': 'test'}
         expected = {
             'blocks': [{
                 'type': 'section',

@@ -44,8 +44,7 @@ CAPABILITIES = [
         'description': 'Read assignment information'
     },
     {
-        'slug':
-        'read_assignment_sensitive_details',
+        'slug': 'read_assignment_sensitive_details',
         'description':
         'The mentor in residence is allowed to see aditional info about the task, like the "delivery url"'
     },
@@ -206,10 +205,8 @@ CAPABILITIES = [
         'description': 'Create, update or delete a assignment'
     },
     {
-        'slug':
-        'classroom_activity',
-        'description':
-        'To report student activities during the classroom or cohorts (Specially meant for teachers)'
+        'slug': 'classroom_activity',
+        'description': 'To report student activities during the classroom or cohorts (Specially meant for teachers)'
     },
     {
         'slug': 'academy_reporting',
@@ -558,8 +555,8 @@ ROLES = [
         'Student',
         'caps': [
             'crud_assignment', 'chatbot_message', 'read_syllabus', 'read_assignment', 'read_single_cohort',
-            'read_my_academy', 'read_all_cohort', 'crud_activity', 'read_mentorship_service',
-            'read_mentorship_mentor', 'read_cohort_log', 'read_service', 'read_academyservice'
+            'read_my_academy', 'read_all_cohort', 'crud_activity', 'read_mentorship_service', 'read_mentorship_mentor',
+            'read_cohort_log', 'read_service', 'read_academyservice'
         ],
     },
 ]
@@ -609,9 +606,8 @@ def extend_roles(roles: list[RoleType]) -> None:
         'Content Writer',
         'caps':
         extend(roles, ['basic']) + [
-            'read_keywordcluster', 'read_member', 'read_media', 'read_keyword', 'read_my_academy',
-            'read_asset', 'crud_asset', 'read_category', 'crud_category', 'read_content_variables',
-            'crud_content_variables'
+            'read_keywordcluster', 'read_member', 'read_media', 'read_keyword', 'read_my_academy', 'read_asset',
+            'crud_asset', 'read_category', 'crud_category', 'read_content_variables', 'crud_content_variables'
         ]
     })
 
@@ -622,9 +618,9 @@ def extend_roles(roles: list[RoleType]) -> None:
         'Teacher Assistant',
         'caps':
         extend(roles, ['staff']) + [
-            'read_assignment', 'crud_assignment', 'read_cohort_activity', 'read_nps_answers',
-            'classroom_activity', 'read_event', 'read_event_type', 'task_delivery_details', 'crud_cohort',
-            'read_cohort_log', 'crud_cohort_log', 'start_or_end_class', 'start_or_end_event'
+            'read_assignment', 'crud_assignment', 'read_cohort_activity', 'read_nps_answers', 'classroom_activity',
+            'read_event', 'read_event_type', 'task_delivery_details', 'crud_cohort', 'read_cohort_log',
+            'crud_cohort_log', 'start_or_end_class', 'start_or_end_event'
         ]
     })
     roles.append({
@@ -663,10 +659,8 @@ def extend_roles(roles: list[RoleType]) -> None:
         'name':
         'Admissions Developer',
         'caps':
-        extend(roles, ['staff']) + [
-            'crud_lead', 'crud_student', 'crud_cohort', 'read_all_cohort', 'read_lead', 'read_activity',
-            'invite_resend'
-        ]
+        extend(roles, ['staff']) +
+        ['crud_lead', 'crud_student', 'crud_cohort', 'read_all_cohort', 'read_lead', 'read_activity', 'invite_resend']
     })
     roles.append({
         'slug':
@@ -688,8 +682,7 @@ def extend_roles(roles: list[RoleType]) -> None:
         'name':
         'Graphic Designer',
         'caps':
-        extend(roles, ['staff']) +
-        ['read_event', 'read_event_type', 'crud_media', 'read_asset', 'read_media']
+        extend(roles, ['staff']) + ['read_event', 'read_event_type', 'crud_media', 'read_asset', 'read_media']
     })
     roles.append({
         'slug':
@@ -698,8 +691,8 @@ def extend_roles(roles: list[RoleType]) -> None:
         'Manage Syllabus, Exercises and all academy content',
         'caps':
         extend(roles, ['staff', 'graphic_designer']) + [
-            'crud_lead', 'crud_event', 'crud_event_type', 'read_eventcheckin', 'read_nps_answers',
-            'read_lead', 'read_all_cohort', 'crud_asset', 'read_keywordcluster', 'read_keyword'
+            'crud_lead', 'crud_event', 'crud_event_type', 'read_eventcheckin', 'read_nps_answers', 'read_lead',
+            'read_all_cohort', 'crud_asset', 'read_keywordcluster', 'read_keyword'
         ]
     })
     roles.append({
@@ -739,11 +732,7 @@ def extend_roles(roles: list[RoleType]) -> None:
         'name': 'Homework Reviewer',
         'caps': extend(roles, ['assistant']) + ['crud_student']
     })
-    roles.append({
-        'slug': 'teacher',
-        'name': 'Teacher',
-        'caps': extend(roles, ['assistant']) + ['crud_cohort']
-    })
+    roles.append({'slug': 'teacher', 'name': 'Teacher', 'caps': extend(roles, ['assistant']) + ['crud_cohort']})
     roles.append({
         'slug':
         'academy_coordinator',

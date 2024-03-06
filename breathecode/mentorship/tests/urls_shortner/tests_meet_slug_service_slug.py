@@ -44,12 +44,7 @@ def format_consumable(data={}):
     }
 
 
-def format_consumption_session(mentorship_service,
-                               mentor_profile,
-                               mentorship_service_set,
-                               user,
-                               consumable,
-                               data={}):
+def format_consumption_session(mentorship_service, mentor_profile, mentorship_service_set, user, consumable, data={}):
     return {
         'consumable_id': consumable.id,
         'duration': timedelta(),
@@ -398,26 +393,16 @@ def get_mentorship_session_serializer(mentorship_session, mentor_profile, user, 
     }
 
 
-def render_session(mentorship_session,
-                   mentor_profile,
-                   user,
-                   mentorship_service,
-                   academy,
-                   token,
-                   fix_logo=False):
+def render_session(mentorship_session, mentor_profile, user, mentorship_service, academy, token, fix_logo=False):
     request = None
 
     data = {
-        'subject':
-        mentorship_session.service.name,
-        'room_url':
-        mentorship_session.online_meeting_url,
-        'session':
-        get_mentorship_session_serializer(mentorship_session, mentor_profile, user, mentorship_service,
-                                          academy),
+        'subject': mentorship_session.service.name,
+        'room_url': mentorship_session.online_meeting_url,
+        'session': get_mentorship_session_serializer(mentorship_session, mentor_profile, user, mentorship_service,
+                                                     academy),
         'userName': (token.user.first_name + ' ' + token.user.last_name).strip(),
-        'backup_room_url':
-        mentorship_session.mentor.online_meeting_url,
+        'backup_room_url': mentorship_session.mentor.online_meeting_url,
     }
 
     if token.user.id == mentorship_session.mentor.user.id:
@@ -509,10 +494,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render(f'No service found with slug {slug}',
-                          model.mentor_profile,
-                          model.token,
-                          fix_logo=False)
+        expected = render(f'No service found with slug {slug}', model.mentor_profile, model.token, fix_logo=False)
 
         # dump error in external files
         if content != expected:
@@ -684,11 +666,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'DAILY_API_URL': URL,
-               'DAILY_API_KEY': API_KEY,
-           })))
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({
+        'DAILY_API_URL': URL,
+        'DAILY_API_KEY': API_KEY,
+    })))
     @patch('requests.request',
            apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
                'name': ROOM_NAME,
@@ -751,11 +732,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'DAILY_API_URL': URL,
-               'DAILY_API_KEY': API_KEY,
-           })))
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({
+        'DAILY_API_URL': URL,
+        'DAILY_API_KEY': API_KEY,
+    })))
     @patch('requests.request',
            apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
                'name': ROOM_NAME,
@@ -827,18 +807,16 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'DAILY_API_URL': URL,
-               'DAILY_API_KEY': API_KEY,
-           })))
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({
+        'DAILY_API_URL': URL,
+        'DAILY_API_KEY': API_KEY,
+    })))
     @patch('requests.request',
            apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
                'name': ROOM_NAME,
                'url': ROOM_URL,
            })]))
-    def test_with_mentor_profile__good_statuses__with_mentor_urls__session_without_mentee__passing_session(
-            self):
+    def test_with_mentor_profile__good_statuses__with_mentor_urls__session_without_mentee__passing_session(self):
         cases = [{
             'status': x,
             'online_meeting_url': self.bc.fake.url(),
@@ -904,11 +882,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'DAILY_API_URL': URL,
-               'DAILY_API_KEY': API_KEY,
-           })))
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({
+        'DAILY_API_URL': URL,
+        'DAILY_API_KEY': API_KEY,
+    })))
     @patch('requests.request',
            apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
                'name': ROOM_NAME,
@@ -985,11 +962,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'DAILY_API_URL': URL,
-               'DAILY_API_KEY': API_KEY,
-           })))
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({
+        'DAILY_API_URL': URL,
+        'DAILY_API_KEY': API_KEY,
+    })))
     @patch('requests.request',
            apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
                'name': ROOM_NAME,
@@ -1074,11 +1050,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'DAILY_API_URL': URL,
-               'DAILY_API_KEY': API_KEY,
-           })))
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({
+        'DAILY_API_URL': URL,
+        'DAILY_API_KEY': API_KEY,
+    })))
     @patch('requests.request',
            apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
                'name': ROOM_NAME,
@@ -1154,11 +1129,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'DAILY_API_URL': URL,
-               'DAILY_API_KEY': API_KEY,
-           })))
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({
+        'DAILY_API_URL': URL,
+        'DAILY_API_KEY': API_KEY,
+    })))
     @patch('requests.request',
            apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
                'name': ROOM_NAME,
@@ -1201,13 +1175,12 @@ class AuthenticateTestSuite(MentorshipTestCase):
             response = self.client.get(url)
 
             content = self.bc.format.from_bytes(response.content)
-            expected = render(
-                f'Hello student, you are about to start a {model.mentorship_service.name} with a mentor.',
-                model.mentor_profile,
-                base.token,
-                fix_logo=True,
-                start_session=True,
-                academy=model.academy)
+            expected = render(f'Hello student, you are about to start a {model.mentorship_service.name} with a mentor.',
+                              model.mentor_profile,
+                              base.token,
+                              fix_logo=True,
+                              start_session=True,
+                              academy=model.academy)
 
             # dump error in external files
             if content != expected:
@@ -1315,18 +1288,16 @@ class AuthenticateTestSuite(MentorshipTestCase):
     #         self.bc.database.delete('auth.User')
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'DAILY_API_URL': URL,
-               'DAILY_API_KEY': API_KEY,
-           })))
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({
+        'DAILY_API_URL': URL,
+        'DAILY_API_KEY': API_KEY,
+    })))
     @patch('requests.request',
            apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
                'name': ROOM_NAME,
                'url': ROOM_URL,
            })]))
-    @patch('breathecode.mentorship.permissions.flags.Release.enable_consume_mentorships',
-           MagicMock(return_value=True))
+    @patch('breathecode.mentorship.permissions.flags.Release.enable_consume_mentorships', MagicMock(return_value=True))
     def test_with_mentor_profile__academy_available_as_saas__flag_eq_true__mentee_with_no_consumables(self):
         cases = [{
             'status': x,
@@ -1370,9 +1341,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             template_data['URL_BACK'] = 'https://4geeks.com/choose-program'
             template_data['BUTTON'] = 'Get a plan'
             template_data['LINK'] = f'https://4geeks.com/checkout?plan=basic&token={base.token.key}'
-            expected = render('You must get a plan in order to access this service',
-                              data=template_data,
-                              academy=None)
+            expected = render('You must get a plan in order to access this service', data=template_data, academy=None)
 
             # dump error in external files
             if content != expected:
@@ -1396,18 +1365,16 @@ class AuthenticateTestSuite(MentorshipTestCase):
             self.bc.database.delete('auth.User')
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'DAILY_API_URL': URL,
-               'DAILY_API_KEY': API_KEY,
-           })))
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({
+        'DAILY_API_URL': URL,
+        'DAILY_API_KEY': API_KEY,
+    })))
     @patch('requests.request',
            apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
                'name': ROOM_NAME,
                'url': ROOM_URL,
            })]))
-    @patch('breathecode.mentorship.permissions.flags.Release.enable_consume_mentorships',
-           MagicMock(return_value=True))
+    @patch('breathecode.mentorship.permissions.flags.Release.enable_consume_mentorships', MagicMock(return_value=True))
     def test_with_mentor_profile__academy_available_as_saas__flag_eq_true__mentee_with_no_consumables_with_subcription(
             self):
         cases = [{
@@ -1422,11 +1389,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             id += 1
 
             user = {'first_name': '', 'last_name': ''}
-            base = self.bc.database.create(user=user,
-                                           token=1,
-                                           group=1,
-                                           permission=permission,
-                                           mentorship_service_set=1)
+            base = self.bc.database.create(user=user, token=1, group=1, permission=permission, mentorship_service_set=1)
 
             mentorship_session = {'mentee_id': None}
             academy = {'available_as_saas': True}
@@ -1447,8 +1410,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
 
             model.mentorship_session.mentee = None
             model.mentorship_session.save()
-            model.subscription.selected_mentorship_service_set.mentorship_services.add(
-                model.mentorship_service)
+            model.subscription.selected_mentorship_service_set.mentorship_services.add(model.mentorship_service)
             model.subscription.save()
 
             querystring = self.bc.format.to_querystring({
@@ -1493,18 +1455,16 @@ class AuthenticateTestSuite(MentorshipTestCase):
             self.bc.database.delete('auth.User')
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'DAILY_API_URL': URL,
-               'DAILY_API_KEY': API_KEY,
-           })))
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({
+        'DAILY_API_URL': URL,
+        'DAILY_API_KEY': API_KEY,
+    })))
     @patch('requests.request',
            apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
                'name': ROOM_NAME,
                'url': ROOM_URL,
            })]))
-    @patch('breathecode.mentorship.permissions.flags.Release.enable_consume_mentorships',
-           MagicMock(return_value=True))
+    @patch('breathecode.mentorship.permissions.flags.Release.enable_consume_mentorships', MagicMock(return_value=True))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_with_mentor_profile__academy_available_as_saas__flag_eq_true__mentee_with_consumables(self):
@@ -1556,13 +1516,12 @@ class AuthenticateTestSuite(MentorshipTestCase):
             response = self.client.get(url)
 
             content = self.bc.format.from_bytes(response.content)
-            expected = render(
-                f'Hello student, you are about to start a {model.mentorship_service.name} with a mentor.',
-                model.mentor_profile,
-                base.token,
-                fix_logo=True,
-                start_session=True,
-                academy=model.academy)
+            expected = render(f'Hello student, you are about to start a {model.mentorship_service.name} with a mentor.',
+                              model.mentor_profile,
+                              base.token,
+                              fix_logo=True,
+                              start_session=True,
+                              academy=model.academy)
 
             # dump error in external files
             if content != expected:
@@ -1612,18 +1571,16 @@ class AuthenticateTestSuite(MentorshipTestCase):
             tasks.end_the_consumption_session.apply_async.call_args_list = []
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'DAILY_API_URL': URL,
-               'DAILY_API_KEY': API_KEY,
-           })))
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({
+        'DAILY_API_URL': URL,
+        'DAILY_API_KEY': API_KEY,
+    })))
     @patch('requests.request',
            apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
                'name': ROOM_NAME,
                'url': ROOM_URL,
            })]))
-    @patch('breathecode.mentorship.permissions.flags.Release.enable_consume_mentorships',
-           MagicMock(return_value=True))
+    @patch('breathecode.mentorship.permissions.flags.Release.enable_consume_mentorships', MagicMock(return_value=True))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_with_mentor_profile__academy_available_as_saas__flag_eq_true__bypass_mentor_consume(self):
         cases = [{
@@ -1701,11 +1658,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'DAILY_API_URL': URL,
-               'DAILY_API_KEY': API_KEY,
-           })))
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({
+        'DAILY_API_URL': URL,
+        'DAILY_API_KEY': API_KEY,
+    })))
     @patch('requests.request',
            apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
                'name': ROOM_NAME,
@@ -1786,11 +1742,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'DAILY_API_URL': URL,
-               'DAILY_API_KEY': API_KEY,
-           })))
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({
+        'DAILY_API_URL': URL,
+        'DAILY_API_KEY': API_KEY,
+    })))
     @patch('requests.request',
            apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
                'name': ROOM_NAME,
@@ -1854,10 +1809,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
 
                 content = self.bc.format.from_bytes(response.content)
 
-                url = (
-                    f'/mentor/meet/{model.mentor_profile.slug}/service/{model.mentorship_service.slug}?'
-                    f'token={token.key}&extend=true&mentee={base.user.id}&session={model.mentorship_session.id}'
-                )
+                url = (f'/mentor/meet/{model.mentor_profile.slug}/service/{model.mentorship_service.slug}?'
+                       f'token={token.key}&extend=true&mentee={base.user.id}&session={model.mentorship_session.id}')
                 expected = render(
                     f'The mentoring session expired {timeago.format(ends_at, UTC_NOW)}: You can '
                     f'<a href="{url}">extend it for another 30 minutes</a> or end the session right now.',
@@ -1894,19 +1847,17 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'DAILY_API_URL': URL,
-               'DAILY_API_KEY': API_KEY,
-           })))
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({
+        'DAILY_API_URL': URL,
+        'DAILY_API_KEY': API_KEY,
+    })))
     @patch('requests.request',
            apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
                'name': ROOM_NAME,
                'url': ROOM_URL,
            })]))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.mentorship.actions.extend_session',
-           MagicMock(side_effect=ExtendSessionException('xyz')))
+    @patch('breathecode.mentorship.actions.extend_session', MagicMock(side_effect=ExtendSessionException('xyz')))
     def test_with_mentor_profile__ends_at_less_now__with_extend_true__extend_session_raise_exception(self):
         mentor_profile_cases = [{
             'status': x,
@@ -1997,11 +1948,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'DAILY_API_URL': URL,
-               'DAILY_API_KEY': API_KEY,
-           })))
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({
+        'DAILY_API_URL': URL,
+        'DAILY_API_KEY': API_KEY,
+    })))
     @patch('requests.request',
            apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
                'name': ROOM_NAME,
@@ -2103,11 +2053,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'DAILY_API_URL': URL,
-               'DAILY_API_KEY': API_KEY,
-           })))
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({
+        'DAILY_API_URL': URL,
+        'DAILY_API_KEY': API_KEY,
+    })))
     @patch('requests.request',
            apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
                'name': ROOM_NAME,
@@ -2184,10 +2133,9 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 self.assertEqual(content, expected)
                 expired_at = timeago.format(model.mentorship_session.ends_at, UTC_NOW)
                 minutes = round(((model.mentorship_session.service.duration.total_seconds() / 3600) * 60) / 2)
-                message = (
-                    f'You have a session that expired {expired_at}. Only sessions with less than '
-                    f'{minutes}min from expiration can be extended (if allowed by the academy)').replace(
-                        ' ', '%20')
+                message = (f'You have a session that expired {expired_at}. Only sessions with less than '
+                           f'{minutes}min from expiration can be extended (if allowed by the academy)').replace(
+                               ' ', '%20')
                 self.assertEqual(
                     response.url, f'/mentor/session/{model.mentorship_session.id}?token='
                     f'{token.key}&message={message}')
@@ -2209,11 +2157,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'DAILY_API_URL': URL,
-               'DAILY_API_KEY': API_KEY,
-           })))
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({
+        'DAILY_API_URL': URL,
+        'DAILY_API_KEY': API_KEY,
+    })))
     @patch('requests.request',
            apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
                'name': ROOM_NAME,
@@ -2287,11 +2234,9 @@ class AuthenticateTestSuite(MentorshipTestCase):
             expired_at = timeago.format(model.mentorship_session.ends_at, UTC_NOW)
             minutes = round(((model.mentorship_session.service.duration.total_seconds() / 3600) * 60) / 2)
             message = (f'You have a session that expired {expired_at}. Only sessions with less than '
-                       f'{minutes}min from expiration can be extended (if allowed by the academy)').replace(
-                           ' ', '%20')
-            self.assertEqual(
-                response.url, f'/mentor/session/{model.mentorship_session.id}?token='
-                f'{token.key}&message={message}')
+                       f'{minutes}min from expiration can be extended (if allowed by the academy)').replace(' ', '%20')
+            self.assertEqual(response.url, f'/mentor/session/{model.mentorship_session.id}?token='
+                             f'{token.key}&message={message}')
             self.assertEqual(response.status_code, status.HTTP_302_FOUND)
             self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
                 self.bc.format.to_dict(model.mentor_profile),
@@ -2310,11 +2255,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'DAILY_API_URL': URL,
-               'DAILY_API_KEY': API_KEY,
-           })))
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({
+        'DAILY_API_URL': URL,
+        'DAILY_API_KEY': API_KEY,
+    })))
     @patch('requests.request',
            apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
                'name': ROOM_NAME,
@@ -2398,11 +2342,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
             self.bc.database.delete('auth.Permission')
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'DAILY_API_URL': URL,
-               'DAILY_API_KEY': API_KEY,
-           })))
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({
+        'DAILY_API_URL': URL,
+        'DAILY_API_KEY': API_KEY,
+    })))
     @patch('requests.request',
            apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
                'name': ROOM_NAME,
@@ -2490,11 +2433,9 @@ class AuthenticateTestSuite(MentorshipTestCase):
             expired_at = timeago.format(model.mentorship_session.ends_at, UTC_NOW)
             minutes = round(((model.mentorship_session.service.duration.total_seconds() / 3600) * 60) / 2)
             message = (f'You have a session that expired {expired_at}. Only sessions with less than '
-                       f'{minutes}min from expiration can be extended (if allowed by the academy)').replace(
-                           ' ', '%20')
-            self.assertEqual(
-                response.url, f'/mentor/session/{model.mentorship_session.id}?token='
-                f'{token.key}&message={message}')
+                       f'{minutes}min from expiration can be extended (if allowed by the academy)').replace(' ', '%20')
+            self.assertEqual(response.url, f'/mentor/session/{model.mentorship_session.id}?token='
+                             f'{token.key}&message={message}')
             self.assertEqual(response.status_code, status.HTTP_302_FOUND)
             self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
                 self.bc.format.to_dict(model.mentor_profile),
@@ -2535,11 +2476,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    @patch('os.getenv',
-           MagicMock(side_effect=apply_get_env({
-               'DAILY_API_URL': URL,
-               'DAILY_API_KEY': API_KEY,
-           })))
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({
+        'DAILY_API_URL': URL,
+        'DAILY_API_KEY': API_KEY,
+    })))
     @patch('requests.request',
            apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
                'name': ROOM_NAME,

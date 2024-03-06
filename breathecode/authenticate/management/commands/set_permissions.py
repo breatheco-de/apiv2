@@ -89,8 +89,7 @@ GROUPS = [
         'inherit': []
     },
     {
-        'name':
-        'Student',
+        'name': 'Student',
         'permissions':
         ['get_my_certificate', 'get_containers', 'get_my_mentoring_sessions', 'upload_assignment_telemetry'],
         'inherit': []
@@ -185,9 +184,8 @@ class Command(BaseCommand):
                 instance.permissions.set(Permission.objects.filter().exclude(content_type=content_type))
 
             permissions = list(
-                itertools.chain.from_iterable(
-                    [group['permissions']] +
-                    [x['permissions'] for x in groups if x['name'] in group['inherit']]))
+                itertools.chain.from_iterable([group['permissions']] +
+                                              [x['permissions'] for x in groups if x['name'] in group['inherit']]))
 
             for permission in permissions:
                 instance.permissions.add(permission_instances[permission])

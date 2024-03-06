@@ -19,8 +19,7 @@ class Freelancer(models.Model):
         if project is None:
             return self.price_per_hour
         else:
-            member = FreelanceProjectMember.objects.filter(project__id=project.id,
-                                                           freelancer__id=self.id).first()
+            member = FreelanceProjectMember.objects.filter(project__id=project.id, freelancer__id=self.id).first()
             if member is None:
                 return 0
             elif member.total_cost_hourly_price is None:
@@ -63,8 +62,7 @@ class FreelanceProjectMember(models.Model):
         null=True,
         blank=True,
         default=None,
-        help_text=
-        'Billed to the client on this project/freelancer, leave blank to use default from the project')
+        help_text='Billed to the client on this project/freelancer, leave blank to use default from the project')
 
 
 DUE = 'DUE'
@@ -156,15 +154,13 @@ class Issue(models.Model):
         default=None,
         null=True,
         blank=True,
-        help_text=
-        'This is the only unique identifier we get from github, the issue number is not unique among repos')
+        help_text='This is the only unique identifier we get from github, the issue number is not unique among repos')
     status = models.CharField(max_length=20, choices=ISSUE_STATUS, default=DRAFT)
-    status_message = models.CharField(
-        max_length=255,
-        blank=True,
-        null=True,
-        default=None,
-        help_text='Important message like reason why not included on bill, etc.')
+    status_message = models.CharField(max_length=255,
+                                      blank=True,
+                                      null=True,
+                                      default=None,
+                                      help_text='Important message like reason why not included on bill, etc.')
 
     github_state = models.CharField(max_length=30, blank=True, null=True, default=None)
     github_number = models.PositiveIntegerField(blank=True, null=True, default=None)

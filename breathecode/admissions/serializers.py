@@ -8,8 +8,8 @@ from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
 from breathecode.assignments.serializers import TaskGETSmallSerializer
 from breathecode.assignments.models import Task
 from .actions import test_syllabus, haversine
-from .models import (Academy, SyllabusScheduleTimeSlot, Cohort, SyllabusSchedule, CohortTimeSlot, CohortUser,
-                     Syllabus, SyllabusVersion, COHORT_STAGE)
+from .models import (Academy, SyllabusScheduleTimeSlot, Cohort, SyllabusSchedule, CohortTimeSlot, CohortUser, Syllabus,
+                     SyllabusVersion, COHORT_STAGE)
 
 logger = logging.getLogger(__name__)
 
@@ -384,8 +384,8 @@ class GetTeacherAcademySmallSerializer(serpy.Serializer):
 
         return GetSmallCohortSerializer(Cohort.objects.filter(
             cohortuser__user__id=obj.user.id,
-            cohortuser__role__in=['TEACHER', 'ASSISTANT'
-                                  ]).exclude(stage__iexact='DELETED').order_by('-ending_date').all(),
+            cohortuser__role__in=['TEACHER',
+                                  'ASSISTANT']).exclude(stage__iexact='DELETED').order_by('-ending_date').all(),
                                         many=True).data
 
 
@@ -603,8 +603,8 @@ class CohortSerializerMixin(serializers.ModelSerializer):
 
     def validate(self, data):
 
-        kickoff_date = (data['kickoff_date'] if 'kickoff_date' in data else
-                        None) or (self.instance.kickoff_date if self.instance else None)
+        kickoff_date = (data['kickoff_date'] if 'kickoff_date' in data else None) or (self.instance.kickoff_date
+                                                                                      if self.instance else None)
 
         ending_date = (data['ending_date'] if 'ending_date' in data else None) or (self.instance.ending_date
                                                                                    if self.instance else None)
@@ -616,16 +616,14 @@ class CohortSerializerMixin(serializers.ModelSerializer):
         if 'stage' in data:
             possible_stages = [stage_slug for stage_slug, stage_label in COHORT_STAGE]
             if data['stage'] not in possible_stages:
-                raise ValidationException(f"Invalid cohort stage {data['stage']}",
-                                          slug='invalid-cohort-stage')
+                raise ValidationException(f"Invalid cohort stage {data['stage']}", slug='invalid-cohort-stage')
 
         if 'syllabus' in data:
             strings = data['syllabus'].split('.v')
 
             if len(strings) != 2:
-                raise ValidationException(
-                    'Syllabus field marformed(`${syllabus.slug}.v{syllabus_version.version}`)',
-                    slug='syllabus-field-marformed')
+                raise ValidationException('Syllabus field marformed(`${syllabus.slug}.v{syllabus_version.version}`)',
+                                          slug='syllabus-field-marformed')
 
             [syllabus_slug, syllabus_version_number] = strings
 
@@ -651,8 +649,7 @@ class CohortSerializerMixin(serializers.ModelSerializer):
         if 'slug' in data:
             cohort = Cohort.objects.filter(slug=data['slug']).first()
             if cohort is not None and self.instance.slug != data['slug']:
-                raise ValidationException('Slug already exists for another cohort',
-                                          slug='slug-already-exists')
+                raise ValidationException('Slug already exists for another cohort', slug='slug-already-exists')
 
         if 'available_as_saas' not in data or data['available_as_saas'] is None:
             data['available_as_saas'] = self.context['academy'].available_as_saas
@@ -683,8 +680,7 @@ class CohortSerializerMixin(serializers.ModelSerializer):
 
         # if cohort is being activated the online_meeting_url should not be null
         if self.instance is not None and (self.instance.online_meeting_url is None
-                                          or self.instance.online_meeting_url
-                                          == '') and self.instance.remote_available:
+                                          or self.instance.online_meeting_url == '') and self.instance.remote_available:
             stage = (data['stage'] if 'stage' in data else self.instance.stage)
             if stage in ['STARTED', 'FINAL_PROJECT'] and stage != self.instance.stage:
                 raise ValidationException(
@@ -699,10 +695,9 @@ class CohortSerializer(CohortSerializerMixin):
 
     class Meta:
         model = Cohort
-        fields = ('id', 'slug', 'name', 'remote_available', 'kickoff_date', 'current_day', 'academy',
-                  'syllabus', 'schedule', 'syllabus_version', 'ending_date', 'stage', 'language',
-                  'created_at', 'updated_at', 'never_ends', 'online_meeting_url', 'timezone',
-                  'is_hidden_on_prework', 'available_as_saas')
+        fields = ('id', 'slug', 'name', 'remote_available', 'kickoff_date', 'current_day', 'academy', 'syllabus',
+                  'schedule', 'syllabus_version', 'ending_date', 'stage', 'language', 'created_at', 'updated_at',
+                  'never_ends', 'online_meeting_url', 'timezone', 'is_hidden_on_prework', 'available_as_saas')
 
     def create(self, validated_data):
         del self.context['request']
@@ -731,10 +726,9 @@ class CohortPUTSerializer(CohortSerializerMixin):
 
     class Meta:
         model = Cohort
-        fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'remote_available', 'current_day',
-                  'stage', 'language', 'syllabus', 'syllabus_version', 'schedule', 'never_ends', 'private',
-                  'online_meeting_url', 'timezone', 'current_module', 'is_hidden_on_prework',
-                  'available_as_saas')
+        fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'remote_available', 'current_day', 'stage',
+                  'language', 'syllabus', 'syllabus_version', 'schedule', 'never_ends', 'private', 'online_meeting_url',
+                  'timezone', 'current_module', 'is_hidden_on_prework', 'available_as_saas')
 
     def update(self, instance, validated_data):
         last_schedule = instance.schedule
@@ -832,8 +826,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
 
         if ('role' in data and data['role'] != 'STUDENT' and not ProfileAcademy.objects.filter(
                 user_id=user.id, academy__id=cohort.academy.id).exclude(role__slug='student').exists()):
-            raise ValidationException(
-                'The user must be staff member to this academy before it can be a teacher')
+            raise ValidationException('The user must be staff member to this academy before it can be a teacher')
 
         if (is_post_method and cohort.schedule and self.count_certificates_by_cohort(cohort, user.id) > 0):
             raise ValidationException(
@@ -843,8 +836,8 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         role = data.get('role')
 
         exclude_params = {'id': instance.id} if instance else {}
-        if role == 'TEACHER' and (CohortUser.objects.filter(
-                role=role, cohort_id=cohort.id).exclude(**exclude_params).count()):
+        if role == 'TEACHER' and (CohortUser.objects.filter(role=role,
+                                                            cohort_id=cohort.id).exclude(**exclude_params).count()):
             raise ValidationException('There can only be one main instructor in a cohort')
 
         cohort_user = CohortUser.objects.filter(user__id=user.id, cohort__id=cohort.id).first()
@@ -884,8 +877,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
             revision_status__in=['APPROVED', 'IGNORED']).count()
 
         if is_graduated and has_tasks:
-            raise ValidationException(
-                'User has tasks with status pending the educational status cannot be GRADUATED')
+            raise ValidationException('User has tasks with status pending the educational status cannot be GRADUATED')
 
         return {**data, 'cohort': cohort, 'user': user, 'id': id}
 
@@ -901,8 +893,7 @@ class CohortUserListSerializer(serializers.ListSerializer):
         for key in range(0, len(items)):
             item = items[key]
             items[key].id = CohortUser.objects.filter(cohort__id=item.cohort_id,
-                                                      user__id=item.user_id).values_list('id',
-                                                                                         flat=True).first()
+                                                      user__id=item.user_id).values_list('id', flat=True).first()
 
         return items
 
@@ -1012,8 +1003,8 @@ class SyllabusSerializer(serializers.ModelSerializer):
     class Meta:
         model = Syllabus
         fields = [
-            'id', 'slug', 'name', 'academy_owner', 'duration_in_days', 'duration_in_hours', 'week_hours',
-            'github_url', 'logo', 'private'
+            'id', 'slug', 'name', 'academy_owner', 'duration_in_days', 'duration_in_hours', 'week_hours', 'github_url',
+            'logo', 'private'
         ]
         exclude = ()
 
@@ -1047,8 +1038,7 @@ class SyllabusVersionSerializer(serializers.ModelSerializer):
                         f'There are {len(_log.errors)} errors in your syllabus, please validate before submitting',
                         slug='syllabus-with-errors')
             except Exception as e:
-                raise ValidationException(f'Error when testing the syllabus: {str(e)}',
-                                          slug='syllabus-with-errors')
+                raise ValidationException(f'Error when testing the syllabus: {str(e)}', slug='syllabus-with-errors')
 
         return _data
 
@@ -1098,8 +1088,7 @@ class SyllabusVersionPutSerializer(serializers.ModelSerializer):
                         f'There are {len(_log.errors)} errors in your syllabus, please validate before submitting',
                         slug='syllabus-with-errors')
             except Exception as e:
-                raise ValidationException(f'Error when testing the syllabus: {str(e)}',
-                                          slug='syllabus-with-errors')
+                raise ValidationException(f'Error when testing the syllabus: {str(e)}', slug='syllabus-with-errors')
 
         return _data
 
@@ -1134,8 +1123,7 @@ class AcademyReportSerializer(serpy.Serializer):
 
     def get_teachers(self, obj):
 
-        query = CohortUser.objects.filter(cohort__academy__id=obj.id,
-                                          cohort__stage__in=['STARTED', 'FINAL_PROJECT'])
+        query = CohortUser.objects.filter(cohort__academy__id=obj.id, cohort__stage__in=['STARTED', 'FINAL_PROJECT'])
         active = {
             'main': query.filter(role='TEACHER').count(),
             'assistant': query.filter(role='ASSISTANT').count(),

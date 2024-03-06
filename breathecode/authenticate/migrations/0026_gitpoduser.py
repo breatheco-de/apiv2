@@ -17,8 +17,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='GitpodUser',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('github_username', models.CharField(max_length=40)),
                 ('assignee_id', models.CharField(max_length=64)),
                 ('position_in_gitpod_team', models.PositiveSmallIntegerField()),

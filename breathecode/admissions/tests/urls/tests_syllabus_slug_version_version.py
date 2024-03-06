@@ -25,11 +25,10 @@ class CertificateTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.all_syllabus_schedule_dict(), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
@@ -131,7 +130,5 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(self.all_syllabus_dict(), [{**self.model_to_dict(model, 'syllabus')}])
-        self.assertEqual(self.all_syllabus_version_dict(), [{
-            **self.model_to_dict(model, 'syllabus_version')
-        }])
+        self.assertEqual(self.all_syllabus_version_dict(), [{**self.model_to_dict(model, 'syllabus_version')}])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])

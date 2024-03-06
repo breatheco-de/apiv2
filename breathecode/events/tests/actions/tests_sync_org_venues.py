@@ -39,8 +39,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         with self.assertRaises(Exception) as cm:
             sync_org_venues(model['organization'])
 
-        self.assertEqual(str(cm.exception),
-                         'First you must specify to which academy this organization belongs')
+        self.assertEqual(str(cm.exception), 'First you must specify to which academy this organization belongs')
         self.assertEqual(actions.create_or_update_venue.call_args_list, [])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])

@@ -73,8 +73,7 @@ class AssessmentThreshold(models.Model):
         default=None,
         blank=True,
         null=True,
-        help_text=
-        'If null it will be default, but if specified, the only this academy will have this threshold')
+        help_text='If null it will be default, but if specified, the only this academy will have this threshold')
 
     score_threshold = models.IntegerField(
         help_text='You can set a threshold to determine if the user score is successfull')
@@ -165,11 +164,7 @@ class UserAssessment(models.Model):
 
 class Answer(models.Model):
 
-    user_assesment = models.ForeignKey(UserAssessment,
-                                       on_delete=models.CASCADE,
-                                       default=None,
-                                       blank=True,
-                                       null=True)
+    user_assesment = models.ForeignKey(UserAssessment, on_delete=models.CASCADE, default=None, blank=True, null=True)
     option = models.ForeignKey(Option,
                                on_delete=models.CASCADE,
                                default=None,

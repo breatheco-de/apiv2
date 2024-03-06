@@ -154,8 +154,7 @@ def run_app_diagnostic(app, report=False):
     else:
         results['status'] = 'MINOR'
 
-    results['slack_payload'] = render_snooze_text_endpoint(
-        failed_endpoints)  # converting to json to send to slack
+    results['slack_payload'] = render_snooze_text_endpoint(failed_endpoints)  # converting to json to send to slack
 
     # JSON Details to be shown on the error report
     results['details'] = json.dumps(results, indent=4)
@@ -174,8 +173,7 @@ def run_endpoint_diagnostic(endpoint_id):
     logger.debug(f'Testing endpoint {endpoint.url}')
     now = timezone.now()
 
-    if (endpoint.last_check
-            and endpoint.last_check > now - timezone.timedelta(minutes=endpoint.frequency_in_minutes)):
+    if (endpoint.last_check and endpoint.last_check > now - timezone.timedelta(minutes=endpoint.frequency_in_minutes)):
         logger.debug(f'Ignoring {endpoint.url} because frequency hast not been met')
         endpoint.status_text = 'Ignored because its paused'
         endpoint.save()
@@ -392,9 +390,7 @@ def add_github_webhook(context: dict, academy_slug: str):
             logger.error(context)
             return None
 
-    webhook = RepositoryWebhook(webhook_action=context['action'],
-                                scope=context['scope'],
-                                academy_slug=academy_slug)
+    webhook = RepositoryWebhook(webhook_action=context['action'], scope=context['scope'], academy_slug=academy_slug)
 
     if 'repository' in context:
         webhook.repository = context['repository']['html_url']
@@ -418,8 +414,6 @@ def add_stripe_webhook(context: dict) -> StripeEvent:
         event.save()
 
     except Exception:
-        raise ValidationException('Invalid stripe webhook payload',
-                                  code=400,
-                                  slug='invalid-stripe-webhook-payload')
+        raise ValidationException('Invalid stripe webhook payload', code=400, slug='invalid-stripe-webhook-payload')
 
     return event

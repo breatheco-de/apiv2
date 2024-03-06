@@ -19,7 +19,6 @@ class Migration(migrations.Migration):
             model_name='cohort',
             name='remote_available',
             field=models.BooleanField(
-                default=True,
-                help_text='True (default) if the students from other cities can take it from home'),
+                default=True, help_text='True (default) if the students from other cities can take it from home'),
         ),
     ]
