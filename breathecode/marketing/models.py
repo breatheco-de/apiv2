@@ -796,7 +796,7 @@ class Course(models.Model):
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     syllabus = models.ManyToManyField(Syllabus, blank=True)
-    cohort = models.ForeignKey(Cohort, null=True, blank=True, default=None, on_delete=models.CASCADE)
+    cohort = models.ForeignKey(Cohort, null=False, blank=False, on_delete=models.CASCADE)
 
     status = models.CharField(max_length=15, choices=COURSE_STATUS, default=ACTIVE)
     status_message = models.CharField(max_length=250,
