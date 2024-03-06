@@ -56,7 +56,7 @@ pytest-asyncio = "*"
 
 [packages]
 django = "*"
-djangorestframework = "~=3.14.0"
+djangorestframework = "*"
 serpy = "*"
 gunicorn = "*"
 requests = "*"
@@ -134,5 +134,5 @@ django-storages = {extras = ["google"], version = "*"}
 aiohttp = {extras = ["speedups"], version = "*"}
 aiodns = "*"
 eventlet = "*"
-celery-task-manager = {extras = ["django"], version = ">=1.0.0b6"}
+celery-task-manager = {extras = ["django"], version = "*"}
 linked-services = {extras = ["django", "aiohttp", "requests"], version = "*"}

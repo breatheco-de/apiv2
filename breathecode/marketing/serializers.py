@@ -111,17 +111,17 @@ class SyllabusScheduleHookSerializer(serpy.Serializer):
     def get_syllabus(self, obj):
         return obj.syllabus.name if obj.syllabus else None
 
-
-class CohortHookSerializer(serpy.Serializer):
-    """The serializer schema definition."""
-    # Use a Field subclass like IntField if you need more validation.
+class GetCohortSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+
+class CohortHookSerializer(GetCohortSmallSerializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    schedule = SyllabusScheduleHookSerializer(required=False)
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
-    schedule = SyllabusScheduleHookSerializer(required=False)
-
 
 class TagSmallSerializer(serpy.Serializer):
     id = serpy.Field()
@@ -223,6 +223,7 @@ class FormEntryHookSerializer(serpy.Serializer):
     ac_expected_cohort_date = serpy.Field()
 
     cohort = serpy.MethodField(required=False)
+    is_won = serpy.MethodField(required=False)
 
     def get_cohort(self, obj):
         _cohort = Cohort.objects.filter(slug=obj.ac_expected_cohort).first()
@@ -230,6 +231,9 @@ class FormEntryHookSerializer(serpy.Serializer):
             return _cohort
 
         return CohortHookSerializer(_cohort).data
+    
+    def is_won(self, obj):
+        return obj.deal_status == 'WON'
 
 
 class FormEntrySmallSerializer(serpy.Serializer):
@@ -360,6 +364,7 @@ class GetSyllabusSmallSerializer(serpy.Serializer):
 class GetCourseTranslationSerializer(serpy.Serializer):
     title = serpy.Field()
     description = serpy.Field()
+    short_description = serpy.Field()
     lang = serpy.Field()
     course_modules = serpy.Field()
     landing_url = serpy.Field()
@@ -397,6 +402,7 @@ class GetCourseSerializer(GetCourseSmallSerializer):
     slug = serpy.Field()
     syllabus = serpy.MethodField()
     academy = GetAcademySmallSerializer()
+    cohort = GetCohortSmallSerializer()
     status = serpy.Field()
     visibility = serpy.Field()
 
@@ -507,6 +513,15 @@ class PUTTagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
         exclude = ('slug', 'acp_id', 'subscribers', 'ac_academy', 'created_at', 'updated_at')
+        list_serializer_class = TagListSerializer
+
+
+class PUTAutomationSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(required=False)
+
+    class Meta:
+        model = Automation
+        exclude = ('acp_id', 'ac_academy', 'created_at', 'updated_at', 'entered', 'exited')
         list_serializer_class = TagListSerializer
 
 

@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "6af1a09d9d7150a18094437bc56e9d8d255e93702120e2161b5cbbc7891f26bf"
+            "sha256": "86c7ae6d7d8572c43e3ab9cc32dbb3dddde7529e795a53861a0ac0d70bf35ba2"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -1071,12 +1071,12 @@
         },
         "google-cloud-recaptcha-enterprise": {
             "hashes": [
-                "sha256:5661bd99c0c3530bc094baae96f9a742a237ac16b643181f7edab71ec7a94899",
-                "sha256:633d11a2078eeea17d9296917cfdeb5a3eb917caf3a655ddc7defe9f7a632280"
+                "sha256:3b06d28be7a4aacb0f40156f30efed21ab5cd6172f4c062ae7734adcc6e7b1c3",
+                "sha256:9ab59f3106190c2360ee52fb2c792f64464adb9b1027cd756202af74a6dfbb17"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.7'",
-            "version": "==1.18.0"
+            "version": "==1.18.1"
         },
         "google-cloud-storage": {
             "hashes": [
@@ -1539,7 +1539,6 @@
                 "sha256:9ecdbbd083b06798ae1e86adcbfe8ab1479cf864e4ee30fe4e46a003d12491ca",
                 "sha256:c05567e9c24a6b9faaa835c4821bad0590fbb9d5779e7caa6e1cc4978e7eb24f"
             ],
-            "markers": "python_version >= '3.5'",
             "version": "==3.6"
         },
         "incremental": {
@@ -2741,7 +2740,7 @@
                 "sha256:37dd54208da7e1cd875388217d5e00ebd4179249f90fb72437e91a35459a0ad3",
                 "sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427"
             ],
-            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'",
+            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2'",
             "version": "==2.9.0.post0"
         },
         "python-frontmatter": {
@@ -3111,7 +3110,7 @@
                 "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926",
                 "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"
             ],
-            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'",
+            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2'",
             "version": "==1.16.0"
         },
         "sniffio": {
@@ -4065,7 +4064,6 @@
                 "sha256:9ecdbbd083b06798ae1e86adcbfe8ab1479cf864e4ee30fe4e46a003d12491ca",
                 "sha256:c05567e9c24a6b9faaa835c4821bad0590fbb9d5779e7caa6e1cc4978e7eb24f"
             ],
-            "markers": "python_version >= '3.5'",
             "version": "==3.6"
         },
         "importlib-metadata": {
@@ -4203,12 +4201,12 @@
         },
         "mkdocs-material": {
             "hashes": [
-                "sha256:5f69cef6a8aaa4050b812f72b1094fda3d079b9a51cf27a247244c03ec455e97",
-                "sha256:d6f0c269f015e48c76291cdc79efb70f7b33bbbf42d649cfe475522ebee61b1f"
+                "sha256:5cbe17fee4e3b4980c8420a04cc762d8dc052ef1e10532abd4fce88e5ea9ce6a",
+                "sha256:d8e4caae576312a88fd2609b81cf43d233cdbe36860d67a68702b018b425bd87"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.8'",
-            "version": "==9.5.12"
+            "version": "==9.5.13"
         },
         "mkdocs-material-extensions": {
             "hashes": [
@@ -4389,7 +4387,7 @@
                 "sha256:37dd54208da7e1cd875388217d5e00ebd4179249f90fb72437e91a35459a0ad3",
                 "sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427"
             ],
-            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'",
+            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2'",
             "version": "==2.9.0.post0"
         },
         "pyyaml": {
@@ -4579,7 +4577,7 @@
                 "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926",
                 "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"
             ],
-            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'",
+            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2'",
             "version": "==1.16.0"
         },
         "snowballstemmer": {

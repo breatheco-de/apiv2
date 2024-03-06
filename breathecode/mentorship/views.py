@@ -165,6 +165,7 @@ def forward_booking_url(request, mentor_slug, token):
             'mentor': mentor,
             'mentee': token.user,
             'booking_url': booking_url,
+            'LOGO_IN_CONTENT': True,
             **obj,
         })
 
@@ -876,7 +877,7 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
 
         if 'syllabus' in self.request.GET:
             param = self.request.GET.get('syllabus')
-            lookup['syllabus__slug__in'] = [s.strip() for s in param.split(',')]
+            lookup['syllabus__slug__in'] = [s.strip().lower() for s in param.split(',')]
 
         like = request.GET.get('like', None)
         if like is not None:

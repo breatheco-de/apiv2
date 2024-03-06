@@ -52,7 +52,7 @@ def bigquery_client_mock(self, n=1, user_id=1, kind=None, date_start=None, date_
                 {'AND kind = @kind' if kind else ''}
                 {'AND timestamp >= @date_start' if date_start else ''}
                 {'AND timestamp <= @date_end' if date_end else ''}
-            ORDER BY @order DESC
+            ORDER BY timestamp DESC
             LIMIT @limit
             OFFSET @offset
         """

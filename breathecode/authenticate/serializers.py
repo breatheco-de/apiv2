@@ -767,7 +767,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                 notify_actions.send_email_message('welcome_academy',
                                                   email, {
                                                       'email': email,
-                                                      'subject': 'Welcome to 4Geeks',
+                                                      'subject': 'Welcome to ' + academy.name,
                                                       'LINK': url,
                                                       'FIST_NAME': validated_data['first_name'],
                                                   },
@@ -965,7 +965,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 notify_actions.send_email_message('welcome_academy',
                                                   email, {
                                                       'email': email,
-                                                      'subject': 'Welcome to 4Geeks.com',
+                                                      'subject': 'Welcome to ' + academy.name,
                                                       'LINK': url,
                                                       'FIST_NAME': validated_data['first_name']
                                                   },
