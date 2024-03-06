@@ -14,10 +14,9 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.urls import path
-
-import linked_services.rest_framework
-from breathecode.authenticate.actions import get_user_language
 from linked_services.rest_framework.views import app_webhook, authorize_view
+
+from breathecode.authenticate.actions import get_user_language
 
 from .views import (
     AcademyAuthSettingsView,

@@ -12,15 +12,7 @@ from breathecode.utils import serpy
 from breathecode.utils.integer_to_base import to_base
 from breathecode.utils.validation_exception import ValidationException
 
-from .models import (
-    AcademyAlias,
-    ActiveCampaignAcademy,
-    Automation,
-    CourseTranslation,
-    FormEntry,
-    ShortLink,
-    Tag,
-)
+from .models import AcademyAlias, ActiveCampaignAcademy, Automation, CourseTranslation, FormEntry, ShortLink, Tag
 
 logger = logging.getLogger(__name__)
 
@@ -111,10 +103,12 @@ class SyllabusScheduleHookSerializer(serpy.Serializer):
     def get_syllabus(self, obj):
         return obj.syllabus.name if obj.syllabus else None
 
+
 class GetCohortSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+
 
 class CohortHookSerializer(GetCohortSmallSerializer):
     """The serializer schema definition."""
@@ -122,6 +116,7 @@ class CohortHookSerializer(GetCohortSmallSerializer):
     schedule = SyllabusScheduleHookSerializer(required=False)
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
+
 
 class TagSmallSerializer(serpy.Serializer):
     id = serpy.Field()
@@ -231,8 +226,8 @@ class FormEntryHookSerializer(serpy.Serializer):
             return _cohort
 
         return CohortHookSerializer(_cohort).data
-    
-    def is_won(self, obj):
+
+    def get_is_won(self, obj):
         return obj.deal_status == 'WON'
 
 
@@ -340,8 +335,7 @@ class FormEntryBigSerializer(serpy.Serializer):
         if obj.automations is not None:
             automation_ids = obj.automations.split(',')
 
-        automations = Automation.objects.filter(slug__in=automation_ids,
-                                                ac_academy__academy=obj.calculate_academy())
+        automations = Automation.objects.filter(slug__in=automation_ids, ac_academy__academy=obj.calculate_academy())
         return AutomationSmallSerializer(automations, many=True).data
 
 
@@ -476,8 +470,7 @@ class ShortLinkSerializer(serializers.ModelSerializer):
 
         academy = Academy.objects.filter(id=self.context['academy']).first()
         if academy is None:
-            raise ValidationException(f'Academy {self.context["academy"]} not found',
-                                      slug='academy-not-found')
+            raise ValidationException(f'Academy {self.context["academy"]} not found', slug='academy-not-found')
 
         if self.instance is not None:  #creating a new link (instead of updating)
             utc_now = timezone.now()
@@ -501,9 +494,7 @@ class TagListSerializer(serializers.ListSerializer):
 
         instance_hash = {index: instance for index, instance in enumerate(instances)}
 
-        result = [
-            self.child.update(instance_hash[index], attrs) for index, attrs in enumerate(validated_data)
-        ]
+        result = [self.child.update(instance_hash[index], attrs) for index, attrs in enumerate(validated_data)]
 
         return result
 
@@ -535,8 +526,7 @@ class ActiveCampaignAcademySerializer(serializers.ModelSerializer):
 
         academy = Academy.objects.filter(id=self.context['academy']).first()
         if academy is None:
-            raise ValidationException(f'Academy {self.context["academy"]} not found',
-                                      slug='academy-not-found')
+            raise ValidationException(f'Academy {self.context["academy"]} not found', slug='academy-not-found')
 
         return {**data, 'academy': academy}
 

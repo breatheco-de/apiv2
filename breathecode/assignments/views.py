@@ -5,9 +5,8 @@ import os
 from adrf.views import APIView
 from circuitbreaker import CircuitBreakerError
 from django.contrib import messages
-from django.core.exceptions import SynchronousOnlyOperation
 from django.db.models import Q
-from django.http import HttpResponse, HttpResponseRedirect, StreamingHttpResponse
+from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.utils import timezone
 from linked_services.django.service import Service
@@ -17,13 +16,13 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from slugify import slugify
 
-from breathecode.services.learnpack import LearnPack
 import breathecode.activity.tasks as tasks_activity
 import breathecode.assignments.tasks as tasks
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.assignments.permissions.consumers import code_revision_service
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy, Token
+from breathecode.services.learnpack import LearnPack
 from breathecode.utils import GenerateLookupsMixin, ValidationException, capable_of, num_to_roman, response_207
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission

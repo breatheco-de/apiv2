@@ -8,7 +8,7 @@ import requests
 from celery import shared_task
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils import timezone
-from task_manager.core.exceptions import AbortTask, RetryTask
+from task_manager.core.exceptions import AbortTask
 from task_manager.django.decorators import task
 
 from breathecode.authenticate.models import Token

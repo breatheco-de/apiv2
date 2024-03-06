@@ -1,5 +1,4 @@
 import logging
-import time
 
 logger = logging.getLogger(__name__)
 from breathecode.assignments.models import AssignmentTelemetry
@@ -11,8 +10,7 @@ def batch(self, webhook):
 
     _slug = webhook.payload['slug']
 
-    telemetry = AssignmentTelemetry.objects.filter(asset_slug=_slug,
-                                                   user__id=webhook.payload['user_id']).first()
+    telemetry = AssignmentTelemetry.objects.filter(asset_slug=_slug, user__id=webhook.payload['user_id']).first()
 
     assets = Task.objects.filter(associated_slug=_slug, user__id=webhook.student.id)
     if assets.count() == 0:
