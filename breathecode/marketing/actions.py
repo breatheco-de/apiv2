@@ -13,13 +13,7 @@ from task_manager.core.exceptions import RetryTask
 
 from breathecode.authenticate.models import CredentialsFacebook
 from breathecode.notify.actions import send_email_message
-from breathecode.services.activecampaign import (
-    ACOldClient,
-    ActiveCampaign,
-    ActiveCampaignClient,
-    acp_ids,
-    map_ids,
-)
+from breathecode.services.activecampaign import ACOldClient, ActiveCampaign, ActiveCampaignClient, acp_ids, map_ids
 from breathecode.utils import getLogger
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
@@ -81,13 +75,6 @@ def validate_email(email, lang):
         }
     }
     """
-
-    print('====================6')
-    print('====================6')
-    print('====================6')
-    print('====================6')
-    print('====================6')
-    print('====================6')
 
     resp = requests.get(f'https://emailvalidation.abstractapi.com/v1/?api_key={MAIL_ABSTRACT_KEY}&email={email}',
                         timeout=10)

@@ -111,13 +111,6 @@ def async_accept_user_from_waiting_list(user_invite_id: int) -> None:
                                       academy=invite.academy)
 
 
-@task(priority=TaskPriority.OAUTH_CREDENTIALS.value)
-def destroy_legacy_key(legacy_key_id, **_):
-    from linked_services.django.models import LegacyKey
-
-    LegacyKey.objects.filter(id=legacy_key_id).delete()
-
-
 @task(priority=TaskPriority.STUDENT.value)
 def create_user_from_invite(user_invite_id: int, **_):
     logger.info('Running create_user_from_invite task')
