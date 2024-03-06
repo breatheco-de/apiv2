@@ -1,6 +1,10 @@
 import hashlib
 import logging
 import re
+import os
+import hmac
+import time
+from base64 import b64decode
 
 import timeago
 from django.contrib import messages
@@ -20,6 +24,7 @@ from breathecode.authenticate.models import ProfileAcademy, Token
 from breathecode.mentorship import actions
 from breathecode.mentorship.caches import MentorProfileCache
 from breathecode.mentorship.exceptions import ExtendSessionException
+import breathecode.activity.tasks as tasks_activity
 from breathecode.notify.actions import get_template_content
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.calendly import Calendly
@@ -84,10 +89,70 @@ logger = logging.getLogger(__name__)
 @renderer_classes([PlainTextRenderer])
 def calendly_webhook(request, org_hash):
 
+    # Your application's webhook signing key
+    webhook_signing_key = os.getenv('CALENDLY_WEBHOOK_SIGNING_KEY')
+
+    # Extract the timestamp and signature from the header
+    calendly_signature = request.headers.get('Calendly-Webhook-Signature')
+    signature_hash = dict(item.split('=') for item in calendly_signature.split(','))
+
+    t = signature_hash.get('t')  # UNIX timestamp
+    signature = signature_hash.get('v1')
+
+    if t is None or signature is None:
+        raise ValidationException('Missing timestamp or signature',
+                                  code=400,
+                                  slug='missing-timestamp-or-signature')
+
+    # Create the signed payload by concatenating the timestamp (t), the character '.', and the request body's JSON payload.
+    signed_payload = f"{t}.{request.body.decode('utf-8')}"
+
+    digest = hashlib.sha256
+    hmac_obj = hmac.new(webhook_signing_key.encode('utf-8'),
+                        msg=signed_payload.encode('utf-8'),
+                        digestmod=digest)
+
+    # Determine the expected signature by computing an HMAC with the SHA256 hash function.
+    expected_signature = hmac_obj.hexdigest()
+
+    if expected_signature != signature:
+        # Signature is invalid!
+        raise ValidationException('Invalid webhook signature', code=400, slug='invalid-webhook-signature')
+
+    ### Prevent replay attacks ###
+
+    # If an attacker intercepts the webhook's payload and signature, they could potentially re-transmit the request.
+    # This is known as a replay attack. This type of attack can be mitigated by utilizing the timestamp in the Calendly-Webhook-Signature header.
+    # In the example below we set the application's tolerance zone to 3 minutes. This helps mitigate replay attacks by ensuring that
+    # requests that have timestamps older than 3 minutes ago will not be considered valid.
+
+    three_minutes = 180
+    tolerance = three_minutes
+
+    if time.gmtime(int(t)) < time.gmtime(time.time() - tolerance):
+        # Signature is invalid!
+        # The signature's timestamp is outside of the tolerance zone defined above.
+        raise ValidationException(
+            'Invalid Signature. The signature\'s timestamp is outside of the tolerance zone.',
+            code=400,
+            slug='invalid-webhook-signature')
+
     webhook = Calendly.add_webhook_to_log(request.data, org_hash)
 
     if webhook:
         async_calendly_webhook.delay(webhook.id)
+        if webhook.event == 'invitee.created':
+
+            user_email = webhook.payload['email']
+            user = User.objects.filter(email=user_email).first()
+            if user is not None:
+                tasks_activity.add_activity.delay(
+                    user.id,
+                    'mentoring_session_scheduled',
+                    related_type='mentorship.MentorshipSession',
+                    timestamp=webhook.called_at,
+                )
+
     else:
         logger.debug('One request cannot be parsed, maybe you should update `Calendly'
                      '.add_webhook_to_log`')

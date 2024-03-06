@@ -294,9 +294,13 @@ def add_activity(user_id: int,
                  related_type: Optional[str] = None,
                  related_id: Optional[str | int] = None,
                  related_slug: Optional[str] = None,
+                 timestamp: Optional[str] = None,
                  **_):
 
     logger.info(f'Executing add_activity related to {str(kind)}')
+
+    if timestamp is None:
+        timestamp = timezone.now().isoformat()
 
     if related_type and not (bool(related_id) ^ bool(related_slug)):
         raise AbortTask(
@@ -345,7 +349,7 @@ def add_activity(user_id: int,
                     'id': uuid.uuid4().hex,
                     'user_id': user_id,
                     'kind': kind,
-                    'timestamp': timezone.now().isoformat(),
+                    'timestamp': timestamp,
                     'related': {
                         'type': related_type,
                         'id': related_id,
