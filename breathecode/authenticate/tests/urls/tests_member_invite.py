@@ -3,16 +3,18 @@ Test cases for /academy/:id/member/:id
 """
 import os
 import urllib.parse
+
 from django.template import loader
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
 from ..mixins.new_auth_test_case import AuthTestCase
 
 
 # IMPORTANT: the loader.render_to_string in a function is inside of function render
 def render_page_without_invites():
     request = None
-    APP_URL = os.getenv('APP_URL', '')
+    APP_URL = os.getenv('APP_URL', '')[:-1]
 
     return loader.render_to_string(
         'message.html', {
@@ -25,7 +27,7 @@ def render_page_without_invites():
 
 def render_page_with_pending_invites(self, model):
     request = None
-    APP_URL = os.getenv('APP_URL', '')
+    APP_URL = os.getenv('APP_URL', '')[:-1]
     user_invites = []
     if 'user_invite' in model:
         user_invites = model.user_invite if isinstance(model.user_invite, list) else [model.user_invite]
@@ -180,8 +182,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
-                         self.bc.format.to_dict(model.user_invite))
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), self.bc.format.to_dict(model.user_invite))
 
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
@@ -211,8 +212,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
-                         self.bc.format.to_dict(model.user_invite))
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), self.bc.format.to_dict(model.user_invite))
 
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
@@ -242,8 +242,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
-                         self.bc.format.to_dict(model.user_invite))
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), self.bc.format.to_dict(model.user_invite))
 
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])

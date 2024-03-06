@@ -34,6 +34,14 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
+def get_app_url():
+    url = os.getenv('APP_URL', 'https://4geeks.com')
+    if url and url[-1] == '/':
+        url = url[:-1]
+
+    return url
+
+
 def get_github_scopes(user):
 
     scopes = ['user']

@@ -50,6 +50,7 @@ from .actions import (
     accept_invite,
     accept_invite_action,
     generate_academy_token,
+    get_app_url,
     get_user_language,
     resend_invite,
     reset_password,
@@ -116,7 +117,6 @@ from .serializers import (
 )
 
 logger = logging.getLogger(__name__)
-APP_URL = os.getenv('APP_URL', '')
 
 PATTERNS = {
     'CONTAINS_LOWERCASE': r'[a-z]',
@@ -1060,7 +1060,7 @@ def save_github_token(request):
 
             if user_does_not_exists and invite:
                 if url is None or url == '':
-                    url = os.getenv('APP_URL', 'https://4geeks.com')
+                    url = get_app_url()
 
                 return render_message(
                     request, f'You are still number {invite.id} on the waiting list, we will email you once you are '
@@ -1665,9 +1665,9 @@ def render_user_invite(request, token):
         return render_message(request,
                               'You don\'t have any more pending invites',
                               btn_label='Continue to 4Geeks',
-                              btn_url=APP_URL)
+                              btn_url=get_app_url())
 
-    querystr = urllib.parse.urlencode({'callback': APP_URL, 'token': token.key})
+    querystr = urllib.parse.urlencode({'callback': get_app_url(), 'token': token.key})
     url = os.getenv('API_URL') + '/v1/auth/member/invite?' + querystr
     return render(
         request, 'user_invite.html', {
@@ -1806,9 +1806,9 @@ def render_academy_invite(request, token):
         return render_message(request,
                               'You don\'t have any more pending invites',
                               btn_label='Continue to 4Geeks',
-                              btn_url=APP_URL)
+                              btn_url=get_app_url())
 
-    querystr = urllib.parse.urlencode({'callback': APP_URL, 'token': token.key})
+    querystr = urllib.parse.urlencode({'callback': get_app_url(), 'token': token.key})
     url = os.getenv('API_URL') + '/v1/auth/academy/html/invite?' + querystr
     return render(
         request, 'academy_invite.html', {

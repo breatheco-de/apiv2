@@ -8,7 +8,7 @@ from django.utils import timezone
 from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
 
-from breathecode.authenticate.actions import get_user_settings
+from breathecode.authenticate.actions import get_app_url, get_user_settings
 from breathecode.notify import actions as notify_actions
 from breathecode.payments import actions
 from breathecode.payments.services.stripe import Stripe
@@ -34,10 +34,6 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-def get_app_url():
-    return os.getenv('APP_URL', '')
 
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)

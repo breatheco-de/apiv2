@@ -13,7 +13,7 @@ from rest_framework.exceptions import ValidationError
 import breathecode.authenticate.tasks as tasks_authenticate
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, Cohort
-from breathecode.authenticate.actions import get_user_settings
+from breathecode.authenticate.actions import get_app_url, get_user_settings
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
 from breathecode.utils import ValidationException, serpy
@@ -33,8 +33,6 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
-
-APP_URL = os.getenv('APP_URL', '')
 
 
 class GetSmallCohortSerializer(serpy.Serializer):
@@ -878,7 +876,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
             email = user.email
             token, created = Token.get_or_create(user, token_type='temporal')
-            querystr = urllib.parse.urlencode({'callback': APP_URL, 'token': token})
+            querystr = urllib.parse.urlencode({'callback': get_app_url(), 'token': token})
             url = os.getenv('API_URL') + '/v1/auth/academy/html/invite?' + querystr
 
             if 'invite' in validated_data:
@@ -960,7 +958,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
                 logger.debug('Sending invite email to ' + email)
 
-                querystr = urllib.parse.urlencode({'callback': APP_URL})
+                querystr = urllib.parse.urlencode({'callback': get_app_url()})
                 url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
                     str(invite.token) + '?' + querystr
 

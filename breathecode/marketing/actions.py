@@ -78,25 +78,19 @@ def validate_email(email, lang):
 
     resp = requests.get(f'https://emailvalidation.abstractapi.com/v1/?api_key={MAIL_ABSTRACT_KEY}&email={email}',
                         timeout=10)
-    print(61)
     data = resp.json()
-    print(62)
 
     if 'error' in data:
-        print(63)
         if 'message' in data['error']:
-            print(64)
             raise Exception(data['error']['message'])
-        print(65)
+
         raise ValidationException(
             translation(lang,
                         en='Error while validating email address',
                         es='Se ha producido un error validando tu dirección de correo electrónico',
                         slug='email-validation-error'))
 
-    print(66)
     if 'is_disposable_email' in data and data['is_disposable_email']['value'] == True:
-        print(67)
         raise ValidationException(
             translation(
                 lang,
@@ -105,10 +99,8 @@ def validate_email(email, lang):
                 'Parece que estás utilizando un proveedor de correos electronicos temporales. Por favor cambia tu dirección de correo electrónico.',
                 slug='disposable-email'))
 
-    print(67)
     if (('is_mx_found' in data and data['is_mx_found']['value'] == False)
             or ('is_smtp_valid' in data and data['is_smtp_valid']['value'] == False)):
-        print(68)
         raise ValidationException(
             translation(
                 lang,
@@ -116,9 +108,7 @@ def validate_email(email, lang):
                 es='El correo electrónico que haz especificado parece inválido, por favor corrige tu correo electronico',
                 slug='invalid-email'))
 
-    print(69)
     if 'quality_score' in data and float(data['quality_score']) <= 0.60:
-        print(610)
         raise ValidationException(translation(
             lang,
             en='The email address seems to have poor quality. Are you able to provide a different email address?',
@@ -127,14 +117,10 @@ def validate_email(email, lang):
             slug='invalid-email'),
                                   data=data)
 
-    print(611)
     email_quality = float(data['quality_score'])
-    print(612)
     data['email_quality'] = email_quality
-    print(613)
     split_email = email.split('@')
 
-    print(614)
     email_status = {
         'email': email,
         'user': split_email[0],
@@ -149,7 +135,6 @@ def validate_email(email, lang):
         'score': email_quality
     }
 
-    print(615)
     return email_status
 
 

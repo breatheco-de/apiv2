@@ -7,6 +7,7 @@ from logging import Logger
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+from linked_services.django.actions import reset_app_cache
 from linked_services.django.service import Service
 
 from breathecode.assignments import signals
@@ -18,6 +19,8 @@ from ..mixins import AssignmentsTestCase
 @pytest.fixture(autouse=True)
 def x(db, monkeypatch):
     empty = lambda *args, **kwargs: None
+
+    reset_app_cache()
 
     monkeypatch.setattr('logging.Logger.info', MagicMock())
     monkeypatch.setattr('logging.Logger.error', MagicMock())
@@ -294,12 +297,9 @@ class MediaTestSuite(AssignmentsTestCase):
             call('Executing set_cohort_user_assignments'),
             call('History log saved'),
         ])
-        self.assertEqual(Logger.error.call_args_list, [call('Rigobot error: App not found')])
+        self.assertEqual(Logger.error.call_args_list, [call('App rigobot not found')])
 
-    @patch.multiple('linked_services.core.service.Service',
-                    __init__=MagicMock(return_value=None),
-                    post=MagicMock(),
-                    put=MagicMock())
+    @patch.multiple('linked_services.django.service.Service', post=MagicMock(), put=MagicMock())
     def test__rigobot_cancelled_revision(self):
         task_type = random.choice(['LESSON', 'QUIZ', 'PROJECT', 'EXERCISE'])
         task = {
@@ -323,7 +323,10 @@ class MediaTestSuite(AssignmentsTestCase):
                 ],
             }
         }
-        model = self.bc.database.create(task=task, cohort_user=cohort_user, credentials_github=1)
+        model = self.bc.database.create(task=task,
+                                        cohort_user=cohort_user,
+                                        credentials_github=1,
+                                        app={'slug': 'rigobot'})
 
         Logger.info.call_args_list = []
 
@@ -355,12 +358,9 @@ class MediaTestSuite(AssignmentsTestCase):
         ])
         self.assertEqual(Logger.info.call_args_list, [
             call('Executing set_cohort_user_assignments'),
-            call('Service rigobot found'),
-            call('repository added to rigobot if task is not done'),
             call('History log saved'),
         ])
         self.assertEqual(Logger.error.call_args_list, [])
-        self.bc.check.calls(Service.__init__.call_args_list, [call('rigobot', 1)])
         self.bc.check.calls(Service.post.call_args_list, [])
         self.bc.check.calls(
             Service.put.call_args_list,
@@ -369,10 +369,7 @@ class MediaTestSuite(AssignmentsTestCase):
                 'activity_status': 'INACTIVE'
             })])
 
-    @patch.multiple('linked_services.core.service.Service',
-                    __init__=MagicMock(return_value=None),
-                    post=MagicMock(),
-                    put=MagicMock())
+    @patch.multiple('linked_services.core.service.Service', post=MagicMock(), put=MagicMock())
     def test__rigobot_schedule_revision(self):
         task_type = random.choice(['LESSON', 'QUIZ', 'PROJECT', 'EXERCISE'])
         task = {
@@ -396,7 +393,10 @@ class MediaTestSuite(AssignmentsTestCase):
                 ],
             }
         }
-        model = self.bc.database.create(task=task, cohort_user=cohort_user, credentials_github=1)
+        model = self.bc.database.create(task=task,
+                                        cohort_user=cohort_user,
+                                        credentials_github=1,
+                                        app={'slug': 'rigobot'})
 
         Logger.info.call_args_list = []
 
@@ -428,12 +428,9 @@ class MediaTestSuite(AssignmentsTestCase):
         ])
         self.assertEqual(Logger.info.call_args_list, [
             call('Executing set_cohort_user_assignments'),
-            call('Service rigobot found'),
-            call('repository added to rigobot if task is done'),
             call('History log saved'),
         ])
         self.assertEqual(Logger.error.call_args_list, [])
-        self.bc.check.calls(Service.__init__.call_args_list, [call('rigobot', 1)])
         self.bc.check.calls(
             Service.post.call_args_list,
             [call('/v1/finetuning/me/repository/', json={

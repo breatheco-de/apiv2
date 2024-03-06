@@ -5,12 +5,19 @@ import json
 import random
 from unittest.mock import MagicMock, call, patch
 
+import pytest
 import requests
 from django.urls.base import reverse_lazy
-from linked_services.django.service import Service
+from linked_services.django.actions import reset_app_cache
 from rest_framework import status
 
 from ..mixins import AssignmentsTestCase
+
+
+@pytest.fixture(autouse=True)
+def setup(db):
+    reset_app_cache()
+    yield
 
 
 class MediaTestSuite(AssignmentsTestCase):

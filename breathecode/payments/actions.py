@@ -1,23 +1,24 @@
+import os
 import re
 from typing import Optional, Type
+
 from dateutil.relativedelta import relativedelta
-from django.utils import timezone
-from django.db.models.query_utils import Q
-from django.db.models import Sum, QuerySet
-from django.core.handlers.wsgi import WSGIRequest
-from pytz import UTC
 from django.contrib.auth.models import User
+from django.core.handlers.wsgi import WSGIRequest
+from django.db.models import QuerySet, Sum
+from django.db.models.query_utils import Q
+from django.utils import timezone
+from pytz import UTC
+from rest_framework.request import Request
 
 from breathecode.admissions.models import Cohort, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.authenticate.models import UserSetting
+from breathecode.utils import getLogger
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
-from rest_framework.request import Request
 
-from .models import (SERVICE_UNITS, Bag, Consumable, Currency, Plan, PlanFinancing, Service, ServiceItem,
-                     Subscription)
-from breathecode.utils import getLogger
+from .models import SERVICE_UNITS, Bag, Consumable, Currency, Plan, PlanFinancing, Service, ServiceItem, Subscription
 
 logger = getLogger(__name__)
 
@@ -87,9 +88,7 @@ class PlanFinder:
             kwargs['slug'] = pk
 
         if academy and model == Syllabus:
-            args.append(
-                Q(academy_owner__slug=academy) | Q(academy_owner__id=self._get_pk(academy))
-                | Q(private=False))
+            args.append(Q(academy_owner__slug=academy) | Q(academy_owner__id=self._get_pk(academy)) | Q(private=False))
 
         elif academy and model == Cohort:
             args.append(Q(academy__slug=academy) | Q(academy__id=self._get_pk(academy)))
@@ -182,8 +181,7 @@ def ask_to_add_plan_and_charge_it_in_the_bag(plan: Plan, user: User, lang: str):
     subscriptions = Subscription.objects.filter(user=user, plans=plan)
 
     # avoid bought a free trial for financing if this was bought before
-    if not price and plan_have_free_trial and not plan.is_renewable and subscriptions.filter(
-            valid_until__gte=utc_now):
+    if not price and plan_have_free_trial and not plan.is_renewable and subscriptions.filter(valid_until__gte=utc_now):
         raise ValidationException(
             translation(lang,
                         en='Free trial plans can\'t be bought again',
@@ -289,16 +287,16 @@ class BagHandler:
                                                   es='El cohort debe ser un id o slug'),
                                       slug='cohort-not-id-or-slug')
 
-        if self.selected_event_type_set and not isinstance(
-                self.selected_event_type_set, int) and not isinstance(self.selected_event_type_set, str):
+        if self.selected_event_type_set and not isinstance(self.selected_event_type_set, int) and not isinstance(
+                self.selected_event_type_set, str):
             raise ValidationException(translation(self.lang,
                                                   en='The event type set needs to be a id or slug',
                                                   es='El event type set debe ser un id o slug'),
                                       slug='event-type-set-not-id-or-slug')
 
-        if self.selected_mentorship_service_set and not isinstance(
-                self.selected_mentorship_service_set, int) and not isinstance(
-                    self.selected_mentorship_service_set, str):
+        if self.selected_mentorship_service_set and not isinstance(self.selected_mentorship_service_set,
+                                                                   int) and not isinstance(
+                                                                       self.selected_mentorship_service_set, str):
             raise ValidationException(translation(self.lang,
                                                   en='The mentorship service set needs to be a id or slug',
                                                   es='El mentorship service set debe ser un id o slug'),
@@ -359,8 +357,6 @@ class BagHandler:
                 elif self.selected_cohort_set and isinstance(self.selected_cohort_set, str):
                     kwargs['cohort_set__slug'] = self.selected_cohort_set
 
-                print(kwargs, exclude)
-
                 if not Plan.objects.filter(**kwargs).exclude(**exclude):
                     self.plans_not_found.add(plan)
 
@@ -381,8 +377,7 @@ class BagHandler:
                 args, kwargs = self._lookups(service_item['service'])
 
                 service = Service.objects.filter(*args, **kwargs).first()
-                service_item, _ = ServiceItem.objects.get_or_create(service=service,
-                                                                    how_many=service_item['how_many'])
+                service_item, _ = ServiceItem.objects.get_or_create(service=service, how_many=service_item['how_many'])
                 self.bag.service_items.add(service_item)
 
     def _add_plans_to_bag(self):
@@ -406,11 +401,10 @@ class BagHandler:
 
     def _validate_buy_plans_or_service_items(self):
         if self.bag.plans.count() and self.bag.service_items.count():
-            raise ValidationException(translation(
-                self.lang,
-                en="You can't select a plan and a services at the same time",
-                es='No puedes seleccionar un plan y servicios al mismo tiempo',
-                slug='one-plan-and-many-services'),
+            raise ValidationException(translation(self.lang,
+                                                  en="You can't select a plan and a services at the same time",
+                                                  es='No puedes seleccionar un plan y servicios al mismo tiempo',
+                                                  slug='one-plan-and-many-services'),
                                       code=400)
 
     def _ask_to_add_plan_and_charge_it_in_the_bag(self):
@@ -494,13 +488,11 @@ def get_amount_by_chosen_period(bag: Bag, chosen_period: str, lang: str) -> floa
         amount = bag.amount_per_year
 
     # free trial
-    if not amount and (bag.amount_per_month or bag.amount_per_quarter or bag.amount_per_half
-                       or bag.amount_per_year):
-        raise ValidationException(translation(
-            lang,
-            en=f'The period {chosen_period} is disabled for this bag',
-            es=f'El periodo {chosen_period} está deshabilitado para esta bolsa',
-            slug='period-disabled-for-bag'),
+    if not amount and (bag.amount_per_month or bag.amount_per_quarter or bag.amount_per_half or bag.amount_per_year):
+        raise ValidationException(translation(lang,
+                                              en=f'The period {chosen_period} is disabled for this bag',
+                                              es=f'El periodo {chosen_period} está deshabilitado para esta bolsa',
+                                              slug='period-disabled-for-bag'),
                                   code=400)
 
     return amount
