@@ -625,3 +625,16 @@ class GitpodUser(models.Model):
         blank=True,
         help_text='If a gitpod user is not connected to a real user and academy in the database, it will be deleted ASAP'
     )
+
+
+class App(models.Model):
+    """
+    The only reason for keeping this models is because this model is really indestructible.
+
+    Remove it as soon as Django team let us do it.
+    """
+
+    def __init__(self, *args, **kwargs):
+        raise DeprecationWarning('authenticate.App was deprecated, use linked_services.App instead')
+
+    name = models.CharField(max_length=25, unique=True, help_text='Descriptive and unique name of the app')
