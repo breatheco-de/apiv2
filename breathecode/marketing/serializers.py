@@ -111,10 +111,12 @@ class SyllabusScheduleHookSerializer(serpy.Serializer):
     def get_syllabus(self, obj):
         return obj.syllabus.name if obj.syllabus else None
 
+
 class GetCohortSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+
 
 class CohortHookSerializer(GetCohortSmallSerializer):
     """The serializer schema definition."""
@@ -122,6 +124,7 @@ class CohortHookSerializer(GetCohortSmallSerializer):
     schedule = SyllabusScheduleHookSerializer(required=False)
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
+
 
 class TagSmallSerializer(serpy.Serializer):
     id = serpy.Field()
@@ -231,7 +234,7 @@ class FormEntryHookSerializer(serpy.Serializer):
             return _cohort
 
         return CohortHookSerializer(_cohort).data
-    
+
     def is_won(self, obj):
         return obj.deal_status == 'WON'
 
@@ -399,7 +402,7 @@ class GetCourseSmallSerializer(serpy.Serializer):
 
 
 class GetCourseSerializer(GetCourseSmallSerializer):
-    slug = serpy.Field()
+    plan_slug = serpy.Field()
     syllabus = serpy.MethodField()
     academy = GetAcademySmallSerializer()
     cohort = GetCohortSmallSerializer()
