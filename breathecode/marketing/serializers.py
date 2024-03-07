@@ -393,7 +393,7 @@ class GetCourseSmallSerializer(serpy.Serializer):
 
 
 class GetCourseSerializer(GetCourseSmallSerializer):
-    slug = serpy.Field()
+    plan_slug = serpy.Field()
     syllabus = serpy.MethodField()
     academy = GetAcademySmallSerializer()
     cohort = GetCohortSmallSerializer()
