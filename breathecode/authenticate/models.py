@@ -629,7 +629,7 @@ class GitpodUser(models.Model):
 
 class App(models.Model):
     """
-    The only reason for keeping this models is because this model is really indestructible.
+    The only reason for keeping this model is because this model is really indestructible.
 
     Remove it as soon as Django team let us do it.
     """
