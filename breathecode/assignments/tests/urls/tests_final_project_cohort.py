@@ -22,7 +22,7 @@ def setup(db):
     yield
 
 
-def get_setializer(final_project, data={}):
+def get_serializer(final_project, data={}):
     return {
         'id': final_project.id,
         'repo_owner': {
@@ -151,7 +151,7 @@ def test_with_projects(bc: Breathecode, client: APIClient):
     url = reverse_lazy('assignments:final_project_cohort', kwargs={'cohort_id': 1})
     response = client.get(url, headers={'academy': 1})
 
-    expected = [get_setializer(model.final_project)]
+    expected = [get_serializer(model.final_project)]
     json = response.json()
 
     assert expected == json
