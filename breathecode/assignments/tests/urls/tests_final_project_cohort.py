@@ -3,11 +3,8 @@ Test /academy/cohort/<int:cohort_id>/final_project
 """
 import json
 import random
-from unittest.mock import MagicMock, call
 
-import aiohttp
 import pytest
-from django.core.exceptions import SynchronousOnlyOperation
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -135,22 +132,28 @@ def test_with_no_projects(bc: Breathecode, client: APIClient):
 
 def test_with_projects(bc: Breathecode, client: APIClient):
 
-    model_cohort = bc.database.create(cohort=1)
-
-    model = bc.database.create(
+    model_cohort = bc.database.create(
+        cohort=1,
         profile_academy=1,
         role=1,
         capability='read_assignment',
-        final_project={'cohort': model_cohort.cohort},
     )
-    client.force_authenticate(model.user)
-    print('model.user.id')
-    print(model.user.id)
+
+    model = bc.database.create(final_project={'cohort': model_cohort.cohort}, )
+
+    client.force_authenticate(model_cohort.user)
 
     url = reverse_lazy('assignments:final_project_cohort', kwargs={'cohort_id': 1})
     response = client.get(url, headers={'academy': 1})
 
-    expected = [get_serializer(model.final_project)]
+    project = model.final_project
+    expected = [
+        get_serializer(
+            project, {
+                'created_at': bc.datetime.to_iso_string(project.created_at),
+                'updated_at': bc.datetime.to_iso_string(project.updated_at),
+            })
+    ]
     json = response.json()
 
     assert expected == json
