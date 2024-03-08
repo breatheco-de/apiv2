@@ -360,9 +360,9 @@ class PUTFinalProjectSerializer(serializers.ModelSerializer):
                                       slug='task-marked-approved-when-pending')
 
         if 'revision_status' in data and data['revision_status'] != self.instance.revision_status:
-            student_cohorts = CohortUser.objects.filter(user__id=self.instance.user.id,
+            student_cohorts = CohortUser.objects.filter(user__in=self.instance.members.all(),
                                                         role='STUDENT').values_list('cohort__id', flat=True)
-            student_academies = CohortUser.objects.filter(user__id=self.instance.user.id,
+            student_academies = CohortUser.objects.filter(user__in=self.instance.members.all(),
                                                           role='STUDENT').values_list('cohort__academy__id',
                                                                                       flat=True)
 

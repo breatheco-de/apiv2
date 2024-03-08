@@ -396,7 +396,7 @@ class FinalProjectCohortView(APIView):
                                                   slug='cohort-not-found'),
                                       code=404)
 
-        items = FinalProject.objects.filter(cohort=cohort)
+        items = FinalProject.objects.filter(cohort__id=cohort.id)
 
         serializer = FinalProjectGETSerializer(items, many=True)
         return Response(serializer.data)
