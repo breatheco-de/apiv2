@@ -119,7 +119,6 @@ def test_with_no_projects(bc: Breathecode, client: APIClient):
         profile_academy=1,
         role=1,
         cohort=1,
-        final_project=1,
         capability='read_assignment',
     )
     client.force_authenticate(model.user)
