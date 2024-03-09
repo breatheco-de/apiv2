@@ -143,13 +143,40 @@ def calendly_webhook(request, org_hash):
         async_calendly_webhook.delay(webhook.id)
         if webhook.event == 'invitee.created':
 
-            user_email = webhook.payload['email']
-            user = User.objects.filter(email=user_email).first()
-            if user is not None:
+            payload = request.data['payload']
+            scheduled_event = payload['scheduled_event']
+
+            mentor_profile = None
+            mentorship_session = None
+            user_email = payload['email']
+            mentee = User.objects.filter(email=user_email).first()
+
+            mentor_email = scheduled_event['event_memberships'][0]['user_email']
+
+            mentor_profile = MentorProfile.objects.filter(email=mentor_email).first()
+
+            starts_at = scheduled_event['start_time']
+            end_at = scheduled_event['end_time']
+
+            if mentee is not None and mentor_profile is not None:
+
+                mentorship_session = MentorshipSession()
+
+                mentorship_session.mentee = mentee
+                mentorship_session.mentor = mentor_profile
+                mentorship_session.starts_at = starts_at
+                mentorship_session.ends_at = end_at
+                mentorship_session.questions_and_answers = payload['questions_and_answers']
+                mentorship_session.is_online = True
+
+                mentorship_session.save()
+
+            if mentorship_session is not None:
                 tasks_activity.add_activity.delay(
-                    user.id,
+                    mentee.id,
                     'mentoring_session_scheduled',
                     related_type='mentorship.MentorshipSession',
+                    related_id=mentorship_session.id,
                     timestamp=webhook.called_at,
                 )
 
