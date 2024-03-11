@@ -21,7 +21,8 @@ from breathecode.monitoring.decorators import WebhookTask
 from .models import Asset, AssetImage
 from circuitbreaker import CircuitBreakerError
 from .actions import (pull_from_github, screenshots_bucket, test_asset, clean_asset_readme,
-                      upload_image_to_bucket, asset_images_bucket, add_syllabus_translations)
+                      upload_image_to_bucket, asset_images_bucket, add_syllabus_translations,
+                      generate_screenshot)
 
 logger = logging.getLogger(__name__)
 
@@ -131,8 +132,6 @@ def async_create_asset_thumbnail(asset_slug: str, **_):
     if asset is None:
         raise RetryTask(f'Asset with slug {asset_slug} not found')
 
-    func = FunctionV1(region='us-central1', project_id=google_project_id(), name='screenshots', method='GET')
-
     preview_url = asset.get_preview_generation_url()
     if preview_url is None:
         raise AbortTask('Not able to retrieve a preview generation')
@@ -141,16 +140,9 @@ def async_create_asset_thumbnail(asset_slug: str, **_):
     url = set_query_parameter(preview_url, 'slug', asset_slug)
 
     response = None
+    logger.info(f'Generating screenshot for {preview_url}')
     try:
-        response = func.call(
-            params={
-                'url': url,
-                'name': name,
-                'dimension': '1200x630',
-                # this should be fixed if the screenshots is taken without load the content properly
-                'delay': 1000,
-            },
-            timeout=8)
+        response = generate_screenshot(url, '1200x630', delay=1000)
 
     except Exception as e:
         raise AbortTask('Error calling service to generate thumbnail screenshot: ' + str(e))
