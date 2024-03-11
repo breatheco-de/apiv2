@@ -798,6 +798,7 @@ class Course(models.Model):
     syllabus = models.ManyToManyField(Syllabus, blank=True)
     cohort = models.ForeignKey(Cohort, null=True, blank=True, default=None, on_delete=models.CASCADE)
 
+    plan_slug = models.SlugField(max_length=150, null=True, blank=True, default=None)
     status = models.CharField(max_length=15, choices=COURSE_STATUS, default=ACTIVE)
     status_message = models.CharField(max_length=250,
                                       null=True,
@@ -843,7 +844,8 @@ class CourseTranslation(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
     lang = models.CharField(max_length=5, validators=[validate_language_code])
     title = models.CharField(max_length=60)
-    description = models.CharField(max_length=255)
+    description = models.TextField(max_length=400)
+    short_description = models.CharField(max_length=120, null=True, default=None, blank=True)
     landing_url = models.URLField(
         default=None,
         null=True,

@@ -210,6 +210,12 @@ class AssetSerializer(serpy.Serializer):
     technologies = serpy.MethodField()
     seo_keywords = serpy.MethodField()
 
+    assets_related = serpy.MethodField()
+
+    def get_assets_related(self, obj):
+        _assets_related = [AssetSmallSerializer(asset).data for asset in obj.assets_related.all()]
+        return _assets_related
+
     def get_translations(self, obj):
         result = {}
         for t in obj.all_translations.all():

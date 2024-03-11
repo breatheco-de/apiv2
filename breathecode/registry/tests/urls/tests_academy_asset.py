@@ -140,6 +140,7 @@ def put_serializer(academy, category, asset, data={}):
         'cleaning_status': asset.cleaning_status,
         'cleaning_status_details': None,
         'clusters': [],
+        'assets_related': [],
         'description': None,
         'difficulty': None,
         'readme_updated_at': None,

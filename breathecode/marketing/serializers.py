@@ -112,15 +112,18 @@ class SyllabusScheduleHookSerializer(serpy.Serializer):
         return obj.syllabus.name if obj.syllabus else None
 
 
-class CohortHookSerializer(serpy.Serializer):
-    """The serializer schema definition."""
-    # Use a Field subclass like IntField if you need more validation.
+class GetCohortSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+
+
+class CohortHookSerializer(GetCohortSmallSerializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    schedule = SyllabusScheduleHookSerializer(required=False)
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
-    schedule = SyllabusScheduleHookSerializer(required=False)
 
 
 class TagSmallSerializer(serpy.Serializer):
@@ -231,7 +234,7 @@ class FormEntryHookSerializer(serpy.Serializer):
             return _cohort
 
         return CohortHookSerializer(_cohort).data
-    
+
     def is_won(self, obj):
         return obj.deal_status == 'WON'
 
@@ -364,6 +367,7 @@ class GetSyllabusSmallSerializer(serpy.Serializer):
 class GetCourseTranslationSerializer(serpy.Serializer):
     title = serpy.Field()
     description = serpy.Field()
+    short_description = serpy.Field()
     lang = serpy.Field()
     course_modules = serpy.Field()
     landing_url = serpy.Field()
@@ -398,9 +402,10 @@ class GetCourseSmallSerializer(serpy.Serializer):
 
 
 class GetCourseSerializer(GetCourseSmallSerializer):
-    slug = serpy.Field()
+    plan_slug = serpy.Field()
     syllabus = serpy.MethodField()
     academy = GetAcademySmallSerializer()
+    cohort = GetCohortSmallSerializer()
     status = serpy.Field()
     visibility = serpy.Field()
 
