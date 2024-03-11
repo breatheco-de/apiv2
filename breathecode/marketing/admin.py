@@ -71,7 +71,7 @@ def sync_ac_tags(modeladmin, request, queryset):
 @admin.display(description='♼ Sync AC Automations')
 def sync_ac_automations(modeladmin, request, queryset):
     entries = queryset.all()
-    _result = { "success": [], "error": [] }
+    _result = {'success': [], 'error': []}
     try:
         for entry in entries:
             if sync_automations(entry): _result['success'].append(entry.academy.name)
@@ -79,7 +79,7 @@ def sync_ac_automations(modeladmin, request, queryset):
 
         _errors = ', '.join(_result['error'])
         _success = ', '.join(_result['success'])
-        messages.success(request, message=f"Errored in {_errors}. Succeded in: {_success}")
+        messages.success(request, message=f'Errored in {_errors}. Succeded in: {_success}')
     except Exception as e:
         logger.fatal(str(e))
         messages.error(request, message=str(e))
