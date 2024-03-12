@@ -371,6 +371,7 @@ class GetCourseTranslationSerializer(serpy.Serializer):
     lang = serpy.Field()
     course_modules = serpy.Field()
     landing_url = serpy.Field()
+    video_url = serpy.Field()
 
 
 class GetCourseSmallSerializer(serpy.Serializer):
