@@ -1783,6 +1783,10 @@ class PublicCohortUserView(APIView, GenerateLookupsMixin):
 
         items = CohortUser.objects.all()
 
+        cohort_id = request.GET.get('cohort_id', None)
+        if cohort_id is not None:
+            items = items.filter(cohort__id=cohort_id)
+
         roles = request.GET.get('roles', None)
         if roles is not None:
             items = items.filter(role__in=roles.upper().split(','))

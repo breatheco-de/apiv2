@@ -381,6 +381,53 @@ class FinalProjectMeView(APIView):
             return Response(updated_projects, status=status.HTTP_200_OK)
 
 
+class FinalProjectCohortView(APIView):
+
+    @capable_of('read_assignment')
+    def get(self, request, academy_id, cohort_id):
+
+        lang = get_user_language(request)
+
+        cohort = Cohort.objects.filter(id=cohort_id).first()
+        if cohort is None:
+            raise ValidationException(translation(lang,
+                                                  en='Cohort not found',
+                                                  es='Cohorte no encontrada',
+                                                  slug='cohort-not-found'),
+                                      code=404)
+
+        items = FinalProject.objects.filter(cohort__id=cohort.id)
+
+        serializer = FinalProjectGETSerializer(items, many=True)
+        return Response(serializer.data)
+
+    @capable_of('crud_assignment')
+    def put(self, request, academy_id, cohort_id, final_project_id):
+        lang = get_user_language(request)
+
+        cohort = Cohort.objects.filter(id=cohort_id).first()
+        if cohort is None:
+            raise ValidationException(translation(lang,
+                                                  en='Cohort not found',
+                                                  es='Cohorte no encontrada',
+                                                  slug='cohort-not-found'),
+                                      code=404)
+
+        item = FinalProject.objects.filter(id=final_project_id).first()
+        if item is None:
+            raise ValidationException(translation(lang,
+                                                  en='Project not found',
+                                                  es='Proyecto no encontrado',
+                                                  slug='project-not-found'),
+                                      code=404)
+
+        serializer = PUTFinalProjectSerializer(item, data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class CohortTaskView(APIView, GenerateLookupsMixin):
     extensions = APIViewExtensions(cache=TaskCache, sort='-created_at', paginate=True)
 
@@ -927,7 +974,7 @@ class MeCodeRevisionView(APIView):
         for key in request.GET.keys():
             params[key] = request.GET.get(key)
 
-        if task_id and not (task := Task.objects.filter(id=task_id, user__id=request.user.id).first()):
+        if task_id and not (task := Task.objects.filter(id=task_id, user__id=request.user.id).exclude(github_url=None).first()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         elif not hasattr(request.user, 'credentialsgithub'):
@@ -1004,7 +1051,7 @@ class AcademyCodeRevisionView(APIView):
 
     async def get_code_revision(self, request, academy_id, task_id, coderevision_id):
         if task_id and not (task := await Task.objects.filter(
-                id=task_id, cohort__academy__id=academy_id).prefetch_related('user').afirst()):
+                id=task_id, cohort__academy__id=academy_id).exclude(github_url=None).prefetch_related('user').afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         params = {}
