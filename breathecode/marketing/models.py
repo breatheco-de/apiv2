@@ -1,15 +1,17 @@
-import uuid, hashlib
+import hashlib
 import secrets
-from django.db import models
+import uuid
 from datetime import timedelta
-from django.contrib.auth.models import User
 
-from breathecode.authenticate.models import UserInvite
-from .signals import form_entry_won_or_lost, new_form_entry_deal
-from breathecode.admissions.models import Academy, Cohort
+from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
-from breathecode.admissions.models import Syllabus
+from django.db import models
+
+from breathecode.admissions.models import Academy, Cohort, Syllabus
+from breathecode.authenticate.models import UserInvite
 from breathecode.utils.validators.language import validate_language_code
+
+from .signals import form_entry_won_or_lost, new_form_entry_deal
 
 __all__ = [
     'ActiveCampaignAcademy', 'AcademyAlias', 'Automation', 'Tag', 'Contact', 'FormEntry', 'ShortLink',
@@ -845,13 +847,15 @@ class CourseTranslation(models.Model):
     title = models.CharField(max_length=60)
     description = models.TextField(max_length=400)
     short_description = models.CharField(max_length=120, null=True, default=None, blank=True)
-    landing_url = models.URLField(
-        default=None,
-        null=True,
-        blank=True,
-        help_text=
-        'Landing URL used on call to actions where the course is shown. A URL is needed per each translation.'
-    )
+    video_url = models.URLField(default=None,
+                                null=True,
+                                blank=False,
+                                help_text='Video that introduces/promotes this course')
+    landing_url = models.URLField(default=None,
+                                  null=True,
+                                  blank=True,
+                                  help_text='Landing URL used on call to actions where the course is shown. '
+                                  'A URL is needed per each translation.')
     course_modules = models.JSONField(
         default=None,
         blank=True,
