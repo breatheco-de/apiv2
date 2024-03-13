@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from breathecode.commons import tasks
+from breathecode.activity import tasks as activity_tasks
 
 from .models import TaskManager, TaskWatcher
 
@@ -30,6 +31,16 @@ def resume(modeladmin, request, queryset):
         tasks.mark_task_as_pending.delay(x.id)
 
 
+def upload(modeladmin, request, queryset):
+    for x in queryset.all():
+        # tasks.mark_task_as_pending.delay(x.id)
+        print('x')
+        print(x)
+        print(type(x))
+        print(x.id)
+        activity_tasks.upload_activities.delay(task_manager_id=x.id)
+
+
 @admin.register(TaskManager)
 class TaskManagerAdmin(admin.ModelAdmin):
     list_display = [
@@ -38,7 +49,7 @@ class TaskManagerAdmin(admin.ModelAdmin):
     ]
     search_fields = ['task_module', 'task_name', 'reverse_module', 'reverse_name']
     list_filter = ['status', 'killed', 'task_module']
-    actions = [pause, resume, cancel, reverse, force_reverse]
+    actions = [pause, resume, cancel, reverse, force_reverse, upload]
 
     @admin.display(description='Duration (ms)')
     def get_duration(self, obj):
