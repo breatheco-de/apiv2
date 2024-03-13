@@ -67,6 +67,10 @@ class AdmissionsModelsMixin(ModelsMixin):
                                    github_academy_user=False,
                                    github_academy_user_log=False,
                                    cohort_set=False,
+                                   invoice=False,
+                                   plan_financing=False,
+                                   service_set=False,
+                                   service_set_translation=False,
                                    country_kwargs={},
                                    city_kwargs={},
                                    cohort_time_slot_kwargs={},
@@ -110,7 +114,8 @@ class AdmissionsModelsMixin(ModelsMixin):
                 or is_valid(event_type_set_translation) or is_valid(mentorship_service_set)
                 or is_valid(mentorship_service_set_translation) or is_valid(provisioning_profile) or
                 is_valid(provisioning_academy) or is_valid(provisioning_bill) or is_valid(github_academy_user)
-                or is_valid(github_academy_user_log) or is_valid(cohort_set)):
+                or is_valid(github_academy_user_log) or is_valid(cohort_set) or is_valid(invoice)
+                or is_valid(plan_financing) or is_valid(service_set) or is_valid(service_set_translation)):
             kargs = {}
 
             if 'country' in models:

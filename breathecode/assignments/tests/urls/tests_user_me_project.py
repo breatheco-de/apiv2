@@ -146,8 +146,6 @@ class FinalProjectTestSuite(AssignmentsTestCase):
         response = self.client.put(url, data)
 
         json = response.json()
-        expected = {'detail': 'not-a-member', 'status_code': 400}
-        print(json, 'json')
 
         self.assertEqual(
             json,

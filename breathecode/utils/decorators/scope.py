@@ -1,14 +1,14 @@
 import datetime as dt
-from datetime import datetime, timedelta
 import hashlib
 import hmac
 import logging
+import urllib.parse
+from datetime import datetime, timedelta
 from typing import Optional
 
-from django.utils import timezone
 import jwt
+from django.utils import timezone
 from rest_framework.views import APIView
-import urllib.parse
 
 from breathecode.utils.attr_dict import AttrDict
 
@@ -21,9 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 def link_schema(request, required_scopes, authorization: str, use_signature: bool):
-    """
-    Authenticate the request and return a two-tuple of (user, token).
-    """
+    """Authenticate the request and return a two-tuple of (user, token)."""
     from breathecode.authenticate.actions import get_app_keys, get_user_scopes
 
     try:
@@ -121,9 +119,7 @@ TOLERANCE = 2
 
 
 def signature_schema(request, required_scopes, authorization: str, use_signature: bool):
-    """
-    Authenticate the request and return a two-tuple of (user, token).
-    """
+    """Authenticate the request and return a two-tuple of (user, token)."""
     from breathecode.authenticate.actions import get_app_keys, get_user_scopes
 
     try:
@@ -199,7 +195,7 @@ def signature_schema(request, required_scopes, authorization: str, use_signature
 
 
 def scope(scopes: Optional[list] = None, mode: Optional[str] = None) -> callable:
-    """This decorator check if the app has access to the scope provided"""
+    """Check if the app has access to the scope provided."""
 
     if scopes is None:
         scopes = []

@@ -38,6 +38,7 @@ from breathecode.payments.models import (
     PlanOffer,
     Service,
     ServiceItem,
+    ServiceSet,
     Subscription,
 )
 from breathecode.payments.serializers import (
@@ -585,10 +586,14 @@ class MeConsumableView(APIView):
         event_types = EventTypeSet.objects.none()
         event_types = filter_consumables(request, items, event_types, 'event_type_set')
 
+        service_sets = ServiceSet.objects.none()
+        service_sets = filter_consumables(request, items, service_sets, 'service_set')
+
         balance = {
             'mentorship_service_sets': get_balance_by_resource(mentorship_services, 'mentorship_service_set'),
             'cohort_sets': get_balance_by_resource(cohorts, 'cohort_set'),
             'event_type_sets': get_balance_by_resource(event_types, 'event_type_set'),
+            'service_sets': get_balance_by_resource(service_sets, 'service_set'),
         }
 
         return Response(balance)
@@ -1038,6 +1043,12 @@ class CardView(APIView):
                 token = s.create_card_token(card_number, exp_month, exp_year, cvc)
 
             s.add_payment_method(request.user, token)
+
+        except ValidationException as e:
+            raise e
+
+        except PaymentException as e:
+            raise e
 
         except Exception as e:
             raise ValidationException(str(e), code=400)

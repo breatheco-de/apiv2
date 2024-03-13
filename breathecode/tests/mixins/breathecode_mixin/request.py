@@ -1,5 +1,7 @@
 import os
 from typing import Optional
+from warnings import warn
+
 import jwt
 from rest_framework.test import APITestCase
 
@@ -26,6 +28,10 @@ class Request:
         self.bc.request.set_headers(academy=1, thing_of_importance='potato')
         ```
         """
+        warn('Use rest_framework.test.APIClient instead. Example: client.get(..., headers={...})',
+             DeprecationWarning,
+             stacklevel=2)
+
         headers = {}
 
         items = [
@@ -49,13 +55,14 @@ class Request:
         model = self.bc.database.create(user=1)
 
         # that setup the request to use the credential of user passed
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         ```
 
         Keywords arguments:
 
         - user: a instance of user model `breathecode.authenticate.models.User`
         """
+        warn('Use `client.manual_authentication` instead', DeprecationWarning, stacklevel=2)
         self._parent.client.force_authenticate(user=user)
 
     def manual_authentication(self, user) -> None:
@@ -75,6 +82,8 @@ class Request:
         - user: a instance of user model `breathecode.authenticate.models.User`.
         """
         from breathecode.authenticate.models import Token
+
+        warn('Use `client.credentials` instead', DeprecationWarning, stacklevel=2)
 
         token = Token.objects.create(user=user)
         self._parent.client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
@@ -98,7 +107,10 @@ class Request:
         - user: a instance of user model `breathecode.authenticate.models.User`
         """
         from datetime import datetime, timedelta
-        now = datetime.utcnow()
+
+        from django.utils import timezone
+
+        now = timezone.now()
 
         # https://datatracker.ietf.org/doc/html/rfc7519#section-4
         payload = {

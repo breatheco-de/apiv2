@@ -1,12 +1,14 @@
-import os
-import requests
 import json
 import logging
-import breathecode.services.activecampaign.actions as actions
-from breathecode.utils import APIException
+import os
+
+import requests
+from activecampaign.client import Client
 from django.utils import timezone
 from slugify import slugify
-from activecampaign.client import Client
+
+import breathecode.services.activecampaign.actions as actions
+from breathecode.utils import APIException
 
 logger = logging.getLogger(__name__)
 
@@ -157,10 +159,10 @@ class ActiveCampaign:
 
     @staticmethod
     def add_webhook_to_log(context: dict, academy_slug: str):
-        """Add one incoming webhook request to log"""
+        """Add one incoming webhook request to log."""
 
         # prevent circular dependency import between thousand modules previuosly loaded and cached
-        from breathecode.marketing.models import ActiveCampaignWebhook, ActiveCampaignAcademy
+        from breathecode.marketing.models import ActiveCampaignAcademy, ActiveCampaignWebhook
 
         if not context or not len(context):
             return None
@@ -199,7 +201,7 @@ class ActiveCampaign:
         ]
         _allowed_custom_ids = [x for x in acp_ids['deal'].values()]
         # {
-        # "deal": {
+        #   "deal": {
         #     "contact": "51",
         #     "account": "45",
         #     "description": "This deal is an important deal",
@@ -226,7 +228,7 @@ class ActiveCampaign:
         #         "fieldCurrency": "USD"
         #       }
         #     ]
-        # }
+        #   }
         # }
         _to_be_updated = {'fields': []}
         for field_key in fields:
@@ -500,7 +502,9 @@ class Contacts(object):
 
     def create_contact(self, data):
         """
-        :param data: A dictionary with the parameters
+        :param data: A dictionary with the parameters.
+
+        ```py
         data ={
             "email": String, Unique email
             "first_name": String, First name of the contact.
@@ -524,6 +528,7 @@ class Contacts(object):
                                 Examples: 1 = yes, 0 = no."
             "lastmessage": String. Whether or not to set "send the last broadcast campaign." Examples: 1 = yes, 0 = no."
             }
+        ```
         :return: A json
         """
         if 'email' not in data:
@@ -532,7 +537,9 @@ class Contacts(object):
 
     def subscribe_contact(self, data):
         """
-        :param data: A dictionary with the parameters
+        :param data: A dictionary with the parameters.
+
+        ```py
         data ={
                 "email": String, Unique email
                 "first_name": String, First name of the contact.
@@ -556,6 +563,8 @@ class Contacts(object):
                                     Examples: 1 = yes, 0 = no."
                 "lastmessage": String. Whether or not to set "send the last broadcast campaign." Examples: 1 = yes, 0 = no."
             }
+        ```
+
         :return: A json
         """
         if 'email' not in data:
@@ -565,7 +574,9 @@ class Contacts(object):
 
     def edit_contact(self, data):
         """
-        :param data: A dictionary with the parameters
+        :param data: A dictionary with the parameters.
+
+        ```py
         data ={
             "email": String, Unique email
             "first_name": String, First name of the contact.
@@ -589,6 +600,8 @@ class Contacts(object):
                                 Examples: 1 = yes, 0 = no."
             "lastmessage": String. Whether or not to set "send the last broadcast campaign." Examples: 1 = yes, 0 = no."
             }
+        ```
+
         :return: A json
         """
         if 'email' not in data:
@@ -615,12 +628,6 @@ class ACOldClient(object):
         self._base_url = f'https://{url}' if not url.startswith('http') else url
         self._apikey = apikey
         self.contacts = Contacts(self)
-        # self.account = Account(self)
-        # self.lists = Lists(self)
-        # self.webhooks = Webhooks(self)
-        # self.tasks = Tasks(self)
-        # self.deals = Deals(self)
-        # self.users = Users(self)
 
     def _get(self, action, aditional_data=None):
         return self._request('GET', action, aditional_data=aditional_data)
@@ -650,7 +657,6 @@ class ACOldClient(object):
             data = response.json()
             return self._parse(data)
         else:
-            print('Error when saving contact on AC', response.text)
             raise Exception('Error when saving contact on AC')
 
     def _parse(self, response):

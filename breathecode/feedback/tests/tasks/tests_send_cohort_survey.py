@@ -2,18 +2,19 @@
 Test /academy/survey
 """
 
-from unittest.mock import patch, MagicMock, call
-
 import logging
+from datetime import timedelta
+from unittest.mock import MagicMock, call, patch
+
+from django.utils import timezone
+
+import breathecode.feedback.tasks as tasks
+import breathecode.notify.actions as actions
+from breathecode.feedback.models import Answer
+from breathecode.feedback.tasks import generate_user_cohort_survey_answers, send_cohort_survey
+from breathecode.utils import ValidationException
 
 from ..mixins import FeedbackTestCase
-from breathecode.feedback.tasks import send_cohort_survey, generate_user_cohort_survey_answers
-import breathecode.feedback.tasks as tasks
-from breathecode.feedback.models import Answer
-from django.utils import timezone
-from datetime import timedelta
-import breathecode.notify.actions as actions
-from breathecode.utils import ValidationException
 
 now = timezone.now()
 
@@ -134,15 +135,16 @@ class SendCohortSurvey(FeedbackTestCase):
                          [call(model.user, model.survey, status='SENT')])
         token = self.bc.database.get('authenticate.Token', 1, dict=False)
         self.assertEqual(actions.send_email_message.call_args_list, [
-            call(
-                'nps_survey', model.user.email, {
-                    'SUBJECT': 'We need your feedback',
-                    'MESSAGE':
-                    'Please take 5 minutes to give us feedback about your experience at the academy so far.',
-                    'TRACKER_URL': f'https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png',
-                    'BUTTON': 'Answer the question',
-                    'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}'
-                })
+            call('nps_survey',
+                 model.user.email, {
+                     'SUBJECT': 'We need your feedback',
+                     'MESSAGE':
+                     'Please take 5 minutes to give us feedback about your experience at the academy so far.',
+                     'TRACKER_URL': f'https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png',
+                     'BUTTON': 'Answer the question',
+                     'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}',
+                 },
+                 academy=model.academy)
         ])
 
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'API_URL': 'https://hello.com'})))
@@ -176,14 +178,16 @@ class SendCohortSurvey(FeedbackTestCase):
             token = self.bc.database.get('authenticate.Token', model.survey.id, dict=False)
             self.assertEqual(actions.send_email_message.call_args_list, [
                 call(
-                    'nps_survey', model.user.email, {
+                    'nps_survey',
+                    model.user.email, {
                         'SUBJECT': 'We need your feedback',
                         'MESSAGE':
                         'Please take 5 minutes to give us feedback about your experience at the academy so far.',
                         'TRACKER_URL': f'https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png',
                         'BUTTON': 'Answer the question',
-                        'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}'
-                    })
+                        'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}',
+                    },
+                    academy=model.academy)
             ])
 
             logging.Logger.info.call_args_list = []
@@ -243,19 +247,22 @@ class SendCohortSurvey(FeedbackTestCase):
                             'TRACKER_URL':
                             f'https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png',
                             'BUTTON': 'Answer the question',
-                            'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}'
-                        })
+                            'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}',
+                        },
+                        academy=model.academy)
                 ]))
             self.assertEqual(actions.send_email_message.call_args_list, [
                 call(
-                    'nps_survey', model.user.email, {
+                    'nps_survey',
+                    model.user.email, {
                         'SUBJECT': 'We need your feedback',
                         'MESSAGE':
                         'Please take 5 minutes to give us feedback about your experience at the academy so far.',
                         'TRACKER_URL': f'https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png',
                         'BUTTON': 'Answer the question',
-                        'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}'
-                    })
+                        'LINK': f'https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}',
+                    },
+                    academy=model.academy)
             ])
 
             logging.Logger.info.call_args_list = []

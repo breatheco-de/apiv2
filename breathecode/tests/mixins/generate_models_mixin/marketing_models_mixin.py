@@ -1,9 +1,11 @@
 """
 Collections of mixins used to login in authorize microservice
 """
-from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
-from .utils import is_valid, create_models, just_one, get_list
+
+from breathecode.tests.mixins.models_mixin import ModelsMixin
+
+from .utils import create_models, get_list, is_valid, just_one
 
 
 class MarketingModelsMixin(ModelsMixin):
@@ -22,6 +24,7 @@ class MarketingModelsMixin(ModelsMixin):
                                   downloadable=False,
                                   course=False,
                                   course_translation=False,
+                                  active_campaign_webhook=False,
                                   active_campaign_academy_kwargs={},
                                   automation_kwargs={},
                                   tag_kwargs={},
@@ -36,7 +39,8 @@ class MarketingModelsMixin(ModelsMixin):
         """Generate models"""
         models = models.copy()
 
-        if not 'active_campaign_academy' in models and is_valid(active_campaign_academy):
+        if not 'active_campaign_academy' in models and (is_valid(active_campaign_academy)
+                                                        or is_valid(active_campaign_webhook)):
             kargs = {}
 
             if 'academy' in models or academy:
@@ -178,6 +182,21 @@ class MarketingModelsMixin(ModelsMixin):
                 **kargs,
                 **short_link_kwargs
             })
+
+        if not 'active_campaign_webhook' in models and is_valid(active_campaign_webhook):
+            kargs = {}
+
+            if 'active_campaign_academy' in models:
+                kargs['ac_academy'] = just_one(models['active_campaign_academy'])
+
+            if 'form_entry' in models:
+                kargs['form_entry'] = just_one(models['form_entry'])
+
+            if 'contact' in models:
+                kargs['contact'] = just_one(models['contact'])
+
+            models['active_campaign_webhook'] = create_models(active_campaign_webhook,
+                                                              'marketing.ActiveCampaignWebhook', **kargs)
 
         if not 'downloadable' in models and is_valid(downloadable):
             kargs = {}

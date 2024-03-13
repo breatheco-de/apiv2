@@ -1,12 +1,13 @@
-import stripe
 import random
 from unittest.mock import MagicMock, call, patch
+
+import stripe
 from django.urls import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
 
-from django.utils import timezone
-
 from breathecode.utils.attr_dict import AttrDict
+
 from ..mixins import PaymentsTestCase
 
 UTC_NOW = timezone.now()
@@ -132,11 +133,11 @@ class SignalTestSuite(PaymentsTestCase):
     @patch('stripe.Customer.modify', MagicMock(return_value={'id': 1}))
     def test__no_body(self):
         model = self.bc.database.create(user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:card')
         response = self.client.post(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {'detail': 'missing-card-information', 'status_code': 404}
@@ -163,12 +164,12 @@ class SignalTestSuite(PaymentsTestCase):
     @patch('stripe.Customer.modify', MagicMock(return_value=AttrDict(id=1)))
     def test__passing_card(self):
         model = self.bc.database.create(user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:card')
         data = {'card_number': '4242424242424242', 'exp_month': '12', 'exp_year': '2030', 'cvc': '123'}
         response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {'status': 'ok'}

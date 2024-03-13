@@ -1,19 +1,24 @@
+import logging
 from datetime import timedelta
 from typing import Any
+
+from django.db.models.query_utils import Q
+from django.utils import timezone
+from rest_framework import serializers
+from slugify import slugify
+
+import breathecode.activity.tasks as tasks_activity
+from breathecode.admissions.models import Academy
+from breathecode.registry.models import Asset
+from breathecode.registry.serializers import AssetSmallSerializer
+from breathecode.admissions.serializers import UserPublicSerializer
 from breathecode.authenticate.models import Profile, ProfileTranslation
 from breathecode.marketing.actions import validate_marketing_tags
+from breathecode.utils import serpy
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
-from .models import (Event, EventType, LiveClass, Organization, EventbriteWebhook, EventCheckin)
-from breathecode.admissions.models import Academy
-from breathecode.admissions.serializers import UserPublicSerializer
-from slugify import slugify
-from rest_framework import serializers
-import logging
-from django.utils import timezone
-from django.db.models.query_utils import Q
-import breathecode.activity.tasks as tasks_activity
-from breathecode.utils import serpy
+
+from .models import Event, EventbriteWebhook, EventCheckin, EventType, LiveClass, Organization
 
 logger = logging.getLogger(__name__)
 
@@ -183,6 +188,14 @@ class EventSmallSerializer(EventTinySerializer):
     asset_slug = serpy.Field()
     host_user = UserSerializer(required=False)
     author = UserSerializer(required=False)
+    asset = serpy.MethodField()
+
+    def get_asset(self, obj):
+        if obj.asset_slug is not None:
+            asset = Asset.objects.filter(slug=obj.asset_slug).first()
+            if asset is not None:
+                return AssetSmallSerializer(asset, many=False).data
+        return None
 
 
 class EventJoinSmallSerializer(EventSmallSerializer):
@@ -222,6 +235,7 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
     ending_at = serpy.Field()
     ended_at = serpy.Field()
     host = serpy.Field()
+    asset_slug = serpy.Field()
     status = serpy.Field()
     event_type = EventTypeSmallSerializer(required=False)
     online_event = serpy.Field()
@@ -337,15 +351,6 @@ class EventSerializer(serializers.ModelSerializer):
 
         academy = self.context.get('academy_id')
 
-        if ('sync_with_eventbrite' not in data or data['sync_with_eventbrite']
-                == False) and ('url' not in data or data['url'] is None or data['url'] == ''):
-            raise ValidationException(
-                translation(
-                    lang,
-                    en='Event URL must not be empty unless it will be synched with Eventbrite',
-                    es='La URL del evento no puede estar vacía a menos que se sincronice con Eventbrite',
-                    slug='empty-url'))
-
         if 'tags' not in data or data['tags'] == '':
             raise ValidationException(
                 translation(lang,
@@ -388,7 +393,14 @@ class EventSerializer(serializers.ModelSerializer):
                             es=f'El slug {slug} ya está en uso, prueba con otro slug',
                             slug='slug-taken'))
 
-        if 'event_type' in data and 'lang' in data and data['event_type'].lang != data['lang']:
+        if 'event_type' not in data or data['event_type'] is None:
+            raise ValidationException(
+                translation(lang,
+                            en='Missing event type',
+                            es='Debes especificar un tipo de evento',
+                            slug='no-event-type'))
+
+        if 'lang' in data and data['event_type'].lang != data.get('lang', 'en'):
             raise ValidationException(
                 translation(lang,
                             en='Event type and event language must match',
@@ -411,6 +423,89 @@ class EventSerializer(serializers.ModelSerializer):
             pass
 
         return super().create(validated_data)
+
+
+class EventPUTSerializer(serializers.ModelSerializer):
+    banner = serializers.URLField(required=False)
+    capacity = serializers.IntegerField(required=False)
+    starting_at = serializers.DateTimeField(required=False)
+    ending_at = serializers.DateTimeField(required=False)
+
+    class Meta:
+        model = Event
+        exclude = ()
+
+    def validate(self, data: dict[str, Any]):
+        lang = data.get('lang', 'en')
+
+        academy = self.context.get('academy_id')
+
+        if 'tags' in data:
+            if data['tags'] == '':
+                raise ValidationException(
+                    translation(lang,
+                                en='Event must have at least one tag',
+                                es='El evento debe tener al menos un tag',
+                                slug='empty-tags'))
+
+            validate_marketing_tags(data['tags'], academy, types=['DISCOVERY'], lang=lang)
+
+        title = data.get('title')
+        slug = data.get('slug')
+
+        if slug and self.instance:
+            raise ValidationException(
+                translation(lang,
+                            en='The slug field is readonly',
+                            es='El campo slug es de solo lectura',
+                            slug='try-update-slug'))
+
+        if title and not slug:
+            slug = slugify(data['title']).lower()
+
+        elif slug:
+            slug = f'{data["slug"].lower()}'
+
+        online_event = data.get('online_event')
+        live_stream_url = data.get('live_stream_url')
+        if online_event == True and (live_stream_url is None
+                                     or live_stream_url == '') and (self.instance.live_stream_url is None
+                                                                    or self.instance.live_stream_url == ''):
+            raise ValidationException(
+                translation(lang,
+                            en='live_stream_url cannot be empty if the event is online.',
+                            es='Si el evento es online, entonces live_stream_url no puede estar vacío.',
+                            slug='live-stream-url-empty'))
+
+        existing_events = Event.objects.filter(slug=slug)
+        if slug and not self.instance and existing_events.exists():
+            raise ValidationException(
+                translation(lang,
+                            en=f'Event slug {slug} already taken, try a different slug',
+                            es=f'El slug {slug} ya está en uso, prueba con otro slug',
+                            slug='slug-taken'))
+
+        event_type = data['event_type'] if 'event_type' in data else self.instance.event_type
+        if not event_type:
+            raise ValidationException(
+                translation(lang,
+                            en='Missing event type',
+                            es='Debes especificar un tipo de evento',
+                            slug='event-type-lang-mismatch'))
+
+        if 'lang' in data and event_type.lang != data['lang']:
+            raise ValidationException(
+                translation(lang,
+                            en='Event type and event language must match',
+                            es='El tipo de evento y el idioma del evento deben coincidir',
+                            slug='event-type-lang-mismatch'))
+
+        data['lang'] = event_type.lang
+
+        if not self.instance:
+            data['slug'] = slug
+
+        return data
 
     def update(self, instance, validated_data):
 

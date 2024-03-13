@@ -462,6 +462,7 @@ ROLES = [
             'read_freelancer_bill',
             'read_keywordcluster',
             'crud_academyservice',
+            'crud_event',
             'crud_mentorship_session',
             'read_calendly_organization',
         ],
@@ -481,6 +482,38 @@ ROLES = [
             'read_activity',
             'read_technology',
             'read_academyservice',
+        ],
+    },
+    {
+        'slug':
+        'read_only',
+        'name':
+        'Read Only (Base)',
+        'caps': [
+            'read_academyservice',
+            'read_member',
+            'read_syllabus',
+            'read_student',
+            'read_all_cohort',
+            'read_media',
+            'read_my_academy',
+            'read_invite',
+            'read_survey',
+            'read_tag',
+            'read_layout',
+            'read_event',
+            'read_event_type',
+            'read_certificate',
+            'read_won_lead',
+            'read_eventcheckin',
+            'read_review',
+            'read_activity',
+            'read_shortlink',
+            'read_mentorship_service',
+            'read_mentorship_mentor',
+            'read_lead_gen_app',
+            'read_technology',
+            'read_service',
         ],
     },
     {
@@ -676,8 +709,17 @@ def extend_roles(roles: list[RoleType]) -> None:
         'Growth Manager',
         'caps':
         extend(roles, ['staff', 'community_manager']) + [
-            'crud_media', 'read_activity', 'read_lead', 'read_won_lead', 'crud_review', 'crud_shortlink',
-            'crud_tag', 'crud_keyword', 'crud_keywordcluster', 'crud_asset', 'read_category'
+            'crud_media',
+            'read_activity',
+            'read_lead',
+            'read_won_lead',
+            'crud_review',
+            'crud_shortlink',
+            'crud_tag',
+            'crud_keyword',
+            'crud_keywordcluster',
+            'crud_asset',
+            'read_category',
         ]
     })
     roles.append({
@@ -695,7 +737,7 @@ def extend_roles(roles: list[RoleType]) -> None:
     roles.append({
         'slug': 'homework_reviewer',
         'name': 'Homework Reviewer',
-        'caps': extend(roles, ['assistant'])
+        'caps': extend(roles, ['assistant']) + ['crud_student']
     })
     roles.append({
         'slug': 'teacher',

@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/google/yapf
-    rev: "v0.40.1" # Use the sha / tag you want to point at
+    rev: "v0.40.2" # Use the sha / tag you want to point at
     hooks:
       - id: yapf
         language: python
@@ -13,7 +13,7 @@ repos:
   #     hooks:
   #     -   id: flake8
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v4.5.0
     # docs https://pre-commit.com/hooks.html
     hooks:
       - id: trailing-whitespace

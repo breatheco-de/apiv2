@@ -1,10 +1,13 @@
 """
 Test cases for /academy/user/me/invite && academy/user/invite
 """
-from breathecode.authenticate.models import ProfileAcademy
+from random import choice
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from random import choice
+
+from breathecode.authenticate.models import ProfileAcademy
+
 from ..mixins.new_auth_test_case import AuthTestCase
 
 STATUSES = [
@@ -75,7 +78,7 @@ class AuthenticateTestSuite(AuthTestCase):
         model = self.generate_models(user=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('authenticate:academy_user_invite')
         response = self.client.get(url)
@@ -94,7 +97,7 @@ class AuthenticateTestSuite(AuthTestCase):
         model = self.generate_models(user=1, profile_academy=1, role=1, capability='read_invite')
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('authenticate:academy_user_invite')
         response = self.client.get(url)
@@ -118,7 +121,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                      user_invite=(2, user_invite))
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('authenticate:academy_user_invite')
         response = self.client.get(url)
@@ -148,7 +151,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                          user_invite=(2, user_invite))
 
             self.bc.request.set_headers(academy=model.academy.id)
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
 
             url = reverse_lazy('authenticate:academy_user_invite')
             response = self.client.get(url)
@@ -178,7 +181,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                          user_invite=(2, user_invite))
 
             self.bc.request.set_headers(academy=model.academy.id)
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
 
             url = reverse_lazy('authenticate:academy_user_invite') + f'?status={x}'
             response = self.client.get(url)
@@ -221,7 +224,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                          user_invite=user_invites)
 
             self.bc.request.set_headers(academy=model.academy.id)
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
 
             url = reverse_lazy('authenticate:academy_user_invite') + f'?status={first_status},{second_status}'
             response = self.client.get(url)
@@ -252,7 +255,7 @@ class AuthenticateTestSuite(AuthTestCase):
         model = self.generate_models(user=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('authenticate:academy_user_invite')
         response = self.client.delete(url)
@@ -278,7 +281,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                      user_invite=user_invites)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('authenticate:academy_user_invite') + '?id=1,2'
         response = self.client.delete(url)
@@ -301,7 +304,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                      profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('authenticate:academy_user_invite')
 
@@ -329,7 +332,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                      profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('authenticate:academy_user_invite') + '?id=1'
 

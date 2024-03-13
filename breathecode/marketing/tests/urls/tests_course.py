@@ -16,9 +16,11 @@ def course_translation_serializer(course_translation):
     return {
         'course_modules': course_translation.course_modules,
         'description': course_translation.description,
+        'short_description': course_translation.short_description,
         'lang': course_translation.lang,
         'title': course_translation.title,
         'landing_url': course_translation.landing_url,
+        'video_url': course_translation.video_url,
     }
 
 

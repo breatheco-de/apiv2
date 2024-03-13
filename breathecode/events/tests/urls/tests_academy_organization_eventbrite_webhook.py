@@ -1,6 +1,7 @@
 from django.urls.base import reverse_lazy
-from ..mixins.new_events_tests_case import EventTestCase
 from django.utils import timezone
+
+from ..mixins.new_events_tests_case import EventTestCase
 
 
 class AcademyEventbriteWebhookTestSuite(EventTestCase):
@@ -34,7 +35,7 @@ class AcademyEventbriteWebhookTestSuite(EventTestCase):
                                         capability='read_organization',
                                         role='potato',
                                         cohort=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         response = self.client.get(url)
         json = response.json()
         expected = {'detail': 'organization-no-found', 'status_code': 400}
@@ -51,7 +52,7 @@ class AcademyEventbriteWebhookTestSuite(EventTestCase):
                                         capability='read_organization',
                                         role='potato',
                                         cohort=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         response = self.client.get(url)
         json = response.json()
         expected = {
@@ -75,7 +76,7 @@ class AcademyEventbriteWebhookTestSuite(EventTestCase):
                                         role='potato',
                                         cohort=1)
         end = timezone.now()
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         response = self.client.get(url)
         json = response.json()
 

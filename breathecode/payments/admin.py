@@ -1,17 +1,43 @@
+from django import forms
 from django.contrib import admin
-from breathecode.payments import signals, tasks
 from django.db.models import Q
 from django.utils import timezone
-from django import forms
 
-from breathecode.payments.models import (Bag, CohortSet, CohortSetCohort, CohortSetTranslation, Consumable,
-                                         ConsumptionSession, Currency, EventTypeSet, EventTypeSetTranslation,
-                                         FinancialReputation, FinancingOption, Invoice, MentorshipServiceSet,
-                                         MentorshipServiceSetTranslation, PaymentContact, Plan, PlanFinancing,
-                                         PlanOffer, PlanOfferTranslation, PlanServiceItem,
-                                         PlanServiceItemHandler, PlanTranslation, Service, ServiceItem,
-                                         ServiceItemFeature, ServiceStockScheduler, ServiceTranslation,
-                                         Subscription, SubscriptionServiceItem, AcademyService)
+from breathecode.payments import signals, tasks
+from breathecode.payments.models import (
+    AcademyService,
+    Bag,
+    CohortSet,
+    CohortSetCohort,
+    CohortSetTranslation,
+    Consumable,
+    ConsumptionSession,
+    Currency,
+    EventTypeSet,
+    EventTypeSetTranslation,
+    FinancialReputation,
+    FinancingOption,
+    Invoice,
+    MentorshipServiceSet,
+    MentorshipServiceSetTranslation,
+    PaymentContact,
+    Plan,
+    PlanFinancing,
+    PlanOffer,
+    PlanOfferTranslation,
+    PlanServiceItem,
+    PlanServiceItemHandler,
+    PlanTranslation,
+    Service,
+    ServiceItem,
+    ServiceItemFeature,
+    ServiceSet,
+    ServiceSetTranslation,
+    ServiceStockScheduler,
+    ServiceTranslation,
+    Subscription,
+    SubscriptionServiceItem,
+)
 
 # Register your models here.
 
@@ -85,7 +111,7 @@ def grant_service_permissions(modeladmin, request, queryset):
 @admin.register(Consumable)
 class ConsumableAdmin(admin.ModelAdmin):
     list_display = ('id', 'unit_type', 'how_many', 'service_item', 'user', 'valid_until')
-    list_filter = ['unit_type', 'app_service__app__slug', 'service_item__service__slug']
+    list_filter = ['unit_type', 'service_item__service__slug']
     search_fields = ['service_item__service__slug']
     raw_id_fields = ['user', 'service_item', 'cohort_set', 'event_type_set', 'mentorship_service_set']
     actions = [grant_service_permissions]
@@ -183,6 +209,13 @@ class MentorshipServiceSetAdmin(admin.ModelAdmin):
     search_fields = ['slug', 'academy__slug', 'academy__name']
 
 
+@admin.register(ServiceSet)
+class ServiceSetAdmin(admin.ModelAdmin):
+    list_display = ('id', 'slug', 'academy')
+    list_filter = ['academy__slug']
+    search_fields = ['slug', 'academy__slug', 'academy__name']
+
+
 @admin.register(CohortSetCohort)
 class CohortSetCohortAdmin(admin.ModelAdmin):
     list_display = ('id', 'cohort_set', 'cohort')
@@ -194,6 +227,13 @@ class CohortSetCohortAdmin(admin.ModelAdmin):
 @admin.register(MentorshipServiceSetTranslation)
 class MentorshipServiceSetTranslationAdmin(admin.ModelAdmin):
     list_display = ('id', 'mentorship_service_set', 'lang', 'title', 'description', 'short_description')
+    list_filter = ['lang']
+    search_fields = ['slug', 'academy__slug', 'academy__name']
+
+
+@admin.register(ServiceSetTranslation)
+class ServiceSetTranslationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'service_set', 'lang', 'title', 'description', 'short_description')
     list_filter = ['lang']
     search_fields = ['slug', 'academy__slug', 'academy__name']
 

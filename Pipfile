@@ -5,6 +5,8 @@ verify_ssl = true
 
 [scripts]
 start="python manage.py runserver 0.0.0.0:8000"
+wsgi="gunicorn breathecode.wsgi --worker-class gevent"
+asgi="gunicorn breathecode.asgi --worker-class uvicorn.workers.UvicornWorker"
 format="pre-commit run --all-files"
 migrate="python manage.py migrate"
 makemigrations="python manage.py makemigrations"
@@ -50,9 +52,10 @@ mccabe = "*"
 pep8-naming = "*"
 flake8-bugbear = "*"
 pytest-gevent = "*"
+pytest-asyncio = "*"
 
 [packages]
-django = "~=5.0.1"
+django = "~=5.0.2"
 djangorestframework = "~=3.14.0"
 serpy = "*"
 gunicorn = "*"
@@ -111,7 +114,6 @@ sqlalchemy-bigquery = { extras = ["bqstorage"]}
 drf-yasg = "*"
 google-cloud-firestore = "*"
 gevent = "*"
-django-storages = {extras = ["google"] }
 newrelic = "*"
 graphene-django = "*"
 graphene-django-optimizer = "*"
@@ -125,8 +127,11 @@ circuitbreaker = "*"
 kombu = "*"
 zstandard = "*"
 psycopg = {extras = ["pool", "binary"], version = "*"}
-cryptography = "~=41.0.7"
+cryptography = "*"
 adrf = "*"
 uvicorn = "*"
 django-minify-html = "*"
-aiohttp = "*"
+django-storages = {extras = ["google"], version = "*"}
+aiohttp = {extras = ["speedups"], version = "*"}
+aiodns = "*"
+eventlet = "*"

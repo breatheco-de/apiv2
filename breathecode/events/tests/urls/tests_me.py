@@ -1,11 +1,12 @@
 import re
 from datetime import datetime
-
-from breathecode.events.caches import EventCache
-from django.urls.base import reverse_lazy
 from unittest.mock import MagicMock, call, patch
 
+from django.urls.base import reverse_lazy
+
+from breathecode.events.caches import EventCache
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
+
 from ..mixins.new_events_tests_case import EventTestCase
 
 
@@ -81,6 +82,7 @@ def get_serializer(self,
 
     return {
         'academy': academy_serialized,
+        'asset': None,
         'author': {
             'id': user.id,
             'first_name': user.first_name,
@@ -167,7 +169,7 @@ class AcademyEventTestSuite(EventTestCase):
         url = reverse_lazy('events:me')
 
         model = self.bc.database.create(user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         response = self.client.get(url)
         json = response.json()
@@ -183,7 +185,7 @@ class AcademyEventTestSuite(EventTestCase):
         url = reverse_lazy('events:me')
 
         model = self.bc.database.create(user=1, event=1, event_type={'icon_url': 'https://www.google.com'})
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         response = self.client.get(url)
         json = response.json()
@@ -221,7 +223,7 @@ class AcademyEventTestSuite(EventTestCase):
                                         cohort=cohort,
                                         cohort_user=1,
                                         event_type_visibility_setting=event_type_visibility_setting)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         response = self.client.get(url)
         json = response.json()
@@ -276,7 +278,7 @@ class AcademyEventTestSuite(EventTestCase):
                                             cohort=cohort,
                                             cohort_user=1,
                                             event_type_visibility_setting=event_type_visibility_setting)
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
 
             response = self.client.get(url)
             json = response.json()
@@ -319,7 +321,7 @@ class AcademyEventTestSuite(EventTestCase):
                                         cohort=(2, cohort),
                                         cohort_user=1,
                                         event_type_visibility_setting=event_type_visibility_setting)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         response = self.client.get(url)
         json = response.json()
@@ -374,7 +376,7 @@ class AcademyEventTestSuite(EventTestCase):
                                             cohort=cohort,
                                             cohort_user=1,
                                             event_type_visibility_setting=event_type_visibility_setting)
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
 
             response = self.client.get(url)
             json = response.json()
@@ -416,7 +418,7 @@ class AcademyEventTestSuite(EventTestCase):
                                         syllabus=2,
                                         syllabus_version=1,
                                         event_type_visibility_setting=event_type_visibility_setting)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         response = self.client.get(url)
         json = response.json()
@@ -476,7 +478,7 @@ class AcademyEventTestSuite(EventTestCase):
                                             profile_translation=2,
                                             event_type_visibility_setting=event_type_visibility_setting)
 
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
 
             response = self.client.get(url)
             json = response.json()
@@ -546,7 +548,7 @@ class AcademyEventTestSuite(EventTestCase):
                                             syllabus_version=1,
                                             event_type_visibility_setting=event_type_visibility_setting)
 
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
 
             response = self.client.get(url)
             json = response.json()

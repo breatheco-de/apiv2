@@ -3,18 +3,18 @@ This file contains test over AcademyInviteView, if it change, the duck tests wil
 """
 import os
 import re
+from datetime import timedelta
 from unittest.mock import MagicMock, patch
+
 from django.urls.base import reverse_lazy
-from rest_framework import status
-from ..mixins.new_auth_test_case import AuthTestCase
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 
-from breathecode.utils import capable_of
 from breathecode.tests.mocks import apply_requests_post_mock
+from breathecode.utils import capable_of
 
-from datetime import timedelta
-from django.utils import timezone
+from ..mixins.new_auth_test_case import AuthTestCase
 
 
 @capable_of('invite_resend')
@@ -116,7 +116,7 @@ class MemberGetDuckTestSuite(AuthTestCase):
                                         } for id in range(1, 4)])
 
         for n in range(1, 4):
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
             self.bc.request.set_headers(academy=1)
 
             url = reverse_lazy('authenticate:member_invite_resend_id', kwargs={'invite_id': n})
@@ -193,7 +193,7 @@ class MemberPutDuckTestSuite(AuthTestCase):
                                         } for id in range(1, 4)])
 
         for n in range(1, 4):
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
             self.bc.request.set_headers(academy=1)
 
             url = reverse_lazy('authenticate:member_invite_resend_id', kwargs={'invite_id': n})

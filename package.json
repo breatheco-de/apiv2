@@ -1,0 +1,16 @@
+{
+  "name": "apiv2",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^20.11.8"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "elysia": "^0.8.14",
+    "lit-ssr-utils": "0.2.5"
+  }
+}

@@ -1,18 +1,20 @@
-from datetime import timedelta
 import os
-from breathecode.authenticate.models import Token
-from breathecode.utils import ValidationException
+from datetime import timedelta
+
 from celery import shared_task
-from django.utils import timezone
-from breathecode.notify import actions as notify_actions
-from breathecode.utils.decorators.task import TaskPriority
-from .utils import strings
-from breathecode.utils import getLogger
-from breathecode.admissions.models import CohortUser, Cohort
 from django.contrib.auth.models import User
-from .models import Survey, Answer
+from django.utils import timezone
+
+from breathecode.admissions.models import Cohort, CohortUser
+from breathecode.authenticate.models import Token
 from breathecode.mentorship.models import MentorshipSession
+from breathecode.notify import actions as notify_actions
+from breathecode.utils import ValidationException, getLogger
+from breathecode.utils.decorators.task import TaskPriority
+
 from . import actions
+from .models import Answer, Survey
+from .utils import strings
 
 # Get an instance of a logger
 logger = getLogger(__name__)
@@ -182,11 +184,14 @@ def send_cohort_survey(self, user_id, survey_id):
     }
 
     if user.email:
-
-        notify_actions.send_email_message('nps_survey', user.email, data)
+        notify_actions.send_email_message('nps_survey', user.email, data, academy=survey.cohort.academy)
 
     if hasattr(user, 'slackuser') and hasattr(survey.cohort.academy, 'slackteam'):
-        notify_actions.send_slack('nps_survey', user.slackuser, survey.cohort.academy.slackteam, data=data)
+        notify_actions.send_slack('nps_survey',
+                                  user.slackuser,
+                                  survey.cohort.academy.slackteam,
+                                  data=data,
+                                  academy=survey.cohort.academy)
 
 
 @shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
@@ -271,8 +276,9 @@ def process_answer_received(self, answer_id):
                     'SCORE': answer.score,
                     'COMMENTS': answer.comment,
                     'ACADEMY': answer.academy.name,
-                    'LINK': f'{admin_url}/feedback/surveys/{answer.academy.slug}/{answer.survey.id}'
-                })
+                    'LINK': f'{admin_url}/feedback/surveys/{answer.academy.slug}/{answer.survey.id}',
+                },
+                academy=answer.academy)
 
     return True
 
@@ -339,6 +345,9 @@ def send_mentorship_session_survey(self, session_id):
     }
 
     if session.mentee.email:
-        if notify_actions.send_email_message('nps_survey', session.mentee.email, data):
+        if notify_actions.send_email_message('nps_survey',
+                                             session.mentee.email,
+                                             data,
+                                             academy=session.mentor.academy):
             answer.sent_at = timezone.now()
             answer.save()

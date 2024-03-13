@@ -1,8 +1,7 @@
 import datetime
 import os
-from typing import Any
+from typing import Any, Optional
 
-from aiohttp_retry import Optional
 from django.db.models import Avg, Count, Sum
 from google.api_core.client_options import ClientOptions
 from google.auth.credentials import AnonymousCredentials
@@ -91,10 +90,11 @@ class BigQuerySet():
         if self._table_ref:
             return self._table_ref
 
-        table_ref = f'{self.project_id}.{self.dataset}'
+        table_ref = f'{self.dataset}.{self.table}'
 
         # Fetch the schema of the table
         table = self.client.get_table(table_ref)
+        # self.client.
         self._table_ref = table
         return self._table_ref
 
@@ -388,7 +388,7 @@ class BigQuery(metaclass=BigQueryMeta):
         return engine.connect()
 
     @classmethod
-    def client(cls) -> tuple[bigquery.Client, str]:
+    def client(cls) -> tuple[bigquery.Client, str, str]:
         """Get a BigQuery client instance and project id."""
 
         global client

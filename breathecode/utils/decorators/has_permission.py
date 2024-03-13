@@ -1,16 +1,17 @@
-from datetime import datetime, timedelta
+import os
 import logging
 import traceback
+from datetime import datetime, timedelta
 from typing import Callable, Optional, TypedDict
 
 from django.contrib.auth.models import AnonymousUser
 from django.core.handlers.wsgi import WSGIRequest
-from django.db.models import QuerySet
-from django.utils import timezone
-from rest_framework.views import APIView
-from django.db.models import Sum
-from django.shortcuts import render
+from django.db.models import QuerySet, Sum
 from django.http import JsonResponse
+from django.shortcuts import render
+from django.utils import timezone
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from breathecode.authenticate.models import Permission, User
 from breathecode.payments.signals import consume_service
@@ -18,7 +19,6 @@ from breathecode.payments.signals import consume_service
 from ..exceptions import ProgrammingError
 from ..payment_exception import PaymentException
 from ..validation_exception import ValidationException
-from rest_framework.response import Response
 
 __all__ = ['has_permission', 'validate_permission', 'HasPermissionCallback', 'PermissionContextType']
 
@@ -51,11 +51,36 @@ def validate_permission(user: User, permission: str, consumer: bool | HasPermiss
     return found.user_set.filter(id=user.id).exists() or found.group_set.filter(user__id=user.id).exists()
 
 
-def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', data=None, status=None):
+def render_message(r,
+                   msg,
+                   btn_label=None,
+                   btn_url=None,
+                   btn_target='_blank',
+                   data=None,
+                   status=None,
+                   go_back=None,
+                   url_back=None,
+                   academy=None):
     if data is None:
         data = {}
 
-    _data = {'MESSAGE': msg, 'BUTTON': btn_label, 'BUTTON_TARGET': btn_target, 'LINK': btn_url}
+    _data = {
+        'MESSAGE': msg,
+        'BUTTON': btn_label,
+        'BUTTON_TARGET': btn_target,
+        'LINK': btn_url,
+        'GO_BACK': go_back,
+        'URL_BACK': url_back
+    }
+
+    if academy:
+        _data['COMPANY_INFO_EMAIL'] = academy.feedback_email
+        _data['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
+        _data['COMPANY_LOGO'] = academy.logo_url
+        _data['COMPANY_NAME'] = academy.name
+
+        if 'heading' not in _data:
+            _data['heading'] = academy.name
 
     return render(r, 'message.html', {**_data, **data}, status=status)
 
@@ -63,7 +88,7 @@ def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', da
 def has_permission(permission: str,
                    consumer: bool | HasPermissionCallback = False,
                    format='json') -> callable:
-    """This decorator check if the current user can access to the resource through of permissions"""
+    """Check if the current user can access to the resource through of permissions."""
 
     from breathecode.payments.models import Consumable, ConsumptionSession
 
@@ -180,7 +205,98 @@ def has_permission(permission: str,
                     raise e
 
                 if format == 'html':
-                    return render_message(request, str(e), status=402)
+                    from breathecode.events.models import Event
+                    from breathecode.payments.models import PlanFinancing, PlanOffer, Subscription
+
+                    token = None
+                    if 'token' in kwargs and kwargs['token'] is not None:
+                        token = kwargs['token'].key
+
+                    service = None
+
+                    if 'service_slug' in kwargs:
+                        service = kwargs['service_slug']
+
+                    if 'event_id' in kwargs:
+                        event_id = kwargs['event_id']
+                        event = Event.objects.filter(id=event_id).first()
+                        if event is not None:
+                            service = event.event_type.slug
+
+                    if 'event' in kwargs:
+                        event = kwargs['event']
+                        service = event.event_type.slug
+
+                    if 'mentorship_service' in kwargs:
+                        service = kwargs['mentorship_service'].slug
+
+                    renovate_consumables = {}
+                    subscription = None
+                    plan_financing = None
+                    mentorship_service_set = None
+                    event_type_set = None
+                    plan_offer = None
+                    user_plan = None
+
+                    if permission == 'join_mentorship':
+                        subscription = Subscription.objects.filter(
+                            user=request.user,
+                            selected_mentorship_service_set__mentorship_services__slug=service).first()
+                        if subscription is not None:
+                            mentorship_service_set = subscription.selected_mentorship_service_set.slug
+                            user_plan = subscription.plans.first()
+                    elif permission == 'event_join':
+                        subscription = Subscription.objects.filter(
+                            user=request.user, selected_event_type_set__event_types__slug=service).first()
+                        if subscription is not None:
+                            event_type_set = subscription.selected_event_type_set.slug
+                            user_plan = subscription.plans.first()
+
+                    if subscription is None:
+                        if permission == 'join_mentorship':
+                            plan_financing = PlanFinancing.objects.filter(
+                                user=request.user,
+                                selected_mentorship_service_set__mentorship_services__slug=service).first()
+                            if plan_financing is not None:
+                                mentorship_service_set = plan_financing.selected_mentorship_service_set.slug
+                                user_plan = plan_financing.plans.first()
+                        elif permission == 'event_join':
+                            plan_financing = PlanFinancing.objects.filter(
+                                user=request.user,
+                                selected_event_type_set__event_types__slug=service).first()
+                            if plan_financing is not None:
+                                event_type_set = plan_financing.selected_event_type_set.slug
+                                user_plan = plan_financing.plans.first()
+
+                    if user_plan:
+                        plan_offer = PlanOffer.objects.filter(original_plan__slug=user_plan.slug).first()
+
+                    if plan_offer is not None:
+                        renovate_consumables['btn_label'] = 'Get more consumables'
+                        renovate_consumables[
+                            'btn_url'] = f'https://4geeks.com/checkout?plan={plan_offer.suggested_plan.slug}&token={token}'
+                    elif subscription is not None or plan_financing is not None:
+                        renovate_consumables['btn_label'] = 'Get more consumables'
+                        if permission == 'join_mentorship':
+                            renovate_consumables[
+                                'btn_url'] = f'https://4geeks.com/checkout?mentorship_service_set={mentorship_service_set}&token={token}'
+                        elif permission == 'event_join':
+                            renovate_consumables[
+                                'btn_url'] = f'https://4geeks.com/checkout?event_type_set={event_type_set}&token={token}'
+                    else:
+                        if permission == 'join_mentorship' or permission == 'event_join':
+                            e = 'You must get a plan in order to access this service'
+                            renovate_consumables['btn_label'] = 'Get a plan'
+                            plan = os.getenv('BASE_PLAN', 'basic')
+                            renovate_consumables[
+                                'btn_url'] = f'https://4geeks.com/checkout?plan={plan}&token={token}'
+
+                    return render_message(request,
+                                          str(e),
+                                          status=402,
+                                          go_back='Go back to Dashboard',
+                                          url_back='https://4geeks.com/choose-program',
+                                          **renovate_consumables)
 
                 return Response({'detail': str(e), 'status_code': 402}, 402)
 

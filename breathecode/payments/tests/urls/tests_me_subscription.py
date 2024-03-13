@@ -1,15 +1,16 @@
-from datetime import timedelta
 import math
 import random
+from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
-import pytest
 
+import pytest
 from django.urls import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
 
-from django.utils import timezone
-from ..mixins import PaymentsTestCase
 import breathecode.activity.tasks as activity_tasks
+
+from ..mixins import PaymentsTestCase
 
 UTC_NOW = timezone.now()
 
@@ -330,11 +331,11 @@ class SignalTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__without_items(self):
         model = self.bc.database.create(user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {'plan_financings': [], 'subscriptions': []}
@@ -373,11 +374,11 @@ class SignalTestSuite(PaymentsTestCase):
             plan=(2, plan),
             service_item=2,
         )
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -462,11 +463,11 @@ class SignalTestSuite(PaymentsTestCase):
             plan=(2, plan),
             service_item=2,
         )
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription') + f'?subscription={model.subscription[0].id}'
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -520,11 +521,11 @@ class SignalTestSuite(PaymentsTestCase):
             plan=(2, plan),
             service_item=2,
         )
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription') + f'?plan-financing={model.plan_financing[0].id}'
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -578,12 +579,12 @@ class SignalTestSuite(PaymentsTestCase):
             plan=(2, plan),
             service_item=2,
         )
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription') + (f'?subscription={model.subscription[0].id}&'
                                                           f'plan-financing={model.plan_financing[0].id}')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -651,11 +652,11 @@ class SignalTestSuite(PaymentsTestCase):
             plan=(2, plan),
             service_item=2,
         )
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -702,12 +703,12 @@ class SignalTestSuite(PaymentsTestCase):
             plan=(2, plan),
             service_item=2,
         )
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription') + (f'?status={chosen_statuses[0]},'
                                                           f'{chosen_statuses[1]}')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -796,11 +797,11 @@ class SignalTestSuite(PaymentsTestCase):
             plan=(2, plan),
             service_item=2,
         )
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription') + (f'?invoice=3,4')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -843,11 +844,11 @@ class SignalTestSuite(PaymentsTestCase):
             plan=(2, plan),
             service_item=2,
         )
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription') + '?invoice=1,2'
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -936,12 +937,12 @@ class SignalTestSuite(PaymentsTestCase):
             plan=(2, plan),
             service_item=2,
         )
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription') + (f'?invoice={random.choice([3, "gangsters-i"])},'
                                                           f'{random.choice([4, "gangsters-ii"])}')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -984,13 +985,13 @@ class SignalTestSuite(PaymentsTestCase):
             plan=(2, plan),
             service_item=2,
         )
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription') + (
             f'?service={random.choice([model.service.id, model.service.slug])},'
             f'{random.choice([model.service.id, model.service.slug])}')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -1079,12 +1080,12 @@ class SignalTestSuite(PaymentsTestCase):
             plan=(2, plan),
             service_item=2,
         )
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription') + (f'?plan={random.choice([3, "gangsters-i"])},'
                                                           f'{random.choice([4, "gangsters-ii"])}')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -1127,13 +1128,13 @@ class SignalTestSuite(PaymentsTestCase):
             plan=(2, plan),
             service_item=2,
         )
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription') + (
             f'?plan={random.choice([model.plan[0].id, model.plan[0].slug])},'
             f'{random.choice([model.plan[1].id, model.plan[1].slug])}')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -1221,13 +1222,13 @@ class SignalTestSuite(PaymentsTestCase):
                                         service_item=2,
                                         cohort_set=2,
                                         academy=academy)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription') + (
             f'?cohort-set-selected={random.choice([1, "slug1"])},'
             f'{random.choice([2, "slug2"])}')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -1277,13 +1278,13 @@ class SignalTestSuite(PaymentsTestCase):
                                         cohort_set=2,
                                         cohort_set_cohort=cohort_set_cohorts,
                                         academy=academy)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription') + (
             f'?cohort-set-selected={random.choice([model.cohort_set[0].id, model.cohort_set[0].slug])},'
             f'{random.choice([model.cohort_set[1].id, model.cohort_set[1].slug])}')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -1379,13 +1380,13 @@ class SignalTestSuite(PaymentsTestCase):
                                         service_item=2,
                                         cohort_set=2,
                                         academy=academy)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription') + (
             f'?cohort-set-selected={random.choice([3, "slug1"])},'
             f'{random.choice([4, "slug2"])}')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -1431,14 +1432,14 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan=(2, plan),
                                         service_item=2,
                                         mentorship_service_set=2)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription') + (
             '?mentorship-service-set-selected='
             f'{random.choice([model.mentorship_service_set[0].id,model.mentorship_service_set[0].slug])},'
             f'{random.choice([model.mentorship_service_set[1].id, model.mentorship_service_set[1].slug])}')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -1530,13 +1531,13 @@ class SignalTestSuite(PaymentsTestCase):
                                         service_item=2,
                                         cohort_set=2,
                                         academy=academy)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription') + (
             f'?event-type-set-selected={random.choice([1, "slug1"])},'
             f'{random.choice([2, "slug2"])}')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {
@@ -1580,14 +1581,14 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan=(2, plan),
                                         service_item=2,
                                         event_type_set=2)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription') + (
             '?event-type-set-selected='
             f'{random.choice([model.event_type_set[0].id,model.event_type_set[0].slug])},'
             f'{random.choice([model.event_type_set[1].id, model.event_type_set[1].slug])}')
         response = self.client.get(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {

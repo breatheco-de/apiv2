@@ -2,15 +2,14 @@
 Test /answer
 """
 import random
-from uuid import uuid4
-from django.utils import timezone
 from unittest.mock import MagicMock, call, patch
+from uuid import uuid4
 
 from django.urls.base import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
 
 from breathecode.services.google_cloud.big_query import BigQuery
-
 from breathecode.utils.attr_dict import AttrDict
 
 from ...mixins import MediaTestCase
@@ -53,7 +52,7 @@ def bigquery_client_mock(self, n=1, user_id=1, kind=None, date_start=None, date_
                 {'AND kind = @kind' if kind else ''}
                 {'AND timestamp >= @date_start' if date_start else ''}
                 {'AND timestamp <= @date_end' if date_end else ''}
-            ORDER BY @order DESC
+            ORDER BY timestamp DESC
             LIMIT @limit
             OFFSET @offset
         """
@@ -77,7 +76,7 @@ class MediaTestSuite(MediaTestCase):
                                         capability='read_activity',
                                         role=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         url = reverse_lazy('v2:activity:academy_activity')
@@ -106,7 +105,7 @@ class MediaTestSuite(MediaTestCase):
                                         capability='read_activity',
                                         role=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         kind = self.bc.fake.slug()

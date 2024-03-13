@@ -1,13 +1,15 @@
 import os
 from unittest.mock import MagicMock, PropertyMock, call, patch
 from uuid import UUID
-from breathecode.events.caches import EventCache
-from django.urls.base import reverse_lazy
 
-from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
-from ..mixins.new_events_tests_case import EventTestCase
-from breathecode.services import datetime_to_iso_format
+from django.urls.base import reverse_lazy
 from django.utils import timezone
+
+from breathecode.events.caches import EventCache
+from breathecode.services import datetime_to_iso_format
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
+
+from ..mixins.new_events_tests_case import EventTestCase
 
 seed = os.urandom(16)
 uuid = UUID(bytes=seed, version=4)
@@ -174,6 +176,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'asset_slug': model['event'].asset_slug,
             'capacity': model['event'].capacity,
             'venue': {
                 'city': model['event'].venue.city,
@@ -240,6 +243,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'asset_slug': model['event'].asset_slug,
             'capacity': model['event'].capacity,
             'venue': {
                 'city': model['event'].venue.city,
@@ -306,6 +310,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'asset_slug': model['event'].asset_slug,
             'capacity': model['event'].capacity,
             'venue': {
                 'city': model['event'].venue.city,
@@ -355,6 +360,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': model['event'].title,
             'url': model['event'].url,
             'host': model['event'].host,
+            'asset_slug': model['event'].asset_slug,
             'capacity': model['event'].capacity,
             'venue': {
                 'city': model['event'].venue.city,
@@ -1279,7 +1285,7 @@ class AcademyEventTestSuite(EventTestCase):
                                          event=(2, event))
 
             self.bc.request.set_headers(academy=model.academy.id)
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
 
             url = reverse_lazy('events:academy_event') + f'?id={",".join([str(x.id) for x in model.event])}'
 
@@ -1344,7 +1350,7 @@ class AcademyEventTestSuite(EventTestCase):
                                      event=events)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('events:academy_event') + f'?id={",".join([str(x.id) for x in model.event])}'
 

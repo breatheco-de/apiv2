@@ -2,6 +2,7 @@
 
 FILE="./general.md"
 CONNECTIONS=2000
+HTTP_CLIENT_CONNECTIONS=700 # how many connections as your computer can handle without breaking the tests
 THREADS=20
 PORT=8000
 HOST="http://localhost:$PORT"
@@ -51,7 +52,7 @@ function sync_bench {
     echo "#### Sync" >> "$FILE"
     echo "" >> "$FILE"
     echo "\`\`\`bash" >> "$FILE"
-    wrk -t "$THREADS" -c "$CONNECTIONS" -d10s "$HOST/myapp/sync/gateway_3s" >> "$FILE"
+    wrk -t "$THREADS" -c "$CONNECTIONS" -d15s "$HOST/myapp/sync/gateway_3s" >> "$FILE"
     echo "\`\`\`" >> "$FILE"
     echo "" >> "$FILE"
 
@@ -61,7 +62,7 @@ function sync_bench {
     echo "#### Sync" >> "$FILE"
     echo "" >> "$FILE"
     echo "\`\`\`bash" >> "$FILE"
-    wrk -t "$THREADS" -c "$CONNECTIONS" -d10s "$HOST/myapp/sync/gateway_10s" >> "$FILE"
+    wrk -t "$THREADS" -c "$CONNECTIONS" -d22s "$HOST/myapp/sync/gateway_10s" >> "$FILE"
     echo "\`\`\`" >> "$FILE"
     echo "" >> "$FILE"
 
@@ -75,11 +76,30 @@ function sync_bench {
     echo "\`\`\`" >> "$FILE"
     echo "" >> "$FILE"
 
+    sleep $SLEEP_TIME
+
+    echo "" >> "$FILE"
+    echo "### Fake redis hit" >> "$FILE"
+    echo "#### Sync" >> "$FILE"
+    echo "" >> "$FILE"
+    echo "\`\`\`bash" >> "$FILE"
+    wrk -t "$THREADS" -c "$CONNECTIONS" -d10s "$HOST/myapp/sync/cache_hit" >> "$FILE"
+    echo "\`\`\`" >> "$FILE"
+    echo "" >> "$FILE"
+
+    echo "### Fake cache set" >> "$FILE"
+    echo "#### Sync" >> "$FILE"
+    echo "" >> "$FILE"
+    echo "\`\`\`bash" >> "$FILE"
+    wrk -t "$THREADS" -c "$CONNECTIONS" -d10s "$HOST/myapp/sync/cache_set" >> "$FILE"
+    echo "\`\`\`" >> "$FILE"
+    echo "" >> "$FILE"
+
     echo "### Requests" >> "$FILE"
     echo "#### Sync" >> "$FILE"
     echo "" >> "$FILE"
     echo "\`\`\`bash" >> "$FILE"
-    wrk -t "$THREADS" -c "$CONNECTIONS" -d10s "$HOST/myapp/sync/requests" >> "$FILE"
+    wrk -t "$THREADS" -c "$HTTP_CLIENT_CONNECTIONS" -d10s "$HOST/myapp/sync/requests" >> "$FILE"
     echo "\`\`\`" >> "$FILE"
     echo "" >> "$FILE"
 
@@ -89,7 +109,7 @@ function sync_bench {
     echo "#### Sync" >> "$FILE"
     echo "" >> "$FILE"
     echo "\`\`\`bash" >> "$FILE"
-    wrk -t "$THREADS" -c "$CONNECTIONS" -d10s "$HOST/myapp/sync/httpx" >> "$FILE"
+    wrk -t "$THREADS" -c "$HTTP_CLIENT_CONNECTIONS" -d10s "$HOST/myapp/sync/httpx" >> "$FILE"
     echo "\`\`\`" >> "$FILE"
     echo "" >> "$FILE"
 }
@@ -161,13 +181,13 @@ function bench {
     echo "#### Sync" >> "$FILE"
     echo "" >> "$FILE"
     echo "\`\`\`bash" >> "$FILE"
-    wrk -t "$THREADS" -c "$CONNECTIONS" -d10s "$HOST/myapp/sync/gateway_3s" >> "$FILE"
+    wrk -t "$THREADS" -c "$CONNECTIONS" -d15s "$HOST/myapp/sync/gateway_3s" >> "$FILE"
     echo "\`\`\`" >> "$FILE"
     echo "" >> "$FILE"
     echo "#### Async" >> "$FILE"
     echo "" >> "$FILE"
     echo "\`\`\`bash" >> "$FILE"
-    wrk -t "$THREADS" -c "$CONNECTIONS" -d10s "$HOST/myapp/async/gateway_3s" >> "$FILE"
+    wrk -t "$THREADS" -c "$CONNECTIONS" -d15s "$HOST/myapp/async/gateway_3s" >> "$FILE"
     echo "\`\`\`" >> "$FILE"
     echo "" >> "$FILE"
 
@@ -177,13 +197,13 @@ function bench {
     echo "#### Sync" >> "$FILE"
     echo "" >> "$FILE"
     echo "\`\`\`bash" >> "$FILE"
-    wrk -t "$THREADS" -c "$CONNECTIONS" -d10s "$HOST/myapp/sync/gateway_10s" >> "$FILE"
+    wrk -t "$THREADS" -c "$CONNECTIONS" -d22s "$HOST/myapp/sync/gateway_10s" >> "$FILE"
     echo "\`\`\`" >> "$FILE"
     echo "" >> "$FILE"
     echo "#### Async" >> "$FILE"
     echo "" >> "$FILE"
     echo "\`\`\`bash" >> "$FILE"
-    wrk -t "$THREADS" -c "$CONNECTIONS" -d10s "$HOST/myapp/async/gateway_10s" >> "$FILE"
+    wrk -t "$THREADS" -c "$CONNECTIONS" -d22s "$HOST/myapp/async/gateway_10s" >> "$FILE"
     echo "\`\`\`" >> "$FILE"
     echo "" >> "$FILE"
 
@@ -203,17 +223,48 @@ function bench {
     echo "\`\`\`" >> "$FILE"
     echo "" >> "$FILE"
 
-    echo "### Requests" >> "$FILE"
+    sleep $SLEEP_TIME
+
+    echo "" >> "$FILE"
+    echo "### Fake redis hit" >> "$FILE"
     echo "#### Sync" >> "$FILE"
     echo "" >> "$FILE"
     echo "\`\`\`bash" >> "$FILE"
-    wrk -t "$THREADS" -c "$CONNECTIONS" -d10s "$HOST/myapp/sync/requests" >> "$FILE"
+    wrk -t "$THREADS" -c "$CONNECTIONS" -d10s "$HOST/myapp/sync/cache_hit" >> "$FILE"
     echo "\`\`\`" >> "$FILE"
     echo "" >> "$FILE"
     echo "#### Async" >> "$FILE"
     echo "" >> "$FILE"
     echo "\`\`\`bash" >> "$FILE"
-    wrk -t "$THREADS" -c "$CONNECTIONS" -d10s "$HOST/myapp/async/requests" >> "$FILE"
+    wrk -t "$THREADS" -c "$CONNECTIONS" -d10s "$HOST/myapp/async/cache_hit" >> "$FILE"
+    echo "\`\`\`" >> "$FILE"
+    echo "" >> "$FILE"
+
+    echo "### Fake cache set" >> "$FILE"
+    echo "#### Sync" >> "$FILE"
+    echo "" >> "$FILE"
+    echo "\`\`\`bash" >> "$FILE"
+    wrk -t "$THREADS" -c "$CONNECTIONS" -d10s "$HOST/myapp/sync/cache_set" >> "$FILE"
+    echo "\`\`\`" >> "$FILE"
+    echo "" >> "$FILE"
+    echo "#### Async" >> "$FILE"
+    echo "" >> "$FILE"
+    echo "\`\`\`bash" >> "$FILE"
+    wrk -t "$THREADS" -c "$CONNECTIONS" -d10s "$HOST/myapp/async/cache_set" >> "$FILE"
+    echo "\`\`\`" >> "$FILE"
+    echo "" >> "$FILE"
+
+    echo "### Requests" >> "$FILE"
+    echo "#### Sync" >> "$FILE"
+    echo "" >> "$FILE"
+    echo "\`\`\`bash" >> "$FILE"
+    wrk -t "$THREADS" -c "$HTTP_CLIENT_CONNECTIONS" -d10s "$HOST/myapp/sync/requests" >> "$FILE"
+    echo "\`\`\`" >> "$FILE"
+    echo "" >> "$FILE"
+    echo "#### Async" >> "$FILE"
+    echo "" >> "$FILE"
+    echo "\`\`\`bash" >> "$FILE"
+    wrk -t "$THREADS" -c "$HTTP_CLIENT_CONNECTIONS" -d10s "$HOST/myapp/async/requests" >> "$FILE"
     echo "\`\`\`" >> "$FILE"
     echo "" >> "$FILE"
 
@@ -223,13 +274,13 @@ function bench {
     echo "#### Sync" >> "$FILE"
     echo "" >> "$FILE"
     echo "\`\`\`bash" >> "$FILE"
-    wrk -t "$THREADS" -c "$CONNECTIONS" -d10s "$HOST/myapp/sync/httpx" >> "$FILE"
+    wrk -t "$THREADS" -c "$HTTP_CLIENT_CONNECTIONS" -d10s "$HOST/myapp/sync/httpx" >> "$FILE"
     echo "\`\`\`" >> "$FILE"
     echo "" >> "$FILE"
     echo "#### Async" >> "$FILE"
     echo "" >> "$FILE"
     echo "\`\`\`bash" >> "$FILE"
-    wrk -t "$THREADS" -c "$CONNECTIONS" -d10s "$HOST/myapp/async/httpx" >> "$FILE"
+    wrk -t "$THREADS" -c "$HTTP_CLIENT_CONNECTIONS" -d10s "$HOST/myapp/async/httpx" >> "$FILE"
     echo "\`\`\`" >> "$FILE"
     echo "" >> "$FILE"
 
@@ -239,7 +290,7 @@ function bench {
     echo "#### Async" >> "$FILE"
     echo "" >> "$FILE"
     echo "\`\`\`bash" >> "$FILE"
-    wrk -t "$THREADS" -c "$CONNECTIONS" -d10s "$HOST/myapp/async/aiohttp" >> "$FILE"
+    wrk -t "$THREADS" -c "$HTTP_CLIENT_CONNECTIONS" -d10s "$HOST/myapp/async/aiohttp" >> "$FILE"
     echo "\`\`\`" >> "$FILE"
     echo "" >> "$FILE"
 }
@@ -270,6 +321,24 @@ sudo fuser -k $PORT/tcp
 hypercorn mysite.asgi:application -b 127.0.0.1:$PORT -w $THREADS --read-timeout $TIMEOUT -k uvloop & echo "starting server..."
 sleep $SLEEP_TIME
 echo "## ASGI Hypercorn Uvloop" >> $FILE
+bench
+
+sudo fuser -k $PORT/tcp
+granian --interface asgi mysite.asgi:application --port $PORT --workers $THREADS --loop asyncio & echo "starting server..."
+sleep $SLEEP_TIME
+echo "## Granian Asyncio" >> $FILE
+bench
+
+sudo fuser -k $PORT/tcp
+granian --interface asgi mysite.asgi:application --port $PORT --workers $THREADS --loop uvloop & echo "starting server..."
+sleep $SLEEP_TIME
+echo "## Granian uvloop" >> $FILE
+bench
+
+sudo fuser -k $PORT/tcp
+daphne mysite.asgi:application -p $PORT -t $TIMEOUT & echo "starting server..."
+sleep $SLEEP_TIME
+echo "## Daphne" >> $FILE
 bench
 
 sudo fuser -k $PORT/tcp

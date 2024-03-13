@@ -1,12 +1,14 @@
 import os
+from unittest.mock import MagicMock, PropertyMock, call, patch
 from uuid import UUID
-from breathecode.events.caches import EventCache
+
 from django.urls.base import reverse_lazy
 
-from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
-from ..mixins.new_events_tests_case import EventTestCase
+from breathecode.events.caches import EventCache
 from breathecode.services import datetime_to_iso_format
-from unittest.mock import MagicMock, PropertyMock, call, patch
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
+
+from ..mixins.new_events_tests_case import EventTestCase
 
 
 def user_serializer(user):
@@ -142,12 +144,13 @@ class AcademyEventIdTestSuite(EventTestCase):
                                      profile_academy=True,
                                      capability='crud_event',
                                      role='potato2',
+                                     event_type=1,
                                      event=True)
 
         url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
         data = {}
 
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
         json = response.json()
         expected = {'detail': 'organization-not-exist', 'status_code': 400}
 
@@ -167,6 +170,7 @@ class AcademyEventIdTestSuite(EventTestCase):
                                      profile_academy=True,
                                      capability='crud_event',
                                      role='potato2',
+                                     event_type=1,
                                      event=True)
 
         url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
@@ -175,7 +179,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             'id': 1,
         }
 
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
         json = response.json()
 
         expected = {
@@ -657,6 +661,7 @@ class AcademyEventIdTestSuite(EventTestCase):
                                      }),
                                      capability='crud_event',
                                      role='potato2',
+                                     event_type=1,
                                      event=True)
 
         url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})

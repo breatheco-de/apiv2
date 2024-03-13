@@ -1,13 +1,24 @@
 from unittest.mock import MagicMock, patch
-from django.urls.base import reverse_lazy
+
 from django.template import loader
+from django.urls.base import reverse_lazy
+
 from ..mixins.new_events_tests_case import EventTestCase
 
 
 # IMPORTANT: the loader.render_to_string in a function is inside of function render
-def render_message(message):
+def render_message(message, academy=None):
     request = None
     context = {'MESSAGE': message, 'BUTTON': None, 'BUTTON_TARGET': '_blank', 'LINK': None}
+
+    if academy:
+        context['COMPANY_INFO_EMAIL'] = academy.feedback_email
+        context['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
+        context['COMPANY_LOGO'] = academy.logo_url
+        context['COMPANY_NAME'] = academy.name
+
+        if 'heading' not in context:
+            context['heading'] = academy.name
 
     return loader.render_to_string('message.html', context, request)
 
@@ -39,7 +50,7 @@ class AcademyVenueTestSuite(EventTestCase):
         url = reverse_lazy('events:academy_event_liveclass_join_hash', kwargs={'hash': '1234'})
         model = self.bc.database.create(user=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         response = self.client.get(url)
         json = response.json()
@@ -64,7 +75,7 @@ class AcademyVenueTestSuite(EventTestCase):
                                         capability='start_or_end_class',
                                         role='potato')
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         response = self.client.get(url)
         json = response.json()
@@ -88,12 +99,12 @@ class AcademyVenueTestSuite(EventTestCase):
                                         cohort=1,
                                         cohort_user=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('events:academy_event_liveclass_join_hash', kwargs={'hash': model.live_class.hash})
 
         response = self.client.get(url)
         content = self.bc.format.from_bytes(response.content)
-        expected = render_message('no-meeting-url')
+        expected = render_message('no-meeting-url', academy=model.academy)
 
         # dump error in external files
         if content != expected:
@@ -125,7 +136,7 @@ class AcademyVenueTestSuite(EventTestCase):
                                         cohort=cohort,
                                         cohort_user=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
         url = reverse_lazy('events:academy_event_liveclass_join_hash', kwargs={'hash': model.live_class.hash})
 
         response = self.client.get(url)

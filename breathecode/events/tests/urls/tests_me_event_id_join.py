@@ -1,15 +1,17 @@
-from datetime import datetime, timedelta
 import os
 import random
+from datetime import datetime, timedelta
 from unittest.mock import MagicMock, call, patch
-from breathecode.events.caches import EventCache
-from django.urls.base import reverse_lazy
-from django.template import loader
 
-from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
-from ..mixins.new_events_tests_case import EventTestCase
+from django.template import loader
+from django.urls.base import reverse_lazy
 from django.utils import timezone
+
+from breathecode.events.caches import EventCache
 from breathecode.payments import tasks
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
+
+from ..mixins.new_events_tests_case import EventTestCase
 
 UTC_NOW = timezone.now()
 
@@ -57,9 +59,9 @@ def event_checkin_serializer(id, event, user):
 
 
 # IMPORTANT: the loader.render_to_string in a function is inside of function render
-def render_message(message):
+def render_message(message, data={}):
     request = None
-    context = {'MESSAGE': message, 'BUTTON': None, 'BUTTON_TARGET': '_blank', 'LINK': None}
+    context = {'MESSAGE': message, 'BUTTON': None, 'BUTTON_TARGET': '_blank', 'LINK': None, **data}
 
     return loader.render_to_string('message.html', context, request)
 
@@ -75,12 +77,18 @@ def serializer(event):
 
 
 # IMPORTANT: the loader.render_to_string in a function is inside of function render
-def render_countdown(event, token):
+def render_countdown(event, token, academy=None):
     request = None
     context = {
         'event': serializer(event),
         'token': token.key,
     }
+
+    if academy:
+        context['COMPANY_INFO_EMAIL'] = academy.feedback_email
+        context['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
+        context['COMPANY_LOGO'] = academy.logo_url
+        context['COMPANY_NAME'] = academy.name
 
     return loader.render_to_string('countdown.html', context, request)
 
@@ -122,15 +130,33 @@ class AcademyEventTestSuite(EventTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables(self):
-        model = self.bc.database.create(user=1, token=1)
+        event_type_model = model = self.bc.database.create(event_type_set=1)
+        model = self.bc.database.create(
+            user=1,
+            token=1,
+            plan={
+                'is_renewable': False,
+                'event_type_set': event_type_model.event_type_set
+            },
+            service=1,
+            subscription={'selected_event_type_set': event_type_model.event_type_set})
         querystring = self.bc.format.to_querystring({'token': model.token.key})
 
         url = reverse_lazy('events:me_event_id_join', kwargs={'event_id': 1}) + f'?{querystring}'
 
         response = self.client.get(url)
 
+        template_data = {}
+
+        event_type_set = event_type_model.event_type_set
+        template_data['BUTTON'] = 'Get more consumables'
+        template_data[
+            'LINK'] = f'https://4geeks.com/checkout?event_type_set={event_type_set.slug}&token={model.token.key}'
+        template_data['GO_BACK'] = 'Go back to Dashboard'
+        template_data['URL_BACK'] = 'https://4geeks.com/choose-program'
+
         content = self.bc.format.from_bytes(response.content)
-        expected = render_message('not-enough-consumables')
+        expected = render_message('not-enough-consumables', data=template_data)
 
         # dump error in external files
         if content != expected:
@@ -456,6 +482,17 @@ class AcademyEventTestSuite(EventTestCase):
                                         event=event,
                                         event_type=event_type,
                                         event_type_set=1,
+                                        plan={
+                                            'is_renewable': False,
+                                            'time_of_life': 1,
+                                            'time_of_life_unit': 'MONTH',
+                                        },
+                                        plan_offer={
+                                            'original_plan_id': 1,
+                                            'suggested_plan_id': 1,
+                                            'show_modal': bool(random.getrandbits(1)),
+                                            'expires_at': None,
+                                        },
                                         token=1,
                                         **extra)
         querystring = self.bc.format.to_querystring({'token': model.token.key})
@@ -464,8 +501,15 @@ class AcademyEventTestSuite(EventTestCase):
 
         response = self.client.get(url)
 
+        template_data = {}
+
+        sugested = model.plan_offer.suggested_plan.slug
+        template_data['BUTTON'] = 'Get more consumables'
+        template_data['LINK'] = f'https://4geeks.com/checkout?plan={sugested}&token={model.token.key}'
+        template_data['GO_BACK'] = 'Go back to Dashboard'
+        template_data['URL_BACK'] = 'https://4geeks.com/choose-program'
         content = self.bc.format.from_bytes(response.content)
-        expected = render_message('with-consumer-not-enough-consumables')
+        expected = render_message('with-consumer-not-enough-consumables', data=template_data)
 
         # dump error in external files
         if content != expected:
@@ -1250,7 +1294,7 @@ class AcademyEventTestSuite(EventTestCase):
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_countdown(model.event, model.token)
+        expected = render_countdown(model.event, model.token, academy=model.academy)
 
         # dump error in external files
         if content != expected:
@@ -1338,7 +1382,7 @@ class AcademyEventTestSuite(EventTestCase):
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_countdown(model.event, model.token)
+        expected = render_countdown(model.event, model.token, academy=model.academy)
 
         # dump error in external files
         if content != expected:

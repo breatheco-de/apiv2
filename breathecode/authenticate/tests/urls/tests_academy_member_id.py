@@ -3,11 +3,14 @@ Test cases for /academy/:id/member/:id
 """
 
 from unittest.mock import MagicMock, patch
-from breathecode.services import datetime_to_iso_format
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from rest_framework.response import Response
+
+from breathecode.services import datetime_to_iso_format
 from breathecode.utils import capable_of
+
 from ..mixins.new_auth_test_case import AuthTestCase
 
 
@@ -32,7 +35,7 @@ class MemberSetOfDuckTestSuite(AuthTestCase):
                                         profile_academy=profile_academies)
 
         for n in range(1, 4):
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
             self.bc.request.set_headers(academy=n)
 
             url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': f'{n}'})
@@ -57,7 +60,7 @@ class MemberSetOfDuckTestSuite(AuthTestCase):
                                         profile_academy=profile_academies)
 
         for n in range(1, 4):
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
             self.bc.request.set_headers(academy=n)
 
             url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': f'{n}'})
@@ -82,7 +85,7 @@ class MemberSetOfDuckTestSuite(AuthTestCase):
                                         profile_academy=profile_academies)
 
         for n in range(1, 4):
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
             self.bc.request.set_headers(academy=n)
 
             url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': f'{n}'})

@@ -11,22 +11,16 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import TypedDict
 
 import dj_database_url
-
-# TODO: decouple file storage from django
-# from time import time
 import django_heroku
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
 
 from breathecode.setup import configure_redis
-
-# TODO: decouple file storage from django
-# from django.utils.http import http_date
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -46,16 +40,8 @@ DEBUG = (ENVIRONMENT == 'development' or ENVIRONMENT == 'test')
 
 ALLOWED_HOSTS = []
 
-INSTALLED_APPS = []
-
-# TODO: decouple file storage from django
-# if ENVIRONMENT == 'test':
-#     INSTALLED_APPS += ['whitenoise.runserver_nostatic']
-
 # Application definition
-INSTALLED_APPS += [
-    # TODO: decouple file storage from django
-    'whitenoise.runserver_nostatic',
+INSTALLED_APPS = [
     'breathecode.admin_styles',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -131,7 +117,7 @@ if os.getenv('ENABLE_DEFAULT_PAGINATION', 'y') in ['t', 'true', 'True', 'TRUE', 
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'breathecode.middlewares.static_redirect_middleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
 
@@ -150,6 +136,59 @@ MIDDLEWARE = [
 
 if ENVIRONMENT != 'test':
     MIDDLEWARE += ['django_minify_html.middleware.MinifyHtmlMiddleware']
+
+if os.getenv('GOOGLE_APPLICATION_CREDENTIALS') and (GS_BUCKET_NAME := os.getenv('STATIC_BUCKET')):
+    from google.oauth2 import service_account
+
+    from .setup import resolve_gcloud_credentials
+
+    resolve_gcloud_credentials()
+
+    GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
+        os.getenv('GOOGLE_APPLICATION_CREDENTIALS'))
+
+    GS_PROJECT_ID = os.getenv('GOOGLE_PROJECT_ID', '')
+    GS_IS_GZIPPED = True
+    GS_QUERYSTRING_AUTH = False
+    GS_FILE_OVERWRITE = True
+    GZIP_CONTENT_TYPES = (
+        'text/html',
+        'text/css',
+        'text/javascript',
+        'application/javascript',
+        'application/x-javascript',
+        'image/svg+xml',
+    )
+
+    # GS_OBJECT_PARAMETERS = {
+    #     'cache_control': 'max-age=604800',  # 1 week
+    # }
+
+    GS_EXPIRATION = timedelta(days=7)
+
+    STORAGES = {
+        'staticfiles': {
+            'BACKEND': 'storages.backends.gcloud.GoogleCloudStorage',
+        },
+    }
+    # STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+
+else:
+    INSTALLED_APPS += [
+        'whitenoise.runserver_nostatic',
+    ]
+
+    MIDDLEWARE += [
+        'whitenoise.middleware.WhiteNoiseMiddleware',
+    ]
+
+    # Simplified static file serving.
+    # https://warehouse.python.org/project/whitenoise/
+    STORAGES = {
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        },
+    }
 
 DISABLE_SERVER_SIDE_CURSORS = True  # required when using pgbouncer's pool_mode=transaction
 
@@ -296,8 +335,12 @@ STATICFILES_DIRS = [
     os.path.join(PROJECT_ROOT, 'static'),
 ]
 
-CORS_ORIGIN_ALLOW_ALL = True
+CSRF_TRUSTED_ORIGINS = [
+    'http://*.gitpod.io',
+    'https://*.gitpod.io',
+]
 
+CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_HEADERS = [
     'accept',
     'academy',
@@ -349,22 +392,17 @@ DJANGO_REDIS_IGNORE_EXCEPTIONS = True
 if IS_REDIS_WITH_SSL_ON_HEROKU:
     CACHES['default']['OPTIONS'] = {
         'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        'SOCKET_CONNECT_TIMEOUT': 0.2,  # seconds
-        'SOCKET_TIMEOUT': 0.2,  # seconds
         'PICKLE_VERSION': -1,
         # "IGNORE_EXCEPTIONS": True,
         'CONNECTION_POOL_KWARGS': {
             'ssl_cert_reqs': None,
             'max_connections': int(os.getenv('REDIS_MAX_CONNECTIONS', 500)),
-            'retry_on_timeout': False,
         },
     }
 elif IS_REDIS_WITH_SSL:
     redis_ca_cert_path, redis_user_cert_path, redis_user_private_key_path = configure_redis()
     CACHES['default']['OPTIONS'] = {
         'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        'SOCKET_CONNECT_TIMEOUT': 0.2,  # seconds
-        'SOCKET_TIMEOUT': 0.2,  # seconds
         'PICKLE_VERSION': -1,
         # "IGNORE_EXCEPTIONS": True,
         'CONNECTION_POOL_KWARGS': {
@@ -373,7 +411,6 @@ elif IS_REDIS_WITH_SSL:
             'ssl_certfile': redis_user_cert_path,
             'ssl_keyfile': redis_user_private_key_path,
             'max_connections': int(os.getenv('REDIS_MAX_CONNECTIONS', 500)),
-            'retry_on_timeout': False,
         }
     }
 
@@ -435,14 +472,6 @@ if IS_TEST_ENV:
 # overwrite the redis url with the new one
 os.environ['REDIS_URL'] = REDIS_URL
 
-# Simplified static file serving.
-# https://warehouse.python.org/project/whitenoise/
-STORAGES = {
-    'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
-    },
-}
-
 SITE_ID = 1
 
 # Change 'default' database configuration with $DATABASE_URL.
@@ -481,12 +510,14 @@ HOOK_EVENTS = {
 
     # and custom events, make sure to trigger them at notify.receivers.py
     'cohort_user.edu_status_updated': 'admissions.CohortUser.edu_status_updated',
+    'cohort.cohort_stage_updated': 'admissions.Cohort.cohort_stage_updated',
     'user_invite.invite_status_updated': 'authenticate.UserInvite.invite_status_updated',
     'asset.asset_status_updated': 'registry.Asset.asset_status_updated',
     'event.event_status_updated': 'events.Event.event_status_updated',
     'event.new_event_order': 'events.EventCheckin.new_event_order',
     'event.new_event_attendee': 'events.EventCheckin.new_event_attendee',
     'form_entry.won_or_lost': 'marketing.FormEntry.won_or_lost',
+    'form_entry.new_deal': 'marketing.FormEntry.new_deal',
     'session.mentorship_session_status': 'mentorship.MentorshipSession.mentorship_session_status',
 }
 

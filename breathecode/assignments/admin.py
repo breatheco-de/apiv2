@@ -1,9 +1,10 @@
 import logging, os
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from breathecode.authenticate.models import Token
 from django.utils.html import format_html
-from .models import Task, UserAttachment, UserProxy, CohortProxy, FinalProject
+from breathecode.services.learnpack import LearnPack
+from .models import Task, UserAttachment, UserProxy, CohortProxy, FinalProject, LearnPackWebhook, AssignmentTelemetry
 from .actions import sync_student_tasks
 # Register your models here.
 logger = logging.getLogger(__name__)
@@ -106,3 +107,57 @@ class FinalProjectAdmin(admin.ModelAdmin):
     #     token, created = Token.get_or_create(obj.user, token_type='temporal')
     #     url = os.getenv('API_URL') + f'/v1/assignment/task/{str(obj.id)}/deliver/{token}'
     #     return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>deliver</a>")
+
+
+def async_process_hook(modeladmin, request, queryset):
+    # stay this here for use the poor mocking system
+    for hook in queryset.all().order_by('created_at'):
+        async_learnpack_webhook.delay(hook.id)
+
+
+def process_hook(modeladmin, request, queryset):
+    # stay this here for use the poor mocking system
+    for hook in queryset.all().order_by('created_at'):
+        print(f'Procesing hook: {hook.id}')
+        client = LearnPack()
+        try:
+            client.execute_action(hook.id)
+        except Exception as e:
+            raise e
+            pass
+
+    messages.success(request, message='Check each updated status on the webhook list for details')
+
+
+@admin.register(AssignmentTelemetry)
+class AssignmentTelemetryAdmin(admin.ModelAdmin):
+    list_display = ('id', 'asset_slug', 'user', 'created_at')
+    search_fields = ['asset_slug', 'user__email', 'user__id']
+    raw_id_fields = ['user']
+
+
+@admin.register(LearnPackWebhook)
+class LearnPackWebhookAdmin(admin.ModelAdmin):
+    list_display = ('id', 'event', 'current_status', 'student', 'created_at')
+    search_fields = ['telemetry__asset_slug', 'telemetry__user__email']
+    list_filter = ['status', 'event']
+    raw_id_fields = ['student', 'telemetry']
+    actions = [process_hook, async_process_hook]
+
+    def current_status(self, obj):
+        colors = {
+            'DONE': 'bg-success',
+            'ERROR': 'bg-error',
+            'PENDING': 'bg-warning',
+            'webhook': 'bg-warning',
+            None: 'bg-warning',
+        }
+
+        def from_status(s):
+            if s in colors:
+                return colors[s]
+            return ''
+
+        return format_html(
+            f"<div><span class='badge {from_status(obj.status)}'>{obj.status}</span></div><small>{obj.status_text}</small>"
+        )

@@ -58,6 +58,12 @@ nav:
                 - "essential/celery/calling.md"
           - 4geeks:
                 - "essential/4geeks/actions.md"
+                - Services:
+                  - essential/4geeks/services/introduction.md
+                  - First-party:
+                        - essential/4geeks/services/first-party/using-services.md
+                        - essential/4geeks/services/first-party/writing-services.md
+                        - essential/4geeks/services/first-party/token.md
     - Advanced:
           - Celery:
                 - "advanced/celery/application.md"
@@ -80,7 +86,7 @@ nav:
           - Mocks:
                 - "testing/mocks/using-mocks.md"
                 - "testing/mocks/mock-requests.md"
-    - infrastructure:
+    - Infrastructure:
           - "infrastructure/journal.md"
           - "infrastructure/web.md"
           - "infrastructure/infra-env.md"

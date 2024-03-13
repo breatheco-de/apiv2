@@ -2,14 +2,14 @@ import random
 from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
+import pytest
 from django.urls import reverse_lazy
 from django.utils import timezone
-import pytest
 from rest_framework import status
-from breathecode.payments import actions
 
-from breathecode.payments.tests.mixins.payments_test_case import PaymentsTestCase
 import breathecode.activity.tasks as activity_tasks
+from breathecode.payments import actions
+from breathecode.payments.tests.mixins.payments_test_case import PaymentsTestCase
 
 UTC_NOW = timezone.now()
 
@@ -152,11 +152,11 @@ class SignalTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__without_bag(self):
         model = self.bc.database.create(user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:checking')
         response = self.client.put(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {'detail': 'not-found', 'status_code': 404}
@@ -184,7 +184,7 @@ class SignalTestSuite(PaymentsTestCase):
         cases = [{}, {'type': 'BAG'}]
         for case in cases:
             model = self.bc.database.create(user=1, bag=bag)
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
 
             url = reverse_lazy('payments:checking')
 
@@ -248,7 +248,7 @@ class SignalTestSuite(PaymentsTestCase):
         }
 
         model = self.bc.database.create(user=1, bag=bag)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:checking')
         response = self.client.put(url)
@@ -283,7 +283,7 @@ class SignalTestSuite(PaymentsTestCase):
         }
 
         model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:checking')
         data = {'academy': 1, 'type': 'PREVIEW'}
@@ -343,7 +343,7 @@ class SignalTestSuite(PaymentsTestCase):
         }
 
         model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:checking')
         data = {'academy': 1, 'type': 'PREVIEW', 'plans': [1], 'service_items': [1]}
@@ -383,7 +383,7 @@ class SignalTestSuite(PaymentsTestCase):
         }
 
         model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:checking')
         data = {'academy': 1, 'type': 'PREVIEW', 'plans': [1], 'service_items': [{}]}
@@ -423,7 +423,7 @@ class SignalTestSuite(PaymentsTestCase):
         }
 
         model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:checking')
         data = {
@@ -477,7 +477,7 @@ class SignalTestSuite(PaymentsTestCase):
         plan = {'is_renewable': False}
 
         model = self.bc.database.create(user=1, bag=bag, service_item=1, plan=plan, academy=academy)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [])
@@ -564,7 +564,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan=plan,
                                         plan_service_item=1,
                                         currency=currency)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         service_item = self.bc.database.get('payments.ServiceItem', 1, dict=False)
         service_item.how_many = how_many2
@@ -657,7 +657,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=1,
                                         financing_option=1,
                                         currency=currency)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         service_item = self.bc.database.get('payments.ServiceItem', 1, dict=False)
         service_item.how_many = how_many2
@@ -773,7 +773,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=1,
                                         financing_option=1,
                                         currency=currency)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         service_item = self.bc.database.get('payments.ServiceItem', 1, dict=False)
         service_item.how_many = how_many2
@@ -880,7 +880,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan=plan,
                                         plan_service_item=1,
                                         currency=currency)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         service_item = self.bc.database.get('payments.ServiceItem', 1, dict=False)
         service_item.how_many = how_many2
@@ -982,7 +982,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan=plan,
                                         plan_service_item=1,
                                         currency=currency)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         service_item = self.bc.database.get('payments.ServiceItem', 1, dict=False)
         service_item.how_many = how_many2
@@ -1096,7 +1096,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=1,
                                         financing_option=1,
                                         currency=currency)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         service_item = self.bc.database.get('payments.ServiceItem', 1, dict=False)
         service_item.how_many = how_many2
@@ -1214,7 +1214,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan=plan,
                                         plan_service_item=1,
                                         currency=currency)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         service_item = self.bc.database.get('payments.ServiceItem', 1, dict=False)
         service_item.how_many = how_many2
@@ -1307,7 +1307,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=1,
                                         financing_option=1,
                                         currency=currency)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         service_item = self.bc.database.get('payments.ServiceItem', 1, dict=False)
         service_item.how_many = how_many2
@@ -1428,7 +1428,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan=plan,
                                         plan_service_item=1,
                                         currency=currency)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         service_item = self.bc.database.get('payments.ServiceItem', 1, dict=False)
         service_item.how_many = how_many2
@@ -1524,7 +1524,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=1,
                                         financing_option=1,
                                         currency=currency)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         service_item = self.bc.database.get('payments.ServiceItem', 1, dict=False)
         service_item.how_many = how_many2
@@ -1619,7 +1619,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=1,
                                         financing_option=1,
                                         currency=currency)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         service_item = self.bc.database.get('payments.ServiceItem', 1, dict=False)
         service_item.how_many = how_many2
@@ -1706,7 +1706,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=1,
                                         financing_option=1,
                                         currency=currency)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         service_item = self.bc.database.get('payments.ServiceItem', 1, dict=False)
         service_item.how_many = how_many2
@@ -1820,7 +1820,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=1,
                                         financing_option=1,
                                         currency=currency)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         service_item = self.bc.database.get('payments.ServiceItem', 1, dict=False)
         service_item.how_many = how_many2
@@ -1932,7 +1932,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=1,
                                         financing_option=1,
                                         currency=currency)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         service_item = self.bc.database.get('payments.ServiceItem', 1, dict=False)
         service_item.how_many = how_many2
@@ -2046,7 +2046,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=1,
                                         financing_option=1,
                                         currency=currency)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         service_item = self.bc.database.get('payments.ServiceItem', 1, dict=False)
         service_item.how_many = how_many2

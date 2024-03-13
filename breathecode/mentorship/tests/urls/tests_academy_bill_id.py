@@ -1,17 +1,19 @@
 """
 This file just can contains duck tests refert to AcademyInviteView
 """
-from datetime import timedelta
 import hashlib
 import random
+from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
+
 from django.urls.base import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
-from breathecode.utils.datetime_integer import duration_to_str
 
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
+from breathecode.utils.datetime_integer import duration_to_str
+
 from ..mixins import MentorshipTestCase
-from django.utils import timezone
 
 UTC_NOW = timezone.now()
 
@@ -462,7 +464,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     def test__get__without_academy_header(self):
         model = self.bc.database.create(user=1)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_bill_id', kwargs={'bill_id': 1})
         response = self.client.get(url)
@@ -484,7 +486,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         model = self.bc.database.create(user=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_bill_id', kwargs={'bill_id': 1})
         response = self.client.get(url)
@@ -506,7 +508,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         model = self.bc.database.create(user=1, role=1, capability='read_mentorship_bill', profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_bill_id', kwargs={'bill_id': 1})
         response = self.client.get(url)
@@ -532,7 +534,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_bill_id', kwargs={'bill_id': 1})
         response = self.client.get(url)
@@ -565,7 +567,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_bill_id', kwargs={'bill_id': 1})
         self.client.get(url)
@@ -586,7 +588,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         model = self.bc.database.create(user=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_bill_id', kwargs={'bill_id': 1})
         response = self.client.put(url)
@@ -608,7 +610,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         model = self.bc.database.create(user=1, role=1, capability='crud_mentorship_bill', profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_bill_id', kwargs={'bill_id': 1})
         response = self.client.put(url)
@@ -634,7 +636,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_bill_id', kwargs={'bill_id': 1})
         response = self.client.put(url)
@@ -670,7 +672,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_bill_id', kwargs={'bill_id': 1})
         data = {'status': 'PAID'}
@@ -700,7 +702,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         created_at = timezone.now()
         updated_at = timezone.now()
@@ -748,7 +750,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         started_at = timezone.now()
         ended_at = timezone.now()
@@ -796,7 +798,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         model = self.bc.database.create(user=1, role=1, capability='crud_mentorship_bill', profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_bill_id', kwargs={'bill_id': 1})
         data = [{'id': 1}, {'id': 2}]
@@ -816,7 +818,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         model = self.bc.database.create(user=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_bill_id', kwargs={'bill_id': 1})
         response = self.client.delete(url)
@@ -838,7 +840,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         model = self.bc.database.create(user=1, role=1, capability='crud_mentorship_bill', profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_bill_id', kwargs={'bill_id': 1})
         response = self.client.delete(url)
@@ -865,7 +867,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                             mentorship_bill=mentorship_bill)
 
             self.bc.request.set_headers(academy=model.academy.id)
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
 
             url = reverse_lazy('mentorship:academy_bill_id', kwargs={'bill_id': model.mentorship_bill.id})
             response = self.client.delete(url)
@@ -886,7 +888,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                                         mentorship_bill=mentorship_bill)
 
         self.bc.request.set_headers(academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_bill_id', kwargs={'bill_id': 1})
         response = self.client.delete(url)

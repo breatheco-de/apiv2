@@ -6,6 +6,11 @@ import zlib
 
 import brotli
 import zstandard
+from asgiref.sync import iscoroutinefunction
+
+# from django.http import HttpResponsePermanentRedirect
+from django.http import HttpResponseRedirect
+from django.utils.decorators import sync_and_async_middleware
 from django.utils.deprecation import MiddlewareMixin
 
 ENV = os.getenv('ENV', '')
@@ -87,3 +92,35 @@ class CompressResponseMiddleware(MiddlewareMixin):
                 self._compress(response, 'br', brotli.compress)
 
         return response
+
+
+@sync_and_async_middleware
+def static_redirect_middleware(get_response):
+    path = '/static'
+
+    def redirect(request):
+        bucket = os.getenv('STATIC_BUCKET')
+        gcs_base_url = f'https://storage.googleapis.com/{bucket}'
+        full_url = f"{gcs_base_url}{request.path.replace(path, '')}"
+
+        return HttpResponseRedirect(full_url)
+
+    if iscoroutinefunction(get_response):
+
+        async def middleware(request):
+            if request.path.startswith(f'{path}/'):
+                return redirect(request)
+
+            response = await get_response(request)
+            return response
+
+    else:
+
+        def middleware(request):
+            if request.path.startswith(f'{path}/'):
+                return redirect(request)
+
+            response = get_response(request)
+            return response
+
+    return middleware

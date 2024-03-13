@@ -5,7 +5,7 @@ from breathecode.authenticate.models import UserInvite
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_status
 from breathecode.mentorship.serializers import SessionHookSerializer
-from breathecode.marketing.signals import form_entry_won_or_lost
+from breathecode.marketing.signals import form_entry_won_or_lost, new_form_entry_deal
 from breathecode.marketing.models import FormEntry
 from breathecode.marketing.serializers import FormEntryHookSerializer
 from breathecode.admissions.signals import student_edu_status_updated
@@ -15,8 +15,9 @@ from breathecode.registry.serializers import AssetHookSerializer
 from breathecode.events.models import EventCheckin, Event
 from breathecode.events.signals import new_event_attendee, new_event_order, event_status_updated
 from breathecode.events.serializers import EventJoinSmallSerializer, EventHookCheckinSerializer
-from breathecode.admissions.models import CohortUser
-from breathecode.admissions.serializers import CohortUserHookSerializer
+from breathecode.admissions.models import CohortUser, Cohort
+from breathecode.admissions.signals import cohort_stage_updated
+from breathecode.admissions.serializers import CohortUserHookSerializer, CohortHookSerializer
 from .tasks import send_mentorship_starting_notification
 from .utils.hook_manager import HookManager
 from django.db.models.signals import post_save, post_delete
@@ -78,6 +79,27 @@ def form_entry_updated(sender, instance, **kwargs):
 
     serializer = FormEntryHookSerializer(instance)
     HookManager.process_model_event(instance, model_label, 'won_or_lost', payload_override=serializer.data)
+
+
+@receiver(cohort_stage_updated, sender=Cohort)
+def new_cohort_stage_updated(sender, instance, **kwargs):
+
+    model_label = get_model_label(instance)
+
+    serializer = CohortHookSerializer(instance)
+    HookManager.process_model_event(instance,
+                                    model_label,
+                                    'cohort_stage_updated',
+                                    payload_override=serializer.data)
+
+
+@receiver(new_form_entry_deal, sender=FormEntry)
+def new_form_entry_deal(sender, instance, **kwargs):
+    logger.debug('Sending formentry with new deal to hook')
+    model_label = get_model_label(instance)
+
+    serializer = FormEntryHookSerializer(instance)
+    HookManager.process_model_event(instance, model_label, 'new_deal', payload_override=serializer.data)
 
 
 @receiver(new_event_attendee, sender=EventCheckin)

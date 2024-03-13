@@ -25,6 +25,7 @@ from breathecode.authenticate.actions import get_user_language, server_id
 from breathecode.events import actions
 from breathecode.events.caches import EventCache, LiveClassCache
 from breathecode.renderers import PlainTextRenderer
+import breathecode.activity.tasks as tasks_activity
 from breathecode.services.eventbrite import Eventbrite
 from breathecode.utils import (
     DatetimeInteger,
@@ -61,6 +62,7 @@ from .serializers import (
     EventCheckinSmallSerializer,
     EventJoinSmallSerializer,
     EventPublicBigSerializer,
+    EventPUTSerializer,
     EventSerializer,
     EventSmallSerializer,
     EventSmallSerializerNoAcademy,
@@ -229,9 +231,13 @@ class EventMeView(APIView):
             #DEPRECATED: due we have a new endpoint that manages the EventTypeSet consumables
             if _r == 'true':
                 if single_event is None:
-                    return render_message(request, 'Event not found or you dont have access')
+                    return render_message(request,
+                                          'Event not found or you dont have access',
+                                          academy=single_event.academy)
                 if single_event.live_stream_url is None or single_event.live_stream_url == '':
-                    return render_message(request, 'Event live stream URL is not found')
+                    return render_message(request,
+                                          'Event live stream URL is not found',
+                                          academy=single_event.academy)
                 return redirect(single_event.live_stream_url)
 
             serializer = EventBigSerializer(single_event, many=False)
@@ -308,9 +314,21 @@ def join_live_class(request, token, live_class, lang):
     now = timezone.now()
 
     if live_class.starting_at > now:
+        obj = {}
+        if live_class.cohort_time_slot.cohort.academy:
+            obj['COMPANY_INFO_EMAIL'] = live_class.cohort_time_slot.cohort.academy.feedback_email
+            obj['COMPANY_LEGAL_NAME'] = (live_class.cohort_time_slot.cohort.academy.legal_name
+                                         or live_class.cohort_time_slot.cohort.academy.name)
+            obj['COMPANY_LOGO'] = live_class.cohort_time_slot.cohort.academy.logo_url
+            obj['COMPANY_NAME'] = live_class.cohort_time_slot.cohort.academy.name
+
+            if 'heading' not in obj:
+                obj['heading'] = live_class.cohort_time_slot.cohort.academy.name
+
         return render(request, 'countdown.html', {
             'token': token.key,
             'event': LiveClassJoinSerializer(live_class).data,
+            **obj,
         })
 
     return redirect(live_class.cohort_time_slot.cohort.online_meeting_url)
@@ -428,7 +446,10 @@ class AcademyLiveClassJoinView(APIView):
                                   en='Live class has no online meeting url',
                                   es='La clase en vivo no tiene una URL de reunión en línea',
                                   slug='no-meeting-url')
-            return render_message(request, message, status=400)
+            return render_message(request,
+                                  message,
+                                  status=400,
+                                  academy=live_class.cohort_time_slot.cohort.academy)
 
         return redirect(live_class.cohort_time_slot.cohort.online_meeting_url)
 
@@ -497,22 +518,11 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                             es=f'Academia {academy_id} no encontrada',
                             slug='academy-not-found'))
 
-        organization_id = Organization.objects.filter(
-            Q(academy__id=academy_id) | Q(organizer__academy__id=academy_id)).values_list('id',
-                                                                                          flat=True).first()
-        if not organization_id:
-            raise ValidationException(
-                translation(lang,
-                            en=f"Academy {academy.name} doesn\'t have the integrations with Eventbrite done",
-                            es=f'La academia {academy.name} no tiene las integraciones con Eventbrite aún',
-                            slug='organization-not-exist'))
-
         data = {}
         for key in request.data.keys():
             data[key] = request.data.get(key)
 
         data['sync_status'] = 'PENDING'
-        data['organization'] = organization_id
 
         serializer = EventSerializer(data={
             **data, 'academy': academy.id
@@ -530,37 +540,69 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
     def put(self, request, academy_id=None, event_id=None):
         lang = get_user_language(request)
 
-        already = Event.objects.filter(id=event_id, academy__id=academy_id).first()
-        if already is None:
-            raise ValidationException(
-                translation(lang,
-                            en=f'Event not found for this academy {academy_id}',
-                            es=f'Evento no encontrado para esta academia {academy_id}',
-                            slug='event-not-found'))
+        data_list = request.data
+        if not isinstance(request.data, list):
 
-        organization_id = Organization.objects.filter(
-            Q(academy__id=academy_id) | Q(organizer__academy__id=academy_id)).values_list('id',
-                                                                                          flat=True).first()
-        if not organization_id:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en=f"Academy {already.academy.name} doesn\'t have the integrations with Eventbrite done",
-                    es=f'La academia {already.academy.name} no tiene las integraciones con Eventbrite aún',
-                    slug='organization-not-exist'))
+            # make it a list
+            data_list = [dict(request.data)]
 
-        data = {}
-        for key in request.data.keys():
-            data[key] = request.data.get(key)
+            if event_id is None:
+                raise ValidationException('Missing event_id')
 
-        data['sync_status'] = 'PENDING'
-        data['organization'] = organization_id
+            event = Event.objects.filter(id=event_id, academy__id=academy_id).first()
+            if event is None:
+                raise ValidationException(
+                    translation(lang,
+                                en=f'Event not found for this academy {academy_id}',
+                                es=f'Evento no encontrado para esta academia {academy_id}',
+                                slug='event-not-found'))
 
-        serializer = EventSerializer(already, data=data, context={'lang': lang, 'academy_id': academy_id})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            data_list[0]['id'] = event.id
+
+        all_events = []
+        for data in data_list:
+
+            if 'id' not in data:
+                raise ValidationException(
+                    translation(lang,
+                                en='Event id not found',
+                                es='No encontró el id del evento',
+                                slug='event-id-not-found'))
+
+            instance = Event.objects.filter(id=data['id'], academy__id=academy_id).first()
+            if not instance:
+                raise ValidationException(
+                    translation(lang,
+                                en=f'Event not found for this academy {academy_id}',
+                                es=f'Evento no encontrado para esta academia {academy_id}',
+                                slug='event-not-found'))
+            all_events.append(instance)
+
+        all_serializers = []
+        index = -1
+        for data in data_list:
+            index += 1
+            serializer = EventPUTSerializer(all_events[index],
+                                            data=data,
+                                            context={
+                                                'lang': lang,
+                                                'request': request,
+                                                'academy_id': academy_id
+                                            })
+            all_serializers.append(serializer)
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        all_events = []
+        for serializer in all_serializers:
+            all_events.append(serializer.save())
+
+        if isinstance(request.data, list):
+            serializer = EventSerializer(all_events, many=True)
+        else:
+            serializer = EventSerializer(all_events.pop(), many=False)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @capable_of('crud_event')
     def delete(self, request, academy_id=None, event_id=None):
@@ -639,7 +681,7 @@ class AcademyEventJoinView(APIView):
                                   en='Event has no live stream url',
                                   es='Evento no tiene url de live stream',
                                   slug='no-live-stream-url')
-            return render_message(request, message, status=400)
+            return render_message(request, message, status=400, academy=event.academy)
 
         return redirect(event.live_stream_url)
 
@@ -829,9 +871,20 @@ def join_event(request, token, event):
     now = timezone.now()
 
     if event.starting_at > now:
+        obj = {}
+        if event.academy:
+            obj['COMPANY_INFO_EMAIL'] = event.academy.feedback_email
+            obj['COMPANY_LEGAL_NAME'] = event.academy.legal_name or event.academy.name
+            obj['COMPANY_LOGO'] = event.academy.logo_url
+            obj['COMPANY_NAME'] = event.academy.name
+
+            if 'heading' not in obj:
+                obj['heading'] = event.academy.name
+
         return render(request, 'countdown.html', {
             'token': token.key,
             'event': EventJoinSmallSerializer(event).data,
+            **obj,
         })
 
     # if the event is happening right now and I have not joined yet
@@ -845,6 +898,11 @@ def join_event(request, token, event):
         checkin.status = 'DONE'
         checkin.attended_at = now
         checkin.save()
+
+        tasks_activity.add_activity.delay(checkin.attendee.id,
+                                          'event_checkin_assisted',
+                                          related_type='events.EventCheckin',
+                                          related_id=checkin.id)
 
     return redirect(event.live_stream_url)
 
@@ -985,7 +1043,8 @@ class AcademyEventCheckinView(APIView):
 @renderer_classes([PlainTextRenderer])
 def eventbrite_webhook(request, organization_id):
     if actions.is_eventbrite_enabled() is False:
-        return Response('ok', content_type='text/plain')
+        return Response('Eventbrite integration is disabled, to activate add env variable EVENTBRITE=TRUE',
+                        content_type='text/plain')
 
     webhook = Eventbrite.add_webhook_to_log(request.data, organization_id)
 

@@ -1,14 +1,16 @@
 import math
 import random
+from unittest.mock import MagicMock, call, patch
+
 import pytest
 import stripe
-from unittest.mock import MagicMock, call, patch
 from django.urls import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
 
-from django.utils import timezone
-from ..mixins import PaymentsTestCase
 import breathecode.activity.tasks as activity_tasks
+
+from ..mixins import PaymentsTestCase
 
 UTC_NOW = timezone.now()
 
@@ -152,11 +154,11 @@ class SignalTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__no_service(self):
         model = self.bc.database.create(user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
         response = self.client.post(url)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {'detail': 'service-is-required', 'status_code': 400}
@@ -178,12 +180,12 @@ class SignalTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__service_not_found(self):
         model = self.bc.database.create(user=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
         data = {'service': 1}
         response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {'detail': 'service-not-found', 'status_code': 400}
@@ -205,12 +207,12 @@ class SignalTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__with_service(self):
         model = self.bc.database.create(user=1, service=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
         data = {'service': 1}
         response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {'detail': 'how-many-is-required', 'status_code': 400}
@@ -232,12 +234,12 @@ class SignalTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__academy_is_required(self):
         model = self.bc.database.create(user=1, service=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
         data = {'service': 1, 'how_many': 1}
         response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {'detail': 'academy-is-required', 'status_code': 400}
@@ -259,12 +261,12 @@ class SignalTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__academy_not_found(self):
         model = self.bc.database.create(user=1, service=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
         data = {'service': 1, 'how_many': 1, 'academy': 1}
         response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {'detail': 'academy-not-found', 'status_code': 400}
@@ -286,12 +288,12 @@ class SignalTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__resourse_is_required(self):
         model = self.bc.database.create(user=1, service=1, academy=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
         data = {'service': 1, 'how_many': 1, 'academy': 1}
         response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {'detail': 'mentorship-service-set-or-event-type-set-is-required', 'status_code': 400}
@@ -315,12 +317,12 @@ class SignalTestSuite(PaymentsTestCase):
     def test__bad_service_type_for_event_type_set(self):
         service = {'type': 'MENTORSHIP_SERVICE_SET'}
         model = self.bc.database.create(user=1, service=service, academy=1, event_type_set=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
         data = {'service': 1, 'how_many': 1, 'academy': 1, 'event_type_set': 1}
         response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {'detail': 'bad-service-type-mentorship-service-set', 'status_code': 400}
@@ -344,12 +346,12 @@ class SignalTestSuite(PaymentsTestCase):
     def test__bad_service_type_for_mentorship_service_set(self):
         service = {'type': 'EVENT_TYPE_SET'}
         model = self.bc.database.create(user=1, service=service, academy=1, mentorship_service_set=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
         data = {'service': 1, 'how_many': 1, 'academy': 1, 'mentorship_service_set': 1}
         response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {'detail': 'bad-service-type-event-type-set', 'status_code': 400}
@@ -381,12 +383,12 @@ class SignalTestSuite(PaymentsTestCase):
             kwargs['event_type_set'] = 1
 
         model = self.bc.database.create(user=1, service=service, academy=1, **kwargs)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
         data = {'service': 1, 'how_many': 1, 'academy': 1, 'mentorship_service_set': 1}
         response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {'detail': 'service-type-no-implemented', 'status_code': 400}
@@ -419,12 +421,12 @@ class SignalTestSuite(PaymentsTestCase):
             kwargs['event_type_set'] = 1
 
         model = self.bc.database.create(user=1, service=service, academy=1, **kwargs)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
         data = {'service': 1, 'how_many': 1, 'academy': 1, **kwargs}
         response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {'detail': 'academy-service-not-found', 'status_code': 404}
@@ -471,12 +473,12 @@ class SignalTestSuite(PaymentsTestCase):
                                         academy=1,
                                         academy_service=academy_service,
                                         **kwargs)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
         data = {'service': 1, 'how_many': how_many, 'academy': 1, **kwargs}
         response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {'detail': 'the-amount-of-items-is-too-high', 'status_code': 400}
@@ -525,12 +527,12 @@ class SignalTestSuite(PaymentsTestCase):
                                         academy=1,
                                         academy_service=academy_service,
                                         **kwargs)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
         data = {'service': 1, 'how_many': how_many, 'academy': 1, **kwargs}
         response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {'detail': 'the-amount-is-too-low', 'status_code': 400}
@@ -571,12 +573,12 @@ class SignalTestSuite(PaymentsTestCase):
                                         academy=1,
                                         academy_service=academy_service,
                                         mentorship_service_set=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
         data = {'service': 1, 'how_many': how_many / 2, 'academy': 1, 'mentorship_service_set': 1}
         response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
         expected = {'detail': 'the-amount-is-too-high', 'status_code': 400}
@@ -622,12 +624,12 @@ class SignalTestSuite(PaymentsTestCase):
                                         academy=1,
                                         academy_service=academy_service,
                                         mentorship_service_set=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
         data = {'service': 1, 'how_many': how_many, 'academy': 1, 'mentorship_service_set': 1}
         response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         json = response.json()
 
@@ -652,7 +654,7 @@ class SignalTestSuite(PaymentsTestCase):
                 data={
                     'mentorship_service_set_id': 1,
                     'service_item_id': 1,
-                    'app_service_id': None,
+                    'service_set_id': None,
                     'user_id': 1,
                     'how_many': how_many,
                 }),
@@ -702,12 +704,12 @@ class SignalTestSuite(PaymentsTestCase):
                                         academy=1,
                                         academy_service=academy_service,
                                         event_type_set=1)
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
         data = {'service': 1, 'how_many': how_many, 'academy': 1, 'event_type_set': 1}
         response = self.client.post(url, data, format='json')
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         amount = get_discounted_price(model.academy_service, how_many)
         amount = math.ceil(amount)
@@ -731,7 +733,7 @@ class SignalTestSuite(PaymentsTestCase):
                 data={
                     'event_type_set_id': 1,
                     'service_item_id': 1,
-                    'app_service_id': None,
+                    'service_set_id': None,
                     'user_id': 1,
                     'how_many': how_many,
                 }),

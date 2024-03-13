@@ -1,15 +1,17 @@
-import uuid, hashlib
+import hashlib
 import secrets
-from django.db import models
+import uuid
 from datetime import timedelta
-from django.contrib.auth.models import User
 
-from breathecode.authenticate.models import UserInvite
-from .signals import form_entry_won_or_lost
-from breathecode.admissions.models import Academy, Cohort
+from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
-from breathecode.admissions.models import Syllabus
+from django.db import models
+
+from breathecode.admissions.models import Academy, Cohort, Syllabus
+from breathecode.authenticate.models import UserInvite
 from breathecode.utils.validators.language import validate_language_code
+
+from .signals import form_entry_won_or_lost, new_form_entry_deal
 
 __all__ = [
     'ActiveCampaignAcademy', 'AcademyAlias', 'Automation', 'Tag', 'Contact', 'FormEntry', 'ShortLink',
@@ -316,6 +318,7 @@ class FormEntry(models.Model):
     def __init__(self, *args, **kwargs):
         super(FormEntry, self).__init__(*args, **kwargs)
         self.__old_deal_status = self.deal_status
+        self.__old_deal_id = self.ac_deal_id
 
     contact = models.ForeignKey(Contact, on_delete=models.CASCADE, null=True, default=None, blank=True)
 
@@ -496,6 +499,10 @@ class FormEntry(models.Model):
     def save(self, *args, **kwargs):
 
         deal_status_modified = False
+        is_new_deal = False
+
+        if self.__old_deal_id != self.ac_deal_id and self.ac_deal_id is not None:
+            is_new_deal = True
 
         if self.__old_deal_status != self.deal_status:
             deal_status_modified = True
@@ -506,6 +513,7 @@ class FormEntry(models.Model):
         super().save(*args, **kwargs)
 
         if deal_status_modified: form_entry_won_or_lost.send(instance=self, sender=FormEntry)
+        if is_new_deal: new_form_entry_deal.send(instance=self, sender=FormEntry)
 
     def is_duplicate(self, incoming_lead):
         duplicate_leads_delta_avoidance = timedelta(minutes=30)
@@ -792,6 +800,7 @@ class Course(models.Model):
     syllabus = models.ManyToManyField(Syllabus, blank=True)
     cohort = models.ForeignKey(Cohort, null=True, blank=True, default=None, on_delete=models.CASCADE)
 
+    plan_slug = models.SlugField(max_length=150, null=True, blank=True, default=None)
     status = models.CharField(max_length=15, choices=COURSE_STATUS, default=ACTIVE)
     status_message = models.CharField(max_length=250,
                                       null=True,
@@ -837,14 +846,17 @@ class CourseTranslation(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
     lang = models.CharField(max_length=5, validators=[validate_language_code])
     title = models.CharField(max_length=60)
-    description = models.CharField(max_length=255)
-    landing_url = models.URLField(
-        default=None,
-        null=True,
-        blank=True,
-        help_text=
-        'Landing URL used on call to actions where the course is shown. A URL is needed per each translation.'
-    )
+    description = models.TextField(max_length=400)
+    short_description = models.CharField(max_length=120, null=True, default=None, blank=True)
+    video_url = models.URLField(default=None,
+                                null=True,
+                                blank=False,
+                                help_text='Video that introduces/promotes this course')
+    landing_url = models.URLField(default=None,
+                                  null=True,
+                                  blank=True,
+                                  help_text='Landing URL used on call to actions where the course is shown. '
+                                  'A URL is needed per each translation.')
     course_modules = models.JSONField(
         default=None,
         blank=True,

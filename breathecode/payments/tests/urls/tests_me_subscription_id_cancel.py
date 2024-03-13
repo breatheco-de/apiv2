@@ -1,15 +1,15 @@
-from datetime import timedelta
 import math
 import random
+from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
-from rest_framework.authtoken.models import Token
 
 from django.urls import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
+from rest_framework.authtoken.models import Token
 
 from breathecode.payments import signals
 
-from django.utils import timezone
 from ..mixins import PaymentsTestCase
 
 UTC_NOW = timezone.now()
@@ -74,7 +74,7 @@ class SignalTestSuite(PaymentsTestCase):
     def test__put__not_found(self):
         model = self.bc.database.create(user=1, )
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription_id_cancel', kwargs={'subscription_id': 1})
         response = self.client.put(url)
@@ -92,7 +92,7 @@ class SignalTestSuite(PaymentsTestCase):
             subscription = {'status': s}
             model = self.bc.database.create(user=1, subscription=subscription)
 
-            self.bc.request.authenticate(model.user)
+            self.client.force_authenticate(model.user)
 
             url = reverse_lazy('payments:me_subscription_id_cancel',
                                kwargs={'subscription_id': model.subscription.id})
@@ -121,7 +121,7 @@ class SignalTestSuite(PaymentsTestCase):
         subscription = {'status': 'CANCELLED'}
         model = self.bc.database.create(user=1, subscription=subscription)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription_id_cancel',
                            kwargs={'subscription_id': model.subscription.id})
@@ -143,7 +143,7 @@ class SignalTestSuite(PaymentsTestCase):
         subscription = {'status': 'DEPRECATED'}
         model = self.bc.database.create(user=1, subscription=subscription)
 
-        self.bc.request.authenticate(model.user)
+        self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_subscription_id_cancel',
                            kwargs={'subscription_id': model.subscription.id})
