@@ -118,45 +118,9 @@ class BigQuerySet():
         table = self._get_table()
         return table.schema
 
-    def update_schema(self, schema: list[SchemaField], append=False) -> None:
+    def update_schema(self, schema: list[SchemaField]) -> None:
         table = self._get_table()
-
-        if append:
-            new_schema = table.schema
-
-            for field in schema:
-                if field in new_schema:
-                    continue
-
-                found = [x for x in new_schema if x.name == field.name]
-
-                if not found:
-                    new_schema.append(field)
-                    continue
-
-                found = found[0]
-
-                if (found.field_type is not bigquery.enums.SqlTypeNames.STRUCT
-                        or field.field_type is not bigquery.enums.SqlTypeNames.STRUCT):
-                    new_schema.remove(found)
-                    new_schema.append(field)
-                    continue
-
-                fields = found.fields
-                new_fields = field.fields
-
-                new_schema.remove(found)
-
-                for f in new_fields:
-                    if f not in fields:
-                        fields.append(f)
-
-                new_schema.append(SchemaField(field.name, field.field_type, fields=fields))
-
-            table.schema = new_schema
-
-        else:
-            table.schema = schema
+        table.schema = schema
 
         self.client.update_table(table, ['schema'])
 
@@ -351,6 +315,10 @@ class BigQueryMeta(type):
             pass
 
 
+Schema = list[bigquery.SchemaField] | tuple[bigquery.SchemaField]
+MappedSchema = dict[str, bigquery.SchemaField]
+
+
 class BigQuery(metaclass=BigQueryMeta):
 
     @staticmethod
@@ -438,3 +406,74 @@ class BigQuery(metaclass=BigQueryMeta):
         client, project_id, dataset = cls.client()
 
         return BigQuerySet(table, client, project_id, dataset)
+
+    @classmethod
+    def _map_schema(cls, schema: Schema) -> MappedSchema:
+        res = {}
+
+        for field in schema:
+            res[field.name] = field
+
+        return res
+
+    @classmethod
+    def join_schemas(
+        cls,
+        *schemas: Schema,
+    ) -> BigQuerySet:
+        """Join n schemas into one."""
+
+        res: MappedSchema = {}
+
+        for schema in schemas:
+            new = cls._map_schema(schema)
+            new_keys = set(new.keys())
+            res_keys = set(res.keys())
+
+            common = new_keys.intersection(res_keys)
+            added = new_keys - res_keys
+
+            for key in added:
+                new_field = new[key]
+                res[key] = new_field
+
+            for key in common:
+                new_field = new[key]
+                if new_field.field_type == bigquery.enums.SqlTypeNames.STRUCT:
+                    new_field._fields = cls.join_schemas(res[key].fields, new_field.fields)
+                    res[key] = new_field
+
+                elif new_field != res[key]:
+                    res[key] = new_field
+
+        return res.values()
+
+    @classmethod
+    def schema_difference(cls, old_schema: Schema, new_schema: Schema) -> BigQuerySet:
+        """Get the difference between two schemas."""
+
+        res = []
+        old = cls._map_schema(old_schema)
+        new = cls._map_schema(new_schema)
+
+        new_keys = set(new.keys())
+        old_keys = set(old.keys())
+
+        added = new_keys - old_keys
+        # removed = old_keys - new_keys
+        common = new_keys.intersection(old_keys)
+
+        for key in added:
+            new_field = new[key]
+            res.append(new_field)
+
+        for key in common:
+            new_field = new[key]
+            if new_field.field_type == bigquery.enums.SqlTypeNames.STRUCT:
+                new_field._fields = cls.schema_difference(old[key].fields, new_field.fields)
+                res.append(new_field)
+
+            elif new_field != old[key]:
+                res.append(new_field)
+
+        return res
