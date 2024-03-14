@@ -802,6 +802,11 @@ class Course(models.Model):
 
     plan_slug = models.SlugField(max_length=150, null=True, blank=True, default=None)
     status = models.CharField(max_length=15, choices=COURSE_STATUS, default=ACTIVE)
+    color = models.CharField(max_length=50,
+                             null=True,
+                             blank=True,
+                             default=None,
+                             help_text='Add the color with hexadecimal format, i.e.: #FFFFFF')
     status_message = models.CharField(max_length=250,
                                       null=True,
                                       blank=True,
