@@ -379,6 +379,7 @@ class GetCourseSmallSerializer(serpy.Serializer):
     icon_url = serpy.Field()
     academy = serpy.MethodField()
     syllabus = serpy.MethodField()
+    color = serpy.Field()
     course_translation = serpy.MethodField()
     technologies = serpy.Field()
 
