@@ -256,7 +256,6 @@ def test_with_data_in_both_workers(bc: Breathecode, fake, apply_patch, get_schem
     both_schema_are_equal(update_table_mock.call_args_list, [
         call(
             TableMock([
-                bigquery.SchemaField('character', 'STRING', 'NULLABLE'),
                 bigquery.SchemaField('kind', 'STRING', 'NULLABLE'),
                 bigquery.SchemaField('user_id', 'INTEGER', 'NULLABLE'),
                 bigquery.SchemaField('timestamp', 'TIMESTAMP', 'NULLABLE'),
@@ -268,15 +267,11 @@ def test_with_data_in_both_workers(bc: Breathecode, fake, apply_patch, get_schem
                                          bigquery.SchemaField(attr2, bigquery.enums.SqlTypeNames.BOOL, 'NULLABLE'),
                                          bigquery.SchemaField(attr3, bigquery.enums.SqlTypeNames.FLOAT64, 'NULLABLE'),
                                          bigquery.SchemaField(attr4, bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
-                                         bigquery.SchemaField('knife', 'BOOL', 'NULLABLE'),
-                                         bigquery.SchemaField('pistol', 'FLOAT64', 'NULLABLE'),
                                      )),
                 bigquery.SchemaField('related',
                                      'RECORD',
                                      'NULLABLE',
                                      fields=(
-                                         bigquery.SchemaField('name', 'STRING', 'NULLABLE'),
-                                         bigquery.SchemaField('amount', 'INT64', 'NULLABLE'),
                                          bigquery.SchemaField('id', 'INTEGER', 'NULLABLE'),
                                          bigquery.SchemaField('type', 'STRING', 'NULLABLE'),
                                          bigquery.SchemaField('slug', 'STRING', 'NULLABLE'),

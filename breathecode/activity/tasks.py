@@ -238,42 +238,14 @@ def upload_activities(self, task_manager_id: int, **_):
 
     table = BigQuery.table('activity')
     schema = table.schema()
-    new_schema = []
-    rows = []
 
-    to_check = set()
-
-    for activity in res:
-        to_check.update(activity['schema'])
-        rows.append(activity['data'])
-
-    structs = {}
-    new_structs = {}
-
-    structs['meta'] = schema
-    for field in schema:
-        if field.field_type == bigquery.enums.SqlTypeNames.STRUCT:
-            structs[field.name] = field.fields
-
-    diff = to_check.symmetric_difference(schema)
-
-    for field in diff:
-        if field.field_type == bigquery.enums.SqlTypeNames.STRUCT:
-            if field.name not in new_structs:
-                new_structs[field.name] = set()
-
-            new_structs[field.name].update(field.fields)
-
-        else:
-            new_schema.append(field)
-
-    for struct in new_structs:
-        new_schema.append(
-            bigquery.SchemaField(struct, bigquery.enums.SqlTypeNames.STRUCT, 'NULLABLE', fields=new_structs[struct]))
+    rows = [x['data'] for x in res]
+    new_schema = BigQuery.join_schemas(*[x['schema'] for x in res])
+    diff = BigQuery.schema_difference(schema, new_schema)
 
     try:
-        if new_schema:
-            table.update_schema(new_schema, append=True)
+        if diff:
+            table.update_schema(diff)
 
         table.bulk_insert(rows)
 

@@ -359,6 +359,7 @@ class GetCourseTranslationSerializer(serpy.Serializer):
     lang = serpy.Field()
     course_modules = serpy.Field()
     landing_url = serpy.Field()
+    video_url = serpy.Field()
 
 
 class GetCourseSmallSerializer(serpy.Serializer):
@@ -366,6 +367,7 @@ class GetCourseSmallSerializer(serpy.Serializer):
     icon_url = serpy.Field()
     academy = serpy.MethodField()
     syllabus = serpy.MethodField()
+    color = serpy.Field()
     course_translation = serpy.MethodField()
     technologies = serpy.Field()
 

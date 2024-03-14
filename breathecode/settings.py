@@ -111,6 +111,9 @@ REST_FRAMEWORK = {
 if os.getenv('ENABLE_DEFAULT_PAGINATION', 'y') in ['t', 'true', 'True', 'TRUE', '1', 'yes', 'y']:
     REST_FRAMEWORK['PAGE_SIZE'] = 20
 
+# whitenoise runs in sync mode, it must be wrapped or removed
+# CompressResponseMiddleware must be upgraded because a django deprecation
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'breathecode.middlewares.static_redirect_middleware',
@@ -129,6 +132,9 @@ MIDDLEWARE = [
     'breathecode.middlewares.CompressResponseMiddleware',
     'django.middleware.http.ConditionalGetMiddleware',
 ]
+
+if ENVIRONMENT != 'test':
+    MIDDLEWARE += ['django_minify_html.middleware.MinifyHtmlMiddleware']
 
 if os.getenv('GOOGLE_APPLICATION_CREDENTIALS') and (GS_BUCKET_NAME := os.getenv('STATIC_BUCKET')):
     from google.oauth2 import service_account
