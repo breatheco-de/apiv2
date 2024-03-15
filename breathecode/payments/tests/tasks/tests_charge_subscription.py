@@ -2,6 +2,7 @@
 Test /answer
 """
 import logging
+import os
 import random
 from unittest.mock import MagicMock, call, patch
 
@@ -237,16 +238,17 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'next_payment_at': UTC_NOW + calculate_relative_delta(unit, unit_type),
             },
         ])
-        self.assertEqual(notify_actions.send_email_message.call_args_list, [
+
+        assert notify_actions.send_email_message.call_args_list == [
             call('message',
                  model.user.email, {
                      'SUBJECT': 'Your 4Geeks subscription was successfully renewed',
                      'MESSAGE': 'The amount was $0.0',
                      'BUTTON': 'See the invoice',
-                     'LINK': '/subscription/1'
+                     'LINK': os.getenv('APP_URL')[:-1] + '/subscription/1'
                  },
                  academy=model.academy)
-        ])
+        ]
         self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
             call(1, 'bag_created', related_type='payments.Bag', related_id=1),
             call(1, 'bag_created', related_type='payments.Bag', related_id=2),
@@ -271,8 +273,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         }
         model = self.bc.database.create(subscription=subscription, invoice=1)
 
-        with patch('breathecode.payments.services.stripe.Stripe.pay',
-                   MagicMock(side_effect=Exception('fake error'))):
+        with patch('breathecode.payments.services.stripe.Stripe.pay', MagicMock(side_effect=Exception('fake error'))):
             # remove prints from mixer
             logging.Logger.info.call_args_list = []
             logging.Logger.error.call_args_list = []
@@ -305,7 +306,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                      'SUBJECT': 'Your 4Geeks subscription could not be renewed',
                      'MESSAGE': 'Please update your payment methods',
                      'BUTTON': 'Please update your payment methods',
-                     'LINK': '/subscription/1'
+                     'LINK': os.getenv('APP_URL')[:-1] + '/subscription/1'
                  },
                  academy=model.academy)
         ])
@@ -334,8 +335,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         }
         model = self.bc.database.create(subscription=subscription, invoice=1)
 
-        with patch('breathecode.payments.services.stripe.Stripe.pay',
-                   MagicMock(side_effect=Exception('fake error'))):
+        with patch('breathecode.payments.services.stripe.Stripe.pay', MagicMock(side_effect=Exception('fake error'))):
             # remove prints from mixer
             logging.Logger.info.call_args_list = []
             logging.Logger.error.call_args_list = []
@@ -379,8 +379,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('mixer.main.LOGGER.info', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.services.stripe.Stripe.refund_payment', MagicMock())
-    def test_plan_financing_process_to_charge__but_a_undexpected_exception_is_raised__not_found_invoice_to_refund(
-            self):
+    def test_plan_financing_process_to_charge__but_a_undexpected_exception_is_raised__not_found_invoice_to_refund(self):
         unit = random.choice([1, 3, 6, 12])
         unit_type = 'MONTH'
         subscription = {
@@ -398,8 +397,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             logging.Logger.info.call_args_list = []
             logging.Logger.error.call_args_list = []
 
-            with patch('breathecode.notify.actions.send_email_message',
-                       MagicMock(side_effect=Exception(error))):
+            with patch('breathecode.notify.actions.send_email_message', MagicMock(side_effect=Exception(error))):
                 charge_subscription.delay(1)
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
@@ -439,8 +437,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('mixer.main.LOGGER.info', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.services.stripe.Stripe.refund_payment', MagicMock())
-    def test_plan_financing_process_to_charge__but_a_undexpected_exception_is_raised__found_invoice_to_refund(
-            self):
+    def test_plan_financing_process_to_charge__but_a_undexpected_exception_is_raised__found_invoice_to_refund(self):
         unit = random.choice([1, 3, 6, 12])
         unit_type = 'MONTH'
         subscription = {
@@ -458,8 +455,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             logging.Logger.info.call_args_list = []
             logging.Logger.error.call_args_list = []
 
-            with patch('breathecode.notify.actions.send_email_message',
-                       MagicMock(side_effect=Exception(error))):
+            with patch('breathecode.notify.actions.send_email_message', MagicMock(side_effect=Exception(error))):
                 charge_subscription.delay(1)
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])

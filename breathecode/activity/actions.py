@@ -4,8 +4,7 @@ from datetime import datetime
 from typing import Any, Optional, TypedDict
 
 from django.core.cache import cache
-
-from breathecode.utils.decorators.task import AbortTask, RetryTask
+from task_manager.core.exceptions import AbortTask, RetryTask
 
 ALLOWED_TYPES = {
     'auth.UserInvite': [
@@ -54,8 +53,7 @@ ALLOWED_TYPES = {
 class FillActivityMeta:
 
     @staticmethod
-    def _get_query(related_id: Optional[str | int] = None,
-                   related_slug: Optional[str] = None) -> dict[str, Any]:
+    def _get_query(related_id: Optional[str | int] = None, related_slug: Optional[str] = None) -> dict[str, Any]:
         kwargs = {}
 
         if related_id:
@@ -543,8 +541,7 @@ class FillActivityMeta:
         selected_mentorship_service_set = (instance.selected_mentorship_service_set.slug
                                            if instance.selected_mentorship_service_set else None)
 
-        selected_event_type_set = (instance.selected_event_type_set.slug
-                                   if instance.selected_event_type_set else None)
+        selected_event_type_set = (instance.selected_event_type_set.slug if instance.selected_event_type_set else None)
         obj = {
             'id': instance.id,
             'status': instance.status,
@@ -619,8 +616,7 @@ def get_activity_meta(kind: str,
     if related_type == 'payments.PlanFinancing' and kind in ALLOWED_TYPES['payments.PlanFinancing']:
         return FillActivityMeta.plan_financing(*args)
 
-    if related_type == 'mentorship.MentorshipSession' and kind in ALLOWED_TYPES[
-            'mentorship.MentorshipSession']:
+    if related_type == 'mentorship.MentorshipSession' and kind in ALLOWED_TYPES['mentorship.MentorshipSession']:
         return FillActivityMeta.mentorship_session(*args)
 
     if related_type == 'payments.Invoice' and kind in ALLOWED_TYPES['payments.Invoice']:

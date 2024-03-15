@@ -3,7 +3,7 @@ from typing import Optional
 from warnings import warn
 
 import jwt
-from rest_framework.test import APITestCase
+from rest_framework.test import APIClient, APITestCase
 
 __all__ = ['Request']
 
@@ -88,7 +88,11 @@ class Request:
         token = Token.objects.create(user=user)
         self._parent.client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
 
-    def sign_jwt_link(self, app, user_id: Optional[int] = None, reverse: bool = False):
+    def sign_jwt_link(self,
+                      app,
+                      user_id: Optional[int] = None,
+                      reverse: bool = False,
+                      client: Optional[APIClient] = None):
         """
         Set Json Web Token in the request.
 
@@ -111,6 +115,9 @@ class Request:
         from django.utils import timezone
 
         now = timezone.now()
+
+        if not client:
+            client = self._parent.client
 
         # https://datatracker.ietf.org/doc/html/rfc7519#section-4
         payload = {
@@ -140,4 +147,4 @@ class Request:
         else:
             raise Exception('Algorithm not implemented')
 
-        self._parent.client.credentials(HTTP_AUTHORIZATION=f'Link App={app.slug},Token={token}')
+        client.credentials(HTTP_AUTHORIZATION=f'Link App={app.slug},Token={token}')

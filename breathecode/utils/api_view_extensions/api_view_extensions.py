@@ -1,6 +1,9 @@
 import inspect
-import breathecode.utils.api_view_extensions.extensions as extensions
+
 from django.core.handlers.wsgi import WSGIRequest
+
+import breathecode.utils.api_view_extensions.extensions as extensions
+
 from .api_view_extension_handlers import APIViewExtensionHandlers
 
 __all__ = ['APIViewExtensions']
@@ -11,17 +14,13 @@ OFFSET_QUERY_PARAM = 'offset'
 
 
 class APIViewExtensions:
-    """
-    That's the interface to declare the extensions will be used.
-    """
+    """Django rest's view extensions."""
 
     _valid_extensions: list
     _kwargs: dict
 
+    # autodetect the extension compatible with the arguments.
     def __init__(self, **kwargs) -> APIViewExtensionHandlers:
-        """
-        Autodetect the extension compatible with the arguments.
-        """
 
         self._valid_extensions = set()
         self._kwargs = kwargs
@@ -38,17 +37,13 @@ class APIViewExtensions:
                 self._valid_extensions.add(extension)
 
     def __call__(self, request: WSGIRequest):
-        """
-        Get the handler of extensions
-        """
+        """Get handler."""
 
         self.request = request
         return APIViewExtensionHandlers(request, self._valid_extensions, **self._kwargs)
 
     def _requirements(self, extension):
-        """
-        Get requirements of a extension.
-        """
+        """Get requirements of the extension."""
 
         return [
             x for x in dict(inspect.signature(extension.__init__).parameters)

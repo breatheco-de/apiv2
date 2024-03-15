@@ -5,15 +5,15 @@ import logging
 import random
 from unittest.mock import MagicMock, call, patch
 
-from django.utils import timezone
 import pytest
+from dateutil.relativedelta import relativedelta
+from django.utils import timezone
+
+import breathecode.activity.tasks as activity_tasks
 from breathecode.payments import tasks
 
 from ...tasks import build_subscription
-
 from ..mixins import PaymentsTestCase
-from dateutil.relativedelta import relativedelta
-import breathecode.activity.tasks as activity_tasks
 
 UTC_NOW = timezone.now()
 

@@ -1,7 +1,0 @@
-{% if type == 'link' %}
-<a class="btn {{className|safe}}" type="button" href="{{href|safe}}" onclick="{{onclick}}">
-  {{value}}
-</a>
-{% else %}
-<button class="btn {{className|safe}}" type="{{type|safe}}">{{value|safe}}</button>
-{% endif %}
