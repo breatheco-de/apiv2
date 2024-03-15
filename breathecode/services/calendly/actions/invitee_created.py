@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 logger = logging.getLogger(__name__)
 
 
-def invitee_created(self, webhook, payload: dict):
+def invitee_created(client, webhook, payload: dict):
     # lazyload to fix circular import
     from breathecode.mentorship.models import MentorshipService, MentorProfile, MentorshipSession
     # from breathecode.events.actions import update_or_create_event
@@ -38,7 +38,7 @@ def invitee_created(self, webhook, payload: dict):
         raise Exception(f'Mentee user not found with email {mentee_email} or id {mentee_id}')
 
     event_uuid = urlparse(payload['event']).path.split('/')[-1]
-    event = self.get_event(event_uuid)
+    event = client.get_event(event_uuid)
     if event is None or 'resource' not in event:
         raise Exception(f'Event with uuid {event_uuid} not found on calendly')
     event = event['resource']
@@ -78,3 +78,5 @@ def invitee_created(self, webhook, payload: dict):
     session.service = service
     session.calendly_uuid = event_uuid
     session.save()
+
+    return session

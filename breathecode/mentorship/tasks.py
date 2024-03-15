@@ -5,7 +5,9 @@ import requests
 from celery import shared_task
 
 from breathecode.services.calendly import Calendly
+from breathecode.services.calendly.actions import invitee_created
 from breathecode.utils.decorators import task
+import breathecode.activity.tasks as tasks_activity
 from breathecode.utils.decorators.task import AbortTask, TaskPriority
 
 from .models import CalendlyOrganization, CalendlyWebhook, MentorProfile
@@ -43,6 +45,28 @@ def async_calendly_webhook(self, calendly_webhook_id):
         status = 'error'
 
     logger.debug(f'Calendly status: {status}')
+
+
+@shared_task(bind=True, priority=TaskPriority.STUDENT.value)
+def async_mentorship_session_calendly_webhook(self, calendly_webhook_id):
+    logger.debug('Starting async_mentorship_session_calendly_webhook')
+
+    webhook = CalendlyWebhook.objects.filter(id=calendly_webhook_id).first()
+
+    payload = webhook.payload
+    calendly_token = os.getenv('CALENDLY_TOKEN')
+    client = Calendly(calendly_token)
+    payload['tracking']['utm_campaign'] = 'geekpal'
+    mentorship_session = invitee_created(client, webhook, payload)
+
+    if mentorship_session is not None:
+        tasks_activity.add_activity.delay(
+            mentorship_session.mentee.id,
+            'mentoring_session_scheduled',
+            related_type='mentorship.MentorshipSession',
+            related_id=mentorship_session.id,
+            timestamp=webhook.called_at,
+        )
 
 
 @task(bind=False, priority=TaskPriority.STUDENT.value)
