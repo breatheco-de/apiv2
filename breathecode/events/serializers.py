@@ -294,6 +294,14 @@ class AcademyEventSmallSerializer(serpy.Serializer):
     host_user = UserSerializer(required=False)
     author = UserSerializer(required=False)
     free_for_all = serpy.Field()
+    asset = serpy.MethodField()
+
+    def get_asset(self, obj):
+        if obj.asset_slug is not None:
+            asset = Asset.objects.filter(slug=obj.asset_slug).first()
+            if asset is not None:
+                return AssetSmallSerializer(asset, many=False).data
+        return None
 
 
 class GetLiveClassSerializer(serpy.Serializer):

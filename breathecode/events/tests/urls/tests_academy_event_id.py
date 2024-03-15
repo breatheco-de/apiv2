@@ -19,11 +19,28 @@ def user_serializer(user):
     }
 
 
+def asset_serializer(asset):
+    return {
+        'id': asset.id,
+        'slug': asset.slug,
+        'title': asset.title,
+        'lang': asset.title,
+        'asset_type': asset.asset_type,
+        'status': asset.status,
+        'published_at': datetime_to_iso_format(asset.published_at),
+        'category': {
+            'id': asset.category.id,
+            'slug': asset.category.slug,
+            'title': asset.category.title,
+        }
+    }
+
+
 seed = os.urandom(16)
 uuid = UUID(bytes=seed, version=4)
 
 
-def get_serializer(event, academy, data={}):
+def get_serializer(event, academy, asset=None, data={}):
     return {
         'id': event.id,
         'author': user_serializer(event.author),
@@ -59,6 +76,7 @@ def get_serializer(event, academy, data={}):
         'live_stream_url': event.live_stream_url,
         'eventbrite_sync_status': event.eventbrite_sync_status,
         'eventbrite_sync_description': event.eventbrite_sync_description,
+        'asset': asset_serializer(asset) if asset else None,
         **data,
     }
 
