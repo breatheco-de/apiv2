@@ -9,11 +9,11 @@ from slugify import slugify
 
 import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy
-from breathecode.registry.models import Asset
-from breathecode.registry.serializers import AssetSmallSerializer
 from breathecode.admissions.serializers import UserPublicSerializer
 from breathecode.authenticate.models import Profile, ProfileTranslation
 from breathecode.marketing.actions import validate_marketing_tags
+from breathecode.registry.models import Asset
+from breathecode.registry.serializers import AssetSmallSerializer
 from breathecode.utils import serpy
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
@@ -294,6 +294,14 @@ class AcademyEventSmallSerializer(serpy.Serializer):
     host_user = UserSerializer(required=False)
     author = UserSerializer(required=False)
     free_for_all = serpy.Field()
+    asset = serpy.MethodField()
+
+    def get_asset(self, obj):
+        if obj.asset_slug is not None:
+            asset = Asset.objects.filter(slug=obj.asset_slug).first()
+            if asset is not None:
+                return AssetSmallSerializer(asset, many=False).data
+        return None
 
 
 class GetLiveClassSerializer(serpy.Serializer):
@@ -491,7 +499,7 @@ class EventPUTSerializer(serializers.ModelSerializer):
                 translation(lang,
                             en='Missing event type',
                             es='Debes especificar un tipo de evento',
-                            slug='event-type-lang-mismatch'))
+                            slug='no-event-type'))
 
         if 'lang' in data and event_type.lang != data['lang']:
             raise ValidationException(
@@ -601,11 +609,10 @@ class POSTEventCheckinSerializer(serializers.ModelSerializer):
                 event_checkin.attendee = self.context['user']
                 event_checkin.save()
 
-            raise ValidationException(translation(
-                self.context['lang'],
-                en='This user already has an event checkin associated to this event',
-                es='Este usuario ya esta registrado en este evento',
-                slug='user-registered-in-event'),
+            raise ValidationException(translation(self.context['lang'],
+                                                  en='This user already has an event checkin associated to this event',
+                                                  es='Este usuario ya esta registrado en este evento',
+                                                  slug='user-registered-in-event'),
                                       code=400)
 
         return data
@@ -678,8 +685,8 @@ class LiveClassSerializer(serializers.ModelSerializer):
                             es='Esta clase ya ha sido iniciada.',
                             slug='started-at-already-set'))
 
-        if self.instance and 'started_at' in data and (data['started_at'] < utc_now - timedelta(minutes=2) or
-                                                       data['started_at'] > utc_now + timedelta(minutes=2)):
+        if self.instance and 'started_at' in data and (data['started_at'] < utc_now - timedelta(minutes=2)
+                                                       or data['started_at'] > utc_now + timedelta(minutes=2)):
             raise ValidationException(
                 translation(self.context['lang'],
                             en='Started at cannot be so different from the current time.',

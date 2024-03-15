@@ -9,8 +9,7 @@ from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.authenticate.models import Token
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.notify import actions as notify_actions
-from breathecode.utils import ValidationException, getLogger
-from breathecode.utils.decorators.task import TaskPriority
+from breathecode.utils import TaskPriority, ValidationException, getLogger
 
 from . import actions
 from .models import Answer, Survey
@@ -29,8 +28,7 @@ def build_question(answer):
     question = {'title': '', 'lowest': '', 'highest': ''}
     if answer.mentorship_session is not None:
         question['title'] = strings[lang]['session']['title'].format(
-            f'{answer.mentorship_session.mentor.user.first_name} {answer.mentorship_session.mentor.user.last_name}'
-        )
+            f'{answer.mentorship_session.mentor.user.first_name} {answer.mentorship_session.mentor.user.last_name}')
         question['lowest'] = strings[lang]['session']['lowest']
         question['highest'] = strings[lang]['session']['highest']
     elif answer.event is not None:
@@ -70,8 +68,7 @@ def get_admin_url():
 def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
 
     if not CohortUser.objects.filter(
-            cohort=survey.cohort, role='STUDENT', user=user, educational_status__in=['ACTIVE', 'GRADUATED'
-                                                                                     ]).exists():
+            cohort=survey.cohort, role='STUDENT', user=user, educational_status__in=['ACTIVE', 'GRADUATED']).exists():
         raise ValidationException('This student does not belong to this cohort', 400)
 
     cohort_teacher = CohortUser.objects.filter(cohort=survey.cohort,
@@ -105,10 +102,7 @@ def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
         for ct in cohort_teacher:
             if cont >= survey.max_teachers_to_ask:
                 break
-            answer = Answer(mentor=ct.user,
-                            cohort=survey.cohort,
-                            academy=survey.cohort.academy,
-                            lang=survey.lang)
+            answer = Answer(mentor=ct.user, cohort=survey.cohort, academy=survey.cohort.academy, lang=survey.lang)
             _answers.append(new_answer(answer))
             cont = cont + 1
 
@@ -120,10 +114,7 @@ def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
         for ca in cohort_assistant:
             if cont >= survey.max_assistants_to_ask:
                 break
-            answer = Answer(mentor=ca.user,
-                            cohort=survey.cohort,
-                            academy=survey.cohort.academy,
-                            lang=survey.lang)
+            answer = Answer(mentor=ca.user, cohort=survey.cohort, academy=survey.cohort.academy, lang=survey.lang)
             _answers.append(new_answer(answer))
             cont = cont + 1
 
@@ -296,8 +287,7 @@ def send_mentorship_session_survey(self, session_id):
         return False
 
     if not session.started_at or not session.ended_at:
-        logger.error('Mentorship session not finished',
-                     slug='mentorship-session-without-started-at-or-ended-at')
+        logger.error('Mentorship session not finished', slug='mentorship-session-without-started-at-or-ended-at')
         return False
 
     if session.ended_at - session.started_at <= timedelta(minutes=5):
@@ -312,9 +302,7 @@ def send_mentorship_session_survey(self, session_id):
 
     answer = Answer.objects.filter(mentorship_session__id=session.id).first()
     if answer is None:
-        answer = Answer(mentorship_session=session,
-                        academy=session.mentor.academy,
-                        lang=session.service.language)
+        answer = Answer(mentorship_session=session, academy=session.mentor.academy, lang=session.service.language)
         question = build_question(answer)
         answer.title = question['title']
         answer.lowest = question['lowest']
@@ -345,9 +333,6 @@ def send_mentorship_session_survey(self, session_id):
     }
 
     if session.mentee.email:
-        if notify_actions.send_email_message('nps_survey',
-                                             session.mentee.email,
-                                             data,
-                                             academy=session.mentor.academy):
+        if notify_actions.send_email_message('nps_survey', session.mentee.email, data, academy=session.mentor.academy):
             answer.sent_at = timezone.now()
             answer.save()

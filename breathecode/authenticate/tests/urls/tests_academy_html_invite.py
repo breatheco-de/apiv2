@@ -3,16 +3,18 @@ Test cases for /academy/:id/member/:id
 """
 import os
 import urllib.parse
+
 from django.template import loader
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
 from ..mixins.new_auth_test_case import AuthTestCase
 
 
 # IMPORTANT: the loader.render_to_string in a function is inside of function render
 def render_page_without_invites():
     request = None
-    APP_URL = os.getenv('APP_URL', '')
+    APP_URL = os.getenv('APP_URL', '')[:-1]
 
     return loader.render_to_string(
         'message.html', {
@@ -25,7 +27,7 @@ def render_page_without_invites():
 
 def render_page_with_pending_invites(model):
     request = None
-    APP_URL = os.getenv('APP_URL', '')
+    APP_URL = os.getenv('APP_URL', '')[:-1]
     profile_academies = []
     if 'profile_academy' in model:
         profile_academies = model.profile_academy if isinstance(model.profile_academy,

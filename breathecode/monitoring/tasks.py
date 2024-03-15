@@ -4,7 +4,7 @@ from celery import shared_task
 from django.utils import timezone
 
 from breathecode.notify.actions import send_email_message, send_slack_raw
-from breathecode.utils.decorators.task import TaskPriority
+from breathecode.utils import TaskPriority
 
 from .actions import download_csv, run_endpoint_diagnostic, run_script
 from .models import Endpoint, MonitorScript
@@ -44,14 +44,13 @@ def test_endpoint(self, endpoint_id):
                 and hasattr(endpoint.application.academy, 'slackteam')
                 and hasattr(endpoint.application.academy.slackteam.owner, 'credentialsslack')):
 
-            send_slack_raw(
-                'diagnostic',
-                endpoint.application.academy.slackteam.owner.credentialsslack.token,
-                endpoint.application.notify_slack_channel.slack_id, {
-                    'subject': f'Errors found on app {endpoint.application.title} endpoint {endpoint.url}',
-                    **result,
-                },
-                academy=endpoint.application.academy)
+            send_slack_raw('diagnostic',
+                           endpoint.application.academy.slackteam.owner.credentialsslack.token,
+                           endpoint.application.notify_slack_channel.slack_id, {
+                               'subject': f'Errors found on app {endpoint.application.title} endpoint {endpoint.url}',
+                               **result,
+                           },
+                           academy=endpoint.application.academy)
 
 
 @shared_task(bind=True, priority=TaskPriority.MONITORING.value)
@@ -88,8 +87,7 @@ def execute_scripts(self, script_id):
 
         if email is None:
             logger.debug(
-                f'No email set for monitoring app or script, skiping email notification for {script.script_slug}'
-            )
+                f'No email set for monitoring app or script, skiping email notification for {script.script_slug}')
         else:
             logger.debug(f'Sending script notification report to {email}')
 

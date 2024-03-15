@@ -4,11 +4,10 @@ Test /answer
 from unittest.mock import MagicMock, call, patch
 
 from django.utils import timezone
+from faker import Faker
+from task_manager.core.exceptions import AbortTask
 
 from breathecode.activity.actions import FillActivityMeta, get_activity_meta
-from faker import Faker
-
-from breathecode.utils.decorators.task import AbortTask
 
 from ..mixins import MediaTestCase
 

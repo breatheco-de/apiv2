@@ -5,12 +5,19 @@ import json
 import random
 from unittest.mock import MagicMock, call, patch
 
+import pytest
+import requests
 from django.urls.base import reverse_lazy
+from linked_services.django.actions import reset_app_cache
 from rest_framework import status
 
-from breathecode.utils.service import Service
-
 from ..mixins import AssignmentsTestCase
+
+
+@pytest.fixture(autouse=True)
+def setup(db):
+    reset_app_cache()
+    yield
 
 
 class MediaTestSuite(AssignmentsTestCase):
@@ -46,19 +53,22 @@ class MediaTestSuite(AssignmentsTestCase):
         mock.reason = 'OK'
 
         task = {'github_url': self.bc.fake.url()}
-        model = self.bc.database.create(profile_academy=1, task=task)
+        model = self.bc.database.create(profile_academy=1, task=task, app={'slug': 'rigobot'})
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:me_commitfile_id',
-                           kwargs={'commitfile_id': 1}) + '?' + self.bc.format.querystring(query)
+        url = reverse_lazy('assignments:me_commitfile_id', kwargs={'commitfile_id': 1
+                                                                   }) + '?' + self.bc.format.querystring(query)
 
-        with patch.multiple('breathecode.utils.service.Service',
-                            __init__=MagicMock(return_value=None),
-                            get=MagicMock(return_value=mock)):
-            response = self.client.get(url)
-            self.bc.check.calls(Service.get.call_args_list, [
-                call('/v1/finetuning/commitfile/1', params=query, stream=True),
-            ])
+        token = self.bc.random.string(lower=True, upper=True, symbol=True, number=True, size=20)
+        with patch('linked_services.django.actions.get_jwt', MagicMock(return_value=token)):
+            with patch.multiple('requests', get=MagicMock(return_value=mock)):
+                response = self.client.get(url)
+                self.bc.check.calls(requests.get.call_args_list, [
+                    call(model.app.app_url + '/v1/finetuning/commitfile/1',
+                         params=query,
+                         stream=True,
+                         headers={'Authorization': f'Link App=4geeks,Token={token}'}),
+                ])
 
         self.assertEqual(response.getvalue().decode('utf-8'), json.dumps(expected))
         self.assertEqual(response.status_code, code)

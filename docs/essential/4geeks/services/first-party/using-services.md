@@ -67,7 +67,7 @@ except Exception:
 
 # If all went well
 async with s:
-    async with s.aget('/my/path') as response:
+    async with s.get('/my/path') as response:
         data = await response.json()
 ```
 
@@ -88,7 +88,7 @@ except Exception:
 
 # If all went well
 async with s:
-    async with s.aget('/my/path') as response:
+    async with s.get('/my/path') as response:
         data = await response.json()
 ```
 

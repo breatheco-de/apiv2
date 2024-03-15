@@ -4,17 +4,21 @@ from typing import Type
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.signals import post_delete, post_save, pre_delete
-from breathecode.admissions.signals import student_edu_status_updated
-from breathecode.admissions.models import CohortUser
-from breathecode.authenticate.signals import (invite_status_updated, user_info_updated, user_info_deleted,
-                                              app_scope_updated, cohort_user_deleted)
-from breathecode.authenticate.models import UserInvite
 from django.dispatch import receiver
-from .tasks import async_remove_from_organization, async_add_to_organization
-from breathecode.authenticate.models import AppOptionalScope, AppRequiredScope, AppUserAgreement, ProfileAcademy
+
+from breathecode.admissions.models import CohortUser
+from breathecode.admissions.signals import student_edu_status_updated
+from breathecode.authenticate import tasks
+from breathecode.authenticate.models import ProfileAcademy, UserInvite
+from breathecode.authenticate.signals import (
+    cohort_user_deleted,
+    invite_status_updated,
+    user_info_deleted,
+    user_info_updated,
+)
 from breathecode.mentorship.models import MentorProfile
 
-from breathecode.authenticate import tasks
+from .tasks import async_add_to_organization, async_remove_from_organization
 
 logger = logging.getLogger(__name__)
 
@@ -74,15 +78,15 @@ def unset_user_group(sender, instance, **_):
 
     is_valid_profile_academy = sender == ProfileAcademy and instance.user and instance.status == 'ACTIVE'
     if is_valid_profile_academy and instance.role.slug == 'student':
-        should_be_deleted = not ProfileAcademy.objects.filter(
-            user=instance.user, role__slug='student', status='ACTIVE').exists()
+        should_be_deleted = not ProfileAcademy.objects.filter(user=instance.user, role__slug='student',
+                                                              status='ACTIVE').exists()
 
         group = Group.objects.filter(name='Student').first()
         groups = instance.user.groups
 
     if is_valid_profile_academy and instance.role.slug == 'teacher':
-        should_be_deleted = not ProfileAcademy.objects.filter(
-            user=instance.user, role__slug='teacher', status='ACTIVE').exists()
+        should_be_deleted = not ProfileAcademy.objects.filter(user=instance.user, role__slug='teacher',
+                                                              status='ACTIVE').exists()
 
         group = Group.objects.filter(name='Teacher').first()
         groups = instance.user.groups
@@ -128,35 +132,6 @@ def post_save_cohort_user(sender, instance, **_):
         async_add_to_organization(instance.cohort.id, instance.user.id)
     else:
         async_remove_from_organization(instance.cohort.id, instance.user.id)
-
-
-@receiver(post_save, sender=AppRequiredScope)
-def increment_on_update_required_scope(sender: Type[AppRequiredScope], instance: AppRequiredScope, **_):
-    app_scope_updated.send(sender=sender, instance=instance)
-
-
-@receiver(post_save, sender=AppOptionalScope)
-def increment_on_update_optional_scope(sender: Type[AppOptionalScope], instance: AppOptionalScope, **_):
-    app_scope_updated.send(sender=sender, instance=instance)
-
-
-@receiver(pre_delete, sender=AppRequiredScope)
-def increment_on_delete_required_scope(sender: Type[AppRequiredScope], instance: AppRequiredScope, **_):
-    app_scope_updated.send(sender=sender, instance=instance)
-
-
-@receiver(pre_delete, sender=AppOptionalScope)
-def increment_on_delete_optional_scope(sender: Type[AppOptionalScope], instance: AppOptionalScope, **_):
-    app_scope_updated.send(sender=sender, instance=instance)
-
-
-@receiver(app_scope_updated)
-def update_app_scope(sender: Type[AppOptionalScope | AppRequiredScope],
-                     instance: AppOptionalScope | AppRequiredScope, **_):
-    if AppUserAgreement.objects.filter(app=instance.app,
-                                       agreement_version=instance.app.agreement_version).exists():
-        instance.app.agreement_version += 1
-        instance.app.save()
 
 
 @receiver(invite_status_updated, sender=UserInvite)

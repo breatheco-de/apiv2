@@ -14,17 +14,57 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.urls import path
+from linked_services.rest_framework.views import app_webhook, authorize_view
 
-from .views import (AcademyInviteView, AcademyTokenView, AppUserAgreementView, AppUserView, ConfirmEmailView,
-                    GithubMeView, GitpodUserView, LoginView, LogoutView, MeInviteView, MemberView,
-                    PasswordResetView, ProfileInviteMeView, ProfileMePictureView, ProfileMeView,
-                    ResendInviteView, StudentView, TemporalTokenView, TokenTemporalView, UserMeView,
-                    WaitingListView, app_webhook, authorize_view, get_facebook_token, get_github_token,
-                    get_google_token, get_roles, get_slack_token, get_token_info, get_user_by_id_or_email,
-                    get_users, login_html_view, pick_password, render_academy_invite, render_invite,
-                    render_user_invite, reset_password_view, save_facebook_token, save_github_token,
-                    save_google_token, save_slack_token, sync_gitpod_users_view, GithubUserView,
-                    AcademyGithubSyncView, AcademyAuthSettingsView, UserSettingsView, ProfileView)
+from breathecode.authenticate.actions import get_user_language
+
+from .views import (
+    AcademyAuthSettingsView,
+    AcademyGithubSyncView,
+    AcademyInviteView,
+    AcademyTokenView,
+    AppUserAgreementView,
+    AppUserView,
+    ConfirmEmailView,
+    GithubMeView,
+    GithubUserView,
+    GitpodUserView,
+    LoginView,
+    LogoutView,
+    MeInviteView,
+    MemberView,
+    PasswordResetView,
+    ProfileInviteMeView,
+    ProfileMePictureView,
+    ProfileMeView,
+    ProfileView,
+    ResendInviteView,
+    StudentView,
+    TemporalTokenView,
+    TokenTemporalView,
+    UserMeView,
+    UserSettingsView,
+    WaitingListView,
+    get_facebook_token,
+    get_github_token,
+    get_google_token,
+    get_roles,
+    get_slack_token,
+    get_token_info,
+    get_user_by_id_or_email,
+    get_users,
+    login_html_view,
+    pick_password,
+    render_academy_invite,
+    render_invite,
+    render_user_invite,
+    reset_password_view,
+    save_facebook_token,
+    save_github_token,
+    save_google_token,
+    save_slack_token,
+    sync_gitpod_users_view,
+)
 
 app_name = 'authenticate'
 urlpatterns = [
@@ -44,25 +84,18 @@ urlpatterns = [
     path('profile/invite/me', ProfileInviteMeView.as_view(), name='profile_invite_me'),
     path('member/invite', render_user_invite, name='member_invite'),
     path('member/invite/<str:token>', render_invite, name='member_invite_token'),
-    path('member/<int:profile_academy_id>/token',
-         TokenTemporalView.as_view(),
+    path('member/<int:profile_academy_id>/token', TokenTemporalView.as_view(),
          name='profile_academy_reset_github_link'),
     path('academy/member', MemberView.as_view(), name='academy_member'),
-    path('academy/member/<int:profileacademy_id>/invite',
-         AcademyInviteView.as_view(),
-         name='academy_member_id_invite'),
+    path('academy/member/<int:profileacademy_id>/invite', AcademyInviteView.as_view(), name='academy_member_id_invite'),
     path('academy/<int:academy_id>/member', MemberView.as_view(), name='academy_id_member'),
-    path('academy/<int:academy_id>/member/<str:user_id_or_email>',
-         MemberView.as_view(),
-         name='academy_id_member_id'),
+    path('academy/<int:academy_id>/member/<str:user_id_or_email>', MemberView.as_view(), name='academy_id_member_id'),
     path('academy/member/<str:user_id_or_email>', MemberView.as_view(), name='academy_member_id'),
     path('academy/student', StudentView.as_view(), name='academy_student'),
     path('academy/student/<str:user_id_or_email>', StudentView.as_view(), name='academy_student_id'),
     # TODO: these endpoints starts with academy but actually they are related to the user, not to the academy
     path('academy/user/me/invite', MeInviteView.as_view(), name='academy_user_me_invite'),
-    path('academy/user/me/invite/<slug:new_status>',
-         MeInviteView.as_view(),
-         name='academy_user_me_invite_status'),
+    path('academy/user/me/invite/<slug:new_status>', MeInviteView.as_view(), name='academy_user_me_invite_status'),
     # 🔼🔼🔼
     path('academy/invite/<int:invite_id>', AcademyInviteView.as_view(), name='academy_invite_id'),
     path('academy/user/invite', AcademyInviteView.as_view(), name='academy_user_invite'),
@@ -77,9 +110,7 @@ urlpatterns = [
     path('token/me', TemporalTokenView.as_view(), name='token_me'),
     path('token/<str:token>', get_token_info, name='token'),  # get token information
     path('password/reset', reset_password_view, name='password_reset'),
-    path('member/<int:profileacademy_id>/password/reset',
-         PasswordResetView.as_view(),
-         name='member_password_reset'),
+    path('member/<int:profileacademy_id>/password/reset', PasswordResetView.as_view(), name='member_password_reset'),
     path('password/<str:token>', pick_password, name='password_token'),
     path('github/', get_github_token, name='github'),
     path('github/me', GithubMeView.as_view(), name='github_me'),
@@ -109,7 +140,9 @@ urlpatterns = [
     path('academy/gitpod/user/<int:gitpoduser_id>', GitpodUserView.as_view(), name='gitpod_user_id'),
 
     # authorize
-    path('authorize/<str:app_slug>', authorize_view, name='authorize_slug'),
+    path('authorize/<str:app_slug>',
+         authorize_view(login_url='/v1/auth/view/login', get_language=get_user_language),
+         name='authorize_slug'),
 
     # apps
     path('appuseragreement', AppUserAgreementView.as_view(), name='appuseragreement'),

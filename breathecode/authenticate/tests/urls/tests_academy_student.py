@@ -105,11 +105,10 @@ class StudentGetTestSuite(AuthTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED,
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED,
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_academy_student_without_capability(self):
@@ -120,12 +119,11 @@ class StudentGetTestSuite(AuthTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': "You (user: 1) don't have this capability: read_student "
-                'for academy 1',
-                'status_code': 403
-            })
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: read_student "
+            'for academy 1',
+            'status_code': 403
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_academy_student_without_academy(self):
@@ -137,22 +135,18 @@ class StudentGetTestSuite(AuthTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': "You (user: 1) don't have this capability: read_student "
-                'for academy 1',
-                'status_code': 403
-            })
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: read_student "
+            'for academy 1',
+            'status_code': 403
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_academy_student_without_student(self):
         """Test /academy/student"""
         self.headers(academy=1)
         role = 'konan'
-        model = self.bc.database.create(authenticate=True,
-                                        role=role,
-                                        capability='read_student',
-                                        profile_academy=True)
+        model = self.bc.database.create(authenticate=True, role=role, capability='read_student', profile_academy=True)
         url = reverse_lazy('authenticate:academy_student')
         response = self.client.get(url)
         json = response.json()
@@ -175,10 +169,7 @@ class StudentGetTestSuite(AuthTestCase):
         """Test /academy/student"""
         self.headers(academy=1)
         role = 'student'
-        model = self.bc.database.create(authenticate=True,
-                                        role=role,
-                                        capability='read_student',
-                                        profile_academy=True)
+        model = self.bc.database.create(authenticate=True, role=role, capability='read_student', profile_academy=True)
         url = reverse_lazy('authenticate:academy_student')
         response = self.client.get(url)
         json = response.json()
@@ -693,10 +684,7 @@ class StudentGetTestSuite(AuthTestCase):
         """Test /academy/student"""
         self.headers(academy=1)
         role = 'konan'
-        model = self.bc.database.create(authenticate=True,
-                                        role=role,
-                                        capability='read_student',
-                                        profile_academy=True)
+        model = self.bc.database.create(authenticate=True, role=role, capability='read_student', profile_academy=True)
 
         url = reverse_lazy('authenticate:academy_student')
         self.client.get(url)
@@ -710,10 +698,7 @@ class StudentGetTestSuite(AuthTestCase):
         """Test /academy/student"""
         self.headers(academy=1)
         role = 'konan'
-        model = self.bc.database.create(authenticate=True,
-                                        role=role,
-                                        capability='read_student',
-                                        profile_academy=True)
+        model = self.bc.database.create(authenticate=True, role=role, capability='read_student', profile_academy=True)
 
         url = reverse_lazy('authenticate:academy_student')
         self.client.get(url)
@@ -730,10 +715,7 @@ class StudentPostTestSuite(AuthTestCase):
         """Test /academy/:id/member"""
         role = 'konan'
 
-        model = self.bc.database.create(authenticate=True,
-                                        role=role,
-                                        capability='crud_student',
-                                        profile_academy=True)
+        model = self.bc.database.create(authenticate=True, role=role, capability='crud_student', profile_academy=True)
         url = reverse_lazy('authenticate:academy_student')
         data = {'role': role, 'invite': False}
         response = self.client.post(url, data, headers={'academy': 1})
@@ -763,10 +745,7 @@ class StudentPostTestSuite(AuthTestCase):
         """Test /academy/:id/member"""
         role = 'konan'
 
-        model = self.bc.database.create(authenticate=True,
-                                        role=role,
-                                        capability='crud_student',
-                                        profile_academy=True)
+        model = self.bc.database.create(authenticate=True, role=role, capability='crud_student', profile_academy=True)
         url = reverse_lazy('authenticate:academy_student')
         data = {'role': role, 'invite': True}
         response = self.client.post(url, data, headers={'academy': 1})
@@ -858,10 +837,7 @@ class StudentPostTestSuite(AuthTestCase):
         """Test /academy/:id/member"""
         role = 'konan'
 
-        model = self.bc.database.create(authenticate=True,
-                                        role=role,
-                                        capability='crud_student',
-                                        profile_academy=True)
+        model = self.bc.database.create(authenticate=True, role=role, capability='crud_student', profile_academy=True)
         url = reverse_lazy('authenticate:academy_student')
         data = {'role': role, 'user': model['user'].id, 'first_name': 'Kenny', 'last_name': 'McKornick'}
         response = self.client.post(url, data, headers={'academy': 1})
@@ -897,10 +873,7 @@ class StudentPostTestSuite(AuthTestCase):
 
         role = 'hitman'
 
-        model = self.bc.database.create(authenticate=True,
-                                        role=role,
-                                        capability='crud_student',
-                                        profile_academy=1)
+        model = self.bc.database.create(authenticate=True, role=role, capability='crud_student', profile_academy=1)
 
         url = reverse_lazy('authenticate:academy_student')
         data = {
@@ -975,10 +948,7 @@ class StudentPostTestSuite(AuthTestCase):
 
         role = 'student'
 
-        model = self.bc.database.create(authenticate=True,
-                                        role=role,
-                                        capability='crud_student',
-                                        profile_academy=1)
+        model = self.bc.database.create(authenticate=True, role=role, capability='crud_student', profile_academy=1)
 
         url = reverse_lazy('authenticate:academy_student')
         data = {
@@ -1015,11 +985,7 @@ class StudentPostTestSuite(AuthTestCase):
 
         roles = [{'name': 'konan', 'slug': 'konan'}, {'name': 'student', 'slug': 'student'}]
 
-        model = self.bc.database.create(role=roles,
-                                        user=2,
-                                        cohort=1,
-                                        capability='crud_student',
-                                        profile_academy=1)
+        model = self.bc.database.create(role=roles, user=2, cohort=1, capability='crud_student', profile_academy=1)
 
         self.bc.request.authenticate(model.user[0])
 
@@ -1062,7 +1028,7 @@ class StudentPostTestSuite(AuthTestCase):
         ])
 
         token = self.bc.database.get('authenticate.Token', 1, dict=False)
-        querystr = urllib.parse.urlencode({'callback': os.getenv('APP_URL', ''), 'token': token})
+        querystr = urllib.parse.urlencode({'callback': os.getenv('APP_URL', '')[:-1], 'token': token})
         url = os.getenv('API_URL') + '/v1/auth/academy/html/invite?' + querystr
 
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
@@ -1109,11 +1075,7 @@ class StudentPostTestSuite(AuthTestCase):
 
         roles = [{'name': 'konan', 'slug': 'konan'}, {'name': 'student', 'slug': 'student'}]
 
-        model = self.bc.database.create(role=roles,
-                                        user=2,
-                                        cohort=1,
-                                        capability='crud_student',
-                                        profile_academy=1)
+        model = self.bc.database.create(role=roles, user=2, cohort=1, capability='crud_student', profile_academy=1)
         self.bc.request.authenticate(model.user[0])
 
         url = reverse_lazy('authenticate:academy_student')
@@ -1156,7 +1118,7 @@ class StudentPostTestSuite(AuthTestCase):
         ])
 
         token = self.bc.database.get('authenticate.Token', 1, dict=False)
-        querystr = urllib.parse.urlencode({'callback': os.getenv('APP_URL', ''), 'token': token})
+        querystr = urllib.parse.urlencode({'callback': os.getenv('APP_URL', '')[:-1], 'token': token})
         url = os.getenv('API_URL') + '/v1/auth/academy/html/invite?' + querystr
 
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
@@ -1202,10 +1164,7 @@ class StudentPostTestSuite(AuthTestCase):
 
         role = 'student'
 
-        model = self.bc.database.create(authenticate=True,
-                                        role=role,
-                                        capability='crud_student',
-                                        profile_academy=1)
+        model = self.bc.database.create(authenticate=True, role=role, capability='crud_student', profile_academy=1)
 
         url = reverse_lazy('authenticate:academy_student')
         data = {
@@ -1244,7 +1203,7 @@ class StudentPostTestSuite(AuthTestCase):
         ])
 
         invite = self.bc.database.get('authenticate.UserInvite', 1, dict=False)
-        params = {'callback': ''}
+        params = {'callback': os.getenv('APP_URL', '')[:-1]}
         querystr = urllib.parse.urlencode(params)
         url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
             str(TOKEN) + '?' + querystr
@@ -1285,10 +1244,7 @@ class StudentPostTestSuite(AuthTestCase):
 
         role = 'student'
 
-        model = self.bc.database.create(authenticate=True,
-                                        role=role,
-                                        capability='crud_student',
-                                        profile_academy=1)
+        model = self.bc.database.create(authenticate=True, role=role, capability='crud_student', profile_academy=1)
 
         url = reverse_lazy('authenticate:academy_student')
         data = {
@@ -1375,7 +1331,7 @@ class StudentPostTestSuite(AuthTestCase):
         ])
 
         invite = self.bc.database.get('authenticate.UserInvite', 1, dict=False)
-        params = {'callback': ''}
+        params = {'callback': os.getenv('APP_URL', '')[:-1]}
         querystr = urllib.parse.urlencode(params)
         url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
             str(TOKEN) + '?' + querystr
@@ -1513,7 +1469,7 @@ class StudentPostTestSuite(AuthTestCase):
             }
         ])
 
-        params = {'callback': ''}
+        params = {'callback': os.getenv('APP_URL', '')[:-1]}
         querystr = urllib.parse.urlencode(params)
         url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
             str(TOKEN) + '?' + querystr
