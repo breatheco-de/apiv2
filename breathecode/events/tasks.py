@@ -1,13 +1,15 @@
 import logging
-from breathecode.admissions.models import CohortTimeSlot
-from breathecode.services.eventbrite import Eventbrite
-from celery import shared_task
 
-from breathecode.utils.datetime_integer import DatetimeInteger
-from breathecode.utils.decorators.task import TaskPriority
-from .models import Event, LiveClass, Organization, EventbriteWebhook
+from celery import shared_task
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
+
+from breathecode.admissions.models import CohortTimeSlot
+from breathecode.services.eventbrite import Eventbrite
+from breathecode.utils import TaskPriority
+from breathecode.utils.datetime_integer import DatetimeInteger
+
+from .models import Event, EventbriteWebhook, LiveClass, Organization
 
 logger = logging.getLogger(__name__)
 

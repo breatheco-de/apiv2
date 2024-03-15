@@ -12,29 +12,31 @@ from .auth_mixin import AuthMixin
 from .authenticate_models_mixin import AuthenticateMixin
 from .career_models_mixin import CareerModelsMixin
 from .certificate_models_mixin import CertificateModelsMixin
+from .commons_models_mixin import CommonsModelsMixin
 from .content_types_mixin import ContentTypesMixin
 from .events_models_mixin import EventsModelsMixin
 from .feedback_models_mixin import FeedbackModelsMixin
 from .freelance_models_mixin import FreelanceModelsMixin
+from .linked_services_models_mixin import LinkedServicesMixin
 from .marketing_models_mixin import MarketingModelsMixin
 from .media_models_mixin import MediaModelsMixin
 from .mentorship_models_mixin import MentorshipModelsMixin
 from .monitoring_models_mixin import MonitoringModelsMixin
 from .notify_models_mixin import NotifyModelsMixin
 from .payments_models_mixin import PaymentsModelsMixin
-from .registry_models_mixin import RegistryModelsMixin
 from .provisioning_models_mixin import ProvisioningModelsMixin
-from .commons_models_mixin import CommonsModelsMixin
+from .registry_models_mixin import RegistryModelsMixin
+from .task_manager_models_mixin import TaskManagerModelsMixin
 
 __all__ = ['GenerateModelsMixin']
 
 
 class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMixin, AuthenticateMixin,
                           CertificateModelsMixin, FeedbackModelsMixin, NotifyModelsMixin, EventsModelsMixin,
-                          AssessmentModelsMixin, FreelanceModelsMixin, MarketingModelsMixin,
-                          MonitoringModelsMixin, MediaModelsMixin, MentorshipModelsMixin, CareerModelsMixin,
-                          ContentTypesMixin, RegistryModelsMixin, PaymentsModelsMixin,
-                          ProvisioningModelsMixin, CommonsModelsMixin):
+                          AssessmentModelsMixin, FreelanceModelsMixin, MarketingModelsMixin, MonitoringModelsMixin,
+                          MediaModelsMixin, MentorshipModelsMixin, CareerModelsMixin, ContentTypesMixin,
+                          RegistryModelsMixin, PaymentsModelsMixin, ProvisioningModelsMixin, CommonsModelsMixin,
+                          LinkedServicesMixin, TaskManagerModelsMixin):
 
     def __detect_invalid_arguments__(self, models={}, **kwargs):
         """check if one argument is invalid to prevent errors"""
@@ -75,8 +77,8 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMix
 
         for key in kwargs:
             kwarg = kwargs[key]
-            if isinstance(kwarg, Model) or (isinstance(kwarg, list)
-                                            and len([x for x in kwarg if isinstance(x, Model)])):
+            if isinstance(kwarg, Model) or (isinstance(kwarg, list) and len([x
+                                                                             for x in kwarg if isinstance(x, Model)])):
                 models[key] = kwarg
 
         return models
@@ -98,6 +100,8 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMix
         fn = self.__flow__(
             self.generate_contenttypes_models,
             self.generate_credentials,
+            self.generate_linked_services_models,
+            self.generate_task_manager_models,
             self.generate_admissions_models,
             self.generate_registry_models,
             self.generate_provisioning_models,

@@ -13,7 +13,7 @@ from rest_framework.exceptions import ValidationError
 import breathecode.authenticate.tasks as tasks_authenticate
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, Cohort
-from breathecode.authenticate.actions import get_user_settings
+from breathecode.authenticate.actions import get_app_url, get_user_settings
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
 from breathecode.utils import ValidationException, serpy
@@ -33,8 +33,6 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
-
-APP_URL = os.getenv('APP_URL', '')
 
 
 class GetSmallCohortSerializer(serpy.Serializer):
@@ -461,10 +459,7 @@ class AcademyAuthSettingsSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
 
-        return super().create({
-            **validated_data, 'academy':
-            Academy.filter(id=self.context['academy_id']).first()
-        })
+        return super().create({**validated_data, 'academy': Academy.filter(id=self.context['academy_id']).first()})
 
 
 class StaffSerializer(serializers.ModelSerializer):
@@ -529,8 +524,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProfileAcademy
-        fields = ('email', 'role', 'user', 'first_name', 'last_name', 'address', 'phone', 'invite', 'cohort',
-                  'status')
+        fields = ('email', 'role', 'user', 'first_name', 'last_name', 'address', 'phone', 'invite', 'cohort', 'status')
 
     def validate(self, data):
         lang = data.get('lang', 'en')
@@ -544,14 +538,12 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 
         if 'user' not in data:
             if 'invite' not in data or data['invite'] != True:
-                raise ValidationException('User does not exists, do you want to invite it?',
-                                          slug='user-not-found')
+                raise ValidationException('User does not exists, do you want to invite it?', slug='user-not-found')
 
             elif 'email' not in data:
                 raise ValidationException('Please specify user id or member email', slug='no-email-or-id')
 
-            already = ProfileAcademy.objects.filter(email=data['email'],
-                                                    academy=self.context['academy_id']).exists()
+            already = ProfileAcademy.objects.filter(email=data['email'], academy=self.context['academy_id']).exists()
 
             if already:
                 raise ValidationException(
@@ -566,9 +558,8 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
             already = ProfileAcademy.objects.filter(
                 user=data['user'], academy=self.context['academy_id']).exclude(role=student_role).first()
             if already:
-                raise ValidationException(
-                    f'This user is already a member of this academy as {str(already.role)}',
-                    slug='already-exists')
+                raise ValidationException(f'This user is already a member of this academy as {str(already.role)}',
+                                          slug='already-exists')
 
         academy_id = data['academy'] if 'academy' in data else self.context['academy_id']
         if 'user' in data:
@@ -664,17 +655,16 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                                           code=400)
 
             expected_keys = [
-                'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'conversion_url',
-                'landing_url', 'user_agent', 'plan', 'location', 'translations'
+                'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'conversion_url', 'landing_url',
+                'user_agent', 'plan', 'location', 'translations'
             ]
 
             for key in conversion_info.keys():
                 if key not in expected_keys:
-                    raise ValidationException(translation(
-                        lang,
-                        en=f'Invalid key {key} provided in the conversion_info',
-                        es=f'Clave inválida {key} agregada en el conversion_info',
-                        slug='conversion-info-invalid-key'),
+                    raise ValidationException(translation(lang,
+                                                          en=f'Invalid key {key} provided in the conversion_info',
+                                                          es=f'Clave inválida {key} agregada en el conversion_info',
+                                                          slug='conversion-info-invalid-key'),
                                               code=400)
 
         return data
@@ -711,20 +701,17 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
             status = 'ACTIVE'
 
             student_role = Role.objects.filter(slug='student').first()
-            already_as_student = ProfileAcademy.objects.filter(user=user,
-                                                               academy=academy.id,
-                                                               role=student_role).first()
+            already_as_student = ProfileAcademy.objects.filter(user=user, academy=academy.id, role=student_role).first()
             # avoid double students on the same academy and cohort
             if already_as_student is not None:
-                return super().update(
-                    already_as_student, {
-                        **validated_data,
-                        'email': email,
-                        'user': user,
-                        'academy': academy,
-                        'role': role,
-                        'status': status,
-                    })
+                return super().update(already_as_student, {
+                    **validated_data,
+                    'email': email,
+                    'user': user,
+                    'academy': academy,
+                    'role': role,
+                    'status': status,
+                })
 
         # if there is not user (first time) it will be considere an invite
         if 'user' not in validated_data:
@@ -749,10 +736,9 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 
                 # avoid double invite
                 if invite is not None:
-                    raise ValidationException(
-                        'You already invited this user, check for previous invites and resend',
-                        code=400,
-                        slug='already-invited')
+                    raise ValidationException('You already invited this user, check for previous invites and resend',
+                                              code=400,
+                                              slug='already-invited')
 
             for single_cohort in cohort:
                 # prevent duplicate token (very low probability)
@@ -827,8 +813,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProfileAcademy
-        fields = ('email', 'user', 'first_name', 'last_name', 'address', 'phone', 'invite', 'cohort',
-                  'status', 'plans')
+        fields = ('email', 'user', 'first_name', 'last_name', 'address', 'phone', 'invite', 'cohort', 'status', 'plans')
         list_serializer_class = StudentPOSTListSerializer
 
     def validate(self, data):
@@ -841,21 +826,17 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
         if 'user' not in data:
             if 'invite' not in data or data['invite'] != True:
-                raise ValidationException('User does not exists, do you want to invite it?',
-                                          slug='user-not-found')
+                raise ValidationException('User does not exists, do you want to invite it?', slug='user-not-found')
             elif 'email' not in data:
                 raise ValidationException('Please specify user id or student email', slug='no-email-or-id')
 
-            already = ProfileAcademy.objects.filter(email=data['email'],
-                                                    academy=self.context['academy_id']).first()
+            already = ProfileAcademy.objects.filter(email=data['email'], academy=self.context['academy_id']).first()
             if already:
-                raise ValidationException(
-                    'There is a student already in this academy, or with invitation pending',
-                    slug='already-exists-with-this-email')
+                raise ValidationException('There is a student already in this academy, or with invitation pending',
+                                          slug='already-exists-with-this-email')
 
         elif 'user' in data:
-            already = ProfileAcademy.objects.filter(user=data['user'],
-                                                    academy=self.context['academy_id']).first()
+            already = ProfileAcademy.objects.filter(user=data['user'], academy=self.context['academy_id']).first()
             if already:
                 raise ValidationException('This user is already a member of this academy staff',
                                           code=400,
@@ -895,7 +876,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
             email = user.email
             token, created = Token.get_or_create(user, token_type='temporal')
-            querystr = urllib.parse.urlencode({'callback': APP_URL, 'token': token})
+            querystr = urllib.parse.urlencode({'callback': get_app_url(), 'token': token})
             url = os.getenv('API_URL') + '/v1/auth/academy/html/invite?' + querystr
 
             if 'invite' in validated_data:
@@ -904,26 +885,24 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             if 'plans' in validated_data:
                 del validated_data['plans']
 
-            profile_academy = ProfileAcademy.objects.create(
-                **{
-                    **validated_data,
-                    'email': email,
-                    'user': user,
-                    'academy': academy,
-                    'role': role,
-                    'status': status,
-                })
+            profile_academy = ProfileAcademy.objects.create(**{
+                **validated_data,
+                'email': email,
+                'user': user,
+                'academy': academy,
+                'role': role,
+                'status': status,
+            })
             profile_academy.save()
 
-            notify_actions.send_email_message(
-                'academy_invite',
-                email, {
-                    'subject': f'Invitation to study at {academy.name}',
-                    'invites': [ProfileAcademySmallSerializer(profile_academy).data],
-                    'user': UserSmallSerializer(user).data,
-                    'LINK': url,
-                },
-                academy=academy)
+            notify_actions.send_email_message('academy_invite',
+                                              email, {
+                                                  'subject': f'Invitation to study at {academy.name}',
+                                                  'invites': [ProfileAcademySmallSerializer(profile_academy).data],
+                                                  'user': UserSmallSerializer(user).data,
+                                                  'LINK': url,
+                                              },
+                                              academy=academy)
             return profile_academy
 
         plans: list[Plan] = []
@@ -955,9 +934,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
                 invite = UserInvite.objects.filter(**query).first()
                 if invite is not None:
-                    raise ValidationException('You already invited this user',
-                                              code=400,
-                                              slug='already-invited')
+                    raise ValidationException('You already invited this user', code=400, slug='already-invited')
 
             if (len(cohort) == 0):
                 cohort = [None]
@@ -981,7 +958,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
                 logger.debug('Sending invite email to ' + email)
 
-                querystr = urllib.parse.urlencode({'callback': APP_URL})
+                querystr = urllib.parse.urlencode({'callback': get_app_url()})
                 url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
                     str(invite.token) + '?' + querystr
 
@@ -1000,15 +977,14 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             if 'plans' in validated_data:
                 del validated_data['plans']
 
-            return ProfileAcademy.objects.create(
-                **{
-                    **validated_data,
-                    'email': email,
-                    'user': user,
-                    'academy': academy,
-                    'role': role,
-                    'status': status,
-                })
+            return ProfileAcademy.objects.create(**{
+                **validated_data,
+                'email': email,
+                'user': user,
+                'academy': academy,
+                'role': role,
+                'status': status,
+            })
 
 
 class MemberPUTSerializer(serializers.ModelSerializer):
@@ -1097,8 +1073,7 @@ class PUTGithubUserSerializer(serializers.ModelSerializer):
             else:
                 validated_data['storage_status'] = 'PENDING'
             validated_data['storage_log'] = [
-                GithubAcademyUser.create_log('User was manually scheduled to be ' +
-                                             validated_data['storage_action'])
+                GithubAcademyUser.create_log('User was manually scheduled to be ' + validated_data['storage_action'])
             ]
 
         return super().update(instance, validated_data)
@@ -1131,16 +1106,13 @@ class POSTGithubUserSerializer(serializers.ModelSerializer):
         validated_data['storage_log'] = [GithubAcademyUser.create_log('User was manually added')]
 
         return super().create({
-            **validated_data, 'academy':
-            Academy.objects.filter(id=self.context['academy_id']).first()
+            **validated_data, 'academy': Academy.objects.filter(id=self.context['academy_id']).first()
         })
 
 
 class AuthSerializer(serializers.Serializer):
     email = serializers.EmailField(label='Email')
-    password = serializers.CharField(label='Password',
-                                     style={'input_type': 'password'},
-                                     trim_whitespace=False)
+    password = serializers.CharField(label='Password', style={'input_type': 'password'}, trim_whitespace=False)
 
     def validate(self, attrs):
         email = attrs.get('email')
@@ -1162,10 +1134,9 @@ class AuthSerializer(serializers.Serializer):
             msg = 'Must include "username" and "password".'
             raise serializers.ValidationError(msg, code=403)
 
-        if user and not UserInvite.objects.filter(
-                email__iexact=email, status='ACCEPTED', is_email_validated=True).exists():
-            invites = UserInvite.objects.filter(email__iexact=email,
-                                                status='ACCEPTED',
+        if user and not UserInvite.objects.filter(email__iexact=email, status='ACCEPTED',
+                                                  is_email_validated=True).exists():
+            invites = UserInvite.objects.filter(email__iexact=email, status='ACCEPTED',
                                                 is_email_validated=False).order_by('-id')
 
             data = UserInviteNoUrlSerializer(invites, many=True).data
@@ -1217,9 +1188,9 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserInvite
-        fields = ('id', 'email', 'first_name', 'last_name', 'phone', 'cohort', 'syllabus', 'access_token',
-                  'plan', 'plans', 'user', 'country', 'city', 'latitude', 'longitude', 'status',
-                  'conversion_info', 'asset_slug', 'event_slug')
+        fields = ('id', 'email', 'first_name', 'last_name', 'phone', 'cohort', 'syllabus', 'access_token', 'plan',
+                  'plans', 'user', 'country', 'city', 'latitude', 'longitude', 'status', 'conversion_info',
+                  'asset_slug', 'event_slug')
 
     def validate(self, data: dict[str, str]):
         from breathecode.marketing.models import Course
@@ -1267,10 +1238,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
             except Exception:
                 raise ValidationException(
-                    translation(lang,
-                                en='Course not found',
-                                es='Curso no encontrado',
-                                slug='course-not-found'))
+                    translation(lang, en='Course not found', es='Curso no encontrado', slug='course-not-found'))
 
         if cohort := data.get('cohort'):
             extra['cohort'] = cohort
@@ -1308,17 +1276,15 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         if not self.instance and invites.filter(status='PENDING').exists():
             raise ValidationException(
-                translation(
-                    lang,
-                    en='Check your email! You have a pending invitation link that needs to be accepted',
-                    es='¡Revisa tu correo! Tienes un link con una invitación pendiente que debe ser aceptada',
-                    slug='user-invite-exists-status-pending'))
+                translation(lang,
+                            en='Check your email! You have a pending invitation link that needs to be accepted',
+                            es='¡Revisa tu correo! Tienes un link con una invitación pendiente que debe ser aceptada',
+                            slug='user-invite-exists-status-pending'))
 
         if not self.instance and invites.filter(status='ACCEPTED').exists():
-            raise ValidationException(translation(
-                lang,
-                en='You are already a member of 4Geeks.com, go ahead and log in',
-                es='Ya eres miembro de 4Geeks.com, inicia sesión en su lugar'),
+            raise ValidationException(translation(lang,
+                                                  en='You are already a member of 4Geeks.com, go ahead and log in',
+                                                  es='Ya eres miembro de 4Geeks.com, inicia sesión en su lugar'),
                                       silent=True,
                                       slug='user-invite-exists-status-accepted')
 
@@ -1440,39 +1406,28 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                                           code=400)
 
             expected_keys = [
-                'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'conversion_url',
-                'landing_url', 'user_agent', 'plan', 'location', 'internal_cta_placement',
-                'internal_cta_content', 'internal_cta_campaign'
+                'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'conversion_url', 'landing_url',
+                'user_agent', 'plan', 'location', 'internal_cta_placement', 'internal_cta_content',
+                'internal_cta_campaign'
             ]
 
             for key in conversion_info.keys():
                 if key not in expected_keys:
-                    raise ValidationException(translation(
-                        lang,
-                        en=f'Invalid key {key} provided in the conversion_info',
-                        es=f'Clave inválida {key} agregada en el conversion_info',
-                        slug='conversion-info-invalid-key'),
+                    raise ValidationException(translation(lang,
+                                                          en=f'Invalid key {key} provided in the conversion_info',
+                                                          es=f'Clave inválida {key} agregada en el conversion_info',
+                                                          slug='conversion-info-invalid-key'),
                                               code=400)
 
         return data
 
     def create(self, *args, **kwargs):
-        print('====================2')
-        print('====================2')
-        print('====================2')
-        print('====================2')
-        print('====================2')
-        print('====================2')
         instance = super().create(*args, **kwargs)
 
-        print(21)
         if self.plan:
-            print(22)
             self.plan.invites.add(instance)
 
-        print(23)
         if self.course:
-            print(24)
             self.course.invites.add(instance)
 
         # if self.user:
@@ -1481,39 +1436,21 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         #                                       related_type='auth.UserInvite',
         #                                       related_id=instance.id)
 
-        print(25)
         tasks_authenticate.async_validate_email_invite.delay(instance.id)
         return instance
 
     def update(self, *args, **kwargs):
-        print('====================3')
-        print('====================3')
-        print('====================3')
-        print('====================3')
-        print('====================3')
-        print('====================3')
         instance = super().update(*args, **kwargs)
 
-        print(31)
         if self.plan:
-            print(32)
             self.plan.invites.add(instance)
 
-        print(33)
         if self.course:
-            print(34)
             self.course.invites.add(instance)
 
-        print(35)
         return instance
 
     def get_access_token(self, obj: UserInvite):
-        print('====================4')
-        print('====================4')
-        print('====================4')
-        print('====================4')
-        print('====================4')
-        print('====================4')
         lang = self.context.get('lang', 'en')
 
         if obj.status != 'ACCEPTED':
@@ -1539,14 +1476,13 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 es='4Geeks - Valida tu cuenta',
             )
 
-            notify_actions.send_email_message(
-                'verify_email',
-                self.user.email, {
-                    'SUBJECT': subject,
-                    'LANG': lang,
-                    'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{obj.token}',
-                },
-                academy=obj.academy)
+            notify_actions.send_email_message('verify_email',
+                                              self.user.email, {
+                                                  'SUBJECT': subject,
+                                                  'LANG': lang,
+                                                  'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{obj.token}',
+                                              },
+                                              academy=obj.academy)
 
         self.instance.user = self.user
         self.instance.save()
@@ -1555,12 +1491,6 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         return token.key
 
     def get_plans(self, obj: UserInvite):
-        print('====================5')
-        print('====================5')
-        print('====================5')
-        print('====================5')
-        print('====================5')
-        print('====================5')
         from breathecode.payments.serializers import GetPlanSmallSerializer
 
         return GetPlanSmallSerializer(obj.plans.all(), many=True).data

@@ -120,10 +120,7 @@ class AcademyEventTestSuite(EventTestCase):
 
         response = self.client.get(url)
         json = response.json()
-        expected = {
-            'detail': "You (user: 1) don't have this capability: read_event for academy 1",
-            'status_code': 403
-        }
+        expected = {'detail': "You (user: 1) don't have this capability: read_event for academy 1", 'status_code': 403}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 403)
@@ -398,20 +395,22 @@ class AcademyEventTestSuite(EventTestCase):
     def test_all_academy_events(self):
         self.check_all_academy_events()
 
-    def test_all_academy_events__post__without_organization(self):
+    def test_all_academy_events__post__no_required_fields(self):
         self.headers(academy=1)
 
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_event',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_event', role='potato')
 
         url = reverse_lazy('events:academy_event')
         data = {}
 
         response = self.client.post(url, data)
         json = response.json()
-        expected = {'detail': 'organization-not-exist', 'status_code': 400}
+        expected = {
+            'banner': ['This field is required.'],
+            'capacity': ['This field is required.'],
+            'ending_at': ['This field is required.'],
+            'starting_at': ['This field is required.'],
+        }
 
         self.assertEqual(json, expected)
         self.assertEqual(self.bc.database.list_of('events.Event'), [])
@@ -634,6 +633,7 @@ class AcademyEventTestSuite(EventTestCase):
     def test_all_academy_events__post__bad_slug(self):
         self.headers(academy=1)
 
+        lang = self.bc.fake.slug()[:2]
         model = self.generate_models(authenticate=True,
                                      organization=True,
                                      profile_academy=True,
@@ -642,7 +642,8 @@ class AcademyEventTestSuite(EventTestCase):
                                          'tag_type': 'DISCOVERY'
                                      }),
                                      active_campaign_academy=True,
-                                     role='potato')
+                                     role='potato',
+                                     event_type={'lang': lang})
 
         url = reverse_lazy('events:academy_event')
         current_date = self.datetime_now()
@@ -654,6 +655,8 @@ class AcademyEventTestSuite(EventTestCase):
             'capacity': 11,
             'starting_at': self.datetime_to_iso(current_date),
             'ending_at': self.datetime_to_iso(current_date),
+            'lang': lang,
+            'event_type': 1,
         }
 
         response = self.client.post(url, data)
@@ -670,7 +673,7 @@ class AcademyEventTestSuite(EventTestCase):
             'id': 1,
             'slug': 'they-killed-kenny',
             'academy': 1,
-            'organization': 1,
+            'organization': None,
             'eventbrite_sync_status': 'PENDING',
             'tags': ','.join([x.slug for x in model.tag]),
             'currency': 'USD',
@@ -691,7 +694,9 @@ class AcademyEventTestSuite(EventTestCase):
                     'ending_at': current_date,
                     'tags': ','.join([x.slug for x in model.tag]),
                     'id': 1,
-                    'organization_id': 1,
+                    'organization_id': None,
+                    'lang': lang,
+                    'event_type_id': 1,
                     'starting_at': current_date,
                     'status': 'DRAFT',
                     'eventbrite_sync_status': 'PENDING',
@@ -748,6 +753,7 @@ class AcademyEventTestSuite(EventTestCase):
         seed = os.urandom(16)
         seed2 = os.urandom(16)
         uuid = UUID(bytes=seed2, version=4)
+        lang = self.bc.fake.slug()[:2]
 
         with patch('os.urandom', MagicMock(return_value=seed)):
             model = self.generate_models(authenticate=True,
@@ -759,7 +765,8 @@ class AcademyEventTestSuite(EventTestCase):
                                              'tag_type': 'DISCOVERY'
                                          }),
                                          active_campaign_academy=True,
-                                         role='potato')
+                                         role='potato',
+                                         event_type={'lang': lang})
 
         url = reverse_lazy('events:academy_event')
         current_date = self.datetime_now()
@@ -772,6 +779,8 @@ class AcademyEventTestSuite(EventTestCase):
             'capacity': 11,
             'starting_at': self.datetime_to_iso(current_date),
             'ending_at': self.datetime_to_iso(current_date),
+            'lang': lang,
+            'event_type': 1,
         }
 
         with patch('os.urandom', MagicMock(return_value=seed2)):
@@ -789,7 +798,7 @@ class AcademyEventTestSuite(EventTestCase):
             'id': 2,
             'slug': 'event-they-killed-kenny',
             'academy': 1,
-            'organization': 1,
+            'organization': None,
             'tags': ','.join([x.slug for x in model.tag]),
             'eventbrite_sync_status': 'PENDING',
             'currency': 'USD',
@@ -815,7 +824,9 @@ class AcademyEventTestSuite(EventTestCase):
                     'ending_at': current_date,
                     'tags': data['tags'],
                     'id': 2,
-                    'organization_id': 1,
+                    'organization_id': None,
+                    'lang': lang,
+                    'event_type_id': 1,
                     'starting_at': current_date,
                     'status': 'DRAFT',
                     'eventbrite_sync_status': 'PENDING',
@@ -834,6 +845,7 @@ class AcademyEventTestSuite(EventTestCase):
     def test_all_academy_events__post__tags_is_blank__slug_in_uppercase(self):
         self.headers(academy=1)
 
+        lang = self.bc.fake.slug()[:2]
         model = self.generate_models(authenticate=True,
                                      organization=True,
                                      profile_academy=True,
@@ -842,7 +854,8 @@ class AcademyEventTestSuite(EventTestCase):
                                          'tag_type': 'DISCOVERY'
                                      }),
                                      active_campaign_academy=True,
-                                     role='potato')
+                                     role='potato',
+                                     event_type={'lang': lang})
 
         url = reverse_lazy('events:academy_event')
         current_date = self.datetime_now()
@@ -854,6 +867,8 @@ class AcademyEventTestSuite(EventTestCase):
             'capacity': 11,
             'starting_at': self.datetime_to_iso(current_date),
             'ending_at': self.datetime_to_iso(current_date),
+            'lang': lang,
+            'event_type': 1,
         }
 
         response = self.client.post(url, data)
@@ -870,7 +885,8 @@ class AcademyEventTestSuite(EventTestCase):
             'id': 1,
             'slug': 'event-they-killed-kenny',
             'academy': 1,
-            'organization': 1,
+            'organization': None,
+            'lang': lang,
             'eventbrite_sync_status': 'PENDING',
             'currency': 'USD',
             'tags': ','.join([x.slug for x in model.tag]),
@@ -891,7 +907,9 @@ class AcademyEventTestSuite(EventTestCase):
                     'ending_at': current_date,
                     'tags': data['tags'],
                     'id': 1,
-                    'organization_id': 1,
+                    'organization_id': None,
+                    'lang': lang,
+                    'event_type_id': 1,
                     'starting_at': current_date,
                     'status': 'DRAFT',
                     'eventbrite_sync_status': 'PENDING',
@@ -943,6 +961,7 @@ class AcademyEventTestSuite(EventTestCase):
     def test_all_academy_events__post__with_tags(self):
         self.headers(academy=1)
 
+        lang = self.bc.fake.slug()[:2]
         model = self.generate_models(authenticate=True,
                                      organization=True,
                                      profile_academy=True,
@@ -952,7 +971,8 @@ class AcademyEventTestSuite(EventTestCase):
                                          'tag_type': 'DISCOVERY'
                                      }),
                                      capability='crud_event',
-                                     role='potato')
+                                     role='potato',
+                                     event_type={'lang': lang})
 
         url = reverse_lazy('events:academy_event')
         current_date = self.datetime_now()
@@ -963,6 +983,8 @@ class AcademyEventTestSuite(EventTestCase):
             'capacity': 11,
             'starting_at': self.datetime_to_iso(current_date),
             'ending_at': self.datetime_to_iso(current_date),
+            'lang': lang,
+            'event_type': 1,
         }
 
         response = self.client.post(url, data)
@@ -975,7 +997,7 @@ class AcademyEventTestSuite(EventTestCase):
             **data,
             'id': 1,
             'academy': 1,
-            'organization': 1,
+            'organization': None,
             'eventbrite_sync_status': 'PENDING',
             'currency': 'USD',
             'tags': ','.join([x.slug for x in model.tag]),
@@ -995,7 +1017,7 @@ class AcademyEventTestSuite(EventTestCase):
                     'ending_at': current_date,
                     'tags': data['tags'],
                     'id': 1,
-                    'organization_id': 1,
+                    'organization_id': None,
                     'starting_at': current_date,
                     'status': 'DRAFT',
                     'eventbrite_sync_status': 'PENDING',
@@ -1006,6 +1028,8 @@ class AcademyEventTestSuite(EventTestCase):
                     'free_for_bootcamps': True,
                     'free_for_all': False,
                     'uuid': uuid,
+                    'lang': lang,
+                    'event_type_id': 1,
                 }),
         ])
 
@@ -1032,6 +1056,7 @@ class AcademyEventTestSuite(EventTestCase):
                 'tag_type': 'DISCOVERY'
             },
         ]
+        lang = self.bc.fake.slug()[:2]
         model = self.generate_models(authenticate=True,
                                      organization=True,
                                      profile_academy=True,
@@ -1039,7 +1064,8 @@ class AcademyEventTestSuite(EventTestCase):
                                      active_campaign_academy=True,
                                      tag=tags,
                                      capability='crud_event',
-                                     role='potato')
+                                     role='potato',
+                                     event_type={'lang': lang})
 
         url = reverse_lazy('events:academy_event')
         current_date = self.datetime_now()
@@ -1050,6 +1076,8 @@ class AcademyEventTestSuite(EventTestCase):
             'capacity': 11,
             'starting_at': self.datetime_to_iso(current_date),
             'ending_at': self.datetime_to_iso(current_date),
+            'lang': lang,
+            'event_type': 1,
         }
 
         response = self.client.post(url, data)
@@ -1062,7 +1090,7 @@ class AcademyEventTestSuite(EventTestCase):
             **data,
             'id': 1,
             'academy': 1,
-            'organization': 1,
+            'organization': None,
             'eventbrite_sync_status': 'PENDING',
             'currency': 'USD',
             'free_for_bootcamps': True,
@@ -1081,7 +1109,9 @@ class AcademyEventTestSuite(EventTestCase):
                     'ending_at': current_date,
                     'tags': data['tags'],
                     'id': 1,
-                    'organization_id': 1,
+                    'organization_id': None,
+                    'event_type_id': 1,
+                    'lang': lang,
                     'starting_at': current_date,
                     'status': 'DRAFT',
                     'eventbrite_sync_status': 'PENDING',
@@ -1105,10 +1135,7 @@ class AcademyEventTestSuite(EventTestCase):
     def test_all_academy_events__post__bad_slug____(self):
         self.headers(academy=1)
 
-        tags = [{
-            'slug': self.bc.random.string(lower=True, size=10),
-            'tag_type': 'DISCOVERY'
-        } for _ in range(2)]
+        tags = [{'slug': self.bc.random.string(lower=True, size=10), 'tag_type': 'DISCOVERY'} for _ in range(2)]
         event_type = {
             'lang': self.bc.random.string(lower=True, size=2),
             'icon_url': 'https://www.google.com',
@@ -1149,7 +1176,7 @@ class AcademyEventTestSuite(EventTestCase):
             'id': 1,
             'slug': None,
             'academy': 1,
-            'organization': 1,
+            'organization': None,
             'event_type': 1,
             'eventbrite_sync_status': 'PENDING',
             'lang': model.event_type.lang,
@@ -1172,7 +1199,7 @@ class AcademyEventTestSuite(EventTestCase):
                     'ending_at': current_date,
                     'tags': ','.join([x.slug for x in model.tag]),
                     'id': 1,
-                    'organization_id': 1,
+                    'organization_id': None,
                     'event_type_id': 1,
                     'starting_at': current_date,
                     'status': 'DRAFT',
@@ -1206,10 +1233,7 @@ class AcademyEventTestSuite(EventTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call([
-                'CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension',
-                'SortExtension'
-            ]),
+            call(['CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension', 'SortExtension']),
         ])
 
     @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
@@ -1278,11 +1302,7 @@ class AcademyEventTestSuite(EventTestCase):
         for status in statuses:
 
             event = {'status': status}
-            model = self.generate_models(user=1,
-                                         role=1,
-                                         capability='crud_event',
-                                         profile_academy=1,
-                                         event=(2, event))
+            model = self.generate_models(user=1, role=1, capability='crud_event', profile_academy=1, event=(2, event))
 
             self.bc.request.set_headers(academy=model.academy.id)
             self.client.force_authenticate(model.user)

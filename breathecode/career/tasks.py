@@ -1,10 +1,11 @@
 import logging
+
 from celery import shared_task
-
-from breathecode.utils.decorators.task import TaskPriority
-from .models import Spider
-
 from django.utils import timezone
+
+from breathecode.utils import TaskPriority
+
+from .models import Spider
 
 logger = logging.getLogger(__name__)
 

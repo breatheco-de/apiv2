@@ -1,8 +1,5 @@
 import logging
-import os
-import re
 import traceback
-import urllib
 
 import breathecode.services.learnpack.actions as actions
 from breathecode.assignments.models import LearnPackWebhook
@@ -23,7 +20,6 @@ class LearnPack:
 
     def execute_action(self, webhook_id: int):
         # wonderful way to fix one poor mocking system
-        import requests
         from django.contrib.auth.models import User
 
         # example: {
@@ -62,7 +58,7 @@ class LearnPack:
 
             logger.debug(f'Executing => {webhook.event}')
             if not hasattr(actions, webhook.event):
-                raise f'Learnpack telemetry event `{webhook.event}` is not implemented'
+                raise Exception(f'Learnpack telemetry event `{webhook.event}` is not implemented')
 
             logger.debug('Action found')
             fn = getattr(actions, webhook.event)

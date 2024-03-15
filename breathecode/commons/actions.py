@@ -14,7 +14,7 @@ __all__ = ['clean_cache']
 
 
 def is_test():
-    """Get the environment. It fix a error caused by pytest or python"""
+    """Get the environment. It fix a error caused by pytest or python."""
     env = os.getenv('ENV')
     if env is None and 'ENV' in os.environ:
         env = os.environ['ENV']

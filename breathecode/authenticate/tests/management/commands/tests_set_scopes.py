@@ -2,12 +2,13 @@
 Test /academy/cohort
 """
 import random
-from unittest.mock import MagicMock, patch, call
-from ...mixins.new_auth_test_case import AuthTestCase
-from ....management.commands.set_scopes import Command, APPS, SCOPES
-from django.utils import timezone
+from unittest.mock import MagicMock, call, patch
 
 from django.core.management.base import OutputWrapper
+from django.utils import timezone
+
+from ....management.commands.set_scopes import APPS, SCOPES, Command
+from ...mixins.new_auth_test_case import AuthTestCase
 
 UTC_NOW = timezone.now()
 
@@ -57,7 +58,7 @@ class AcademyCohortTestSuite(AuthTestCase):
                 result = command.handle()
 
         self.assertEqual(result, None)
-        self.assertEqual(self.bc.database.list_of('authenticate.Scope'), [
+        self.assertEqual(self.bc.database.list_of('linked_services.Scope'), [
             {
                 **SCOPES[0],
                 'id': 1,
@@ -75,7 +76,7 @@ class AcademyCohortTestSuite(AuthTestCase):
                 'id': 4,
             },
         ])
-        self.assertEqual(self.bc.database.list_of('authenticate.App'), [])
+        self.assertEqual(self.bc.database.list_of('linked_services.App'), [])
 
     # When: 1 app
     # Then: Must updated it
@@ -106,7 +107,7 @@ class AcademyCohortTestSuite(AuthTestCase):
                 result = command.handle()
 
         self.assertEqual(result, None)
-        self.assertEqual(self.bc.database.list_of('authenticate.Scope'), [
+        self.assertEqual(self.bc.database.list_of('linked_services.Scope'), [
             {
                 **SCOPES[0],
                 'id': 1,
@@ -124,14 +125,14 @@ class AcademyCohortTestSuite(AuthTestCase):
                 'id': 4,
             },
         ])
-        self.assertEqual(self.bc.database.list_of('authenticate.App'), [
+        self.assertEqual(self.bc.database.list_of('linked_services.App'), [
             {
                 **self.bc.format.to_dict(model.app),
                 'name': APPS[0]['name'],
                 'require_an_agreement': APPS[0]['require_an_agreement'],
             },
         ])
-        self.assertEqual(self.bc.database.list_of('authenticate.AppRequiredScope'), [
+        self.assertEqual(self.bc.database.list_of('linked_services.AppRequiredScope'), [
             {
                 'agreed_at': UTC_NOW,
                 'app_id': 1,
@@ -145,7 +146,7 @@ class AcademyCohortTestSuite(AuthTestCase):
                 'scope_id': 2,
             },
         ])
-        self.assertEqual(self.bc.database.list_of('authenticate.AppOptionalScope'), [
+        self.assertEqual(self.bc.database.list_of('linked_services.AppOptionalScope'), [
             {
                 'agreed_at': UTC_NOW,
                 'app_id': 1,

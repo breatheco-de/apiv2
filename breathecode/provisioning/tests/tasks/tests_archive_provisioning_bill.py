@@ -1,13 +1,13 @@
 import random
-from unittest.mock import MagicMock, patch, call
+from logging import Logger
+from unittest.mock import MagicMock, call, patch
 
-from breathecode.utils.decorators.task import AbortTask
-from ..mixins.provisioning_test_case import ProvisioningTestCase
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
+
 from breathecode.provisioning.tasks import archive_provisioning_bill
-from logging import Logger
-from django.core.management.base import OutputWrapper
+
+from ..mixins.provisioning_test_case import ProvisioningTestCase
 
 UTC_NOW = timezone.now()
 
@@ -36,14 +36,10 @@ class AcademyCohortTestSuite(ProvisioningTestCase):
     def test_2_bills__requirements_not_meet(self):
         hash = self.bc.fake.slug()
         provisioning_bill = {
-            'status':
-            'PAID',
-            'paid_at':
-            self.bc.datetime.now() - relativedelta(months=1) + relativedelta(days=random.randint(1, 28)),
-            'archived_at':
-            None,
-            'hash':
-            hash,
+            'status': 'PAID',
+            'paid_at': self.bc.datetime.now() - relativedelta(months=1) + relativedelta(days=random.randint(1, 28)),
+            'archived_at': None,
+            'hash': hash,
         }
 
         provisioning_user_consumption = {
