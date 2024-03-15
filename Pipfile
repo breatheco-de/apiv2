@@ -130,6 +130,7 @@ psycopg = {extras = ["pool", "binary"], version = "*"}
 cryptography = "*"
 adrf = "*"
 uvicorn = "*"
+django-minify-html = "*"
 django-storages = {extras = ["google"], version = "*"}
 aiohttp = {extras = ["speedups"], version = "*"}
 aiodns = "*"
