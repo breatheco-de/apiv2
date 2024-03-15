@@ -128,6 +128,11 @@ def has_permission(permission: str,
             try:
                 utc_now = timezone.now()
                 session = ConsumptionSession.get_session(request)
+
+                #uncomment to acces events for free
+                # context = build_context()
+                # context, args, kwargs = consumer(context, args, kwargs)
+                # return function(*args, **kwargs)
                 if session:
                     if callable(consumer):
                         context = build_context(is_consumption_session=True)
