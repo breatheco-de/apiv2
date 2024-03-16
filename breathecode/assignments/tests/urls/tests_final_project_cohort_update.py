@@ -1,15 +1,11 @@
 """
 Test /academy/cohort/<int:cohort_id>/final_project
 """
-import json
-import random
-
 import pytest
 from django.urls.base import reverse_lazy
-from rest_framework import status
+from linked_services.django.actions import reset_app_cache
 from rest_framework.test import APIClient
 
-from breathecode.authenticate.actions import reset_app_cache
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 
@@ -44,11 +40,7 @@ def put_serializer(project, data={}):
 
 def test_not_authenticated(bc: Breathecode, client: APIClient):
 
-    url = reverse_lazy('assignments:final_project_cohort_update',
-                       kwargs={
-                           'cohort_id': 1,
-                           'final_project_id': 1
-                       })
+    url = reverse_lazy('assignments:final_project_cohort_update', kwargs={'cohort_id': 1, 'final_project_id': 1})
 
     response = client.put(url, headers={'academy': 1})
 
@@ -61,21 +53,14 @@ def test_not_authenticated(bc: Breathecode, client: APIClient):
 
 def test_no_capability(bc: Breathecode, client: APIClient):
 
-    url = reverse_lazy('assignments:final_project_cohort_update',
-                       kwargs={
-                           'cohort_id': 1,
-                           'final_project_id': 1
-                       })
+    url = reverse_lazy('assignments:final_project_cohort_update', kwargs={'cohort_id': 1, 'final_project_id': 1})
     model = bc.database.create(user=1)
 
     client.force_authenticate(model.user)
 
     response = client.put(url, headers={'academy': 1})
 
-    expected = {
-        'detail': "You (user: 1) don't have this capability: crud_assignment for academy 1",
-        'status_code': 403
-    }
+    expected = {'detail': "You (user: 1) don't have this capability: crud_assignment for academy 1", 'status_code': 403}
     json = response.json()
 
     assert json == expected
@@ -91,11 +76,7 @@ def test_cohort_not_found(bc: Breathecode, client: APIClient):
     )
     client.force_authenticate(model.user)
 
-    url = reverse_lazy('assignments:final_project_cohort_update',
-                       kwargs={
-                           'cohort_id': 2,
-                           'final_project_id': 1
-                       })
+    url = reverse_lazy('assignments:final_project_cohort_update', kwargs={'cohort_id': 2, 'final_project_id': 1})
     response = client.put(url, headers={'academy': 1})
 
     expected = {'detail': 'cohort-not-found', 'status_code': 404}
@@ -114,11 +95,7 @@ def test_project_not_found(bc: Breathecode, client: APIClient):
     )
     client.force_authenticate(model.user)
 
-    url = reverse_lazy('assignments:final_project_cohort_update',
-                       kwargs={
-                           'cohort_id': 1,
-                           'final_project_id': 1
-                       })
+    url = reverse_lazy('assignments:final_project_cohort_update', kwargs={'cohort_id': 1, 'final_project_id': 1})
     response = client.put(url, headers={'academy': 1})
 
     expected = {'detail': 'project-not-found', 'status_code': 404}
@@ -148,11 +125,7 @@ def test_put_undone_project(bc: Breathecode, client: APIClient):
     )
     client.force_authenticate(model_cohort.user)
 
-    url = reverse_lazy('assignments:final_project_cohort_update',
-                       kwargs={
-                           'cohort_id': 1,
-                           'final_project_id': 1
-                       })
+    url = reverse_lazy('assignments:final_project_cohort_update', kwargs={'cohort_id': 1, 'final_project_id': 1})
     response = client.put(url,
                           headers={'academy': 1},
                           data={
@@ -190,11 +163,7 @@ def test_put_project(bc: Breathecode, client: APIClient):
     )
     client.force_authenticate(model_cohort.user)
 
-    url = reverse_lazy('assignments:final_project_cohort_update',
-                       kwargs={
-                           'cohort_id': 1,
-                           'final_project_id': 1
-                       })
+    url = reverse_lazy('assignments:final_project_cohort_update', kwargs={'cohort_id': 1, 'final_project_id': 1})
     payload = {
         'revision_status': 'APPROVED',
         'members': [2],

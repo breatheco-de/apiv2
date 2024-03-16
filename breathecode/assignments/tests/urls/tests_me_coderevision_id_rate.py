@@ -179,7 +179,7 @@ def test_auth(bc: Breathecode, client: APIClient, patch_post, get_jwt):
         call(f'{model.app.app_url}/v1/finetuning/rate/coderevision/1',
              json=None,
              data=query,
-             headers={'Authorization': f'Link App=4geeks,Token={get_jwt}'})
+             headers={'Authorization': f'Link App=breathecode,Token={get_jwt}'})
     ]
 
     assert response.getvalue().decode('utf-8') == json.dumps(expected)

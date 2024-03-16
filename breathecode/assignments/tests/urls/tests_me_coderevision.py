@@ -108,7 +108,7 @@ class MediaTestSuite(AssignmentsTestCase):
                              'github_username': model.credentials_github.username,
                          },
                          stream=True,
-                         headers={'Authorization': f'Link App=4geeks,Token={token}'}),
+                         headers={'Authorization': f'Link App=breathecode,Token={token}'}),
                 ])
 
         self.assertEqual(response.getvalue().decode('utf-8'), json.dumps(expected))

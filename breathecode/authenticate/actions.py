@@ -7,6 +7,8 @@ import string
 import urllib.parse
 from random import randint
 
+from adrf.requests import AsyncRequest
+from asgiref.sync import sync_to_async
 from django.contrib.auth.models import User
 from django.core.handlers.wsgi import WSGIRequest
 from django.db.models import Q
@@ -357,7 +359,7 @@ def get_user_settings(user_id: int) -> UserSetting:
     return settings
 
 
-def get_user_language(request: WSGIRequest):
+def get_user_language(request: WSGIRequest | AsyncRequest) -> str:
     lang = request.META.get('HTTP_ACCEPT_LANGUAGE')
 
     if not lang and request.user.id:
@@ -368,6 +370,11 @@ def get_user_language(request: WSGIRequest):
         lang = 'en'
 
     return lang
+
+
+@sync_to_async
+def aget_user_language(request: AsyncRequest) -> str:
+    return get_user_language(request)
 
 
 def add_to_organization(cohort_id, user_id):
