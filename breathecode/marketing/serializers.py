@@ -395,12 +395,16 @@ class GetCourseSerializer(GetCourseSmallSerializer):
     plan_slug = serpy.Field()
     syllabus = serpy.MethodField()
     academy = GetAcademySmallSerializer()
-    cohort = GetCohortSmallSerializer()
+    cohort = serpy.MethodField()
     status = serpy.Field()
     visibility = serpy.Field()
 
     def get_syllabus(self, obj):
         return GetSyllabusSmallSerializer(obj.syllabus.all(), many=True).data
+
+    def get_cohort(self, obj):
+        if obj.cohort:
+            return GetCohortSmallSerializer(obj.cohort, many=False).data
 
 
 class PostFormEntrySerializer(serializers.ModelSerializer):

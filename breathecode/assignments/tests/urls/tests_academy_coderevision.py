@@ -270,7 +270,7 @@ def test_auth(bc: Breathecode, client: APIClient, patch_get, get_jwt):
     assert aiohttp.ClientSession.get.call_args_list == [
         call(f'{model.app.app_url}/v1/finetuning/coderevision',
              params=query,
-             headers={'Authorization': f'Link App=4geeks,Token={get_jwt}'})
+             headers={'Authorization': f'Link App=breathecode,Token={get_jwt}'})
     ]
 
     assert response.getvalue().decode('utf-8') == json.dumps(expected)
@@ -368,7 +368,7 @@ def test_post_auth(bc: Breathecode, client: APIClient, patch_post, get_jwt):
              data=query,
              json=None,
              params={},
-             headers={'Authorization': f'Link App=4geeks,Token={get_jwt}'})
+             headers={'Authorization': f'Link App=breathecode,Token={get_jwt}'})
     ]
 
     assert response.getvalue().decode('utf-8') == json.dumps(expected)

@@ -9,6 +9,8 @@ from urllib.parse import parse_qs, urlencode
 
 import requests
 from adrf.decorators import api_view
+from adrf.views import APIView
+from asgiref.sync import sync_to_async
 from circuitbreaker import CircuitBreakerError
 from django.conf import settings
 from django.contrib import messages
@@ -19,6 +21,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from linked_services.django.models import AppUserAgreement
+from linked_services.django.service import Service
 from linked_services.rest_framework.decorators import scope
 from rest_framework import status
 from rest_framework.authtoken.views import ObtainAuthToken
@@ -28,7 +31,6 @@ from rest_framework.parsers import FileUploadParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.schemas.openapi import AutoSchema
-from rest_framework.views import APIView
 
 import breathecode.activity.tasks as tasks_activity
 import breathecode.notify.actions as notify_actions
@@ -49,6 +51,7 @@ from breathecode.utils.views import private_view, render_message, set_query_para
 from .actions import (
     accept_invite,
     accept_invite_action,
+    aget_user_language,
     generate_academy_token,
     get_app_url,
     get_user_language,
@@ -2483,3 +2486,72 @@ class AppUserAgreementView(APIView):
         serializer = SmallAppUserAgreementSerializer(items, many=True)
 
         return handler.response(serializer.data)
+
+
+# app/user/:id
+class AppSync(APIView):
+
+    @sync_to_async
+    def aget_user(self):
+        return self.request.user
+
+    @sync_to_async
+    def aget_github_credentials(self):
+        return CredentialsGithub.objects.filter(user=self.request.user).first()
+
+    @sync_to_async
+    def aget_profile(self):
+        return Profile.objects.filter(user=self.request.user).first()
+
+    async def post(self, request, app_slug: str):
+        print(type(self.request))
+        lang = await aget_user_language(request)
+        user = await self.aget_user()
+
+        # app = await aget_app(app_slug)
+        async with Service(app_slug, user.id, proxy=True) as s:
+            if s.app.require_an_agreement:
+                raise ValidationException(translation(lang,
+                                                      en='Can\'t sync with an external app',
+                                                      es='No se puede sincronizar con una aplicación externa',
+                                                      slug='external-app'),
+                                          slug='external-app',
+                                          silent=True)
+
+            data = {
+                'username': user.username,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'email': user.email,
+                'profile': None,
+                'credentialsgithub': None,
+            }
+
+            if profile := await self.aget_profile():
+                data['profile'] = {
+                    'avatar_url': profile.avatar_url,
+                    'bio': profile.bio,
+                    'phone': profile.phone,
+                    'show_tutorial': profile.show_tutorial,
+                    'twitter_username': profile.twitter_username,
+                    'github_username': profile.github_username,
+                    'portfolio_url': profile.portfolio_url,
+                    'linkedin_url': profile.linkedin_url,
+                    'blog': profile.blog,
+                }
+
+            if github_credentials := await self.aget_github_credentials():
+                data['credentialsgithub'] = {
+                    'github_id': github_credentials.github_id,
+                    'token': github_credentials.token,
+                    'email': github_credentials.email,
+                    'avatar_url': github_credentials.avatar_url,
+                    'name': github_credentials.name,
+                    'username': github_credentials.username,
+                    'blog': github_credentials.blog,
+                    'bio': github_credentials.bio,
+                    'company': github_credentials.company,
+                    'twitter_username': github_credentials.twitter_username,
+                }
+
+            return await s.post('/v1/auth/app/user', data)

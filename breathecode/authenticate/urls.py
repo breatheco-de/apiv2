@@ -23,6 +23,7 @@ from .views import (
     AcademyGithubSyncView,
     AcademyInviteView,
     AcademyTokenView,
+    AppSync,
     AppUserAgreementView,
     AppUserView,
     ConfirmEmailView,
@@ -149,4 +150,5 @@ urlpatterns = [
     path('app/user', AppUserView.as_view(), name='app_user'),
     path('app/user/<int:user_id>', AppUserView.as_view(), name='app_user_id'),
     path('app/webhook', app_webhook, name='app_webhook'),
+    path('me/app/<str:app_slug>/sync', AppSync.as_view(), name='me_app_slug_sync'),
 ]

@@ -67,7 +67,7 @@ class MediaTestSuite(AssignmentsTestCase):
                     call(model.app.app_url + '/v1/finetuning/commitfile/1',
                          params=query,
                          stream=True,
-                         headers={'Authorization': f'Link App=4geeks,Token={token}'}),
+                         headers={'Authorization': f'Link App=breathecode,Token={token}'}),
                 ])
 
         self.assertEqual(response.getvalue().decode('utf-8'), json.dumps(expected))
