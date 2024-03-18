@@ -956,7 +956,7 @@ class MeCodeRevisionView(APIView):
                                                   slug='github-account-not-connected'),
                                       code=400)
 
-        if task_id and task:
+        if task_id and task and task.github_url:
             params['repo'] = task.github_url
 
         params['github_username'] = request.user.credentialsgithub.username
@@ -1001,7 +1001,7 @@ class AcademyCodeRevisionView(APIView):
         for key in request.GET.keys():
             params[key] = request.GET.get(key)
 
-        if task_id:
+        if task_id and task and task.github_url:
             params['repo'] = task.github_url
 
         url = '/v1/finetuning/coderevision'
@@ -1021,7 +1021,7 @@ class AcademyCodeRevisionView(APIView):
         for key in request.GET.keys():
             params[key] = request.GET.get(key)
 
-        if task_id:
+        if task_id and task and task.github_url:
             params['repo'] = task.github_url
 
         async with Service('rigobot', proxy=True) as s:
@@ -1039,7 +1039,7 @@ class AcademyCommitFileView(APIView):
         for key in request.GET.keys():
             params[key] = request.GET.get(key)
 
-        if task_id:
+        if task_id and task and task.github_url:
             params['repo'] = task.github_url
 
         url = '/v1/finetuning/commitfile'
