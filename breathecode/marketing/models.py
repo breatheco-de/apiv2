@@ -48,17 +48,15 @@ class ActiveCampaignAcademy(models.Model):
         default=timedelta(minutes=30),
         help_text='Leads that apply to the same course on this timedelta will not be sent to AC')
 
-    sync_status = models.CharField(
-        max_length=15,
-        choices=SYNC_STATUS,
-        default=INCOMPLETED,
-        help_text='Automatically set when interacting with the Active Campaign API')
-    sync_message = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        default=None,
-        help_text='Contains any success or error messages depending on the status')
+    sync_status = models.CharField(max_length=15,
+                                   choices=SYNC_STATUS,
+                                   default=INCOMPLETED,
+                                   help_text='Automatically set when interacting with the Active Campaign API')
+    sync_message = models.CharField(max_length=100,
+                                    blank=True,
+                                    null=True,
+                                    default=None,
+                                    help_text='Contains any success or error messages depending on the status')
     last_interaction_at = models.DateTimeField(default=None, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -92,11 +90,10 @@ AUTOMATION_STATUS = (
 
 
 class Automation(models.Model):
-    slug = models.SlugField(
-        max_length=150,
-        blank=True,
-        default='',
-        help_text='unique string id that is used to connect incoming leads to automations')
+    slug = models.SlugField(max_length=150,
+                            blank=True,
+                            default='',
+                            help_text='unique string id that is used to connect incoming leads to automations')
     name = models.CharField(max_length=100)
     acp_id = models.PositiveIntegerField(help_text='ID asigned in active campaign')
     status = models.CharField(max_length=1,
@@ -152,8 +149,7 @@ class Tag(models.Model):
         blank=True,
         null=True,
         default=None,
-        help_text=
-        'Disputed tags get deleted after 10 days unless its used in 1+ automations or has 1+ subscriber')
+        help_text='Disputed tags get deleted after 10 days unless its used in 1+ automations or has 1+ subscriber')
     disputed_reason = models.TextField(blank=True,
                                        null=True,
                                        default=None,
@@ -163,13 +159,12 @@ class Tag(models.Model):
                                    default=None,
                                    help_text='How is this tag being used? Why is it needed?')
 
-    automation = models.ForeignKey(
-        Automation,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        default=None,
-        help_text='Leads that contain this tag will be asociated to this automation')
+    automation = models.ForeignKey(Automation,
+                                   on_delete=models.CASCADE,
+                                   null=True,
+                                   blank=True,
+                                   default=None,
+                                   help_text='Leads that contain this tag will be asociated to this automation')
 
     ac_academy = models.ForeignKey(ActiveCampaignAcademy, on_delete=models.CASCADE, null=True, default=None)
 
@@ -216,10 +211,9 @@ class LeadGenerationApp(models.Model):
     slug = models.SlugField(max_length=150, unique=True)
     name = models.CharField(max_length=100)
     description = models.TextField(max_length=450)
-    app_id = models.CharField(
-        max_length=255,
-        unique=True,
-        help_text='Unique token generated only for this app, can be reset to revoke access')
+    app_id = models.CharField(max_length=255,
+                              unique=True,
+                              help_text='Unique token generated only for this app, can be reset to revoke access')
 
     hits = models.IntegerField(default=0)
 
@@ -234,11 +228,7 @@ class LeadGenerationApp(models.Model):
                                      blank=True,
                                      help_text='Incomig payload from the last request')
 
-    last_call_status = models.CharField(max_length=9,
-                                        choices=LAST_CALL_STATUS,
-                                        default=None,
-                                        null=True,
-                                        blank=True)
+    last_call_status = models.CharField(max_length=9, choices=LAST_CALL_STATUS, default=None, null=True, blank=True)
     last_call_at = models.DateTimeField(default=None,
                                         blank=True,
                                         null=True,
@@ -247,9 +237,7 @@ class LeadGenerationApp(models.Model):
     # defaults
     default_tags = models.ManyToManyField(Tag, blank=True)
     default_automations = models.ManyToManyField(
-        Automation,
-        blank=True,
-        help_text='Automations with are slug will be excluded, make sure to set slug to them')
+        Automation, blank=True, help_text='Automations with are slug will be excluded, make sure to set slug to them')
     location = models.CharField(max_length=70, blank=True, null=True, default=None)
     language = models.CharField(max_length=2, blank=True, null=True, default=None)
     utm_url = models.CharField(max_length=2000, null=True, default=None, blank=True)
@@ -360,11 +348,7 @@ class FormEntry(models.Model):
     utm_campaign = models.CharField(max_length=70, blank=True, null=True, default=None)
     utm_content = models.CharField(max_length=70, blank=True, null=True, default=None)
     utm_source = models.CharField(max_length=70, blank=True, null=True, default=None)
-    utm_term = models.CharField(max_length=50,
-                                blank=True,
-                                null=True,
-                                default=None,
-                                help_text='Keyword used in cpc')
+    utm_term = models.CharField(max_length=50, blank=True, null=True, default=None, help_text='Keyword used in cpc')
     utm_placement = models.CharField(max_length=50,
                                      blank=True,
                                      null=True,
@@ -376,11 +360,10 @@ class FormEntry(models.Model):
                                 default=None,
                                 help_text='If its applying for a scholarship, upfront, isa, financing, etc.')
 
-    custom_fields = models.JSONField(
-        blank=True,
-        null=True,
-        default=None,
-        help_text='Other incoming values in the payload will be saved here as they come')
+    custom_fields = models.JSONField(blank=True,
+                                     null=True,
+                                     default=None,
+                                     help_text='Other incoming values in the payload will be saved here as they come')
 
     current_download = models.CharField(max_length=255,
                                         blank=True,
@@ -407,11 +390,7 @@ class FormEntry(models.Model):
     zip_code = models.CharField(max_length=15, null=True, default=None, blank=True)
     browser_lang = models.CharField(max_length=10, null=True, default=None, blank=True)
 
-    sex = models.CharField(max_length=15,
-                           null=True,
-                           default=None,
-                           blank=True,
-                           help_text='M=male,F=female,O=other')
+    sex = models.CharField(max_length=15, null=True, default=None, blank=True, help_text='M=male,F=female,O=other')
 
     # is it saved into active campaign?
     storage_status = models.CharField(max_length=15, choices=STORAGE_SATUS, default=PENDING)
@@ -557,8 +536,7 @@ class FormEntry(models.Model):
 
         # has the attribution id already been attributed to a previous won lead?
         # if true, we need a new one to reset the attribution cycle
-        if FormEntry.objects.filter(email=self.email,
-                                    attribution_id=self.attribution_id,
+        if FormEntry.objects.filter(email=self.email, attribution_id=self.attribution_id,
                                     won_at__isnull=False).exists():
             # if true, reset
             self.attribution_id = generate_hash()
@@ -632,22 +610,17 @@ class ShortLink(models.Model):
                                   null=True,
                                   default=None,
                                   help_text='social, organic, paid, email, referral, etc.')
-    utm_campaign = models.CharField(
-        max_length=50,
-        blank=True,
-        null=True,
-        default=None,
-        help_text='Campaign ID when PPC but can be a string in more informal campaigns')
+    utm_campaign = models.CharField(max_length=50,
+                                    blank=True,
+                                    null=True,
+                                    default=None,
+                                    help_text='Campaign ID when PPC but can be a string in more informal campaigns')
     utm_source = models.CharField(max_length=50,
                                   blank=True,
                                   null=True,
                                   default=None,
                                   help_text='fb, ig, google, twitter, quora, etc.')
-    utm_term = models.CharField(max_length=50,
-                                blank=True,
-                                null=True,
-                                default=None,
-                                help_text='Keyword used in cpc')
+    utm_term = models.CharField(max_length=50, blank=True, null=True, default=None, help_text='Keyword used in cpc')
     utm_placement = models.CharField(max_length=50,
                                      blank=True,
                                      null=True,
@@ -687,15 +660,11 @@ WEBHOOK_STATUS = (
 class ActiveCampaignWebhook(models.Model):
 
     webhook_type = models.CharField(max_length=100, blank=True, null=True, default=None)
-    run_at = models.DateTimeField(help_text='Date/time that the webhook ran',
-                                  blank=True,
-                                  null=True,
-                                  default=None)
-    initiated_by = models.CharField(
-        max_length=100, help_text='Source/section of the software that triggered the webhook to run')
+    run_at = models.DateTimeField(help_text='Date/time that the webhook ran', blank=True, null=True, default=None)
+    initiated_by = models.CharField(max_length=100,
+                                    help_text='Source/section of the software that triggered the webhook to run')
 
-    payload = models.JSONField(
-        help_text='Extra info that came on the request, it varies depending on the webhook type')
+    payload = models.JSONField(help_text='Extra info that came on the request, it varies depending on the webhook type')
 
     ac_academy = models.ForeignKey(ActiveCampaignAcademy, on_delete=models.CASCADE)
     contact = models.ForeignKey(Contact, on_delete=models.CASCADE, default=None, null=True, blank=True)
@@ -717,8 +686,7 @@ class Downloadable(models.Model):
     description = models.TextField(max_length=450)
 
     hits = models.IntegerField(default=0)
-    active = models.BooleanField(default=True,
-                                 help_text='Non-active downloadables will display a message to the user')
+    active = models.BooleanField(default=True, help_text='Non-active downloadables will display a message to the user')
 
     preview_url = models.URLField()
     destination_url = models.URLField()
@@ -818,10 +786,7 @@ class Course(models.Model):
     technologies = models.CharField(max_length=150, blank=False)
     has_waiting_list = models.BooleanField(default=False, help_text='Has waiting list?')
 
-    invites = models.ManyToManyField(UserInvite,
-                                     blank=True,
-                                     help_text='Plan\'s invites',
-                                     related_name='courses')
+    invites = models.ManyToManyField(UserInvite, blank=True, help_text='Plan\'s invites', related_name='courses')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -834,8 +799,7 @@ class Course(models.Model):
             raise Exception('Cohort must be a never ending cohort')
 
         if self.cohort and (self.cohort.available_as_saas == False or
-                            (self.cohort.available_as_saas == None
-                             and self.cohort.academy.available_as_saas == False)):
+                            (self.cohort.available_as_saas == None and self.cohort.academy.available_as_saas == False)):
 
             raise Exception('Cohort must be available as saas')
 
@@ -855,7 +819,7 @@ class CourseTranslation(models.Model):
     short_description = models.CharField(max_length=120, null=True, default=None, blank=True)
     video_url = models.URLField(default=None,
                                 null=True,
-                                blank=False,
+                                blank=True,
                                 help_text='Video that introduces/promotes this course')
     landing_url = models.URLField(default=None,
                                   null=True,
