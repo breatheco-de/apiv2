@@ -237,8 +237,7 @@ class BigQuerySet():
         if aggs:
             for agg in aggs:
                 operation, attribute = self.aggregation_parser(agg)
-                query_fields.append(
-                    f'{operation}({attribute}) AS {operation.lower()}__{attribute.replace(".", "__")}')
+                query_fields.append(f'{operation}({attribute}) AS {operation.lower()}__{attribute.replace(".", "__")}')
 
         if len(query_fields) > 0:
             query = f"""SELECT {", ".join(query_fields)} FROM `{self.project_id}.{self.dataset}.{self.table}` """
@@ -471,9 +470,42 @@ class BigQuery(metaclass=BigQueryMeta):
             new_field = new[key]
             if new_field.field_type == bigquery.enums.SqlTypeNames.STRUCT:
                 new_field._fields = cls.schema_difference(old[key].fields, new_field.fields)
-                res.append(new_field)
+                if len(new_field._fields) > 0:
+                    res.append(new_field)
 
             elif new_field != old[key]:
+                res.append(new_field)
+
+        return res
+
+    @classmethod
+    def merge_schema(cls, diff: Schema, schema: Schema) -> BigQuerySet:
+        """Get the difference between two schemas."""
+
+        res = []
+        diff = cls._map_schema(diff)
+        schema = cls._map_schema(schema)
+
+        diff_keys = set(diff.keys())
+        schema_keys = set(schema.keys())
+
+        original = schema_keys - diff_keys
+
+        for key in original:
+            field = schema[key]
+            res.append(field)
+
+        for key in diff:
+            new_field = diff[key]
+            if new_field.field_type == bigquery.enums.SqlTypeNames.STRUCT:
+                old_field = schema[key]
+
+                new_field._fields = cls.merge_schema(new_field.fields, old_field.fields)
+
+                if len(new_field._fields) > 0:
+                    res.append(new_field)
+
+            elif new_field != schema[key]:
                 res.append(new_field)
 
         return res

@@ -13,6 +13,7 @@ from django.core.cache import cache
 from django.utils import timezone
 from django_redis import get_redis_connection
 from google.cloud import bigquery
+from google.cloud.bigquery.schema import SchemaField
 from redis.exceptions import LockError
 from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
@@ -255,7 +256,10 @@ def upload_activities(self, task_manager_id: int, **_):
 
     try:
         if diff:
-            table.update_schema(diff)
+            merged_schema = BigQuery.merge_schema(diff, schema)
+            print('merged_schema')
+            print(merged_schema)
+            table.update_schema(merged_schema)
 
         table.bulk_insert(rows)
 
