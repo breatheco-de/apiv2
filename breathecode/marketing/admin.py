@@ -578,6 +578,7 @@ class CourseAdmin(admin.ModelAdmin):
     list_display = ('slug', 'academy', 'status', 'status_message', 'visibility')
     list_filter = ['academy__slug', 'status', 'visibility']
     filter_horizontal = ('syllabus', )
+    raw_id_fields = ['cohort']
     actions = [validate_course_modules]
 
 
