@@ -776,12 +776,12 @@ class SessionSerializer(SessionPUTSerializer):
         if 'mentee' in data:
             if not data['mentee'].isnumeric():
                 mentee = Consumable.objects.filter(
-                    mentorship_service_set__mentorship_services__id=data['service'],
+                    mentorship_service_set__mentorship_services__id=service.id,
                     user__email=data['mentee']).first()
 
             else:
                 mentee = Consumable.objects.filter(
-                    mentorship_service_set__mentorship_services__id=data['service'],
+                    mentorship_service_set__mentorship_services__id=service.id,
                     user__id=data['mentee']).first()
 
             if mentee is None:
