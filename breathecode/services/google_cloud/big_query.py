@@ -480,32 +480,32 @@ class BigQuery(metaclass=BigQueryMeta):
 
     @classmethod
     def merge_schema(cls, diff: Schema, schema: Schema) -> BigQuerySet:
-        """Get the difference between two schemas."""
+        """Add the difference of the new schema to the original"""
 
         res = []
-        diff = cls._map_schema(diff)
-        schema = cls._map_schema(schema)
+        diff_map = cls._map_schema(diff)
+        schema_map = cls._map_schema(schema)
 
-        diff_keys = set(diff.keys())
-        schema_keys = set(schema.keys())
+        diff_keys = set(diff_map.keys())
+        schema_keys = set(schema_map.keys())
 
         original = schema_keys - diff_keys
 
         for key in original:
-            field = schema[key]
+            field = schema_map[key]
             res.append(field)
 
-        for key in diff:
-            new_field = diff[key]
+        for key in diff_map:
+            new_field = diff_map[key]
             if new_field.field_type == bigquery.enums.SqlTypeNames.STRUCT:
-                old_field = schema[key]
+                old_field = schema_map[key]
 
                 new_field._fields = cls.merge_schema(new_field.fields, old_field.fields)
 
                 if len(new_field._fields) > 0:
                     res.append(new_field)
 
-            elif new_field != schema[key]:
+            elif new_field != schema_map[key]:
                 res.append(new_field)
 
         return res

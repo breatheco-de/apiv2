@@ -196,7 +196,6 @@ def upload_activities(self, task_manager_id: int, **_):
 
             worker += 1
 
-    print(f'EXECUTING UPLOAD FOR {task_manager_id}')
     utc_now = timezone.now()
     limit = utc_now - timedelta(seconds=get_activity_sampling_rate())
 
@@ -244,21 +243,11 @@ def upload_activities(self, task_manager_id: int, **_):
     rows = [x['data'] for x in res]
     new_schema = BigQuery.join_schemas(*[x['schema'] for x in res])
 
-    print('schema')
-    print(schema)
-    print('new_schema')
-    print(new_schema)
-
     diff = BigQuery.schema_difference(schema, new_schema)
-
-    print('diff')
-    print(diff)
 
     try:
         if diff:
             merged_schema = BigQuery.merge_schema(diff, schema)
-            print('merged_schema')
-            print(merged_schema)
             table.update_schema(merged_schema)
 
         table.bulk_insert(rows)
@@ -344,8 +333,8 @@ def add_activity(user_id: int,
                 t = bigquery.enums.SqlTypeNames.STRING
 
                 # keep it adobe than the date conditional
-                if isinstance(meta[key], datetime) or (isinstance(meta[key], str)
-                                                       and ISO_STRING_PATTERN.match(meta[key])):
+                if (isinstance(meta[key], datetime) or
+                    (isinstance(meta[key], str) and ISO_STRING_PATTERN.match(meta[key]))) and key != 'attended_at':
                     t = bigquery.enums.SqlTypeNames.TIMESTAMP
                 elif isinstance(meta[key], date):
                     t = bigquery.enums.SqlTypeNames.DATE
