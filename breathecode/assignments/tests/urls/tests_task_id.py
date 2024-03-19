@@ -26,8 +26,7 @@ def get_serializer(self, task, user):
         'title': task.title,
         'description': task.description,
         'opened_at': self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
-        'delivered_at':
-        self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
+        'delivered_at': self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
         'user': {
             'first_name': user.first_name,
             'id': user.id,
@@ -53,10 +52,10 @@ def put_serializer(self, task, data={}):
         'attachments': [],
         'subtasks': task.subtasks,
         'title': task.title,
+        'telemetry': task.telemetry,
         'rigobot_repository_id': task.rigobot_repository_id,
         'opened_at': self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
-        'delivered_at':
-        self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
+        'delivered_at': self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
         **data,
     }
 
@@ -76,9 +75,9 @@ def task_row(self, task, data={}):
         'user_id': task.user.id,
         'subtasks': task.subtasks,
         'opened_at': self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
-        'delivered_at':
-        self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
+        'delivered_at': self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
         'rigobot_repository_id': task.rigobot_repository_id,
+        'telemetry_id': task.telemetry,
         **data,
     }
 
@@ -232,8 +231,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'),
-                         [task_row(self, model.task, data=data)])
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), [task_row(self, model.task, data=data)])
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
@@ -420,8 +418,7 @@ class MediaTestSuite(AssignmentsTestCase):
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-            self.assertEqual(self.bc.database.list_of('assignments.Task'),
-                             [task_row(self, model.task, data=data)])
+            self.assertEqual(self.bc.database.list_of('assignments.Task'), [task_row(self, model.task, data=data)])
             self.assertEqual(student_task_notification.delay.call_args_list, [call(index + 1)])
             self.assertEqual(teacher_task_notification.delay.call_args_list, [])
 
@@ -473,8 +470,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'),
-                         [task_row(self, model.task, data=data)])
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), [task_row(self, model.task, data=data)])
 
         self.assertEqual(student_task_notification.delay.call_args_list, [call(1)])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
@@ -513,8 +509,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
 
         data['cohort_id'] = data.pop('cohort')
-        self.assertEqual(self.bc.database.list_of('assignments.Task'),
-                         [task_row(self, model.task, data=data)])
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), [task_row(self, model.task, data=data)])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
@@ -572,12 +567,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_id': model.task.id,
         })
 
-        data = {
-            'associated_slug': 'hello',
-            'title': 'hello',
-            'task_status': 'DONE',
-            'revision_status': 'APPROVED'
-        }
+        data = {'associated_slug': 'hello', 'title': 'hello', 'task_status': 'DONE', 'revision_status': 'APPROVED'}
 
         response = self.client.put(url, data)
         json = response.json()

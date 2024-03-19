@@ -124,7 +124,7 @@ class Request:
             'sub': user_id,
             'iss': os.getenv('API_URL', 'http://localhost:8000'),
             'app': app.slug,
-            'aud': '4geeks',
+            'aud': 'breathecode',
             'exp': datetime.timestamp(now + timedelta(minutes=2)),
             'iat': datetime.timestamp(now) - 1,
             'typ': 'JWT',
@@ -132,7 +132,7 @@ class Request:
 
         if reverse:
             payload['aud'] = app.slug
-            payload['app'] = '4geeks'
+            payload['app'] = 'breathecode'
 
         if app.algorithm == 'HMAC_SHA256':
 

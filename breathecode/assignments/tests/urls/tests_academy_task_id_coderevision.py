@@ -317,7 +317,7 @@ def test_auth(bc: Breathecode, client: APIClient, patch_get, get_jwt):
                  **query,
                  'repo': model.task.github_url,
              },
-             headers={'Authorization': f'Link App=4geeks,Token={get_jwt}'})
+             headers={'Authorization': f'Link App=breathecode,Token={get_jwt}'})
     ]
 
     assert json == expected
@@ -453,7 +453,7 @@ def test_post_auth(bc: Breathecode, client: APIClient, patch_post, get_jwt):
              params={
                  'repo': model.task.github_url,
              },
-             headers={'Authorization': f'Link App=4geeks,Token={get_jwt}'})
+             headers={'Authorization': f'Link App=breathecode,Token={get_jwt}'})
     ]
 
     assert json == expected

@@ -3,6 +3,7 @@ import logging
 import os
 
 from adrf.views import APIView
+from asgiref.sync import sync_to_async
 from circuitbreaker import CircuitBreakerError
 from django.contrib import messages
 from django.db.models import Q
@@ -991,11 +992,17 @@ class MeCodeRevisionView(APIView):
 
 class AcademyCodeRevisionView(APIView):
 
+    @sync_to_async
+    def get_user(self):
+        return self.request.user
+
     @acapable_of('read_assignment')
     async def get(self, request, academy_id=None, task_id=None, coderevision_id=None):
         if task_id and not (task := await Task.objects.filter(
                 id=task_id, cohort__academy__id=academy_id).exclude(github_url=None).prefetch_related('user').afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
+
+        user = await self.get_user()
 
         params = {}
         for key in request.GET.keys():
@@ -1009,13 +1016,16 @@ class AcademyCodeRevisionView(APIView):
         if coderevision_id is not None:
             url = f'{url}/{coderevision_id}'
 
-        async with Service('rigobot', proxy=True) as s:
+        async with Service('rigobot', user.id, proxy=True) as s:
             return await s.get(url, params=params)
 
     @acapable_of('crud_assignment')
     async def post(self, request, academy_id, task_id=None):
-        if task_id and not (task := await Task.objects.filter(id=task_id, cohort__academy__id=academy_id).afirst()):
+        if task_id and not (task := await Task.objects.filter(
+                id=task_id, cohort__academy__id=academy_id).select_related('user').afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
+
+        user = await self.get_user()
 
         params = {}
         for key in request.GET.keys():
@@ -1024,7 +1034,7 @@ class AcademyCodeRevisionView(APIView):
         if task_id and task and task.github_url:
             params['repo'] = task.github_url
 
-        async with Service('rigobot', proxy=True) as s:
+        async with Service('rigobot', user.id, proxy=True) as s:
             return await s.post('/v1/finetuning/coderevision', data=request.data, params=params)
 
 

@@ -146,7 +146,7 @@ def test__get__auth(bc: Breathecode, client: APIClient):
                         'github_username': model.credentials_github.username,
                     },
                     stream=True,
-                    headers={'Authorization': f'Link App=4geeks,Token={token}'},
+                    headers={'Authorization': f'Link App=breathecode,Token={token}'},
                 ),
             ]
 
@@ -371,7 +371,7 @@ def test__post__auth(bc: Breathecode, client: APIClient):
                         'github_username': model.credentials_github.username,
                     },
                     stream=True,
-                    headers={'Authorization': f'Link App=4geeks,Token={token}'},
+                    headers={'Authorization': f'Link App=breathecode,Token={token}'},
                 ),
             ]
 

@@ -1,15 +1,11 @@
 """
 Test /academy/cohort/<int:cohort_id>/final_project
 """
-import json
-import random
-
 import pytest
 from django.urls.base import reverse_lazy
-from rest_framework import status
+from linked_services.django.actions import reset_app_cache
 from rest_framework.test import APIClient
 
-from breathecode.authenticate.actions import reset_app_cache
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 
@@ -81,10 +77,7 @@ def test_no_capability(bc: Breathecode, client: APIClient):
 
     response = client.get(url, headers={'academy': 1})
 
-    expected = {
-        'detail': "You (user: 1) don't have this capability: read_assignment for academy 1",
-        'status_code': 403
-    }
+    expected = {'detail': "You (user: 1) don't have this capability: read_assignment for academy 1", 'status_code': 403}
     json = response.json()
 
     assert json == expected

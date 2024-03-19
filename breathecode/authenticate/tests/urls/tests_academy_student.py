@@ -1225,7 +1225,7 @@ class StudentPostTestSuite(AuthTestCase):
             call('welcome_academy',
                  'dude@dude.dude', {
                      'email': 'dude@dude.dude',
-                     'subject': 'Welcome to 4Geeks.com',
+                     'subject': 'Welcome to ' + model.academy.name,
                      'LINK': url,
                      'FIST_NAME': 'Kenny'
                  },
@@ -1357,7 +1357,7 @@ class StudentPostTestSuite(AuthTestCase):
             call('welcome_academy',
                  'dude@dude.dude', {
                      'email': 'dude@dude.dude',
-                     'subject': 'Welcome to 4Geeks.com',
+                     'subject': 'Welcome to ' + model.academy.name,
                      'LINK': url,
                      'FIST_NAME': 'Kenny'
                  },
@@ -1503,7 +1503,7 @@ class StudentPostTestSuite(AuthTestCase):
             call('welcome_academy',
                  'dude2@dude.dude', {
                      'email': 'dude2@dude.dude',
-                     'subject': 'Welcome to 4Geeks.com',
+                     'subject': 'Welcome to ' + model.academy.name,
                      'LINK': url,
                      'FIST_NAME': 'Kenny'
                  },
