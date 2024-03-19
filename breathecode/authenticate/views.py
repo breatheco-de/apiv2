@@ -2469,6 +2469,13 @@ class AppUserView(APIView):
             serializer = AppUserSerializer(user, many=False)
             return Response(serializer.data)
 
+        if not token.sub and (id := request.GET.get('id')):
+            extra['id'] = id
+
+        for key in ['email', 'username']:
+            if key in request.GET:
+                extra[key] = request.GET.get(key)
+
         # test this path
         items = User.objects.filter(**extra)
         items = handler.queryset(items)
