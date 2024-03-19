@@ -683,7 +683,7 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
         if 'difficulty' in config:
             asset.difficulty = config['difficulty'].upper()
         if 'solution' in config:
-            asset.solution = config['solution']
+            asset.solution_url = config['solution']
             asset.with_solutions = True
 
         if 'technologies' in config:
