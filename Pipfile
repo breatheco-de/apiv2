@@ -136,4 +136,4 @@ aiohttp = {extras = ["speedups"], version = "*"}
 aiodns = "*"
 eventlet = "*"
 celery-task-manager = {extras = ["django"], version = "*"}
-linked-services = {extras = ["django", "aiohttp", "requests"], version = "*"}
+linked-services = {extras = ["aiohttp", "requests", "django"], version = "*"}
