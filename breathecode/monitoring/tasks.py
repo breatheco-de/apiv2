@@ -6,7 +6,7 @@ from django.utils import timezone
 from breathecode.notify.actions import send_email_message, send_slack_raw
 from breathecode.utils.decorators.task import TaskPriority
 
-from .actions import download_csv, run_endpoint_diagnostic, run_script
+from .actions import download_csv, run_endpoint_diagnostic, run_script, delete_repo_subscription
 from .models import Endpoint, MonitorScript
 
 # Get an instance of a logger
@@ -122,3 +122,9 @@ def execute_scripts(self, script_id):
 def async_download_csv(self, module, model_name, ids_to_download):
     logger.debug('Starting to download csv for ')
     return download_csv(module, model_name, ids_to_download)
+
+
+@shared_task(bind=True, priority=TaskPriority.MARKETING.value)
+def async_delete_repo_subscription(self, hook_id):
+    logger.debug('Async Delete repo subscription')
+    return delete_repo_subscription(hook_id)

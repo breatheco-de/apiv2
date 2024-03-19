@@ -3,18 +3,24 @@ import stripe
 
 from breathecode.authenticate.actions import get_user_language
 from breathecode.utils.i18n import translation
+from breathecode.admissions.models import Academy
 from .signals import github_webhook
 from .models import CSVDownload, CSVUpload, RepositorySubscription, RepositoryWebhook
 from rest_framework.permissions import AllowAny
-from .serializers import CSVDownloadSmallSerializer, CSVUploadSmallSerializer
+from .serializers import CSVDownloadSmallSerializer, CSVUploadSmallSerializer, RepositorySubscriptionSerializer
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
-from breathecode.utils import ValidationException
 from rest_framework import status
 from django.http import StreamingHttpResponse
 from .actions import add_github_webhook, add_stripe_webhook
+from .serializers import RepoSubscriptionSmallSerializer
 from breathecode.monitoring import signals
 from circuitbreaker import CircuitBreakerError
+from rest_framework.views import APIView
+from django.db.models import Q
+from breathecode.authenticate.actions import get_user_language
+from breathecode.utils import GenerateLookupsMixin, ValidationException, capable_of
+from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +130,12 @@ def process_github_webhook(request, subscription_token):
             'Webhook was called from a different repository than its original subscription: ' +
             payload['repository']['html_url'])
 
+    if payload['scope'] == 'ping':
+        subscription.status = 'OPERATIONAL'
+        subscription.status_message = 'Answered github ping successfully'
+        subscription.save()
+        return Response('Ready', status=status.HTTP_200_OK)
+
     for academy_slug in academy_slugs:
         webhook = add_github_webhook(payload, academy_slug)
         if webhook:
@@ -159,3 +171,46 @@ def process_stripe_webhook(request):
         signals.stripe_webhook.send(event=event, sender=event.__class__)
 
     return Response({'success': True})
+
+
+class RepositorySubscriptionView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
+    @capable_of('read_asset')
+    def get(self, request, academy_id=None):
+        lang = get_user_language(request)
+        handler = self.extensions(request)
+
+        _academy = Academy.objects.get(id=academy_id)
+        items = RepositorySubscription.objects.filter(Q(shared_with=_academy) | Q(owner=_academy))
+        lookup = {}
+
+        if 'repository' in self.request.GET:
+            param = self.request.GET.get('repository')
+            items = items.filter(repository=param)
+
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+
+        serializer = RepoSubscriptionSmallSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+    @capable_of('crud_asset')
+    def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+        ALLOWED_EVENTS = ['push', 'pull_request']
+
+        serializer = RepositorySubscriptionSerializer(data=request.data,
+                                                      context={
+                                                          'request': request,
+                                                          'academy': academy_id,
+                                                          'lang': lang
+                                                      })
+        if serializer.is_valid():
+            instance = serializer.save()
+            return Response(RepoSubscriptionSmallSerializer(instance).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

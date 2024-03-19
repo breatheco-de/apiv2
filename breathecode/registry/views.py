@@ -41,19 +41,8 @@ from .caches import (
     KeywordCache,
     TechnologyCache,
 )
-from .models import (
-    Asset,
-    AssetAlias,
-    AssetCategory,
-    AssetComment,
-    AssetErrorLog,
-    AssetKeyword,
-    AssetTechnology,
-    ContentVariable,
-    KeywordCluster,
-    OriginalityScan,
-    SEOReport,
-)
+from .models import (Asset, AssetAlias, AssetCategory, AssetComment, AssetErrorLog, AssetKeyword,
+                     AssetTechnology, ContentVariable, KeywordCluster, OriginalityScan, SEOReport, AssetImage)
 from .serializers import (
     AcademyAssetSerializer,
     AcademyCommentSerializer,
@@ -83,6 +72,7 @@ from .serializers import (
     SEOReportSerializer,
     TechnologyPUTSerializer,
     VariableSmallSerializer,
+    AssetImageSmallSerializer,
 )
 from .tasks import async_pull_from_github
 
@@ -1091,6 +1081,39 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
             async_pull_from_github.delay(instance.slug)
             return Response(AssetBigSerializer(instance).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AssetImageView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
+    @capable_of('read_asset')
+    def get(self, request, academy_id=None):
+
+        handler = self.extensions(request)
+
+        items = AssetImage.objects.filter(assets__academy__id=academy_id)
+        lookup = {}
+
+        if 'slug' in self.request.GET:
+            param = self.request.GET.get('slug')
+            lookup['assets__slug__in'] = [p.lower() for p in param.split(',')]
+
+        if 'download_status' in self.request.GET:
+            param = self.request.GET.get('download_status')
+            lookup['download_status__in'] = [p.upper() for p in param.split(',')]
+
+        if 'original_url' in self.request.GET:
+            param = self.request.GET.get('original_url')
+            lookup['original_url'] = param
+
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+
+        serializer = AssetImageSmallSerializer(items, many=True)
+        return handler.response(serializer.data)
 
 
 class AcademyAssetCommentView(APIView, GenerateLookupsMixin):

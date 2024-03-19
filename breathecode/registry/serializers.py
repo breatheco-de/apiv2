@@ -80,6 +80,20 @@ class SmallAsset(serpy.Serializer):
     slug = serpy.Field()
 
 
+class AssetImageSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    name = serpy.Field()
+    bucket_url = serpy.Field()
+    original_url = serpy.Field()
+    download_details = serpy.Field()
+    download_status = serpy.Field()
+
+    assets = serpy.MethodField()
+
+    def get_assets(self, obj):
+        return AssetSmallSerializer(obj.assets.all(), many=True).data
+
+
 class AssetCategorySmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()

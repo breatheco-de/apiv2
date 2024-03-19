@@ -150,7 +150,7 @@ def test_asset_integrity(modeladmin, request, queryset):
 
     for a in assets:
         try:
-            async_test_asset.delay(a.slug)
+            async_test_asset(a.slug)
             #test_asset(a)
         except Exception as e:
             messages.error(request, a.slug + ': ' + str(e))
@@ -729,17 +729,24 @@ def upload_image_to_bucket(modeladmin, request, queryset):
 
 @admin.register(AssetImage)
 class AssetImageAdmin(admin.ModelAdmin):
-    list_display = ['name', 'current_status', 'mime', 'original', 'bucket']
+    list_display = ['name', 'current_status', 'mime', 'related_assets', 'original', 'bucket']
     search_fields = ('name', 'original_url', 'bucket_url', 'assets__slug')
     raw_id_fields = ['assets']
-    list_filter = ['mime', 'assets__academy']
+    list_filter = ['mime', 'assets__academy', 'download_status']
     actions = [remove_image_from_bucket]
 
+    def related_assets(self, obj):
+        return format_html(''.join([
+            f'<a href="/admin/registry/asset/{a.id}/change/" style="display: inline-block; background: #2d302d; padding: 2px; border-radius: 3px; margin: 2px;">{a.slug}</a>'
+            for a in obj.assets.all()
+        ]))
+        return format_html(f'<a href="/admin/registry/asset/{obj.asset.id}/change/">{obj.asset.slug}</a>')
+
     def original(self, obj):
-        return format_html(f'<a href="{obj.original_url}">{obj.original_url}</a>')
+        return format_html(f'<a target="_blank" href="{obj.original_url}">{obj.original_url}</a>')
 
     def bucket(self, obj):
-        return format_html(f'<a href="{obj.bucket_url}">{obj.bucket_url}</a>')
+        return format_html(f'<a target="_blank" href="{obj.bucket_url}">{obj.bucket_url}</a>')
 
     def current_status(self, obj):
         colors = {

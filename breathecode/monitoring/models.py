@@ -2,6 +2,7 @@ import binascii
 import os
 import json
 from django.db import models
+from urllib.parse import urlparse
 from breathecode.admissions.models import Academy
 from breathecode.notify.models import SlackChannel
 from datetime import timedelta
@@ -173,6 +174,9 @@ class CSVUpload(models.Model):
     finished_at = models.DateTimeField(auto_now=True, editable=False)
 
 
+SUBSCRIPTION_STATUS = ((OPERATIONAL, 'Operational'), (CRITICAL, 'Critical'))
+
+
 class RepositorySubscription(models.Model):
     repository = models.URLField(max_length=255, help_text='Github repo where the event ocurred')
     token = models.CharField(max_length=255, unique=True)
@@ -181,8 +185,27 @@ class RepositorySubscription(models.Model):
 
     shared_with = models.ManyToManyField(Academy, blank=True, related_name='repo_subscription')
 
+    hook_id = models.IntegerField(default=None, null=True, blank=True, help_text='Assigned from github')
+
+    status = models.CharField(max_length=20, choices=SUBSCRIPTION_STATUS, default=CRITICAL)
+    status_message = models.TextField(null=True, blank=True, default='Waiting for ping')
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def get_repo_name(self):
+        parsed_url = urlparse(self.repository)
+
+        # Split the path to get the repository name
+        # The path usually is "/username/repository_name"
+        path_parts = parsed_url.path.strip('/').split('/')
+
+        # Check if the URL path has at least two parts (username and repository_name)
+        if len(path_parts) >= 2:
+            # The repository name is the second part of the path
+            return path_parts[0], path_parts[1]
+        else:
+            raise Exception(f'Invalid URL format for: {self.repository}')
 
     def save(self, *args, **kwargs):
         if not self.pk:

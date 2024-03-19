@@ -281,10 +281,12 @@ class LeadGenerationApp(models.Model):
 PENDING = 'PENDING'
 PERSISTED = 'PERSISTED'
 DUPLICATED = 'DUPLICATED'
+REJECTED = 'REJECTED'
 ERROR = 'ERROR'
-STORAGE_SATUS = (
+STORAGE_STATUS = (
     (PENDING, 'Pending'),
     (PERSISTED, 'Persisted'),
+    (REJECTED, 'Rejected'),  # If rejection rules apply
     (DUPLICATED, 'Duplicated'),
     (ERROR, 'Error'),
 )
@@ -412,7 +414,7 @@ class FormEntry(models.Model):
                            help_text='M=male,F=female,O=other')
 
     # is it saved into active campaign?
-    storage_status = models.CharField(max_length=15, choices=STORAGE_SATUS, default=PENDING)
+    storage_status = models.CharField(max_length=15, choices=STORAGE_STATUS, default=PENDING)
     storage_status_text = models.CharField(
         default='',
         blank=True,

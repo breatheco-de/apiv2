@@ -3,6 +3,7 @@ from django.contrib import admin
 from django import forms
 from django.utils import timezone
 from .signals import github_webhook
+from .tasks import async_delete_repo_subscription
 from .models import Endpoint, Application, MonitorScript, CSVDownload, CSVUpload, RepositoryWebhook, RepositorySubscription
 from breathecode.notify.models import SlackChannel
 from django.utils.html import format_html
@@ -171,15 +172,43 @@ class CSVUploadAdmin(admin.ModelAdmin):
     search_fields = ['name', 'url', 'hash']
 
 
+def delete_subscription(modeladmin, request, queryset):
+    # stay this here for use the poor mocking system
+    for subs in queryset.all():
+        # delete_repo_subscription(subs.hook_id)
+        async_delete_repo_subscription.delay(subs.hook_id)
+
+
 @admin.register(RepositorySubscription)
 class RepositorySubscriptionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'repository', 'owner', 'shared')
-    list_filter = ['owner']
+    list_display = ('id', 'current_status', 'hook_id', 'repository', 'owner', 'shared')
+    list_filter = ['owner', 'status']
     search_fields = ['repository', 'token']
     readonly_fields = ['token']
+    actions = [delete_subscription]
+
+    def get_actions(self, request):
+        actions = super(RepositorySubscriptionAdmin, self).get_actions(request)
+        if 'delete_selected' in actions:
+            del actions['delete_selected']
+        return actions
+
+    def has_delete_permission(self, request, obj=None):
+        # Return False to remove the "Delete" button from the update form.
+        # You can add additional logic here if you want to conditionally
+        # enable the delete button for certain cases.
+        return False
 
     def shared(self, obj):
         return format_html(''.join([o.name for o in obj.shared_with.all()]))
+
+    def current_status(self, obj):
+        colors = {
+            'OPERATIONAL': 'bg-success',
+            'CRITICAL': 'bg-error',
+            None: 'bg-warning',
+        }
+        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 
 
 def process_webhook(modeladmin, request, queryset):

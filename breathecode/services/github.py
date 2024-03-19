@@ -1,6 +1,7 @@
-import requests, logging
+import requests, logging, os
 
 logger = logging.getLogger(__name__)
+API_URL = os.getenv('API_URL', '')
 
 
 class Github:
@@ -79,6 +80,22 @@ class Github:
 
     def get_machines_types(self, repo_name):
         return self.get(f'/repos/{self.org}/{repo_name}/codespaces/machines')
+
+    def subscribe_to_repo(self, owner, repo_name, subscription_token):
+
+        payload = {
+            'name': 'web',
+            'active': True,
+            'events': ['push'],
+            'config': {
+                'url': f'{API_URL}/v1/monitoring/github/webhook/{subscription_token}',
+                'content_type': 'json'
+            }
+        }
+        return self.post(f'/repos/{owner}/{repo_name}/hooks', request_data=payload)
+
+    def unsubscribe_from_repo(self, owner, repo_name, hook_id):
+        return self.delete(f'/repos/{owner}/{repo_name}/hooks/{hook_id}')
 
     def create_container(self, repo_name):
         return self.post(f'/repos/{self.org}/{repo_name}/codespaces')

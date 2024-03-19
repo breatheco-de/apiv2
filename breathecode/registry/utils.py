@@ -49,7 +49,7 @@ class AssetException(Exception):
 
 class AssetValidator():
     base_warns = ['translations', 'technologies']
-    base_errors = ['lang', 'urls', 'category', 'preview']
+    base_errors = ['lang', 'urls', 'category', 'preview', 'images']
     warns = []
     errors = []
 
@@ -118,6 +118,13 @@ class AssetValidator():
 
         if self.asset.category is None:
             raise Exception('Empty category')
+
+    def images(self):
+        images = self.asset.images.all()
+        print('Validating images', images)
+        for image in images:
+            if image.download_status != 'OK':
+                raise Exception('Check the asset images, there seems to be images not properly downloaded')
 
 
 class LessonValidator(AssetValidator):
