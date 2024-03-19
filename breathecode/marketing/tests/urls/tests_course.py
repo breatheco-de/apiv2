@@ -16,9 +16,11 @@ def course_translation_serializer(course_translation):
     return {
         'course_modules': course_translation.course_modules,
         'description': course_translation.description,
+        'short_description': course_translation.short_description,
         'lang': course_translation.lang,
         'title': course_translation.title,
         'landing_url': course_translation.landing_url,
+        'video_url': course_translation.video_url,
     }
 
 
@@ -29,6 +31,7 @@ def get_serializer(course, academy, syllabus=[], course_translation=None, data={
     return {
         'slug': course.slug,
         'icon_url': course.icon_url,
+        'color': course.color,
         'technologies': course.technologies,
         'academy': academy.id,
         'syllabus': [x.id for x in syllabus],

@@ -1,19 +1,37 @@
-import re
 import os
+import re
 from typing import Any, Optional
+
+from django.contrib.auth.models import User
 from django.utils import timezone
 from requests.exceptions import Timeout
-from django.contrib.auth.models import User
+from task_manager.core.exceptions import AbortTask, RetryTask
+from task_manager.django.decorators import task
+
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.events.models import Event
-from breathecode.services.activecampaign import ActiveCampaign
 from breathecode.monitoring.actions import test_link
-from breathecode.utils import getLogger
-from .models import AcademyAlias, FormEntry, ShortLink, ActiveCampaignWebhook, ActiveCampaignAcademy, Tag, Downloadable
 from breathecode.monitoring.models import CSVUpload
-from .serializers import (PostFormEntrySerializer)
-from .actions import register_new_lead, save_get_geolocal, bind_formentry_with_webhook, update_deal_custom_fields
-from breathecode.utils.decorators.task import AbortTask, RetryTask, TaskPriority, task
+from breathecode.services.activecampaign import ActiveCampaign
+from breathecode.utils import getLogger
+from breathecode.utils.decorators import TaskPriority
+
+from .actions import (
+    bind_formentry_with_webhook,
+    register_new_lead,
+    save_get_geolocal,
+    update_deal_custom_fields,
+)
+from .models import (
+    AcademyAlias,
+    ActiveCampaignAcademy,
+    ActiveCampaignWebhook,
+    Downloadable,
+    FormEntry,
+    ShortLink,
+    Tag,
+)
+from .serializers import PostFormEntrySerializer
 
 logger = getLogger(__name__)
 is_test_env = os.getenv('ENV') == 'test'
@@ -152,10 +170,7 @@ def add_cohort_task_to_student(user_id, cohort_id, academy_id, **_: Any):
 
 
 @task(priority=TaskPriority.MARKETING.value)
-def add_event_tags_to_student(event_id: int,
-                              user_id: Optional[int] = None,
-                              email: Optional[str] = None,
-                              **_: Any):
+def add_event_tags_to_student(event_id: int, user_id: Optional[int] = None, email: Optional[str] = None, **_: Any):
     logger.info('Task add_event_tags_to_student started')
 
     if not user_id and not email:
@@ -298,11 +313,7 @@ def add_downloadable_slug_as_acp_tag(downloadable_id: int, academy_id: int, **_:
         data = client.create_tag(new_tag_slug,
                                  description=f'Downloadable {downloadable.slug} at {ac_academy.academy.slug}')
 
-        tag = Tag(slug=data['tag'],
-                  acp_id=data['id'],
-                  tag_type='DOWNLOADABLE',
-                  ac_academy=ac_academy,
-                  subscribers=0)
+        tag = Tag(slug=data['tag'], acp_id=data['id'], tag_type='DOWNLOADABLE', ac_academy=ac_academy, subscribers=0)
         tag.save()
 
     except Exception as e:

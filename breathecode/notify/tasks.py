@@ -8,12 +8,14 @@ import requests
 from celery import shared_task
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils import timezone
+from task_manager.core.exceptions import AbortTask
+from task_manager.django.decorators import task
 
 from breathecode.authenticate.models import Token
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.notify import actions
 from breathecode.services.slack.client import Slack
-from breathecode.utils.decorators import AbortTask, TaskPriority, task
+from breathecode.utils.decorators import TaskPriority
 
 from .actions import sync_slack_team_channel, sync_slack_team_users
 
@@ -101,6 +103,8 @@ def async_slack_command(post_data):
 @task(priority=TaskPriority.DEFAULT.value)
 def async_deliver_hook(target, payload, hook_id=None, **kwargs):
     """
+    Deliver a hook.
+
     target:     the url to receive the payload.
     payload:    a python primitive data structure
     instance:   a possibly null "trigger" instance
@@ -121,8 +125,7 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
             elif isinstance(payload[key], Decimal):
                 payload[key] = str(payload[key])
 
-            elif isinstance(payload[key], list) or isinstance(payload[key], tuple) or isinstance(
-                    payload[key], set):
+            elif isinstance(payload[key], list) or isinstance(payload[key], tuple) or isinstance(payload[key], set):
                 l = []
                 for item in payload[key]:
                     l.append(parse_payload(item))
@@ -181,5 +184,4 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
 
     except Exception:
         logger.error(payload)
-        raise AbortTask(
-            f'Error while trying to save hook call with status code {response.status_code}. {payload}')
+        raise AbortTask(f'Error while trying to save hook call with status code {response.status_code}. {payload}')

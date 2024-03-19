@@ -539,6 +539,7 @@ ROLES = [
             'read_event_type',
             'read_certificate',
             'academy_reporting',
+            'crud_media',
             'read_won_lead',
             'read_eventcheckin',
             'read_review',

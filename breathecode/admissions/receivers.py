@@ -1,14 +1,17 @@
 # from django.db.models.signals import post_save
+import logging
 from typing import Any, Type
+
 from django.dispatch import receiver
 
-from breathecode.assignments.signals import assignment_status_updated
+import breathecode.authenticate.actions as authenticate_actions
 from breathecode.assignments.models import Task
-from .models import Cohort, CohortUser
-from .actions import get_assets_on_syllabus
-from .signals import cohort_log_saved
+from breathecode.assignments.signals import assignment_status_updated
+
 from ..activity import tasks as activity_tasks
-import logging
+from .actions import get_assets_on_syllabus
+from .models import Cohort, CohortUser
+from .signals import cohort_log_saved, cohort_user_created
 
 # add your receives here
 logger = logging.getLogger(__name__)
@@ -19,6 +22,23 @@ def process_cohort_history_log(sender: Type[Cohort], instance: Cohort, **kwargs:
     logger.info('Processing Cohort history log for cohort: ' + str(instance.id))
 
     activity_tasks.get_attendancy_log.delay(instance.id)
+
+
+@receiver(cohort_user_created, sender=Cohort)
+async def new_cohort_user(sender: Type[Cohort], instance: Cohort, **kwargs: Any):
+    logger.info('Processing Cohort history log for cohort: ' + str(instance.id))
+
+    await authenticate_actions.send_webhook('rigobot',
+                                            'cohort_user.created',
+                                            user=instance.user,
+                                            data={
+                                                'user': {
+                                                    'id': instance.user.id,
+                                                    'email': instance.user.email,
+                                                    'first_name': instance.user.first_name,
+                                                    'last_name': instance.user.last_name,
+                                                },
+                                            })
 
 
 @receiver(assignment_status_updated, sender=Task, weak=False)

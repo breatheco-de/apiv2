@@ -41,8 +41,8 @@ from .caches import (
     KeywordCache,
     TechnologyCache,
 )
-from .models import (Asset, AssetAlias, AssetCategory, AssetComment, AssetErrorLog, AssetKeyword,
-                     AssetTechnology, ContentVariable, KeywordCluster, OriginalityScan, SEOReport, AssetImage)
+from .models import (Asset, AssetAlias, AssetCategory, AssetComment, AssetErrorLog, AssetKeyword, AssetTechnology,
+                     ContentVariable, KeywordCluster, OriginalityScan, SEOReport, AssetImage)
 from .serializers import (
     AcademyAssetSerializer,
     AcademyCommentSerializer,
@@ -79,7 +79,6 @@ from .tasks import async_pull_from_github
 logger = logging.getLogger(__name__)
 
 SYSTEM_EMAIL = os.getenv('SYSTEM_EMAIL', None)
-APP_URL = os.getenv('APP_URL', '')
 ENV = os.getenv('ENV', 'development')
 
 
@@ -137,8 +136,7 @@ def render_preview_html(request, asset_slug):
             **AssetBigSerializer(asset).data, 'html': readme['html'],
             'theme': request.GET.get('theme', 'light'),
             'plain': request.GET.get('plain', 'false'),
-            'styles':
-            readme['frontmatter']['inlining']['css'][0] if 'inlining' in readme['frontmatter'] else None,
+            'styles': readme['frontmatter']['inlining']['css'][0] if 'inlining' in readme['frontmatter'] else None,
             'frontmatter': readme['frontmatter'].items()
         })
 
@@ -352,15 +350,13 @@ def render_readme(request, asset_slug, extension='raw'):
         else:
             asset.log_error(AssetErrorLog.EMPTY_HTML,
                             status_text='Someone requested the asset HTML via API and it was empty')
-            readme = asset.get_readme(parse=True,
-                                      remove_frontmatter=request.GET.get('frontmatter', 'true') != 'false')
+            readme = asset.get_readme(parse=True, remove_frontmatter=request.GET.get('frontmatter', 'true') != 'false')
             asset.html = readme['html']
             asset.save()
             response = HttpResponse(readme['html'], content_type='text/html')
 
     elif extension in ['md', 'mdx', 'txt']:
-        readme = asset.get_readme(parse=True,
-                                  remove_frontmatter=request.GET.get('frontmatter', 'true') != 'false')
+        readme = asset.get_readme(parse=True, remove_frontmatter=request.GET.get('frontmatter', 'true') != 'false')
         response = HttpResponse(readme['decoded'], content_type='text/markdown')
 
     elif extension == 'ipynb':
@@ -404,17 +400,13 @@ def get_config(request, asset_slug):
         if response.status_code == 404:
             response = requests.get(f'{asset.url}/blob/{main_branch}/bc.json?raw=true', timeout=2)
             if response.status_code == 404:
-                raise ValidationException(f'Config file not found for {asset.url}',
-                                          code=404,
-                                          slug='config_not_found')
+                raise ValidationException(f'Config file not found for {asset.url}', code=404, slug='config_not_found')
 
         return Response(response.json())
     except Exception:
         data = {
-            'MESSAGE':
-            f'learn.json or bc.json not found or invalid for for: \n {asset.url}',
-            'TITLE':
-            f'Error fetching the exercise meta-data learn.json for {asset.asset_type.lower()} {asset.slug}',
+            'MESSAGE': f'learn.json or bc.json not found or invalid for for: \n {asset.url}',
+            'TITLE': f'Error fetching the exercise meta-data learn.json for {asset.asset_type.lower()} {asset.slug}',
         }
 
         to = SYSTEM_EMAIL
@@ -576,26 +568,25 @@ class AssetView(APIView, GenerateLookupsMixin):
 
         items = Asset.objects.all()
         lookup = {}
-        query = handler.lookup.build(lang,
-                                     strings={
-                                         'iexact': [
-                                             'test_status',
-                                             'sync_status',
-                                         ],
-                                         'in': [
-                                             'difficulty', 'status', 'asset_type', 'category__slug',
-                                             'technologies__slug', 'seo_keywords__slug'
-                                         ]
-                                     },
-                                     ids=['author', 'owner'],
-                                     bools={
-                                         'exact': ['with_video', 'interactive', 'graded'],
-                                     },
-                                     overwrite={
-                                         'category': 'category__slug',
-                                         'technologies': 'technologies__slug',
-                                         'seo_keywords': 'seo_keywords__slug'
-                                     })
+        query = handler.lookup.build(
+            lang,
+            strings={
+                'iexact': [
+                    'test_status',
+                    'sync_status',
+                ],
+                'in':
+                ['difficulty', 'status', 'asset_type', 'category__slug', 'technologies__slug', 'seo_keywords__slug']
+            },
+            ids=['author', 'owner'],
+            bools={
+                'exact': ['with_video', 'interactive', 'graded'],
+            },
+            overwrite={
+                'category': 'category__slug',
+                'technologies': 'technologies__slug',
+                'seo_keywords': 'seo_keywords__slug'
+            })
 
         like = request.GET.get('like', None)
         if like is not None:
@@ -680,8 +671,7 @@ class AcademyAssetActionView(APIView):
 
         asset = Asset.objects.filter(slug__iexact=asset_slug, academy__id=academy_id).first()
         if asset is None:
-            raise ValidationException(f'This asset {asset_slug} does not exist for this academy {academy_id}',
-                                      404)
+            raise ValidationException(f'This asset {asset_slug} does not exist for this academy {academy_id}', 404)
 
         possible_actions = ['test', 'pull', 'push', 'analyze_seo', 'clean', 'originality']
         if action_slug not in possible_actions:
@@ -717,8 +707,8 @@ class AcademyAssetActionView(APIView):
             if isinstance(e, Exception):
                 raise ValidationException(str(e))
 
-            raise ValidationException('; '.join(
-                [k.capitalize() + ': ' + ''.join(v) for k, v in e.message_dict.items()]))
+            raise ValidationException('; '.join([k.capitalize() + ': ' + ''.join(v)
+                                                 for k, v in e.message_dict.items()]))
 
         asset = Asset.objects.filter(slug=asset_slug, academy__id=academy_id).first()
         serializer = AcademyAssetSerializer(asset)
@@ -815,8 +805,7 @@ class AcademyAssetOriginalityView(APIView, GenerateLookupsMixin):
 
         scans = OriginalityScan.objects.filter(asset__slug=asset_slug)
         if scans.count() == 0:
-            raise ValidationException(f'No originality scans found for asset {asset_slug}',
-                                      status.HTTP_404_NOT_FOUND)
+            raise ValidationException(f'No originality scans found for asset {asset_slug}', status.HTTP_404_NOT_FOUND)
 
         scans = scans.order_by('-created_at')
 
@@ -846,8 +835,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         if asset_slug is not None:
             asset = Asset.get_by_slug(asset_slug, request)
             if asset is None or (asset.academy is not None and asset.academy.id != int(academy_id)):
-                raise ValidationException(f'Asset {asset_slug} not found for this academy',
-                                          status.HTTP_404_NOT_FOUND)
+                raise ValidationException(f'Asset {asset_slug} not found for this academy', status.HTTP_404_NOT_FOUND)
 
             serializer = AcademyAssetSerializer(asset)
             return handler.response(serializer.data)
@@ -983,34 +971,31 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
             asset = Asset.objects.filter(slug__iexact=asset_slug, academy__id=academy_id).first()
             if asset is None:
-                raise ValidationException(
-                    f'This asset {asset_slug} does not exist for this academy {academy_id}', 404)
+                raise ValidationException(f'This asset {asset_slug} does not exist for this academy {academy_id}', 404)
 
             data_list[0]['id'] = asset.id
 
         all_assets = []
         for data in data_list:
 
-            if 'technologies' in data and len(data['technologies']) > 0 and isinstance(
-                    data['technologies'][0], str):
-                technology_ids = AssetTechnology.objects.filter(slug__in=data['technologies']).values_list(
-                    'pk', flat=True)
+            if 'technologies' in data and len(data['technologies']) > 0 and isinstance(data['technologies'][0], str):
+                technology_ids = AssetTechnology.objects.filter(slug__in=data['technologies']).values_list('pk',
+                                                                                                           flat=True)
                 delta = len(data['technologies']) - len(technology_ids)
                 if delta != 0:
-                    raise ValidationException(
-                        f'{delta} of the assigned technologies for this lesson are not found')
+                    raise ValidationException(f'{delta} of the assigned technologies for this lesson are not found')
 
                 data['technologies'] = technology_ids
 
             if 'seo_keywords' in data and len(data['seo_keywords']) > 0:
                 if isinstance(data['seo_keywords'][0], str):
-                    data['seo_keywords'] = AssetKeyword.objects.filter(
-                        slug__in=data['seo_keywords']).values_list('pk', flat=True)
+                    data['seo_keywords'] = AssetKeyword.objects.filter(slug__in=data['seo_keywords']).values_list(
+                        'pk', flat=True)
 
             if 'all_translations' in data and len(data['all_translations']) > 0 and isinstance(
                     data['all_translations'][0], str):
-                data['all_translations'] = Asset.objects.filter(
-                    slug__in=data['all_translations']).values_list('pk', flat=True)
+                data['all_translations'] = Asset.objects.filter(slug__in=data['all_translations']).values_list(
+                    'pk', flat=True)
 
             if 'id' not in data:
                 raise ValidationException('Cannot determine asset id', slug='without-id')
@@ -1056,22 +1041,20 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
         if 'seo_keywords' in data and len(data['seo_keywords']) > 0:
             if isinstance(data['seo_keywords'][0], str):
-                data['seo_keywords'] = AssetKeyword.objects.filter(slug__in=data['seo_keywords']).values_list(
-                    'pk', flat=True)
+                data['seo_keywords'] = AssetKeyword.objects.filter(slug__in=data['seo_keywords']).values_list('pk',
+                                                                                                              flat=True)
 
         if 'all_translations' in data and len(data['all_translations']) > 0 and isinstance(
                 data['all_translations'][0], str):
-            data['all_translations'] = Asset.objects.filter(slug__in=data['all_translations']).values_list(
-                'pk', flat=True)
+            data['all_translations'] = Asset.objects.filter(slug__in=data['all_translations']).values_list('pk',
+                                                                                                           flat=True)
 
-        if 'technologies' in data and len(data['technologies']) > 0 and isinstance(
-                data['technologies'][0], str):
+        if 'technologies' in data and len(data['technologies']) > 0 and isinstance(data['technologies'][0], str):
             technology_ids = AssetTechnology.objects.filter(slug__in=data['technologies']).values_list(
                 'pk', flat=True).order_by('sort_priority')
             delta = len(data['technologies']) - len(technology_ids)
             if delta != 0:
-                raise ValidationException(
-                    f'{delta} of the assigned technologies for this lesson are not found')
+                raise ValidationException(f'{delta} of the assigned technologies for this lesson are not found')
 
             data['technologies'] = technology_ids
 
@@ -1170,11 +1153,7 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
 
         payload = {**request.data, 'author': request.user.id}
 
-        serializer = PostAssetCommentSerializer(data=payload,
-                                                context={
-                                                    'request': request,
-                                                    'academy': academy_id
-                                                })
+        serializer = PostAssetCommentSerializer(data=payload, context={'request': request, 'academy': academy_id})
         if serializer.is_valid():
             serializer.save()
             serializer = AcademyCommentSerializer(serializer.instance)
@@ -1195,12 +1174,7 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
         if 'status' in request.data and request.data['status'] == 'NOT_STARTED':
             data['author'] = None
 
-        serializer = PutAssetCommentSerializer(comment,
-                                               data=data,
-                                               context={
-                                                   'request': request,
-                                                   'academy': academy_id
-                                               })
+        serializer = PutAssetCommentSerializer(comment, data=data, context={'request': request, 'academy': academy_id})
         if serializer.is_valid():
             serializer.save()
             serializer = AcademyCommentSerializer(serializer.instance)
@@ -1281,12 +1255,7 @@ class AcademyCategoryView(APIView, GenerateLookupsMixin):
         if 'lang' in data:
             data['lang'] = data['lang'].upper()
 
-        serializer = PUTCategorySerializer(cat,
-                                           data=data,
-                                           context={
-                                               'request': request,
-                                               'academy': academy_id
-                                           })
+        serializer = PUTCategorySerializer(cat, data=data, context={'request': request, 'academy': academy_id})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -1364,12 +1333,7 @@ class AcademyKeywordView(APIView, GenerateLookupsMixin):
 
         data = {**request.data}
 
-        serializer = PUTKeywordSerializer(keywd,
-                                          data=data,
-                                          context={
-                                              'request': request,
-                                              'academy': academy_id
-                                          })
+        serializer = PUTKeywordSerializer(keywd, data=data, context={'request': request, 'academy': academy_id})
         if serializer.is_valid():
             serializer.save()
             serializer = AssetKeywordBigSerializer(serializer.instance)
@@ -1438,11 +1402,7 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
 
         payload = {**request.data, 'author': request.user.id}
 
-        serializer = PostKeywordClusterSerializer(data=payload,
-                                                  context={
-                                                      'request': request,
-                                                      'academy': academy_id
-                                                  })
+        serializer = PostKeywordClusterSerializer(data=payload, context={'request': request, 'academy': academy_id})
         if serializer.is_valid():
             serializer.save()
             serializer = KeywordClusterBigSerializer(serializer.instance)

@@ -2,14 +2,15 @@
 Test /answer
 """
 import random
-from unittest.mock import MagicMock, call
-import pytest
-from breathecode.payments import tasks
-
-from django.utils import timezone
-from breathecode.tests.mixins.breathecode_mixin import Breathecode
-from breathecode.utils.decorators.task import AbortTask
 from logging import Logger
+from unittest.mock import MagicMock, call
+
+import pytest
+from django.utils import timezone
+from task_manager.core.exceptions import AbortTask
+
+from breathecode.payments import tasks
+from breathecode.tests.mixins.breathecode_mixin import Breathecode
 
 UTC_NOW = timezone.now()
 
@@ -125,9 +126,7 @@ def test_subscription_have_a_cohort_set(bc: Breathecode, reset_mock_calls, caplo
     assert Logger.info.call_args_list == [
         call('Starting add_cohort_set_to_subscription for subscription 1 cohort_set 1'),
     ]
-    assert Logger.error.call_args_list == [
-        call('Subscription with id 1 already have a cohort set', exc_info=True)
-    ]
+    assert Logger.error.call_args_list == [call('Subscription with id 1 already have a cohort set', exc_info=True)]
 
 
 # When: all is ok

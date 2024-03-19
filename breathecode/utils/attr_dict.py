@@ -6,7 +6,7 @@ T = TypeVar('T')
 
 
 class AttrDict(dict):
-    """support use one dict like one javascript object."""
+    """Support use a dict like a javascript object."""
 
     def __init__(self, **kwargs: T):
         dict.__init__(self, **kwargs)

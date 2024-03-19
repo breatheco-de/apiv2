@@ -3,10 +3,12 @@ Test /academy/lead
 """
 import random
 from random import choice, choices, randint
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from django.urls.base import reverse_lazy
-from rest_framework import status
 from faker import Faker
+from rest_framework import status
+
 from ..mixins import MarketingTestCase
 
 fake = Faker()
@@ -16,9 +18,11 @@ def course_translation_serializer(course_translation):
     return {
         'course_modules': course_translation.course_modules,
         'description': course_translation.description,
+        'short_description': course_translation.short_description,
         'lang': course_translation.lang,
         'title': course_translation.title,
         'landing_url': course_translation.landing_url,
+        'video_url': course_translation.video_url,
     }
 
 
@@ -55,6 +59,9 @@ def get_serializer(course, academy, syllabus=[], course_translation=None, data={
         'course_translation': course_translation,
         'status': course.status,
         'visibility': course.visibility,
+        'cohort': course.cohort,
+        'color': course.color,
+        'plan_slug': course.plan_slug,
         **data,
     }
 

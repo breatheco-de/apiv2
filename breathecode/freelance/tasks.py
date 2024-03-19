@@ -1,8 +1,11 @@
 import logging
+
 from celery import shared_task
+
 from breathecode.monitoring.decorators import WebhookTask
-from breathecode.utils.decorators.task import TaskPriority
-from .actions import (sync_single_issue, update_status_based_on_github_action, generate_freelancer_bill)
+from breathecode.utils import TaskPriority
+
+from .actions import generate_freelancer_bill, sync_single_issue, update_status_based_on_github_action
 
 logger = logging.getLogger(__name__)
 

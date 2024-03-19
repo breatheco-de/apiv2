@@ -115,9 +115,7 @@ def gitpod_csv(lines=1, data={}):
     effective_times = [datetime_to_iso(timezone.now()) for _ in range(lines)]
     kinds = [fake.slug() for _ in range(lines)]
     usernames = [fake.slug() for _ in range(lines)]
-    contextURLs = [
-        f'https://github.com/{username}/{fake.slug()}/tree/{fake.slug()}/' for username in usernames
-    ]
+    contextURLs = [f'https://github.com/{username}/{fake.slug()}/tree/{fake.slug()}/' for username in usernames]
 
     # dictionary of lists
     return {
@@ -236,7 +234,7 @@ def github_academy_user_data(data={}):
 
 
 def get_last_task_manager_id(bc):
-    task_manager_cls = bc.database.get_model('commons.TaskManager')
+    task_manager_cls = bc.database.get_model('task_manager.TaskManager')
     task_manager = task_manager_cls.objects.order_by('-id').first()
 
     if task_manager is None:
@@ -252,15 +250,14 @@ class RandomFileTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=False),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=False),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -272,8 +269,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
 
         slug = self.bc.fake.slug()
         with patch('requests.get', response_mock(content=[{'id': 1} for _ in range(10)])):
-            with patch('breathecode.services.google_cloud.File.download',
-                       MagicMock(side_effect=csv_file_mock(csv))):
+            with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
 
                 upload(slug)
 
@@ -301,15 +297,14 @@ class RandomFileTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -321,8 +316,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
 
         slug = self.bc.fake.slug()
         with patch('requests.get', response_mock(content=[{'id': 1} for _ in range(10)])):
-            with patch('breathecode.services.google_cloud.File.download',
-                       MagicMock(side_effect=csv_file_mock(csv))):
+            with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
 
                 upload(slug)
 
@@ -332,8 +326,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
 
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
-            call(f'File {slug} has an unsupported origin or the provider had changed the file format',
-                 exc_info=True),
+            call(f'File {slug} has an unsupported origin or the provider had changed the file format', exc_info=True),
         ])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
@@ -346,15 +339,14 @@ class RandomFileTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -371,8 +363,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
         logging.Logger.error.call_args_list = []
 
         with patch('requests.get', response_mock(content=[{'id': 1} for _ in range(10)])):
-            with patch('breathecode.services.google_cloud.File.download',
-                       MagicMock(side_effect=csv_file_mock(csv))):
+            with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
 
                 upload(slug)
 
@@ -399,15 +390,14 @@ class RandomFileTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -427,8 +417,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
         logging.Logger.error.call_args_list = []
 
         with patch('requests.get', response_mock(content=[{'id': 1} for _ in range(10)])):
-            with patch('breathecode.services.google_cloud.File.download',
-                       MagicMock(side_effect=csv_file_mock(csv))):
+            with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
 
                 upload(slug, force=True)
 
@@ -442,8 +431,7 @@ class RandomFileTestSuite(ProvisioningTestCase):
             call(f'Starting upload for hash {slug}'),
         ])
         self.bc.check.calls(logging.Logger.error.call_args_list, [
-            call('Cannot force upload because there are bills with status DISPUTED, IGNORED or PAID',
-                 exc_info=True),
+            call('Cannot force upload because there are bills with status DISPUTED, IGNORED or PAID', exc_info=True),
         ])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
@@ -460,15 +448,14 @@ class CodespacesTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -480,8 +467,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
 
         slug = self.bc.fake.slug()
         with patch('requests.get', response_mock(content=[{'id': 1} for _ in range(10)])):
-            with patch('breathecode.services.google_cloud.File.download',
-                       MagicMock(side_effect=csv_file_mock(csv))):
+            with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
 
                 upload(slug)
 
@@ -556,15 +542,14 @@ class CodespacesTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -599,8 +584,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
 
         slug = self.bc.fake.slug()
         with patch('requests.get', response_mock(content=[{'id': 1} for _ in range(10)])):
-            with patch('breathecode.services.google_cloud.File.download',
-                       MagicMock(side_effect=csv_file_mock(csv))):
+            with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
 
                 upload(slug)
 
@@ -707,15 +691,14 @@ class CodespacesTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -751,8 +734,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
 
         slug = self.bc.fake.slug()
         with patch('requests.get', response_mock(content=[{'id': 1} for _ in range(10)])):
-            with patch('breathecode.services.google_cloud.File.download',
-                       MagicMock(side_effect=csv_file_mock(csv))):
+            with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
 
                 upload(slug)
 
@@ -861,15 +843,14 @@ class CodespacesTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -898,8 +879,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
         logging.Logger.error.call_args_list = []
 
         slug = self.bc.fake.slug()
-        with patch('breathecode.services.google_cloud.File.download',
-                   MagicMock(side_effect=csv_file_mock(csv))):
+        with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
 
             upload(slug)
 
@@ -969,15 +949,14 @@ class CodespacesTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -1012,8 +991,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
         task_manager_id = get_last_task_manager_id(self.bc) + 1
 
         slug = self.bc.fake.slug()
-        with patch('breathecode.services.google_cloud.File.download',
-                   MagicMock(side_effect=csv_file_mock(csv))):
+        with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
 
             upload(slug)
 
@@ -1091,15 +1069,14 @@ class CodespacesTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -1130,8 +1107,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        with patch('breathecode.services.google_cloud.File.download',
-                   MagicMock(side_effect=csv_file_mock(csv))):
+        with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
 
             upload(slug, force=True)
 
@@ -1202,15 +1178,14 @@ class CodespacesTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -1242,8 +1217,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
         logging.Logger.error.call_args_list = []
 
         slug = self.bc.fake.slug()
-        with patch('breathecode.services.google_cloud.File.download',
-                   MagicMock(side_effect=csv_file_mock(csv))):
+        with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
 
             upload(slug)
 
@@ -1297,9 +1271,8 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 UTC_NOW,
                 'status':
                 'PERSISTED',
-                'status_text':
-                (f"We could not find enough information about {csv['Username'][n]}, mark this user user "
-                 "as deleted if you don't recognize it"),
+                'status_text': (f"We could not find enough information about {csv['Username'][n]}, mark this user user "
+                                "as deleted if you don't recognize it"),
             }) for n in range(10)
         ])
 
@@ -1324,15 +1297,14 @@ class GitpodTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -1344,8 +1316,7 @@ class GitpodTestSuite(ProvisioningTestCase):
 
         slug = self.bc.fake.slug()
         with patch('requests.get', response_mock(content=[{'id': 1} for _ in range(10)])):
-            with patch('breathecode.services.google_cloud.File.download',
-                       MagicMock(side_effect=csv_file_mock(csv))):
+            with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
 
                 upload(slug)
 
@@ -1368,17 +1339,16 @@ class GitpodTestSuite(ProvisioningTestCase):
             })
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionEvent'), [
-            provisioning_activity_item_data(
-                {
-                    'id': n + 1,
-                    'price_id': 1,
-                    'quantity': float(csv['credits'][n]),
-                    'external_pk': str(csv['id'][n]),
-                    'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
-                    'repository_url': csv['contextURL'][n],
-                    'task_associated_slug': repo_name(csv['contextURL'][n]),
-                    'csv_row': n,
-                }) for n in range(10)
+            provisioning_activity_item_data({
+                'id': n + 1,
+                'price_id': 1,
+                'quantity': float(csv['credits'][n]),
+                'external_pk': str(csv['id'][n]),
+                'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
+                'repository_url': csv['contextURL'][n],
+                'task_associated_slug': repo_name(csv['contextURL'][n]),
+                'csv_row': n,
+            }) for n in range(10)
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
             provisioning_activity_data({
@@ -1417,15 +1387,14 @@ class GitpodTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -1452,8 +1421,7 @@ class GitpodTestSuite(ProvisioningTestCase):
         logging.Logger.error.call_args_list = []
 
         slug = self.bc.fake.slug()
-        with patch('breathecode.services.google_cloud.File.download',
-                   MagicMock(side_effect=csv_file_mock(csv))):
+        with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
 
             upload(slug)
 
@@ -1478,18 +1446,17 @@ class GitpodTestSuite(ProvisioningTestCase):
             })
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionEvent'), [
-            provisioning_activity_item_data(
-                {
-                    'id': n + 1,
-                    'price_id': 1,
-                    'vendor_id': None,
-                    'quantity': float(csv['credits'][n]),
-                    'external_pk': str(csv['id'][n]),
-                    'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
-                    'repository_url': csv['contextURL'][n],
-                    'task_associated_slug': repo_name(csv['contextURL'][n]),
-                    'csv_row': n,
-                }) for n in range(10)
+            provisioning_activity_item_data({
+                'id': n + 1,
+                'price_id': 1,
+                'vendor_id': None,
+                'quantity': float(csv['credits'][n]),
+                'external_pk': str(csv['id'][n]),
+                'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
+                'repository_url': csv['contextURL'][n],
+                'task_associated_slug': repo_name(csv['contextURL'][n]),
+                'csv_row': n,
+            }) for n in range(10)
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
             provisioning_activity_data({
@@ -1517,15 +1484,14 @@ class GitpodTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -1554,8 +1520,7 @@ class GitpodTestSuite(ProvisioningTestCase):
         logging.Logger.error.call_args_list = []
 
         slug = self.bc.fake.slug()
-        with patch('breathecode.services.google_cloud.File.download',
-                   MagicMock(side_effect=csv_file_mock(csv))):
+        with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
 
             upload(slug)
 
@@ -1583,18 +1548,17 @@ class GitpodTestSuite(ProvisioningTestCase):
             })
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionEvent'), [
-            provisioning_activity_item_data(
-                {
-                    'id': n + 1,
-                    'price_id': 1,
-                    'vendor_id': 1,
-                    'quantity': float(csv['credits'][n]),
-                    'external_pk': str(csv['id'][n]),
-                    'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
-                    'repository_url': csv['contextURL'][n],
-                    'task_associated_slug': repo_name(csv['contextURL'][n]),
-                    'csv_row': n,
-                }) for n in range(10)
+            provisioning_activity_item_data({
+                'id': n + 1,
+                'price_id': 1,
+                'vendor_id': 1,
+                'quantity': float(csv['credits'][n]),
+                'external_pk': str(csv['id'][n]),
+                'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
+                'repository_url': csv['contextURL'][n],
+                'task_associated_slug': repo_name(csv['contextURL'][n]),
+                'csv_row': n,
+            }) for n in range(10)
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
             provisioning_activity_data({
@@ -1624,15 +1588,14 @@ class GitpodTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -1667,8 +1630,7 @@ class GitpodTestSuite(ProvisioningTestCase):
         task_manager_id = get_last_task_manager_id(self.bc) + 1
 
         slug = self.bc.fake.slug()
-        with patch('breathecode.services.google_cloud.File.download',
-                   MagicMock(side_effect=csv_file_mock(csv))):
+        with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
 
             upload(slug)
 
@@ -1696,18 +1658,17 @@ class GitpodTestSuite(ProvisioningTestCase):
             })
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionEvent'), [
-            provisioning_activity_item_data(
-                {
-                    'id': n + 1,
-                    'price_id': 1,
-                    'vendor_id': 1,
-                    'quantity': float(csv['credits'][n]),
-                    'external_pk': str(csv['id'][n]),
-                    'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
-                    'repository_url': csv['contextURL'][n],
-                    'task_associated_slug': repo_name(csv['contextURL'][n]),
-                    'csv_row': n,
-                }) for n in range(10)
+            provisioning_activity_item_data({
+                'id': n + 1,
+                'price_id': 1,
+                'vendor_id': 1,
+                'quantity': float(csv['credits'][n]),
+                'external_pk': str(csv['id'][n]),
+                'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
+                'repository_url': csv['contextURL'][n],
+                'task_associated_slug': repo_name(csv['contextURL'][n]),
+                'csv_row': n,
+            }) for n in range(10)
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
             provisioning_activity_data({
@@ -1745,15 +1706,14 @@ class GitpodTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -1784,8 +1744,7 @@ class GitpodTestSuite(ProvisioningTestCase):
         logging.Logger.error.call_args_list = []
 
         slug = self.bc.fake.slug()
-        with patch('breathecode.services.google_cloud.File.download',
-                   MagicMock(side_effect=csv_file_mock(csv))):
+        with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
 
             upload(slug)
 
@@ -1827,18 +1786,17 @@ class GitpodTestSuite(ProvisioningTestCase):
             })
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionEvent'), [
-            provisioning_activity_item_data(
-                {
-                    'id': n + 1,
-                    'price_id': 1,
-                    'vendor_id': 1,
-                    'quantity': float(csv['credits'][n]),
-                    'external_pk': str(csv['id'][n]),
-                    'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
-                    'repository_url': csv['contextURL'][n],
-                    'task_associated_slug': repo_name(csv['contextURL'][n]),
-                    'csv_row': n,
-                }) for n in range(10)
+            provisioning_activity_item_data({
+                'id': n + 1,
+                'price_id': 1,
+                'vendor_id': 1,
+                'quantity': float(csv['credits'][n]),
+                'external_pk': str(csv['id'][n]),
+                'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
+                'repository_url': csv['contextURL'][n],
+                'task_associated_slug': repo_name(csv['contextURL'][n]),
+                'csv_row': n,
+            }) for n in range(10)
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
             provisioning_activity_data({
@@ -1868,15 +1826,14 @@ class GitpodTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -1925,8 +1882,7 @@ class GitpodTestSuite(ProvisioningTestCase):
 
         slug = self.bc.fake.slug()
 
-        with patch('breathecode.services.google_cloud.File.download',
-                   MagicMock(side_effect=csv_file_mock(csv))):
+        with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
 
             upload(slug)
 
@@ -1968,18 +1924,17 @@ class GitpodTestSuite(ProvisioningTestCase):
             })
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionEvent'), [
-            provisioning_activity_item_data(
-                {
-                    'id': n + 1,
-                    'price_id': 1,
-                    'vendor_id': 1,
-                    'quantity': float(csv['credits'][n]),
-                    'external_pk': str(csv['id'][n]),
-                    'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
-                    'repository_url': csv['contextURL'][n],
-                    'task_associated_slug': repo_name(csv['contextURL'][n]),
-                    'csv_row': n,
-                }) for n in range(10)
+            provisioning_activity_item_data({
+                'id': n + 1,
+                'price_id': 1,
+                'vendor_id': 1,
+                'quantity': float(csv['credits'][n]),
+                'external_pk': str(csv['id'][n]),
+                'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
+                'repository_url': csv['contextURL'][n],
+                'task_associated_slug': repo_name(csv['contextURL'][n]),
+                'csv_row': n,
+            }) for n in range(10)
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
             provisioning_activity_data({
@@ -2009,15 +1964,14 @@ class GitpodTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock(wraps=upload.delay))
     @patch('breathecode.provisioning.tasks.calculate_bill_amounts.delay', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
@@ -2082,8 +2036,7 @@ class GitpodTestSuite(ProvisioningTestCase):
         y = [[model.academy[RANDOM_ACADEMIES[x]]] for x in range(10)]
 
         with patch('random.choices', MagicMock(side_effect=y)):
-            with patch('breathecode.services.google_cloud.File.download',
-                       MagicMock(side_effect=csv_file_mock(csv))):
+            with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
 
                 upload(slug)
 
@@ -2121,18 +2074,17 @@ class GitpodTestSuite(ProvisioningTestCase):
             })
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionEvent'), [
-            provisioning_activity_item_data(
-                {
-                    'id': n + 1,
-                    'price_id': 1,
-                    'vendor_id': 1,
-                    'quantity': float(csv['credits'][n]),
-                    'external_pk': str(csv['id'][n]),
-                    'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
-                    'repository_url': csv['contextURL'][n],
-                    'task_associated_slug': repo_name(csv['contextURL'][n]),
-                    'csv_row': n,
-                }) for n in range(10)
+            provisioning_activity_item_data({
+                'id': n + 1,
+                'price_id': 1,
+                'vendor_id': 1,
+                'quantity': float(csv['credits'][n]),
+                'external_pk': str(csv['id'][n]),
+                'registered_at': self.bc.datetime.from_iso_string(csv['startTime'][n]),
+                'repository_url': csv['contextURL'][n],
+                'task_associated_slug': repo_name(csv['contextURL'][n]),
+                'csv_row': n,
+            }) for n in range(10)
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
             provisioning_activity_data({
