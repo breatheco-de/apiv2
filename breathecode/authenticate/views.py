@@ -23,6 +23,7 @@ from django.utils import timezone
 from linked_services.django.models import AppUserAgreement
 from linked_services.django.service import Service
 from linked_services.rest_framework.decorators import scope
+from linked_services.rest_framework.types import LinkedApp, LinkedHttpRequest, LinkedToken
 from rest_framework import status
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.decorators import permission_classes
@@ -2434,7 +2435,7 @@ class AppUserView(APIView):
     extensions = APIViewExtensions(paginate=True)
 
     @scope(['read:user'])
-    def get(self, request, app: dict, token: dict, user_id=None):
+    def get(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken, user_id=None):
         handler = self.extensions(request)
         lang = get_user_language(request)
 
@@ -2443,10 +2444,11 @@ class AppUserView(APIView):
             extra['appuseragreement__app__id'] = app.id
 
         if token.sub:
-            extra['id'] = token.sub
+            user = request.get_user()
+            extra['id'] = user.id
 
         if user_id:
-            if token.sub and token.sub != user_id:
+            if 'id' in extra and extra['id'] != user_id:
                 raise ValidationException(translation(lang,
                                                       en='This user does not have access to this resource',
                                                       es='Este usuario no tiene acceso a este recurso'),
@@ -2504,7 +2506,6 @@ class AppSync(APIView):
         return Profile.objects.filter(user=self.request.user).first()
 
     async def post(self, request, app_slug: str):
-        print(type(self.request))
         lang = await aget_user_language(request)
         user = await self.aget_user()
 

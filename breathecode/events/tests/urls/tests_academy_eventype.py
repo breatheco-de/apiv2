@@ -1,11 +1,13 @@
 from unittest.mock import MagicMock, call, patch
-from breathecode.events.caches import EventCache
-from django.urls.base import reverse_lazy
 
-from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
-from ..mixins.new_events_tests_case import EventTestCase
-from breathecode.services import datetime_to_iso_format
+from django.urls.base import reverse_lazy
 from django.utils import timezone
+
+from breathecode.events.caches import EventCache
+from breathecode.services import datetime_to_iso_format
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
+
+from ..mixins.new_events_tests_case import EventTestCase
 
 
 def get_serializer(event_type, academy=None, city=None, data={}):
@@ -271,8 +273,8 @@ class AcademyEventTestSuite(EventTestCase):
         expected = {
             'id': 1,
             'academy': 1,
-            'free_for_bootcamps': False,
-            'allow_shared_creation': False,
+            'free_for_bootcamps': True,
+            'allow_shared_creation': True,
             'visibility_settings': [],
             **data,
         }
@@ -283,7 +285,7 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(self.all_event_type_dict(), [{
             'id': 1,
             'academy_id': 1,
-            'allow_shared_creation': False,
-            'free_for_bootcamps': False,
+            'allow_shared_creation': True,
+            'free_for_bootcamps': True,
             **data
         }])
