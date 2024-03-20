@@ -333,8 +333,8 @@ def add_activity(user_id: int,
                 t = bigquery.enums.SqlTypeNames.STRING
 
                 # keep it adobe than the date conditional
-                if (isinstance(meta[key], datetime) or
-                    (isinstance(meta[key], str) and ISO_STRING_PATTERN.match(meta[key]))) and key != 'attended_at':
+                if isinstance(meta[key], datetime) or (isinstance(meta[key], str)
+                                                       and ISO_STRING_PATTERN.match(meta[key])):
                     t = bigquery.enums.SqlTypeNames.TIMESTAMP
                 elif isinstance(meta[key], date):
                     t = bigquery.enums.SqlTypeNames.DATE
