@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 import requests, logging
+from breathecode.services.github import Github
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ class AssetException(Exception):
 
 class AssetValidator():
     base_warns = ['translations', 'technologies']
-    base_errors = ['lang', 'urls', 'category', 'preview', 'images']
+    base_errors = ['lang', 'urls', 'category', 'preview', 'images', 'readme_url']
     warns = []
     errors = []
 
@@ -59,6 +60,7 @@ class AssetValidator():
         self.errors = self.base_errors + self.errors
 
     def validate(self):
+
         try:
             for validation in self.errors:
                 if hasattr(self, validation):
@@ -77,6 +79,20 @@ class AssetValidator():
                     raise Exception('Invalid asset warning validation ' + validation)
         except Exception as e:
             raise AssetException(str(e), severity='WARNING')
+
+    def readme_url(self):
+        if self.asset.readme_url is not None or self.asset.readme_url != '':
+            if not asset.owner:
+                raise Exception(f'Asset must have an owner and the owner must have write access to the readme file')
+
+            credentials = CredentialsGithub.objects.filter(user=asset.owner).first()
+            if credentials is None:
+                raise Exception(f'Github credentials for asset owner were not found')
+
+            gb = Github(credentials.token)
+            return gb.check_file(asset.readme_url)
+
+        return True
 
     def urls(self):
 
