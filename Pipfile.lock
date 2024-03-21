@@ -1656,11 +1656,11 @@
                 "requests"
             ],
             "hashes": [
-                "sha256:17e64524e2d6d5c6e29a68f8d30453343b29641e8ad2bf3872d2c4904e0f9466",
-                "sha256:3fd33b288f23996e832dff663cce4d2a2323e4463cc58b19ecd14b704a8edb23"
+                "sha256:0c71f043805e0f32a3f17ed4129f76ad5ba4710f68b092de210939d0d290a8f2",
+                "sha256:eba1d993a8568ecccc1b9d2f0427ba59df6f8d99575119ba2dc1f609d65fd120"
             ],
             "markers": "python_version >= '3.10'",
-            "version": "==1.2.0"
+            "version": "==1.2.1"
         },
         "lxml": {
             "hashes": [
