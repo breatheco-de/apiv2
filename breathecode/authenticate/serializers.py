@@ -364,6 +364,7 @@ class AppUserSerializer(serpy.Serializer):
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     email = serpy.Field()
+    username = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
     github = serpy.MethodField()
