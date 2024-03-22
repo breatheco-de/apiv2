@@ -135,5 +135,5 @@ django-storages = {extras = ["google"], version = "*"}
 aiohttp = {extras = ["speedups"], version = "*"}
 aiodns = "*"
 eventlet = "*"
-linked-services = {extras = ["requests", "aiohttp", "django"], version = "*"}
-celery-task-manager = "*"
+celery-task-manager = {extras = ["django"], version = "*"}
+linked-services = {extras = ["django", "aiohttp", "requests"], version = "*"}
