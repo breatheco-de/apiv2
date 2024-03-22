@@ -30,7 +30,7 @@ url_list = [
 
 
 def main():
-    global times, url, timeout
+    global url, timeout
 
     father_time = []
     with httpx.Client() as client:

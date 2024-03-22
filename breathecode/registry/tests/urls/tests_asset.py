@@ -32,6 +32,27 @@ def get_serializer(asset, data={}):
         },
         'description':
         asset.description,
+        'assets_related': [{
+            'id':
+            related.id,
+            'slug':
+            related.slug,
+            'lang':
+            related.lang,
+            'asset_type':
+            related.asset_type,
+            'status':
+            related.status,
+            'published_at':
+            related.published_at,
+            'category': {
+                'id': related.category.id,
+                'slug': related.category.slug,
+                'title': related.category.title,
+            },
+            'technologies': [get_serializer_technology(tech)
+                             for tech in related.technologies.all()] if related.technologies else [],
+        } for related in asset.assets_related.all()] if asset.assets_related else [],
         'difficulty':
         asset.difficulty,
         'duration':

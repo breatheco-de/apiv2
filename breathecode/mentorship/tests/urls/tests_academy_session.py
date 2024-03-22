@@ -268,10 +268,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
 
     def test__get__without_data(self):
-        model = self.bc.database.create(user=1,
-                                        role=1,
-                                        capability='read_mentorship_session',
-                                        profile_academy=1)
+        model = self.bc.database.create(user=1, role=1, capability='read_mentorship_session', profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
         self.client.force_authenticate(model.user)
@@ -427,9 +424,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             response = self.client.get(url)
 
             json = response.json()
-            mentorship_session_list = sorted(model.mentorship_session,
-                                             key=lambda x: x.created_at,
-                                             reverse=True)
+            mentorship_session_list = sorted(model.mentorship_session, key=lambda x: x.created_at, reverse=True)
             expected = [
                 get_serializer(self,
                                mentorship_session_list[0],
@@ -927,10 +922,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
 
     def test__post__missing_fields(self):
-        model = self.bc.database.create(user=1,
-                                        role=1,
-                                        capability='crud_mentorship_session',
-                                        profile_academy=1)
+        model = self.bc.database.create(user=1, role=1, capability='crud_mentorship_session', profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
         self.client.force_authenticate(model.user)
@@ -966,6 +958,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
         json = response.json()
         expected = post_serializer({
+            'allow_billing': True,
             'service': {
                 'id': model.mentorship_service.id,
                 'name': model.mentorship_service.name,
@@ -987,7 +980,10 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
-            mentorship_session_columns({'service_id': 1}),
+            mentorship_session_columns({
+                'allow_billing': True,
+                'service_id': 1,
+            }),
         ])
 
     """
@@ -1021,6 +1017,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
         json = response.json()
         expected = post_serializer({
+            'allow_billing': True,
             'service': {
                 'id': model.mentorship_service.id,
                 'name': model.mentorship_service.name,
@@ -1042,7 +1039,10 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
-            mentorship_session_columns({'service_id': 1}),
+            mentorship_session_columns({
+                'allow_billing': True,
+                'service_id': 1,
+            }),
         ])
 
     """
@@ -1111,6 +1111,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
             json = response.json()
             expected = post_serializer({
+                'allow_billing': True,
                 'id': id,
                 'service': {
                     'id': model.mentorship_service.id,
@@ -1135,6 +1136,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
             self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
                 mentorship_session_columns({
+                    'allow_billing': True,
                     'id': id,
                     'service_id': 1,
                     field: date,
@@ -1378,10 +1380,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
     def test__put__without_id(self):
-        model = self.bc.database.create(user=1,
-                                        role=1,
-                                        capability='crud_mentorship_session',
-                                        profile_academy=1)
+        model = self.bc.database.create(user=1, role=1, capability='crud_mentorship_session', profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
         self.client.force_authenticate(model.user)

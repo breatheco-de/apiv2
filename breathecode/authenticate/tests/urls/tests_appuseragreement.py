@@ -40,7 +40,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(self.bc.database.list_of('authenticate.AppUserAgreement'), [])
+        self.assertEqual(self.bc.database.list_of('linked_services.AppUserAgreement'), [])
 
     # When: no agreements
     # Then: return empty list
@@ -55,7 +55,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('authenticate.AppUserAgreement'), [])
+        self.assertEqual(self.bc.database.list_of('linked_services.AppUserAgreement'), [])
 
         # teardown
         self.bc.database.delete('authenticate.Token')
@@ -80,7 +80,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            self.bc.database.list_of('authenticate.AppUserAgreement'),
+            self.bc.database.list_of('linked_services.AppUserAgreement'),
             self.bc.format.to_dict(model.app_user_agreement),
         )
 
@@ -107,6 +107,6 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            self.bc.database.list_of('authenticate.AppUserAgreement'),
+            self.bc.database.list_of('linked_services.AppUserAgreement'),
             self.bc.format.to_dict(model.app_user_agreement),
         )

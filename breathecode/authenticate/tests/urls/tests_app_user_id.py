@@ -1,8 +1,12 @@
 """
 Test cases for /user
 """
+from unittest.mock import MagicMock
+
+import pytest
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
 from ..mixins.new_auth_test_case import AuthTestCase
 
 
@@ -23,12 +27,21 @@ def profile_serializer(credentials_github):
 def get_serializer(user, credentials_github=None, profile=None):
     return {
         'email': user.email,
+        'username': user.username,
         'first_name': user.first_name,
         'github': credentials_github_serializer(credentials_github) if credentials_github else None,
         'id': user.id,
         'last_name': user.last_name,
         'profile': profile_serializer(profile) if profile else None,
     }
+
+
+@pytest.fixture(autouse=True)
+def setup(monkeypatch):
+    from linked_services.django.actions import reset_app_cache
+    reset_app_cache()
+    monkeypatch.setattr('linked_services.django.tasks.check_credentials.delay', MagicMock())
+    yield
 
 
 class AuthenticateTestSuite(AuthTestCase):
@@ -51,13 +64,18 @@ class AuthenticateTestSuite(AuthTestCase):
     # When: Sign with an user
     # Then: return 200
     def test_sign_with_user__get_own_info(self):
-        app = {'require_an_agreement': False}
+        app = {'require_an_agreement': False, 'slug': 'rigobot'}
         credentials_githubs = [{'user_id': x + 1} for x in range(2)]
         profiles = [{'user_id': x + 1} for x in range(2)]
         model = self.bc.database.create(user=2,
                                         app=app,
                                         profile=profiles,
-                                        credentials_github=credentials_githubs)
+                                        credentials_github=credentials_githubs,
+                                        first_party_credentials={
+                                            'app': {
+                                                'rigobot': 1,
+                                            },
+                                        })
         self.bc.request.sign_jwt_link(model.app, 1)
 
         url = reverse_lazy('authenticate:app_user_id', kwargs={'user_id': 1})
@@ -73,13 +91,18 @@ class AuthenticateTestSuite(AuthTestCase):
     # When: Sign with an user
     # Then: return 200
     def test_sign_with_user__get_info_from_another(self):
-        app = {'require_an_agreement': False}
+        app = {'require_an_agreement': False, 'slug': 'rigobot'}
         credentials_githubs = [{'user_id': x + 1} for x in range(2)]
         profiles = [{'user_id': x + 1} for x in range(2)]
         model = self.bc.database.create(user=2,
                                         app=app,
                                         profile=profiles,
-                                        credentials_github=credentials_githubs)
+                                        credentials_github=credentials_githubs,
+                                        first_party_credentials={
+                                            'app': {
+                                                'rigobot': 1,
+                                            },
+                                        })
         self.bc.request.sign_jwt_link(model.app, 1)
 
         url = reverse_lazy('authenticate:app_user_id', kwargs={'user_id': 2})
@@ -103,10 +126,7 @@ class AuthenticateTestSuite(AuthTestCase):
         app = {'require_an_agreement': False}
         credentials_githubs = [{'user_id': x + 1} for x in range(2)]
         profiles = [{'user_id': x + 1} for x in range(2)]
-        model = self.bc.database.create(user=2,
-                                        app=app,
-                                        profile=profiles,
-                                        credentials_github=credentials_githubs)
+        model = self.bc.database.create(user=2, app=app, profile=profiles, credentials_github=credentials_githubs)
         self.bc.request.sign_jwt_link(model.app)
 
         for user in model.user:
@@ -126,10 +146,7 @@ class AuthenticateTestSuite(AuthTestCase):
         app = {'require_an_agreement': False, 'require_an_agreement': True}
         credentials_github = {'user_id': 1}
         profile = {'user_id': 1}
-        model = self.bc.database.create(user=1,
-                                        app=app,
-                                        profile=profile,
-                                        credentials_github=credentials_github)
+        model = self.bc.database.create(user=1, app=app, profile=profile, credentials_github=credentials_github)
         self.bc.request.sign_jwt_link(model.app)
 
         url = reverse_lazy('authenticate:app_user_id', kwargs={'user_id': 1})

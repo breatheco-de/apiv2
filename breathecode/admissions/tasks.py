@@ -1,14 +1,19 @@
-import logging, os
+import logging
+import os
 from typing import Any
-from celery import shared_task
 
-from breathecode.authenticate.models import ProfileAcademy, Role
-from breathecode.utils.decorators.task import AbortTask, TaskPriority, task
-from .models import Academy, Cohort, CohortUser, SyllabusVersion
-from .actions import test_syllabus
-from django.utils import timezone
+from celery import shared_task
 from django.contrib.auth.models import User
+from django.utils import timezone
+from task_manager.core.exceptions import AbortTask
+from task_manager.django.decorators import task
+
 import breathecode.activity.tasks as tasks_activity
+from breathecode.authenticate.models import ProfileAcademy, Role
+from breathecode.utils.decorators import TaskPriority
+
+from .actions import test_syllabus
+from .models import Academy, Cohort, CohortUser, SyllabusVersion
 
 API_URL = os.getenv('API_URL', '')
 
@@ -19,8 +24,7 @@ logger = logging.getLogger(__name__)
 def async_test_syllabus(syllabus_slug, syllabus_version) -> None:
     logger.debug('Process async_test_syllabus')
 
-    syl_version = SyllabusVersion.objects.filter(syllabus__slug=syllabus_slug,
-                                                 version=syllabus_version).first()
+    syl_version = SyllabusVersion.objects.filter(syllabus__slug=syllabus_slug, version=syllabus_version).first()
     if syl_version is None:
         logger.error(f'Syllabus {syllabus_slug} v{syllabus_version} not found')
 

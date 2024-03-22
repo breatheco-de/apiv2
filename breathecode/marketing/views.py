@@ -1187,7 +1187,9 @@ class CourseView(APIView):
         if cache is not None:
             return cache
 
-        lang = get_user_language(request)
+        lang = request.GET.get('lang')
+        if lang is None:
+            lang = get_user_language(request)
 
         if course_slug:
             item = Course.objects.filter(slug=course_slug).annotate(

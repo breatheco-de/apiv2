@@ -1,10 +1,11 @@
 """
 Collections of mixins used to login in authorize microservice
 """
-from breathecode.tests.mixins.models_mixin import ModelsMixin
-from breathecode.tests.mixins.headers_mixin import HeadersMixin
 from breathecode.tests.mixins import DateFormatterMixin
-from .utils import is_valid, create_models, just_one, get_list
+from breathecode.tests.mixins.headers_mixin import HeadersMixin
+from breathecode.tests.mixins.models_mixin import ModelsMixin
+
+from .utils import create_models, get_list, is_valid, just_one
 
 
 class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
@@ -30,13 +31,6 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                                      user_setting=False,
                                      github_academy_user_log=False,
                                      pending_github_user=False,
-                                     scope=False,
-                                     app=False,
-                                     app_user_agreement=False,
-                                     optional_scope_set=False,
-                                     legacy_key=False,
-                                     app_required_scope=False,
-                                     app_optional_scope=False,
                                      profile_kwargs={},
                                      device_id_kwargs={},
                                      capability_kwargs={},
@@ -68,8 +62,8 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                 'profile': just_one(models['profile']),
             }
 
-            models['profile_translation'] = create_models(profile_translation,
-                                                          'authenticate.ProfileTranslation', **kargs)
+            models['profile_translation'] = create_models(profile_translation, 'authenticate.ProfileTranslation',
+                                                          **kargs)
 
         if not 'user_setting' in models and is_valid(user_setting):
             kargs = {}
@@ -85,10 +79,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                 'description': capability,
             }
 
-            models['capability'] = create_models(profile, 'authenticate.Capability', **{
-                **kargs,
-                **capability_kwargs
-            })
+            models['capability'] = create_models(profile, 'authenticate.Capability', **{**kargs, **capability_kwargs})
 
         if not 'role' in models and (is_valid(role) or is_valid(profile_academy)):
             kargs = {
@@ -103,78 +94,6 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                 **kargs,
                 **role_kwargs
             })
-
-        if not 'scope' in models and (is_valid(scope) or is_valid(app_required_scope)
-                                      or is_valid(app_optional_scope)):
-            kargs = {}
-
-            models['scope'] = create_models(scope, 'authenticate.Scope', **kargs)
-
-        if not 'app' in models and (is_valid(app) or is_valid(app_user_agreement) or is_valid(legacy_key)
-                                    or is_valid(app_required_scope) or is_valid(app_optional_scope)):
-            kargs = {
-                'public_key': None,
-                'private_key': '',
-            }
-
-            models['app'] = create_models(app, 'authenticate.App', **kargs)
-
-        if not 'app_required_scope' in models and is_valid(app_required_scope):
-            kargs = {}
-
-            if 'app' in models:
-                kargs['app'] = just_one(models['app'])
-
-            if 'scope' in models:
-                kargs['scope'] = just_one(models['scope'])
-
-            models['app_required_scope'] = create_models(app_required_scope, 'authenticate.AppRequiredScope',
-                                                         **kargs)
-
-        if not 'app_optional_scope' in models and is_valid(app_optional_scope):
-            kargs = {}
-
-            if 'app' in models:
-                kargs['app'] = just_one(models['app'])
-
-            if 'scope' in models:
-                kargs['scope'] = just_one(models['scope'])
-
-            models['app_optional_scope'] = create_models(app_optional_scope, 'authenticate.AppOptionalScope',
-                                                         **kargs)
-
-        if not 'optional_scope_set' in models and (is_valid(optional_scope_set)
-                                                   or is_valid(app_user_agreement)):
-            kargs = {}
-
-            if 'scope' in models:
-                kargs['optional_scopes'] = get_list(models['scope'])
-
-            models['optional_scope_set'] = create_models(optional_scope_set, 'authenticate.OptionalScopeSet',
-                                                         **kargs)
-
-        if not 'app_user_agreement' in models and is_valid(app_user_agreement):
-            kargs = {}
-
-            if 'user' in models:
-                kargs['user'] = just_one(models['user'])
-
-            if 'app' in models:
-                kargs['app'] = just_one(models['app'])
-
-            if 'optional_scope_set' in models:
-                kargs['optional_scope_set'] = just_one(models['optional_scope_set'])
-
-            models['app_user_agreement'] = create_models(app_user_agreement, 'authenticate.AppUserAgreement',
-                                                         **kargs)
-
-        if not 'legacy_key' in models and is_valid(legacy_key):
-            kargs = {}
-
-            if 'app' in models:
-                kargs['app'] = just_one(models['app'])
-
-            models['legacy_key'] = create_models(legacy_key, 'authenticate.LegacyKey', **kargs)
 
         if not 'user_invite' in models and is_valid(user_invite):
             kargs = {}
@@ -222,8 +141,8 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             if 'academy' in models:
                 kargs['academy'] = just_one(models['academy'])
 
-            models['academy_auth_settings'] = create_models(academy_auth_settings,
-                                                            'authenticate.AcademyAuthSettings', **{
+            models['academy_auth_settings'] = create_models(academy_auth_settings, 'authenticate.AcademyAuthSettings',
+                                                            **{
                                                                 **kargs,
                                                                 **academy_auth_settings_kwargs
                                                             })
@@ -234,11 +153,10 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             if 'user' in models:
                 kargs['user'] = just_one(models['user'])
 
-            models['credentials_github'] = create_models(credentials_github, 'authenticate.CredentialsGithub',
-                                                         **{
-                                                             **kargs,
-                                                             **credentials_github_kwargs
-                                                         })
+            models['credentials_github'] = create_models(credentials_github, 'authenticate.CredentialsGithub', **{
+                **kargs,
+                **credentials_github_kwargs
+            })
 
         if not 'credentials_slack' in models and is_valid(credentials_slack):
             kargs = {}
@@ -246,11 +164,10 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             if 'user' in models:
                 kargs['user'] = just_one(models['user'])
 
-            models['credentials_slack'] = create_models(credentials_slack, 'authenticate.CredentialsSlack',
-                                                        **{
-                                                            **kargs,
-                                                            **credentials_slack_kwargs
-                                                        })
+            models['credentials_slack'] = create_models(credentials_slack, 'authenticate.CredentialsSlack', **{
+                **kargs,
+                **credentials_slack_kwargs
+            })
 
         if not 'credentials_facebook' in models and is_valid(credentials_facebook):
             kargs = {}
@@ -261,11 +178,10 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             if 'academy' in models:
                 kargs['academy'] = just_one(models['academy'])
 
-            models['credentials_facebook'] = create_models(credentials_facebook,
-                                                           'authenticate.CredentialsFacebook', **{
-                                                               **kargs,
-                                                               **credentials_facebook_kwargs
-                                                           })
+            models['credentials_facebook'] = create_models(credentials_facebook, 'authenticate.CredentialsFacebook', **{
+                **kargs,
+                **credentials_facebook_kwargs
+            })
 
         if not 'cohort_user' in models and is_valid(cohort_user):
             kargs = {}
@@ -284,8 +200,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                 **cohort_user_kwargs
             })
 
-        if not 'github_academy_user' in models and (is_valid(github_academy_user)
-                                                    or is_valid(github_academy_user_log)):
+        if not 'github_academy_user' in models and (is_valid(github_academy_user) or is_valid(github_academy_user_log)):
             kargs = {}
 
             if 'user' in models:
@@ -294,17 +209,16 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             if 'academy' in models:
                 kargs['academy'] = just_one(models['academy'])
 
-            models['github_academy_user'] = create_models(github_academy_user,
-                                                          'authenticate.GithubAcademyUser', **{
-                                                              **kargs,
-                                                              **github_academy_user_kwargs
-                                                          })
+            models['github_academy_user'] = create_models(github_academy_user, 'authenticate.GithubAcademyUser', **{
+                **kargs,
+                **github_academy_user_kwargs
+            })
 
         if not 'pending_github_user' in models and is_valid(pending_github_user):
             kargs = {}
 
-            models['pending_github_user'] = create_models(pending_github_user,
-                                                          'authenticate.PendingGithubUser', **kargs)
+            models['pending_github_user'] = create_models(pending_github_user, 'authenticate.PendingGithubUser',
+                                                          **kargs)
 
         if not 'github_academy_user_log' in models and is_valid(github_academy_user_log):
             kargs = {}
@@ -338,9 +252,6 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
         if not 'device_id' in models and is_valid(device_id):
             kargs = {}
 
-            models['device_id'] = create_models(device_id, 'authenticate.DeviceId', **{
-                **kargs,
-                **device_id_kwargs
-            })
+            models['device_id'] = create_models(device_id, 'authenticate.DeviceId', **{**kargs, **device_id_kwargs})
 
         return models

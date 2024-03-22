@@ -1,8 +1,10 @@
 from typing import Any
+
+from django.db.models import QuerySet
+
 from breathecode.utils.api_view_extensions.extension_base import ExtensionBase
 from breathecode.utils.api_view_extensions.priorities.mutator_order import MutatorOrder
-from breathecode.utils import GenerateLookupsMixin
-from django.db.models import QuerySet
+from breathecode.utils.generate_lookups_mixin import GenerateLookupsMixin
 
 __all__ = ['SortExtension']
 

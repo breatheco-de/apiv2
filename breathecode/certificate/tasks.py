@@ -1,7 +1,10 @@
+from task_manager.core.exceptions import AbortTask, RetryTask
+from task_manager.django.decorators import task
+
+from breathecode.admissions.models import CohortUser
 from breathecode.certificate.models import UserSpecialty
 from breathecode.utils import getLogger
-from breathecode.admissions.models import CohortUser
-from breathecode.utils.decorators.task import AbortTask, RetryTask, TaskPriority, task
+from breathecode.utils.decorators import TaskPriority
 
 # Get an instance of a logger
 logger = getLogger(__name__)
