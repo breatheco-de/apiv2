@@ -53,8 +53,7 @@ def get_serializer(self, task, user):
         'title': task.title,
         'description': task.description,
         'opened_at': self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
-        'delivered_at':
-        self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
+        'delivered_at': self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
         'user': {
             'first_name': user.first_name,
             'id': user.id,
@@ -79,9 +78,9 @@ def put_serializer(self, task, data={}):
         'rigobot_repository_id': task.rigobot_repository_id,
         'attachments': [],
         'subtasks': task.subtasks,
+        'telemetry': task.telemetry,
         'opened_at': self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
-        'delivered_at':
-        self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
+        'delivered_at': self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
         **data,
     }
 
@@ -187,12 +186,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_user_me_task__with_query_string_assets(self):
-        model = self.bc.database.create(user=1,
-                                        task=[{
-                                            'associated_slug': 'fine'
-                                        }, {
-                                            'associated_slug': 'super'
-                                        }])
+        model = self.bc.database.create(user=1, task=[{'associated_slug': 'fine'}, {'associated_slug': 'super'}])
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:user_me_task') + '?associated_slug=fine,super'
@@ -214,12 +208,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_user_me_task__with_query_string_assets_no_results(self):
-        model = self.bc.database.create(user=1,
-                                        task=[{
-                                            'associated_slug': 'fine'
-                                        }, {
-                                            'associated_slug': 'super'
-                                        }])
+        model = self.bc.database.create(user=1, task=[{'associated_slug': 'fine'}, {'associated_slug': 'super'}])
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:user_me_task') + '?associated_slug=kenny'
@@ -482,8 +471,7 @@ class MediaTestSuite(AssignmentsTestCase):
         json = response.json()
 
         expected = [
-            put_serializer(self, x, {'updated_at': self.bc.datetime.to_iso_string(UTC_NOW)})
-            for x in model.task
+            put_serializer(self, x, {'updated_at': self.bc.datetime.to_iso_string(UTC_NOW)}) for x in model.task
         ]
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -617,8 +605,9 @@ class MediaTestSuite(AssignmentsTestCase):
 
             json = response.json()
             json = [
-                x for x in json if self.bc.check.datetime_in_range(
-                    start, end, self.bc.datetime.from_iso_string(x['updated_at'])) or x.pop('updated_at')
+                x for x in json
+                if self.bc.check.datetime_in_range(start, end, self.bc.datetime.from_iso_string(x['updated_at']))
+                or x.pop('updated_at')
             ]
             expected = [put_serializer(self, model.task, data={'revision_status': next_status})]
 

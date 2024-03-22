@@ -64,3 +64,4 @@ class UserAssessmentAdmin(admin.ModelAdmin):
 class UserAssessmentThresholdAdmin(admin.ModelAdmin):
     search_fields = ['assessment__slug', 'assessment__title']
     list_display = ['id', 'score_threshold', 'assessment']
+    list_filter = ['assessment__slug']

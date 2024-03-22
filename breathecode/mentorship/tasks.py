@@ -3,10 +3,11 @@ from typing import Any
 
 import requests
 from celery import shared_task
+from task_manager.core.exceptions import AbortTask
+from task_manager.django.decorators import task
 
 from breathecode.services.calendly import Calendly
-from breathecode.utils.decorators import task
-from breathecode.utils.decorators.task import AbortTask, TaskPriority
+from breathecode.utils.decorators import TaskPriority
 
 from .models import CalendlyOrganization, CalendlyWebhook, MentorProfile
 

@@ -3,39 +3,33 @@ import logging
 import os
 
 from adrf.views import APIView
+from asgiref.sync import sync_to_async
 from circuitbreaker import CircuitBreakerError
 from django.contrib import messages
-from django.core.exceptions import SynchronousOnlyOperation
 from django.db.models import Q
-from django.http import HttpResponse, HttpResponseRedirect, StreamingHttpResponse
+from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.utils import timezone
+from linked_services.django.service import Service
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from slugify import slugify
 
-from breathecode.services.learnpack import LearnPack
 import breathecode.activity.tasks as tasks_activity
 import breathecode.assignments.tasks as tasks
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.assignments.permissions.consumers import code_revision_service
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy, Token
-from breathecode.utils import (
-    GenerateLookupsMixin,
-    ValidationException,
-    capable_of,
-    num_to_roman,
-    response_207,
-)
+from breathecode.services.learnpack import LearnPack
+from breathecode.utils import GenerateLookupsMixin, ValidationException, capable_of, num_to_roman, response_207
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.decorators.capable_of import acapable_of
 from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
-from breathecode.utils.service import Service, service
 
 from .actions import deliver_task, sync_cohort_tasks
 from .caches import TaskCache
@@ -71,8 +65,7 @@ class TaskTeacherView(APIView):
         items = Task.objects.all()
         logger.debug(f'Found {items.count()} tasks')
 
-        profile_ids = ProfileAcademy.objects.filter(user=request.user.id).values_list('academy__id',
-                                                                                      flat=True)
+        profile_ids = ProfileAcademy.objects.filter(user=request.user.id).values_list('academy__id', flat=True)
         if not profile_ids:
             raise ValidationException(
                 'The quest user must belong to at least one academy to be able to request student tasks',
@@ -381,6 +374,53 @@ class FinalProjectMeView(APIView):
             return Response(updated_projects, status=status.HTTP_200_OK)
 
 
+class FinalProjectCohortView(APIView):
+
+    @capable_of('read_assignment')
+    def get(self, request, academy_id, cohort_id):
+
+        lang = get_user_language(request)
+
+        cohort = Cohort.objects.filter(id=cohort_id).first()
+        if cohort is None:
+            raise ValidationException(translation(lang,
+                                                  en='Cohort not found',
+                                                  es='Cohorte no encontrada',
+                                                  slug='cohort-not-found'),
+                                      code=404)
+
+        items = FinalProject.objects.filter(cohort__id=cohort.id)
+
+        serializer = FinalProjectGETSerializer(items, many=True)
+        return Response(serializer.data)
+
+    @capable_of('crud_assignment')
+    def put(self, request, academy_id, cohort_id, final_project_id):
+        lang = get_user_language(request)
+
+        cohort = Cohort.objects.filter(id=cohort_id).first()
+        if cohort is None:
+            raise ValidationException(translation(lang,
+                                                  en='Cohort not found',
+                                                  es='Cohorte no encontrada',
+                                                  slug='cohort-not-found'),
+                                      code=404)
+
+        item = FinalProject.objects.filter(id=final_project_id).first()
+        if item is None:
+            raise ValidationException(translation(lang,
+                                                  en='Project not found',
+                                                  es='Proyecto no encontrado',
+                                                  slug='project-not-found'),
+                                      code=404)
+
+        serializer = PUTFinalProjectSerializer(item, data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class CohortTaskView(APIView, GenerateLookupsMixin):
     extensions = APIViewExtensions(cache=TaskCache, sort='-created_at', paginate=True)
 
@@ -493,8 +533,7 @@ class TaskMeAttachmentView(APIView):
         for index in range(0, len(files)):
             file = files[index]
             if file.content_type not in mime_allow:
-                raise ValidationException(
-                    f'You can upload only files on the following formats: {",".join(mime_allow)}')
+                raise ValidationException(f'You can upload only files on the following formats: {",".join(mime_allow)}')
 
         for index in range(0, len(files)):
             file = files[index]
@@ -695,12 +734,7 @@ class TaskMeView(APIView):
         if isinstance(request.data, list) == False:
             payload = [request.data]
 
-        serializer = PostTaskSerializer(data=payload,
-                                        context={
-                                            'request': request,
-                                            'user_id': user_id
-                                        },
-                                        many=True)
+        serializer = PostTaskSerializer(data=payload, context={'request': request, 'user_id': user_id}, many=True)
         if serializer.is_valid():
             tasks = serializer.save()
             # tasks.teacher_task_notification.delay(serializer.data['id'])
@@ -721,21 +755,16 @@ class TaskMeView(APIView):
                 raise ValidationException('Task not found', code=404, slug='task-not-found')
 
             if item.user.id != request.user.id:
-                raise ValidationException('Task not found for this user',
-                                          code=400,
-                                          slug='task-not-found-for-this-user')
+                raise ValidationException('Task not found for this user', code=400, slug='task-not-found-for-this-user')
 
             item.delete()
 
         else:  # task_id is None:
             ids = request.GET.get('id', '')
             if ids == '':
-                raise ValidationException('Missing querystring propery id for bulk delete tasks',
-                                          slug='missing-id')
+                raise ValidationException('Missing querystring propery id for bulk delete tasks', slug='missing-id')
 
-            ids_to_delete = [
-                int(id.strip()) if id.strip().isnumeric() else id.strip() for id in ids.split(',')
-            ]
+            ids_to_delete = [int(id.strip()) if id.strip().isnumeric() else id.strip() for id in ids.split(',')]
 
             all = Task.objects.filter(id__in=ids_to_delete)
             do_not_belong = all.exclude(user__id=request.user.id)
@@ -759,10 +788,7 @@ class TaskMeView(APIView):
 
             if ids_to_delete:
                 responses.append(
-                    MultiStatusResponse('Task not found',
-                                        code=404,
-                                        slug='task-not-found',
-                                        queryset=ids_to_delete))
+                    MultiStatusResponse('Task not found', code=404, slug='task-not-found', queryset=ids_to_delete))
 
             if do_not_belong or ids_to_delete:
                 response = response_207(responses, 'associated_slug')
@@ -881,9 +907,7 @@ class SubtaskMeView(APIView):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         if not isinstance(request.data, list):
-            raise ValidationException('Subtasks json must be an array of tasks',
-                                      code=404,
-                                      slug='json-as-array')
+            raise ValidationException('Subtasks json must be an array of tasks', code=404, slug='json-as-array')
 
         subtasks_ids = []
         for t in request.data:
@@ -894,24 +918,19 @@ class SubtaskMeView(APIView):
             else:
                 try:
                     found = subtasks_ids.index(t['id'])
-                    raise ValidationException(
-                        f'Duplicated subtask id {t["id"]} for the assignment on position {found}',
-                        code=404,
-                        slug='duplicated-subtask-unique-id')
+                    raise ValidationException(f'Duplicated subtask id {t["id"]} for the assignment on position {found}',
+                                              code=404,
+                                              slug='duplicated-subtask-unique-id')
                 except Exception:
                     subtasks_ids.append(t['id'])
 
             if not 'status' in t:
-                raise ValidationException('All substasks must have a status',
-                                          code=404,
-                                          slug='missing-subtask-status')
+                raise ValidationException('All substasks must have a status', code=404, slug='missing-subtask-status')
             elif t['status'] not in ['DONE', 'PENDING']:
                 raise ValidationException('Subtask status must be DONE or PENDING, received: ' + t['status'])
 
             if not 'label' in t:
-                raise ValidationException('All substasks must have a label',
-                                          code=404,
-                                          slug='missing-task-label')
+                raise ValidationException('All substasks must have a label', code=404, slug='missing-task-label')
 
         item.subtasks = request.data
         item.save()
@@ -927,7 +946,8 @@ class MeCodeRevisionView(APIView):
         for key in request.GET.keys():
             params[key] = request.GET.get(key)
 
-        if task_id and not (task := Task.objects.filter(id=task_id, user__id=request.user.id).exclude(github_url=None).first()):
+        if task_id and not (task := Task.objects.filter(id=task_id,
+                                                        user__id=request.user.id).exclude(github_url=None).first()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         elif not hasattr(request.user, 'credentialsgithub'):
@@ -942,23 +962,8 @@ class MeCodeRevisionView(APIView):
 
         params['github_username'] = request.user.credentialsgithub.username
 
-        s = Service('rigobot', request.user.id)
-        response = s.get('/v1/finetuning/me/coderevision', params=params, stream=True)
-        resource = StreamingHttpResponse(
-            response.raw,
-            status=response.status_code,
-            reason=response.reason,
-        )
-
-        header_keys = [
-            x for x in response.headers.keys() if x != 'Transfer-Encoding' and x != 'Content-Encoding'
-            and x != 'Keep-Alive' and x != 'Connection'
-        ]
-
-        for header in header_keys:
-            resource[header] = response.headers[header]
-
-        return resource
+        with Service('rigobot', request.user.id, proxy=True) as s:
+            return s.get('/v1/finetuning/me/coderevision', params=params, stream=True)
 
     @has_permission('add_code_review', consumer=code_revision_service)
     def post(self, request, task_id):
@@ -981,31 +986,23 @@ class MeCodeRevisionView(APIView):
         params['github_username'] = request.user.credentialsgithub.username
         params['repo'] = item.github_url
 
-        s = Service('rigobot', request.user.id)
-        response = s.post('/v1/finetuning/coderevision/', data=request.data, stream=True, params=params)
-        resource = StreamingHttpResponse(
-            response.raw,
-            status=response.status_code,
-            reason=response.reason,
-        )
-
-        header_keys = [
-            x for x in response.headers.keys() if x != 'Transfer-Encoding' and x != 'Content-Encoding'
-            and x != 'Keep-Alive' and x != 'Connection'
-        ]
-
-        for header in header_keys:
-            resource[header] = response.headers[header]
-
-        return resource
+        with Service('rigobot', request.user.id, proxy=True) as s:
+            return s.post('/v1/finetuning/coderevision/', data=request.data, stream=True, params=params)
 
 
 class AcademyCodeRevisionView(APIView):
 
-    async def get_code_revision(self, request, academy_id, task_id, coderevision_id):
+    @sync_to_async
+    def get_user(self):
+        return self.request.user
+
+    @acapable_of('read_assignment')
+    async def get(self, request, academy_id=None, task_id=None, coderevision_id=None):
         if task_id and not (task := await Task.objects.filter(
                 id=task_id, cohort__academy__id=academy_id).exclude(github_url=None).prefetch_related('user').afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
+
+        user = await self.get_user()
 
         params = {}
         for key in request.GET.keys():
@@ -1019,37 +1016,16 @@ class AcademyCodeRevisionView(APIView):
         if coderevision_id is not None:
             url = f'{url}/{coderevision_id}'
 
-        try:
-            s = await service('rigobot', task.user.id)
+        async with Service('rigobot', user.id, proxy=True) as s:
+            return await s.get(url, params=params)
 
-        except SynchronousOnlyOperation:
-            raise ValidationException('Async is not supported by the worker',
-                                      code=500,
-                                      slug='no-async-support')
-
-        except Exception:
-            raise ValidationException('App rigobot not found', code=404, slug='app-not-found')
-
-        async with s:
-            async with s.aget(url, params=params) as response:
-                banned = [
-                    'Transfer-Encoding', 'Content-Encoding', 'Keep-Alive', 'Connection', 'Content-Length',
-                    'Upgrade'
-                ]
-                header_keys = [x for x in response.headers.keys() if x not in banned]
-
-                headers = {}
-                for header in header_keys:
-                    headers[str(header)] = response.headers[header]
-
-                headers['App'] = 'Rigobot'
-
-                return HttpResponse(await response.content.read(), status=response.status, headers=headers)
-
-    async def add_code_revision(self, request, academy_id, task_id, coderevision_id):
+    @acapable_of('crud_assignment')
+    async def post(self, request, academy_id, task_id=None):
         if task_id and not (task := await Task.objects.filter(
-                id=task_id, cohort__academy__id=academy_id).prefetch_related('user').afirst()):
+                id=task_id, cohort__academy__id=academy_id).select_related('user').afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
+
+        user = await self.get_user()
 
         params = {}
         for key in request.GET.keys():
@@ -1058,57 +1034,15 @@ class AcademyCodeRevisionView(APIView):
         if task_id:
             params['repo'] = task.github_url
 
-        try:
-            s = await service('rigobot', request.user.id)
-
-        except SynchronousOnlyOperation:
-            raise ValidationException('Async is not supported by the worker',
-                                      code=500,
-                                      slug='no-async-support')
-
-        except Exception:
-            raise ValidationException('App rigobot not found', code=404, slug='app-not-found')
-
-        async with s:
-            async with s.apost('/v1/finetuning/coderevision', data=request.data, params=params) as response:
-                banned = [
-                    'Transfer-Encoding', 'Content-Encoding', 'Keep-Alive', 'Connection', 'Content-Length',
-                    'Upgrade'
-                ]
-                header_keys = [x for x in response.headers.keys() if x not in banned]
-
-                headers = {}
-                for header in header_keys:
-                    headers[str(header)] = response.headers[header]
-
-                headers['App'] = 'Rigobot'
-
-                return HttpResponse(await response.content.read(), status=response.status, headers=headers)
-
-    async def verify(self, request, academy_id, task_id, coderevision_id, call: callable):
-        try:
-            return await call(request, academy_id, task_id, coderevision_id)
-
-        except ValidationException as e:
-            raise e
-
-        except Exception as e:
-            raise ValidationException('Unexpected error: ' + str(e), code=500)
-
-    @acapable_of('read_assignment')
-    async def get(self, request, academy_id=None, task_id=None, coderevision_id=None):
-        return await self.verify(request, academy_id, task_id, coderevision_id, self.get_code_revision)
-
-    @acapable_of('crud_assignment')
-    async def post(self, request, academy_id, task_id=None):
-        return await self.verify(request, academy_id, task_id, None, self.add_code_revision)
+        async with Service('rigobot', user.id, proxy=True) as s:
+            return await s.post('/v1/finetuning/coderevision', data=request.data, params=params)
 
 
 class AcademyCommitFileView(APIView):
 
-    async def get_commit_file(self, request, academy_id, task_id, commitfile_id):
-        if task_id and not (task := await Task.objects.filter(
-                id=task_id, cohort__academy__id=academy_id).prefetch_related('user').afirst()):
+    @acapable_of('read_assignment')
+    async def get(self, request, academy_id, task_id=None, commitfile_id=None):
+        if task_id and not (task := await Task.objects.filter(id=task_id, cohort__academy__id=academy_id).afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         params = {}
@@ -1123,88 +1057,15 @@ class AcademyCommitFileView(APIView):
         if commitfile_id is not None:
             url = f'{url}/{commitfile_id}'
 
-        try:
-            s = await service('rigobot', task.user.id)
-
-        except SynchronousOnlyOperation:
-            raise ValidationException('Async is not supported by the worker',
-                                      code=500,
-                                      slug='no-async-support')
-
-        except Exception:
-            raise ValidationException('App rigobot not found', code=404, slug='app-not-found')
-
-        async with s:
-            async with s.aget(url, params=params) as response:
-                banned = [
-                    'Transfer-Encoding', 'Content-Encoding', 'Keep-Alive', 'Connection', 'Content-Length',
-                    'Upgrade'
-                ]
-                header_keys = [x for x in response.headers.keys() if x not in banned]
-
-                headers = {}
-                for header in header_keys:
-                    headers[str(header)] = response.headers[header]
-
-                headers['App'] = 'Rigobot'
-
-                return HttpResponse(await response.content.read(), status=response.status, headers=headers)
-
-    async def verify(self, request, academy_id, task_id, commitfile_id, call: callable):
-        try:
-            return await call(request, academy_id, task_id, commitfile_id)
-
-        except ValidationException as e:
-            raise e
-
-        except Exception as e:
-            raise ValidationException('Unexpected error: ' + str(e), code=500)
-
-    @acapable_of('read_assignment')
-    async def get(self, request, academy_id, task_id=None, commitfile_id=None):
-        return await self.verify(request, academy_id, task_id, commitfile_id, self.get_commit_file)
+        async with Service('rigobot', proxy=True) as s:
+            return await s.get(url, params=params)
 
 
 class MeCodeRevisionRateView(APIView):
 
-    async def add_rate(self, request, coderevision_id):
-        try:
-            s = await service('rigobot', request.user.id)
-
-        except SynchronousOnlyOperation:
-            raise ValidationException('Async is not supported by the worker',
-                                      code=500,
-                                      slug='no-async-support')
-
-        except Exception:
-            raise ValidationException('App rigobot not found', code=404, slug='app-not-found')
-
-        async with s:
-            async with s.apost(f'/v1/finetuning/rate/coderevision/{coderevision_id}',
-                               data=request.data) as response:
-                banned = [
-                    'Transfer-Encoding', 'Content-Encoding', 'Keep-Alive', 'Connection', 'Content-Length',
-                    'Upgrade'
-                ]
-                header_keys = [x for x in response.headers.keys() if x not in banned]
-
-                headers = {}
-                for header in header_keys:
-                    headers[str(header)] = response.headers[header]
-
-                headers['App'] = 'Rigobot'
-
-                return HttpResponse(await response.content.read(), status=response.status, headers=headers)
-
     async def post(self, request, coderevision_id):
-        try:
-            return await self.add_rate(request, coderevision_id)
-
-        except ValidationException as e:
-            raise e
-
-        except Exception as e:
-            raise ValidationException('Unexpected error: ' + str(e), code=500)
+        async with Service('rigobot', request.user.id, proxy=True) as s:
+            return await s.post(f'/v1/finetuning/rate/coderevision/{coderevision_id}', data=request.data)
 
 
 class MeCommitFileView(APIView):
@@ -1215,7 +1076,6 @@ class MeCommitFileView(APIView):
         for key in request.GET.keys():
             params[key] = request.GET.get(key)
 
-        s = Service('rigobot', request.user.id)
         url = '/v1/finetuning/commitfile'
         task = None
         if commitfile_id is not None:
@@ -1239,19 +1099,5 @@ class MeCommitFileView(APIView):
             params['repo'] = task.github_url
             params['watcher'] = task.user.credentialsgithub.username
 
-        response = s.get(url, params=params, stream=True)
-        resource = StreamingHttpResponse(
-            response.raw,
-            status=response.status_code,
-            reason=response.reason,
-        )
-
-        header_keys = [
-            x for x in response.headers.keys() if x != 'Transfer-Encoding' and x != 'Content-Encoding'
-            and x != 'Keep-Alive' and x != 'Connection'
-        ]
-
-        for header in header_keys:
-            resource[header] = response.headers[header]
-
-        return resource
+        with Service('rigobot', request.user.id, proxy=True) as s:
+            return s.get(url, params=params, stream=True)

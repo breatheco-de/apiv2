@@ -1,28 +1,41 @@
-import hashlib, requests
+import hashlib
 import logging
 import os
-import time
-import re
 import pathlib
+import re
+import time
 from typing import Optional
-from celery import shared_task
-from breathecode.services.seo import SEOAnalyzer
-from django.utils import timezone
+
+import requests
 from bs4 import BeautifulSoup
+from celery import shared_task
+from circuitbreaker import CircuitBreakerError
 from django.db.models.query_utils import Q
+from django.utils import timezone
+from task_manager.core.exceptions import AbortTask, RetryTask
+from task_manager.django.decorators import task
+
 from breathecode.admissions.models import SyllabusVersion
 from breathecode.media.models import Media, MediaResolution
 from breathecode.media.views import media_gallery_bucket
+from breathecode.monitoring.decorators import WebhookTask
 from breathecode.services.google_cloud import FunctionV1
 from breathecode.services.google_cloud.storage import Storage
-from breathecode.utils.decorators.task import AbortTask, RetryTask, TaskPriority, task
+from breathecode.services.seo import SEOAnalyzer
+from breathecode.utils.decorators import TaskPriority
 from breathecode.utils.views import set_query_parameter
-from breathecode.monitoring.decorators import WebhookTask
+
+from .actions import (
+    add_syllabus_translations,
+    asset_images_bucket,
+    clean_asset_readme,
+    pull_from_github,
+    screenshots_bucket,
+    test_asset,
+    upload_image_to_bucket,
+    generate_screenshot,
+)
 from .models import Asset, AssetImage
-from circuitbreaker import CircuitBreakerError
-from .actions import (pull_from_github, screenshots_bucket, test_asset, clean_asset_readme,
-                      upload_image_to_bucket, asset_images_bucket, add_syllabus_translations,
-                      generate_screenshot)
 
 logger = logging.getLogger(__name__)
 

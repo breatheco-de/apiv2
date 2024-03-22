@@ -55,8 +55,8 @@ pytest-gevent = "*"
 pytest-asyncio = "*"
 
 [packages]
-django = "~=5.0.2"
-djangorestframework = "~=3.14.0"
+django = "*"
+djangorestframework = "*"
 serpy = "*"
 gunicorn = "*"
 requests = "*"
@@ -130,7 +130,10 @@ psycopg = {extras = ["pool", "binary"], version = "*"}
 cryptography = "*"
 adrf = "*"
 uvicorn = "*"
+django-minify-html = "*"
 django-storages = {extras = ["google"], version = "*"}
 aiohttp = {extras = ["speedups"], version = "*"}
 aiodns = "*"
 eventlet = "*"
+celery-task-manager = {extras = ["django"], version = "*"}
+linked-services = {extras = ["django", "aiohttp", "requests"], version = "*"}

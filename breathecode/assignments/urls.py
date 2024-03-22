@@ -17,6 +17,7 @@ from .views import (
     deliver_assignment_view,
     sync_cohort_tasks_view,
     AssignmentTelemetryView,
+    FinalProjectCohortView,
 )
 
 app_name = 'assignments'
@@ -54,6 +55,12 @@ urlpatterns = [
     path('user/<int:user_id>/task', TaskMeView.as_view(), name='user_id_task'),
     path('user/<int:user_id>/task/<int:task_id>', TaskMeView.as_view(), name='user_id_task_id'),
     path('academy/cohort/<int:cohort_id>/task', CohortTaskView.as_view()),
+    path('academy/cohort/<int:cohort_id>/final_project',
+         FinalProjectCohortView.as_view(),
+         name='final_project_cohort'),
+    path('academy/cohort/<int:cohort_id>/final_project/<int:final_project_id>',
+         FinalProjectCohortView.as_view(),
+         name='final_project_cohort_update'),
     path('academy/user/<int:user_id>/task', TaskMeView.as_view(), name='academy_user_id_task'),
     path('task/<int:task_id>/deliver/<str:token>', deliver_assignment_view, name='task_id_deliver_token'),
     path('task/<int:task_id>/deliver', TaskMeDeliverView.as_view(), name='task_id_deliver'),

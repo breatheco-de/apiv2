@@ -3,14 +3,14 @@ import os
 import re
 
 from celery import shared_task
+from linked_services.django.service import Service
 
 import breathecode.notify.actions as actions
 from breathecode.services.learnpack import LearnPack
 from breathecode.admissions.models import CohortUser
 from breathecode.assignments.models import LearnPackWebhook
 from breathecode.assignments.actions import NOTIFICATION_STRINGS, task_is_valid_for_notifications
-from breathecode.utils.decorators.task import TaskPriority
-from breathecode.utils.service import Service
+from breathecode.utils import TaskPriority
 
 from .models import Task
 
@@ -136,9 +136,7 @@ def set_cohort_user_assignments(task_id: int):
     user_history_log['delivered_assignments'] = user_history_log.get('delivered_assignments', [])
     user_history_log['pending_assignments'] = user_history_log.get('pending_assignments', [])
 
-    user_history_log['pending_assignments'] = [
-        x for x in user_history_log['pending_assignments'] if x['id'] != task.id
-    ]
+    user_history_log['pending_assignments'] = [x for x in user_history_log['pending_assignments'] if x['id'] != task.id]
 
     user_history_log['delivered_assignments'] = [
         x for x in user_history_log['delivered_assignments'] if x['id'] != task.id
@@ -156,32 +154,27 @@ def set_cohort_user_assignments(task_id: int):
     s = None
     try:
         if hasattr(task.user, 'credentialsgithub') and task.github_url:
-            s = Service('rigobot', task.user.id)
-            logger.info('Service rigobot found')
+            with Service('rigobot', task.user.id) as s:
+                if task.task_status == 'DONE':
+                    response = s.post('/v1/finetuning/me/repository/',
+                                      json={
+                                          'url': task.github_url,
+                                          'watchers': task.user.credentialsgithub.username,
+                                      })
+                    data = response.json()
+                    task.rigobot_repository_id = data['id']
 
-        if s and task.task_status == 'DONE':
-            response = s.post('/v1/finetuning/me/repository/',
-                              json={
-                                  'url': task.github_url,
-                                  'watchers': task.user.credentialsgithub.username,
-                              })
-            logger.info('repository added to rigobot if task is done')
-            data = response.json()
-            task.rigobot_repository_id = data['id']
+                else:
+                    response = s.put('/v1/finetuning/me/repository/',
+                                     json={
+                                         'url': task.github_url,
+                                         'activity_status': 'INACTIVE',
+                                     })
 
-        elif s:
-            response = s.put('/v1/finetuning/me/repository/',
-                             json={
-                                 'url': task.github_url,
-                                 'activity_status': 'INACTIVE',
-                             })
-
-            logger.info('repository added to rigobot if task is not done')
-
-            data = response.json()
-            task.rigobot_repository_id = data['id']
+                    data = response.json()
+                    task.rigobot_repository_id = data['id']
 
     except Exception as e:
-        logger.error('Rigobot error: ' + str(e))
+        logger.error(str(e))
 
     logger.info('History log saved')

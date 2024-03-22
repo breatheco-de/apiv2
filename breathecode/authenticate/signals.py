@@ -10,5 +10,4 @@ profile_academy_saved = dispatch.Signal()
 user_info_updated = dispatch.Signal()
 user_info_deleted = dispatch.Signal()
 
-app_scope_updated = dispatch.Signal()
 cohort_user_deleted = dispatch.Signal()

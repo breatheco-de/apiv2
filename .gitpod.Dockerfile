@@ -11,13 +11,14 @@ RUN sudo apt-get update \
 
 
 # That Gitpod install pyenv for me? no, thanks
-WORKDIR /home/gitpod/
-RUN rm .pyenv -Rf
-RUN rm .gp_pyenv.d -Rf
-RUN curl https://pyenv.run | bash
+# WORKDIR /home/gitpod/
+# RUN rm .pyenv -Rf
+# RUN rm .gp_pyenv.d -Rf
+# RUN curl https://pyenv.run | bash
 
 
-RUN pyenv update && pyenv install 3.11.3 && pyenv global 3.11.3
+# RUN pyenv update && pyenv install 3.11.8 && pyenv global 3.11.8
+RUN pyenv install 3.11.8 && pyenv global 3.11.8
 RUN pip install pipenv yapf
 
 # remove PIP_USER environment

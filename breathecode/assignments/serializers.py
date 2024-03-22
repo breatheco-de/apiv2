@@ -347,7 +347,8 @@ class PUTFinalProjectSerializer(serializers.ModelSerializer):
                                                        role='STUDENT').count()
             if len(data['members']) != total_students:
                 raise ValidationException(
-                    f'All members of this project must belong to the cohort {data["cohort"].name} - {total_students}')
+                    f'All members of this project must belong to the cohort {data["cohort"].name} - {total_students}'
+                )
 
         # the teacher shouldn't be allowed to approve a project that isn't done
         if ('project_status' in data and 'revision_status' in data and data['project_status'] == 'PENDING'
@@ -360,9 +361,9 @@ class PUTFinalProjectSerializer(serializers.ModelSerializer):
                                       slug='task-marked-approved-when-pending')
 
         if 'revision_status' in data and data['revision_status'] != self.instance.revision_status:
-            student_cohorts = CohortUser.objects.filter(user__id=self.instance.user.id,
+            student_cohorts = CohortUser.objects.filter(user__in=self.instance.members.all(),
                                                         role='STUDENT').values_list('cohort__id', flat=True)
-            student_academies = CohortUser.objects.filter(user__id=self.instance.user.id,
+            student_academies = CohortUser.objects.filter(user__in=self.instance.members.all(),
                                                           role='STUDENT').values_list('cohort__academy__id',
                                                                                       flat=True)
 

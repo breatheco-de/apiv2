@@ -9,12 +9,12 @@ import aiohttp
 import pytest
 from django.core.exceptions import SynchronousOnlyOperation
 from django.urls.base import reverse_lazy
+from linked_services.django.actions import reset_app_cache
+from linked_services.django.service import Service
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from breathecode.authenticate.actions import reset_app_cache
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
-from breathecode.utils.service import Service
 
 
 @pytest.fixture(autouse=True)
@@ -26,7 +26,7 @@ def setup(db):
 @pytest.fixture
 def get_jwt(bc: Breathecode, monkeypatch):
     token = bc.random.string(lower=True, upper=True, symbol=True, number=True, size=20)
-    monkeypatch.setattr('breathecode.authenticate.actions.get_jwt', MagicMock(return_value=token))
+    monkeypatch.setattr('linked_services.django.actions.get_jwt', MagicMock(return_value=token))
     yield token
 
 
@@ -49,13 +49,13 @@ class ResponseMock:
     async def __aenter__(self):
         return self
 
-    async def __aexit__(self, exc_type, exc, tb):
+    async def __aexit__(self, *args, **kwargs):
         pass
 
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc, tb):
+    def __exit__(self, *args, **kwargs):
         pass
 
 
@@ -65,8 +65,7 @@ def patch_get(monkeypatch):
     def handler(expected, code, headers):
 
         reader = StreamReaderMock(json.dumps(expected).encode())
-        monkeypatch.setattr('aiohttp.ClientSession.get',
-                            MagicMock(return_value=ResponseMock(reader, code, headers)))
+        monkeypatch.setattr('aiohttp.ClientSession.get', MagicMock(return_value=ResponseMock(reader, code, headers)))
 
     yield handler
 
@@ -77,19 +76,16 @@ def patch_post(monkeypatch):
     def handler(expected, code, headers):
 
         reader = StreamReaderMock(json.dumps(expected).encode())
-        monkeypatch.setattr('aiohttp.ClientSession.post',
-                            MagicMock(return_value=ResponseMock(reader, code, headers)))
+        monkeypatch.setattr('aiohttp.ClientSession.post', MagicMock(return_value=ResponseMock(reader, code, headers)))
 
     yield handler
 
 
 @pytest.fixture(params=[
-    ('breathecode.utils.service.AsyncService.__init__', Exception, 'Async is not supported by the worker',
-     'app-not-found', 404, True),
-    ('breathecode.utils.service.AsyncService.__init__', SynchronousOnlyOperation, 'App rigobot not found',
-     'no-async-support', 500, True),
-    ('breathecode.utils.service.AsyncService.aget', Exception, 'random exc', 'Unexpected error: random exc',
-     500, False),
+    ('linked_services.core.service.Service.__aenter__', Exception, 'App rigobot not found', 'app-not-found', 404, True),
+    ('linked_services.core.service.Service.__aenter__', SynchronousOnlyOperation,
+     'Async is not supported by the worker', 'no-async-support', 500, True),
+    ('aiohttp.ClientSession.get', Exception, 'random exc', 'unexpected-error', 500, False),
 ])
 def get_exc(request, monkeypatch):
     path, exc, message, slug, code, is_async = request.param
@@ -110,13 +106,13 @@ def get_exc(request, monkeypatch):
             async def __aenter__(self):
                 raise exc(message)
 
-            async def __aexit__(self, exc_type, exc, tb):
+            async def __aexit__(self, *args, **kwargs):
                 pass
 
             def __enter__(self):
                 raise exc(message)
 
-            def __exit__(self, exc_type, exc, tb):
+            def __exit__(self, *args, **kwargs):
                 pass
 
         async def async_exc_mock(message):
@@ -131,18 +127,16 @@ def get_exc(request, monkeypatch):
 
 
 @pytest.fixture(params=[
-    ('breathecode.utils.service.AsyncService.__init__', Exception, 'Async is not supported by the worker',
-     'app-not-found', 404, True),
-    ('breathecode.utils.service.AsyncService.__init__', SynchronousOnlyOperation, 'App rigobot not found',
-     'no-async-support', 500, True),
-    ('breathecode.utils.service.AsyncService.apost', Exception, 'random exc', 'Unexpected error: random exc',
-     500, False),
+    ('linked_services.core.service.Service.__aenter__', Exception, 'App rigobot not found', 'app-not-found', 404, True),
+    ('linked_services.core.service.Service.__aenter__', SynchronousOnlyOperation,
+     'Async is not supported by the worker', 'no-async-support', 500, True),
+    ('aiohttp.ClientSession.post', Exception, 'random exc', 'unexpected-error', 500, False),
 ])
 def post_exc(request, monkeypatch):
     path, exc, message, slug, code, is_async = request.param
     if is_async:
 
-        def async_exc_mock(*args, **kwargs):
+        async def async_exc_mock(*args, **kwargs):
             raise exc(message)
 
         monkeypatch.setattr(path, async_exc_mock)
@@ -157,13 +151,13 @@ def post_exc(request, monkeypatch):
             async def __aenter__(self):
                 raise exc(message)
 
-            async def __aexit__(self, exc_type, exc, tb):
+            async def __aexit__(self, *args, **kwargs):
                 pass
 
             def __enter__(self):
                 raise exc(message)
 
-            def __exit__(self, exc_type, exc, tb):
+            def __exit__(self, *args, **kwargs):
                 pass
 
         async def async_exc_mock(message):
@@ -239,10 +233,10 @@ def test_no_tasks(bc: Breathecode, client: APIClient):
                                })
     client.force_authenticate(model.user)
 
-    url = reverse_lazy('assignments:academy_task_id_coderevision',
-                       kwargs={'task_id': 1}) + '?' + bc.format.querystring(query)
+    url = reverse_lazy('assignments:academy_task_id_coderevision', kwargs={'task_id': 1
+                                                                           }) + '?' + bc.format.querystring(query)
 
-    with patch.multiple('breathecode.utils.service.Service',
+    with patch.multiple('linked_services.core.service.Service',
                         __init__=MagicMock(return_value=None),
                         get=MagicMock(return_value=mock)):
         response = client.get(url, headers={'Academy': 1})
@@ -274,8 +268,8 @@ def test_raise_an_exception(bc: Breathecode, client: APIClient, get_exc):
                                })
     client.force_authenticate(model.user)
 
-    url = reverse_lazy('assignments:academy_task_id_coderevision',
-                       kwargs={'task_id': 1}) + '?' + bc.format.querystring(query)
+    url = reverse_lazy('assignments:academy_task_id_coderevision', kwargs={'task_id': 1
+                                                                           }) + '?' + bc.format.querystring(query)
 
     response = client.get(url, query, format='json', headers={'Academy': 1})
     json = response.json()
@@ -311,20 +305,19 @@ def test_auth(bc: Breathecode, client: APIClient, patch_get, get_jwt):
                                })
     client.force_authenticate(model.user)
 
-    url = reverse_lazy('assignments:academy_task_id_coderevision',
-                       kwargs={'task_id': 1}) + '?' + bc.format.querystring(query)
+    url = reverse_lazy('assignments:academy_task_id_coderevision', kwargs={'task_id': 1
+                                                                           }) + '?' + bc.format.querystring(query)
 
     response = client.get(url, headers={'Academy': 1})
     json = response.json()
 
     assert aiohttp.ClientSession.get.call_args_list == [
         call(f'{model.app.app_url}/v1/finetuning/coderevision',
-             allow_redirects=True,
              params={
                  **query,
                  'repo': model.task.github_url,
              },
-             headers={'Authorization': f'Link App=4geeks,Token={get_jwt}'})
+             headers={'Authorization': f'Link App=breathecode,Token={get_jwt}'})
     ]
 
     assert json == expected
@@ -456,10 +449,11 @@ def test_post_auth(bc: Breathecode, client: APIClient, patch_post, get_jwt):
     assert aiohttp.ClientSession.post.call_args_list == [
         call(f'{model.app.app_url}/v1/finetuning/coderevision',
              data=query,
+             json=None,
              params={
                  'repo': model.task.github_url,
              },
-             headers={'Authorization': f'Link App=4geeks,Token={get_jwt}'})
+             headers={'Authorization': f'Link App=breathecode,Token={get_jwt}'})
     ]
 
     assert json == expected

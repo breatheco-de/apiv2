@@ -8,11 +8,11 @@ import pytest
 from rest_framework.test import APIClient
 from breathecode.registry.tasks import async_create_asset_thumbnail
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
-from breathecode.authenticate.actions import reset_app_cache
 
 
 @pytest.fixture(autouse=True)
 def setup(db):
+    from linked_services.django.actions import reset_app_cache
     reset_app_cache()
     yield
 
@@ -142,24 +142,15 @@ def test__with_asset__good_function_response(bc: Breathecode, client: APIClient,
     async_create_asset_thumbnail.delay(model.asset.slug)
 
     assert bc.database.list_of('media.Media') == [{
-        'academy_id':
-        model.asset.academy.id,
-        'hash':
-        hash,
-        'hits':
-        0,
-        'id':
-        1,
-        'mime':
-        'image/png',
-        'name':
-        f'{model.asset.academy.slug}-{model.asset.category.slug}-{model.asset.slug}.png',
-        'slug':
-        f'{model.asset.academy.slug}-{model.asset.category.slug}-{model.asset.slug}',
-        'thumbnail':
-        f'https://storage.googleapis.com/random-bucket/{hash}-thumbnail',
-        'url':
-        f'https://storage.googleapis.com/random-bucket/{hash}',
+        'academy_id': model.asset.academy.id,
+        'hash': hash,
+        'hits': 0,
+        'id': 1,
+        'mime': 'image/png',
+        'name': f'{model.asset.academy.slug}-{model.asset.category.slug}-{model.asset.slug}.png',
+        'slug': f'{model.asset.academy.slug}-{model.asset.category.slug}-{model.asset.slug}',
+        'thumbnail': f'https://storage.googleapis.com/random-bucket/{hash}-thumbnail',
+        'url': f'https://storage.googleapis.com/random-bucket/{hash}',
     }]
     assert Logger.warning.call_args_list == [
         call(f'Media was save with {hash} for academy {model.asset.academy}'),
@@ -184,8 +175,7 @@ def test__with_asset__good_function_response(bc: Breathecode, client: APIClient,
         'GOOGLE_PROJECT_ID': 'labor-day-story',
         'SCREENSHOT_MACHINE_KEY': '000000'
     })))
-def test__with_asset__with_media__without_asset_category_with_url(bc: Breathecode, client: APIClient,
-                                                                  patch_get):
+def test__with_asset__with_media__without_asset_category_with_url(bc: Breathecode, client: APIClient, patch_get):
     hash = '3d78522863c7781e5800cd3c7dfe6450856db9eb9166f43ecfe82ccdbe95173a'
     media = {'hash': hash}
     model = bc.database.create_v2(asset=1, media=media)

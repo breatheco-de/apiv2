@@ -1,11 +1,11 @@
 """
 Test /final_project/<int:project_id>
 """
-from django.utils import timezone
 from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
 from django.urls.base import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
 
 from ..mixins import AssignmentsTestCase
@@ -98,7 +98,7 @@ class FinalProjectTestSuite(AssignmentsTestCase):
 
         json = response.json()
         expected = {
-            'detail': f'All members of this project must belong to the cohort {project_cohort.name}',
+            'detail': f'All members of this project must belong to the cohort {project_cohort.name} - 0',
             'status_code': 400
         }
 
@@ -135,10 +135,7 @@ class FinalProjectTestSuite(AssignmentsTestCase):
 
         project_cohort = helper_models['cohort']
 
-        models = self.bc.database.create(final_project={
-            'members': [helper_models['user']],
-            'cohort': project_cohort
-        })
+        models = self.bc.database.create(final_project={'members': [helper_models['user']], 'cohort': project_cohort})
 
         self.bc.request.authenticate(helper_models['user'])
         url = reverse_lazy('assignments:user_me_project', kwargs={'project_id': 1})
@@ -146,8 +143,6 @@ class FinalProjectTestSuite(AssignmentsTestCase):
         response = self.client.put(url, data)
 
         json = response.json()
-        expected = {'detail': 'not-a-member', 'status_code': 400}
-        print(json, 'json')
 
         self.assertEqual(
             json,

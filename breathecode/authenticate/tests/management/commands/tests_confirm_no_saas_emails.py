@@ -1,14 +1,12 @@
 """
 Test /academy/cohort
 """
-import os
-import random
-import logging
-from unittest.mock import MagicMock, patch, call
-from ...mixins.new_auth_test_case import AuthTestCase
-from ....management.commands.confirm_no_saas_emails import Command
+from unittest.mock import MagicMock, call, patch
 
 from django.core.management.base import OutputWrapper
+
+from ....management.commands.confirm_no_saas_emails import Command
+from ...mixins.new_auth_test_case import AuthTestCase
 
 
 class AcademyCohortTestSuite(AuthTestCase):

@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, call, patch
 
 from breathecode.tests.mixins.legacy import LegacyAPITestCase
+
 from ...signals import event_saved
 from ...tasks import async_export_event_to_eventbrite
 
@@ -153,5 +154,5 @@ class TestAcademyEvent(LegacyAPITestCase):
         model = self.generate_models(event=True, event_kwargs=event_kwargs)
         event_db = self.model_to_dict(model, 'event')
 
-        self.assertEqual(async_export_event_to_eventbrite.delay.call_args_list, [call(1)])
+        assert async_export_event_to_eventbrite.delay.call_args_list == [call(1)]
         self.assertEqual(self.bc.database.list_of('events.Event'), [event_db])

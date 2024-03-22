@@ -71,8 +71,8 @@ class TokenTestSuite(AuthTestCase):
         # the behavior of permissions is not exact, this changes every time you add a model
         self.latest_content_type_id = content_type.id
         self.latest_permission_id = permission.id
-        self.job_content_type_id = self.latest_content_type_id - 47
-        self.can_delete_job_permission_id = self.latest_permission_id - 189
+        self.job_content_type_id = self.latest_content_type_id - 56
+        self.can_delete_job_permission_id = self.latest_permission_id - 225
 
     """
     🔽🔽🔽 format of PERMISSIONS
@@ -111,8 +111,7 @@ class TokenTestSuite(AuthTestCase):
 
     @patch('breathecode.authenticate.management.commands.set_permissions.get_permissions',
            MagicMock(return_value=PERMISSIONS))
-    @patch('breathecode.authenticate.management.commands.set_permissions.get_groups',
-           MagicMock(return_value=GROUPS))
+    @patch('breathecode.authenticate.management.commands.set_permissions.get_groups', MagicMock(return_value=GROUPS))
     def test__execute__ends_successfully(self):
         Permission = self.bc.database.get_model('auth.Permission')
         permissions = self.bc.format.to_dict(Permission.objects.all())
@@ -173,8 +172,7 @@ class TokenTestSuite(AuthTestCase):
         ])
 
         self.assertEqual(
-            sort_by_id(self.bc.format.to_dict(Group.objects.filter(name='Admin').first().permissions.all())),
-            [
+            sort_by_id(self.bc.format.to_dict(Group.objects.filter(name='Admin').first().permissions.all())), [
                 *sort_by_id(permissions),
                 {
                     'codename': 'get_my_profile',
@@ -197,62 +195,60 @@ class TokenTestSuite(AuthTestCase):
             ])
 
         self.assertEqual(
-            sort_by_id(self.bc.format.to_dict(
-                Group.objects.filter(name='Default').first().permissions.all())), [
-                    {
-                        'codename': 'delete_job',
-                        'content_type_id': self.job_content_type_id,
-                        'id': self.can_delete_job_permission_id,
-                        'name': 'Can delete job'
-                    },
-                    {
-                        'codename': 'get_my_profile',
-                        'content_type_id': self.latest_content_type_id + 1,
-                        'id': self.latest_permission_id + 1,
-                        'name': 'Get my profile'
-                    },
-                    {
-                        'codename': 'create_my_profile',
-                        'content_type_id': self.latest_content_type_id + 1,
-                        'id': self.latest_permission_id + 2,
-                        'name': 'Create my profile'
-                    },
-                    {
-                        'codename': 'update_my_profile',
-                        'content_type_id': self.latest_content_type_id + 1,
-                        'id': self.latest_permission_id + 3,
-                        'name': 'Update my profile'
-                    },
-                ])
+            sort_by_id(self.bc.format.to_dict(Group.objects.filter(name='Default').first().permissions.all())), [
+                {
+                    'codename': 'delete_job',
+                    'content_type_id': self.job_content_type_id,
+                    'id': self.can_delete_job_permission_id,
+                    'name': 'Can delete job'
+                },
+                {
+                    'codename': 'get_my_profile',
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + 1,
+                    'name': 'Get my profile'
+                },
+                {
+                    'codename': 'create_my_profile',
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + 2,
+                    'name': 'Create my profile'
+                },
+                {
+                    'codename': 'update_my_profile',
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + 3,
+                    'name': 'Update my profile'
+                },
+            ])
 
         self.assertEqual(
-            sort_by_id(self.bc.format.to_dict(
-                Group.objects.filter(name='Student').first().permissions.all())), [
-                    {
-                        'codename': 'delete_job',
-                        'content_type_id': self.job_content_type_id,
-                        'id': self.can_delete_job_permission_id,
-                        'name': 'Can delete job'
-                    },
-                    {
-                        'codename': 'get_my_profile',
-                        'content_type_id': self.latest_content_type_id + 1,
-                        'id': self.latest_permission_id + 1,
-                        'name': 'Get my profile'
-                    },
-                    {
-                        'codename': 'create_my_profile',
-                        'content_type_id': self.latest_content_type_id + 1,
-                        'id': self.latest_permission_id + 2,
-                        'name': 'Create my profile'
-                    },
-                    {
-                        'codename': 'update_my_profile',
-                        'content_type_id': self.latest_content_type_id + 1,
-                        'id': self.latest_permission_id + 3,
-                        'name': 'Update my profile'
-                    },
-                ])
+            sort_by_id(self.bc.format.to_dict(Group.objects.filter(name='Student').first().permissions.all())), [
+                {
+                    'codename': 'delete_job',
+                    'content_type_id': self.job_content_type_id,
+                    'id': self.can_delete_job_permission_id,
+                    'name': 'Can delete job'
+                },
+                {
+                    'codename': 'get_my_profile',
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + 1,
+                    'name': 'Get my profile'
+                },
+                {
+                    'codename': 'create_my_profile',
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + 2,
+                    'name': 'Create my profile'
+                },
+                {
+                    'codename': 'update_my_profile',
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + 3,
+                    'name': 'Update my profile'
+                },
+            ])
 
     """
     🔽🔽🔽 execute successfully, all the elements exists previously
@@ -260,8 +256,7 @@ class TokenTestSuite(AuthTestCase):
 
     @patch('breathecode.authenticate.management.commands.set_permissions.get_permissions',
            MagicMock(return_value=PERMISSIONS))
-    @patch('breathecode.authenticate.management.commands.set_permissions.get_groups',
-           MagicMock(return_value=GROUPS))
+    @patch('breathecode.authenticate.management.commands.set_permissions.get_groups', MagicMock(return_value=GROUPS))
     def test__execute__ends_successfully__run_second_time(self):
         num_permissions_was_deleted = 3
         permission = [
@@ -365,8 +360,7 @@ class TokenTestSuite(AuthTestCase):
         ])
 
         self.assertEqual(
-            sort_by_id(self.bc.format.to_dict(Group.objects.filter(name='Admin').first().permissions.all())),
-            [
+            sort_by_id(self.bc.format.to_dict(Group.objects.filter(name='Admin').first().permissions.all())), [
                 *sort_by_id(permissions),
                 {
                     'codename': 'get_my_profile',
@@ -389,66 +383,63 @@ class TokenTestSuite(AuthTestCase):
             ])
 
         self.assertEqual(
-            sort_by_id(self.bc.format.to_dict(
-                Group.objects.filter(name='Default').first().permissions.all())), [
-                    {
-                        'codename': 'delete_job',
-                        'content_type_id': self.job_content_type_id,
-                        'id': self.can_delete_job_permission_id,
-                        'name': 'Can delete job'
-                    },
-                    {
-                        'codename': 'get_my_profile',
-                        'content_type_id': self.latest_content_type_id + 1,
-                        'id': self.latest_permission_id + num_permissions_was_deleted + 1,
-                        'name': 'Get my profile'
-                    },
-                    {
-                        'codename': 'create_my_profile',
-                        'content_type_id': self.latest_content_type_id + 1,
-                        'id': self.latest_permission_id + num_permissions_was_deleted + 2,
-                        'name': 'Create my profile'
-                    },
-                    {
-                        'codename': 'update_my_profile',
-                        'content_type_id': self.latest_content_type_id + 1,
-                        'id': self.latest_permission_id + num_permissions_was_deleted + 3,
-                        'name': 'Update my profile'
-                    },
-                ])
+            sort_by_id(self.bc.format.to_dict(Group.objects.filter(name='Default').first().permissions.all())), [
+                {
+                    'codename': 'delete_job',
+                    'content_type_id': self.job_content_type_id,
+                    'id': self.can_delete_job_permission_id,
+                    'name': 'Can delete job'
+                },
+                {
+                    'codename': 'get_my_profile',
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + num_permissions_was_deleted + 1,
+                    'name': 'Get my profile'
+                },
+                {
+                    'codename': 'create_my_profile',
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + num_permissions_was_deleted + 2,
+                    'name': 'Create my profile'
+                },
+                {
+                    'codename': 'update_my_profile',
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + num_permissions_was_deleted + 3,
+                    'name': 'Update my profile'
+                },
+            ])
 
         self.assertEqual(
-            sort_by_id(self.bc.format.to_dict(
-                Group.objects.filter(name='Student').first().permissions.all())), [
-                    {
-                        'codename': 'delete_job',
-                        'content_type_id': self.job_content_type_id,
-                        'id': self.can_delete_job_permission_id,
-                        'name': 'Can delete job'
-                    },
-                    {
-                        'codename': 'get_my_profile',
-                        'content_type_id': self.latest_content_type_id + 1,
-                        'id': self.latest_permission_id + num_permissions_was_deleted + 1,
-                        'name': 'Get my profile'
-                    },
-                    {
-                        'codename': 'create_my_profile',
-                        'content_type_id': self.latest_content_type_id + 1,
-                        'id': self.latest_permission_id + num_permissions_was_deleted + 2,
-                        'name': 'Create my profile'
-                    },
-                    {
-                        'codename': 'update_my_profile',
-                        'content_type_id': self.latest_content_type_id + 1,
-                        'id': self.latest_permission_id + num_permissions_was_deleted + 3,
-                        'name': 'Update my profile'
-                    },
-                ])
+            sort_by_id(self.bc.format.to_dict(Group.objects.filter(name='Student').first().permissions.all())), [
+                {
+                    'codename': 'delete_job',
+                    'content_type_id': self.job_content_type_id,
+                    'id': self.can_delete_job_permission_id,
+                    'name': 'Can delete job'
+                },
+                {
+                    'codename': 'get_my_profile',
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + num_permissions_was_deleted + 1,
+                    'name': 'Get my profile'
+                },
+                {
+                    'codename': 'create_my_profile',
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + num_permissions_was_deleted + 2,
+                    'name': 'Create my profile'
+                },
+                {
+                    'codename': 'update_my_profile',
+                    'content_type_id': self.latest_content_type_id + 1,
+                    'id': self.latest_permission_id + num_permissions_was_deleted + 3,
+                    'name': 'Update my profile'
+                },
+            ])
 
         self.assertEqual(
-            sort_by_id(self.bc.format.to_dict(Group.objects.filter(name='Legacy').first().permissions.all())),
-            [
+            sort_by_id(self.bc.format.to_dict(Group.objects.filter(name='Legacy').first().permissions.all())), [
                 {
                     'codename': 'delete_job',
                     'content_type_id': self.job_content_type_id,
