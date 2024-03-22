@@ -127,13 +127,16 @@ def async_create_asset_thumbnail_legacy(asset_slug: str, **_):
 
 @task(priority=TaskPriority.ACADEMY.value)
 def async_create_asset_thumbnail(asset_slug: str, **_):
+    print('HEY!!!?')
 
     asset = Asset.objects.filter(slug=asset_slug).first()
     if asset is None:
+        print('ABORT ASSET')
         raise RetryTask(f'Asset with slug {asset_slug} not found')
 
     preview_url = asset.get_preview_generation_url()
     if preview_url is None:
+        print('ABORT preview_url')
         raise AbortTask('Not able to retrieve a preview generation')
 
     name = asset.get_thumbnail_name()
@@ -145,31 +148,28 @@ def async_create_asset_thumbnail(asset_slug: str, **_):
         response = generate_screenshot(url, '1200x630', delay=1000)
 
     except Exception as e:
+        print('ABORT ERROR!!')
+        print(str(e))
         raise AbortTask('Error calling service to generate thumbnail screenshot: ' + str(e))
 
     if response.status_code >= 400:
+        print('ABORT STATUS CODE!!')
         raise AbortTask('Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` '
                         f'returns status code {response.status_code}')
 
-    json = response.json()
-    json = json[0]
+    file = response.content
+    print('file')
+    print(file)
 
-    url = json['url']
-    filename = json['filename']
+    hash = hashlib.sha256(file).hexdigest()
+    content_type = response.headers['content-type']
 
     storage = Storage()
-    cloud_file = storage.file(screenshots_bucket(), filename)
 
-    # reattempt 60 times
-    for _ in range(0, 60):
-        content_file = cloud_file.download()
-        if not content_file:
-            time.sleep(1)
-            cloud_file = storage.file(screenshots_bucket(), filename)
-            continue
+    cloud_file = storage.file(screenshots_bucket(), hash)
 
-        hash = hashlib.sha256(content_file).hexdigest()
-        break
+    cloud_file.upload(file, content_type=content_type)
+    url = cloud_file.url()
 
     # file already exists for this academy
     media = Media.objects.filter(hash=hash, academy=asset.academy).first()
@@ -181,6 +181,7 @@ def async_create_asset_thumbnail(asset_slug: str, **_):
             asset.preview = media.url
             asset.save()
 
+        print('ABORT 1!!!!')
         raise AbortTask(f'Media with hash {hash} already exists, skipping')
 
     # file already exists for another academy
@@ -201,6 +202,7 @@ def async_create_asset_thumbnail(asset_slug: str, **_):
             asset.preview = media.url
             asset.save()
 
+        print('ABORT 2!!!!')
         raise AbortTask(f'Media was save with {hash} for academy {asset.academy}')
 
     # if media does not exist too, keep the screenshots with other name
@@ -220,6 +222,8 @@ def async_create_asset_thumbnail(asset_slug: str, **_):
     if asset.preview is None or asset.preview == '':
         asset.preview = url
         asset.save()
+
+    print('DONE!!!!')
 
     logger.warning(f'Media was save with {hash} for academy {asset.academy}')
 
