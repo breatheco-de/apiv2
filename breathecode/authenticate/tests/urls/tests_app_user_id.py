@@ -27,6 +27,7 @@ def profile_serializer(credentials_github):
 def get_serializer(user, credentials_github=None, profile=None):
     return {
         'email': user.email,
+        'username': user.username,
         'first_name': user.first_name,
         'github': credentials_github_serializer(credentials_github) if credentials_github else None,
         'id': user.id,
