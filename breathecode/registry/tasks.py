@@ -475,8 +475,17 @@ def async_synchonize_repository_content(self, webhook):
                 logger.debug(
                     f'The file {file_path} was modified, searching for matches in our registry with {base_repo_url}/blob/{default_branch}/{file_path}'
                 )
-                assets = Asset.objects.filter(
-                    readme_url__icontains=f'{base_repo_url}/blob/{default_branch}/{file_path}')
+
+                # include readme files and quiz json files
+                all_readme_files = Q(readme_url__icontains=f'{base_repo_url}/blob/{default_branch}/{file_path}')
+
+                # Conditional query for when 'learn.json' is in file_path
+                learn_json_files = Q(asset_type__in=['EXERCISE', 'PROJECT'],
+                                     readme_url__icontains=f'{base_repo_url}/blob/{default_branch}/'
+                                     ) if 'learn.json' in file_path else Q()
+
+                # Execute the combined query
+                assets = Asset.objects.filter(all_readme_files | learn_json_files)
                 for a in assets:
                     if commit['id'] == a.github_commit_hash:
                         # ignore asset because the commit content is already on the asset

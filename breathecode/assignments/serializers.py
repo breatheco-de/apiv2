@@ -161,6 +161,7 @@ class PUTTaskSerializer(serializers.ModelSerializer):
     title = serializers.CharField(required=False)
     associated_slug = serializers.CharField(read_only=True)
     task_type = serializers.CharField(read_only=True)
+    task_status = serializers.CharField(required=False)
 
     class Meta:
         model = Task
@@ -170,7 +171,7 @@ class PUTTaskSerializer(serializers.ModelSerializer):
 
         if self.instance.user.id != self.context['request'].user.id:
             if 'task_status' in data and data['task_status'] != self.instance.task_status:
-                raise ValidationException('Only the task owner can modify its status',
+                raise ValidationException(f'Only the task {self.instance.id} owner can modify its status',
                                           slug='put-task-status-of-other-user')
             if 'live_url' in data and data['live_url'] != self.instance.live_url:
                 raise ValidationException('Only the task owner can modify its live_url',
@@ -193,8 +194,7 @@ class PUTTaskSerializer(serializers.ModelSerializer):
             student_cohorts = CohortUser.objects.filter(user__id=self.instance.user.id,
                                                         role='STUDENT').values_list('cohort__id', flat=True)
             student_academies = CohortUser.objects.filter(user__id=self.instance.user.id,
-                                                          role='STUDENT').values_list('cohort__academy__id',
-                                                                                      flat=True)
+                                                          role='STUDENT').values_list('cohort__academy__id', flat=True)
 
             # the logged in user could be a teacher from the same cohort as the student
             teacher = CohortUser.objects.filter(cohort__id__in=student_cohorts,
@@ -222,8 +222,7 @@ class PUTTaskSerializer(serializers.ModelSerializer):
                                               related_type='assignments.Task',
                                               related_id=instance.id)
 
-        if 'revision_status' in validated_data and validated_data[
-                'revision_status'] != instance.revision_status:
+        if 'revision_status' in validated_data and validated_data['revision_status'] != instance.revision_status:
             tasks_activity.add_activity.delay(self.context['request'].user.id,
                                               'assignment_review_status_updated',
                                               related_type='assignments.Task',
@@ -296,16 +295,14 @@ class PostFinalProjectSerializer(serializers.ModelSerializer):
                                                        cohort__id=data['cohort'].id,
                                                        role='STUDENT').count()
             if 'members' in data and len(data['members']) != total_students:
-                raise ValidationException(
-                    f'Project members must be students on this cohort {data["cohort"].name}')
+                raise ValidationException(f'Project members must be students on this cohort {data["cohort"].name}')
 
         if 'repo_url' not in data:
             raise ValidationException('Missing repository URL')
         else:
             proj = FinalProject.objects.filter(repo_url=data['repo_url']).first()
             if proj is not None:
-                raise ValidationException(
-                    f'There is another project already with this repository: {proj.name}')
+                raise ValidationException(f'There is another project already with this repository: {proj.name}')
 
         return super(PostFinalProjectSerializer, self).validate({**data, 'repo_owner': user})
 
@@ -347,8 +344,7 @@ class PUTFinalProjectSerializer(serializers.ModelSerializer):
                                                        role='STUDENT').count()
             if len(data['members']) != total_students:
                 raise ValidationException(
-                    f'All members of this project must belong to the cohort {data["cohort"].name} - {total_students}'
-                )
+                    f'All members of this project must belong to the cohort {data["cohort"].name} - {total_students}')
 
         # the teacher shouldn't be allowed to approve a project that isn't done
         if ('project_status' in data and 'revision_status' in data and data['project_status'] == 'PENDING'
@@ -364,8 +360,7 @@ class PUTFinalProjectSerializer(serializers.ModelSerializer):
             student_cohorts = CohortUser.objects.filter(user__in=self.instance.members.all(),
                                                         role='STUDENT').values_list('cohort__id', flat=True)
             student_academies = CohortUser.objects.filter(user__in=self.instance.members.all(),
-                                                          role='STUDENT').values_list('cohort__academy__id',
-                                                                                      flat=True)
+                                                          role='STUDENT').values_list('cohort__academy__id', flat=True)
 
             # the logged in user could be a teacher from the same cohort as the student
             teacher = CohortUser.objects.filter(cohort__id__in=student_cohorts,
