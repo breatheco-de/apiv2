@@ -686,6 +686,9 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
             asset.solution_url = config['solution']
             asset.with_solutions = True
 
+        if 'projectType' in config:
+            asset.gitpod = config['projectType'] == 'tutorial'
+      
         if 'technologies' in config:
             asset.technologies.clear()
             for tech_slug in config['technologies']:
