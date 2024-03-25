@@ -169,9 +169,9 @@ class PUTTaskSerializer(serializers.ModelSerializer):
     def validate(self, data):
 
         if self.instance.user.id != self.context['request'].user.id:
-            if 'task_status' in data and data['task_status'] != self.instance.task_status:
-                raise ValidationException('Only the task owner can modify its status',
-                                          slug='put-task-status-of-other-user')
+            # if 'task_status' in data and data['task_status'] != self.instance.task_status:
+            #     raise ValidationException('Only the task owner can modify its status',
+            #                               slug='put-task-status-of-other-user')
             if 'live_url' in data and data['live_url'] != self.instance.live_url:
                 raise ValidationException('Only the task owner can modify its live_url',
                                           slug='put-live-url-of-other-user')
