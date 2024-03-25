@@ -892,4 +892,11 @@ def add_syllabus_translations(_json: dict):
                             'title': a.title
                         }
 
+                    if _asset.lang not in _json['days'][day_count][asset_type][index]['translations']:
+                        _json['days'][day_count][asset_type][index]['translations'][_asset.lang] = {
+                            'slug': _asset.slug,
+                            'title': _asset.title
+                        }
+  
+
     return _json
