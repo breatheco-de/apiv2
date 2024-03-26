@@ -688,6 +688,7 @@ class TaskMeView(APIView):
             item = Task.objects.filter(id=_id).first()
             if item is None:
                 raise ValidationException('Task not found', slug='task-not-found', code=404)
+
             serializer = PUTTaskSerializer(item, data=data, context={'request': _req})
             if serializer.is_valid():
                 if not only_validate:
