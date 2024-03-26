@@ -405,6 +405,8 @@ class MentorshipSession(models.Model):
                                      default=None,
                                      help_text='To be used by the calendly API')
 
+    questions_and_answers = models.JSONField(null=True, blank=True, default=None)
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
