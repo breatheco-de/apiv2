@@ -36,8 +36,8 @@ class PermissionContextType(TypedDict):
     is_consumption_session: bool
 
 
-HasPermissionCallback = Callable[[PermissionContextType, tuple, dict], tuple[PermissionContextType, tuple,
-                                                                             dict, Optional[timedelta]]]
+HasPermissionCallback = Callable[[PermissionContextType, tuple, dict], tuple[PermissionContextType, tuple, dict,
+                                                                             Optional[timedelta]]]
 
 
 def validate_permission(user: User, permission: str, consumer: bool | HasPermissionCallback = False) -> bool:
@@ -85,9 +85,7 @@ def render_message(r,
     return render(r, 'message.html', {**_data, **data}, status=status)
 
 
-def has_permission(permission: str,
-                   consumer: bool | HasPermissionCallback = False,
-                   format='json') -> callable:
+def has_permission(permission: str, consumer: bool | HasPermissionCallback = False, format='json') -> callable:
     """Check if the current user can access to the resource through of permissions."""
 
     from breathecode.payments.models import Consumable, ConsumptionSession
@@ -128,6 +126,7 @@ def has_permission(permission: str,
             try:
                 utc_now = timezone.now()
                 session = ConsumptionSession.get_session(request)
+
                 if session:
                     if callable(consumer):
                         context = build_context(is_consumption_session=True)
@@ -147,24 +146,20 @@ def has_permission(permission: str,
 
                     if consumer and context['time_of_life']:
                         consumables = context['consumables']
-                        for item in consumables.filter(consumptionsession__status='PENDING').exclude(
-                                how_many=0):
+                        for item in consumables.filter(consumptionsession__status='PENDING').exclude(how_many=0):
 
-                            sum = item.consumptionsession_set.filter(status='PENDING').aggregate(
-                                Sum('how_many'))
+                            sum = item.consumptionsession_set.filter(status='PENDING').aggregate(Sum('how_many'))
 
                             if item.how_many - sum['how_many__sum'] == 0:
                                 context['consumables'] = context['consumables'].exclude(id=item.id)
 
                     if consumer and context['will_consume'] and not context['consumables']:
-                        raise PaymentException(
-                            f'You do not have enough credits to access this service: {permission}',
-                            slug='with-consumer-not-enough-consumables')
+                        raise PaymentException(f'You do not have enough credits to access this service: {permission}',
+                                               slug='with-consumer-not-enough-consumables')
 
                     if consumer and context['will_consume'] and context['time_of_life'] and (
                             consumable := context['consumables'].first()):
-                        session = ConsumptionSession.build_session(request, consumable,
-                                                                   context['time_of_life'])
+                        session = ConsumptionSession.build_session(request, consumable, context['time_of_life'])
 
                     response = function(*args, **kwargs)
 
@@ -195,9 +190,8 @@ def has_permission(permission: str,
                         slug='anonymous-user-not-enough-consumables')
 
                 else:
-                    raise PaymentException(
-                        f'You do not have enough credits to access this service: {permission}',
-                        slug='not-enough-consumables')
+                    raise PaymentException(f'You do not have enough credits to access this service: {permission}',
+                                           slug='not-enough-consumables')
 
             # handle html views errors
             except PaymentException as e:
@@ -262,8 +256,7 @@ def has_permission(permission: str,
                                 user_plan = plan_financing.plans.first()
                         elif permission == 'event_join':
                             plan_financing = PlanFinancing.objects.filter(
-                                user=request.user,
-                                selected_event_type_set__event_types__slug=service).first()
+                                user=request.user, selected_event_type_set__event_types__slug=service).first()
                             if plan_financing is not None:
                                 event_type_set = plan_financing.selected_event_type_set.slug
                                 user_plan = plan_financing.plans.first()
@@ -288,8 +281,7 @@ def has_permission(permission: str,
                             e = 'You must get a plan in order to access this service'
                             renovate_consumables['btn_label'] = 'Get a plan'
                             plan = os.getenv('BASE_PLAN', 'basic')
-                            renovate_consumables[
-                                'btn_url'] = f'https://4geeks.com/checkout?plan={plan}&token={token}'
+                            renovate_consumables['btn_url'] = f'https://4geeks.com/checkout?plan={plan}&token={token}'
 
                     return render_message(request,
                                           str(e),
@@ -318,9 +310,7 @@ def has_permission(permission: str,
                 traceback.print_exc()
 
                 if format == 'html':
-                    return render_message(request,
-                                          'unexpected error, contact admin if you are affected',
-                                          status=500)
+                    return render_message(request, 'unexpected error, contact admin if you are affected', status=500)
 
                 response = JsonResponse({'detail': str(e), 'status_code': 500})
                 response.status_code = 500
