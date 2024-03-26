@@ -49,7 +49,7 @@ def bigquery_client_mock(self, n=1, user_id=1, kind=None):
             FROM `{project_id}.{dataset}.activity`
             WHERE user_id = @user_id
                 {'AND kind = @kind' if kind else ''}
-            ORDER BY id DESC
+            ORDER BY timestamp DESC
             LIMIT @limit
             OFFSET @offset
         """

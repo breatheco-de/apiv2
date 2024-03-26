@@ -5,6 +5,7 @@ from django.utils.html import format_html
 
 @admin.register(Media)
 class MediaAdmin(admin.ModelAdmin):
+    search_fields = ['slug', 'name']
     list_display = ('slug', 'name', 'mime', 'hits', 'academy', 'open_url')
     list_filter = ['categories', 'mime', 'academy']
 

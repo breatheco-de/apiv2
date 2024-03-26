@@ -259,6 +259,19 @@ def set_blob_content(repo, path_name, content, file_name, branch='main'):
     return repo.update_file(file[0].path, f'Update {file_name}', content, file[0].sha)
 
 
+def generate_screenshot(url: str, dimension: str = '1200x630', **kwargs):
+    screenshot_key = os.getenv('SCREENSHOT_MACHINE_KEY', '')
+    params = {
+        'key': screenshot_key,
+        'url': url,
+        'dimension': dimension,
+        **kwargs,
+    }
+    request = requests.request('GET', 'https://api.screenshotmachine.com', params=params, timeout=8)
+
+    return request
+
+
 def push_github_asset(github, asset: Asset):
 
     logger.debug(f'Sync pull_github_lesson {asset.slug}')
