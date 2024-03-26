@@ -179,8 +179,6 @@ def async_create_asset_thumbnail(asset_slug: str, **_):
     # file already exists for this academy
     media = Media.objects.filter(hash=hash, academy=asset.academy).first()
     if media is not None:
-        # this prevent a screenshots duplicated
-        cloud_file.delete()
 
         if asset.preview is None or asset.preview == '':
             asset.preview = media.url
@@ -191,8 +189,7 @@ def async_create_asset_thumbnail(asset_slug: str, **_):
     # file already exists for another academy
     media = Media.objects.filter(hash=hash).first()
     if media:
-        # this prevent a screenshots duplicated
-        cloud_file.delete()
+
         media = Media(slug=name.split('.')[0],
                       name=media.name,
                       url=media.url,
