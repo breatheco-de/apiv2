@@ -1406,7 +1406,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                                           code=400)
 
             expected_keys = [
-                'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'conversion_url', 'landing_url',
+                'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'utm_campaign', 'conversion_url', 'landing_url',
                 'user_agent', 'plan', 'location', 'internal_cta_placement', 'internal_cta_content',
                 'internal_cta_campaign'
             ]
