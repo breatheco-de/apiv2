@@ -221,7 +221,9 @@ class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
         'online'
     ], name='location') + change_field([
         'full-stack', 'datascience-ml', 'cybersecurity'
-    ], name='course')
+    ], name='course') + change_field([
+        'REJECTED', 'DUPLICATED', 'ERROR'
+    ], name='storage_status')
 
     def _attribution_id(self, obj):
 
