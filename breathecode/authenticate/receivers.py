@@ -117,7 +117,7 @@ def post_delete_cohort_user(sender, instance, **_):
     args = (instance.cohort.id, instance.user.id)
     kwargs = {'force': True}
 
-    manager = schedule_task(async_remove_from_organization, '1w')
+    manager = schedule_task(async_remove_from_organization, '3w')
     if not manager.exists(*args, **kwargs):
         manager.call(*args, **kwargs)
 
@@ -136,7 +136,7 @@ def post_save_cohort_user(sender, instance, **_):
     else:
         args = (instance.cohort.id, instance.user.id)
 
-        manager = schedule_task(async_remove_from_organization, '1w')
+        manager = schedule_task(async_remove_from_organization, '3w')
         if not manager.exists(*args):
             manager.call(*args)
 

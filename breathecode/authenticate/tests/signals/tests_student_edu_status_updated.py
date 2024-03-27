@@ -47,7 +47,7 @@ def test_the_requirements_are_not_met(bc: Breathecode):
 
 @pytest.mark.parametrize('status', ['POSTPONED', 'SUSPENDED', 'GRADUATED', 'DROPPED'])
 def test_the_requirements_are_met(bc: Breathecode, status, set_datetime):
-    delta = timedelta(days=7)
+    delta = timedelta(days=21)
     now = timezone.now()
     set_datetime(now)
 
@@ -75,7 +75,7 @@ def test_the_requirements_are_met(bc: Breathecode, status, set_datetime):
 
 @pytest.mark.parametrize('old_status, new_status', [*all_edutational_statuses_but_active()])
 def test_the_requirements_are_met__it_is_not_triggered_twice(bc: Breathecode, set_datetime, old_status, new_status):
-    delta = timedelta(days=7)
+    delta = timedelta(days=21)
     now = timezone.now()
     set_datetime(now)
 

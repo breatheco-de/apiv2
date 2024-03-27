@@ -13,7 +13,7 @@ def setup(db, enable_signals):
 
 
 def test_same_call_two_times(bc: Breathecode, set_datetime):
-    delta = timedelta(days=7)
+    delta = timedelta(days=21)
     now = timezone.now()
     set_datetime(now)
 
@@ -44,7 +44,7 @@ def test_same_call_two_times(bc: Breathecode, set_datetime):
 
 
 def test_different_calls(bc: Breathecode, set_datetime):
-    delta = timedelta(days=7)
+    delta = timedelta(days=21)
     now = timezone.now()
     set_datetime(now)
 
