@@ -177,7 +177,7 @@ class Calendly:
         """Add one incoming webhook request to log"""
 
         # prevent circular dependency import between thousand modules previuosly loaded and cached
-        from breathecode.mentorship.models import CalendlyWebhook
+        from breathecode.mentorship.models import CalendlyWebhook, CalendlyOrganization
 
         if not context or not len(context):
             return None
@@ -194,6 +194,11 @@ class Calendly:
         webhook.called_at = context['created_at']
         webhook.organization_hash = organization_hash
         webhook.status = 'PENDING'
+
+        organization = CalendlyOrganization.objects.filter(uri=context['created_by']).first()
+        if organization is not None:
+            webhook.organization = organization
+
         webhook.save()
 
         return webhook
