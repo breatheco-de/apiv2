@@ -5,6 +5,7 @@ from django.contrib.auth.models import Group, User
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.signals import post_delete, post_save, pre_delete
 from django.dispatch import receiver
+from task_manager.django.actions import schedule_task
 
 from breathecode.admissions.models import CohortUser
 from breathecode.admissions.signals import student_edu_status_updated
@@ -113,10 +114,12 @@ def post_delete_cohort_user(sender, instance, **_):
         return None
 
     logger.debug('Cohort user deleted, removing from organization')
-    try:
-        async_remove_from_organization(instance.cohort.id, instance.user.id, force=True)
-    except Exception as e:
-        logger.debug(str(e))
+    args = (instance.cohort.id, instance.user.id)
+    kwargs = {'force': True}
+
+    manager = schedule_task(async_remove_from_organization, '3w')
+    if not manager.exists(*args, **kwargs):
+        manager.call(*args, **kwargs)
 
 
 @receiver(student_edu_status_updated, sender=CohortUser)
@@ -129,9 +132,13 @@ def post_save_cohort_user(sender, instance, **_):
         if instance.cohort.never_ends:
             return None
 
-        async_add_to_organization(instance.cohort.id, instance.user.id)
+        async_add_to_organization.delay(instance.cohort.id, instance.user.id)
     else:
-        async_remove_from_organization(instance.cohort.id, instance.user.id)
+        args = (instance.cohort.id, instance.user.id)
+
+        manager = schedule_task(async_remove_from_organization, '3w')
+        if not manager.exists(*args):
+            manager.call(*args)
 
 
 @receiver(invite_status_updated, sender=UserInvite)

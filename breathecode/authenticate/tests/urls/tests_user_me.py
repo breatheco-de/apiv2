@@ -1,9 +1,12 @@
 """
 Test cases for /user
 """
-import pytz, datetime
+import datetime
+
+import pytz
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
 from ..mixins.new_auth_test_case import AuthTestCase
 
 
@@ -34,6 +37,8 @@ def get_serializer(self,
         user.id,
         'email':
         user.email,
+        'username':
+        user.username,
         'first_name':
         user.first_name,
         'last_name':
@@ -103,12 +108,10 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = get_serializer(self,
-                                  model.user,
-                                  data={'settings': {
-                                      'lang': 'en',
-                                      'main_currency': None,
-                                  }})
+        expected = get_serializer(self, model.user, data={'settings': {
+            'lang': 'en',
+            'main_currency': None,
+        }})
 
         self.assertEqual(json, expected)
 
