@@ -21,7 +21,6 @@ class Command(BaseCommand):
             repo_url = f'https://github.com/{username}/{repo_name}'
             subs = RepositorySubscription.objects.filter(repository=repo_url).first()
             if subs is None:
-
                 if not a.is_auto_subscribed:
                     logger.debug(f'Skipping asset {a.slug}, auto_subscribe is deactivated')
                     continue
@@ -39,7 +38,7 @@ class Command(BaseCommand):
 
                 try:
                     if settings[academy_id] is not None:
-                        subs = subscribe_repository(subs, settings[academy_id])
+                        subs = subscribe_repository(subs.id, settings[academy_id])
                         logger.debug(f'Successfully subscribed asset {a.slug}, repo {repo_url}')
                     else:
                         raise Exception(f'No subscription found for academy {academy_id}')
