@@ -359,7 +359,7 @@ class EventSerializer(serializers.ModelSerializer):
 
         academy = self.context.get('academy_id')
 
-        if 'tags' not in data or data['tags'] == '':
+        if ('tags' not in data and self.instance.tags == "") or ('tags' in data and data['tags'] == ''):
             raise ValidationException(
                 translation(lang,
                             en='Event must have at least one tag',
