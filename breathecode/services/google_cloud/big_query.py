@@ -175,6 +175,9 @@ class BigQuerySet():
         if key[-4:] == '.lte':
             key = key[:-4]
             operand = '<='
+        if key[-5:] == '.like':
+            key = key[:-5]
+            operand = 'LIKE'
         return key, operand, 'x__' + key.replace('.', '__')
 
     def get_type(self, elem: Any) -> None:
@@ -505,7 +508,7 @@ class BigQuery(metaclass=BigQueryMeta):
                 if len(new_field._fields) > 0:
                     res.append(new_field)
 
-            elif new_field != schema_map[key]:
+            elif key not in schema_map:
                 res.append(new_field)
 
         return res
