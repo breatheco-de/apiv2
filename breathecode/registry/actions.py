@@ -333,6 +333,8 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
 
         if 'excerpt' in fm:
             asset.description = fm['excerpt']
+        elif 'description' in fm:
+            asset.description = fm['description']
         elif 'subtitle' in fm:
             asset.description = fm['subtitle']
 
@@ -342,9 +344,15 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
         if 'authors' in fm and fm['authors'] != '':
             asset.authors_username = ','.join(fm['authors'])
 
-        if 'tags' in fm and isinstance(fm['tags'], list):
+
+        # retrive technologies from the frontmatter
+        _techs = []
+        if 'tags' in fm and isinstance(fm['tags'], list): _techs = fm['tags']
+        elif 'technologies' in fm and isinstance(fm['technologies'], list): _techs = fm['technologies']
+
+        if len(_techs) > 0:
             asset.technologies.clear()
-            for tech_slug in fm['tags']:
+            for tech_slug in _techs:
                 technology = AssetTechnology.get_or_create(tech_slug)
                 asset.technologies.add(technology)
 
