@@ -104,11 +104,12 @@ class AssetValidator():
             raise Exception('No difficulty')
 
     def preview(self):
-
-        if self.asset.preview is None:
-            raise Exception('Missing preview url')
-        else:
-            test_url(self.asset.preview, allow_relative=False, allow_hash=False)
+        pass
+        # TODO: Comment this out for now, we will uncomment when preview url generates automatically
+        # if self.asset.preview is None:
+        #     raise Exception('Missing preview url')
+        # else:
+        #     test_url(self.asset.preview, allow_relative=False, allow_hash=False)
 
     def readme(self):
         if self.asset.readme is None or self.asset.readme == '' and not self.asset.external:
