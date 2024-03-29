@@ -333,6 +333,8 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
 
         if 'excerpt' in fm:
             asset.description = fm['excerpt']
+        elif 'description' in fm:
+            asset.description = fm['description']
         elif 'subtitle' in fm:
             asset.description = fm['subtitle']
 
