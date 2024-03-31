@@ -316,11 +316,13 @@ class AcademyAuthSettings(models.Model):
         help_text='User will be invited to this github team ID when joining the github organization')
     github_is_sync = models.BooleanField(default=False,
                                          blank=False,
-                                         help_text='If true, will try synching every few hours')
+                                         help_text='If true, will try synching users every few hours')
     github_error_log = models.JSONField(default=None,
                                         blank=True,
                                         null=True,
                                         help_text='Error trace log for github API communication')
+    auto_sync_content = models.BooleanField(
+        default=False, help_text='If true, will attempt to create WebhookSubscription on each asset repo')
 
     def add_error(self, msg):
         if self.github_error_log is None:

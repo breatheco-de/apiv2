@@ -63,19 +63,36 @@ def test_link(url, test_pattern=None):
     return result
 
 
-def subscribe_repository(subscription, settings):
+def subscribe_repository(subs_id, settings=None):
 
+    subscription = RepositorySubscription.objects.filter(id=subs_id).first()
     try:
+        if subscription is None:
+            raise Exception(f'Invalid subscription id {subs_id}')
+
+        if settings is None:
+            settings = AcademyAuthSettings.objects.filter(academy__id=subscription.owner.id).first()
+            if settings is None:
+                raise Exception(
+                    f'Github credentials and settings have not been found for the academy {subscription.owner.id}')
+
+        if settings.academy.id != subscription.owner.id:
+            raise Exception(f'Provided auth settings don\'t belong to the academy subscription owner')
+
         _owner, _repo_name = subscription.get_repo_name()
         gb = Github(org=settings.github_username, token=settings.github_owner.credentialsgithub.token)
         result = gb.subscribe_to_repo(_owner, _repo_name, subscription.token)
 
+        subscription.status = 'OPERATIONAL'
+        subscription.status_message = 'OK'
         subscription.hook_id = result['id']
         subscription.save()
 
         return subscription
     except Exception as e:
-        if subscription.id: subscription.delete()
+        subscription.status = 'CRITICAL'
+        subscription.status_message = 'Error subscribing to repo: ' + str(e)
+        subscription.save()
         raise e
 
 
@@ -393,21 +410,32 @@ def download_csv(module, model_name, ids_to_download, academy_id=None):
         return False
 
 
-def delete_repo_subscription(hook_id):
+def unsubscribe_repository(subs_id, force_delete=True):
     try:
-        subs = RepositorySubscription.objects.filter(hook_id=hook_id).first()
+        subs = RepositorySubscription.objects.filter(id=subs_id).first()
+
+        if subs.hook_id is None:
+            raise Exception('Subscription is missing a github hook id')
 
         settings = AcademyAuthSettings.objects.filter(academy__id=subs.owner.id).first()
         gb = Github(org=settings.github_username, token=settings.github_owner.credentialsgithub.token)
 
         _owner, _repo_name = subs.get_repo_name()
-        result = gb.unsubscribe_from_repo(_owner, _repo_name, hook_id)
-        print('unsubscribe', result)
-        subs.delete()
+        result = gb.unsubscribe_from_repo(_owner, _repo_name, subs.hook_id)
+
+        # you can delete the subscription after unsubscribing
+        if force_delete: subs.delete()
+        else:
+            subs.status = 'DISABLED'
+            subs.hook_id = None
+            subs.status_message = 'disabled successfully'
+            subs.save()
+            return subs
+
         return True
     except Exception as e:
         subs.status = 'CRITICAL'
-        subs.status_message = 'Cannot delete subscription: ' + str(e)
+        subs.status_message = 'Cannot unsubscribe subscription: ' + str(e)
         subs.save()
         return False
 
