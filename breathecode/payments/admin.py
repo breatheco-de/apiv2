@@ -12,6 +12,7 @@ from breathecode.payments.models import (
     CohortSetTranslation,
     Consumable,
     ConsumptionSession,
+    Coupon,
     Currency,
     EventTypeSet,
     EventTypeSetTranslation,
@@ -28,6 +29,7 @@ from breathecode.payments.models import (
     PlanServiceItem,
     PlanServiceItemHandler,
     PlanTranslation,
+    Seller,
     Service,
     ServiceItem,
     ServiceItemFeature,
@@ -131,8 +133,8 @@ def renew_subscription_consumables(modeladmin, request, queryset):
 
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'paid_at', 'status', 'is_refundable', 'next_payment_at', 'pay_every',
-                    'pay_every_unit', 'user')
+    list_display = ('id', 'paid_at', 'status', 'is_refundable', 'next_payment_at', 'pay_every', 'pay_every_unit',
+                    'user')
     list_filter = ['status', 'is_refundable', 'pay_every_unit']
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
     raw_id_fields = [
@@ -144,9 +146,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
 @admin.register(SubscriptionServiceItem)
 class SubscriptionServiceItemAdmin(admin.ModelAdmin):
     list_display = ('id', 'subscription', 'service_item')
-    list_filter = [
-        'subscription__user__email', 'subscription__user__first_name', 'subscription__user__last_name'
-    ]
+    list_filter = ['subscription__user__email', 'subscription__user__first_name', 'subscription__user__last_name']
 
 
 def renew_plan_financing_consumables(modeladmin, request, queryset):
@@ -175,8 +175,7 @@ def add_cohort_set_to_the_subscriptions(modeladmin, request, queryset):
 
     subscriptions = Subscription.objects.filter(
         Q(valid_until__isnull=True)
-        | Q(valid_until__gt=timezone.now()),
-        selected_cohort_set=None).exclude(status__in=['CANCELLED', 'DEPRECATED'])
+        | Q(valid_until__gt=timezone.now()), selected_cohort_set=None).exclude(status__in=['CANCELLED', 'DEPRECATED'])
 
     for item in subscriptions:
         tasks.add_cohort_set_to_subscription.delay(item.id, cohort_set_id)
@@ -311,8 +310,7 @@ class FinancialReputationAdmin(admin.ModelAdmin):
 
 @admin.register(Bag)
 class BagAdmin(admin.ModelAdmin):
-    list_display = ('id', 'status', 'type', 'chosen_period', 'academy', 'user', 'is_recurrent',
-                    'was_delivered')
+    list_display = ('id', 'status', 'type', 'chosen_period', 'academy', 'user', 'is_recurrent', 'was_delivered')
     list_filter = ['status', 'type', 'chosen_period', 'academy', 'is_recurrent']
     search_fields = ['user__email', 'user__first_name', 'user__last_name']
     raw_id_fields = ['user', 'academy']
@@ -344,11 +342,31 @@ class AcademyServiceAdmin(admin.ModelAdmin):
 
 @admin.register(ConsumptionSession)
 class ConsumptionSessionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'consumable', 'eta', 'duration', 'how_many', 'status', 'was_discounted',
-                    'path', 'related_id', 'related_slug')
+    list_display = ('id', 'user', 'consumable', 'eta', 'duration', 'how_many', 'status', 'was_discounted', 'path',
+                    'related_id', 'related_slug')
     list_filter = ['was_discounted', 'status', 'duration']
     search_fields = [
-        'user__email', 'user__id', 'user__first_name', 'user__last_name', 'path', 'related_slug',
-        'related_id', 'consumable__service_item__service__slug'
+        'user__email', 'user__id', 'user__first_name', 'user__last_name', 'path', 'related_slug', 'related_id',
+        'consumable__service_item__service__slug'
     ]
     raw_id_fields = ['user', 'consumable']
+
+
+@admin.register(Seller)
+class SellerAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'user', 'is_hidden', 'is_active')
+    list_filter = ['is_hidden', 'is_active']
+    search_fields = ['name', 'user__email', 'user__id', 'user__first_name', 'user__last_name']
+    raw_id_fields = ['user']
+
+
+@admin.register(Coupon)
+class CouponAdmin(admin.ModelAdmin):
+    list_display = ('id', 'slug', 'discount_type', 'discount_value', 'referral_type', 'referral_value', 'auto',
+                    'seller', 'offered_at', 'expires_at')
+    list_filter = ['discount_type', 'referral_type', 'auto']
+    search_fields = [
+        'slug', 'seller__name', 'seller__user__email', 'seller__user__id', 'seller__user__first_name',
+        'seller__user__last_name'
+    ]
+    raw_id_fields = ['seller']

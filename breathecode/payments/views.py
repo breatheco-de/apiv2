@@ -20,7 +20,9 @@ from breathecode.payments.actions import (
     filter_consumables,
     get_amount,
     get_amount_by_chosen_period,
+    get_available_coupons,
     get_balance_by_resource,
+    get_discounted_price,
 )
 from breathecode.payments.caches import PlanOfferCache
 from breathecode.payments.models import (
@@ -44,6 +46,7 @@ from breathecode.payments.models import (
 from breathecode.payments.serializers import (
     GetAcademyServiceSmallSerializer,
     GetBagSerializer,
+    GetCouponSerializer,
     GetEventTypeSetSerializer,
     GetEventTypeSetSmallSerializer,
     GetInvoiceSerializer,
@@ -90,10 +93,7 @@ class PlanView(APIView):
         if plan_slug:
             item = Plan.objects.filter(slug=plan_slug).first()
             if not item:
-                raise ValidationException(translation(lang,
-                                                      en='Plan not found',
-                                                      es='Plan no existe',
-                                                      slug='not-found'),
+                raise ValidationException(translation(lang, en='Plan not found', es='Plan no existe', slug='not-found'),
                                           code=404)
 
             serializer = GetPlanSerializer(item,
@@ -115,8 +115,7 @@ class PlanView(APIView):
                                      custom_fields={'is_onboarding': is_onboarding})
 
         if filtering:
-            items = PlanFinder(request,
-                               query=query).get_plans_belongs_from_request().exclude(status='DELETED')
+            items = PlanFinder(request, query=query).get_plans_belongs_from_request().exclude(status='DELETED')
 
         else:
             items = Plan.objects.filter(query).exclude(status='DELETED')
@@ -150,10 +149,7 @@ class AcademyPlanView(APIView):
                 Q(id=plan_id) | Q(slug=plan_slug, slug__isnull=False),
                 Q(owner__id=academy_id) | Q(owner=None)).exclude(status='DELETED').first()
             if not item:
-                raise ValidationException(translation(lang,
-                                                      en='Plan not found',
-                                                      es='Plan no existe',
-                                                      slug='not-found'),
+                raise ValidationException(translation(lang, en='Plan not found', es='Plan no existe', slug='not-found'),
                                           code=404)
 
             serializer = GetPlanSerializer(item,
@@ -176,14 +172,11 @@ class AcademyPlanView(APIView):
 
         if filtering:
             items = PlanFinder(
-                request,
-                query=query).get_plans_belongs_from_request().filter(Q(owner__id=academy_id)
-                                                                     | Q(owner=None)).exclude(
-                                                                         status='DELETED')
+                request, query=query).get_plans_belongs_from_request().filter(Q(owner__id=academy_id)
+                                                                              | Q(owner=None)).exclude(status='DELETED')
 
         else:
-            items = Plan.objects.filter(query,
-                                        Q(owner__id=academy_id) | Q(owner=None)).exclude(status='DELETED')
+            items = Plan.objects.filter(query, Q(owner__id=academy_id) | Q(owner=None)).exclude(status='DELETED')
 
         items = handler.queryset(items)
         serializer = GetPlanSerializer(items,
@@ -234,10 +227,7 @@ class AcademyPlanView(APIView):
                                    Q(owner__id=academy_id) | Q(owner=None),
                                    id=plan_id).exclude(status='DELETED').first()
         if not plan:
-            raise ValidationException(translation(lang,
-                                                  en='Plan not found',
-                                                  es='Plan no existe',
-                                                  slug='not-found'),
+            raise ValidationException(translation(lang, en='Plan not found', es='Plan no existe', slug='not-found'),
                                       code=404)
 
         data = {}
@@ -266,10 +256,7 @@ class AcademyPlanView(APIView):
                                    Q(owner__id=academy_id) | Q(owner=None),
                                    id=plan_id).exclude(status='DELETED').first()
         if not plan:
-            raise ValidationException(translation(lang,
-                                                  en='Plan not found',
-                                                  es='Plan no existe',
-                                                  slug='not-found'),
+            raise ValidationException(translation(lang, en='Plan not found', es='Plan no existe', slug='not-found'),
                                       code=404)
 
         plan.status = 'DELETED'
@@ -286,30 +273,24 @@ class AcademyCohortSetCohortView(APIView):
         lang = get_user_language(request)
 
         handler = self.extensions(request)
-        query = handler.lookup.build(lang,
-                                     ints={
-                                         'in': [
-                                             'id',
-                                         ],
-                                     },
-                                     strings={
-                                         'in': [
-                                             'slug',
-                                         ],
-                                     },
-                                     fix={'lower': 'slug'})
+        query = handler.lookup.build(lang, ints={
+            'in': [
+                'id',
+            ],
+        }, strings={
+            'in': [
+                'slug',
+            ],
+        }, fix={'lower': 'slug'})
 
         errors = []
-        if not (cohort_set
-                := CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug),
-                                            owner__id=academy_id).exclude(status='DELETED').first()):
-            errors.append(C(translation(lang, en='Plan not found', es='Plan no encontrado',
-                                        slug='not-found')))
+        if not (cohort_set := CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug),
+                                                       owner__id=academy_id).exclude(status='DELETED').first()):
+            errors.append(C(translation(lang, en='Plan not found', es='Plan no encontrado', slug='not-found')))
 
         if not (items := Cohort.objects.filter(query)):
             errors.append(
-                C(translation(lang, en='Cohort not found', es='Cohort no encontrada',
-                              slug='cohort-not-found')))
+                C(translation(lang, en='Cohort not found', es='Cohort no encontrada', slug='cohort-not-found')))
 
         if errors:
             raise ValidationException(errors, code=404)
@@ -462,11 +443,10 @@ class AcademyAcademyServiceView(APIView):
         if service_slug is not None:
             item = AcademyService.objects.filter(academy__id=academy_id, service__slug=service_slug).first()
             if item is None:
-                raise ValidationException(translation(
-                    lang,
-                    en='There is no Academy Service with that service slug',
-                    es='No existe ningún Academy Service con ese slug de Service',
-                    slug='academy-service-not-found'),
+                raise ValidationException(translation(lang,
+                                                      en='There is no Academy Service with that service slug',
+                                                      es='No existe ningún Academy Service con ese slug de Service',
+                                                      slug='academy-service-not-found'),
                                           code=404)
 
             serializer = GetAcademyServiceSmallSerializer(item)
@@ -573,12 +553,10 @@ class MeConsumableView(APIView):
     def get(self, request):
         utc_now = timezone.now()
 
-        items = Consumable.objects.filter(Q(valid_until__gte=utc_now) | Q(valid_until=None),
-                                          user=request.user)
+        items = Consumable.objects.filter(Q(valid_until__gte=utc_now) | Q(valid_until=None), user=request.user)
 
         mentorship_services = MentorshipServiceSet.objects.none()
-        mentorship_services = filter_consumables(request, items, mentorship_services,
-                                                 'mentorship_service_set')
+        mentorship_services = filter_consumables(request, items, mentorship_services, 'mentorship_service_set')
 
         cohorts = CohortSet.objects.none()
         cohorts = filter_consumables(request, items, cohorts, 'cohort_set')
@@ -742,8 +720,8 @@ class MeSubscriptionView(APIView):
         else:
             subscriptions = subscriptions.exclude(status='CANCELLED').exclude(status='DEPRECATED').exclude(
                 status='PAYMENT_ISSUE')
-            plan_financings = plan_financings.exclude(status='CANCELLED').exclude(
-                status='DEPRECATED').exclude(status='PAYMENT_ISSUE')
+            plan_financings = plan_financings.exclude(status='CANCELLED').exclude(status='DEPRECATED').exclude(
+                status='PAYMENT_ISSUE')
 
         if invoice := request.GET.get('invoice'):
             ids = [int(x) for x in invoice if x.isnumeric()]
@@ -767,8 +745,7 @@ class MeSubscriptionView(APIView):
             subscriptions = subscriptions.filter(*args, **kwargs)
             plan_financings = plan_financings.filter(*args, **kwargs)
 
-        if selected_cohort_set := (request.GET.get('cohort-set-selected')
-                                   or request.GET.get('cohort-set-selected')):
+        if selected_cohort_set := (request.GET.get('cohort-set-selected') or request.GET.get('cohort-set-selected')):
             args, kwargs = self.get_lookup('selected_cohort_set', selected_cohort_set)
             subscriptions = subscriptions.filter(*args, **kwargs)
             plan_financings = plan_financings.filter(*args, **kwargs)
@@ -855,11 +832,10 @@ class MeSubscriptionCancelView(APIView):
                                       code=400)
 
         if subscription.status == 'DEPRECATED':
-            raise ValidationException(translation(
-                lang,
-                en='This subscription is deprecated, so is already cancelled',
-                es='Esta suscripción está obsoleta, por lo que ya está cancelada',
-                slug='deprecated'),
+            raise ValidationException(translation(lang,
+                                                  en='This subscription is deprecated, so is already cancelled',
+                                                  es='Esta suscripción está obsoleta, por lo que ya está cancelada',
+                                                  slug='deprecated'),
                                       code=400)
 
         subscription.status = 'CANCELLED'
@@ -876,8 +852,7 @@ class MePlanFinancingChargeView(APIView):
     def put(self, request, plan_financing_id):
         utc_now = timezone.now()
 
-        if not (subscription := PlanFinancing.objects.filter(id=plan_financing_id,
-                                                             user=request.user).first()):
+        if not (subscription := PlanFinancing.objects.filter(id=plan_financing_id, user=request.user).first()):
             raise ValidationException(translation(request.user.language,
                                                   en='Subscription not found',
                                                   es='No existe la suscripción',
@@ -915,9 +890,9 @@ class AcademySubscriptionView(APIView):
         now = timezone.now()
 
         if subscription_id:
-            item = Subscription.objects.filter(
-                Q(valid_until__gte=now) | Q(valid_until=None), id=subscription_id).exclude(
-                    status='CANCELLED').exclude(status='DEPRECATED').exclude(status='PAYMENT_ISSUE').first()
+            item = Subscription.objects.filter(Q(valid_until__gte=now) | Q(valid_until=None),
+                                               id=subscription_id).exclude(status='CANCELLED').exclude(
+                                                   status='DEPRECATED').exclude(status='PAYMENT_ISSUE').first()
 
             if not item:
                 raise ValidationException(translation(lang,
@@ -934,8 +909,7 @@ class AcademySubscriptionView(APIView):
         if status := request.GET.get('status'):
             items = items.filter(status__in=status.split(','))
         else:
-            items = items.exclude(status='CANCELLED').exclude(status='DEPRECATED').exclude(
-                status='PAYMENT_ISSUE')
+            items = items.exclude(status='CANCELLED').exclude(status='DEPRECATED').exclude(status='PAYMENT_ISSUE')
 
         if invoice_ids := request.GET.get('invoice_ids'):
             items = items.filter(invoices__id__in=invoice_ids.split(','))
@@ -1140,9 +1114,23 @@ class BagView(APIView):
         s.set_language(lang)
         s.add_contact(request.user)
 
+        if 'coupons' in request.data and not isinstance(request.data['coupons'], list):
+            raise ValidationException(translation(lang,
+                                                  en='Coupons must be a list of strings',
+                                                  es='Cupones debe ser una lista de cadenas',
+                                                  slug='invalid-coupons'),
+                                      code=400)
+
         # do no show the bags of type preview they are build
         bag, _ = Bag.objects.get_or_create(lock=True, user=request.user, status='CHECKING', type='BAG')
         add_items_to_bag(request, bag, lang)
+
+        plan = bag.plans.first()
+        if plan:
+            coupons = get_available_coupons(plan, request.data.get('coupons', []))
+            if coupons:
+                bag.coupons.set(coupons)
+
         # actions.check_dependencies_in_bag(bag, lang)
 
         serializer = GetBagSerializer(bag, many=False)
@@ -1222,6 +1210,13 @@ class CheckingView(APIView):
                             slug='not-found'),
                                                   code=404)
 
+                    if 'coupons' in request.data and not isinstance(request.data['coupons'], list):
+                        raise ValidationException(translation(lang,
+                                                              en='Coupons must be a list of strings',
+                                                              es='Cupones debe ser una lista de cadenas',
+                                                              slug='invalid-coupons'),
+                                                  code=400)
+
                     # Locked operation to avoid creating twice if 2 web instances are requesting in parallel
                     bag, created = Bag.objects.get_or_create(lock=True,
                                                              user=request.user,
@@ -1231,6 +1226,12 @@ class CheckingView(APIView):
                                                              currency=academy.main_currency)
 
                     add_items_to_bag(request, bag, lang)
+
+                    plan = bag.plans.first()
+                    if plan and bag.coupons.count() == 0:
+                        coupons = get_available_coupons(plan, request.data.get('coupons', []))
+                        if coupons:
+                            bag.coupons.set(coupons)
                     # actions.check_dependencies_in_bag(bag, lang)
 
                 utc_now = timezone.now()
@@ -1264,8 +1265,7 @@ class CheckingView(APIView):
                 transaction.savepoint_commit(sid)
 
                 serializer = GetBagSerializer(bag, many=False)
-                return Response(serializer.data,
-                                status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+                return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
             except Exception as e:
                 transaction.savepoint_rollback(sid)
@@ -1296,10 +1296,7 @@ class ConsumableCheckoutView(APIView):
 
         if not query or not (service := Service.objects.filter(**query).first()):
             raise ValidationException(
-                translation(lang,
-                            en='Service not found',
-                            es='El servicio no fue encontrado',
-                            slug='service-not-found'))
+                translation(lang, en='Service not found', es='El servicio no fue encontrado', slug='service-not-found'))
 
         if not total_items:
             raise ValidationException(translation(lang,
@@ -1324,10 +1321,7 @@ class ConsumableCheckoutView(APIView):
 
         if not Academy.objects.filter(id=academy).exists():
             raise ValidationException(
-                translation(lang,
-                            en='Academy not found',
-                            es='La academia no fue encontrada',
-                            slug='academy-not-found'))
+                translation(lang, en='Academy not found', es='La academia no fue encontrada', slug='academy-not-found'))
 
         mentorship_service_set = request.data.get('mentorship_service_set')
         event_type_set = request.data.get('event_type_set')
@@ -1398,11 +1392,10 @@ class ConsumableCheckoutView(APIView):
                                       code=400)
 
         if amount > academy_service.max_amount:
-            raise ValidationException(translation(
-                lang,
-                en=f'The amount is too high (max {academy_service.max_amount})',
-                es=f'El monto es demasiado alto (máx {academy_service.max_amount})',
-                slug='the-amount-is-too-high'),
+            raise ValidationException(translation(lang,
+                                                  en=f'The amount is too high (max {academy_service.max_amount})',
+                                                  es=f'El monto es demasiado alto (máx {academy_service.max_amount})',
+                                                  slug='the-amount-is-too-high'),
                                       code=400)
 
         s = None
@@ -1427,8 +1420,7 @@ class ConsumableCheckoutView(APIView):
                 bag.save()
 
                 if mentorship_service_set:
-                    mentorship_service_set = MentorshipServiceSet.objects.filter(
-                        id=mentorship_service_set).first()
+                    mentorship_service_set = MentorshipServiceSet.objects.filter(id=mentorship_service_set).first()
 
                 if event_type_set:
                     event_type_set = EventTypeSet.objects.filter(id=event_type_set).first()
@@ -1441,11 +1433,7 @@ class ConsumableCheckoutView(APIView):
                 else:
                     description = f'Can join to {int(total_items)} events'
 
-                invoice = s.pay(request.user,
-                                bag,
-                                amount,
-                                currency=bag.currency.code,
-                                description=description)
+                invoice = s.pay(request.user, bag, amount, currency=bag.currency.code, description=description)
 
                 consumable = Consumable(service_item=service_item,
                                         user=request.user,
@@ -1485,8 +1473,7 @@ class PayView(APIView):
                 if current_reputation == 'FRAUD' or current_reputation == 'BAD':
                     raise PaymentException(translation(
                         lang,
-                        en=
-                        'The payment could not be completed because you have a bad reputation on this platform',
+                        en='The payment could not be completed because you have a bad reputation on this platform',
                         es='No se pudo completar el pago porque tienes mala reputación en esta plataforma'),
                                            slug='fraud-or-bad-reputation',
                                            silent=True)
@@ -1566,18 +1553,29 @@ class PayView(APIView):
                         slug='invalid-how-many-installments'),
                                               code=400)
 
+                if 'coupons' in request.data and not isinstance(request.data['coupons'], list):
+                    raise ValidationException(translation(lang,
+                                                          en='Coupons must be a list of strings',
+                                                          es='Cupones debe ser una lista de cadenas',
+                                                          slug='invalid-coupons'),
+                                              code=400)
+
                 if (not available_for_free_trial and not available_free and not chosen_period
                         and how_many_installments):
                     bag.how_many_installments = how_many_installments
 
+                coupons = bag.coupons.none()
+
                 if not available_for_free_trial and not available_free and bag.how_many_installments > 0:
                     try:
                         plan = bag.plans.filter().first()
-                        option = plan.financing_options.filter(
-                            how_many_months=bag.how_many_installments).first()
+                        option = plan.financing_options.filter(how_many_months=bag.how_many_installments).first()
                         amount = option.monthly_price
-                        bag.monthly_price = amount
-                    except Exception:
+
+                        coupons = bag.coupons.all()
+                        bag.monthly_price = get_discounted_price(amount, coupons)
+                    except Exception as e:
+                        print(e)
                         raise ValidationException(translation(
                             lang,
                             en='Bag bad configured, related to financing option',
@@ -1587,12 +1585,13 @@ class PayView(APIView):
 
                 elif not available_for_free_trial and not available_free:
                     amount = get_amount_by_chosen_period(bag, chosen_period, lang)
+                    coupons = bag.coupons.all()
+                    amount = get_discounted_price(amount, coupons)
 
                 else:
                     amount = 0
 
-                if amount == 0 and Subscription.objects.filter(user=request.user,
-                                                               plans__in=bag.plans.all()).count():
+                if amount == 0 and Subscription.objects.filter(user=request.user, plans__in=bag.plans.all()).count():
                     raise ValidationException(translation(lang,
                                                           en='Your free trial was already took',
                                                           es='Tu prueba gratuita ya fue tomada',
@@ -1607,8 +1606,7 @@ class PayView(APIView):
                         translation(
                             lang,
                             en='The plan was chosen does not have a pricing setup, it\'s not ready to be sold',
-                            es=
-                            'El plan elegido no tiene una configuracion de precios, no esta listo para venderse',
+                            es='El plan elegido no tiene una configuracion de precios, no esta listo para venderse',
                             slug='the-plan-was-chosen-is-not-ready-too-be-sold'))
 
                 if amount >= 0.50:
@@ -1676,7 +1674,11 @@ class PayView(APIView):
                                                   related_type='payments.Invoice',
                                                   related_id=serializer.instance.id)
 
-                return Response(serializer.data, status=201)
+                data = serializer.data
+                serializer = GetCouponSerializer(coupons, many=True)
+                data['coupons'] = serializer.data
+
+                return Response(data, status=201)
 
             except Exception as e:
                 transaction.savepoint_rollback(sid)

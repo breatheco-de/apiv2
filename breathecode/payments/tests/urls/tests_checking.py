@@ -37,8 +37,7 @@ def financing_option_serializer(financing_option, currency, data={}):
 
 def plan_serializer(plan, service_items, service, cohorts=[], financing_options=[], currency=None, data={}):
     return {
-        'service_items':
-        [service_item_serializer(service_item, service, cohorts) for service_item in service_items],
+        'service_items': [service_item_serializer(service_item, service, cohorts) for service_item in service_items],
         'financing_options':
         [financing_option_serializer(financing_option, currency) for financing_option in financing_options],
         'slug':
@@ -80,6 +79,10 @@ def service_item_serializer(service_item, service, cohorts=[], data={}):
     }
 
 
+def format_coupon(coupon):
+    return {}
+
+
 def get_serializer(bag,
                    plans=[],
                    plan_service_items=[],
@@ -88,6 +91,7 @@ def get_serializer(bag,
                    cohorts=[],
                    financing_options=[],
                    currency=None,
+                   coupons=[],
                    data={}):
     return {
         'amount_per_month':
@@ -102,12 +106,9 @@ def get_serializer(bag,
         bag.expires_at,
         'is_recurrent':
         bag.is_recurrent,
-        'plans': [
-            plan_serializer(plan, plan_service_items, service, cohorts, financing_options, currency)
-            for plan in plans
-        ],
-        'service_items':
-        [service_item_serializer(service_item, service, cohorts) for service_item in service_items],
+        'plans':
+        [plan_serializer(plan, plan_service_items, service, cohorts, financing_options, currency) for plan in plans],
+        'service_items': [service_item_serializer(service_item, service, cohorts) for service_item in service_items],
         'status':
         bag.status,
         'token':
@@ -116,6 +117,7 @@ def get_serializer(bag,
         bag.type,
         'was_delivered':
         bag.was_delivered,
+        'coupons': [format_coupon(x) for x in coupons],
         **data,
     }
 
@@ -426,15 +428,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:checking')
-        data = {
-            'academy': 1,
-            'type': 'PREVIEW',
-            'plans': [1],
-            'service_items': [{
-                'how_many': 1,
-                'service': 1
-            }]
-        }
+        data = {'academy': 1, 'type': 'PREVIEW', 'plans': [1], 'service_items': [{'how_many': 1, 'service': 1}]}
 
         token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
         with patch('rest_framework.authtoken.models.Token.generate_key', MagicMock(return_value=token)):
@@ -483,15 +477,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.check.queryset_with_pks(model.bag.plans.all(), [])
 
         url = reverse_lazy('payments:checking')
-        data = {
-            'academy': 1,
-            'type': 'PREVIEW',
-            'plans': [1],
-            'service_items': [{
-                'how_many': 1,
-                'service': 1
-            }]
-        }
+        data = {'academy': 1, 'type': 'PREVIEW', 'plans': [1], 'service_items': [{'how_many': 1, 'service': 1}]}
 
         token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
         with patch('rest_framework.authtoken.models.Token.generate_key', MagicMock(return_value=token)):
@@ -524,8 +510,7 @@ class SignalTestSuite(PaymentsTestCase):
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__with_bag__type_bag__passing_type_preview__items_found__with_the_correct_currency__with_service_item(
-            self):
+    def test__with_bag__type_bag__passing_type_preview__items_found__with_the_correct_currency__with_service_item(self):
         bag = {
             'status': 'CHECKING',
             'type': 'PREVIEW',
@@ -1171,8 +1156,7 @@ class SignalTestSuite(PaymentsTestCase):
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__with_bag__type_bag__passing_type_preview__items_found__free_trial_already_taken__amount_is_0(
-            self):
+    def test__with_bag__type_bag__passing_type_preview__items_found__free_trial_already_taken__amount_is_0(self):
         bag = {
             'status': 'CHECKING',
             'type': 'PREVIEW',

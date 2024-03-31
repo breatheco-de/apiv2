@@ -44,7 +44,11 @@ def format_invoice_item(data={}):
     }
 
 
-def get_serializer(bc, currency, user, data={}):
+def format_coupon(coupon):
+    return {}
+
+
+def get_serializer(bc, currency, user, coupons=[], data={}):
     return {
         'amount': 0,
         'currency': {
@@ -58,6 +62,7 @@ def get_serializer(bc, currency, user, data={}):
             'first_name': user.first_name,
             'last_name': user.last_name,
         },
+        'coupons': [format_coupon(x) for x in coupons],
         **data,
     }
 
@@ -443,13 +448,7 @@ def test_free_trial__with_plan_offer(bc: Breathecode, client: APIClient):
 
     plan = {'is_renewable': False}
 
-    model = bc.database.create(user=1,
-                               bag=bag,
-                               academy=1,
-                               currency=1,
-                               plan=plan,
-                               service_item=1,
-                               plan_offer=1)
+    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1, plan_offer=1)
     client.force_authenticate(user=model.user)
 
     url = reverse_lazy('payments:pay')
@@ -504,8 +503,7 @@ def test_free_trial__with_plan_offer(bc: Breathecode, client: APIClient):
         (Exception, 'unexpected-exception'),
     ],
 )
-def test_pay_for_subscription_has_failed(bc: Breathecode, client: APIClient, exc_cls, silent_code,
-                                         monkeypatch, fake):
+def test_pay_for_subscription_has_failed(bc: Breathecode, client: APIClient, exc_cls, silent_code, monkeypatch, fake):
 
     def get_exp():
         args = [fake.slug()]
@@ -589,8 +587,7 @@ def test_pay_for_subscription_has_failed(bc: Breathecode, client: APIClient, exc
         (Exception, 'unexpected-exception'),
     ],
 )
-def test_pay_for_plan_financing_has_failed(bc: Breathecode, client: APIClient, exc_cls, silent_code,
-                                           monkeypatch, fake):
+def test_pay_for_plan_financing_has_failed(bc: Breathecode, client: APIClient, exc_cls, silent_code, monkeypatch, fake):
 
     def get_exp():
         args = [fake.slug()]
@@ -683,13 +680,7 @@ def test_free_plan__is_renewable(bc: Breathecode, client: APIClient):
 
     plan = {'is_renewable': True, 'trial_duration': 0}
 
-    model = bc.database.create(user=1,
-                               bag=bag,
-                               academy=1,
-                               currency=1,
-                               plan=plan,
-                               service_item=1,
-                               plan_offer=1)
+    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1, plan_offer=1)
     client.force_authenticate(user=model.user)
 
     url = reverse_lazy('payments:pay')
@@ -742,13 +733,7 @@ def test_free_plan__not_is_renewable(bc: Breathecode, client: APIClient):
 
     plan = {'is_renewable': False, 'trial_duration': 0}
 
-    model = bc.database.create(user=1,
-                               bag=bag,
-                               academy=1,
-                               currency=1,
-                               plan=plan,
-                               service_item=1,
-                               plan_offer=1)
+    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1, plan_offer=1)
     client.force_authenticate(user=model.user)
 
     url = reverse_lazy('payments:pay')

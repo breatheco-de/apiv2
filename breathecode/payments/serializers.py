@@ -1,7 +1,16 @@
 import logging
-from breathecode.payments.models import AcademyService, Plan, PlanOfferTranslation, Service, ServiceItem, ServiceItemFeature
+
 from django.db.models.query_utils import Q
 from rest_framework.exceptions import ValidationError
+
+from breathecode.payments.models import (
+    AcademyService,
+    Plan,
+    PlanOfferTranslation,
+    Service,
+    ServiceItem,
+    ServiceItemFeature,
+)
 from breathecode.utils import serializers, serpy
 
 logger = logging.getLogger(__name__)
@@ -221,6 +230,26 @@ class GetMentorshipServiceSerializer(serpy.Serializer):
     academy = GetAcademySmallSerializer(many=False)
 
 
+class GetSellerSerializer(serpy.Serializer):
+
+    name = serpy.Field()
+    user = GetUserSmallSerializer(many=False, required=False)
+    is_hidden = serpy.Field()
+    is_active = serpy.Field()
+
+
+class GetCouponSerializer(serpy.Serializer):
+
+    slug = serpy.Field()
+    discount_type = serpy.Field()
+    discount_value = serpy.Field()
+    referral_type = serpy.Field()
+    referral_value = serpy.Field()
+    auto = serpy.Field()
+    offered_at = serpy.Field()
+    expires_at = serpy.Field()
+
+
 class GetAcademyServiceSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     academy = GetAcademySmallSerializer(many=False)
@@ -370,6 +399,7 @@ class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
 class GetBagSerializer(serpy.Serializer):
     service_items = serpy.MethodField()
     plans = serpy.MethodField()
+    coupons = serpy.MethodField()
     status = serpy.Field()
     type = serpy.Field()
     is_recurrent = serpy.Field()
@@ -386,6 +416,9 @@ class GetBagSerializer(serpy.Serializer):
 
     def get_plans(self, obj):
         return GetPlanSmallSerializer(obj.plans.filter(), many=True).data
+
+    def get_coupons(self, obj):
+        return GetCouponSerializer(obj.coupons.filter(), many=True).data
 
 
 class ServiceSerializer(serializers.Serializer):

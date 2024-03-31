@@ -17,7 +17,18 @@ from breathecode.utils import getLogger
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
 
-from .models import SERVICE_UNITS, Bag, Consumable, Currency, Plan, PlanFinancing, Service, ServiceItem, Subscription
+from .models import (
+    SERVICE_UNITS,
+    Bag,
+    Consumable,
+    Coupon,
+    Currency,
+    Plan,
+    PlanFinancing,
+    Service,
+    ServiceItem,
+    Subscription,
+)
 
 logger = getLogger(__name__)
 
@@ -629,3 +640,48 @@ def get_balance_by_resource(queryset: QuerySet, key: str):
             'items': items,
         })
     return result
+
+
+def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None) -> list[Coupon]:
+    founded_coupons = []
+    founded_coupon_slugs = []
+
+    args = (
+        Q(plans=plan) | Q(plans=None),
+        Q(offered_at=None) | Q(offered_at__lte=timezone.now()),
+        Q(expires_at=None) | Q(expires_at__gte=timezone.now()),
+    )
+    special_offers = Coupon.objects.filter(*args, auto=True).exclude(discount_type=Coupon.Discount.NO_DISCOUNT).only(
+        'id', 'slug')
+
+    for coupon in special_offers:
+        if coupon.slug not in founded_coupon_slugs:
+            founded_coupons.append(coupon)
+            founded_coupon_slugs.append(coupon.slug)
+
+    valid_coupons = Coupon.objects.filter(*args, slug__in=coupons, auto=False).only('id', 'slug')
+
+    for coupon in valid_coupons:
+        if coupon.slug not in founded_coupon_slugs:
+            founded_coupons.append(coupon)
+            founded_coupon_slugs.append(coupon.slug)
+
+    return founded_coupons
+
+
+def get_discounted_price(price: float, coupons: list[Coupon]) -> float:
+    percent_off_coupons = [x for x in coupons if x.discount_type == Coupon.Discount.PERCENT_OFF]
+    fixed_discount_coupons = [
+        x for x in coupons if x.discount_type not in [Coupon.Discount.NO_DISCOUNT, Coupon.Discount.PERCENT_OFF]
+    ]
+
+    for coupon in percent_off_coupons:
+        price -= price * coupon.discount_value
+
+    for coupon in fixed_discount_coupons:
+        price -= coupon.discount_value
+
+    if price < 0:
+        price = 0
+
+    return price
