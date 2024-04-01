@@ -56,6 +56,7 @@ def deal_update(ac_cls, webhook, payload: dict, acp_ids):
     logger.debug('looking for deal on activecampaign api')
     deal_custom_fields = ac_cls.get_deal_customfields(entry.ac_deal_id)
 
+    # WARNING: Do not update the utm's back to breathecode, we want to keep the original trace
     entry = update_expected_cohort(ac_cls, entry, acp_ids, deal_custom_fields)
     entry = update_location(ac_cls, entry, acp_ids, deal_custom_fields)
     entry = update_course(ac_cls, entry, acp_ids, deal_custom_fields)
