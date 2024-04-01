@@ -439,6 +439,8 @@ class EventPUTSerializer(serializers.ModelSerializer):
     capacity = serializers.IntegerField(required=False)
     starting_at = serializers.DateTimeField(required=False)
     ending_at = serializers.DateTimeField(required=False)
+    online_event = serializers.BooleanField(required=False)
+    status = serializers.CharField(required=False)
 
     class Meta:
         model = Event
