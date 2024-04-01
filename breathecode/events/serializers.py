@@ -435,6 +435,7 @@ class EventSerializer(serializers.ModelSerializer):
 
 class EventPUTSerializer(serializers.ModelSerializer):
     banner = serializers.URLField(required=False)
+    tags = serializers.CharField(required=False)
     capacity = serializers.IntegerField(required=False)
     starting_at = serializers.DateTimeField(required=False)
     ending_at = serializers.DateTimeField(required=False)
