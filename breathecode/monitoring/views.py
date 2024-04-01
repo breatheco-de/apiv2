@@ -125,7 +125,7 @@ def process_github_webhook(request, subscription_token):
     payload = request.data.copy()
     payload['scope'] = request.headers['X-GitHub-Event']
 
-    if subscription.repository != payload['repository']['html_url']:
+    if 'repository' in payload and subscription.repository != payload['repository']['html_url']:
         raise ValidationException(
             'Webhook was called from a different repository than its original subscription: ' +
             payload['repository']['html_url'])
