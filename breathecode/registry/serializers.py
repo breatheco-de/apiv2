@@ -122,6 +122,11 @@ class AcademySmallSerializer(serpy.Serializer):
     name = serpy.Field()
 
 
+class AssessmentSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+  
 class KeywordClusterSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
@@ -263,6 +268,8 @@ class AcademyAssetSerializer(AssetSerializer):
     cleaning_status = serpy.Field()
     cleaning_status_details = serpy.Field()
     last_cleaning_at = serpy.Field()
+
+    assessment = AssessmentSmallSerializer(required=False)
 
     author = UserSerializer(required=False)
     owner = UserSerializer(required=False)
