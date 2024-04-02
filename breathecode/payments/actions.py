@@ -643,30 +643,47 @@ def get_balance_by_resource(queryset: QuerySet, key: str):
 
 
 def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None) -> list[Coupon]:
+
+    def manage_coupon(coupon: Coupon) -> None:
+        if coupon.slug not in founded_coupon_slugs:
+            sub_kwargs = {'invoices__bag__coupon': coupon}
+            if coupon.offered_at:
+                sub_kwargs['created_at__gte'] = coupon.offered_at
+
+            if coupon.expires_at:
+                sub_kwargs['created_at__lte'] = coupon.expires_at
+
+            how_many_subscriptions = Subscription.objects.filter(**sub_kwargs).count()
+            how_many_plan_financings = PlanFinancing.objects.filter(**sub_kwargs).count()
+            total_spent_coupons = how_many_subscriptions + how_many_plan_financings
+
+            if total_spent_coupons >= coupon.how_many_offers:
+                founded_coupons.append(coupon)
+
+            founded_coupon_slugs.append(coupon.slug)
+
     founded_coupons = []
     founded_coupon_slugs = []
 
-    args = (
+    cou_args = (
         Q(plans=plan) | Q(plans=None),
         Q(offered_at=None) | Q(offered_at__lte=timezone.now()),
         Q(expires_at=None) | Q(expires_at__gte=timezone.now()),
     )
+    cou_fields = ('id', 'slug', 'how_many_offers', 'offered_at', 'expires_at')
+
     special_offers = Coupon.objects.filter(
-        *args,
-        auto=True).exclude(Q(how_many_offers=0) | Q(discount_type=Coupon.Discount.NO_DISCOUNT)).only('id', 'slug')
+        *cou_args,
+        auto=True).exclude(Q(how_many_offers=0) | Q(discount_type=Coupon.Discount.NO_DISCOUNT)).only(*cou_fields)
 
     for coupon in special_offers:
-        if coupon.slug not in founded_coupon_slugs:
-            founded_coupons.append(coupon)
-            founded_coupon_slugs.append(coupon.slug)
+        manage_coupon(coupon)
 
-    valid_coupons = Coupon.objects.filter(*args, slug__in=coupons,
-                                          auto=False).exclude(how_many_offers=0).only('id', 'slug')
+    valid_coupons = Coupon.objects.filter(*cou_args, slug__in=coupons,
+                                          auto=False).exclude(how_many_offers=0).only(*cou_fields)
 
     for coupon in valid_coupons:
-        if coupon.slug not in founded_coupon_slugs:
-            founded_coupons.append(coupon)
-            founded_coupon_slugs.append(coupon.slug)
+        manage_coupon(coupon)
 
     return founded_coupons
 
