@@ -132,6 +132,7 @@ def post_serializer(academy, category, data={}):
 def put_serializer(academy, category, asset, data={}):
 
     return {
+        'assessment': asset.assessment,
         'asset_type': asset.asset_type,
         'author': asset.author,
         'authors_username': None,

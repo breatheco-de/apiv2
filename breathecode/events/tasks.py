@@ -56,27 +56,6 @@ def async_eventbrite_webhook(self, eventbrite_webhook_id):
 
 
 @shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
-def async_export_event_to_eventbrite(self, event_id: int):
-    from .actions import export_event_to_eventbrite
-
-    logger.info('Starting async_export_event_to_eventbrite')
-
-    event = Event.objects.filter(id=event_id).first()
-    if not event:
-        logger.error(f'Event {event_id} not fount')
-        return
-
-    if not event.organization:
-        logger.error(f'Event {event_id} not have a organization assigned')
-        return
-
-    try:
-        export_event_to_eventbrite(event, event.organization)
-    except Exception:
-        logger.exception(f'The {event_id} export was failed')
-
-
-@shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
 def build_live_classes_from_timeslot(self, timeslot_id: int):
     logger.info(f'Starting build_live_classes_from_timeslot with id {timeslot_id}')
 
