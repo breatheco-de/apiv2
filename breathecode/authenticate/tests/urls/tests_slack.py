@@ -75,9 +75,9 @@ class AuthenticateTestSuite(AuthTestCase):
         query_string = f'a={academy}&url={original_url_callback}&user={user}'.encode('utf-8')
         payload = str(base64.urlsafe_b64encode(query_string), 'utf-8')
         scopes = ('app_mentions:read', 'channels:history', 'channels:join', 'channels:read', 'chat:write',
-                  'chat:write.customize', 'commands', 'files:read', 'files:write', 'groups:history',
-                  'groups:read', 'groups:write', 'incoming-webhook', 'team:read', 'users:read',
-                  'users:read.email', 'users.profile:read', 'users:read')
+                  'chat:write.customize', 'commands', 'files:read', 'files:write', 'groups:history', 'groups:read',
+                  'groups:write', 'incoming-webhook', 'team:read', 'users:read', 'users:read.email',
+                  'users.profile:read', 'users:read')
         params = {
             'client_id': os.getenv('SLACK_CLIENT_ID', ''),
             'redirect_uri': os.getenv('SLACK_REDIRECT_URL', '') + '?payload=' + payload,

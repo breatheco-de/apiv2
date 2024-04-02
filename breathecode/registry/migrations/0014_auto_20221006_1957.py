@@ -13,13 +13,13 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='asset',
             name='cleaning_status',
-            field=models.CharField(
-                blank=True,
-                choices=[('PENDING', 'Pending'), ('ERROR', 'Error'), ('OK', 'Ok'), ('WARNING', 'Warning')],
-                default='PENDING',
-                help_text='Internal state automatically set by the system based on cleanup',
-                max_length=20,
-                null=True),
+            field=models.CharField(blank=True,
+                                   choices=[('PENDING', 'Pending'), ('ERROR', 'Error'), ('OK', 'Ok'),
+                                            ('WARNING', 'Warning')],
+                                   default='PENDING',
+                                   help_text='Internal state automatically set by the system based on cleanup',
+                                   max_length=20,
+                                   null=True),
         ),
         migrations.AddField(
             model_name='asset',

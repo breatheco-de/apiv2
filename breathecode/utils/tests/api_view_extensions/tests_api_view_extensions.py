@@ -97,10 +97,8 @@ class GetCohortSerializer(serpy.Serializer):
 
 
 def serialize_cache_value(data):
-    return str(data).replace('\'', '"').replace('None',
-                                                'null').replace('True',
-                                                                'true').replace('False',
-                                                                                'false').encode('utf-8')
+    return str(data).replace('\'', '"').replace('None', 'null').replace('True', 'true').replace('False',
+                                                                                                'false').encode('utf-8')
 
 
 class CustomTestView(APIView):
@@ -173,10 +171,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         view(request)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call([
-                'CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension',
-                'SortExtension'
-            ]),
+            call(['CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension', 'SortExtension']),
         ])
 
     """
@@ -237,10 +232,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         view(request)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
-            call(cache=CohortCache,
-                 cache_prefix='the-beans-should-not-have-sugar',
-                 sort='name',
-                 paginate=False),
+            call(cache=CohortCache, cache_prefix='the-beans-should-not-have-sugar', sort='name', paginate=False),
         ])
 
     """
@@ -253,10 +245,9 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         request = APIRequestFactory()
         request = request.get('/the-beans-should-not-have-sugar')
 
-        key = 'Cohort__' + urllib.parse.urlencode(
-            sorted({
-                'request.path': '/the-beans-should-not-have-sugar',
-            }.items()))
+        key = 'Cohort__' + urllib.parse.urlencode(sorted({
+            'request.path': '/the-beans-should-not-have-sugar',
+        }.items()))
 
         view = CustomTestView.as_view()
 
@@ -273,10 +264,9 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         model = self.bc.database.create(cohort=1)
 
-        key = 'Cohort__' + urllib.parse.urlencode(
-            sorted({
-                'request.path': '/the-beans-should-not-have-sugar',
-            }.items()))
+        key = 'Cohort__' + urllib.parse.urlencode(sorted({
+            'request.path': '/the-beans-should-not-have-sugar',
+        }.items()))
 
         request = APIRequestFactory()
         request = request.get('/the-beans-should-not-have-sugar')
@@ -296,10 +286,9 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         model = self.bc.database.create(cohort=10)
 
-        key = 'Cohort__' + urllib.parse.urlencode(
-            sorted({
-                'request.path': '/the-beans-should-not-have-sugar',
-            }.items()))
+        key = 'Cohort__' + urllib.parse.urlencode(sorted({
+            'request.path': '/the-beans-should-not-have-sugar',
+        }.items()))
 
         request = APIRequestFactory()
         request = request.get('/the-beans-should-not-have-sugar')
@@ -1022,10 +1011,7 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
         view(request, id=1)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call([
-                'CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension',
-                'SortExtension'
-            ]),
+            call(['CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension', 'SortExtension']),
         ])
 
     """
@@ -1086,8 +1072,7 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
         for expected in cases:
             json_data = json.dumps(expected).encode('utf-8')
             key = 'Cohort__id=1&' + urllib.parse.urlencode({
-                'request.path':
-                '/the-beans-should-not-have-sugar/1',
+                'request.path': '/the-beans-should-not-have-sugar/1',
             })
             cache.set(key, json_data)
             cache.set('Cohort__keys', {key})
@@ -1157,8 +1142,7 @@ class ApiViewExtensionsGetIdTestSuite(UtilsTestCase):
             json_data_query = ('application/json    ' + json.dumps(case[1])).encode('utf-8')
             cache.set('Cohort__', json_data_root)
             key = 'Cohort__id=1&' + urllib.parse.urlencode({
-                'request.path':
-                '/the-beans-should-not-have-sugar/1',
+                'request.path': '/the-beans-should-not-have-sugar/1',
             })
             cache.set(key, json_data_query)
             cache.set('Cohort__keys', {'Cohort__', key})

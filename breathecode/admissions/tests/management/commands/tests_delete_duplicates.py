@@ -17,8 +17,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """Test /academy/cohort without auth"""
         model = self.generate_models(cohort=True, user=True)
         models = [
-            mixer.blend('admissions.CohortUser', user=model['user'], cohort=model['cohort'])
-            for _ in range(0, 10)
+            mixer.blend('admissions.CohortUser', user=model['user'], cohort=model['cohort']) for _ in range(0, 10)
         ]
         model_dict = self.remove_dinamics_fields(models[0].__dict__)
         command = Command()

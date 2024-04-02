@@ -13,9 +13,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='mentorshipbill',
             name='status',
-            field=models.CharField(choices=[('RECALCULATE', 'Recalculate'), ('DUE', 'Due'),
-                                            ('APPROVED', 'Approved'), ('PAID', 'Paid'),
-                                            ('IGNORED', 'Ignored')],
+            field=models.CharField(choices=[('RECALCULATE', 'Recalculate'), ('DUE', 'Due'), ('APPROVED', 'Approved'),
+                                            ('PAID', 'Paid'), ('IGNORED', 'Ignored')],
                                    default='DUE',
                                    max_length=20),
         ),

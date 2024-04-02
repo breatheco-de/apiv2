@@ -96,8 +96,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         add_event_tags_to_student.delay(1, user_id=1)
 
         self.assertEqual(logging.Logger.info.call_args_list, [call(TASK_STARTED_MESSAGE)])
-        self.assertEqual(logging.Logger.error.call_args_list,
-                         [call('We can\'t get the user email', exc_info=True)])
+        self.assertEqual(logging.Logger.error.call_args_list, [call('We can\'t get the user email', exc_info=True)])
         self.assertEqual(requests.get.call_args_list, [])
         self.assertEqual(requests.post.call_args_list, [])
 
@@ -332,8 +331,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         add_event_tags_to_student.delay(1, user_id=1)
 
         self.assertEqual(logging.Logger.info.call_args_list, [call(TASK_STARTED_MESSAGE)])
-        self.assertEqual(logging.Logger.error.call_args_list,
-                         [call(GET_CONTACT_BY_EMAIL_EXCEPTION, exc_info=True)])
+        self.assertEqual(logging.Logger.error.call_args_list, [call(GET_CONTACT_BY_EMAIL_EXCEPTION, exc_info=True)])
 
         self.assertEqual(requests.get.call_args_list, [])
         self.assertEqual(requests.post.call_args_list, [])
@@ -364,8 +362,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         add_event_tags_to_student.delay(1, email='pokemon@potato.io')
 
         self.assertEqual(logging.Logger.info.call_args_list, [call(TASK_STARTED_MESSAGE)])
-        self.assertEqual(logging.Logger.error.call_args_list,
-                         [call(GET_CONTACT_BY_EMAIL_EXCEPTION, exc_info=True)])
+        self.assertEqual(logging.Logger.error.call_args_list, [call(GET_CONTACT_BY_EMAIL_EXCEPTION, exc_info=True)])
 
         self.assertEqual(requests.get.call_args_list, [])
         self.assertEqual(requests.post.call_args_list, [])
@@ -405,8 +402,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             call('Adding tag 1 to acp contact 1'),
         ])
 
-        self.assertEqual(logging.Logger.error.call_args_list,
-                         [call(ADD_TAG_TO_CONTACT_EXCEPTION, exc_info=True)])
+        self.assertEqual(logging.Logger.error.call_args_list, [call(ADD_TAG_TO_CONTACT_EXCEPTION, exc_info=True)])
         self.assertEqual(requests.get.call_args_list, [
             call('https://ac.ca/api/3/contacts',
                  headers={'Api-Token': model.active_campaign_academy.ac_key},
@@ -446,8 +442,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             call('Adding tag 1 to acp contact 1'),
         ])
 
-        self.assertEqual(logging.Logger.error.call_args_list,
-                         [call(ADD_TAG_TO_CONTACT_EXCEPTION, exc_info=True)])
+        self.assertEqual(logging.Logger.error.call_args_list, [call(ADD_TAG_TO_CONTACT_EXCEPTION, exc_info=True)])
         self.assertEqual(requests.get.call_args_list, [
             call('https://ac.ca/api/3/contacts',
                  headers={'Api-Token': model.active_campaign_academy.ac_key},

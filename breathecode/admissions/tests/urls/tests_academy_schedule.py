@@ -28,11 +28,10 @@ class CertificateTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.all_syllabus_schedule_dict(), [])
 
@@ -163,8 +162,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         statuses = ['PARTIME', 'FULLTIME']
         cases = [(x, x, random.choice([y for y in statuses if x != y]))
-                 for x in statuses] + [(x, x.lower(), random.choice([y for y in statuses if x != y]))
-                                       for x in statuses]
+                 for x in statuses] + [(x, x.lower(), random.choice([y for y in statuses if x != y])) for x in statuses]
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
                                      syllabus_schedule=3,
@@ -264,12 +262,9 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         for field in many_fields:
             certificate_kwargs = {
-                'logo':
-                choice(['http://exampledot.com', 'http://exampledotdot.com', 'http://exampledotdotdot.com']),
-                'week_hours':
-                randint(0, 999999999),
-                'schedule_type':
-                choice(['PAR-TIME', 'FULL-TIME']),
+                'logo': choice(['http://exampledot.com', 'http://exampledotdot.com', 'http://exampledotdotdot.com']),
+                'week_hours': randint(0, 999999999),
+                'schedule_type': choice(['PAR-TIME', 'FULL-TIME']),
             }
             model = self.generate_models(authenticate=True,
                                          profile_academy=True,
@@ -322,12 +317,9 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         for field in many_fields:
             certificate_kwargs = {
-                'logo':
-                choice(['http://exampledot.com', 'http://exampledotdot.com', 'http://exampledotdotdot.com']),
-                'week_hours':
-                randint(0, 999999999),
-                'schedule_type':
-                choice(['PAR-TIME', 'FULL-TIME']),
+                'logo': choice(['http://exampledot.com', 'http://exampledotdot.com', 'http://exampledotdotdot.com']),
+                'week_hours': randint(0, 999999999),
+                'schedule_type': choice(['PAR-TIME', 'FULL-TIME']),
             }
             model1 = self.generate_models(authenticate=True,
                                           profile_academy=True,

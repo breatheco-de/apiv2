@@ -13,11 +13,7 @@ from ..mixins import AdmissionsTestCase
 UTC_NOW = timezone.now()
 
 
-def generate_syllabus_json(lesson_slug,
-                           quiz_slug=None,
-                           reply_slug=None,
-                           project_slug=None,
-                           assignment_slug=None):
+def generate_syllabus_json(lesson_slug, quiz_slug=None, reply_slug=None, project_slug=None, assignment_slug=None):
 
     if quiz_slug == None:
         quiz_slug = lesson_slug
@@ -63,11 +59,10 @@ class CertificateTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.all_syllabus_schedule_dict(), [])
 
@@ -153,9 +148,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(self.all_syllabus_version_dict(), [{
-            **self.model_to_dict(model, 'syllabus_version')
-        }])
+        self.assertEqual(self.all_syllabus_version_dict(), [{**self.model_to_dict(model, 'syllabus_version')}])
 
     def test_syllabus_id_version__post__bad_syllabus_id(self):
         """Test /certificate without auth"""

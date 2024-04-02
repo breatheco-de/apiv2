@@ -27,8 +27,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='specialtymodetimeslot',
             name='specialty_mode',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
-                                    to='admissions.specialtymode'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.specialtymode'),
         ),
         migrations.AddField(
             model_name='academyspecialtymode',
@@ -38,8 +37,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='academyspecialtymode',
             name='specialty_mode',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
-                                    to='admissions.specialtymode'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.specialtymode'),
         ),
         migrations.AddField(
             model_name='cohort',

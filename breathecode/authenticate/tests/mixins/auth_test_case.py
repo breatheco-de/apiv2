@@ -9,8 +9,8 @@ from rest_framework.test import APITestCase, APIClient
 from mixer.backend.django import mixer
 from django.core.cache import cache
 from breathecode.tests.mixins import ModelsMixin
-from breathecode.tests.mocks import (GOOGLE_CLOUD_PATH, apply_google_cloud_client_mock,
-                                     apply_google_cloud_bucket_mock, apply_google_cloud_blob_mock)
+from breathecode.tests.mocks import (GOOGLE_CLOUD_PATH, apply_google_cloud_client_mock, apply_google_cloud_bucket_mock,
+                                     apply_google_cloud_blob_mock)
 
 
 class AuthTestCase(APITestCase, ModelsMixin):

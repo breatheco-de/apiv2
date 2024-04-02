@@ -65,8 +65,8 @@ class PaginationExtension(ExtensionBase):
         self._offset = self._get_offset()
         self._limit = self._get_limit()
 
-        if self._is_paginate() and self._request.GET.get(
-                'envelope', '').lower() in ['false', 'f', '0', 'no', 'n', 'off', '']:
+        if self._is_paginate() and self._request.GET.get('envelope',
+                                                         '').lower() in ['false', 'f', '0', 'no', 'n', 'off', '']:
             self._use_envelope = True
 
         self._queryset = queryset[self._offset:self._offset + self._limit]
@@ -126,9 +126,7 @@ class PaginationExtension(ExtensionBase):
     def _get_limit(self):
         if LIMIT_QUERY_PARAM:
             try:
-                return _positive_int(self._request.query_params[LIMIT_QUERY_PARAM],
-                                     strict=True,
-                                     cutoff=MAX_LIMIT)
+                return _positive_int(self._request.query_params[LIMIT_QUERY_PARAM], strict=True, cutoff=MAX_LIMIT)
             except (KeyError, ValueError):
                 pass
 

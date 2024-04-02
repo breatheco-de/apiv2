@@ -16,9 +16,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='TaskWatcher',
             fields=[
-                ('id',
-                 models.BigAutoField(auto_created=True, primary_key=True, serialize=False,
-                                     verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('email', models.EmailField(blank=True, max_length=254, null=True)),
                 ('on_error', models.BooleanField(default=True)),
                 ('on_success', models.BooleanField(default=True)),
@@ -28,9 +26,8 @@ class Migration(migrations.Migration):
                                         help_text='Notify for the progress of these tasks',
                                         related_name='watchers',
                                         to='commons.TaskManager')),
-                ('user',
-                 models.OneToOneField(on_delete=django.db.models.deletion.CASCADE,
-                                      to=settings.AUTH_USER_MODEL)),
+                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE,
+                                              to=settings.AUTH_USER_MODEL)),
             ],
         ),
     ]

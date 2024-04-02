@@ -17,21 +17,14 @@ from ..mixins import AdmissionsTestCase
 def put_serializer(self, cohort_user, cohort, user, profile_academy=None, data={}):
     return {
         'cohort': {
-            'ending_date':
-            cohort.ending_date,
-            'id':
-            cohort.id,
+            'ending_date': cohort.ending_date,
+            'id': cohort.id,
             'kickoff_date':
-            self.bc.datetime.to_iso_string(cohort.kickoff_date)
-            if cohort.kickoff_date else cohort.kickoff_date,
-            'name':
-            cohort.name,
-            'slug':
-            cohort.slug,
-            'stage':
-            cohort.stage,
-            'available_as_saas':
-            cohort.available_as_saas,
+            self.bc.datetime.to_iso_string(cohort.kickoff_date) if cohort.kickoff_date else cohort.kickoff_date,
+            'name': cohort.name,
+            'slug': cohort.slug,
+            'stage': cohort.stage,
+            'available_as_saas': cohort.available_as_saas,
         },
         'created_at': self.bc.datetime.to_iso_string(cohort_user.created_at),
         'educational_status': cohort_user.educational_status,
@@ -70,11 +63,10 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -102,11 +94,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     def test_cohort_id_user_id_put_with_bad_user_id(self):
         """Test /cohort/:id/user/:id without auth"""
         model = self.generate_models(authenticate=True, cohort=True)
-        url = reverse_lazy('admissions:cohort_id_user_id',
-                           kwargs={
-                               'cohort_id': model.cohort.id,
-                               'user_id': 999
-                           })
+        url = reverse_lazy('admissions:cohort_id_user_id', kwargs={'cohort_id': model.cohort.id, 'user_id': 999})
         data = {}
         response = self.client.put(url, data, format='json')
         json = response.json()
@@ -200,12 +188,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         data = {'schedule': model.syllabus_schedule.id}
         response = self.client.put(url, data, format='json')
         json = response.json()
-        expected = put_serializer(self,
-                                  model.cohort_user,
-                                  model.cohort,
-                                  model.user,
-                                  model.profile_academy,
-                                  data={})
+        expected = put_serializer(self, model.cohort_user, model.cohort, model.user, model.profile_academy, data={})
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -225,11 +208,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                      syllabus_schedule=True,
                                      profile_academy=True,
                                      cohort_user=True)
-        url = reverse_lazy('admissions:cohort_id_user_id',
-                           kwargs={
-                               'cohort_id': model.cohort.id,
-                               'user_id': 9999
-                           })
+        url = reverse_lazy('admissions:cohort_id_user_id', kwargs={'cohort_id': model.cohort.id, 'user_id': 9999})
         data = {'schedule': model.syllabus_schedule.id}
         response = self.client.delete(url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -247,11 +226,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                      syllabus_schedule=True,
                                      profile_academy=True,
                                      cohort_user=True)
-        url = reverse_lazy('admissions:cohort_id_user_id',
-                           kwargs={
-                               'cohort_id': 9999,
-                               'user_id': model.user.id
-                           })
+        url = reverse_lazy('admissions:cohort_id_user_id', kwargs={'cohort_id': 9999, 'user_id': model.user.id})
         data = {'schedule': model.syllabus_schedule.id}
         response = self.client.delete(url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -328,11 +303,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_cohort_id_user_id_put_with_unsuccess_finantial_status(self):
         """Test /cohort/:id/user/:id without auth"""
-        model = self.generate_models(authenticate=True,
-                                     cohort=True,
-                                     user=True,
-                                     profile_academy=True,
-                                     cohort_user=True)
+        model = self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True, cohort_user=True)
         url = reverse_lazy('admissions:cohort_id_user_id',
                            kwargs={
                                'cohort_id': model.cohort.id,

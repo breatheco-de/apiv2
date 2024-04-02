@@ -32,8 +32,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     def test_remove_certificate_screenshot_with_invalid_id(self):
         """remove_certificate_screenshot don't call open in development environment"""
 
-        with self.assertRaisesMessage(UserSpecialty.DoesNotExist,
-                                      'UserSpecialty matching query does not exist.'):
+        with self.assertRaisesMessage(UserSpecialty.DoesNotExist, 'UserSpecialty matching query does not exist.'):
             remove_certificate_screenshot(1)
 
         self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [])
@@ -147,8 +146,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
         self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [
             {
                 **self.remove_is_clean_for_one_item(self.bc.format.to_dict(model.user_specialty)),
-                'preview_url':
-                '',
+                'preview_url': '',
             },
         ])
 

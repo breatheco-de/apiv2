@@ -14,12 +14,7 @@ class Command(BaseCommand):
             action='store_true',
             help='Delete and add again',
         )
-        parser.add_argument('--limit',
-                            action='store',
-                            dest='limit',
-                            type=int,
-                            default=0,
-                            help='How many to import')
+        parser.add_argument('--limit', action='store', dest='limit', type=int, default=0, help='How many to import')
 
     def handle(self, *args, **options):
         if 'entity' not in options:

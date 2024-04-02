@@ -118,9 +118,7 @@ class MarketingTestSuite(ProvisioningTestCase):
         model = self.bc.database.create(user=1)
         self.client.force_authenticate(model.user)
 
-        self.headers(academy=1,
-                     accept='application/json',
-                     content_disposition='attachment; filename="filename.csv"')
+        self.headers(academy=1, accept='application/json', content_disposition='attachment; filename="filename.csv"')
 
         url = reverse_lazy('provisioning:academy_userconsumption')
 
@@ -139,10 +137,7 @@ class MarketingTestSuite(ProvisioningTestCase):
     # Then: Should return empty csv
     def test_no_activity(self):
 
-        model = self.bc.database.create(user=1,
-                                        profile_academy=1,
-                                        role=1,
-                                        capability='read_provisioning_activity')
+        model = self.bc.database.create(user=1, profile_academy=1, role=1, capability='read_provisioning_activity')
         self.client.force_authenticate(model.user)
 
         self.headers(academy=1, accept='text/csv', content_disposition='attachment; filename="filename.csv"')
@@ -205,9 +200,7 @@ class MarketingTestSuite(ProvisioningTestCase):
                                         provisioning_bill=1)
         self.client.force_authenticate(model.user)
 
-        self.headers(academy=1,
-                     accept='application/json',
-                     content_disposition='attachment; filename="filename.csv"')
+        self.headers(academy=1, accept='application/json', content_disposition='attachment; filename="filename.csv"')
 
         url = reverse_lazy('provisioning:academy_userconsumption')
 
@@ -269,8 +262,7 @@ class MarketingTestSuite(ProvisioningTestCase):
         query = self.bc.format.lookup(*args, **kwargs)
         url = reverse_lazy('provisioning:academy_userconsumption') + '?' + self.bc.format.querystring(query)
 
-        self.assertEqual([x for x in query],
-                         ['hash', 'username', 'status', 'product_name', 'sku', 'start', 'end'])
+        self.assertEqual([x for x in query], ['hash', 'username', 'status', 'product_name', 'sku', 'start', 'end'])
 
         response = self.client.get(url)
 

@@ -22,9 +22,7 @@ def get_user_label(self):
 
 User.add_to_class('__str__', get_user_label)
 
-__all__ = [
-    'UserAdmissions', 'Country', 'City', 'Academy', 'Syllabus', 'Cohort', 'CohortUser', 'CohortTimeSlot'
-]
+__all__ = ['UserAdmissions', 'Country', 'City', 'Academy', 'Syllabus', 'Cohort', 'CohortUser', 'CohortTimeSlot']
 
 
 class UserAdmissions(User):
@@ -69,9 +67,7 @@ class Academy(models.Model):
     name = models.CharField(max_length=150, db_index=True)
     legal_name = models.CharField(max_length=150, db_index=True, default=None, null=True, blank=True)
     logo_url = models.CharField(max_length=255)
-    icon_url = models.CharField(max_length=255,
-                                help_text='It has to be a square',
-                                default='/static/icons/picture.png')
+    icon_url = models.CharField(max_length=255, help_text='It has to be a square', default='/static/icons/picture.png')
     website_url = models.CharField(max_length=255, blank=True, null=True, default=None)
     white_label_url = models.CharField(max_length=255, blank=True, null=True, default=None)
 
@@ -83,10 +79,7 @@ class Academy(models.Model):
     phone_regex = RegexValidator(
         regex=r'^\+?1?\d{9,15}$',
         message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
-    marketing_phone = models.CharField(validators=[phone_regex],
-                                       max_length=17,
-                                       blank=True,
-                                       null=True,
+    marketing_phone = models.CharField(validators=[phone_regex], max_length=17, blank=True, null=True,
                                        default=None)  # validators should be a list
 
     twitter_handle = models.CharField(max_length=15, blank=True, null=True, default=None)
@@ -110,8 +103,9 @@ class Academy(models.Model):
                                             blank=True,
                                             db_index=True)
 
-    available_as_saas = models.BooleanField(
-        default=False, help_text='Academies available as SAAS will be sold thru 4Geeks.com', db_index=True)
+    available_as_saas = models.BooleanField(default=False,
+                                            help_text='Academies available as SAAS will be sold thru 4Geeks.com',
+                                            db_index=True)
 
     is_hidden_on_prework = models.BooleanField(
         default=True,
@@ -235,10 +229,7 @@ class SyllabusVersion(models.Model):
     status = models.CharField(max_length=15, choices=VERSION_STATUS, default=PUBLISHED, db_index=True)
     change_log_details = models.TextField(max_length=450, blank=True, null=True, default=None)
 
-    integrity_status = models.CharField(max_length=15,
-                                        choices=INTEGRITY_STATUS,
-                                        default=PENDING,
-                                        db_index=True)
+    integrity_status = models.CharField(max_length=15, choices=INTEGRITY_STATUS, default=PENDING, db_index=True)
     integrity_check_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
     integrity_report = models.JSONField(null=True, blank=True, default=None)
 
@@ -312,8 +303,8 @@ class Cohort(models.Model):
 
     kickoff_date = models.DateTimeField(db_index=True)
     ending_date = models.DateTimeField(blank=True, null=True, db_index=True)
-    current_day = models.IntegerField(
-        help_text='Each day the teacher takes attendancy and increases the day in one', default=1)
+    current_day = models.IntegerField(help_text='Each day the teacher takes attendancy and increases the day in one',
+                                      default=1)
     current_module = models.IntegerField(
         null=True,
         default=None,
@@ -324,8 +315,7 @@ class Cohort(models.Model):
     stage = models.CharField(max_length=15, choices=COHORT_STAGE, default=INACTIVE, db_index=True)
     private = models.BooleanField(
         default=False,
-        help_text=
-        'It will not show on the public API endpoints but you will still be able to add people manually',
+        help_text='It will not show on the public API endpoints but you will still be able to add people manually',
         db_index=True)
     accepts_enrollment_suggestions = models.BooleanField(
         default=True, help_text='The system will suggest won leads to be added to this cohort', db_index=True)
@@ -333,9 +323,7 @@ class Cohort(models.Model):
     never_ends = models.BooleanField(default=False, db_index=True)
 
     remote_available = models.BooleanField(
-        default=True,
-        help_text='True (default) if the students from other cities can take it from home',
-        db_index=True)
+        default=True, help_text='True (default) if the students from other cities can take it from home', db_index=True)
     online_meeting_url = models.URLField(max_length=255, blank=True, default=None, null=True)
 
     timezone = models.CharField(max_length=50, null=True, default=None, blank=True, db_index=True)
@@ -355,11 +343,7 @@ class Cohort(models.Model):
                                          blank=True)
 
     intro_video = models.URLField(null=True, blank=True, default=None)
-    schedule = models.ForeignKey(SyllabusSchedule,
-                                 on_delete=models.SET_NULL,
-                                 default=None,
-                                 null=True,
-                                 blank=True)
+    schedule = models.ForeignKey(SyllabusSchedule, on_delete=models.SET_NULL, default=None, null=True, blank=True)
 
     is_hidden_on_prework = models.BooleanField(
         default=True,
@@ -480,10 +464,9 @@ class CohortUser(models.Model):
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)
     role = models.CharField(max_length=9, choices=COHORT_ROLE, default=STUDENT, db_index=True)
 
-    watching = models.BooleanField(
-        default=False,
-        help_text='You can active students to the watch list and monitor them closely',
-        db_index=True)
+    watching = models.BooleanField(default=False,
+                                   help_text='You can active students to the watch list and monitor them closely',
+                                   db_index=True)
 
     history_log = models.JSONField(
         default=dict,

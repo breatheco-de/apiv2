@@ -1,9 +1,8 @@
 from django.urls import path
-from .views import (CourseView, create_lead, sync_tags_with_active_campaign,
-                    sync_automations_with_active_campaign, receive_facebook_lead, get_leads, get_leads_report,
-                    AcademyLeadView, AcademyWonLeadView, AcademyTagView, AcademyAutomationView,
-                    activecampaign_webhook, googleads_enrollments, googleads_csv, get_downloadable,
-                    ShortLinkView, create_lead_from_app, UTMView, AcademyProcessView, AcademyAppView,
+from .views import (CourseView, create_lead, sync_tags_with_active_campaign, sync_automations_with_active_campaign,
+                    receive_facebook_lead, get_leads, get_leads_report, AcademyLeadView, AcademyWonLeadView,
+                    AcademyTagView, AcademyAutomationView, activecampaign_webhook, googleads_enrollments, googleads_csv,
+                    get_downloadable, ShortLinkView, create_lead_from_app, UTMView, AcademyProcessView, AcademyAppView,
                     AcademyAliasView, ActiveCampaignView, UploadView, validate_email_from_app, get_alias)
 
 app_name = 'marketing'
@@ -29,9 +28,7 @@ urlpatterns = [
     path('academy/tag', AcademyTagView.as_view(), name='academy_tag'),
     path('academy/tag/<str:tag_slug>', AcademyTagView.as_view(), name='academy_tag_slug'),
     path('academy/automation', AcademyAutomationView.as_view(), name='academy_automation'),
-    path('academy/automation/<int:automation_id>',
-         AcademyAutomationView.as_view(),
-         name='academy_automation_id'),
+    path('academy/automation/<int:automation_id>', AcademyAutomationView.as_view(), name='academy_automation_id'),
     path('academy/short', ShortLinkView.as_view(), name='short'),
     path('academy/short/<slug:short_slug>', ShortLinkView.as_view(), name='short-slug'),
     path('academy/utm', UTMView.as_view(), name='academy_utm'),

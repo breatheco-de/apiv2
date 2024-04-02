@@ -35,8 +35,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         command = Command()
         command.handle()
 
-        self.assertEqual(self.bc.database.list_of('events.LiveClass'),
-                         self.bc.format.to_dict(model.live_class))
+        self.assertEqual(self.bc.database.list_of('events.LiveClass'), self.bc.format.to_dict(model.live_class))
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW - DELTA))
     def test_with_two_live_classes_before_ending_at_more_30_minutes__started_at_set(self):
@@ -48,8 +47,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         command = Command()
         command.handle()
 
-        self.assertEqual(self.bc.database.list_of('events.LiveClass'),
-                         self.bc.format.to_dict(model.live_class))
+        self.assertEqual(self.bc.database.list_of('events.LiveClass'), self.bc.format.to_dict(model.live_class))
 
     """
     🔽🔽🔽 With two LiveClass after ending_at + 30 minutes
@@ -64,8 +62,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         command = Command()
         command.handle()
 
-        self.assertEqual(self.bc.database.list_of('events.LiveClass'),
-                         self.bc.format.to_dict(model.live_class))
+        self.assertEqual(self.bc.database.list_of('events.LiveClass'), self.bc.format.to_dict(model.live_class))
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW + DELTA))
     def test_with_two_live_classes_after_ending_at_more_30_minutes__started_at_set(self):

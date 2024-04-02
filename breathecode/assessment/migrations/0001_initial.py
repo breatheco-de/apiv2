@@ -20,17 +20,15 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Assessment',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('slug', models.SlugField(max_length=200, unique=True)),
                 ('title', models.CharField(blank=True, max_length=255)),
                 ('lang', models.CharField(blank=True, default='en', max_length=3)),
                 ('score_threshold',
-                 models.IntegerField(
-                     blank=True,
-                     default=None,
-                     help_text='You can set a threshold to determine if the user score is successfull',
-                     null=True)),
+                 models.IntegerField(blank=True,
+                                     default=None,
+                                     help_text='You can set a threshold to determine if the user score is successfull',
+                                     null=True)),
                 ('private', models.BooleanField(default=False)),
                 ('comment', models.CharField(blank=True, default=None, max_length=255, null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
@@ -52,8 +50,7 @@ class Migration(migrations.Migration):
                  models.ForeignKey(
                      blank=True,
                      default=None,
-                     help_text=
-                     'The original translation (will only be set if the quiz is a translation of another one)',
+                     help_text='The original translation (will only be set if the quiz is a translation of another one)',
                      null=True,
                      on_delete=django.db.models.deletion.CASCADE,
                      related_name='translations',
@@ -76,12 +73,10 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='UserAssessment',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('title', models.CharField(blank=True, max_length=200)),
                 ('lang', models.CharField(blank=True, default='en', max_length=3)),
-                ('total_score',
-                 models.FloatField(help_text='Total sum of all chosen options in the assesment')),
+                ('total_score', models.FloatField(help_text='Total sum of all chosen options in the assesment')),
                 ('opened', models.BooleanField(default=False)),
                 ('status',
                  models.CharField(choices=[('DRAFT', 'DRAFT'), ('SENT', 'Sent'), ('EXPIRED', 'Expired')],
@@ -115,8 +110,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Question',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('title', models.TextField()),
                 ('help_text', models.CharField(blank=True, default=None, max_length=255, null=True)),
                 ('lang', models.CharField(blank=True, default='en', max_length=3)),
@@ -144,8 +138,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Option',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('title', models.TextField()),
                 ('help_text', models.CharField(blank=True, default=None, max_length=255, null=True)),
                 ('lang', models.CharField(blank=True, default='en', max_length=3)),
@@ -167,8 +160,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Answer',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('value', models.TextField()),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),

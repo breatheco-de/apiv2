@@ -68,8 +68,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         for current in statuses:
             mentorship_sessions = [
                 {
-                    'ends_at':
-                    UTC_NOW - timedelta(seconds=random.randint(7201, 10000)),  # eq or gt than 2 hours
+                    'ends_at': UTC_NOW - timedelta(seconds=random.randint(7201, 10000)),  # eq or gt than 2 hours
                     'status': current,
                 } for _ in range(0, 2)
             ]
@@ -106,8 +105,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         for current in statuses:
             mentorship_sessions = [
                 {
-                    'ends_at':
-                    UTC_NOW - timedelta(seconds=random.randint(7201, 10000)),  # eq or gt than 2 hours
+                    'ends_at': UTC_NOW - timedelta(seconds=random.randint(7201, 10000)),  # eq or gt than 2 hours
                     'status': current,
                 } for _ in range(0, 2)
             ]

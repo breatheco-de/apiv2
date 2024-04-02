@@ -28,8 +28,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='asset',
             name='status',
-            field=models.CharField(choices=[('UNASSIGNED', 'Unassigned'), ('WRITING', 'Writing'),
-                                            ('DRAFT', 'Draft'), ('PUBLISHED', 'Published')],
+            field=models.CharField(choices=[('UNASSIGNED', 'Unassigned'), ('WRITING', 'Writing'), ('DRAFT', 'Draft'),
+                                            ('PUBLISHED', 'Published')],
                                    default='DRAFT',
                                    help_text='Related to the publishing of the asset',
                                    max_length=20),

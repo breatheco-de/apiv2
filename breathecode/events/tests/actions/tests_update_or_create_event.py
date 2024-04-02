@@ -139,8 +139,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(logging.Logger.warning.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
-        self.assertEqual(actions.create_or_update_venue.call_args_list,
-                         [call(event['venue'], model.organization)])
+        self.assertEqual(actions.create_or_update_venue.call_args_list, [call(event['venue'], model.organization)])
         self.assertEqual(actions.create_or_update_organizer.call_args_list,
                          [call(event['organizer'], model.organization, force_update=True)])
 
@@ -223,8 +222,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(logging.Logger.warning.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
-        self.assertEqual(actions.create_or_update_venue.call_args_list,
-                         [call(event['venue'], model.organization)])
+        self.assertEqual(actions.create_or_update_venue.call_args_list, [call(event['venue'], model.organization)])
         self.assertEqual(actions.create_or_update_organizer.call_args_list,
                          [call(event['organizer'], model.organization, force_update=True)])
 

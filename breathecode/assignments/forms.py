@@ -15,13 +15,13 @@ class DeliverAssigntmentForm(forms.Form):
             'type': 'url',
             'class': 'form-control',
         }))
-    live_url = forms.URLField(required=False,
-                              widget=forms.TextInput(
-                                  attrs={
-                                      'placeholder': 'Optionally you can also specify the live URL',
-                                      'type': 'url',
-                                      'class': 'form-control',
-                                  }))
+    live_url = forms.URLField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Optionally you can also specify the live URL',
+            'type': 'url',
+            'class': 'form-control',
+        }))
 
     def __init__(self, params, *args, **kwargs):
         super(forms.Form, self).__init__(params, *args, **kwargs)

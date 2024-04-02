@@ -16,8 +16,7 @@ logger = logging.getLogger(__name__)
 
 def field_is_requested(info, field_name):
     """Check if a field is being requested in the current query."""
-    return any(selection.name.value == field_name
-               for selection in info.field_nodes[0].selection_set.selections)
+    return any(selection.name.value == field_name for selection in info.field_nodes[0].selection_set.selections)
 
 
 def fields_requested(info):
@@ -212,8 +211,7 @@ class Admissions(graphene.ObjectType):
                 latitude = float(latitude)
                 longitude = float(longitude)
             except Exception:
-                raise GraphQLError('Bad coordinates, the format is latitude,longitude',
-                                   slug='bad-coordinates')
+                raise GraphQLError('Bad coordinates, the format is latitude,longitude', slug='bad-coordinates')
 
             if latitude > 90 or latitude < -90:
                 raise GraphQLError('Bad latitude', slug='bad-latitude')
@@ -221,8 +219,7 @@ class Admissions(graphene.ObjectType):
             if longitude > 180 or longitude < -180:
                 raise GraphQLError('Bad longitude', slug='bad-longitude')
 
-            items = items.annotate(longitude=Value(longitude, FloatField()),
-                                   latitude=Value(latitude, FloatField()))
+            items = items.annotate(longitude=Value(longitude, FloatField()), latitude=Value(latitude, FloatField()))
 
         saas = kwargs.get('saas', '').lower()
         if saas == 'true':

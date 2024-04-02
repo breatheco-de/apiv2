@@ -94,9 +94,8 @@ def get_sample_data(request, hook_id=None):
         items = items.filter(Q(event__icontains=like) | Q(target__icontains=like))
 
     if not filtered:
-        return Response(
-            {'details': 'Please specify hook id or filters get have an idea on what sample data you want'},
-            status=status.HTTP_400_BAD_REQUEST)
+        return Response({'details': 'Please specify hook id or filters get have an idea on what sample data you want'},
+                        status=status.HTTP_400_BAD_REQUEST)
 
     single = items.first()
     if single is None:

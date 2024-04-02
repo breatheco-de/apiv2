@@ -142,11 +142,7 @@ class CacheExtension(ExtensionBase):
             timeout = user_timeout()
 
         try:
-            res = self._cache.set(data,
-                                  format=format,
-                                  params=params,
-                                  timeout=timeout,
-                                  encoding=self._encoding)
+            res = self._cache.set(data, format=format, params=params, timeout=timeout, encoding=self._encoding)
             data = res['content']
             headers = {
                 **headers,

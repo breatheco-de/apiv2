@@ -51,8 +51,7 @@ CONSUMER_MOCK = MagicMock(wraps=consumer)
 time_of_life = timedelta(days=random.randint(1, 100))
 
 
-def consumer_with_time_of_life(context: PermissionContextType, args: tuple,
-                               kwargs: dict) -> tuple[dict, tuple, dict]:
+def consumer_with_time_of_life(context: PermissionContextType, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
     # remember the objects are passed by reference, so you need to clone them to avoid modify the object
     # receive by the mock causing side effects
     args = (*args, PERMISSION)
@@ -1230,8 +1229,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(
-            self):
+    def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
@@ -1316,8 +1314,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(
-            self):
+    def test__function__get_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2, 'name': 'secret'}
@@ -1652,8 +1649,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(
-            self):
+    def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
@@ -1738,8 +1734,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__put_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(
-            self):
+    def test__function__put_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2, 'name': 'secret'}
@@ -1864,8 +1859,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(
-            self):
+    def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
@@ -1921,8 +1915,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_gte_1(
-            self):
+    def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
@@ -1951,8 +1944,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(
-            self):
+    def test__function__delete_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2, 'name': 'secret'}
@@ -2401,8 +2393,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(
-            self):
+    def test__view__get__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
         CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
 
         user = {'user_permissions': []}
@@ -2616,8 +2607,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(
-            self):
+    def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
@@ -2759,8 +2749,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(
-            self):
+    def test__function__get_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2, 'name': 'secret'}
@@ -2916,8 +2905,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(
-            self):
+    def test__view__get_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
         CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
 
         user = {'user_permissions': []}
@@ -3433,8 +3421,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(
-            self):
+    def test__view__post__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
         CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
 
         user = {'user_permissions': []}
@@ -3648,8 +3635,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(
-            self):
+    def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
@@ -3791,8 +3777,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__put_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(
-            self):
+    def test__function__put_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2, 'name': 'secret'}
@@ -3948,8 +3933,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(
-            self):
+    def test__view__put_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
         CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
 
         user = {'user_permissions': []}
@@ -4167,8 +4151,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(
-            self):
+    def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
@@ -4262,8 +4245,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_gte_1(
-            self):
+    def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
@@ -4311,8 +4293,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(
-            self):
+    def test__function__delete_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
         user = {'user_permissions': []}
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2, 'name': 'secret'}
@@ -4468,8 +4449,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(
-            self):
+    def test__view__delete_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
         CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
 
         user = {'user_permissions': []}
@@ -6481,8 +6461,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(
-            self):
+    def test__view__get__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
         CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
 
         user = {'user_permissions': []}
@@ -6964,8 +6943,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(
-            self):
+    def test__view__get_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
         CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
 
         user = {'user_permissions': []}
@@ -7451,8 +7429,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(
-            self):
+    def test__view__post__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
         CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
 
         user = {'user_permissions': []}
@@ -7934,8 +7911,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(
-            self):
+    def test__view__put_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
         CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
 
         user = {'user_permissions': []}
@@ -8423,8 +8399,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
     @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(
-            self):
+    def test__view__delete_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
         CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
 
         user = {'user_permissions': []}

@@ -19,15 +19,14 @@ class Migration(migrations.Migration):
             field=models.TextField(
                 blank=True,
                 default=None,
-                help_text=
-                'Brief for the copywriters, mainly used to describe what this lessons needs to be about',
+                help_text='Brief for the copywriters, mainly used to describe what this lessons needs to be about',
                 null=True),
         ),
         migrations.AlterField(
             model_name='asset',
             name='status',
-            field=models.CharField(choices=[('UNASSIGNED', 'Unassigned'), ('WRITING', 'Writing'),
-                                            ('DRAFT', 'Draft'), ('PUBLISHED', 'Published')],
+            field=models.CharField(choices=[('UNASSIGNED', 'Unassigned'), ('WRITING', 'Writing'), ('DRAFT', 'Draft'),
+                                            ('PUBLISHED', 'Published')],
                                    default='UNASSIGNED',
                                    help_text='Related to the publishing of the asset',
                                    max_length=20),
@@ -35,13 +34,11 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='AssetComment',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('text', models.TextField()),
                 ('resolved', models.BooleanField(default=False)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('asset', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
-                                            to='registry.asset')),
+                ('asset', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='registry.asset')),
                 ('author',
                  models.ForeignKey(blank=True,
                                    default=None,

@@ -66,12 +66,10 @@ class Command(BaseCommand, DatetimeMixin):
             if not issubclass(model_cls, Model):
                 continue
 
-            if (hasattr(model_cls, 'Meta') and hasattr(model_cls.Meta, 'abstract')
-                    and model_cls.__name__ != 'User'):
+            if (hasattr(model_cls, 'Meta') and hasattr(model_cls.Meta, 'abstract') and model_cls.__name__ != 'User'):
                 continue
 
-            if (hasattr(model_cls, 'Meta') and hasattr(model_cls.Meta, 'proxy')
-                    and model_cls.__name__ != 'User'):
+            if (hasattr(model_cls, 'Meta') and hasattr(model_cls.Meta, 'proxy') and model_cls.__name__ != 'User'):
                 continue
 
             if model_cls.__name__ in self.all_model_names:

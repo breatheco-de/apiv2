@@ -1,8 +1,8 @@
 from datetime import timedelta
 from django.utils import timezone
 from unittest.mock import patch
-from breathecode.tests.mocks import (GOOGLE_CLOUD_PATH, apply_google_cloud_client_mock,
-                                     apply_google_cloud_bucket_mock, apply_google_cloud_blob_mock)
+from breathecode.tests.mocks import (GOOGLE_CLOUD_PATH, apply_google_cloud_client_mock, apply_google_cloud_bucket_mock,
+                                     apply_google_cloud_blob_mock)
 from ..mixins import MonitoringTestCase
 from breathecode.monitoring.actions import run_script
 
@@ -115,8 +115,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
                                     })
         sent_at = timezone.now() - timedelta(weeks=1)
         models = [
-            self.generate_models(survey=True, survey_kwargs={'sent_at': sent_at}, models=base)
-            for _ in range(0, 2)
+            self.generate_models(survey=True, survey_kwargs={'sent_at': sent_at}, models=base) for _ in range(0, 2)
         ]
 
         script = run_script(models[1].monitor_script)
@@ -157,12 +156,10 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         sent_at = timezone.now() - timedelta(weeks=6)
 
         models = [
-            self.generate_models(survey=True,
-                                 survey_kwargs={
-                                     'status': 'SENT',
-                                     'sent_at': sent_at
-                                 },
-                                 models=base) for _ in range(0, 2)
+            self.generate_models(survey=True, survey_kwargs={
+                'status': 'SENT',
+                'sent_at': sent_at
+            }, models=base) for _ in range(0, 2)
         ]
 
         script = run_script(models[1].monitor_script)
@@ -254,8 +251,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         sent_at = timezone.now() - timedelta(weeks=6)
 
         models = [
-            self.generate_models(survey=True, survey_kwargs={'sent_at': sent_at}, models=base)
-            for _ in range(0, 2)
+            self.generate_models(survey=True, survey_kwargs={'sent_at': sent_at}, models=base) for _ in range(0, 2)
         ]
 
         script = run_script(models[1].monitor_script)

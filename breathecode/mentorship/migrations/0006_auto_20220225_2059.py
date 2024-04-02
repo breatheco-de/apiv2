@@ -36,11 +36,10 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='mentorshipsession',
             name='mentor_joined_at',
-            field=models.DateTimeField(
-                blank=True,
-                default=None,
-                help_text='Exact moment the mentor joined the meeting for the first time',
-                null=True),
+            field=models.DateTimeField(blank=True,
+                                       default=None,
+                                       help_text='Exact moment the mentor joined the meeting for the first time',
+                                       null=True),
         ),
         migrations.AddField(
             model_name='mentorshipsession',
@@ -62,11 +61,10 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='mentorshipsession',
             name='ends_at',
-            field=models.DateTimeField(
-                blank=True,
-                default=None,
-                help_text='Scheduled end date, will be used as meeting expiration as well',
-                null=True),
+            field=models.DateTimeField(blank=True,
+                                       default=None,
+                                       help_text='Scheduled end date, will be used as meeting expiration as well',
+                                       null=True),
         ),
         migrations.AlterField(
             model_name='mentorshipsession',

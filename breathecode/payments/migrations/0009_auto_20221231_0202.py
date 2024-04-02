@@ -16,15 +16,11 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='MentorshipServiceSet',
             fields=[
-                ('id',
-                 models.BigAutoField(auto_created=True, primary_key=True, serialize=False,
-                                     verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('slug', models.SlugField(max_length=100, unique=True)),
                 ('name', models.CharField(max_length=150)),
-                ('academy',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
-                ('mentorship_services', models.ManyToManyField(blank=True,
-                                                               to='mentorship.MentorshipService')),
+                ('academy', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
+                ('mentorship_services', models.ManyToManyField(blank=True, to='mentorship.MentorshipService')),
             ],
         ),
         migrations.RemoveField(

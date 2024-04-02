@@ -30,7 +30,6 @@ class Migration(migrations.Migration):
             name='free_for_bootcamps',
             field=models.BooleanField(
                 default=True,
-                help_text='Users that belong to other no-saas academies will be able to join without consuming'
-            ),
+                help_text='Users that belong to other no-saas academies will be able to join without consuming'),
         ),
     ]

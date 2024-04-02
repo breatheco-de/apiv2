@@ -13,8 +13,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='cohort',
             name='available_as_saas',
-            field=models.BooleanField(
-                default=False,
-                help_text='Cohorts available as SAAS will be sold through plans at 4Geeks.com'),
+            field=models.BooleanField(default=False,
+                                      help_text='Cohorts available as SAAS will be sold through plans at 4Geeks.com'),
         ),
     ]

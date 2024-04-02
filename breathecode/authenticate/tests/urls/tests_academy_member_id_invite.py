@@ -211,10 +211,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         response = self.client.get(url)
         json = response.json()
-        expected = {
-            'detail': 'user-invite-and-profile-academy-with-status-invited-not-found',
-            'status_code': 404
-        }
+        expected = {'detail': 'user-invite-and-profile-academy-with-status-invited-not-found', 'status_code': 404}
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 404)
 
@@ -327,9 +324,8 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @patch(
         'requests.post',
-        apply_requests_post_mock([
-            (201, f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages", {})
-        ]))
+        apply_requests_post_mock([(201, f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages", {})
+                                  ]))
     def test_resend_invite_with_invitation(self):
         """Test """
         self.headers(academy=1)
@@ -426,8 +422,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
 
-        self.assertEqual(self.all_user_invite_dict(),
-                         [{
-                             **self.model_to_dict(model, 'user_invite'),
-                             'sent_at': past_time,
-                         }])
+        self.assertEqual(self.all_user_invite_dict(), [{
+            **self.model_to_dict(model, 'user_invite'),
+            'sent_at': past_time,
+        }])

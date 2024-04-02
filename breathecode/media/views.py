@@ -236,8 +236,7 @@ class MediaView(ViewSet, GenerateLookupsMixin):
                         raise ValidationException(translation(
                             lang,
                             en='The circuit breaker is open due to an error, please try again later',
-                            es=
-                            'El circuit breaker está abierto debido a un error, por favor intente más tarde',
+                            es='El circuit breaker está abierto debido a un error, por favor intente más tarde',
                             slug='circuit-breaker-open'),
                                                   slug='circuit-breaker-open',
                                                   data={'service': 'Google Cloud Storage'},
@@ -434,8 +433,7 @@ class UploadView(APIView):
         for index in range(0, len(files)):
             file = files[index]
             if file.content_type not in MIME_ALLOW:
-                raise ValidationException(
-                    f'You can upload only files on the following formats: {",".join(MIME_ALLOW)}')
+                raise ValidationException(f'You can upload only files on the following formats: {",".join(MIME_ALLOW)}')
 
         for index in range(0, len(files)):
             file = files[index]
@@ -495,8 +493,7 @@ class UploadView(APIView):
                         raise ValidationException(translation(
                             lang,
                             en='The circuit breaker is open due to an error, please try again later',
-                            es=
-                            'El circuit breaker está abierto debido a un error, por favor intente más tarde',
+                            es='El circuit breaker está abierto debido a un error, por favor intente más tarde',
                             slug='circuit-breaker-open'),
                                                   slug='circuit-breaker-open',
                                                   data={'service': 'Google Cloud Storage'},
@@ -523,10 +520,7 @@ class UploadView(APIView):
     def put(self, request, academy_id=None):
         lang = get_user_language(request)
         upload = self.upload(request, lang, academy_id, update=True)
-        serializer = MediaPUTSerializer(upload['instance'],
-                                        data=upload['data'],
-                                        context=upload['data'],
-                                        many=True)
+        serializer = MediaPUTSerializer(upload['instance'], data=upload['data'], context=upload['data'], many=True)
 
         if serializer.is_valid():
             serializer.save()
@@ -572,8 +566,7 @@ class MaskingUrlView(APIView):
         media.hits = media.hits + 1
         media.save()
 
-        resolution = MediaResolution.objects.filter(Q(width=width)
-                                                    | Q(height=height), hash=media.hash).first()
+        resolution = MediaResolution.objects.filter(Q(width=width) | Q(height=height), hash=media.hash).first()
 
         if (width or height) and not resolution:
             func = FunctionV1(region='us-central1', project_id=google_project_id(), name='resize-image')
@@ -619,8 +612,8 @@ class MaskingUrlView(APIView):
         )
 
         header_keys = [
-            x for x in response.headers.keys() if x != 'Transfer-Encoding' and x != 'Content-Encoding'
-            and x != 'Keep-Alive' and x != 'Connection'
+            x for x in response.headers.keys()
+            if x != 'Transfer-Encoding' and x != 'Content-Encoding' and x != 'Keep-Alive' and x != 'Connection'
         ]
 
         for header in header_keys:

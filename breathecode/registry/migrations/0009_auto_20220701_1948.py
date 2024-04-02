@@ -13,8 +13,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='assetcategory',
             name='visibility',
-            field=models.CharField(choices=[('PUBLIC', 'Public'), ('UNLISTED', 'Unlisted'),
-                                            ('PRIVATE', 'Private')],
+            field=models.CharField(choices=[('PUBLIC', 'Public'), ('UNLISTED', 'Unlisted'), ('PRIVATE', 'Private')],
                                    default='PUBLIC',
                                    max_length=20),
         ),
@@ -30,8 +29,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='assettechnology',
             name='visibility',
-            field=models.CharField(choices=[('PUBLIC', 'Public'), ('UNLISTED', 'Unlisted'),
-                                            ('PRIVATE', 'Private')],
+            field=models.CharField(choices=[('PUBLIC', 'Public'), ('UNLISTED', 'Unlisted'), ('PRIVATE', 'Private')],
                                    default='PUBLIC',
                                    max_length=20),
         ),
@@ -47,8 +45,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='keywordcluster',
             name='visibility',
-            field=models.CharField(choices=[('PUBLIC', 'Public'), ('UNLISTED', 'Unlisted'),
-                                            ('PRIVATE', 'Private')],
+            field=models.CharField(choices=[('PUBLIC', 'Public'), ('UNLISTED', 'Unlisted'), ('PRIVATE', 'Private')],
                                    default='PUBLIC',
                                    max_length=20),
         ),

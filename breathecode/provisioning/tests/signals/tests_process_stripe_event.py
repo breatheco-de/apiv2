@@ -37,8 +37,7 @@ class TestMakeBills(LegacyAPITestCase):
 
         model = self.bc.database.create(stripe_event=1)
         db = self.bc.format.to_dict(model.stripe_event)
-        monitoring_signals.stripe_webhook.send(instance=model.stripe_event,
-                                               sender=model.stripe_event.__class__)
+        monitoring_signals.stripe_webhook.send(instance=model.stripe_event, sender=model.stripe_event.__class__)
 
         self.assertEqual(self.bc.database.list_of('monitoring.StripeEvent'), [
             {
@@ -62,8 +61,7 @@ class TestMakeBills(LegacyAPITestCase):
         stripe_event = {'type': 'checkout.session.completed'}
         model = self.bc.database.create(stripe_event=stripe_event)
         db = self.bc.format.to_dict(model.stripe_event)
-        monitoring_signals.stripe_webhook.send(instance=model.stripe_event,
-                                               sender=model.stripe_event.__class__)
+        monitoring_signals.stripe_webhook.send(instance=model.stripe_event, sender=model.stripe_event.__class__)
 
         self.assertEqual(self.bc.database.list_of('monitoring.StripeEvent'), [
             {
@@ -95,8 +93,7 @@ class TestMakeBills(LegacyAPITestCase):
         }
         model = self.bc.database.create(stripe_event=stripe_event)
         db = self.bc.format.to_dict(model.stripe_event)
-        monitoring_signals.stripe_webhook.send(instance=model.stripe_event,
-                                               sender=model.stripe_event.__class__)
+        monitoring_signals.stripe_webhook.send(instance=model.stripe_event, sender=model.stripe_event.__class__)
 
         self.assertEqual(self.bc.database.list_of('monitoring.StripeEvent'), [
             {
@@ -126,8 +123,7 @@ class TestMakeBills(LegacyAPITestCase):
         }
         model = self.bc.database.create(stripe_event=stripe_event, provisioning_bill=2)
         db = self.bc.format.to_dict(model.stripe_event)
-        monitoring_signals.stripe_webhook.send(instance=model.stripe_event,
-                                               sender=model.stripe_event.__class__)
+        monitoring_signals.stripe_webhook.send(instance=model.stripe_event, sender=model.stripe_event.__class__)
 
         self.assertEqual(self.bc.database.list_of('monitoring.StripeEvent'), [
             {
@@ -161,8 +157,7 @@ class TestMakeBills(LegacyAPITestCase):
         provisioning_bill = {'stripe_id': STRIPE_ID}
         model = self.bc.database.create(stripe_event=stripe_event, provisioning_bill=provisioning_bill)
         db = self.bc.format.to_dict(model.stripe_event)
-        monitoring_signals.stripe_webhook.send(instance=model.stripe_event,
-                                               sender=model.stripe_event.__class__)
+        monitoring_signals.stripe_webhook.send(instance=model.stripe_event, sender=model.stripe_event.__class__)
 
         self.assertEqual(self.bc.database.list_of('monitoring.StripeEvent'), [
             {

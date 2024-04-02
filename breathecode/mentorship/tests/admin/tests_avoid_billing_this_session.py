@@ -48,8 +48,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
 
         avoid_billing_this_session(None, None, queryset)
 
-        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'),
-                         [{
-                             **x,
-                             'allow_billing': False,
-                         } for x in self.bc.format.to_dict(model.mentorship_session)])
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [{
+            **x,
+            'allow_billing': False,
+        } for x in self.bc.format.to_dict(model.mentorship_session)])

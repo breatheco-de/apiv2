@@ -16,8 +16,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Survey',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('lang', models.CharField(blank=True, default='en', max_length=3)),
                 ('avg_score',
                  models.CharField(blank=True,
@@ -35,8 +34,7 @@ class Migration(migrations.Migration):
                                       help_text='No one will be able to answer after this period of time')),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('cohort',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.cohort')),
+                ('cohort', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.cohort')),
             ],
         ),
         migrations.AddField(

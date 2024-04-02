@@ -15,11 +15,10 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.post(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED,
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED,
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_github_reset_link_without_capability(self):
@@ -42,10 +41,7 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /auth/member/<profile_academy_id>/token"""
         role = 'pikachu'
         self.headers(academy=1)
-        self.generate_models(authenticate=True,
-                             capability='generate_temporal_token',
-                             profile_academy=True,
-                             role=role)
+        self.generate_models(authenticate=True, capability='generate_temporal_token', profile_academy=True, role=role)
         url = reverse_lazy('authenticate:profile_academy_reset_github_link', kwargs={'profile_academy_id': 3})
         response = self.client.post(url)
         json = response.json()

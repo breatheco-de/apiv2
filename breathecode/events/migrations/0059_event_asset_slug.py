@@ -16,8 +16,7 @@ class Migration(migrations.Migration):
             field=models.SlugField(
                 blank=True,
                 default=None,
-                help_text=
-                'Is the event is about a project, this field will have the asset slug of that project.',
+                help_text='Is the event is about a project, this field will have the asset slug of that project.',
                 max_length=200,
                 null=True),
         ),

@@ -64,8 +64,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
 
     @patch('django.contrib.messages.success', MagicMock())
     @patch('django.contrib.messages.error', MagicMock())
-    @patch('breathecode.mentorship.actions.mentor_is_ready',
-           MagicMock(side_effect=exceptions.ConnectionError()))
+    @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock(side_effect=exceptions.ConnectionError()))
     def test_with_two_mentor_profiles__with_connection_error(self):
         model = self.bc.database.create(mentor_profile=2)
         MentorProfile = self.bc.database.get_model('mentorship.MentorProfile')
@@ -115,9 +114,8 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
 
     @patch('django.contrib.messages.success', MagicMock())
     @patch('django.contrib.messages.error', MagicMock())
-    @patch(
-        'breathecode.mentorship.actions.mentor_is_ready',
-        MagicMock(side_effect=[exceptions.ConnectionError(), Exception('xyz')]))
+    @patch('breathecode.mentorship.actions.mentor_is_ready',
+           MagicMock(side_effect=[exceptions.ConnectionError(), Exception('xyz')]))
     def test_with_three_mentor_profiles__with_connection_error__with_exception(self):
         model = self.bc.database.create(mentor_profile=2)
         MentorProfile = self.bc.database.get_model('mentorship.MentorProfile')

@@ -1,11 +1,10 @@
 from django.urls import path
 
-from .views import (AcademyCohortSetCohortView, AcademyPlanView, AcademyServiceView,
-                    AcademyAcademyServiceView, AcademySubscriptionView, BagView, CardView, CheckingView,
-                    ConsumableCheckoutView, EventTypeSetView, MeConsumableView, MeInvoiceView,
-                    AcademyInvoiceView, MeSubscriptionCancelView, MeSubscriptionChargeView,
-                    MentorshipServiceSetView, PayView, PlanOfferView, PlanView, ServiceItemView, ServiceView,
-                    MeSubscriptionView)
+from .views import (AcademyCohortSetCohortView, AcademyPlanView, AcademyServiceView, AcademyAcademyServiceView,
+                    AcademySubscriptionView, BagView, CardView, CheckingView, ConsumableCheckoutView, EventTypeSetView,
+                    MeConsumableView, MeInvoiceView, AcademyInvoiceView, MeSubscriptionCancelView,
+                    MeSubscriptionChargeView, MentorshipServiceSetView, PayView, PlanOfferView, PlanView,
+                    ServiceItemView, ServiceView, MeSubscriptionView)
 
 app_name = 'payments'
 urlpatterns = [

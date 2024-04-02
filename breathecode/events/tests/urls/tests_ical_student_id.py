@@ -46,10 +46,7 @@ class AcademyCohortTestSuite(EventTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_ical_cohorts__without_cohort_time_slot(self):
         device_id_kwargs = {'name': 'server'}
-        model = self.generate_models(academy=True,
-                                     device_id=True,
-                                     device_id_kwargs=device_id_kwargs,
-                                     cohort_user=True)
+        model = self.generate_models(academy=True, device_id=True, device_id_kwargs=device_id_kwargs, cohort_user=True)
 
         url = reverse_lazy('events:ical_student_id', kwargs={'user_id': 1})
         response = self.client.get(url)
@@ -205,8 +202,8 @@ class AcademyCohortTestSuite(EventTestCase):
                                                                  next=True),
                                             utc=False)
 
-        starting_at_utc = self.datetime_to_ical(DatetimeInteger.to_utc_datetime(
-            model.cohort_time_slot.timezone, model.cohort_time_slot.starting_at),
+        starting_at_utc = self.datetime_to_ical(DatetimeInteger.to_utc_datetime(model.cohort_time_slot.timezone,
+                                                                                model.cohort_time_slot.starting_at),
                                                 utc=True)
 
         ending_at = self.datetime_to_ical(fix_datetime_weekday(model.cohort.kickoff_date,
@@ -283,8 +280,8 @@ class AcademyCohortTestSuite(EventTestCase):
                                                                  next=True),
                                             utc=False)
 
-        starting_at_utc = self.datetime_to_ical(DatetimeInteger.to_utc_datetime(
-            model.cohort_time_slot.timezone, model.cohort_time_slot.starting_at),
+        starting_at_utc = self.datetime_to_ical(DatetimeInteger.to_utc_datetime(model.cohort_time_slot.timezone,
+                                                                                model.cohort_time_slot.starting_at),
                                                 utc=True)
 
         ending_at = self.datetime_to_ical(fix_datetime_weekday(model.cohort.kickoff_date,
@@ -355,8 +352,8 @@ class AcademyCohortTestSuite(EventTestCase):
                                                                  next=True),
                                             utc=False)
 
-        created_at = self.datetime_to_ical(DatetimeInteger.to_utc_datetime(
-            model.cohort_time_slot.timezone, model.cohort_time_slot.starting_at),
+        created_at = self.datetime_to_ical(DatetimeInteger.to_utc_datetime(model.cohort_time_slot.timezone,
+                                                                           model.cohort_time_slot.starting_at),
                                            utc=True)
 
         ending_at = self.datetime_to_ical(fix_datetime_weekday(model.cohort.kickoff_date,
@@ -481,10 +478,14 @@ class AcademyCohortTestSuite(EventTestCase):
     def test_ical_cohorts__with_one__with_incoming_true(self):
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {
-            'kickoff_date':
-            timezone.now() + timedelta(days=2),
-            'ending_date':
-            datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0, tzinfo=pytz.timezone('UTC')),
+            'kickoff_date': timezone.now() + timedelta(days=2),
+            'ending_date': datetime(year=2060,
+                                    day=31,
+                                    month=12,
+                                    hour=12,
+                                    minute=0,
+                                    second=0,
+                                    tzinfo=pytz.timezone('UTC')),
         }
 
         # don't forget 🦾 2021 - 1010
@@ -515,8 +516,8 @@ class AcademyCohortTestSuite(EventTestCase):
                                                                  next=True),
                                             utc=False)
 
-        starting_at_utc = self.datetime_to_ical(DatetimeInteger.to_utc_datetime(
-            model.cohort_time_slot.timezone, model.cohort_time_slot.starting_at),
+        starting_at_utc = self.datetime_to_ical(DatetimeInteger.to_utc_datetime(model.cohort_time_slot.timezone,
+                                                                                model.cohort_time_slot.starting_at),
                                                 utc=True)
 
         ending_at = fix_datetime_weekday(model.cohort.kickoff_date,
@@ -606,8 +607,8 @@ class AcademyCohortTestSuite(EventTestCase):
                                                                  next=True),
                                             utc=False)
 
-        starting_at_utc = self.datetime_to_ical(DatetimeInteger.to_utc_datetime(
-            model1.cohort_time_slot.timezone, model1.cohort_time_slot.starting_at),
+        starting_at_utc = self.datetime_to_ical(DatetimeInteger.to_utc_datetime(model1.cohort_time_slot.timezone,
+                                                                                model1.cohort_time_slot.starting_at),
                                                 utc=True)
 
         ending_at = self.datetime_to_ical(fix_datetime_weekday(model1.cohort.kickoff_date,
@@ -710,12 +711,12 @@ class AcademyCohortTestSuite(EventTestCase):
                                                                   next=True),
                                              utc=False)
 
-        starting_at_utc1 = self.datetime_to_ical(DatetimeInteger.to_utc_datetime(
-            model1.cohort_time_slot.timezone, model1.cohort_time_slot.starting_at),
+        starting_at_utc1 = self.datetime_to_ical(DatetimeInteger.to_utc_datetime(model1.cohort_time_slot.timezone,
+                                                                                 model1.cohort_time_slot.starting_at),
                                                  utc=True)
 
-        starting_at_utc3 = self.datetime_to_ical(DatetimeInteger.to_utc_datetime(
-            model3.cohort_time_slot.timezone, model3.cohort_time_slot.starting_at),
+        starting_at_utc3 = self.datetime_to_ical(DatetimeInteger.to_utc_datetime(model3.cohort_time_slot.timezone,
+                                                                                 model3.cohort_time_slot.starting_at),
                                                  utc=True)
 
         ending_at1 = self.datetime_to_ical(fix_datetime_weekday(model1.cohort.kickoff_date,
@@ -782,8 +783,7 @@ class AcademyCohortTestSuite(EventTestCase):
     def test_ical_cohort__with_two__with_teacher__cohort_with_meeting_url(self):
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {
-            'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0,
-                                    tzinfo=pytz.UTC),
+            'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0, tzinfo=pytz.UTC),
             'online_meeting_url': self.bc.fake.url(),
         }
         teacher_kwargs = {'role': 'TEACHER'}
@@ -841,12 +841,12 @@ class AcademyCohortTestSuite(EventTestCase):
                                                                   next=True),
                                              utc=False)
 
-        starting_at_utc1 = self.datetime_to_ical(DatetimeInteger.to_utc_datetime(
-            model1.cohort_time_slot.timezone, model1.cohort_time_slot.starting_at),
+        starting_at_utc1 = self.datetime_to_ical(DatetimeInteger.to_utc_datetime(model1.cohort_time_slot.timezone,
+                                                                                 model1.cohort_time_slot.starting_at),
                                                  utc=True)
 
-        starting_at_utc3 = self.datetime_to_ical(DatetimeInteger.to_utc_datetime(
-            model3.cohort_time_slot.timezone, model3.cohort_time_slot.starting_at),
+        starting_at_utc3 = self.datetime_to_ical(DatetimeInteger.to_utc_datetime(model3.cohort_time_slot.timezone,
+                                                                                 model3.cohort_time_slot.starting_at),
                                                  utc=True)
 
         ending_at1 = self.datetime_to_ical(fix_datetime_weekday(model1.cohort.kickoff_date,

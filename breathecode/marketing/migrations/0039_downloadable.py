@@ -17,15 +17,14 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Downloadable',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('slug', models.SlugField(max_length=150, unique=True)),
                 ('name', models.CharField(max_length=100)),
                 ('description', models.TextField(max_length=450)),
                 ('hits', models.IntegerField(default=0)),
                 ('active',
-                 models.BooleanField(
-                     default=True, help_text='Non-active downloadables will display a message to the user')),
+                 models.BooleanField(default=True,
+                                     help_text='Non-active downloadables will display a message to the user')),
                 ('preview_url', models.URLField()),
                 ('destination_url', models.URLField()),
                 ('destination_status',
@@ -34,10 +33,8 @@ class Migration(migrations.Migration):
                                   max_length=15)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('academy',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
-                ('author',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                ('academy', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
+                ('author', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],
         ),
     ]

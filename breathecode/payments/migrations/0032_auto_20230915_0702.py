@@ -29,8 +29,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='bag',
             name='status',
-            field=models.CharField(choices=[('RENEWAL', 'Renewal'), ('CHECKING', 'Checking'),
-                                            ('PAID', 'Paid')],
+            field=models.CharField(choices=[('RENEWAL', 'Renewal'), ('CHECKING', 'Checking'), ('PAID', 'Paid')],
                                    db_index=True,
                                    default='CHECKING',
                                    help_text='Bag status',
@@ -104,8 +103,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='service',
             name='private',
-            field=models.BooleanField(db_index=True, default=True,
-                                      help_text='If the asset is private or not'),
+            field=models.BooleanField(db_index=True, default=True, help_text='If the asset is private or not'),
         ),
         migrations.AlterField(
             model_name='service',
@@ -151,11 +149,10 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='subscription',
             name='valid_until',
-            field=models.DateTimeField(
-                blank=True,
-                db_index=True,
-                default=None,
-                help_text='Valid until, after this date the subscription will be destroyed',
-                null=True),
+            field=models.DateTimeField(blank=True,
+                                       db_index=True,
+                                       default=None,
+                                       help_text='Valid until, after this date the subscription will be destroyed',
+                                       null=True),
         ),
     ]

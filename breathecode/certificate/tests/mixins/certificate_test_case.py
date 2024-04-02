@@ -3,12 +3,12 @@ Collections of mixins used to login in authorize microservice
 """
 import hashlib
 from rest_framework.test import APITestCase
-from breathecode.tests.mixins import (GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin,
-                                      DatetimeMixin, BreathecodeMixin)
+from breathecode.tests.mixins import (GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin, DatetimeMixin,
+                                      BreathecodeMixin)
 
 
-class CertificateTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin,
-                          DatetimeMixin, BreathecodeMixin):
+class CertificateTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin, DatetimeMixin,
+                          BreathecodeMixin):
     """CertificateTestCase with auth methods"""
 
     def setUp(self):

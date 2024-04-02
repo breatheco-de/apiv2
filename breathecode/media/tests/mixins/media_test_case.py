@@ -3,14 +3,14 @@ Collections of mixins used to login in authorize microservice
 """
 import os
 from rest_framework.test import APITestCase
-from breathecode.tests.mixins import (GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin,
-                                      HeadersMixin, DatetimeMixin, Sha256Mixin, BreathecodeMixin)
+from breathecode.tests.mixins import (GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin, HeadersMixin,
+                                      DatetimeMixin, Sha256Mixin, BreathecodeMixin)
 from breathecode.media.models import Media
 from breathecode.media.serializers import GetMediaSerializer
 
 
-class MediaTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin,
-                    HeadersMixin, DatetimeMixin, Sha256Mixin, BreathecodeMixin):
+class MediaTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin, HeadersMixin,
+                    DatetimeMixin, Sha256Mixin, BreathecodeMixin):
     """FeedbackTestCase with auth methods"""
 
     def tearDown(self):

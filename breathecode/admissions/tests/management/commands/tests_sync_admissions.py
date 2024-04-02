@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, patch
 from mixer.backend.django import mixer
 
 # from random import randint
-from breathecode.tests.mocks import (GOOGLE_CLOUD_PATH, apply_google_cloud_blob_mock,
-                                     apply_google_cloud_bucket_mock, apply_google_cloud_client_mock)
+from breathecode.tests.mocks import (GOOGLE_CLOUD_PATH, apply_google_cloud_blob_mock, apply_google_cloud_bucket_mock,
+                                     apply_google_cloud_client_mock)
 
 from ....management.commands.sync_admissions import Command
 from ....models import Cohort, CohortUser, User

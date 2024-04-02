@@ -19,9 +19,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='FinancingOption',
             fields=[
-                ('id',
-                 models.BigAutoField(auto_created=True, primary_key=True, serialize=False,
-                                     verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('monthly_price', models.IntegerField(default=1)),
                 ('how_many_months', models.IntegerField(default=1)),
             ],
@@ -29,29 +27,22 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='PaymentServiceScheduler',
             fields=[
-                ('id',
-                 models.BigAutoField(auto_created=True, primary_key=True, serialize=False,
-                                     verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('cohort_pattern', models.CharField(blank=True, default=None, max_length=80, null=True)),
                 ('renew_every', models.IntegerField(default=1)),
                 ('renew_every_unit',
-                 models.CharField(choices=[('DAY', 'Day'), ('WEEK', 'Week'), ('MONTH', 'Month'),
-                                           ('YEAR', 'Year')],
+                 models.CharField(choices=[('DAY', 'Day'), ('WEEK', 'Week'), ('MONTH', 'Month'), ('YEAR', 'Year')],
                                   default='MONTH',
                                   max_length=10)),
-                ('academy',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
+                ('academy', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
                 ('cohorts', models.ManyToManyField(blank=True, to='admissions.Cohort')),
-                ('mentorship_services', models.ManyToManyField(blank=True,
-                                                               to='mentorship.MentorshipService')),
+                ('mentorship_services', models.ManyToManyField(blank=True, to='mentorship.MentorshipService')),
             ],
         ),
         migrations.CreateModel(
             name='PlanFinancing',
             fields=[
-                ('id',
-                 models.BigAutoField(auto_created=True, primary_key=True, serialize=False,
-                                     verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('status',
                  models.CharField(choices=[('FREE_TRIAL', 'Free trial'), ('ACTIVE', 'Active'),
                                            ('CANCELLED', 'Cancelled'), ('DEPRECATED', 'Deprecated'),
@@ -63,8 +54,7 @@ class Migration(migrations.Migration):
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('paid_at', models.DateTimeField()),
                 ('pay_until', models.DateTimeField()),
-                ('academy',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
+                ('academy', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
                 ('invoices', models.ManyToManyField(blank=True, to='payments.Invoice')),
             ],
             options={
@@ -74,17 +64,13 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='PlanServiceItem',
             fields=[
-                ('id',
-                 models.BigAutoField(auto_created=True, primary_key=True, serialize=False,
-                                     verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
             ],
         ),
         migrations.CreateModel(
             name='SubscriptionServiceItem',
             fields=[
-                ('id',
-                 models.BigAutoField(auto_created=True, primary_key=True, serialize=False,
-                                     verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('service_item',
                  models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='payments.serviceitem')),
             ],
@@ -229,16 +215,12 @@ class Migration(migrations.Migration):
         migrations.RemoveField(
             model_name='plan',
             name='service_items',
-            field=models.ManyToManyField(blank=True,
-                                         through='payments.PlanServiceItem',
-                                         to='payments.ServiceItem'),
+            field=models.ManyToManyField(blank=True, through='payments.PlanServiceItem', to='payments.ServiceItem'),
         ),
         migrations.AddField(
             model_name='plan',
             name='service_items',
-            field=models.ManyToManyField(blank=True,
-                                         through='payments.PlanServiceItem',
-                                         to='payments.ServiceItem'),
+            field=models.ManyToManyField(blank=True, through='payments.PlanServiceItem', to='payments.ServiceItem'),
         ),
         migrations.RemoveField(
             model_name='subscription',

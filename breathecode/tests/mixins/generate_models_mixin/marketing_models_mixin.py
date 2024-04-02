@@ -58,10 +58,7 @@ class MarketingModelsMixin(ModelsMixin):
             if 'active_campaign_academy' in models:
                 kargs['ac_academy'] = just_one(models['active_campaign_academy'])
 
-            models['automation'] = create_models(automation, 'marketing.Automation', **{
-                **kargs,
-                **automation_kwargs
-            })
+            models['automation'] = create_models(automation, 'marketing.Automation', **{**kargs, **automation_kwargs})
 
         if not 'downloadable' in models and is_valid(downloadable):
             kargs = {}
@@ -94,8 +91,7 @@ class MarketingModelsMixin(ModelsMixin):
             if 'course' in models:
                 kargs['course'] = just_one(models['course'])
 
-            models['course_translation'] = create_models(course_translation, 'marketing.CourseTranslation',
-                                                         **kargs)
+            models['course_translation'] = create_models(course_translation, 'marketing.CourseTranslation', **kargs)
 
         if not 'academy_alias' in models and is_valid(academy_alias):
             kargs = {}
@@ -164,10 +160,7 @@ class MarketingModelsMixin(ModelsMixin):
             if 'active_campaign_academy' in models:
                 kargs['ac_academy'] = just_one(models['active_campaign_academy'])
 
-            models['form_entry'] = create_models(form_entry, 'marketing.FormEntry', **{
-                **kargs,
-                **form_entry_kwargs
-            })
+            models['form_entry'] = create_models(form_entry, 'marketing.FormEntry', **{**kargs, **form_entry_kwargs})
 
         if not 'short_link' in models and is_valid(short_link):
             kargs = {}
@@ -178,10 +171,7 @@ class MarketingModelsMixin(ModelsMixin):
             if 'user' in models:
                 kargs['author'] = just_one(models['user'])
 
-            models['short_link'] = create_models(short_link, 'marketing.ShortLink', **{
-                **kargs,
-                **short_link_kwargs
-            })
+            models['short_link'] = create_models(short_link, 'marketing.ShortLink', **{**kargs, **short_link_kwargs})
 
         if not 'active_campaign_webhook' in models and is_valid(active_campaign_webhook):
             kargs = {}

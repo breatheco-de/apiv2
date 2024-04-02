@@ -155,32 +155,20 @@ def get_sessions(self, obj):
                     'name': session.mentor.service.academy.name,
                     'slug': session.mentor.service.academy.slug,
                 },
-                'allow_mentee_to_extend':
-                session.mentor.service.allow_mentee_to_extend,
-                'allow_mentors_to_extend':
-                session.mentor.service.allow_mentors_to_extend,
-                'created_at':
-                format_datetime(self, session.mentor.service.created_at),
-                'duration':
-                self.bc.datetime.from_timedelta(session.mentor.service.duration),
-                'id':
-                session.mentor.service.id,
-                'language':
-                session.mentor.service.language,
-                'logo_url':
-                session.mentor.service.logo_url,
-                'max_duration':
-                self.bc.datetime.from_timedelta(session.mentor.service.max_duration),
+                'allow_mentee_to_extend': session.mentor.service.allow_mentee_to_extend,
+                'allow_mentors_to_extend': session.mentor.service.allow_mentors_to_extend,
+                'created_at': format_datetime(self, session.mentor.service.created_at),
+                'duration': self.bc.datetime.from_timedelta(session.mentor.service.duration),
+                'id': session.mentor.service.id,
+                'language': session.mentor.service.language,
+                'logo_url': session.mentor.service.logo_url,
+                'max_duration': self.bc.datetime.from_timedelta(session.mentor.service.max_duration),
                 'missed_meeting_duration':
                 self.bc.datetime.from_timedelta(session.mentor.service.missed_meeting_duration),
-                'name':
-                session.mentor.service.name,
-                'slug':
-                session.mentor.service.slug,
-                'status':
-                session.mentor.service.status,
-                'updated_at':
-                self.bc.datetime.to_iso_string(session.mentor.service.updated_at),
+                'name': session.mentor.service.name,
+                'slug': session.mentor.service.slug,
+                'status': session.mentor.service.status,
+                'updated_at': self.bc.datetime.to_iso_string(session.mentor.service.updated_at),
             },
             'slug': session.mentor.slug,
             'status': session.mentor.status,
@@ -245,32 +233,19 @@ def get_serializer(self, mentorship_bill, mentor_profile, mentorship_service, us
                     'name': academy.name,
                     'slug': academy.slug,
                 },
-                'allow_mentee_to_extend':
-                mentorship_service.allow_mentee_to_extend,
-                'allow_mentors_to_extend':
-                mentorship_service.allow_mentors_to_extend,
-                'created_at':
-                format_datetime(self, mentorship_service.created_at),
-                'duration':
-                self.bc.datetime.from_timedelta(mentorship_service.duration),
-                'id':
-                mentorship_service.id,
-                'language':
-                mentorship_service.language,
-                'logo_url':
-                mentorship_service.logo_url,
-                'max_duration':
-                self.bc.datetime.from_timedelta(mentorship_service.max_duration),
-                'missed_meeting_duration':
-                self.bc.datetime.from_timedelta(mentorship_service.missed_meeting_duration),
-                'name':
-                mentorship_service.name,
-                'slug':
-                mentorship_service.slug,
-                'status':
-                mentorship_service.status,
-                'updated_at':
-                format_datetime(self, mentorship_service.updated_at),
+                'allow_mentee_to_extend': mentorship_service.allow_mentee_to_extend,
+                'allow_mentors_to_extend': mentorship_service.allow_mentors_to_extend,
+                'created_at': format_datetime(self, mentorship_service.created_at),
+                'duration': self.bc.datetime.from_timedelta(mentorship_service.duration),
+                'id': mentorship_service.id,
+                'language': mentorship_service.language,
+                'logo_url': mentorship_service.logo_url,
+                'max_duration': self.bc.datetime.from_timedelta(mentorship_service.max_duration),
+                'missed_meeting_duration': self.bc.datetime.from_timedelta(mentorship_service.missed_meeting_duration),
+                'name': mentorship_service.name,
+                'slug': mentorship_service.slug,
+                'status': mentorship_service.status,
+                'updated_at': format_datetime(self, mentorship_service.updated_at),
             },
             'slug': mentor_profile.slug,
             'timezone': mentor_profile.timezone,

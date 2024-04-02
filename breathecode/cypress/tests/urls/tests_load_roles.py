@@ -41,8 +41,7 @@ CAPABILITIES = [
         'description': 'Read assigment information'
     },
     {
-        'slug':
-        'read_assignment_sensitive_details',
+        'slug': 'read_assignment_sensitive_details',
         'description':
         'The mentor in residence is allowed to see aditional info about the task, like the "delivery url"'
     },
@@ -179,10 +178,8 @@ CAPABILITIES = [
         'description': 'List all the assigments'
     },
     {
-        'slug':
-        'classroom_activity',
-        'description':
-        'To report student activities during the classroom or cohorts (Specially meant for teachers)'
+        'slug': 'classroom_activity',
+        'description': 'To report student activities during the classroom or cohorts (Specially meant for teachers)'
     },
     {
         'slug': 'academy_reporting',
@@ -329,8 +326,7 @@ def extend_roles(roles: list):
         'name':
         'Career Support Specialist',
         'caps':
-        create_academy_roles.extend(roles, ['staff']) +
-        ['read_certificate', 'crud_certificate', 'crud_shortlink']
+        create_academy_roles.extend(roles, ['staff']) + ['read_certificate', 'crud_certificate', 'crud_shortlink']
     })
     roles.append({
         'slug':
@@ -342,12 +338,9 @@ def extend_roles(roles: list):
         ['crud_lead', 'crud_student', 'crud_cohort', 'read_all_cohort', 'read_lead', 'read_activity']
     })
     roles.append({
-        'slug':
-        'syllabus_coordinator',
-        'name':
-        'Syllabus Coordinator',
-        'caps':
-        create_academy_roles.extend(roles, ['staff']) + ['crud_syllabus', 'crud_media', 'crud_asset']
+        'slug': 'syllabus_coordinator',
+        'name': 'Syllabus Coordinator',
+        'caps': create_academy_roles.extend(roles, ['staff']) + ['crud_syllabus', 'crud_media', 'crud_asset']
     })
     roles.append({
         'slug': 'culture_and_recruitment',
@@ -371,10 +364,8 @@ def extend_roles(roles: list):
         'name':
         'Growth Manager',
         'caps':
-        create_academy_roles.extend(roles, ['staff', 'community_manager']) + [
-            'crud_media', 'read_activity', 'read_lead', 'read_won_lead', 'crud_review', 'crud_shortlink',
-            'crud_tag'
-        ]
+        create_academy_roles.extend(roles, ['staff', 'community_manager']) +
+        ['crud_media', 'read_activity', 'read_lead', 'read_won_lead', 'crud_review', 'crud_shortlink', 'crud_tag']
     })
     roles.append({
         'slug': 'homework_reviewer',
@@ -394,8 +385,8 @@ def extend_roles(roles: list):
         'caps':
         create_academy_roles.extend(roles, ['teacher']) + [
             'crud_syllabus', 'crud_cohort', 'crud_student', 'crud_survey', 'read_won_lead', 'crud_member',
-            'send_reset_password', 'generate_temporal_token', 'crud_certificate', 'crud_review',
-            'crud_mentor', 'read_mentor', 'read_assignment_sensitive_details', 'crud_shortlink'
+            'send_reset_password', 'generate_temporal_token', 'crud_certificate', 'crud_review', 'crud_mentor',
+            'read_mentor', 'read_assignment_sensitive_details', 'crud_shortlink'
         ]
     })
     roles.append({
@@ -442,8 +433,7 @@ class AcademyEventTestSuite(CypressTestCase):
 
     @patch('breathecode.authenticate.management.commands.create_academy_roles.get_capabilities',
            MagicMock(return_value=CAPABILITIES))
-    @patch('breathecode.authenticate.management.commands.create_academy_roles.get_roles',
-           MagicMock(return_value=ROLES))
+    @patch('breathecode.authenticate.management.commands.create_academy_roles.get_roles', MagicMock(return_value=ROLES))
     @patch('breathecode.authenticate.management.commands.create_academy_roles.extend_roles',
            MagicMock(side_effect=extend_roles))
     def test_load_roles(self):
@@ -522,16 +512,12 @@ class AcademyEventTestSuite(CypressTestCase):
                 'description': 'Read your academy information'
             },
             {
-                'slug':
-                'crud_my_academy',
-                'description':
-                'Read, or update your academy information (very high level, almost the academy admin)'
+                'slug': 'crud_my_academy',
+                'description': 'Read, or update your academy information (very high level, almost the academy admin)'
             },
             {
-                'slug':
-                'crud_member',
-                'description':
-                'Create, update or delete academy members (very high level, almost the academy admin)'
+                'slug': 'crud_member',
+                'description': 'Create, update or delete academy members (very high level, almost the academy admin)'
             },
             {
                 'slug': 'read_member',
@@ -692,8 +678,7 @@ class AcademyEventTestSuite(CypressTestCase):
                 'description': 'List all the assigments'
             },
             {
-                'slug':
-                'classroom_activity',
+                'slug': 'classroom_activity',
                 'description':
                 'To report student activities during the classroom or cohorts (Specially meant for teachers)'
             },

@@ -59,23 +59,19 @@ class MediaTestSuite(MediaTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     def test_upload_without_data(self):
         from breathecode.services.google_cloud import Storage, File
 
         self.headers(academy=1)
 
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_media',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_media', role='potato')
         url = reverse_lazy('media:upload')
         data = {}
         response = self.client.put(url, data)
@@ -97,23 +93,19 @@ class MediaTestSuite(MediaTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     def test_upload(self):
         from breathecode.services.google_cloud import Storage, File
 
         self.headers(academy=1)
 
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_media',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_media', role='potato')
         url = reverse_lazy('media:upload')
 
         file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
@@ -145,8 +137,7 @@ class MediaTestSuite(MediaTestCase):
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(
-                self.all_media_dict(),
-                [{
+                self.all_media_dict(), [{
                     'academy_id': 1,
                     'hash': hash,
                     'hits': 0,
@@ -179,14 +170,13 @@ class MediaTestSuite(MediaTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     def test_upload_with_media(self):
         from breathecode.services.google_cloud import Storage, File
 
@@ -246,14 +236,13 @@ class MediaTestSuite(MediaTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     def test_upload_with_media_with_same_slug(self):
         from breathecode.services.google_cloud import Storage, File
 
@@ -294,8 +283,7 @@ class MediaTestSuite(MediaTestCase):
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(
-                self.all_media_dict(),
-                [{
+                self.all_media_dict(), [{
                     **self.model_to_dict(model, 'media'),
                 }, {
                     'academy_id': 1,
@@ -330,14 +318,13 @@ class MediaTestSuite(MediaTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     def test_upload_categories(self):
         from breathecode.services.google_cloud import Storage, File
 
@@ -380,8 +367,7 @@ class MediaTestSuite(MediaTestCase):
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(
-                self.all_media_dict(),
-                [{
+                self.all_media_dict(), [{
                     'academy_id': 1,
                     'hash': hash,
                     'hits': 0,
@@ -414,14 +400,13 @@ class MediaTestSuite(MediaTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     def test_upload_categories_in_headers(self):
         from breathecode.services.google_cloud import Storage, File
 
@@ -465,8 +450,7 @@ class MediaTestSuite(MediaTestCase):
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(
-                self.all_media_dict(),
-                [{
+                self.all_media_dict(), [{
                     'academy_id': 1,
                     'hash': hash,
                     'hits': 0,
@@ -499,14 +483,13 @@ class MediaTestSuite(MediaTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     def test_upload_categories_in_headers__two_items(self):
         """Test /answer without auth"""
         from breathecode.services.google_cloud import Storage, File
@@ -569,28 +552,28 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.all_media_dict(), [{
-                'academy_id': 1,
-                'hash': hash1,
-                'hits': 0,
-                'id': 1,
-                'mime': 'image/png',
-                'name': 'filename1.jpg',
-                'slug': 'filename1-jpg',
-                'thumbnail': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url-thumbnail',
-                'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-            }, {
-                'academy_id': 1,
-                'hash': hash2,
-                'hits': 0,
-                'id': 2,
-                'mime': 'image/png',
-                'name': 'filename2.jpg',
-                'slug': 'filename2-jpg',
-                'thumbnail': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url-thumbnail',
-                'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-            }])
+        self.assertEqual(self.all_media_dict(),
+                         [{
+                             'academy_id': 1,
+                             'hash': hash1,
+                             'hits': 0,
+                             'id': 1,
+                             'mime': 'image/png',
+                             'name': 'filename1.jpg',
+                             'slug': 'filename1-jpg',
+                             'thumbnail': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url-thumbnail',
+                             'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
+                         }, {
+                             'academy_id': 1,
+                             'hash': hash2,
+                             'hits': 0,
+                             'id': 2,
+                             'mime': 'image/png',
+                             'name': 'filename2.jpg',
+                             'slug': 'filename2-jpg',
+                             'thumbnail': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url-thumbnail',
+                             'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
+                         }])
 
         self.assertEqual(Storage.__init__.call_args_list, [call(), call()])
         self.assertEqual(File.__init__.call_args_list, [
@@ -618,23 +601,19 @@ class MediaTestSuite(MediaTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     def test_upload_valid_format(self):
         from breathecode.services.google_cloud import Storage, File
 
         self.headers(academy=1)
 
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_media',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_media', role='potato')
         url = reverse_lazy('media:upload')
         file = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
         file.write(os.urandom(1024))
@@ -660,8 +639,7 @@ class MediaTestSuite(MediaTestCase):
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(
-                self.all_media_dict(),
-                [{
+                self.all_media_dict(), [{
                     'academy_id': 1,
                     'hash': hash,
                     'hits': 0,
@@ -694,23 +672,19 @@ class MediaTestSuite(MediaTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     def test_upload_invalid_format(self):
         from breathecode.services.google_cloud import Storage, File
 
         self.headers(academy=1)
 
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_media',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_media', role='potato')
         url = reverse_lazy('media:upload')
 
         file = tempfile.NamedTemporaryFile(suffix='.lbs', delete=False)

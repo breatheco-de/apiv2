@@ -36,15 +36,13 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='academyservice',
             name='max_amount',
-            field=models.FloatField(default=1,
-                                    help_text="Limit total amount, it doesn't matter the bundle size"),
+            field=models.FloatField(default=1, help_text="Limit total amount, it doesn't matter the bundle size"),
         ),
         migrations.AddField(
             model_name='academyservice',
             name='max_items',
             field=models.FloatField(
-                default=1,
-                help_text="How many items can be bought in total, it doens't matter the bundle size"),
+                default=1, help_text="How many items can be bought in total, it doens't matter the bundle size"),
         ),
         migrations.AlterField(
             model_name='plan',

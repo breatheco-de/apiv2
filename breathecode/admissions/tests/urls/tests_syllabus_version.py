@@ -57,9 +57,7 @@ class SyllabusVersionTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(self.all_syllabus_dict(), [{**self.model_to_dict(model, 'syllabus')}])
-        self.assertEqual(self.all_syllabus_version_dict(), [{
-            **self.model_to_dict(model, 'syllabus_version')
-        }])
+        self.assertEqual(self.all_syllabus_version_dict(), [{**self.model_to_dict(model, 'syllabus_version')}])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_syllabus_slug_version_with_is_documentation_filter(self):
@@ -76,9 +74,7 @@ class SyllabusVersionTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(self.all_syllabus_dict(), [{**self.model_to_dict(model, 'syllabus')}])
-        self.assertEqual(self.all_syllabus_version_dict(), [{
-            **self.model_to_dict(model, 'syllabus_version')
-        }])
+        self.assertEqual(self.all_syllabus_version_dict(), [{**self.model_to_dict(model, 'syllabus_version')}])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_syllabus_slug_version_with_academy_filter(self):
@@ -95,9 +91,7 @@ class SyllabusVersionTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(self.all_syllabus_dict(), [{**self.model_to_dict(model, 'syllabus')}])
-        self.assertEqual(self.all_syllabus_version_dict(), [{
-            **self.model_to_dict(model, 'syllabus_version')
-        }])
+        self.assertEqual(self.all_syllabus_version_dict(), [{**self.model_to_dict(model, 'syllabus_version')}])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_syllabus_slug_version_with_wrong_academy_filter(self):
@@ -114,6 +108,4 @@ class SyllabusVersionTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(self.all_syllabus_dict(), [{**self.model_to_dict(model, 'syllabus')}])
-        self.assertEqual(self.all_syllabus_version_dict(), [{
-            **self.model_to_dict(model, 'syllabus_version')
-        }])
+        self.assertEqual(self.all_syllabus_version_dict(), [{**self.model_to_dict(model, 'syllabus_version')}])

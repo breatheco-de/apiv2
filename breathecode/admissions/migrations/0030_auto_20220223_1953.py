@@ -23,7 +23,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='cohort',
             name='current_day',
-            field=models.IntegerField(
-                help_text='Each day the teacher takes attendancy and increases the day in one'),
+            field=models.IntegerField(help_text='Each day the teacher takes attendancy and increases the day in one'),
         ),
     ]

@@ -130,8 +130,7 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
     _issue.freelancer = freelancer
     hours = get_hours(_issue.body)
     if hours is not None and _issue.duration_in_hours != hours:
-        logger.info(
-            f'Updating issue {node_id} ({issue_number}) hrs with {hours}, found <hrs> tag on updated body')
+        logger.info(f'Updating issue {node_id} ({issue_number}) hrs with {hours}, found <hrs> tag on updated body')
         _issue.duration_in_minutes = hours * 60
         _issue.duration_in_hours = hours
 
@@ -139,16 +138,14 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
     if comment is not None:
         hours = get_hours(comment['body'])
         if hours is not None and _issue.duration_in_hours != hours:
-            logger.info(
-                f'Updating issue {node_id} ({issue_number}) hrs with {hours}, found <hrs> tag on new comment')
+            logger.info(f'Updating issue {node_id} ({issue_number}) hrs with {hours}, found <hrs> tag on new comment')
             _issue.duration_in_minutes = hours * 60
             _issue.duration_in_hours = hours
 
         status = get_status(comment['body'])
         if status is not None and status_is_valid(status):
             logger.info(
-                f'Updating issue {node_id} ({issue_number}) status to {status} found <status> tag on new comment'
-            )
+                f'Updating issue {node_id} ({issue_number}) status to {status} found <status> tag on new comment')
             _issue.status = status
 
         elif status is not None:
@@ -201,10 +198,10 @@ def generate_project_invoice(project):
     invoice = ProjectInvoice.get_or_create(project.repository, project.academy.slug, status='DUE')
 
     # fetch for issues to be invoiced
-    done_issues = Issue.objects.filter(
-        academy__slug=project.academy.slug, url__icontains=project.repository,
-        status='DONE').filter(Q(invoice__isnull=True)
-                              | Q(invoice__status='DUE'))
+    done_issues = Issue.objects.filter(academy__slug=project.academy.slug,
+                                       url__icontains=project.repository,
+                                       status='DONE').filter(Q(invoice__isnull=True)
+                                                             | Q(invoice__status='DUE'))
 
     invoices = {}
 
@@ -214,12 +211,7 @@ def generate_project_invoice(project):
         issue.status_message = ''
 
         if str(issue.invoice.id) not in invoices:
-            invoices[str(issue.invoice.id)] = {
-                'minutes': 0,
-                'hours': 0,
-                'price': 0,
-                'instance': issue.invoice
-            }
+            invoices[str(issue.invoice.id)] = {'minutes': 0, 'hours': 0, 'price': 0, 'instance': issue.invoice}
 
         if issue.status != 'DONE':
             issue.status_message += 'Issue is still ' + issue.status
@@ -229,10 +221,9 @@ def generate_project_invoice(project):
         if issue.status_message == '':
             _hours = invoices[str(issue.invoice.id)]['hours'] + issue.duration_in_hours
             invoices[str(issue.invoice.id)]['hours'] = _hours
-            invoices[str(issue.invoice.id)]['minutes'] = invoices[str(
-                issue.invoice.id)]['minutes'] + issue.duration_in_minutes
             invoices[str(
-                issue.invoice.id)]['price'] = _hours * issue.freelancer.get_client_hourly_rate(project)
+                issue.invoice.id)]['minutes'] = invoices[str(issue.invoice.id)]['minutes'] + issue.duration_in_minutes
+            invoices[str(issue.invoice.id)]['price'] = _hours * issue.freelancer.get_client_hourly_rate(project)
         issue.save()
 
     for inv_id in invoices:
@@ -247,8 +238,7 @@ def generate_project_invoice(project):
 
 def generate_freelancer_bill(freelancer):
 
-    Issue.objects.filter(bill__isnull=False,
-                         freelancer__id=freelancer.id).exclude(status='DONE').update(bill=None)
+    Issue.objects.filter(bill__isnull=False, freelancer__id=freelancer.id).exclude(status='DONE').update(bill=None)
 
     def get_bill(academy):
         open_bill = Bill.objects.filter(freelancer__id=freelancer.id,
@@ -260,9 +250,9 @@ def generate_freelancer_bill(freelancer):
             open_bill.save()
         return open_bill
 
-    done_issues = Issue.objects.filter(
-        freelancer__id=freelancer.id,
-        status='DONE').filter(Q(bill__isnull=True) | Q(bill__status='DUE')).exclude(academy__isnull=True)
+    done_issues = Issue.objects.filter(freelancer__id=freelancer.id,
+                                       status='DONE').filter(Q(bill__isnull=True)
+                                                             | Q(bill__status='DUE')).exclude(academy__isnull=True)
     bills = {}
 
     for issue in done_issues:
@@ -281,8 +271,7 @@ def generate_freelancer_bill(freelancer):
         if issue.status_message == '':
             _hours = bills[str(issue.bill.id)]['hours'] + issue.duration_in_hours
             bills[str(issue.bill.id)]['hours'] = _hours
-            bills[str(
-                issue.bill.id)]['minutes'] = bills[str(issue.bill.id)]['minutes'] + issue.duration_in_minutes
+            bills[str(issue.bill.id)]['minutes'] = bills[str(issue.bill.id)]['minutes'] + issue.duration_in_minutes
 
             project = issue.invoice.project if issue.invoice is not None else None
             bills[str(issue.bill.id)]['price'] = _hours * freelancer.get_hourly_rate(project)

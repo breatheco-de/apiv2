@@ -168,8 +168,7 @@ class AnswerTypeFilter(admin.SimpleListFilter):
 
 @admin.register(Answer)
 class AnswerAdmin(admin.ModelAdmin, AdminExportCsvMixin):
-    list_display = ('status', 'user', 'academy', 'cohort', 'mentor', 'score', 'opened_at', 'created_at',
-                    'answer_url')
+    list_display = ('status', 'user', 'academy', 'cohort', 'mentor', 'score', 'opened_at', 'created_at', 'answer_url')
     search_fields = ['user__first_name', 'user__last_name', 'user__email', 'cohort__slug']
     list_filter = [AnswerTypeFilter, 'status', 'score', 'academy__slug', 'cohort__slug']
     actions = ['export_as_csv', add_academy_to_answer]
@@ -247,8 +246,8 @@ class SurveyAdmin(admin.ModelAdmin):
     search_fields = ['cohort__slug', 'cohort__academy__slug', 'cohort__name', 'cohort__academy__name']
     list_filter = [SentFilter, 'status', 'cohort__academy__slug']
     raw_id_fields = ['cohort']
-    actions = [send_big_cohort_bulk_survey, fill_sent_at_with_created_at, calculate_survey_scores
-               ] + change_field(['PENDING', 'SENT', 'PARTIAL', 'FATAL'], name='status')
+    actions = [send_big_cohort_bulk_survey, fill_sent_at_with_created_at, calculate_survey_scores] + change_field(
+        ['PENDING', 'SENT', 'PARTIAL', 'FATAL'], name='status')
 
     def survey_url(self, obj):
         url = 'https://nps.4geeks.com/survey/' + str(obj.id)
@@ -258,8 +257,7 @@ class SurveyAdmin(admin.ModelAdmin):
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
     search_fields = ['author__first_name', 'author__last_name', 'author__email', 'cohort__slug']
-    list_display = ('id', 'current_status', 'author', 'cohort', 'nps_previous_rating', 'total_rating',
-                    'platform')
+    list_display = ('id', 'current_status', 'author', 'cohort', 'nps_previous_rating', 'total_rating', 'platform')
     readonly_fields = ['nps_previous_rating']
     list_filter = ['status', 'cohort__academy__slug', 'platform']
     raw_id_fields = ['author', 'cohort']

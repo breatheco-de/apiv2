@@ -15,7 +15,6 @@ class Migration(migrations.Migration):
             name='default_value',
             field=models.TextField(
                 help_text=
-                'If the variable type is fetch or code and the processing fails, the default value will be used'
-            ),
+                'If the variable type is fetch or code and the processing fails, the default value will be used'),
         ),
     ]

@@ -17,8 +17,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Event',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('slug', models.SlugField(max_length=150, unique=True)),
                 ('description', models.TextField(max_length=2000)),
                 ('title', models.CharField(max_length=255)),
@@ -45,8 +44,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='EventType',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('slug', models.SlugField(max_length=150, unique=True)),
                 ('name', models.CharField(max_length=150)),
             ],
@@ -54,8 +52,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Venue',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('title', models.TextField(blank=True, max_length=100)),
                 ('street_address', models.CharField(blank=True, max_length=250)),
                 ('country', models.CharField(blank=True, max_length=30)),
@@ -76,14 +73,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='EventCheckin',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('email', models.EmailField(max_length=150)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('attendee',
-                 models.ForeignKey(blank=True,
-                                   on_delete=django.db.models.deletion.CASCADE,
+                 models.ForeignKey(blank=True, on_delete=django.db.models.deletion.CASCADE,
                                    to=settings.AUTH_USER_MODEL)),
                 ('event', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='events.Event')),
             ],

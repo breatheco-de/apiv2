@@ -32,8 +32,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(send_email_message.call_args_list, [])
         self.assertEqual(os.getenv.call_args_list, [call('TEACHER_URL')])
         self.assertEqual(Logger.info.call_args_list, [call('Starting teacher_task_notification')])
-        self.assertEqual(Logger.error.call_args_list,
-                         [call('TEACHER_URL is not set as environment variable')])
+        self.assertEqual(Logger.error.call_args_list, [call('TEACHER_URL is not set as environment variable')])
         self.assertEqual(signals.assignment_created.send.call_args_list, [])
 
     """
@@ -164,10 +163,9 @@ class MediaTestSuite(AssignmentsTestCase):
                  model.user.email, {
                      'subject':
                      f'{model.user.first_name} {model.user.last_name} envió su tarea',
-                     'details':
-                     (f'{model.user.first_name} {model.user.last_name} envió su tarea "{model.task.title}", '
-                      'puedes revisarla en '
-                      f'https://hardcoded.url/cohort/{model.cohort.slug}/assignments'),
+                     'details': (f'{model.user.first_name} {model.user.last_name} envió su tarea "{model.task.title}", '
+                                 'puedes revisarla en '
+                                 f'https://hardcoded.url/cohort/{model.cohort.slug}/assignments'),
                  },
                  academy=model.academy)
         ])

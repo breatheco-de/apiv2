@@ -20,8 +20,7 @@ class Command(BaseCommand):
         qs = CohortUser.objects.order_by('id')
         for user_id, cohort_id in set(qs.values_list('user__id', 'cohort__id')):
             result.append(
-                qs.filter(user__id=user_id, cohort__id=cohort_id).values('id', 'user__id',
-                                                                         'cohort__id').first())
+                qs.filter(user__id=user_id, cohort__id=cohort_id).values('id', 'user__id', 'cohort__id').first())
 
         # remove dups
         for data in result:

@@ -18,16 +18,14 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Asset',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('slug', models.SlugField(max_length=200, unique=True)),
                 ('title', models.CharField(blank=True, max_length=200)),
-                ('lang',
-                 models.CharField(blank=True,
-                                  default=None,
-                                  help_text='E.g: en, es, it',
-                                  max_length=2,
-                                  null=True)),
+                ('lang', models.CharField(blank=True,
+                                          default=None,
+                                          help_text='E.g: en, es, it',
+                                          max_length=2,
+                                          null=True)),
                 ('url', models.URLField()),
                 ('solution_url', models.URLField(blank=True, default=None, null=True)),
                 ('preview', models.URLField(blank=True, default=None, null=True)),
@@ -60,8 +58,7 @@ class Migration(migrations.Migration):
                                   max_length=20,
                                   null=True)),
                 ('visibility',
-                 models.CharField(choices=[('PUBLIC', 'Public'), ('UNLISTED', 'Unlisted'),
-                                           ('PRIVATE', 'Private')],
+                 models.CharField(choices=[('PUBLIC', 'Public'), ('UNLISTED', 'Unlisted'), ('PRIVATE', 'Private')],
                                   default='PUBLIC',
                                   max_length=20)),
                 ('asset_type',
@@ -135,8 +132,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='AssetTechnology',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('slug', models.SlugField(max_length=200, unique=True)),
                 ('title', models.CharField(blank=True, max_length=200)),
             ],
@@ -144,8 +140,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='AssetErrorLog',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('asset_type',
                  models.CharField(blank=True,
                                   choices=[('PROJECT', 'Project'), ('EXERCISE', 'Exercise'), ('QUIZ', 'Quiz'),
@@ -160,11 +155,10 @@ class Migration(migrations.Migration):
                                   max_length=20)),
                 ('path', models.CharField(max_length=200)),
                 ('status_text',
-                 models.TextField(
-                     blank=True,
-                     default=None,
-                     help_text='Status details, it may be set automatically if enough error information',
-                     null=True)),
+                 models.TextField(blank=True,
+                                  default=None,
+                                  help_text='Status details, it may be set automatically if enough error information',
+                                  null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('asset',
                  models.ForeignKey(
@@ -187,8 +181,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('slug', models.SlugField(max_length=200, primary_key=True, serialize=False)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('asset', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
-                                            to='registry.asset')),
+                ('asset', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='registry.asset')),
             ],
         ),
         migrations.AddField(

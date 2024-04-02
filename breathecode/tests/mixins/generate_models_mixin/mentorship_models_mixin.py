@@ -22,8 +22,7 @@ class MentorshipModelsMixin(ModelsMixin):
             if 'academy' in models:
                 kargs['academy'] = just_one(models['academy'])
 
-            models['mentorship_service'] = create_models(mentorship_service, 'mentorship.MentorshipService',
-                                                         **kargs)
+            models['mentorship_service'] = create_models(mentorship_service, 'mentorship.MentorshipService', **kargs)
 
         if not 'mentor_profile' in models and (is_valid(mentor_profile) or is_valid(mentorship_bill)
                                                or is_valid(mentorship_session)):
@@ -72,7 +71,6 @@ class MentorshipModelsMixin(ModelsMixin):
             if 'mentorship_service' in models:
                 kargs['service'] = just_one(models['mentorship_service'])
 
-            models['mentorship_session'] = create_models(mentorship_session, 'mentorship.MentorshipSession',
-                                                         **kargs)
+            models['mentorship_session'] = create_models(mentorship_session, 'mentorship.MentorshipSession', **kargs)
 
         return models

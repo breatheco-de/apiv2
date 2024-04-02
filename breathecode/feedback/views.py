@@ -9,8 +9,8 @@ from .tasks import generate_user_cohort_survey_answers
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import AllowAny
 from .serializers import (AnswerPUTSerializer, AnswerSerializer, SurveySerializer, SurveyPUTSerializer,
-                          BigAnswerSerializer, SurveySmallSerializer, ReviewPlatformSerializer,
-                          ReviewSmallSerializer, ReviewPUTSerializer)
+                          BigAnswerSerializer, SurveySmallSerializer, ReviewPlatformSerializer, ReviewSmallSerializer,
+                          ReviewPUTSerializer)
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
@@ -138,12 +138,7 @@ class AnswerMeView(APIView):
                                       code=404,
                                       slug='answer-of-other-user-or-not-exists')
 
-        serializer = AnswerPUTSerializer(answer,
-                                         data=request.data,
-                                         context={
-                                             'request': request,
-                                             'answer': answer_id
-                                         })
+        serializer = AnswerPUTSerializer(answer, data=request.data, context={'request': request, 'answer': answer_id})
         if serializer.is_valid():
             tasks_activity.add_activity.delay(request.user.id,
                                               'nps_answered',
@@ -190,11 +185,7 @@ class SurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     @capable_of('crud_survey')
     def post(self, request, academy_id=None):
 
-        serializer = SurveySerializer(data=request.data,
-                                      context={
-                                          'request': request,
-                                          'academy_id': academy_id
-                                      })
+        serializer = SurveySerializer(data=request.data, context={'request': request, 'academy_id': academy_id})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -300,8 +291,7 @@ class SurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
-        sur = Survey.objects.filter(id=survey_id,
-                                    cohort__academy__id=academy_id).exclude(status='SENT').first()
+        sur = Survey.objects.filter(id=survey_id, cohort__academy__id=academy_id).exclude(status='SENT').first()
         if sur is None:
             raise ValidationException('Survey not found', 404, slug='survey-not-found')
 

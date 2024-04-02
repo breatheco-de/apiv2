@@ -468,11 +468,7 @@ class SignalTestSuite(PaymentsTestCase):
         academy_service = {'price_per_unit': (0.5 + (random.random() / 2)) / how_many, 'max_amount': 11}
         # how_many  * 1
         # how_many / 2
-        model = self.bc.database.create(user=1,
-                                        service=service,
-                                        academy=1,
-                                        academy_service=academy_service,
-                                        **kwargs)
+        model = self.bc.database.create(user=1, service=service, academy=1, academy_service=academy_service, **kwargs)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
@@ -522,11 +518,7 @@ class SignalTestSuite(PaymentsTestCase):
             kwargs['event_type_set'] = 1
 
         academy_service = {'price_per_unit': random.random() / 2.01 / how_many, 'max_items': how_many}
-        model = self.bc.database.create(user=1,
-                                        service=service,
-                                        academy=1,
-                                        academy_service=academy_service,
-                                        **kwargs)
+        model = self.bc.database.create(user=1, service=service, academy=1, academy_service=academy_service, **kwargs)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:consumable_checkout')
@@ -729,14 +721,13 @@ class SignalTestSuite(PaymentsTestCase):
                              'amount': amount,
                          })])
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
-            format_consumable_item(
-                data={
-                    'event_type_set_id': 1,
-                    'service_item_id': 1,
-                    'service_set_id': None,
-                    'user_id': 1,
-                    'how_many': how_many,
-                }),
+            format_consumable_item(data={
+                'event_type_set_id': 1,
+                'service_item_id': 1,
+                'service_set_id': None,
+                'user_id': 1,
+                'how_many': how_many,
+            }),
         ])
         self.assertEqual(self.bc.database.list_of('authenticate.UserSetting'), [
             format_user_setting({'lang': 'en'}),

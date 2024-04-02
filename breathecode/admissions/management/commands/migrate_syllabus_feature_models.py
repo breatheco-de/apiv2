@@ -112,8 +112,7 @@ class Command(BaseCommand):
 
         for specialty in self.specialties:
             syllabus = [
-                self.syllabus_instances[x['slug']] for x in self.certificates
-                if x['id'] == specialty['certificate_id']
+                self.syllabus_instances[x['slug']] for x in self.certificates if x['id'] == specialty['certificate_id']
             ]
 
             if syllabus:

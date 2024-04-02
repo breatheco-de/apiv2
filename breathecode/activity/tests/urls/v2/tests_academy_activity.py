@@ -70,11 +70,7 @@ class MediaTestSuite(MediaTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_get_two(self):
-        model = self.bc.database.create(user=1,
-                                        academy=1,
-                                        profile_academy=1,
-                                        capability='read_activity',
-                                        role=1)
+        model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability='read_activity', role=1)
 
         self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
@@ -99,11 +95,7 @@ class MediaTestSuite(MediaTestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_filter_by_kind(self):
-        model = self.bc.database.create(user=1,
-                                        academy=1,
-                                        profile_academy=1,
-                                        capability='read_activity',
-                                        role=1)
+        model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability='read_activity', role=1)
 
         self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)

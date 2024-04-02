@@ -209,10 +209,9 @@ class AuthenticateTestSuite(MentorshipTestCase):
         model = self.bc.database.create(user=1, token=1, mentor_profile=1)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
-        url = reverse_lazy('mentorship_shortner:meet_slug',
-                           kwargs={
-                               'mentor_slug': model.mentor_profile.slug,
-                           }) + f'?{querystring}'
+        url = reverse_lazy('mentorship_shortner:meet_slug', kwargs={
+            'mentor_slug': model.mentor_profile.slug,
+        }) + f'?{querystring}'
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
@@ -241,10 +240,9 @@ class AuthenticateTestSuite(MentorshipTestCase):
         model = self.bc.database.create(user=1, token=1, mentor_profile=1)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
-        url = reverse_lazy('mentorship_shortner:meet_slug',
-                           kwargs={
-                               'mentor_slug': model.mentor_profile.slug,
-                           }) + f'?{querystring}'
+        url = reverse_lazy('mentorship_shortner:meet_slug', kwargs={
+            'mentor_slug': model.mentor_profile.slug,
+        }) + f'?{querystring}'
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
@@ -275,10 +273,9 @@ class AuthenticateTestSuite(MentorshipTestCase):
         model = self.bc.database.create(user=1, token=1, mentor_profile=1, mentorship_service=1)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
-        url = reverse_lazy('mentorship_shortner:meet_slug',
-                           kwargs={
-                               'mentor_slug': model.mentor_profile.slug,
-                           }) + f'?{querystring}'
+        url = reverse_lazy('mentorship_shortner:meet_slug', kwargs={
+            'mentor_slug': model.mentor_profile.slug,
+        }) + f'?{querystring}'
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)

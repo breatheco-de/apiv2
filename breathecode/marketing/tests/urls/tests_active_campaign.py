@@ -10,31 +10,21 @@ from ..mixins import MarketingTestCase
 
 def get_serializer(active_campaign_academy, academy, event_attendancy_automation=None, data={}):
     return {
-        'id':
-        active_campaign_academy.id,
-        'ac_key':
-        active_campaign_academy.ac_key,
-        'ac_url':
-        active_campaign_academy.ac_url,
-        'duplicate_leads_delta_avoidance':
-        str(active_campaign_academy.duplicate_leads_delta_avoidance.total_seconds()),
-        'sync_status':
-        active_campaign_academy.sync_status,
-        'sync_message':
-        active_campaign_academy.sync_message,
-        'last_interaction_at':
-        active_campaign_academy.last_interaction_at,
-        'event_attendancy_automation':
-        event_attendancy_automation,
+        'id': active_campaign_academy.id,
+        'ac_key': active_campaign_academy.ac_key,
+        'ac_url': active_campaign_academy.ac_url,
+        'duplicate_leads_delta_avoidance': str(active_campaign_academy.duplicate_leads_delta_avoidance.total_seconds()),
+        'sync_status': active_campaign_academy.sync_status,
+        'sync_message': active_campaign_academy.sync_message,
+        'last_interaction_at': active_campaign_academy.last_interaction_at,
+        'event_attendancy_automation': event_attendancy_automation,
         'academy': {
             'id': academy.id,
             'slug': academy.slug,
             'name': academy.name,
         },
-        'created_at':
-        datetime_to_iso_format(active_campaign_academy.created_at),
-        'updated_at':
-        datetime_to_iso_format(active_campaign_academy.updated_at),
+        'created_at': datetime_to_iso_format(active_campaign_academy.created_at),
+        'updated_at': datetime_to_iso_format(active_campaign_academy.updated_at),
         **data,
     }
 
@@ -71,10 +61,7 @@ class ActiveCampaignTestSuite(MarketingTestCase):
         self.headers(academy=1)
         response = self.client.get(url)
         json = response.json()
-        expected = {
-            'detail': "You (user: 1) don't have this capability: read_lead for academy 1",
-            'status_code': 403
-        }
+        expected = {'detail': "You (user: 1) don't have this capability: read_lead for academy 1", 'status_code': 403}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

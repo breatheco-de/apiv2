@@ -32,11 +32,10 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
 
         allow_billing_this_session(None, None, queryset)
 
-        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'),
-                         [{
-                             **x,
-                             'allow_billing': True,
-                         } for x in self.bc.format.to_dict(model.mentorship_session)])
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [{
+            **x,
+            'allow_billing': True,
+        } for x in self.bc.format.to_dict(model.mentorship_session)])
 
     """
     🔽🔽🔽 With two MentorshipSession, allow_billing equal to True
