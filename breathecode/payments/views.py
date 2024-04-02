@@ -1230,8 +1230,7 @@ class CheckingView(APIView):
                     plan = bag.plans.first()
                     if plan and bag.coupons.count() == 0:
                         coupons = get_available_coupons(plan, request.data.get('coupons', []))
-                        if coupons:
-                            bag.coupons.set(coupons)
+                        bag.coupons.set(coupons)
                     # actions.check_dependencies_in_bag(bag, lang)
 
                 utc_now = timezone.now()
@@ -1570,12 +1569,11 @@ class PayView(APIView):
                     try:
                         plan = bag.plans.filter().first()
                         option = plan.financing_options.filter(how_many_months=bag.how_many_installments).first()
-                        amount = option.monthly_price
-
                         coupons = bag.coupons.all()
-                        bag.monthly_price = get_discounted_price(amount, coupons)
-                    except Exception as e:
-                        print(e)
+                        amount = get_discounted_price(option.monthly_price, coupons)
+
+                        bag.monthly_price = option.monthly_price
+                    except Exception:
                         raise ValidationException(translation(
                             lang,
                             en='Bag bad configured, related to financing option',

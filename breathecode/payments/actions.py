@@ -651,15 +651,17 @@ def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None) -> li
         Q(offered_at=None) | Q(offered_at__lte=timezone.now()),
         Q(expires_at=None) | Q(expires_at__gte=timezone.now()),
     )
-    special_offers = Coupon.objects.filter(*args, auto=True).exclude(discount_type=Coupon.Discount.NO_DISCOUNT).only(
-        'id', 'slug')
+    special_offers = Coupon.objects.filter(
+        *args,
+        auto=True).exclude(Q(how_many_offers=0) | Q(discount_type=Coupon.Discount.NO_DISCOUNT)).only('id', 'slug')
 
     for coupon in special_offers:
         if coupon.slug not in founded_coupon_slugs:
             founded_coupons.append(coupon)
             founded_coupon_slugs.append(coupon.slug)
 
-    valid_coupons = Coupon.objects.filter(*args, slug__in=coupons, auto=False).only('id', 'slug')
+    valid_coupons = Coupon.objects.filter(*args, slug__in=coupons,
+                                          auto=False).exclude(how_many_offers=0).only('id', 'slug')
 
     for coupon in valid_coupons:
         if coupon.slug not in founded_coupon_slugs:

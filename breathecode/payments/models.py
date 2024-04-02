@@ -717,7 +717,7 @@ class Coupon(models.Model):
     discount_value = models.FloatField(help_text='if type is PERCENT_OFF it\'s a percentage (range 0-1)')
 
     referral_type = models.CharField(max_length=13, choices=Referral, default=Referral.NO_REFERRAL, db_index=True)
-    referral_value = models.FloatField(help_text='If set, the seller will receive a reward')
+    referral_value = models.FloatField(help_text='If set, the seller will receive a reward', default=0)
 
     auto = models.BooleanField(default=False,
                                db_index=True,
@@ -738,13 +738,19 @@ class Coupon(models.Model):
         help_text='Available plans, if refferal type is not NO_REFERRAL it should keep empty, '
         'so, in this case, all plans will be available')
 
-    offered_at = models.DateTimeField(default=None, null=True, blank=False)
-    expires_at = models.DateTimeField(default=None, null=True, blank=False)
+    offered_at = models.DateTimeField(default=None, null=True, blank=True)
+    expires_at = models.DateTimeField(default=None, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def clean(self) -> None:
-        if self.referral_value is not None and self.referral_type == self.ReferralType.NO_REFERRAL:
+        if self.discount_value < 0:
+            raise forms.ValidationError('Discount value must be positive')
+
+        if self.referral_value < 0:
+            raise forms.ValidationError('Referral value must be positive')
+
+        if self.referral_value != 0 and self.referral_type == self.Referral.NO_REFERRAL:
             raise forms.ValidationError('If referral type is NO_REFERRAL, referral value must be None')
 
         elif self.referral_value is None:
