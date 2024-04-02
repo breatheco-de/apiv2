@@ -8,8 +8,6 @@ class EventsQueriesMixin():
     def generate_events_queries(self):
         """Generate queries"""
         return {
-            'module':
-            'events',
-            'models':
-            ['Organization', 'Organizer', 'Venue', 'EventType', 'Event', 'EventCheckin', 'EventbriteWebhook']
+            'module': 'events',
+            'models': ['Organization', 'Organizer', 'Venue', 'EventType', 'Event', 'EventCheckin', 'EventbriteWebhook']
         }

@@ -32,21 +32,14 @@ def cohort_user_item(data={}):
 def post_serializer(self, cohort, user, profile_academy=None, data={}):
     return {
         'cohort': {
-            'ending_date':
-            cohort.ending_date,
-            'id':
-            cohort.id,
+            'ending_date': cohort.ending_date,
+            'id': cohort.id,
             'kickoff_date':
-            self.bc.datetime.to_iso_string(cohort.kickoff_date)
-            if cohort.kickoff_date else cohort.kickoff_date,
-            'name':
-            cohort.name,
-            'slug':
-            cohort.slug,
-            'stage':
-            cohort.stage,
-            'available_as_saas':
-            cohort.available_as_saas,
+            self.bc.datetime.to_iso_string(cohort.kickoff_date) if cohort.kickoff_date else cohort.kickoff_date,
+            'name': cohort.name,
+            'slug': cohort.slug,
+            'stage': cohort.stage,
+            'available_as_saas': cohort.available_as_saas,
         },
         'created_at': self.bc.datetime.to_iso_string(UTC_NOW),
         'educational_status': 'ACTIVE',
@@ -74,21 +67,14 @@ def post_serializer(self, cohort, user, profile_academy=None, data={}):
 def put_serializer(self, cohort_user, cohort, user, profile_academy=None, data={}):
     return {
         'cohort': {
-            'ending_date':
-            cohort.ending_date,
-            'id':
-            cohort.id,
+            'ending_date': cohort.ending_date,
+            'id': cohort.id,
             'kickoff_date':
-            self.bc.datetime.to_iso_string(cohort.kickoff_date)
-            if cohort.kickoff_date else cohort.kickoff_date,
-            'name':
-            cohort.name,
-            'slug':
-            cohort.slug,
-            'stage':
-            cohort.stage,
-            'available_as_saas':
-            cohort.available_as_saas,
+            self.bc.datetime.to_iso_string(cohort.kickoff_date) if cohort.kickoff_date else cohort.kickoff_date,
+            'name': cohort.name,
+            'slug': cohort.slug,
+            'stage': cohort.stage,
+            'available_as_saas': cohort.available_as_saas,
         },
         'created_at': self.bc.datetime.to_iso_string(cohort_user.created_at),
         'educational_status': cohort_user.educational_status,
@@ -128,11 +114,10 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     """
@@ -186,8 +171,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
                 'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z',
-                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
                 'available_as_saas': model['cohort_user'].cohort.available_as_saas,
@@ -268,8 +252,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
                 'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z',
-                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
                 'available_as_saas': model['cohort_user'].cohort.available_as_saas,
@@ -331,8 +314,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
                 'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z',
-                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
                 'available_as_saas': model['cohort_user'].cohort.available_as_saas,
@@ -406,8 +388,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
                 'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z',
-                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
                 'available_as_saas': model['cohort_user'].cohort.available_as_saas,
@@ -473,8 +454,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
                 'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z',
-                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
                 'available_as_saas': model['cohort_user'].cohort.available_as_saas,
@@ -557,8 +537,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
                 'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z',
-                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
                 'available_as_saas': model['cohort_user'].cohort.available_as_saas,
@@ -612,8 +591,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
                 'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z',
-                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
                 'available_as_saas': model['cohort_user'].cohort.available_as_saas,
@@ -670,8 +648,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
                 'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z',
-                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
                 'available_as_saas': model['cohort_user'].cohort.available_as_saas,
@@ -724,8 +701,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
                 'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z',
-                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
                 'available_as_saas': model['cohort_user'].cohort.available_as_saas,
@@ -804,8 +780,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
                 'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z',
-                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
                 'available_as_saas': model['cohort_user'].cohort.available_as_saas,
@@ -859,8 +834,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
                 'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z',
-                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
                 'available_as_saas': model['cohort_user'].cohort.available_as_saas,
@@ -946,8 +920,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
                 'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(r'\+00:00$', 'Z',
-                                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
                 'available_as_saas': model['cohort_user'].cohort.available_as_saas,
@@ -972,10 +945,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_user')
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_cohort', role='potato')
         data = {}
         response = self.client.put(url, data, format='json')
 
@@ -997,10 +967,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_user')
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_cohort', role='potato')
         data = []
         response = self.client.put(url, data, format='json')
         json = response.json()
@@ -1017,10 +984,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_user')
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_cohort', role='potato')
         data = [{}]
         response = self.client.put(url, data, format='json')
         json = response.json()
@@ -1037,10 +1001,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_user')
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_cohort', role='potato')
         data = [{'id': 1}]
         response = self.client.put(url, data, format='json')
         json = response.json()
@@ -1187,14 +1148,10 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.post(url, data, format='json')
         json = response.json()
         expected = [
-            post_serializer(self,
-                            model.cohort,
-                            model.user,
-                            model.profile_academy,
-                            data={
-                                'id': 1,
-                                'role': 'STUDENT',
-                            }),
+            post_serializer(self, model.cohort, model.user, model.profile_academy, data={
+                'id': 1,
+                'role': 'STUDENT',
+            }),
         ]
 
         self.assertEqual(json, expected)
@@ -1231,14 +1188,10 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.post(url, data, format='json')
         json = response.json()
         expected = [
-            post_serializer(self,
-                            model.cohort,
-                            model.user,
-                            None,
-                            data={
-                                'id': model.user.id - 1,
-                                'role': 'STUDENT',
-                            }) for model in models
+            post_serializer(self, model.cohort, model.user, None, data={
+                'id': model.user.id - 1,
+                'role': 'STUDENT',
+            }) for model in models
         ]
 
         self.assertEqual(json, expected)
@@ -1328,10 +1281,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     def test__delete__without_args_in_url_or_bulk(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_cohort', role='potato')
         url = reverse_lazy('admissions:academy_cohort_user')
         response = self.client.delete(url)
         json = response.json()
@@ -1349,10 +1299,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         many_fields = ['id']
 
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='crud_cohort',
-                                    role='potato')
+        base = self.generate_models(authenticate=True, profile_academy=True, capability='crud_cohort', role='potato')
 
         del base['user']
         del base['cohort']
@@ -1379,10 +1326,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         many_fields = ['id']
 
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='crud_cohort',
-                                    role='potato')
+        base = self.generate_models(authenticate=True, profile_academy=True, capability='crud_cohort', role='potato')
 
         del base['user']
         del base['cohort']
@@ -1393,21 +1337,16 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'finantial_status': choice(['FULLY_PAID', 'UP_TO_DATE', 'LATE']),
                 'educational_status': choice(['ACTIVE', 'POSTPONED', 'SUSPENDED', 'GRADUATED', 'DROPPED']),
             }
-            model1 = self.generate_models(cohort_user=True,
-                                          cohort_user_kwargs=cohort_user_kwargs,
-                                          models=base)
+            model1 = self.generate_models(cohort_user=True, cohort_user_kwargs=cohort_user_kwargs, models=base)
 
             cohort_user_kwargs = {
                 'role': choice(['STUDENT', 'ASSISTANT', 'TEACHER']),
                 'finantial_status': choice(['FULLY_PAID', 'UP_TO_DATE', 'LATE']),
                 'educational_status': choice(['ACTIVE', 'POSTPONED', 'SUSPENDED', 'GRADUATED', 'DROPPED']),
             }
-            model2 = self.generate_models(cohort_user=True,
-                                          cohort_user_kwargs=cohort_user_kwargs,
-                                          models=base)
+            model2 = self.generate_models(cohort_user=True, cohort_user_kwargs=cohort_user_kwargs, models=base)
             url = (reverse_lazy('admissions:academy_cohort_user') + f'?{field}=' +
-                   str(getattr(model1['cohort_user'], field)) + ',' +
-                   str(getattr(model2['cohort_user'], field)))
+                   str(getattr(model1['cohort_user'], field)) + ',' + str(getattr(model2['cohort_user'], field)))
             response = self.client.delete(url)
 
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)

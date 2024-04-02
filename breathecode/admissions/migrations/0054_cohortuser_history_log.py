@@ -16,7 +16,6 @@ class Migration(migrations.Migration):
             field=models.JSONField(
                 blank=True,
                 default={},
-                help_text=
-                'The cohort user log will save attendancy and information about progress on each class'),
+                help_text='The cohort user log will save attendancy and information about progress on each class'),
         ),
     ]

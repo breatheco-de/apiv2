@@ -69,8 +69,7 @@ class CertificateView(APIView):
     @capable_of('read_certificate')
     def get(self, request, cohort_id, student_id, academy_id=None):
 
-        cert = UserSpecialty.objects.filter(cohort__id=cohort_id,
-                                            user__id=student_id,
+        cert = UserSpecialty.objects.filter(cohort__id=cohort_id, user__id=student_id,
                                             cohort__academy__id=academy_id).first()
         if cert is None:
             raise serializers.ValidationError('Certificate not found', code=404)
@@ -119,9 +118,7 @@ class CertificateCohortView(APIView):
         if 'layout_slug' in request.data:
             layout_slug = request.data['layout_slug']
 
-        cohort_users = CohortUser.objects.filter(cohort__id=cohort_id,
-                                                 role='STUDENT',
-                                                 cohort__academy__id=academy_id)
+        cohort_users = CohortUser.objects.filter(cohort__id=cohort_id, role='STUDENT', cohort__academy__id=academy_id)
         all_certs = []
         cohort__users = []
 

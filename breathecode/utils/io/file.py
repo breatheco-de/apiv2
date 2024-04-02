@@ -28,8 +28,8 @@ def _cut_csv(f: StringIO | BytesIO | BufferedReader | TextIOWrapper | InMemoryUp
     if isinstance(f, StringIO) or isinstance(f, TextIOWrapper):
         res = StringIO()
 
-    elif isinstance(f, BytesIO) or isinstance(f, BufferedReader) or isinstance(
-            f, InMemoryUploadedFile) or isinstance(f, TemporaryUploadedFile):
+    elif isinstance(f, BytesIO) or isinstance(f, BufferedReader) or isinstance(f, InMemoryUploadedFile) or isinstance(
+            f, TemporaryUploadedFile):
         res = BytesIO()
 
     if isinstance(f, InMemoryUploadedFile):
@@ -67,16 +67,15 @@ def _first_lines_of_csv(f: BytesIO | BufferedReader | InMemoryUploadedFile, *, l
     ...
 
 
-def _first_lines_of_csv(f: StringIO | BytesIO | BufferedReader | TextIOWrapper, *,
-                        first: int) -> StringIO | BytesIO:
+def _first_lines_of_csv(f: StringIO | BytesIO | BufferedReader | TextIOWrapper, *, first: int) -> StringIO | BytesIO:
 
     f.seek(0)
 
     if isinstance(f, StringIO) or isinstance(f, TextIOWrapper):
         res = StringIO()
 
-    elif isinstance(f, BytesIO) or isinstance(f, BufferedReader) or isinstance(
-            f, InMemoryUploadedFile) or isinstance(f, TemporaryUploadedFile):
+    elif isinstance(f, BytesIO) or isinstance(f, BufferedReader) or isinstance(f, InMemoryUploadedFile) or isinstance(
+            f, TemporaryUploadedFile):
         res = BytesIO()
 
     if isinstance(f, InMemoryUploadedFile):
@@ -111,15 +110,14 @@ def _last_lines_of_csv(f: BytesIO | BufferedReader | InMemoryUploadedFile, *, la
     ...
 
 
-def _last_lines_of_csv(f: StringIO | BytesIO | BufferedReader | TextIOWrapper, *,
-                       last: int) -> StringIO | BytesIO:
+def _last_lines_of_csv(f: StringIO | BytesIO | BufferedReader | TextIOWrapper, *, last: int) -> StringIO | BytesIO:
 
     if isinstance(f, StringIO) or isinstance(f, TextIOWrapper):
         res = StringIO()
         line = ''
 
-    elif isinstance(f, BytesIO) or isinstance(f, BufferedReader) or isinstance(
-            f, InMemoryUploadedFile) or isinstance(f, TemporaryUploadedFile):
+    elif isinstance(f, BytesIO) or isinstance(f, BufferedReader) or isinstance(f, InMemoryUploadedFile) or isinstance(
+            f, TemporaryUploadedFile):
         res = BytesIO()
         line = b''
 

@@ -5,13 +5,13 @@ import re
 from unittest.mock import MagicMock, patch
 from django.urls.base import reverse_lazy
 from rest_framework.test import APITestCase
-from breathecode.tests.mixins import (GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, DatetimeMixin,
-                                      ICallMixin, BreathecodeMixin)
+from breathecode.tests.mixins import (GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, DatetimeMixin, ICallMixin,
+                                      BreathecodeMixin)
 from rest_framework import status
 
 
-class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, DatetimeMixin,
-                         ICallMixin, BreathecodeMixin):
+class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, DatetimeMixin, ICallMixin,
+                         BreathecodeMixin):
     """AdmissionsTestCase with auth methods"""
 
     def setUp(self):
@@ -32,10 +32,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
             'timezone': timezone,
         }
 
-    def check_cohort_user_that_not_have_role_student_can_be_teacher(self,
-                                                                    role,
-                                                                    update=False,
-                                                                    additional_data={}):
+    def check_cohort_user_that_not_have_role_student_can_be_teacher(self, role, update=False, additional_data={}):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
 
@@ -205,17 +202,13 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 model['cohort'].is_hidden_on_prework,
                 'available_as_saas':
                 model['cohort'].available_as_saas,
-                'timeslots': [{
-                    'ending_at':
-                    self.integer_to_iso(cohort_time_slot['timezone'], cohort_time_slot['ending_at']),
-                    'id':
-                    cohort_time_slot['id'],
-                    'recurrency_type':
-                    cohort_time_slot['recurrency_type'],
-                    'recurrent':
-                    cohort_time_slot['recurrent'],
-                    'starting_at':
-                    self.integer_to_iso(cohort_time_slot['timezone'], cohort_time_slot['starting_at']),
+                'timeslots':
+                [{
+                    'ending_at': self.integer_to_iso(cohort_time_slot['timezone'], cohort_time_slot['ending_at']),
+                    'id': cohort_time_slot['id'],
+                    'recurrency_type': cohort_time_slot['recurrency_type'],
+                    'recurrent': cohort_time_slot['recurrent'],
+                    'starting_at': self.integer_to_iso(cohort_time_slot['timezone'], cohort_time_slot['starting_at']),
                 }] if cohort_time_slots and model.cohort.id != 1 else [],
                 'schedule': {
                     'id': model['cohort'].schedule.id,
@@ -253,8 +246,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
-                         self.all_model_dict([x.cohort for x in models]))
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), self.all_model_dict([x.cohort for x in models]))
         self.assertEqual(cohort_saved.send.call_args_list, [])
         return models
 
@@ -334,17 +326,13 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 model['cohort'].is_hidden_on_prework,
                 'available_as_saas':
                 model['cohort'].available_as_saas,
-                'timeslots': [{
-                    'ending_at':
-                    self.integer_to_iso(cohort_time_slot['timezone'], cohort_time_slot['ending_at']),
-                    'id':
-                    cohort_time_slot['id'],
-                    'recurrency_type':
-                    cohort_time_slot['recurrency_type'],
-                    'recurrent':
-                    cohort_time_slot['recurrent'],
-                    'starting_at':
-                    self.integer_to_iso(cohort_time_slot['timezone'], cohort_time_slot['starting_at']),
+                'timeslots':
+                [{
+                    'ending_at': self.integer_to_iso(cohort_time_slot['timezone'], cohort_time_slot['ending_at']),
+                    'id': cohort_time_slot['id'],
+                    'recurrency_type': cohort_time_slot['recurrency_type'],
+                    'recurrent': cohort_time_slot['recurrent'],
+                    'starting_at': self.integer_to_iso(cohort_time_slot['timezone'], cohort_time_slot['starting_at']),
                 }] if cohort_time_slots and model.cohort.id != 1 else [],
                 'schedule': {
                     'id': model['cohort'].schedule.id,
@@ -382,7 +370,6 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
-                         self.all_model_dict([x.cohort for x in models]))
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), self.all_model_dict([x.cohort for x in models]))
         self.assertEqual(cohort_saved.send.call_args_list, [])
         return models

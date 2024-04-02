@@ -13,6 +13,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status
 from django.http import StreamingHttpResponse
 from .actions import add_github_webhook, add_stripe_webhook
+from .tasks import async_unsubscribe_repo
 from .serializers import RepoSubscriptionSmallSerializer
 from breathecode.monitoring import signals
 from circuitbreaker import CircuitBreakerError
@@ -120,15 +121,18 @@ def process_github_webhook(request, subscription_token):
     if subscription is None:
         raise ValidationException(f'Subscription not found with token {subscription_token}')
 
-    academy_slugs = set([subscription.owner.slug] +
-                        [academy.slug for academy in subscription.shared_with.all()])
+    if subscription.status == 'DISABLED':
+        logger.debug(f'Ignored because subscription has been disabled')
+        async_unsubscribe_repo.delayed(subscription.hook_id, force_delete=False)
+        return Response('Ignored because subscription has been disabled', status=status.HTTP_200_OK)
+
+    academy_slugs = set([subscription.owner.slug] + [academy.slug for academy in subscription.shared_with.all()])
     payload = request.data.copy()
     payload['scope'] = request.headers['X-GitHub-Event']
 
     if 'repository' in payload and subscription.repository != payload['repository']['html_url']:
-        raise ValidationException(
-            'Webhook was called from a different repository than its original subscription: ' +
-            payload['repository']['html_url'])
+        raise ValidationException('Webhook was called from a different repository than its original subscription: ' +
+                                  payload['repository']['html_url'])
 
     if payload['scope'] == 'ping':
         subscription.status = 'OPERATIONAL'
@@ -202,9 +206,32 @@ class RepositorySubscriptionView(APIView, GenerateLookupsMixin):
     @capable_of('crud_asset')
     def post(self, request, academy_id=None):
         lang = get_user_language(request)
-        ALLOWED_EVENTS = ['push', 'pull_request']
 
         serializer = RepositorySubscriptionSerializer(data=request.data,
+                                                      context={
+                                                          'request': request,
+                                                          'academy': academy_id,
+                                                          'lang': lang
+                                                      })
+        if serializer.is_valid():
+            instance = serializer.save()
+            return Response(RepoSubscriptionSmallSerializer(instance).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_asset')
+    def put(self, request, academy_id=None, subscription_id=None):
+        lang = get_user_language(request)
+
+        subs = RepositorySubscription.objects.filter(id=subscription_id).first()
+        if subs is None:
+            raise ValidationException(
+                translation(lang,
+                            en=f'No subscription has been found with id {subscription_id}',
+                            es=f'No se ha encontrado una subscripcion con id {subscription_id}',
+                            slug='subscription-not-found'))
+
+        serializer = RepositorySubscriptionSerializer(subs,
+                                                      data=request.data,
                                                       context={
                                                           'request': request,
                                                           'academy': academy_id,

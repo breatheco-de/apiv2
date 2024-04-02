@@ -87,8 +87,7 @@ class CompressResponseMiddleware(MiddlewareMixin):
             elif 'gzip' in accept_encoding:
                 self._compress(response, 'gzip', gzip.compress)
 
-            elif IS_DEV and 'br' in accept_encoding and 'PostmanRuntime' in request.META.get(
-                    'HTTP_USER_AGENT', ''):
+            elif IS_DEV and 'br' in accept_encoding and 'PostmanRuntime' in request.META.get('HTTP_USER_AGENT', ''):
                 self._compress(response, 'br', brotli.compress)
 
         return response

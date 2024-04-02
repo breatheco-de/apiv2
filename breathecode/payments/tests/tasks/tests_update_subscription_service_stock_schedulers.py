@@ -37,10 +37,7 @@ def test_all_schedulers_must_be_created(bc: Breathecode):
         'service_item_id': n,
     } for n in range(1, 3)]
 
-    model = bc.database.create(plan=plan,
-                               subscription=1,
-                               service_item=2,
-                               plan_service_item=plan_service_items)
+    model = bc.database.create(plan=plan, subscription=1, service_item=2, plan_service_item=plan_service_items)
     tasks.update_subscription_service_stock_schedulers.delay(1, 1)
 
     assert bc.database.list_of('payments.ServiceStockScheduler') == [

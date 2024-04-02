@@ -14,11 +14,10 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.post(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED,
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED,
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_academy_token_get_without_capability(self):
@@ -29,22 +28,18 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': "You (user: 1) don't have this capability: get_academy_token "
-                'for academy 1',
-                'status_code': 403
-            })
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: get_academy_token "
+            'for academy 1',
+            'status_code': 403
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_academy_token_get_without_user(self):
         """Test /academy/:id/member/:id without auth"""
         role = 'konan'
         self.headers(academy=1)
-        self.generate_models(authenticate=True,
-                             role=role,
-                             capability='get_academy_token',
-                             profile_academy=True)
+        self.generate_models(authenticate=True, role=role, capability='get_academy_token', profile_academy=True)
         url = reverse_lazy('authenticate:academy_token')
         response = self.client.get(url)
         json = response.json()

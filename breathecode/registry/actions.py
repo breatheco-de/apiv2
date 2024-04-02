@@ -117,16 +117,14 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
 
         if author_id is None:
             raise Exception(
-                f'System does not know what github credentials to use to retrieve asset info for: {asset_slug}'
-            )
+                f'System does not know what github credentials to use to retrieve asset info for: {asset_slug}')
 
         if asset.readme_url is None or 'github.com' not in asset.readme_url:
             raise Exception(f'Missing or invalid URL on {asset_slug}, it does not belong to github.com')
 
         credentials = CredentialsGithub.objects.filter(user__id=author_id).first()
         if credentials is None:
-            raise Exception(
-                f'Github credentials for this user {author_id} not found when sync asset {asset_slug}')
+            raise Exception(f'Github credentials for this user {author_id} not found when sync asset {asset_slug}')
 
         g = Github(credentials.token)
         if asset.asset_type in ['LESSON', 'ARTICLE']:
@@ -261,6 +259,19 @@ def set_blob_content(repo, path_name, content, file_name, branch='main'):
     return repo.update_file(file[0].path, f'Update {file_name}', content, file[0].sha)
 
 
+def generate_screenshot(url: str, dimension: str = '1200x630', **kwargs):
+    screenshot_key = os.getenv('SCREENSHOT_MACHINE_KEY', '')
+    params = {
+        'key': screenshot_key,
+        'url': url,
+        'dimension': dimension,
+        **kwargs,
+    }
+    request = requests.request('GET', 'https://api.screenshotmachine.com', params=params, timeout=8)
+
+    return request
+
+
 def push_github_asset(github, asset: Asset):
 
     logger.debug(f'Sync pull_github_lesson {asset.slug}')
@@ -344,7 +355,6 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
         if 'authors' in fm and fm['authors'] != '':
             asset.authors_username = ','.join(fm['authors'])
 
-
         # retrive technologies from the frontmatter
         _techs = []
         if 'tags' in fm and isinstance(fm['tags'], list): _techs = fm['tags']
@@ -391,8 +401,7 @@ def clean_content_variables(asset: Asset):
     logger.debug('Original text:' + markdown_text)
 
     variables_dict = {}
-    variables = ContentVariable.objects.filter(
-        academy=asset.academy).filter(Q(lang__isnull=True) | Q(lang=asset.lang))
+    variables = ContentVariable.objects.filter(academy=asset.academy).filter(Q(lang__isnull=True) | Q(lang=asset.lang))
     for varia in variables:
         if varia.value is None:
             variables_dict[varia.key] = varia.default_value
@@ -411,8 +420,7 @@ def clean_content_variables(asset: Asset):
         if len(variable_parts) > 1:
             default_value = variable_parts[1].strip()
         else:
-            asset.log_error('missing-variable',
-                            f'Variable {variable_name} is missing and it has not default value')
+            asset.log_error('missing-variable', f'Variable {variable_name} is missing and it has not default value')
             default_value = '{% ' + variable_name + ' %}'
 
         value = variables_dict.get(variable_name, default_value)
@@ -602,9 +610,8 @@ class AssetThumbnailGenerator:
             raise Exception('Error calling service to generate thumbnail screenshot: ' + str(e))
 
         if response.status_code >= 400:
-            raise Exception(
-                'Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` '
-                f'returns status code {response.status_code}')
+            raise Exception('Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` '
+                            f'returns status code {response.status_code}')
 
         storage = Storage()
         cloud_file = storage.file(screenshots_bucket(), filename)
@@ -711,7 +718,7 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
 
         if 'projectType' in config:
             asset.gitpod = config['projectType'] == 'tutorial'
-      
+
         if 'technologies' in config:
             asset.technologies.clear()
             for tech_slug in config['technologies']:
@@ -773,6 +780,7 @@ def pull_quiz_asset(github, asset: Asset):
 
 def test_asset(asset: Asset):
     try:
+
         validator = None
         if asset.asset_type == 'LESSON':
             validator = LessonValidator(asset)
@@ -866,8 +874,7 @@ def upload_image_to_bucket(img: AssetImage, asset=None):
     found_mime = [mime for mime in allowed_mimes() if r.headers['content-type'] in mime]
     if len(found_mime) == 0:
         raise Exception(
-            f"Skipping image download for {link} in asset image {img.name}, invalid mime {r.headers['content-type']}"
-        )
+            f"Skipping image download for {link} in asset image {img.name}, invalid mime {r.headers['content-type']}")
 
     img.hash = hashlib.sha256(r.content).hexdigest()
 
@@ -923,6 +930,5 @@ def add_syllabus_translations(_json: dict):
                             'slug': _asset.slug,
                             'title': _asset.title
                         }
-  
 
     return _json

@@ -285,10 +285,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             response = self.client.get(url)
 
             content = self.bc.format.from_bytes(response.content)
-            expected = render_successfully(model.mentor_profile,
-                                           model.user,
-                                           fix_logo=True,
-                                           academy=model.academy)
+            expected = render_successfully(model.mentor_profile, model.user, fix_logo=True, academy=model.academy)
 
             # dump error in external files
             if content != expected:

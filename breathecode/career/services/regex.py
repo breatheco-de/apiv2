@@ -27,8 +27,11 @@ def location_format(findings, string_loc):
 
     for tag in result:
         loc.append(
-            tag.replace(' o ', ',').replace(';', ',').replace('-', '\', \'').replace('\'', '').replace(
-                'temporarily remote', 'Remote').strip())
+            tag.replace(' o ', ',').replace(';',
+                                            ',').replace('-',
+                                                         '\', \'').replace('\'',
+                                                                           '').replace('temporarily remote',
+                                                                                       'Remote').strip())
     return loc
 
 

@@ -31,8 +31,7 @@ class ActionRunSpiderTestCase(CareerTestCase):
         except Exception as e:
             self.assertEqual(str(e), 'missing-spider')
 
-    @patch(REQUESTS_PATH['post'],
-           apply_requests_post_mock([(400, 'https://app.scrapinghub.com/api/run.json', RESULT)]))
+    @patch(REQUESTS_PATH['post'], apply_requests_post_mock([(400, 'https://app.scrapinghub.com/api/run.json', RESULT)]))
     @patch('logging.Logger.error', MagicMock())
     def test_run_spider__with_status_code_error(self):
         from breathecode.career.actions import run_spider
@@ -67,12 +66,11 @@ class ActionRunSpiderTestCase(CareerTestCase):
                 call('Status 400 - bad-request')
             ])
 
-    @patch(
-        REQUESTS_PATH['post'],
-        apply_requests_post_mock([(200, 'https://app.scrapinghub.com/api/run.json', {
-            'status': 'ok',
-            'data': []
-        })]))
+    @patch(REQUESTS_PATH['post'],
+           apply_requests_post_mock([(200, 'https://app.scrapinghub.com/api/run.json', {
+               'status': 'ok',
+               'data': []
+           })]))
     def test_run_spider__with_one_spider(self):
         from breathecode.career.actions import run_spider
         import requests
@@ -92,12 +90,11 @@ class ActionRunSpiderTestCase(CareerTestCase):
                  timeout=2)
         ])
 
-    @patch(
-        REQUESTS_PATH['post'],
-        apply_requests_post_mock([(200, 'https://app.scrapinghub.com/api/run.json', {
-            'status': 'ok',
-            'data': []
-        })]))
+    @patch(REQUESTS_PATH['post'],
+           apply_requests_post_mock([(200, 'https://app.scrapinghub.com/api/run.json', {
+               'status': 'ok',
+               'data': []
+           })]))
     def test_run_spider__with_two_spiders(self):
         from breathecode.career.actions import run_spider
         import requests

@@ -38,8 +38,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='UserInvite',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('email', models.CharField(default=None, max_length=150, null=True)),
                 ('first_name', models.CharField(default=None, max_length=100, null=True)),
                 ('last_name', models.CharField(default=None, max_length=100, null=True)),
@@ -66,8 +65,7 @@ class Migration(migrations.Migration):
                                    null=True,
                                    on_delete=django.db.models.deletion.CASCADE,
                                    to='admissions.academy')),
-                ('author',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                ('author', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
                 ('cohort',
                  models.ForeignKey(default=None,
                                    null=True,

@@ -51,9 +51,7 @@ class MarketingTestSuite(ProvisioningTestCase):
         model = self.bc.database.create(user=1)
         self.client.force_authenticate(model.user)
 
-        self.headers(academy=1,
-                     accept='application/json',
-                     content_disposition='attachment; filename="filename.csv"')
+        self.headers(academy=1, accept='application/json', content_disposition='attachment; filename="filename.csv"')
 
         url = reverse_lazy('provisioning:academy_bill_id', kwargs={'bill_id': 1})
 
@@ -72,10 +70,7 @@ class MarketingTestSuite(ProvisioningTestCase):
     # Then: should return 404
     def test_no_bill(self):
 
-        model = self.bc.database.create(user=1,
-                                        profile_academy=1,
-                                        role=1,
-                                        capability='crud_provisioning_bill')
+        model = self.bc.database.create(user=1, profile_academy=1, role=1, capability='crud_provisioning_bill')
         self.client.force_authenticate(model.user)
 
         self.headers(academy=1)

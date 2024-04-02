@@ -26,8 +26,7 @@ class Migration(migrations.Migration):
             field=models.URLField(
                 blank=True,
                 default=None,
-                help_text=
-                "If set, it will be default for all session's unless the session.online_meeting_url is set",
+                help_text="If set, it will be default for all session's unless the session.online_meeting_url is set",
                 null=True),
         ),
         migrations.AddField(
@@ -53,11 +52,10 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='mentorprofile',
             name='timezone',
-            field=models.CharField(
-                default=None,
-                help_text="Knowing the mentor's timezone helps with more accurrate booking",
-                max_length=50,
-                null=True),
+            field=models.CharField(default=None,
+                                   help_text="Knowing the mentor's timezone helps with more accurrate booking",
+                                   max_length=50,
+                                   null=True),
         ),
         migrations.AddField(
             model_name='mentorshipsession',
@@ -72,12 +70,11 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='mentorprofile',
             name='email',
-            field=models.CharField(
-                blank=True,
-                default=None,
-                help_text='Only use this if the user does not exist on breathecode already',
-                max_length=150,
-                null=True),
+            field=models.CharField(blank=True,
+                                   default=None,
+                                   help_text='Only use this if the user does not exist on breathecode already',
+                                   max_length=150,
+                                   null=True),
         ),
         migrations.AlterField(
             model_name='mentorprofile',
@@ -127,8 +124,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='mentorshipsession',
             name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('COMPLETED', 'Completed'),
-                                            ('FAILED', 'Failed')],
+            field=models.CharField(choices=[('PENDING', 'Pending'), ('COMPLETED', 'Completed'), ('FAILED', 'Failed')],
                                    default='PENDING',
                                    help_text='Options are: PENDINGCOMPLETEDFAILED',
                                    max_length=15),

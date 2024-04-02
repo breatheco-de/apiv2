@@ -15,8 +15,7 @@ class Migration(migrations.Migration):
             name='is_hidden_on_prework',
             field=models.BooleanField(
                 default=True,
-                help_text=
-                "Determines if the cohorts will be shown in the dashboard if it's status is 'PREWORK'"),
+                help_text="Determines if the cohorts will be shown in the dashboard if it's status is 'PREWORK'"),
         ),
         migrations.AddField(
             model_name='cohort',
@@ -24,8 +23,7 @@ class Migration(migrations.Migration):
             field=models.BooleanField(
                 blank=True,
                 default=None,
-                help_text=
-                "Determines if the cohort will be shown in the dashboard if it's status is 'PREWORK'",
+                help_text="Determines if the cohort will be shown in the dashboard if it's status is 'PREWORK'",
                 null=True),
         ),
     ]

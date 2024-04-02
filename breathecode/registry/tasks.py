@@ -33,6 +33,7 @@ from .actions import (
     screenshots_bucket,
     test_asset,
     upload_image_to_bucket,
+    generate_screenshot,
 )
 from .models import Asset, AssetImage
 
@@ -144,8 +145,6 @@ def async_create_asset_thumbnail(asset_slug: str, **_):
     if asset is None:
         raise RetryTask(f'Asset with slug {asset_slug} not found')
 
-    func = FunctionV1(region='us-central1', project_id=google_project_id(), name='screenshots', method='GET')
-
     preview_url = asset.get_preview_generation_url()
     if preview_url is None:
         raise AbortTask('Not able to retrieve a preview generation')
@@ -154,16 +153,9 @@ def async_create_asset_thumbnail(asset_slug: str, **_):
     url = set_query_parameter(preview_url, 'slug', asset_slug)
 
     response = None
+    logger.info(f'Generating screenshot for {preview_url}')
     try:
-        response = func.call(
-            params={
-                'url': url,
-                'name': name,
-                'dimension': '1200x630',
-                # this should be fixed if the screenshots is taken without load the content properly
-                'delay': 1000,
-            },
-            timeout=8)
+        response = generate_screenshot(url, '1200x630', delay=1000)
 
     except Exception as e:
         raise AbortTask('Error calling service to generate thumbnail screenshot: ' + str(e))
@@ -172,31 +164,21 @@ def async_create_asset_thumbnail(asset_slug: str, **_):
         raise AbortTask('Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` '
                         f'returns status code {response.status_code}')
 
-    json = response.json()
-    json = json[0]
+    file = response.content
 
-    url = json['url']
-    filename = json['filename']
+    hash = hashlib.sha256(file).hexdigest()
+    content_type = response.headers['content-type']
 
     storage = Storage()
-    cloud_file = storage.file(screenshots_bucket(), filename)
 
-    # reattempt 60 times
-    for _ in range(0, 60):
-        content_file = cloud_file.download()
-        if not content_file:
-            time.sleep(1)
-            cloud_file = storage.file(screenshots_bucket(), filename)
-            continue
+    cloud_file = storage.file(screenshots_bucket(), hash)
 
-        hash = hashlib.sha256(content_file).hexdigest()
-        break
+    cloud_file.upload(file, content_type=content_type)
+    url = cloud_file.url()
 
     # file already exists for this academy
     media = Media.objects.filter(hash=hash, academy=asset.academy).first()
     if media is not None:
-        # this prevent a screenshots duplicated
-        cloud_file.delete()
 
         if asset.preview is None or asset.preview == '':
             asset.preview = media.url
@@ -207,8 +189,7 @@ def async_create_asset_thumbnail(asset_slug: str, **_):
     # file already exists for another academy
     media = Media.objects.filter(hash=hash).first()
     if media:
-        # this prevent a screenshots duplicated
-        cloud_file.delete()
+
         media = Media(slug=name.split('.')[0],
                       name=media.name,
                       url=media.url,
@@ -476,14 +457,16 @@ def async_synchonize_repository_content(self, webhook):
                     f'The file {file_path} was modified, searching for matches in our registry with {base_repo_url}/blob/{default_branch}/{file_path}'
                 )
 
-                # If the file being updated is a readme file
-                base_query = Q(readme_url__icontains=f'{base_repo_url}/blob/{default_branch}/{file_path}')
-                
-                # If its a learn.json for exercises and projects only
-                learnpack_query = Q(asset_type__in=['EXERCISE', 'PROJECT'], readme_url__icontains=f'{base_repo_url}/blob/{default_branch}/') if "learn.json" in file_path else Q()
-                
+                # include readme files and quiz json files
+                all_readme_files = Q(readme_url__icontains=f'{base_repo_url}/blob/{default_branch}/{file_path}')
+
+                # Conditional query for when 'learn.json' is in file_path
+                learn_json_files = Q(asset_type__in=['EXERCISE', 'PROJECT'],
+                                     readme_url__icontains=f'{base_repo_url}/blob/{default_branch}/'
+                                     ) if 'learn.json' in file_path else Q()
+
                 # Execute the combined query
-                assets = Asset.objects.filter(base_query | learnpack_query)
+                assets = Asset.objects.filter(all_readme_files | learn_json_files)
                 for a in assets:
                     if commit['id'] == a.github_commit_hash:
                         # ignore asset because the commit content is already on the asset

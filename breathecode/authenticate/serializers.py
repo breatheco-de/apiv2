@@ -91,6 +91,7 @@ class AcademyTinySerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+    logo_url = serpy.Field()
 
 
 class CohortTinySerializer(serpy.Serializer):
@@ -364,6 +365,7 @@ class AppUserSerializer(serpy.Serializer):
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     email = serpy.Field()
+    username = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
     github = serpy.MethodField()
@@ -655,8 +657,8 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                                           code=400)
 
             expected_keys = [
-                'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'utm_campaign', 'conversion_url', 'landing_url',
-                'user_agent', 'plan', 'location', 'translations'
+                'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'utm_campaign',
+                'conversion_url', 'landing_url', 'user_agent', 'plan', 'location', 'translations'
             ]
 
             for key in conversion_info.keys():
@@ -1406,9 +1408,9 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                                           code=400)
 
             expected_keys = [
-                'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'utm_campaign', 'conversion_url', 'landing_url',
-                'user_agent', 'plan', 'location', 'internal_cta_placement', 'internal_cta_content',
-                'internal_cta_campaign'
+                'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'utm_campaign',
+                'conversion_url', 'landing_url', 'user_agent', 'plan', 'location', 'internal_cta_placement',
+                'internal_cta_content', 'internal_cta_campaign'
             ]
 
             for key in conversion_info.keys():

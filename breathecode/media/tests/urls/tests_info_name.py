@@ -62,10 +62,7 @@ class MediaTestSuite(MediaTestCase):
     def test_info_id_without_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        models = self.generate_models(authenticate=True,
-                                      profile_academy=True,
-                                      capability='read_media',
-                                      role='potato')
+        models = self.generate_models(authenticate=True, profile_academy=True, capability='read_media', role='potato')
         url = reverse_lazy('media:info_name', kwargs={'media_name': 'they-killed-kenny.exe'})
         response = self.client.get(url)
         json = response.json()
@@ -133,22 +130,14 @@ class MediaTestSuite(MediaTestCase):
                     'name': model['category'].name,
                     'slug': model['category'].slug,
                 }],
-                'hash':
-                model['media'].hash,
-                'hits':
-                model['media'].hits,
-                'id':
-                model['media'].id,
-                'mime':
-                model['media'].mime,
-                'name':
-                model['media'].name,
-                'slug':
-                model['media'].slug,
-                'thumbnail':
-                f'{model.media.url}-thumbnail',
-                'url':
-                model['media'].url,
+                'hash': model['media'].hash,
+                'hits': model['media'].hits,
+                'id': model['media'].id,
+                'mime': model['media'].mime,
+                'name': model['media'].name,
+                'slug': model['media'].slug,
+                'thumbnail': f'{model.media.url}-thumbnail',
+                'url': model['media'].url,
                 'academy': {
                     'id': model['academy'].id,
                     'slug': model['academy'].slug,

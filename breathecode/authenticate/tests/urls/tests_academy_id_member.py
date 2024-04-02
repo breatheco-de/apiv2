@@ -30,11 +30,10 @@ class MemberGetDuckTestSuite(AuthTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED,
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED,
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_academy_id_member__without_capabilities(self):
@@ -54,10 +53,7 @@ class MemberGetDuckTestSuite(AuthTestCase):
     def test_academy_id_member__with_auth(self):
         for n in range(1, 4):
             self.bc.request.set_headers(academy=n)
-            model = self.bc.database.create(authenticate=True,
-                                            capability='read_member',
-                                            role='role',
-                                            profile_academy=1)
+            model = self.bc.database.create(authenticate=True, capability='read_member', role='role', profile_academy=1)
             url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': n})
             response = self.client.get(url)
             json = response.json()
@@ -103,11 +99,10 @@ class MemberPostDuckTestSuite(AuthTestCase):
         response = self.client.post(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED,
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED,
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_academy_id_member__without_capabilities(self):
@@ -127,10 +122,7 @@ class MemberPostDuckTestSuite(AuthTestCase):
     def test_academy_id_member__with_auth(self):
         for n in range(1, 4):
             self.bc.request.set_headers(academy=n)
-            model = self.bc.database.create(authenticate=True,
-                                            capability='crud_member',
-                                            role='role',
-                                            profile_academy=1)
+            model = self.bc.database.create(authenticate=True, capability='crud_member', role='role', profile_academy=1)
 
             url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': n})
             response = self.client.post(url)
@@ -179,11 +171,10 @@ class MemberDeleteDuckTestSuite(AuthTestCase):
         response = self.client.delete(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED,
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED,
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_academy_id_member__without_capabilities(self):
@@ -203,10 +194,7 @@ class MemberDeleteDuckTestSuite(AuthTestCase):
     def test_academy_id_member__with_auth(self):
         for n in range(1, 4):
             self.bc.request.set_headers(academy=n)
-            model = self.bc.database.create(authenticate=True,
-                                            capability='crud_member',
-                                            role='role',
-                                            profile_academy=1)
+            model = self.bc.database.create(authenticate=True, capability='crud_member', role='role', profile_academy=1)
 
             url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': n})
             response = self.client.delete(url)

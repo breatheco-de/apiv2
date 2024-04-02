@@ -69,14 +69,13 @@ class MarketingTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     def test_no_files(self):
         from breathecode.services.google_cloud import Storage, File
 
@@ -105,14 +104,13 @@ class MarketingTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_bad_file_type(self):
         from breathecode.services.google_cloud import Storage, File
@@ -166,14 +164,13 @@ class MarketingTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_bad_format(self):
         from breathecode.services.google_cloud import Storage, File
@@ -250,15 +247,14 @@ class MarketingTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=False),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=False),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock())
     def test_codespaces(self):
@@ -354,15 +350,14 @@ class MarketingTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock())
     def test_codespaces__update(self):
@@ -451,15 +446,14 @@ class MarketingTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=False),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=False),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock())
     def test_gitpod(self):
@@ -481,8 +475,7 @@ class MarketingTestSuite(ProvisioningTestCase):
         kinds = [self.bc.fake.slug() for _ in range(0, 3)]
         usernames = [self.bc.fake.slug() for _ in range(0, 3)]
         contextURLs = [
-            f'https://github.com/{username}/{self.bc.fake.slug()}/tree/{self.bc.fake.slug()}/'
-            for username in usernames
+            f'https://github.com/{username}/{self.bc.fake.slug()}/tree/{self.bc.fake.slug()}/' for username in usernames
         ]
 
         # dictionary of lists
@@ -554,15 +547,14 @@ class MarketingTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.provisioning.tasks.upload.delay', MagicMock())
     def test_gitpod__update(self):
@@ -584,8 +576,7 @@ class MarketingTestSuite(ProvisioningTestCase):
         kinds = [self.bc.fake.slug() for _ in range(0, 3)]
         usernames = [self.bc.fake.slug() for _ in range(0, 3)]
         contextURLs = [
-            f'https://github.com/{username}/{self.bc.fake.slug()}/tree/{self.bc.fake.slug()}/'
-            for username in usernames
+            f'https://github.com/{username}/{self.bc.fake.slug()}/tree/{self.bc.fake.slug()}/' for username in usernames
         ]
 
         # dictionary of lists

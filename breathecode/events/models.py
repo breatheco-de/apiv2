@@ -121,15 +121,13 @@ class EventType(models.Model):
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=False, null=True)
     lang = models.CharField(max_length=5, default='en', validators=[validate_language_code])
     free_for_bootcamps = models.BooleanField(
-        default=True,
-        help_text='Users that belong to other no-saas academies will be able to join without consuming')
+        default=True, help_text='Users that belong to other no-saas academies will be able to join without consuming')
 
-    visibility_settings = models.ManyToManyField(
-        EventTypeVisibilitySetting,
-        blank=True,
-        help_text='Visibility has to be configured every academy separately')
-    allow_shared_creation = models.BooleanField(
-        default=True, help_text='Other academies are allowed to create events of this type')
+    visibility_settings = models.ManyToManyField(EventTypeVisibilitySetting,
+                                                 blank=True,
+                                                 help_text='Visibility has to be configured every academy separately')
+    allow_shared_creation = models.BooleanField(default=True,
+                                                help_text='Other academies are allowed to create events of this type')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -181,11 +179,7 @@ class Event(models.Model):
         null=True,
         help_text='Is the event is about a project, this field will have the asset slug of that project.')
     title = models.CharField(max_length=255, blank=True, default=None, null=True)
-    lang = models.CharField(max_length=5,
-                            blank=True,
-                            default=None,
-                            null=True,
-                            validators=[validate_language_code])
+    lang = models.CharField(max_length=5, blank=True, default=None, null=True, validators=[validate_language_code])
     currency = models.CharField(max_length=3, choices=CURRENCIES, default=USD, blank=True)
     tags = models.CharField(max_length=100, default='', blank=True)
     free_for_all = models.BooleanField(
@@ -194,8 +188,7 @@ class Event(models.Model):
         default=True,
         blank=True,
         null=True,
-        help_text=
-        'Determines if users that belong to an academy not available as saas can join the event for free.')
+        help_text='Determines if users that belong to an academy not available as saas can join the event for free.')
 
     url = models.URLField(
         max_length=255,
@@ -203,8 +196,7 @@ class Event(models.Model):
         blank=True,
         default=None,
         help_text=
-        'URL can be blank if the event will be synched with EventBrite, it will be filled automatically by the API.'
-    )
+        'URL can be blank if the event will be synched with EventBrite, it will be filled automatically by the API.')
     banner = models.URLField(max_length=255)
     capacity = models.IntegerField()
     live_stream_url = models.URLField(
@@ -213,17 +205,15 @@ class Event(models.Model):
         blank=True,
         default=None,
         help_text=
-        'This URL should have the URL of the meeting if it is an online event, if it\'s not online it should be empty.'
-    )
+        'This URL should have the URL of the meeting if it is an online event, if it\'s not online it should be empty.')
 
     starting_at = models.DateTimeField(blank=False)
     ending_at = models.DateTimeField(
         blank=False, help_text='This field contains the value of when the event is supposed to be finished.')
-    ended_at = models.DateTimeField(
-        blank=True,
-        null=True,
-        default=None,
-        help_text='This field contains the value of when the event actually finished.')
+    ended_at = models.DateTimeField(blank=True,
+                                    null=True,
+                                    default=None,
+                                    help_text='This field contains the value of when the event actually finished.')
 
     host = models.CharField(max_length=100,
                             blank=True,
@@ -250,12 +240,11 @@ class Event(models.Model):
     eventbrite_organizer_id = models.CharField(max_length=80, blank=True, default=None, null=True)
 
     status = models.CharField(max_length=9, choices=EVENT_STATUS, default=DRAFT, blank=True)
-    eventbrite_status = models.CharField(
-        max_length=9,
-        help_text='One of: draft, live, started, ended, completed and canceled',
-        blank=True,
-        default=None,
-        null=True)
+    eventbrite_status = models.CharField(max_length=9,
+                                         help_text='One of: draft, live, started, ended, completed and canceled',
+                                         blank=True,
+                                         default=None,
+                                         null=True)
 
     sync_with_eventbrite = models.BooleanField(default=False)
     eventbrite_sync_status = models.CharField(

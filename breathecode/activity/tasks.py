@@ -13,6 +13,7 @@ from django.core.cache import cache
 from django.utils import timezone
 from django_redis import get_redis_connection
 from google.cloud import bigquery
+from google.cloud.bigquery.schema import SchemaField
 from redis.exceptions import LockError
 from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
@@ -241,11 +242,13 @@ def upload_activities(self, task_manager_id: int, **_):
 
     rows = [x['data'] for x in res]
     new_schema = BigQuery.join_schemas(*[x['schema'] for x in res])
+
     diff = BigQuery.schema_difference(schema, new_schema)
 
     try:
         if diff:
-            table.update_schema(diff)
+            merged_schema = BigQuery.merge_schema(diff, schema)
+            table.update_schema(merged_schema)
 
         table.bulk_insert(rows)
 
@@ -263,9 +266,13 @@ def add_activity(user_id: int,
                  related_type: Optional[str] = None,
                  related_id: Optional[str | int] = None,
                  related_slug: Optional[str] = None,
+                 timestamp: Optional[str] = None,
                  **_):
 
     logger.info(f'Executing add_activity related to {str(kind)}')
+
+    if timestamp is None:
+        timestamp = timezone.now().isoformat()
 
     if related_type and not (bool(related_id) ^ bool(related_slug)):
         raise AbortTask(
@@ -312,7 +319,7 @@ def add_activity(user_id: int,
                     'id': uuid.uuid4().hex,
                     'user_id': user_id,
                     'kind': kind,
-                    'timestamp': timezone.now().isoformat(),
+                    'timestamp': timestamp,
                     'related': {
                         'type': related_type,
                         'id': related_id,

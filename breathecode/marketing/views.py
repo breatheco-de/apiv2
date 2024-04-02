@@ -17,10 +17,11 @@ from rest_framework.permissions import AllowAny
 from rest_framework.parsers import FileUploadParser, MultiPartParser
 from rest_framework.decorators import api_view, permission_classes
 from django.db.models import Count, F, Func, Value, CharField
-from breathecode.utils import (APIException, localize_query, capable_of, ValidationException,
-                               GenerateLookupsMixin, HeaderLimitOffsetPagination)
+from breathecode.utils import (APIException, localize_query, capable_of, ValidationException, GenerateLookupsMixin,
+                               HeaderLimitOffsetPagination)
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.i18n import translation
+from breathecode.utils.decorators import validate_captcha
 from .serializers import (
     GetCourseSerializer,
     GetCourseSmallSerializer,
@@ -108,6 +109,7 @@ def get_alias(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@validate_captcha
 def create_lead(request):
     data = request.data.copy()
 
@@ -414,8 +416,8 @@ def get_leads_report(request, id=None):
     items = items.values(*group_by).annotate(total_leads=Count('location'))
 
     if 'created_at__date' in group_by:
-        items = items.annotate(created_date=Func(
-            F('created_at'), Value('YYYYMMDD'), function='to_char', output_field=CharField()))
+        items = items.annotate(
+            created_date=Func(F('created_at'), Value('YYYYMMDD'), function='to_char', output_field=CharField()))
     # items = items.order_by('created_at')
     return Response(items)
 
@@ -517,8 +519,7 @@ class AcademyAutomationView(APIView, GenerateLookupsMixin):
     def put(self, request, automation_id=None, academy_id=None):
         many = isinstance(request.data, list)
         if not many:
-            automation = Automation.objects.filter(id=automation_id,
-                                                   ac_academy__academy__id=academy_id).first()
+            automation = Automation.objects.filter(id=automation_id, ac_academy__academy__id=academy_id).first()
             if automation is None:
                 raise ValidationException(f'Automation {automation_id} not found for this academy',
                                           slug='automation-not-found')
@@ -530,8 +531,7 @@ class AcademyAutomationView(APIView, GenerateLookupsMixin):
 
                 if 'id' not in x:
                     raise ValidationException('Cannot determine automation in '
-                                              f'index {index}',
-                                              slug='without-id')
+                                              f'index {index}', slug='without-id')
 
                 instance = Automation.objects.filter(id=x['id'], ac_academy__academy__id=academy_id).first()
 
@@ -669,8 +669,7 @@ class AcademyProcessView(APIView, GenerateLookupsMixin):
         for item in items:
             persist_single_lead.delay(item.to_form_data())
 
-        return Response({'details': f'{items.count()} leads added to the processing queue'},
-                        status=status.HTTP_200_OK)
+        return Response({'details': f'{items.count()} leads added to the processing queue'}, status=status.HTTP_200_OK)
 
 
 class AcademyLeadView(APIView, GenerateLookupsMixin):
@@ -818,12 +817,7 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
 
         serializers = []
         for lead in leads:
-            serializer = PostFormEntrySerializer(lead,
-                                                 data=data,
-                                                 context={
-                                                     'request': request,
-                                                     'academy': academy_id
-                                                 })
+            serializer = PostFormEntrySerializer(lead, data=data, context={'request': request, 'academy': academy_id})
             serializers.append(serializer)
             if not serializer.is_valid():
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -947,11 +941,7 @@ class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     @capable_of('crud_shortlink')
     def post(self, request, academy_id=None):
 
-        serializer = ShortLinkSerializer(data=request.data,
-                                         context={
-                                             'request': request,
-                                             'academy': academy_id
-                                         })
+        serializer = ShortLinkSerializer(data=request.data, context={'request': request, 'academy': academy_id})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -964,12 +954,7 @@ class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if short is None:
             raise ValidationException(f'ShortLink {short_slug} not found', slug='short-not-found')
 
-        serializer = ShortLinkSerializer(short,
-                                         data=request.data,
-                                         context={
-                                             'request': request,
-                                             'academy': academy_id
-                                         })
+        serializer = ShortLinkSerializer(short, data=request.data, context={'request': request, 'academy': academy_id})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -1192,9 +1177,8 @@ class CourseView(APIView):
             lang = get_user_language(request)
 
         if course_slug:
-            item = Course.objects.filter(slug=course_slug).annotate(
-                lang=Value(lang, output_field=CharField())).exclude(status='DELETED').exclude(
-                    visibility='PRIVATE').first()
+            item = Course.objects.filter(slug=course_slug).annotate(lang=Value(lang, output_field=CharField())).exclude(
+                status='DELETED').exclude(visibility='PRIVATE').first()
 
             if not item:
                 raise ValidationException(translation(lang,

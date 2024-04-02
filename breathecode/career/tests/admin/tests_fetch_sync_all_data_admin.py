@@ -87,8 +87,7 @@ JOBS = [{
     'Company_name': 'Revelry Labs',
     'Post_date': '8 days ago',
     'Extract_date': '2022-02-17',
-    'Job_description':
-    'Net Core Developer who has experience with .net Core, C#, and SQL Server Database experience.',
+    'Job_description': 'Net Core Developer who has experience with .net Core, C#, and SQL Server Database experience.',
     'Salary': '',
     'Tags': [],
     'Apply_to':
@@ -116,8 +115,7 @@ JOBS2 = [{
     'Company_name': 'Revelry Labs',
     'Post_date': '8 days ago',
     'Extract_date': '2022-02-17',
-    'Job_description':
-    'Net Core Developer who has experience with .net Core, C#, and SQL Server Database experience.',
+    'Job_description': 'Net Core Developer who has experience with .net Core, C#, and SQL Server Database experience.',
     'Salary': '',
     'Tags': [],
     'Apply_to':
@@ -144,8 +142,7 @@ class RunSpiderAdminTestSuite(CareerTestCase):
     @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
     @patch('django.contrib.messages.add_message', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.career.actions.fetch_sync_all_data',
-           MagicMock(side_effect=Exception('They killed kenny')))
+    @patch('breathecode.career.actions.fetch_sync_all_data', MagicMock(side_effect=Exception('They killed kenny')))
     def test_fetch_sync_all_data_admin__with_zero_spider(self):
         from breathecode.career.actions import fetch_sync_all_data
         from logging import Logger

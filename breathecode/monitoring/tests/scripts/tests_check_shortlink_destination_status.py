@@ -12,9 +12,7 @@ class ShortLinkTestSuite(MonitoringTestCase):
 
         monitor_script_kwargs = {'script_slug': 'check_shortlinks_with_destination_status_error'}
 
-        model = self.generate_models(academy=True,
-                                     monitor_script=True,
-                                     monitor_script_kwargs=monitor_script_kwargs)
+        model = self.generate_models(academy=True, monitor_script=True, monitor_script_kwargs=monitor_script_kwargs)
 
         script = run_script(model.monitor_script)
 
@@ -102,13 +100,13 @@ class ShortLinkTestSuite(MonitoringTestCase):
         self.assertDatetime(db_values[0]['last_run'])
         del db_values[0]['last_run']
         del db['last_run']
-        self.assertEqual(
-            db_values, [{
-                **db, 'status': 'MINOR',
-                'response_text': f'These shortlinks: - URL: {model.short_link.destination} Status: '
-                f'{model.short_link.destination_status} Last clicked: never are not working properly.',
-                'status_code': 1
-            }])
+        self.assertEqual(db_values,
+                         [{
+                             **db, 'status': 'MINOR',
+                             'response_text': f'These shortlinks: - URL: {model.short_link.destination} Status: '
+                             f'{model.short_link.destination_status} Last clicked: never are not working properly.',
+                             'status_code': 1
+                         }])
 
     def tests_send_list_of_shortlinks_when_destination_status_not_found(self):
         """
@@ -152,13 +150,13 @@ class ShortLinkTestSuite(MonitoringTestCase):
         self.assertDatetime(db_values[0]['last_run'])
         del db_values[0]['last_run']
         del db['last_run']
-        self.assertEqual(
-            db_values, [{
-                **db, 'status': 'MINOR',
-                'response_text': f'These shortlinks: - URL: {model.short_link.destination} Status: '
-                f'{model.short_link.destination_status} Last clicked: never are not working properly.',
-                'status_code': 1
-            }])
+        self.assertEqual(db_values,
+                         [{
+                             **db, 'status': 'MINOR',
+                             'response_text': f'These shortlinks: - URL: {model.short_link.destination} Status: '
+                             f'{model.short_link.destination_status} Last clicked: never are not working properly.',
+                             'status_code': 1
+                         }])
 
     def tests_send_list_of_shortlinks_when_destination_status_error_with_lastclick_at(self):
         """

@@ -94,10 +94,7 @@ class ProfileTestSuite(AuthTestCase):
     def test_user_profile__wrong_user_id(self):
         """Test /profile/id """
         self.bc.request.set_headers(academy=1)
-        model = self.bc.database.create(authenticate=True,
-                                        capability='crud_event',
-                                        role='role',
-                                        profile_academy=1)
+        model = self.bc.database.create(authenticate=True, capability='crud_event', role='role', profile_academy=1)
 
         url = reverse_lazy('authenticate:user_profile', kwargs={
             'user_id': 1,
@@ -136,10 +133,7 @@ class ProfileTestSuite(AuthTestCase):
     def test_put_user_profile__wrong_user_id(self):
         """Test put /profile/id """
         self.bc.request.set_headers(academy=1)
-        model = self.bc.database.create(authenticate=True,
-                                        capability='crud_event',
-                                        role='role',
-                                        profile_academy=1)
+        model = self.bc.database.create(authenticate=True, capability='crud_event', role='role', profile_academy=1)
 
         url = reverse_lazy('authenticate:user_profile', kwargs={
             'user_id': 1,

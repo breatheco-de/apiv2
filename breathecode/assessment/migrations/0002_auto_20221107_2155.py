@@ -24,8 +24,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='AssessmentThreshold',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('score_threshold',
                  models.IntegerField(
                      help_text='You can set a threshold to determine if the user score is successfull')),

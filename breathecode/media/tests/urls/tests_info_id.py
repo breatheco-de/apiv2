@@ -79,10 +79,7 @@ class MediaTestSuite(MediaTestCase):
     def test_info_id_without_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        models = self.generate_models(authenticate=True,
-                                      profile_academy=True,
-                                      capability='read_media',
-                                      role='potato')
+        models = self.generate_models(authenticate=True, profile_academy=True, capability='read_media', role='potato')
         url = reverse_lazy('media:info_id', kwargs={'media_id': 1})
         response = self.client.get(url)
         json = response.json()
@@ -150,22 +147,14 @@ class MediaTestSuite(MediaTestCase):
                     'name': model['category'].name,
                     'slug': model['category'].slug,
                 }],
-                'hash':
-                model['media'].hash,
-                'hits':
-                model['media'].hits,
-                'id':
-                model['media'].id,
-                'mime':
-                model['media'].mime,
-                'name':
-                model['media'].name,
-                'slug':
-                model['media'].slug,
-                'thumbnail':
-                f'{model.media.url}-thumbnail',
-                'url':
-                model['media'].url,
+                'hash': model['media'].hash,
+                'hits': model['media'].hits,
+                'id': model['media'].id,
+                'mime': model['media'].mime,
+                'name': model['media'].name,
+                'slug': model['media'].slug,
+                'thumbnail': f'{model.media.url}-thumbnail',
+                'url': model['media'].url,
                 'academy': {
                     'id': model['academy'].id,
                     'slug': model['academy'].slug,
@@ -224,10 +213,7 @@ class MediaTestSuite(MediaTestCase):
     def test_info_id_put_without_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        models = self.generate_models(authenticate=True,
-                                      profile_academy=True,
-                                      capability='crud_media',
-                                      role='potato')
+        models = self.generate_models(authenticate=True, profile_academy=True, capability='crud_media', role='potato')
         url = reverse_lazy('media:info_id', kwargs={'media_id': 1})
         data = {}
         response = self.client.put(url, data)
@@ -311,10 +297,7 @@ class MediaTestSuite(MediaTestCase):
     def test_info_id_delete_without_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_media',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_media', role='potato')
         url = reverse_lazy('media:info_id', kwargs={'media_id': 1})
         response = self.client.delete(url)
         json = response.json()
@@ -420,9 +403,7 @@ class MediaTestSuite(MediaTestCase):
                                     category=True)
 
         media_kwargs = {'hash': '1234567890123456789012345678901234567890123456'}
-        models = [
-            self.generate_models(media=True, media_kwargs=media_kwargs, models=base) for _ in range(0, 2)
-        ]
+        models = [self.generate_models(media=True, media_kwargs=media_kwargs, models=base) for _ in range(0, 2)]
         url = reverse_lazy('media:info_id', kwargs={'media_id': 1})
         response = self.client.delete(url)
         self.assertEqual(storage_mock.call_args_list, [])

@@ -88,18 +88,15 @@ class IssueAdmin(admin.ModelAdmin):
     list_display = ('id', 'github_number', 'freelancer', 'title', 'status', 'duration_in_hours', 'bill_id',
                     'github_url')
     list_filter = ['status', 'bill__status']
-    actions = [resync_single_issue] + change_field(['TODO', 'DONE', 'IGNORED', 'DRAFT', 'DOING'],
-                                                   name='status')
+    actions = [resync_single_issue] + change_field(['TODO', 'DONE', 'IGNORED', 'DRAFT', 'DOING'], name='status')
 
     def github_url(self, obj):
-        return format_html("<a rel='noopener noreferrer' target='_blank' href='{url}'>open in github</a>",
-                           url=obj.url)
+        return format_html("<a rel='noopener noreferrer' target='_blank' href='{url}'>open in github</a>", url=obj.url)
 
 
 @admin.register(Bill)
 class BillAdmin(admin.ModelAdmin):
-    list_display = ('id', 'freelancer', 'status', 'total_duration_in_hours', 'total_price', 'paid_at',
-                    'invoice_url')
+    list_display = ('id', 'freelancer', 'status', 'total_duration_in_hours', 'total_price', 'paid_at', 'invoice_url')
     list_filter = ['status']
     actions = change_field(['PAID', 'APPROVED', 'IGNORED', 'DUE'], name='status')
 
@@ -131,8 +128,7 @@ class FreelanceProjectMemberAdmin(admin.ModelAdmin):
     list_display = ('freelancer', 'project', 'total_cost_hourly_price', 'total_client_hourly_price')
     list_filter = ['project']
     search_fields = [
-        'project__title', 'freelancer__user__email', 'freelancer__user__first_name',
-        'freelancer__user__last_name'
+        'project__title', 'freelancer__user__email', 'freelancer__user__first_name', 'freelancer__user__last_name'
     ]
 
 

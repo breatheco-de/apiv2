@@ -94,8 +94,7 @@ JOBS = [{
     'Company_name': 'Revelry Labs',
     'Post_date': '8 days ago',
     'Extract_date': '2022-02-17',
-    'Job_description':
-    'Net Core Developer who has experience with .net Core, C#, and SQL Server Database experience.',
+    'Job_description': 'Net Core Developer who has experience with .net Core, C#, and SQL Server Database experience.',
     'Salary': '',
     'Tags': [],
     'Apply_to':
@@ -123,8 +122,7 @@ JOBS2 = [{
     'Company_name': 'Revelry Labs',
     'Post_date': '8 days ago',
     'Extract_date': '2022-02-17',
-    'Job_description':
-    'Net Core Developer who has experience with .net Core, C#, and SQL Server Database experience.',
+    'Job_description': 'Net Core Developer who has experience with .net Core, C#, and SQL Server Database experience.',
     'Salary': '',
     'Tags': [],
     'Apply_to':
@@ -190,10 +188,9 @@ class ActionTestFetchSyncAllDataAdminTestCase(CareerTestCase):
 
     @patch(
         REQUESTS_PATH['get'],
-        apply_requests_get_mock([
-            (200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA1),
-            (200, 'https://storage.scrapinghub.com/items/223344/2/72?apikey=1234567&format=json', JOBS)
-        ]))
+        apply_requests_get_mock([(200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA1),
+                                 (200, 'https://storage.scrapinghub.com/items/223344/2/72?apikey=1234567&format=json',
+                                  JOBS)]))
     def test_verify_fetch_funtions_was_called(self):
         import requests
 

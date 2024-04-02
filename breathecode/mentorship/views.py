@@ -1,6 +1,10 @@
 import hashlib
 import logging
 import re
+import os
+import hmac
+import time
+from base64 import b64decode
 
 import timeago
 from django.contrib import messages
@@ -20,9 +24,11 @@ from breathecode.authenticate.models import ProfileAcademy, Token
 from breathecode.mentorship import actions
 from breathecode.mentorship.caches import MentorProfileCache
 from breathecode.mentorship.exceptions import ExtendSessionException
+import breathecode.activity.tasks as tasks_activity
 from breathecode.notify.actions import get_template_content
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.calendly import Calendly
+import breathecode.activity.tasks as tasks_activity
 from breathecode.utils import (
     GenerateLookupsMixin,
     HeaderLimitOffsetPagination,
@@ -74,7 +80,7 @@ from .serializers import (
     SessionPUTSerializer,
     SessionSerializer,
 )
-from .tasks import async_calendly_webhook
+from .tasks import async_calendly_webhook, async_mentorship_session_calendly_webhook
 
 logger = logging.getLogger(__name__)
 
@@ -84,10 +90,57 @@ logger = logging.getLogger(__name__)
 @renderer_classes([PlainTextRenderer])
 def calendly_webhook(request, org_hash):
 
+    # Your application's webhook signing key
+    webhook_signing_key = os.getenv('CALENDLY_WEBHOOK_SIGNING_KEY')
+
+    # Extract the timestamp and signature from the header
+    calendly_signature = request.headers.get('Calendly-Webhook-Signature')
+    signature_hash = dict(item.split('=') for item in calendly_signature.split(','))
+
+    t = signature_hash.get('t')  # UNIX timestamp
+    signature = signature_hash.get('v1')
+
+    if t is None or signature is None:
+        raise ValidationException('Missing timestamp or signature', code=400, slug='missing-timestamp-or-signature')
+
+    # Create the signed payload by concatenating the timestamp (t), the character '.', and the request body's JSON payload.
+    signed_payload = f"{t}.{request.body.decode('utf-8')}"
+
+    digest = hashlib.sha256
+    hmac_obj = hmac.new(webhook_signing_key.encode('utf-8'), msg=signed_payload.encode('utf-8'), digestmod=digest)
+
+    # Determine the expected signature by computing an HMAC with the SHA256 hash function.
+    expected_signature = hmac_obj.hexdigest()
+
+    if expected_signature != signature:
+        # Signature is invalid!
+        raise ValidationException('Invalid webhook signature', code=400, slug='invalid-webhook-signature')
+
+    ### Prevent replay attacks ###
+
+    # If an attacker intercepts the webhook's payload and signature, they could potentially re-transmit the request.
+    # This is known as a replay attack. This type of attack can be mitigated by utilizing the timestamp in the Calendly-Webhook-Signature header.
+    # In the example below we set the application's tolerance zone to 3 minutes. This helps mitigate replay attacks by ensuring that
+    # requests that have timestamps older than 3 minutes ago will not be considered valid.
+
+    three_minutes = 180
+    tolerance = three_minutes
+
+    if time.gmtime(int(t)) < time.gmtime(time.time() - tolerance):
+        # Signature is invalid!
+        # The signature's timestamp is outside of the tolerance zone defined above.
+        raise ValidationException('Invalid Signature. The signature\'s timestamp is outside of the tolerance zone.',
+                                  code=400,
+                                  slug='invalid-webhook-signature')
+
     webhook = Calendly.add_webhook_to_log(request.data, org_hash)
 
     if webhook:
         async_calendly_webhook.delay(webhook.id)
+        if webhook.event == 'invitee.created':
+
+            async_mentorship_session_calendly_webhook.delay(webhook.id)
+
     else:
         logger.debug('One request cannot be parsed, maybe you should update `Calendly'
                      '.add_webhook_to_log`')
@@ -211,14 +264,13 @@ def forward_booking_url_by_service(request, mentor_slug, token):
         if 'heading' not in obj:
             obj['heading'] = mentor.academy.name
 
-    return render(
-        request, 'book_session.html', {
-            'SUBJECT': 'Mentoring Session',
-            'mentor': mentor,
-            'mentee': token.user,
-            'booking_url': booking_url,
-            **obj,
-        })
+    return render(request, 'book_session.html', {
+        'SUBJECT': 'Mentoring Session',
+        'mentor': mentor,
+        'mentee': token.user,
+        'booking_url': booking_url,
+        **obj,
+    })
 
 
 @private_view()
@@ -405,6 +457,11 @@ class ForwardMeetUrl:
             # if the current user is a mentee, we are going to assign that meeting to it
             if session and session.mentee is None and mentee is not None:
                 session.mentee = mentee
+                if self.token.user.id == mentee.id:
+                    tasks_activity.add_activity.delay(mentee.id,
+                                                      'mentorship_session_checkin',
+                                                      related_type='mentorship.MentorshipSession',
+                                                      related_id=session.id)
 
         return session
 
@@ -440,8 +497,7 @@ class ForwardMeetUrl:
         mentee = self.token.user if is_token_of_mentee else None
         sessions = self.get_pending_sessions_or_create(mentor, service, mentee)
 
-        if not is_token_of_mentee and sessions.count() > 0 and str(
-                sessions.first().id) != self.query_params['session']:
+        if not is_token_of_mentee and sessions.count() > 0 and str(sessions.first().id) != self.query_params['session']:
             return self.render_pick_session(mentor, sessions)
 
         # this also set the session.mentee
@@ -472,8 +528,7 @@ class ForwardMeetUrl:
 
         # session ended
         if session.status not in ['PENDING', 'STARTED']:
-            return render_message(self.request,
-                                  f'This mentoring session has ended ({session.status}), would you like '
+            return render_message(self.request, f'This mentoring session has ended ({session.status}), would you like '
                                   f'<a href="/mentor/meet/{mentor.slug}">to start a new one?</a>.',
                                   status=400,
                                   academy=session.mentor.academy)
@@ -494,11 +549,9 @@ class ForwardMeetUrl:
 
         session_ends_in_the_pass = session.ends_at is not None and session.ends_at < self.now
         # can extend this session?
-        if session_ends_in_the_pass and (self.now -
-                                         session.ends_at).total_seconds() > (service.duration.seconds / 2):
+        if session_ends_in_the_pass and (self.now - session.ends_at).total_seconds() > (service.duration.seconds / 2):
             return HttpResponseRedirect(
-                redirect_to=
-                f'/mentor/session/{str(session.id)}?token={self.token.key}&message=You have a session that '
+                redirect_to=f'/mentor/session/{str(session.id)}?token={self.token.key}&message=You have a session that '
                 f'expired {timeago.format(session.ends_at, self.now)}. Only sessions with less than '
                 f'{round(((session.service.duration.total_seconds() / 3600) * 60)/2)}min from '
                 'expiration can be extended (if allowed by the academy)')
@@ -511,10 +564,9 @@ class ForwardMeetUrl:
                     session = actions.extend_session(session)
 
                 except ExtendSessionException as e:
-                    return self.render_end_session(
-                        str(e),
-                        btn_url=f'/mentor/session/{str(session.id)}?token={self.token.key}',
-                        status=400)
+                    return self.render_end_session(str(e),
+                                                   btn_url=f'/mentor/session/{str(session.id)}?token={self.token.key}',
+                                                   status=400)
 
             extend_url = set_query_parameter(self.request.get_full_path(), 'extend', 'true')
             return self.render_end_session(
@@ -524,12 +576,11 @@ class ForwardMeetUrl:
                 btn_url=f'/mentor/session/{str(session.id)}?token={self.token.key}')
 
         elif session_ends_in_the_pass:
-            return render_message(
-                self.request,
-                f'The mentoring session expired {timeago.format(session.ends_at, self.now)} and it '
-                'cannot be extended.',
-                status=400,
-                academy=mentor.academy)
+            return render_message(self.request,
+                                  f'The mentoring session expired {timeago.format(session.ends_at, self.now)} and it '
+                                  'cannot be extended.',
+                                  status=400,
+                                  academy=mentor.academy)
 
         # save progress so far, we are about to render the session below
         session.save()
@@ -678,8 +729,8 @@ def end_mentoring_session(request, session_id, token):
         request, 'form.html', {
             'form': form,
             'disabled': session.status not in ['PENDING', 'STARTED'],
-            'btn_lable': 'End Mentoring Session'
-            if session.status in ['PENDING', 'STARTED'] else 'Mentoring session already ended',
+            'btn_lable':
+            'End Mentoring Session' if session.status in ['PENDING', 'STARTED'] else 'Mentoring session already ended',
             'intro': 'Please fill the following information to formally end the session',
             'title': 'End Mentoring Session',
             **obj,
@@ -696,9 +747,7 @@ class ServiceView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if service_id is not None:
             service = MentorshipService.objects.filter(id=service_id, academy__id=academy_id).first()
             if service is None:
-                raise ValidationException('This service does not exist on this academy',
-                                          code=404,
-                                          slug='not-found')
+                raise ValidationException('This service does not exist on this academy', code=404, slug='not-found')
 
             serializer = GETServiceBigSerializer(service)
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -725,11 +774,7 @@ class ServiceView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     @capable_of('crud_mentorship_service')
     def post(self, request, academy_id=None):
 
-        serializer = ServicePOSTSerializer(data=request.data,
-                                           context={
-                                               'request': request,
-                                               'academy_id': academy_id
-                                           })
+        serializer = ServicePOSTSerializer(data=request.data, context={'request': request, 'academy_id': academy_id})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -761,16 +806,13 @@ class ServiceView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         lookups = self.generate_lookups(request, many_fields=['id'])
 
         if not lookups and not service_id:
-            raise ValidationException('provide arguments in the url',
-                                      code=400,
-                                      slug='without-lookups-and-service-id')
+            raise ValidationException('provide arguments in the url', code=400, slug='without-lookups-and-service-id')
 
         if lookups and service_id:
-            raise ValidationException(
-                'service_id in url '
-                'in bulk mode request, use querystring style instead',
-                code=400,
-                slug='lookups-and-session-id-together')
+            raise ValidationException('service_id in url '
+                                      'in bulk mode request, use querystring style instead',
+                                      code=400,
+                                      slug='lookups-and-session-id-together')
 
         if lookups:
             alls = MentorshipService.objects.filter(**lookups)
@@ -827,8 +869,7 @@ class ServiceView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         service = MentorshipService.objects.filter(academy__id=academy_id, id=service_id).first()
         if service is None:
-            raise ValidationException('Service doest not exist or does not belong to this academy',
-                                      slug='not-found')
+            raise ValidationException('Service doest not exist or does not belong to this academy', slug='not-found')
 
         mentor = MentorProfile.objects.filter(academy__id=academy_id, services=service.id).first()
         if mentor is not None:
@@ -838,8 +879,7 @@ class ServiceView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         session = MentorshipSession.objects.filter(service=service.id).first()
 
         if session is not None:
-            raise ValidationException('Only services without a session can be deleted.',
-                                      slug='service-with-session')
+            raise ValidationException('Only services without a session can be deleted.', slug='service-with-session')
 
         service.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
@@ -921,9 +961,7 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
         mentor = MentorProfile.objects.filter(id=mentor_id, services__academy__id=academy_id).first()
 
         if mentor is None:
-            raise ValidationException('This mentor does not exist for this academy',
-                                      code=404,
-                                      slug='not-found')
+            raise ValidationException('This mentor does not exist for this academy', code=404, slug='not-found')
         user = ProfileAcademy.objects.filter(user__id=mentor.user.id, academy__id=academy_id).first()
 
         if user is None:
@@ -964,12 +1002,7 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
         for key in request.data.keys():
             data[key] = request.data[key]
 
-        serializer = MentorUpdateSerializer(mentor,
-                                            data=data,
-                                            context={
-                                                'request': request,
-                                                'academy_id': academy_id
-                                            })
+        serializer = MentorUpdateSerializer(mentor, data=data, context={'request': request, 'academy_id': academy_id})
         if serializer.is_valid():
             mentor = serializer.save()
             _serializer = GETMentorBigSerializer(mentor)
@@ -1054,12 +1087,9 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
         handler = self.extensions(request)
 
         if session_id is not None:
-            session = MentorshipSession.objects.filter(id=session_id,
-                                                       mentor__services__academy__id=academy_id).first()
+            session = MentorshipSession.objects.filter(id=session_id, mentor__services__academy__id=academy_id).first()
             if session is None:
-                raise ValidationException('This session does not exist on this academy',
-                                          code=404,
-                                          slug='not-found')
+                raise ValidationException('This session does not exist on this academy', code=404, slug='not-found')
 
             serializer = SessionBigSerializer(session)
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -1111,11 +1141,7 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
     @capable_of('crud_mentorship_session')
     def post(self, request, academy_id=None):
 
-        serializer = SessionSerializer(data=request.data,
-                                       context={
-                                           'request': request,
-                                           'academy_id': academy_id
-                                       })
+        serializer = SessionSerializer(data=request.data, context={'request': request, 'academy_id': academy_id})
         if serializer.is_valid():
             session = serializer.save()
             return Response(SessionBigSerializer(session).data, status=status.HTTP_201_CREATED)
@@ -1126,12 +1152,9 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
 
         many = isinstance(request.data, list)
         if not many:
-            current = MentorshipSession.objects.filter(id=session_id,
-                                                       mentor__services__academy__id=academy_id).first()
+            current = MentorshipSession.objects.filter(id=session_id, mentor__services__academy__id=academy_id).first()
             if current is None:
-                raise ValidationException('This session does not exist on this academy',
-                                          code=404,
-                                          slug='not-found')
+                raise ValidationException('This session does not exist on this academy', code=404, slug='not-found')
 
             if current.bill and (current.bill.status == 'APPROVED' or current.bill.status == 'PAID'
                                  or current.bill.status == 'IGNORED'):
@@ -1151,8 +1174,7 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
 
                 if 'id' not in x:
                     raise ValidationException('Cannot determine session in '
-                                              f'index {index}',
-                                              slug='without-id')
+                                              f'index {index}', slug='without-id')
 
                 instance = MentorshipSession.objects.filter(id=x['id'],
                                                             mentor__services__academy__id=academy_id).first()
@@ -1238,8 +1260,7 @@ class MentorSessionView(APIView, HeaderLimitOffsetPagination):
         if mentor_id is None:
             raise ValidationException('Missing mentor id', code=404)
 
-        items = MentorshipSession.objects.filter(mentor__id=mentor_id,
-                                                 mentor__services__academy__id=academy_id)
+        items = MentorshipSession.objects.filter(mentor__id=mentor_id, mentor__services__academy__id=academy_id)
         lookup = {}
 
         _status = request.GET.get('status', '')
@@ -1321,9 +1342,7 @@ class BillView(APIView, HeaderLimitOffsetPagination):
 
         mentor = MentorProfile.objects.filter(id=mentor_id, services__academy__id=academy_id).first()
         if mentor is None:
-            raise ValidationException('This mentor does not exist for this academy',
-                                      code=404,
-                                      slug='not-found')
+            raise ValidationException('This mentor does not exist for this academy', code=404, slug='not-found')
 
         bills = generate_mentor_bills(mentor)
         serializer = GETBillSmallSerializer(bills, many=True)
@@ -1349,27 +1368,21 @@ class BillView(APIView, HeaderLimitOffsetPagination):
                     raise ValidationException(f'Bill {obj["id"]} not found', code=404, slug='some-not-found')
 
                 if elem.status == 'RECALCULATE' and 'status' in obj and obj['status'] != 'RECALCULATE':
-                    raise ValidationException(
-                        'This bill must be regenerated before you can update its status',
-                        code=400,
-                        slug='trying-edit-status-to-dirty-bill')
+                    raise ValidationException('This bill must be regenerated before you can update its status',
+                                              code=400,
+                                              slug='trying-edit-status-to-dirty-bill')
 
                 bill.append(elem)
 
         else:
             if bill_id is None:
-                raise ValidationException('Missing bill ID on the URL',
-                                          code=404,
-                                          slug='without-bulk-mode-and-bill-id')
+                raise ValidationException('Missing bill ID on the URL', code=404, slug='without-bulk-mode-and-bill-id')
 
             bill = MentorshipBill.objects.filter(id=bill_id, academy__id=academy_id).first()
             if bill is None:
-                raise ValidationException('This bill does not exist for this academy',
-                                          code=404,
-                                          slug='not-found')
+                raise ValidationException('This bill does not exist for this academy', code=404, slug='not-found')
 
-            if bill.status == 'RECALCULATE' and 'status' in request.data and request.data[
-                    'status'] != 'RECALCULATE':
+            if bill.status == 'RECALCULATE' and 'status' in request.data and request.data['status'] != 'RECALCULATE':
                 raise ValidationException('This bill must be regenerated before you can update its status',
                                           code=400,
                                           slug='trying-edit-status-to-dirty-bill')
@@ -1412,8 +1425,7 @@ class UserMeSessionView(APIView, HeaderLimitOffsetPagination):
     @has_permission('get_my_mentoring_sessions')
     def get(self, request):
 
-        items = MentorshipSession.objects.filter(
-            Q(mentor__user__id=request.user.id) | Q(mentee__id=request.user.id))
+        items = MentorshipSession.objects.filter(Q(mentor__user__id=request.user.id) | Q(mentee__id=request.user.id))
         lookup = {}
 
         _status = request.GET.get('status', '')
@@ -1556,8 +1568,7 @@ class AcademyCalendlyOrgView(APIView):
 
         organization = CalendlyOrganization.objects.filter(academy__id=academy_id).first()
         if organization is not None:
-            raise ValidationException('Academy already has a calendly organization associated',
-                                      slug='already-created')
+            raise ValidationException('Academy already has a calendly organization associated', slug='already-created')
 
         serializer = CalendlyOrganizationSerializer(data={
             **request.data, 'academy': academy_id
@@ -1579,8 +1590,7 @@ class AcademyCalendlyOrgView(APIView):
 
         organization = CalendlyOrganization.objects.filter(academy__id=academy_id).first()
         if not organization:
-            raise ValidationException('Calendly Organization not found for this academy',
-                                      slug='org-not-found')
+            raise ValidationException('Calendly Organization not found for this academy', slug='org-not-found')
 
         organization.reset_hash()
 
@@ -1596,8 +1606,7 @@ class AcademyCalendlyOrgView(APIView):
 
         organization = CalendlyOrganization.objects.filter(academy__id=academy_id).first()
         if not organization:
-            raise ValidationException('Calendly Organization not found for this academy',
-                                      slug='org-not-found')
+            raise ValidationException('Calendly Organization not found for this academy', slug='org-not-found')
 
         cal = Calendly(token=organization.access_token)
         cal.unsubscribe_all(organization.uri)

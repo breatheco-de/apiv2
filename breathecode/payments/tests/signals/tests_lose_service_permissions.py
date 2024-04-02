@@ -65,8 +65,7 @@ class TestSignal(LegacyAPITestCase):
         model = self.bc.database.create(consumable=(2, consumable), group=1)
         consumable_db = self.bc.format.to_dict(model.consumable)
 
-        signals.lose_service_permissions.send(sender=model.consumable[0].__class__,
-                                              instance=model.consumable[0])
+        signals.lose_service_permissions.send(sender=model.consumable[0].__class__, instance=model.consumable[0])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), consumable_db)
         self.assertEqual(self.bc.database.list_of('auth.User'), [self.bc.format.to_dict(model.user)])
@@ -85,8 +84,7 @@ class TestSignal(LegacyAPITestCase):
         model = self.bc.database.create(consumable=(2, consumable), group=1)
         consumable_db = self.bc.format.to_dict(model.consumable)
 
-        signals.lose_service_permissions.send(sender=model.consumable[0].__class__,
-                                              instance=model.consumable[0])
+        signals.lose_service_permissions.send(sender=model.consumable[0].__class__, instance=model.consumable[0])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), consumable_db)
         self.assertEqual(self.bc.database.list_of('auth.User'), [self.bc.format.to_dict(model.user)])
@@ -105,8 +103,7 @@ class TestSignal(LegacyAPITestCase):
         model = self.bc.database.create(consumable=(2, consumable), group=1)
         consumable_db = self.bc.format.to_dict(model.consumable)
 
-        signals.lose_service_permissions.send(sender=model.consumable[0].__class__,
-                                              instance=model.consumable[0])
+        signals.lose_service_permissions.send(sender=model.consumable[0].__class__, instance=model.consumable[0])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), consumable_db)
         self.assertEqual(self.bc.database.list_of('auth.User'), [self.bc.format.to_dict(model.user)])
@@ -117,8 +114,7 @@ class TestSignal(LegacyAPITestCase):
     🔽🔽🔽 With two Consumable[(how_many=0), (how_many__gte=1)], User and Group
     """
 
-    def test__with_two_consumables__with_group__first_with_how_many_0__second_with_how_many_gte_1(
-            self, enable_signals):
+    def test__with_two_consumables__with_group__first_with_how_many_0__second_with_how_many_gte_1(self, enable_signals):
         enable_signals()
 
         first_how_many = 0
@@ -127,8 +123,7 @@ class TestSignal(LegacyAPITestCase):
         model = self.bc.database.create(consumable=consumables, group=1)
         consumable_db = self.bc.format.to_dict(model.consumable)
 
-        signals.lose_service_permissions.send(sender=model.consumable[0].__class__,
-                                              instance=model.consumable[0])
+        signals.lose_service_permissions.send(sender=model.consumable[0].__class__, instance=model.consumable[0])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), consumable_db)
         self.assertEqual(self.bc.database.list_of('auth.User'), [self.bc.format.to_dict(model.user)])
@@ -139,8 +134,7 @@ class TestSignal(LegacyAPITestCase):
     🔽🔽🔽 With two Consumable[(how_many=0), ...(how_many__gte=1)], User and Group
     """
 
-    def test__with_two_consumables__with_group__first_with_how_many_0__rest_with_how_many_gte_1(
-            self, enable_signals):
+    def test__with_two_consumables__with_group__first_with_how_many_0__rest_with_how_many_gte_1(self, enable_signals):
         enable_signals()
 
         length = random.randint(2, 5)
@@ -148,8 +142,7 @@ class TestSignal(LegacyAPITestCase):
         model = self.bc.database.create(consumable=consumables, group=1)
         consumable_db = self.bc.format.to_dict(model.consumable)
 
-        signals.lose_service_permissions.send(sender=model.consumable[0].__class__,
-                                              instance=model.consumable[0])
+        signals.lose_service_permissions.send(sender=model.consumable[0].__class__, instance=model.consumable[0])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), consumable_db)
         self.assertEqual(self.bc.database.list_of('auth.User'), [self.bc.format.to_dict(model.user)])
@@ -170,8 +163,7 @@ class TestSignal(LegacyAPITestCase):
         model = self.bc.database.create(consumable=consumables, group=1)
         consumable_db = self.bc.format.to_dict(model.consumable)
 
-        signals.lose_service_permissions.send(sender=model.consumable[0].__class__,
-                                              instance=model.consumable[0])
+        signals.lose_service_permissions.send(sender=model.consumable[0].__class__, instance=model.consumable[0])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), consumable_db)
         self.assertEqual(self.bc.database.list_of('auth.User'), [self.bc.format.to_dict(model.user)])
@@ -182,8 +174,7 @@ class TestSignal(LegacyAPITestCase):
     🔽🔽🔽 With two Consumable[(how_many=0), ...(how_many=-1)], User and Group
     """
 
-    def test__with_two_consumables__with_group__first_with_how_many_0__rest_with_how_many_minus_1(
-            self, enable_signals):
+    def test__with_two_consumables__with_group__first_with_how_many_0__rest_with_how_many_minus_1(self, enable_signals):
         enable_signals()
 
         length = random.randint(2, 5)
@@ -191,8 +182,7 @@ class TestSignal(LegacyAPITestCase):
         model = self.bc.database.create(consumable=consumables, group=1)
         consumable_db = self.bc.format.to_dict(model.consumable)
 
-        signals.lose_service_permissions.send(sender=model.consumable[0].__class__,
-                                              instance=model.consumable[0])
+        signals.lose_service_permissions.send(sender=model.consumable[0].__class__, instance=model.consumable[0])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), consumable_db)
         self.assertEqual(self.bc.database.list_of('auth.User'), [self.bc.format.to_dict(model.user)])
@@ -203,8 +193,7 @@ class TestSignal(LegacyAPITestCase):
     🔽🔽🔽 With two Consumable[(how_many=0), (how_many=-1)], User and Group
     """
 
-    def test__with_two_consumables__with_group__first_with_how_many_0__second_with_how_many_0(
-            self, enable_signals):
+    def test__with_two_consumables__with_group__first_with_how_many_0__second_with_how_many_0(self, enable_signals):
         enable_signals()
 
         first_how_many = 0
@@ -213,8 +202,7 @@ class TestSignal(LegacyAPITestCase):
         model = self.bc.database.create(consumable=consumables, group=1)
         consumable_db = self.bc.format.to_dict(model.consumable)
 
-        signals.lose_service_permissions.send(sender=model.consumable[0].__class__,
-                                              instance=model.consumable[0])
+        signals.lose_service_permissions.send(sender=model.consumable[0].__class__, instance=model.consumable[0])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), consumable_db)
         self.assertEqual(self.bc.database.list_of('auth.User'), [self.bc.format.to_dict(model.user)])
@@ -225,8 +213,7 @@ class TestSignal(LegacyAPITestCase):
     🔽🔽🔽 With two Consumable[(how_many=0), ...(how_many=-1)], User and Group
     """
 
-    def test__with_two_consumables__with_group__first_with_how_many_0__rest_with_how_many_0(
-            self, enable_signals):
+    def test__with_two_consumables__with_group__first_with_how_many_0__rest_with_how_many_0(self, enable_signals):
         enable_signals()
 
         length = random.randint(2, 5)
@@ -234,8 +221,7 @@ class TestSignal(LegacyAPITestCase):
         model = self.bc.database.create(consumable=consumables, group=1)
         consumable_db = self.bc.format.to_dict(model.consumable)
 
-        signals.lose_service_permissions.send(sender=model.consumable[0].__class__,
-                                              instance=model.consumable[0])
+        signals.lose_service_permissions.send(sender=model.consumable[0].__class__, instance=model.consumable[0])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), consumable_db)
         self.assertEqual(self.bc.database.list_of('auth.User'), [self.bc.format.to_dict(model.user)])
@@ -247,8 +233,7 @@ class TestSignal(LegacyAPITestCase):
     Group and Service[(groups=[1]), (groups=[2])]
     """
 
-    def test__with_two_consumables__with_two_group__first_with_how_many_0__rest_with_how_many_0(
-            self, enable_signals):
+    def test__with_two_consumables__with_two_group__first_with_how_many_0__rest_with_how_many_0(self, enable_signals):
         enable_signals()
 
         length = random.randint(2, 5)
@@ -260,14 +245,10 @@ class TestSignal(LegacyAPITestCase):
             'groups': [1] if n == 0 else [2],
         } for n in range(length)]
         service_items = [{'service_id': x} for x in range(1, 3)]
-        model = self.bc.database.create(consumable=consumables,
-                                        group=2,
-                                        service=services,
-                                        service_item=service_items)
+        model = self.bc.database.create(consumable=consumables, group=2, service=services, service_item=service_items)
         consumable_db = self.bc.format.to_dict(model.consumable)
 
-        signals.lose_service_permissions.send(sender=model.consumable[0].__class__,
-                                              instance=model.consumable[0])
+        signals.lose_service_permissions.send(sender=model.consumable[0].__class__, instance=model.consumable[0])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), consumable_db)
         self.assertEqual(self.bc.database.list_of('auth.User'), [self.bc.format.to_dict(model.user)])
@@ -292,14 +273,10 @@ class TestSignal(LegacyAPITestCase):
             'groups': [1] if n == 0 else [2],
         } for n in range(length)]
         service_items = [{'service_id': x} for x in range(1, 3)]
-        model = self.bc.database.create(consumable=consumables,
-                                        group=2,
-                                        service=services,
-                                        service_item=service_items)
+        model = self.bc.database.create(consumable=consumables, group=2, service=services, service_item=service_items)
         consumable_db = self.bc.format.to_dict(model.consumable)
 
-        signals.lose_service_permissions.send(sender=model.consumable[0].__class__,
-                                              instance=model.consumable[0])
+        signals.lose_service_permissions.send(sender=model.consumable[0].__class__, instance=model.consumable[0])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), consumable_db)
         self.assertEqual(self.bc.database.list_of('auth.User'), [self.bc.format.to_dict(model.user)])
@@ -324,14 +301,10 @@ class TestSignal(LegacyAPITestCase):
             'groups': [1] if n == 0 else [2],
         } for n in range(length)]
         service_items = [{'service_id': x} for x in range(1, 3)]
-        model = self.bc.database.create(consumable=consumables,
-                                        group=2,
-                                        service=services,
-                                        service_item=service_items)
+        model = self.bc.database.create(consumable=consumables, group=2, service=services, service_item=service_items)
         consumable_db = self.bc.format.to_dict(model.consumable)
 
-        signals.lose_service_permissions.send(sender=model.consumable[0].__class__,
-                                              instance=model.consumable[0])
+        signals.lose_service_permissions.send(sender=model.consumable[0].__class__, instance=model.consumable[0])
 
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), consumable_db)
         self.assertEqual(self.bc.database.list_of('auth.User'), [self.bc.format.to_dict(model.user)])

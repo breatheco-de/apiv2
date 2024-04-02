@@ -63,9 +63,9 @@ class ImportCohortTimeSlots:
             logger.warning(f'Cohort `{slug}` was skipped because not have a timezone')
             return
 
-        certificate_timeslots = SyllabusScheduleTimeSlot.objects.filter(
-            Q(schedule__academy__id=self.cohort.academy.id) | Q(schedule__syllabus__private=False),
-            schedule__id=self.cohort.schedule.id)
+        certificate_timeslots = SyllabusScheduleTimeSlot.objects.filter(Q(schedule__academy__id=self.cohort.academy.id)
+                                                                        | Q(schedule__syllabus__private=False),
+                                                                        schedule__id=self.cohort.schedule.id)
 
         timeslots = CohortTimeSlot.objects.bulk_create([
             self._fill_timeslot(certificate_timeslot, self.cohort.id, timezone)
@@ -74,8 +74,7 @@ class ImportCohortTimeSlots:
 
         return [self._append_id_of_timeslot(x) for x in timeslots]
 
-    def _fill_timeslot(self, certificate_timeslot: SyllabusScheduleTimeSlot, cohort_id: int,
-                       timezone: str) -> None:
+    def _fill_timeslot(self, certificate_timeslot: SyllabusScheduleTimeSlot, cohort_id: int, timezone: str) -> None:
         from breathecode.admissions.models import CohortTimeSlot
 
         cohort_timeslot = CohortTimeSlot(cohort_id=cohort_id,
@@ -231,19 +230,11 @@ def update_asset_on_json(from_slug, to_slug, asset_type, simulate=True):
 
                 if isinstance(a, dict):
                     if a['slug'] == from_slug:
-                        findings.append({
-                            'module': module_index,
-                            'version': s.version,
-                            'syllabus': s.syllabus.slug
-                        })
+                        findings.append({'module': module_index, 'version': s.version, 'syllabus': s.syllabus.slug})
                         s.json['days'][module_index][key_map[asset_type]][asset_index]['slug'] = to_slug
                 else:
                     if a == from_slug:
-                        findings.append({
-                            'module': module_index,
-                            'version': s.version,
-                            'syllabus': s.syllabus.slug
-                        })
+                        findings.append({'module': module_index, 'version': s.version, 'syllabus': s.syllabus.slug})
                         s.json['days'][module_index][key_map[asset_type]][asset_index] = to_slug
         if not simulate:
             s.save()

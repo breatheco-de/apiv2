@@ -21,8 +21,8 @@ def command(capable_of=None):
 
                 profiles = ProfileAcademy.objects.filter(user__slackuser__slack_id=context['user_id'],
                                                          academy__slackteam__slack_id=context['team_id'],
-                                                         role__capabilities__slug=capable_of).values_list(
-                                                             'academy__id', flat=True)
+                                                         role__capabilities__slug=capable_of).values_list('academy__id',
+                                                                                                          flat=True)
 
                 if len(profiles) == 0:
                     raise SlackException(
@@ -60,8 +60,7 @@ def action(only=None):
                     academy__slackteam__slack_id=context['team']['id']).values_list('academy__id', flat=True)
 
                 if len(profiles) == 0:
-                    raise Exception(
-                        f"Your user {context['user']['id']} don't have permissions execute this action")
+                    raise Exception(f"Your user {context['user']['id']} don't have permissions execute this action")
 
             kwargs['academies'] = profiles
             kwargs['user_id'] = context['user']['id']

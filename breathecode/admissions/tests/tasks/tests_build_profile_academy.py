@@ -90,12 +90,11 @@ class AcademyActivateTestSuite(AdmissionsTestCase):
         build_profile_academy.delay(1, 1)
 
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
-            profile_academy_item(
-                model.user, model.academy, data={
-                    'id': 1,
-                    'status': 'ACTIVE',
-                    'role_id': 'student',
-                }),
+            profile_academy_item(model.user, model.academy, data={
+                'id': 1,
+                'status': 'ACTIVE',
+                'role_id': 'student',
+            }),
         ])
 
         self.bc.check.calls(Logger.info.call_args_list, [

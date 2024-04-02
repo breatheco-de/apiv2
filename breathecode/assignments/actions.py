@@ -117,9 +117,7 @@ def sync_student_tasks(user, cohort=None):
 def sync_cohort_tasks(cohort):
 
     synchronized = []
-    cohort_users = CohortUser.objects.filter(cohort__id=cohort.id,
-                                             role='STUDENT',
-                                             educational_status__in=['ACTIVE'])
+    cohort_users = CohortUser.objects.filter(cohort__id=cohort.id, role='STUDENT', educational_status__in=['ACTIVE'])
     for cu in cohort_users:
         try:
             tasks = sync_student_tasks(cu.user, cohort=cohort)

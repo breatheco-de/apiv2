@@ -32,11 +32,10 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='mentorshipsession',
             name='accounted_duration',
-            field=models.DurationField(
-                blank=True,
-                default=None,
-                help_text='The duration that will be paid to the mentor for this session',
-                null=True),
+            field=models.DurationField(blank=True,
+                                       default=None,
+                                       help_text='The duration that will be paid to the mentor for this session',
+                                       null=True),
         ),
         migrations.AddField(
             model_name='mentorshipsession',
@@ -57,8 +56,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='MentorshipBill',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('status',
                  models.CharField(choices=[('DUE', 'Due'), ('APPROVED', 'Approved'), ('PAID', 'Paid')],
                                   default='DUE',
@@ -73,8 +71,7 @@ class Migration(migrations.Migration):
                 ('total_price', models.FloatField(default=0)),
                 ('overtime_minutes',
                  models.FloatField(
-                     default=0,
-                     help_text='Additional time mentorships took based on the expected default duration')),
+                     default=0, help_text='Additional time mentorships took based on the expected default duration')),
                 ('paid_at', models.DateTimeField(blank=True, default=None, null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
@@ -83,9 +80,8 @@ class Migration(migrations.Migration):
                                    null=True,
                                    on_delete=django.db.models.deletion.CASCADE,
                                    to='admissions.academy')),
-                ('mentor',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
-                                   to='mentorship.mentorprofile')),
+                ('mentor', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
+                                             to='mentorship.mentorprofile')),
                 ('reviewer',
                  models.ForeignKey(default=None,
                                    null=True,

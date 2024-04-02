@@ -492,9 +492,7 @@ class AuthenticateTestSuite(AuthTestCase):
                              'is_email_validated': True,
                          }])
 
-        user_db = [
-            x for x in self.bc.database.list_of('auth.User') if x['date_joined'] and x.pop('date_joined')
-        ]
+        user_db = [x for x in self.bc.database.list_of('auth.User') if x['date_joined'] and x.pop('date_joined')]
         self.assertEqual(user_db, [{
             'email': 'user@dotdotdotdot.dot',
             'first_name': 'abc',
@@ -553,9 +551,7 @@ class AuthenticateTestSuite(AuthTestCase):
                              'is_email_validated': True,
                          }])
 
-        user_db = [
-            x for x in self.bc.database.list_of('auth.User') if x['date_joined'] and x.pop('date_joined')
-        ]
+        user_db = [x for x in self.bc.database.list_of('auth.User') if x['date_joined'] and x.pop('date_joined')]
         self.assertEqual(user_db, [{
             'email': 'user@dotdotdotdot.dot',
             'first_name': 'abc',
@@ -1037,8 +1033,7 @@ class AuthenticateTestSuite(AuthTestCase):
             token=model.user_invite.token,
             academy=model.academy,
             messages=[
-                Message('alert-danger',
-                        'Unexpected error occurred with invite, please contact the staff of 4geeks')
+                Message('alert-danger', 'Unexpected error occurred with invite, please contact the staff of 4geeks')
             ],
             arguments=data)
 
@@ -1128,9 +1123,7 @@ class AuthenticateTestSuite(AuthTestCase):
                              'is_email_validated': True,
                          }])
 
-        user_db = [
-            x for x in self.bc.database.list_of('auth.User') if x['date_joined'] and x.pop('date_joined')
-        ]
+        user_db = [x for x in self.bc.database.list_of('auth.User') if x['date_joined'] and x.pop('date_joined')]
         self.assertEqual(user_db, [{
             'email': 'user@dotdotdotdot.dot',
             'first_name': 'abc',

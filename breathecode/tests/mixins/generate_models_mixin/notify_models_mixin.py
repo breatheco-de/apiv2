@@ -41,10 +41,7 @@ class NotifyModelsMixin(ModelsMixin):
             if 'academy' in models:
                 kargs['academy'] = just_one(models['academy'])
 
-            models['slack_team'] = create_models(slack_team, 'notify.SlackTeam', **{
-                **kargs,
-                **slack_team_kwargs
-            })
+            models['slack_team'] = create_models(slack_team, 'notify.SlackTeam', **{**kargs, **slack_team_kwargs})
 
         if not 'slack_user' in models and is_valid(slack_user):
             kargs = {}
@@ -52,10 +49,7 @@ class NotifyModelsMixin(ModelsMixin):
             if 'user' in models:
                 kargs['user'] = just_one(models['user'])
 
-            models['slack_user'] = create_models(slack_user, 'notify.SlackUser', **{
-                **kargs,
-                **slack_user_kwargs
-            })
+            models['slack_user'] = create_models(slack_user, 'notify.SlackUser', **{**kargs, **slack_user_kwargs})
 
         if not 'slack_user_team' in models and is_valid(slack_user_team):
             kargs = {}

@@ -21,8 +21,7 @@ class ParseDateAdminTestSuite(CareerTestCase):
         queryset = Job.objects.all()
 
         get_was_published_date_from_string_admin(None, request, queryset)
-        self.assertEqual(Logger.error.call_args_list,
-                         [call('There was an error retriving the jobs They killed kenny')])
+        self.assertEqual(Logger.error.call_args_list, [call('There was an error retriving the jobs They killed kenny')])
         self.assertEqual(get_was_published_date_from_string.call_args_list, [call(model.job)])
 
     @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
@@ -53,5 +52,4 @@ class ParseDateAdminTestSuite(CareerTestCase):
 
         get_was_published_date_from_string_admin(None, request, queryset)
 
-        self.assertEqual(get_was_published_date_from_string.call_args_list,
-                         [call(model_1.job), call(model_2.job)])
+        self.assertEqual(get_was_published_date_from_string.call_args_list, [call(model_1.job), call(model_2.job)])

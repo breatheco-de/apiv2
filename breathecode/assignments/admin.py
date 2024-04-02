@@ -78,8 +78,7 @@ def mark_as_rejected(modeladmin, request, queryset):
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
     search_fields = ['title', 'associated_slug', 'user__first_name', 'user__last_name', 'user__email']
-    list_display = ('title', 'task_type', 'associated_slug', 'task_status', 'revision_status', 'user',
-                    'delivery_url')
+    list_display = ('title', 'task_type', 'associated_slug', 'task_status', 'revision_status', 'user', 'delivery_url')
     list_filter = ['task_type', 'task_status', 'revision_status']
     actions = [mark_as_delivered, mark_as_approved, mark_as_rejected, mark_as_ignored]
 

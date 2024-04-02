@@ -151,10 +151,7 @@ class ReviewPlatform(models.Model):
     slug = models.SlugField(primary_key=True)
     name = models.CharField(max_length=100)
     website = models.URLField()
-    review_signup = models.URLField(blank=True,
-                                    null=True,
-                                    default=None,
-                                    help_text='Give URL to create a new review')
+    review_signup = models.URLField(blank=True, null=True, default=None, help_text='Give URL to create a new review')
     contact_email = models.EmailField()
     contact_name = models.EmailField(blank=True, null=True, default=None)
     contact_phone = models.CharField(max_length=17, blank=True, null=True, default=None)
@@ -177,11 +174,10 @@ REVIEW_STATUS = (
 
 class Review(models.Model):
 
-    nps_previous_rating = models.FloatField(
-        blank=True,
-        null=True,
-        default=None,
-        help_text='Automatically calculated based on NPS survey responses')
+    nps_previous_rating = models.FloatField(blank=True,
+                                            null=True,
+                                            default=None,
+                                            help_text='Automatically calculated based on NPS survey responses')
     total_rating = models.FloatField(blank=True, null=True, default=None)
     public_url = models.URLField(blank=True, null=True, default=None)
 

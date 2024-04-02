@@ -22,7 +22,6 @@ class Migration(migrations.Migration):
             model_name='academyservice',
             name='max_items',
             field=models.FloatField(
-                default=1,
-                help_text="How many items can be bought in total, it doesn't matter the bundle size"),
+                default=1, help_text="How many items can be bought in total, it doesn't matter the bundle size"),
         ),
     ]

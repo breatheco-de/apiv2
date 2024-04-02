@@ -23,8 +23,7 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(
                 blank=True,
                 default=None,
-                help_text=
-                'Please pick an academy first to be able to see the available slack channels to notify',
+                help_text='Please pick an academy first to be able to see the available slack channels to notify',
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 to='notify.slackchannel'),

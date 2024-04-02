@@ -63,6 +63,39 @@ def test_link(url, test_pattern=None):
     return result
 
 
+def subscribe_repository(subs_id, settings=None):
+
+    subscription = RepositorySubscription.objects.filter(id=subs_id).first()
+    try:
+        if subscription is None:
+            raise Exception(f'Invalid subscription id {subs_id}')
+
+        if settings is None:
+            settings = AcademyAuthSettings.objects.filter(academy__id=subscription.owner.id).first()
+            if settings is None:
+                raise Exception(
+                    f'Github credentials and settings have not been found for the academy {subscription.owner.id}')
+
+        if settings.academy.id != subscription.owner.id:
+            raise Exception(f'Provided auth settings don\'t belong to the academy subscription owner')
+
+        _owner, _repo_name = subscription.get_repo_name()
+        gb = Github(org=settings.github_username, token=settings.github_owner.credentialsgithub.token)
+        result = gb.subscribe_to_repo(_owner, _repo_name, subscription.token)
+
+        subscription.status = 'OPERATIONAL'
+        subscription.status_message = 'OK'
+        subscription.hook_id = result['id']
+        subscription.save()
+
+        return subscription
+    except Exception as e:
+        subscription.status = 'CRITICAL'
+        subscription.status_message = 'Error subscribing to repo: ' + str(e)
+        subscription.save()
+        raise e
+
+
 def get_website_text(endp):
     """Make a request to get the content of the given URL."""
 
@@ -156,8 +189,7 @@ def run_app_diagnostic(app, report=False):
     else:
         results['status'] = 'MINOR'
 
-    results['slack_payload'] = render_snooze_text_endpoint(
-        failed_endpoints)  # converting to json to send to slack
+    results['slack_payload'] = render_snooze_text_endpoint(failed_endpoints)  # converting to json to send to slack
 
     # JSON Details to be shown on the error report
     results['details'] = json.dumps(results, indent=4)
@@ -176,8 +208,7 @@ def run_endpoint_diagnostic(endpoint_id):
     logger.debug(f'Testing endpoint {endpoint.url}')
     now = timezone.now()
 
-    if (endpoint.last_check
-            and endpoint.last_check > now - timezone.timedelta(minutes=endpoint.frequency_in_minutes)):
+    if (endpoint.last_check and endpoint.last_check > now - timezone.timedelta(minutes=endpoint.frequency_in_minutes)):
         logger.debug(f'Ignoring {endpoint.url} because frequency hast not been met')
         endpoint.status_text = 'Ignored because its paused'
         endpoint.save()
@@ -379,21 +410,32 @@ def download_csv(module, model_name, ids_to_download, academy_id=None):
         return False
 
 
-def delete_repo_subscription(hook_id):
+def unsubscribe_repository(subs_id, force_delete=True):
     try:
-        subs = RepositorySubscription.objects.filter(hook_id=hook_id).first()
+        subs = RepositorySubscription.objects.filter(id=subs_id).first()
+
+        if subs.hook_id is None:
+            raise Exception('Subscription is missing a github hook id')
 
         settings = AcademyAuthSettings.objects.filter(academy__id=subs.owner.id).first()
         gb = Github(org=settings.github_username, token=settings.github_owner.credentialsgithub.token)
 
         _owner, _repo_name = subs.get_repo_name()
-        result = gb.unsubscribe_from_repo(_owner, _repo_name, hook_id)
-        print('unsubscribe', result)
-        subs.delete()
+        result = gb.unsubscribe_from_repo(_owner, _repo_name, subs.hook_id)
+
+        # you can delete the subscription after unsubscribing
+        if force_delete: subs.delete()
+        else:
+            subs.status = 'DISABLED'
+            subs.hook_id = None
+            subs.status_message = 'disabled successfully'
+            subs.save()
+            return subs
+
         return True
     except Exception as e:
         subs.status = 'CRITICAL'
-        subs.status_message = 'Cannot delete subscription: ' + str(e)
+        subs.status_message = 'Cannot unsubscribe subscription: ' + str(e)
         subs.save()
         return False
 
@@ -413,9 +455,7 @@ def add_github_webhook(context: dict, academy_slug: str):
             logger.error(context)
             return None
 
-    webhook = RepositoryWebhook(webhook_action=context['action'],
-                                scope=context['scope'],
-                                academy_slug=academy_slug)
+    webhook = RepositoryWebhook(webhook_action=context['action'], scope=context['scope'], academy_slug=academy_slug)
 
     if 'repository' in context:
         webhook.repository = context['repository']['html_url']
@@ -439,8 +479,6 @@ def add_stripe_webhook(context: dict) -> StripeEvent:
         event.save()
 
     except Exception:
-        raise ValidationException('Invalid stripe webhook payload',
-                                  code=400,
-                                  slug='invalid-stripe-webhook-payload')
+        raise ValidationException('Invalid stripe webhook payload', code=400, slug='invalid-stripe-webhook-payload')
 
     return event

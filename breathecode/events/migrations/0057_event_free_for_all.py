@@ -14,7 +14,6 @@ class Migration(migrations.Migration):
             model_name='event',
             name='free_for_all',
             field=models.BooleanField(
-                default=False,
-                help_text='Determines if any user (From bootcamp or not) can join the event for free.'),
+                default=False, help_text='Determines if any user (From bootcamp or not) can join the event for free.'),
         ),
     ]

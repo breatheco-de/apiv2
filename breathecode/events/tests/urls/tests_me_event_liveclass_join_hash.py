@@ -118,8 +118,7 @@ class AcademyEventTestSuite(EventTestCase):
         model = self.bc.database.create(user=1, token=1)
         querystring = self.bc.format.to_querystring({'token': model.token.key})
 
-        url = reverse_lazy('events:me_event_liveclass_join_hash', kwargs={'hash': 'potato'
-                                                                          }) + f'?{querystring}'
+        url = reverse_lazy('events:me_event_liveclass_join_hash', kwargs={'hash': 'potato'}) + f'?{querystring}'
 
         response = self.client.get(url)
 
@@ -151,8 +150,7 @@ class AcademyEventTestSuite(EventTestCase):
     # When: Feature flag set to False
     # Then: return 404
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes',
-           MagicMock(return_value=False))
+    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes', MagicMock(return_value=False))
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
@@ -161,8 +159,7 @@ class AcademyEventTestSuite(EventTestCase):
         model = self.bc.database.create(user=1, group=1, permission=permission, token=1)
         querystring = self.bc.format.to_querystring({'token': model.token.key})
 
-        url = reverse_lazy('events:me_event_liveclass_join_hash', kwargs={'hash': 'potato'
-                                                                          }) + f'?{querystring}'
+        url = reverse_lazy('events:me_event_liveclass_join_hash', kwargs={'hash': 'potato'}) + f'?{querystring}'
 
         response = self.client.get(url)
 
@@ -189,8 +186,7 @@ class AcademyEventTestSuite(EventTestCase):
     # When: Feature flag set to False, right hash and cohort.live_class_join not set
     # Then: return 400
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes',
-           MagicMock(return_value=False))
+    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes', MagicMock(return_value=False))
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
@@ -236,8 +232,7 @@ class AcademyEventTestSuite(EventTestCase):
     # When: Feature flag set to False, right hash and cohort.live_class_join set
     # Then: return 302 to cohort.online_meeting_url
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes',
-           MagicMock(return_value=False))
+    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes', MagicMock(return_value=False))
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
@@ -287,8 +282,7 @@ class AcademyEventTestSuite(EventTestCase):
     # When: Feature flag set to True
     # Then: return 404
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes',
-           MagicMock(return_value=True))
+    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes', MagicMock(return_value=True))
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
@@ -297,8 +291,7 @@ class AcademyEventTestSuite(EventTestCase):
         model = self.bc.database.create(user=1, group=1, permission=permission, token=1)
         querystring = self.bc.format.to_querystring({'token': model.token.key})
 
-        url = reverse_lazy('events:me_event_liveclass_join_hash', kwargs={'hash': 'potato'
-                                                                          }) + f'?{querystring}'
+        url = reverse_lazy('events:me_event_liveclass_join_hash', kwargs={'hash': 'potato'}) + f'?{querystring}'
 
         response = self.client.get(url)
 
@@ -325,8 +318,7 @@ class AcademyEventTestSuite(EventTestCase):
     # When: Feature flag set to True and cohort.live_class_join not set
     # Then: return 400
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes',
-           MagicMock(return_value=True))
+    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes', MagicMock(return_value=True))
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
@@ -373,8 +365,7 @@ class AcademyEventTestSuite(EventTestCase):
     # When: Feature flag set to True and cohort.live_class_join set
     # Then: return 402
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes',
-           MagicMock(return_value=True))
+    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes', MagicMock(return_value=True))
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
@@ -427,8 +418,7 @@ class AcademyEventTestSuite(EventTestCase):
     # When: Feature flag set to True, class end in the past and cohort.live_class_join set
     # Then: return 200 and create a ConsumptionSession
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes',
-           MagicMock(return_value=True))
+    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes', MagicMock(return_value=True))
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
@@ -481,8 +471,7 @@ class AcademyEventTestSuite(EventTestCase):
     # When: Feature flag set to True and class end in the future
     # Then: return 200 and create a ConsumptionSession
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes',
-           MagicMock(return_value=True))
+    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes', MagicMock(return_value=True))
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
@@ -553,8 +542,7 @@ class AcademyEventTestSuite(EventTestCase):
     # When: Feature flag set to True and class start and end in the future
     # Then: return 200 and create a ConsumptionSession
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes',
-           MagicMock(return_value=True))
+    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes', MagicMock(return_value=True))
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))

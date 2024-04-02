@@ -3,7 +3,8 @@ from django.contrib import admin
 from django import forms
 from django.utils import timezone
 from .signals import github_webhook
-from .tasks import async_delete_repo_subscription
+from .tasks import async_unsubscribe_repo, async_subscribe_repo
+from .actions import unsubscribe_repository, subscribe_repository
 from .models import Endpoint, Application, MonitorScript, CSVDownload, CSVUpload, RepositoryWebhook, RepositorySubscription
 from breathecode.notify.models import SlackChannel
 from django.utils.html import format_html
@@ -126,8 +127,8 @@ class CustomForm(forms.ModelForm):
 @admin.register(MonitorScript)
 class MonitorScriptAdmin(admin.ModelAdmin):
     form = CustomForm
-    list_display = ('script_slug', 'application', 'current_status', 'frequency_delta', 'status_code',
-                    'paused_until', 'last_run')
+    list_display = ('script_slug', 'application', 'current_status', 'frequency_delta', 'status_code', 'paused_until',
+                    'last_run')
     actions = [run_single_script]
     list_filter = ['status', 'application__title']
 
@@ -160,8 +161,7 @@ class CSVDownloadAdmin(admin.ModelAdmin):
 
     def download(self, obj):
         if obj.status == 'DONE':
-            return format_html(
-                f"<a href='/v1/monitoring/download/{obj.id}?raw=true' target='_blank'>download</span>")
+            return format_html(f"<a href='/v1/monitoring/download/{obj.id}?raw=true' target='_blank'>download</span>")
         return format_html('nothing to download')
 
 
@@ -175,8 +175,20 @@ class CSVUploadAdmin(admin.ModelAdmin):
 def delete_subscription(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
     for subs in queryset.all():
-        # delete_repo_subscription(subs.hook_id)
-        async_delete_repo_subscription.delay(subs.hook_id)
+        # unsubscribe_repo_subscription(subs.hook_id)
+        async_unsubscribe_repo.delay(subs.hook_id, force_delete=True)
+
+
+def disable_subscription(modeladmin, request, queryset):
+    # stay this here for use the poor mocking system
+    for subs in queryset.all():
+        unsubscribe_repository(subs.id, force_delete=False)
+
+
+def activate_subscription(modeladmin, request, queryset):
+    # stay this here for use the poor mocking system
+    for subs in queryset.all():
+        subscribe_repository(subs.id)
 
 
 @admin.register(RepositorySubscription)
@@ -185,7 +197,7 @@ class RepositorySubscriptionAdmin(admin.ModelAdmin):
     list_filter = ['owner', 'status']
     search_fields = ['repository', 'token']
     readonly_fields = ['token']
-    actions = [delete_subscription]
+    actions = [delete_subscription, disable_subscription, activate_subscription]
 
     def get_actions(self, request):
         actions = super(RepositorySubscriptionAdmin, self).get_actions(request)
@@ -206,6 +218,7 @@ class RepositorySubscriptionAdmin(admin.ModelAdmin):
         colors = {
             'OPERATIONAL': 'bg-success',
             'CRITICAL': 'bg-error',
+            'DISABLED': 'bg-warning',
             None: 'bg-warning',
         }
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")

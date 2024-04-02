@@ -62,14 +62,13 @@ class MentorshipService(models.Model):
 
     status = models.CharField(max_length=15, choices=MENTORSHIP_STATUS, default=DRAFT)
 
-    language = models.CharField(
-        max_length=5,
-        default='en',
-        validators=[validate_language_code],
-        help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US')
+    language = models.CharField(max_length=5,
+                                default='en',
+                                validators=[validate_language_code],
+                                help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US')
 
-    allow_mentee_to_extend = models.BooleanField(
-        default=True, help_text='If true, mentees will be able to extend mentorship session')
+    allow_mentee_to_extend = models.BooleanField(default=True,
+                                                 help_text='If true, mentees will be able to extend mentorship session')
     allow_mentors_to_extend = models.BooleanField(
         default=True, help_text='If true, mentors will be able to extend mentorship session')
 
@@ -84,11 +83,7 @@ class MentorshipService(models.Model):
 
 class SupportChannel(models.Model):
     slug = models.SlugField(max_length=150)
-    slack_channel = models.ForeignKey(SlackChannel,
-                                      on_delete=models.CASCADE,
-                                      blank=True,
-                                      default=None,
-                                      null=True)
+    slack_channel = models.ForeignKey(SlackChannel, on_delete=models.CASCADE, blank=True, default=None, null=True)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     syllabis = models.ManyToManyField(Syllabus, related_name='support_channels')
 
@@ -142,8 +137,7 @@ class MentorProfile(models.Model):
     slug = models.SlugField(
         max_length=150,
         unique=True,
-        help_text=
-        'Will be used as unique public booking URL with the students, for example: 4geeks.com/meet/bob')
+        help_text='Will be used as unique public booking URL with the students, for example: 4geeks.com/meet/bob')
 
     price_per_hour = models.FloatField()
 
@@ -168,9 +162,7 @@ class MentorProfile(models.Model):
         default=None,
         help_text="If set, it will be default for all session's unless the session.online_meeting_url is set")
 
-    token = models.CharField(max_length=255,
-                             unique=True,
-                             help_text='Used for inviting the user to become a mentor')
+    token = models.CharField(max_length=255, unique=True, help_text='Used for inviting the user to become a mentor')
 
     booking_url = models.URLField(
         blank=True,
@@ -194,10 +186,7 @@ class MentorProfile(models.Model):
                              default=None,
                              help_text='Only use this if the user does not exist on breathecode already')
 
-    availability_report = models.JSONField(blank=True,
-                                           null=False,
-                                           default=[],
-                                           help_text='Mentor availability report')
+    availability_report = models.JSONField(blank=True, null=False, default=[], help_text='Mentor availability report')
 
     user = models.ForeignKey(User,
                              on_delete=models.CASCADE,
@@ -333,11 +322,10 @@ class MentorshipSession(models.Model):
         choices=MENTORSHIP_STATUS,
         default=PENDING,
         help_text=
-        f'Options are: {", ".join([key for key,label in MENTORSHIP_STATUS])}. Ignored sessions will not be billed.'
-    )
+        f'Options are: {", ".join([key for key,label in MENTORSHIP_STATUS])}. Ignored sessions will not be billed.')
     status_message = models.TextField(default=None, null=True, blank=True)
-    allow_billing = models.BooleanField(
-        default=True, help_text='If false it will not be included when generating mentorship bills')
+    allow_billing = models.BooleanField(default=True,
+                                        help_text='If false it will not be included when generating mentorship bills')
     bill = models.ForeignKey(MentorshipBill,
                              on_delete=models.SET_NULL,
                              null=True,
@@ -351,16 +339,12 @@ class MentorshipSession(models.Model):
         default=None,
         help_text='The automatic suggested duration to be paid to the mentor for this session')
 
-    accounted_duration = models.DurationField(
-        blank=True,
-        null=True,
-        default=None,
-        help_text='The duration that will be paid to the mentor for this session')
+    accounted_duration = models.DurationField(blank=True,
+                                              null=True,
+                                              default=None,
+                                              help_text='The duration that will be paid to the mentor for this session')
 
-    agenda = models.TextField(blank=True,
-                              null=True,
-                              default=None,
-                              help_text='What will this mentorship be about')
+    agenda = models.TextField(blank=True, null=True, default=None, help_text='What will this mentorship be about')
     summary = models.TextField(blank=True,
                                null=True,
                                default=None,
@@ -381,29 +365,28 @@ class MentorshipSession(models.Model):
                                     default=None,
                                     help_text='Real start date (only if it started)')
 
-    mentor_joined_at = models.DateTimeField(
-        blank=True,
-        null=True,
-        default=None,
-        help_text='Exact moment the mentor joined the meeting for the first time')
+    mentor_joined_at = models.DateTimeField(blank=True,
+                                            null=True,
+                                            default=None,
+                                            help_text='Exact moment the mentor joined the meeting for the first time')
 
-    mentor_left_at = models.DateTimeField(
-        blank=True,
-        null=True,
-        default=None,
-        help_text='Exact moment the mentor left the meeting for the last time')
+    mentor_left_at = models.DateTimeField(blank=True,
+                                          null=True,
+                                          default=None,
+                                          help_text='Exact moment the mentor left the meeting for the last time')
 
-    mentee_left_at = models.DateTimeField(
-        blank=True,
-        null=True,
-        default=None,
-        help_text='Exact moment the mentee left the meeting for the last time')
+    mentee_left_at = models.DateTimeField(blank=True,
+                                          null=True,
+                                          default=None,
+                                          help_text='Exact moment the mentee left the meeting for the last time')
 
     calendly_uuid = models.CharField(blank=True,
                                      max_length=255,
                                      null=True,
                                      default=None,
                                      help_text='To be used by the calendly API')
+
+    questions_and_answers = models.JSONField(null=True, blank=True, default=None)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

@@ -164,8 +164,7 @@ def post_serializer(self, mentorship_service, user, data={}):
 
 
 def mentor_profile_columns(data={}):
-    token = hashlib.sha1(
-        (str(data['slug'] if 'slug' in data else '') + str(UTC_NOW)).encode('UTF-8')).hexdigest()
+    token = hashlib.sha1((str(data['slug'] if 'slug' in data else '') + str(UTC_NOW)).encode('UTF-8')).hexdigest()
     return {
         'bio': None,
         'booking_url': None,
@@ -250,10 +249,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
 
     def test__get__without_data(self):
-        model = self.bc.database.create(user=1,
-                                        role=1,
-                                        capability='read_mentorship_mentor',
-                                        profile_academy=1)
+        model = self.bc.database.create(user=1, role=1, capability='read_mentorship_mentor', profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
         self.client.force_authenticate(model.user)
@@ -673,10 +669,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call([
-                'CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension',
-                'SortExtension'
-            ]),
+            call(['CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension', 'SortExtension']),
         ])
 
         self.bc.check.calls(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
@@ -710,10 +703,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
 
     def test__post__without_slug_fields_in_body(self):
-        model = self.bc.database.create(user=1,
-                                        role=1,
-                                        capability='crud_mentorship_mentor',
-                                        profile_academy=1)
+        model = self.bc.database.create(user=1, role=1, capability='crud_mentorship_mentor', profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
         self.client.force_authenticate(model.user)
@@ -732,10 +722,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
 
     def test__post__without_required_fields_in_body(self):
-        model = self.bc.database.create(user=1,
-                                        role=1,
-                                        capability='crud_mentorship_mentor',
-                                        profile_academy=1)
+        model = self.bc.database.create(user=1, role=1, capability='crud_mentorship_mentor', profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
         self.client.force_authenticate(model.user)
@@ -773,13 +760,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_mentor')
-        data = {
-            'slug': 'mirai-nikki',
-            'name': 'Mirai Nikki',
-            'price_per_hour': 20,
-            'services': [1],
-            'user': 1
-        }
+        data = {'slug': 'mirai-nikki', 'name': 'Mirai Nikki', 'price_per_hour': 20, 'services': [1], 'user': 1}
         response = self.client.post(url, data, format='json')
 
         json = response.json()
@@ -826,13 +807,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_mentor')
-        data = {
-            'slug': 'mirai-nikki',
-            'name': 'Mirai Nikki',
-            'price_per_hour': 20,
-            'services': [1],
-            'user': 1
-        }
+        data = {'slug': 'mirai-nikki', 'name': 'Mirai Nikki', 'price_per_hour': 20, 'services': [1], 'user': 1}
         response = self.client.post(url, data, format='json')
 
         json = response.json()
@@ -945,13 +920,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('mentorship:academy_mentor')
-        data = {
-            'slug': 'mirai-nikki',
-            'price_per_hour': 20,
-            'services': [1],
-            'user': 1,
-            'name': 'Mirai Nikki'
-        }
+        data = {'slug': 'mirai-nikki', 'price_per_hour': 20, 'services': [1], 'user': 1, 'name': 'Mirai Nikki'}
         response = self.client.post(url, data, format='json')
 
         json = response.json()

@@ -237,11 +237,7 @@ class ActionCertificateSetDefaultIssuedAtTestCase(CertificateTestCase):
         # issuet_at should remain the same because there was already a value so the default should no be applied.
 
         now = timezone.now()
-        model = self.generate_models(user_specialty=True,
-                                     user_specialty_kwargs={
-                                         'status': 'PENDING',
-                                         'issued_at': now
-                                     })
+        model = self.generate_models(user_specialty=True, user_specialty_kwargs={'status': 'PENDING', 'issued_at': now})
 
         query = UserSpecialty.objects.filter(status='PERSISTED', issued_at__isnull=True)
 

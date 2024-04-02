@@ -13,8 +13,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='provisioningactivity',
             name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('PERSISTED', 'Persisted'),
-                                            ('IGNORED', 'Ignored'), ('ERROR', 'Error')],
+            field=models.CharField(choices=[('PENDING', 'Pending'), ('PERSISTED', 'Persisted'), ('IGNORED', 'Ignored'),
+                                            ('ERROR', 'Error')],
                                    default='PENDING',
                                    max_length=20),
         ),

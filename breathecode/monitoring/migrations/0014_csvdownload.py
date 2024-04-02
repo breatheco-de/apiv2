@@ -15,8 +15,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='CSVDownload',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=255)),
                 ('url', models.URLField()),
                 ('status',
@@ -26,8 +25,7 @@ class Migration(migrations.Migration):
                 ('status_message', models.TextField(blank=True, default=None, null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('finished_at', models.DateTimeField(auto_now=True)),
-                ('academy',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
+                ('academy', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
             ],
         ),
     ]

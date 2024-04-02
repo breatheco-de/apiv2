@@ -41,11 +41,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='hook',
             name='service_id',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   max_length=64,
-                                   null=True,
-                                   verbose_name='Service ID'),
+            field=models.CharField(blank=True, default=None, max_length=64, null=True, verbose_name='Service ID'),
         ),
         migrations.AddField(
             model_name='hook',

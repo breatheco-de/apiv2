@@ -53,13 +53,11 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertNotEqual(content.find('<title>'), -1)
         self.assertNotEqual(
-            content.find(
-                '<ul class="errorlist"><li>Ensure this value has at least 8 characters (it has 5).</li></ul>\n'
-                '<input type="password" name="password1"'), -1)
+            content.find('<ul class="errorlist"><li>Ensure this value has at least 8 characters (it has 5).</li></ul>\n'
+                         '<input type="password" name="password1"'), -1)
         self.assertNotEqual(
-            content.find(
-                '<ul class="errorlist"><li>Ensure this value has at least 8 characters (it has 5).</li></ul>\n'
-                '<input type="password" name="password2"'), -1)
+            content.find('<ul class="errorlist"><li>Ensure this value has at least 8 characters (it has 5).</li></ul>\n'
+                         '<input type="password" name="password2"'), -1)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_user_dict(), [])
@@ -187,8 +185,7 @@ class AuthenticateTestSuite(AuthTestCase):
         }
         response = self.client.post(url, data)
 
-        self.assertEqual(response.url,
-                         'https://naturo.io/?msg=Check%20your%20email%20for%20a%20password%20reset!')
+        self.assertEqual(response.url, 'https://naturo.io/?msg=Check%20your%20email%20for%20a%20password%20reset!')
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(self.all_user_dict(), [])
         self.assertEqual(mock.call_args_list, [])
@@ -206,8 +203,7 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.post(url, data)
         token, created = Token.get_or_create(model['user'], token_type='temporal')
 
-        self.assertEqual(response.url,
-                         'https://naturo.io/?msg=Check%20your%20email%20for%20a%20password%20reset!')
+        self.assertEqual(response.url, 'https://naturo.io/?msg=Check%20your%20email%20for%20a%20password%20reset!')
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(self.all_user_dict(), [{**self.model_to_dict(model, 'user')}])
 
@@ -233,8 +229,7 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.post(url, data)
         token, created = Token.get_or_create(model['user'], token_type='temporal')
 
-        self.assertEqual(response.url,
-                         'https://naturo.io/?msg=Check%20your%20email%20for%20a%20password%20reset!')
+        self.assertEqual(response.url, 'https://naturo.io/?msg=Check%20your%20email%20for%20a%20password%20reset!')
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(self.all_user_dict(), [{**self.model_to_dict(model, 'user')}])
 

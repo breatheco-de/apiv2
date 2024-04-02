@@ -279,8 +279,7 @@ class SyncGithubUsersTestSuite(AuthTestCase):
         sync_organization_members(models.academy.id)
 
         GithubAcademyUser = self.bc.database.get_model('authenticate.GithubAcademyUser')
-        users = GithubAcademyUser.objects.filter(user__credentialsgithub__isnull=True).exclude(
-            user__isnull=True)
+        users = GithubAcademyUser.objects.filter(user__credentialsgithub__isnull=True).exclude(user__isnull=True)
         self.assertEqual(users.count(), 1)
         no_credentials_user = users.first()
         self.assertEqual(no_credentials_user.storage_status, 'ERROR')
@@ -341,9 +340,8 @@ class SyncGithubUsersTestSuite(AuthTestCase):
         user = GithubAcademyUser.objects.get(id=models3.github_academy_user.id)
         self.assertEqual(user.storage_status, 'SYNCHED')
         self.assertEqual(user.storage_action, 'DELETE')
-        self.assertEqual(
-            [l['msg'] for l in user.storage_log],
-            [GithubAcademyUser.create_log(f'Successfully deleted in github organization')['msg']])
+        self.assertEqual([l['msg'] for l in user.storage_log],
+                         [GithubAcademyUser.create_log(f'Successfully deleted in github organization')['msg']])
 
     @patch('breathecode.services.github.Github.get_org_members', MagicMock(side_effect=get_org_members))
     @patch('breathecode.services.github.Github.invite_org_member', MagicMock())
@@ -383,9 +381,8 @@ class SyncGithubUsersTestSuite(AuthTestCase):
         user = GithubAcademyUser.objects.get(id=models3.github_academy_user.id)
         self.assertEqual(user.storage_status, 'SYNCHED')
         self.assertEqual(user.storage_action, 'DELETE')
-        self.assertEqual(
-            [l['msg'] for l in user.storage_log],
-            [GithubAcademyUser.create_log(f'Successfully deleted in github organization')['msg']])
+        self.assertEqual([l['msg'] for l in user.storage_log],
+                         [GithubAcademyUser.create_log(f'Successfully deleted in github organization')['msg']])
 
     @patch('breathecode.services.github.Github.get_org_members', MagicMock(side_effect=get_org_members))
     @patch('breathecode.services.github.Github.invite_org_member', MagicMock())

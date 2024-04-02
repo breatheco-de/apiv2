@@ -65,10 +65,7 @@ class MarketingTestSuite(MarketingTestCase):
         data = {}
         response = self.client.put(url, data)
         json = response.json()
-        expected = {
-            'detail': "You (user: 1) don't have this capability: crud_media for academy 1",
-            'status_code': 403
-        }
+        expected = {'detail': "You (user: 1) don't have this capability: crud_media for academy 1", 'status_code': 403}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -77,23 +74,19 @@ class MarketingTestSuite(MarketingTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     def test_upload_with_csv_file(self):
         from breathecode.services.google_cloud import Storage, File
 
         self.headers(academy=1)
 
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_media',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_media', role='potato')
         url = reverse_lazy('marketing:upload')
 
         response = self.client.put(url, {})
@@ -113,14 +106,13 @@ class MarketingTestSuite(MarketingTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_upload_random(self):
         from breathecode.services.google_cloud import Storage, File
@@ -128,10 +120,7 @@ class MarketingTestSuite(MarketingTestCase):
 
         self.headers(academy=1)
 
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_media',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_media', role='potato')
 
         url = reverse_lazy('marketing:upload')
 

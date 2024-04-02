@@ -27,8 +27,7 @@ def get_serializer(self, task, user):
         'title': task.title,
         'description': task.description,
         'opened_at': self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
-        'delivered_at':
-        self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
+        'delivered_at': self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
         'user': {
             'first_name': user.first_name,
             'id': user.id,
@@ -536,11 +535,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_task__query_stu_cohort__id__found_two__related_to_two_users(self):
         tasks = [{'cohort_id': 1, 'user_id': 1}, {'cohort_id': 2, 'user_id': 2}]
         cohort_users = [{'cohort_id': 1, 'user_id': 1}, {'cohort_id': 2, 'user_id': 2}]
-        model = self.bc.database.create(profile_academy=1,
-                                        user=2,
-                                        task=tasks,
-                                        cohort=2,
-                                        cohort_user=cohort_users)
+        model = self.bc.database.create(profile_academy=1, user=2, task=tasks, cohort=2, cohort_user=cohort_users)
         self.bc.request.authenticate(model.user[0])
 
         url = reverse_lazy('assignments:task') + '?stu_cohort=1,2'
@@ -559,11 +554,7 @@ class MediaTestSuite(AssignmentsTestCase):
     def test_task__query_stu_cohort__slug__found_two__related_to_two_users(self):
         tasks = [{'cohort_id': 1, 'user_id': 1}, {'cohort_id': 2, 'user_id': 2}]
         cohort_users = [{'cohort_id': 1, 'user_id': 1}, {'cohort_id': 2, 'user_id': 2}]
-        model = self.bc.database.create(profile_academy=1,
-                                        user=2,
-                                        task=tasks,
-                                        cohort=2,
-                                        cohort_user=cohort_users)
+        model = self.bc.database.create(profile_academy=1, user=2, task=tasks, cohort=2, cohort_user=cohort_users)
         self.bc.request.authenticate(model.user[0])
 
         url = reverse_lazy('assignments:task') + f'?stu_cohort={model.cohort[0].slug},{model.cohort[1].slug}'
@@ -647,11 +638,7 @@ class MediaTestSuite(AssignmentsTestCase):
                 'educational_status': 'DROPPED',
             },
         ]
-        model = self.bc.database.create(profile_academy=1,
-                                        user=2,
-                                        task=tasks,
-                                        cohort=2,
-                                        cohort_user=cohort_users)
+        model = self.bc.database.create(profile_academy=1, user=2, task=tasks, cohort=2, cohort_user=cohort_users)
         self.bc.request.authenticate(model.user[0])
 
         url = reverse_lazy('assignments:task') + f'?edu_status=ACTIVE,DROPPED'
@@ -738,11 +725,7 @@ class MediaTestSuite(AssignmentsTestCase):
                 'cohort_id': 2,
             },
         ]
-        model = self.bc.database.create(profile_academy=1,
-                                        task=tasks,
-                                        user=1,
-                                        cohort=2,
-                                        cohort_user=cohort_users)
+        model = self.bc.database.create(profile_academy=1, task=tasks, user=1, cohort=2, cohort_user=cohort_users)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + f'?teacher=1'

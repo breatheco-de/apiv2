@@ -14,27 +14,17 @@ from ..mixins import AdmissionsTestCase
 
 def get_serializer(cohort, syllabus, syllabus_version, data={}):
     return {
-        'id':
-        cohort.id,
-        'distance':
-        None,
-        'slug':
-        cohort.slug,
-        'name':
-        cohort.name,
-        'never_ends':
-        cohort.never_ends,
-        'private':
-        cohort.private,
+        'id': cohort.id,
+        'distance': None,
+        'slug': cohort.slug,
+        'name': cohort.name,
+        'never_ends': cohort.never_ends,
+        'private': cohort.private,
         'kickoff_date':
-        re.sub(r'\+00:00$', 'Z', cohort.kickoff_date.isoformat())
-        if cohort.kickoff_date else cohort.kickoff_date,
-        'ending_date':
-        cohort.ending_date,
-        'language':
-        cohort.language.lower(),
-        'remote_available':
-        cohort.remote_available,
+        re.sub(r'\+00:00$', 'Z', cohort.kickoff_date.isoformat()) if cohort.kickoff_date else cohort.kickoff_date,
+        'ending_date': cohort.ending_date,
+        'language': cohort.language.lower(),
+        'remote_available': cohort.remote_available,
         'syllabus_version': {
             'name': syllabus.name,
             'status': syllabus_version.status,
@@ -62,11 +52,9 @@ def get_serializer(cohort, syllabus, syllabus_version, data={}):
             'logo_url': cohort.academy.logo_url,
             'is_hidden_on_prework': cohort.academy.is_hidden_on_prework
         },
-        'schedule':
-        None,
+        'schedule': None,
         'timeslots': [],
-        'timezone':
-        None,
+        'timezone': None,
         **data,
     }
 
@@ -101,10 +89,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
     def test__with_data__with_sort(self):
         """Test /cohort/all without auth"""
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    skip_cohort=True,
-                                    syllabus_version=True)
+        base = self.generate_models(authenticate=True, profile_academy=True, skip_cohort=True, syllabus_version=True)
 
         models = [self.generate_models(cohort=True, syllabus=True, models=base) for _ in range(0, 2)]
         ordened_models = sorted(models, key=lambda x: x['cohort'].slug, reverse=True)
@@ -112,9 +97,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
         url = reverse_lazy('admissions:cohort_all') + '?sort=-slug'
         response = self.client.get(url)
         json = response.json()
-        expected = [
-            get_serializer(model.cohort, model.syllabus, model.syllabus_version) for model in ordened_models
-        ]
+        expected = [get_serializer(model.cohort, model.syllabus, model.syllabus_version) for model in ordened_models]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -133,16 +116,11 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     def test_with_data_with_get_academy(self):
         """Test /cohort/all without auth"""
-        model = self.generate_models(authenticate=True,
-                                     cohort=True,
-                                     profile_academy=True,
-                                     syllabus_version=True)
+        model = self.generate_models(authenticate=True, cohort=True, profile_academy=True, syllabus_version=True)
 
         base_url = reverse_lazy('admissions:cohort_all')
         url = f'{base_url}?academy={model.academy.slug}'
@@ -152,9 +130,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     def test_with_data_with_bad_get_location(self):
         """Test /cohort/all without auth"""
@@ -167,16 +143,11 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     def test_with_data_with_get_location(self):
         """Test /cohort/all without auth"""
-        model = self.generate_models(authenticate=True,
-                                     cohort=True,
-                                     profile_academy=True,
-                                     syllabus_version=True)
+        model = self.generate_models(authenticate=True, cohort=True, profile_academy=True, syllabus_version=True)
 
         base_url = reverse_lazy('admissions:cohort_all')
         url = f'{base_url}?location={model.academy.slug}'
@@ -186,16 +157,11 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     def test_with_data_with_get_location_with_comma(self):
         """Test /cohort/all without auth"""
-        model = self.generate_models(authenticate=True,
-                                     cohort=True,
-                                     profile_academy=True,
-                                     syllabus_version=True)
+        model = self.generate_models(authenticate=True, cohort=True, profile_academy=True, syllabus_version=True)
 
         base_url = reverse_lazy('admissions:cohort_all')
         url = f'{base_url}?location={model.academy.slug},they-killed-kenny'
@@ -205,16 +171,11 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     def test_with_data_with_get_upcoming_false(self):
         """Test /cohort/all without auth"""
-        model = self.generate_models(authenticate=True,
-                                     cohort=True,
-                                     profile_academy=True,
-                                     syllabus_version=True)
+        model = self.generate_models(authenticate=True, cohort=True, profile_academy=True, syllabus_version=True)
 
         base_url = reverse_lazy('admissions:cohort_all')
         url = f'{base_url}?upcoming=false'
@@ -224,9 +185,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     def test_with_data_with_get_upcoming_true_without_current_data(self):
         """Test /cohort/all without auth"""
@@ -240,9 +199,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     def test_with_data_with_get_upcoming_true_with_current_data(self):
         """Test /cohort/all without auth"""
@@ -260,16 +217,11 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     def test_with_data(self):
         """Test /cohort/all without auth"""
-        model = self.generate_models(authenticate=True,
-                                     cohort=True,
-                                     profile_academy=True,
-                                     syllabus_version=True)
+        model = self.generate_models(authenticate=True, cohort=True, profile_academy=True, syllabus_version=True)
 
         url = reverse_lazy('admissions:cohort_all')
         response = self.client.get(url)
@@ -278,9 +230,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     def test_with_data_but_is_private(self):
         """Test /cohort/all without auth"""
@@ -298,9 +248,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     """
     🔽🔽🔽 Sort querystring
@@ -309,10 +257,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
     def test_with_data__cohort_with_stage_deleted(self):
         """Test /cohort/all without auth"""
         cohort = {'stage': 'DELETED'}
-        model = self.generate_models(authenticate=True,
-                                     cohort=cohort,
-                                     profile_academy=True,
-                                     syllabus_version=True)
+        model = self.generate_models(authenticate=True, cohort=cohort, profile_academy=True, syllabus_version=True)
 
         url = reverse_lazy('admissions:cohort_all') + '?stage=asdasdasd'
         response = self.client.get(url)
@@ -321,9 +266,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     """
     🔽🔽🔽 Sort querystring
@@ -331,10 +274,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
     def test_with_data__querystring_in_stage__not_found(self):
         """Test /cohort/all without auth"""
-        model = self.generate_models(authenticate=True,
-                                     cohort=True,
-                                     profile_academy=True,
-                                     syllabus_version=True)
+        model = self.generate_models(authenticate=True, cohort=True, profile_academy=True, syllabus_version=True)
 
         url = reverse_lazy('admissions:cohort_all') + '?coordinates=a'
         response = self.client.get(url)
@@ -343,22 +283,16 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     def test_with_data__querystring_in_stage__found(self):
         """Test /cohort/all without auth"""
         statuses = ['INACTIVE', 'PREWORK', 'STARTED', 'FINAL_PROJECT', 'ENDED', 'DELETED']
         cases = [(x, x, random.choice([y for y in statuses if x != y]))
-                 for x in statuses] + [(x, x.lower(), random.choice([y for y in statuses if x != y]))
-                                       for x in statuses]
+                 for x in statuses] + [(x, x.lower(), random.choice([y for y in statuses if x != y])) for x in statuses]
 
         cohorts = [{'kickoff_date': datetime.today().isoformat()} for n in range(0, 3)]
-        model = self.generate_models(authenticate=True,
-                                     cohort=cohorts,
-                                     profile_academy=True,
-                                     syllabus_version=True)
+        model = self.generate_models(authenticate=True, cohort=cohorts, profile_academy=True, syllabus_version=True)
 
         for current, query, bad_status in cases:
             model.cohort[0].stage = current
@@ -418,15 +352,11 @@ class CohortAllTestSuite(AdmissionsTestCase):
             url = reverse_lazy('admissions:cohort_all') + '?coordinates=' + query
             response = self.client.get(url)
             json = response.json()
-            expected = [
-                get_serializer(model.cohort, model.syllabus, model.syllabus_version, data={'distance': None})
-            ]
+            expected = [get_serializer(model.cohort, model.syllabus, model.syllabus_version, data={'distance': None})]
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-                **self.model_to_dict(model, 'cohort')
-            }])
+            self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     def test_with_data__bad_coordinates(self):
         """Test /cohort/all without auth"""
@@ -450,9 +380,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-                **self.model_to_dict(model, 'cohort')
-            }])
+            self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     def test_with_data__bad_coordinates__invalid_values(self):
         """Test /cohort/all without auth"""
@@ -480,9 +408,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-                **self.model_to_dict(model, 'cohort')
-            }])
+            self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     def test_with_data__good_coordinates__check_same_distance_with_different_symbols(self):
         """Test /cohort/all without auth"""
@@ -515,9 +441,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-                **self.model_to_dict(model, 'cohort')
-            }])
+            self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     def test_with_data__good_coordinates__generating_correct_distance(self):
         """Test /cohort/all without auth"""
@@ -538,17 +462,12 @@ class CohortAllTestSuite(AdmissionsTestCase):
             response = self.client.get(url)
             json = response.json()
             expected = [
-                get_serializer(model.cohort,
-                               model.syllabus,
-                               model.syllabus_version,
-                               data={'distance': distance})
+                get_serializer(model.cohort, model.syllabus, model.syllabus_version, data={'distance': distance})
             ]
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-                **self.model_to_dict(model, 'cohort')
-            }])
+            self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     def test_with_data__good_coordinates__sorting_the_distances(self):
         """Test /cohort/all without auth"""
@@ -581,22 +500,10 @@ class CohortAllTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [
-            get_serializer(model.cohort[0],
-                           model.syllabus,
-                           model.syllabus_version,
-                           data={'distance': distance1}),
-            get_serializer(model.cohort[2],
-                           model.syllabus,
-                           model.syllabus_version,
-                           data={'distance': distance2}),
-            get_serializer(model.cohort[1],
-                           model.syllabus,
-                           model.syllabus_version,
-                           data={'distance': distance3}),
-            get_serializer(model.cohort[3],
-                           model.syllabus,
-                           model.syllabus_version,
-                           data={'distance': distance4}),
+            get_serializer(model.cohort[0], model.syllabus, model.syllabus_version, data={'distance': distance1}),
+            get_serializer(model.cohort[2], model.syllabus, model.syllabus_version, data={'distance': distance2}),
+            get_serializer(model.cohort[1], model.syllabus, model.syllabus_version, data={'distance': distance3}),
+            get_serializer(model.cohort[3], model.syllabus, model.syllabus_version, data={'distance': distance4}),
         ]
 
         self.assertEqual(json, expected)
@@ -631,14 +538,10 @@ class CohortAllTestSuite(AdmissionsTestCase):
             response = self.client.get(url)
             json = response.json()
             expected = sorted([
-                get_serializer(
-                    model.cohort[0], model.syllabus, model.syllabus_version, data={'distance': None}),
-                get_serializer(
-                    model.cohort[1], model.syllabus, model.syllabus_version, data={'distance': None}),
-                get_serializer(
-                    model.cohort[2], model.syllabus, model.syllabus_version, data={'distance': None}),
-                get_serializer(
-                    model.cohort[3], model.syllabus, model.syllabus_version, data={'distance': None}),
+                get_serializer(model.cohort[0], model.syllabus, model.syllabus_version, data={'distance': None}),
+                get_serializer(model.cohort[1], model.syllabus, model.syllabus_version, data={'distance': None}),
+                get_serializer(model.cohort[2], model.syllabus, model.syllabus_version, data={'distance': None}),
+                get_serializer(model.cohort[3], model.syllabus, model.syllabus_version, data={'distance': None}),
             ],
                               key=lambda x: self.bc.datetime.from_iso_string(x['kickoff_date']),
                               reverse=True)
@@ -757,9 +660,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     def test_plan_true__with_scheduler(self):
         """Test /cohort/all without auth"""
@@ -787,9 +688,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     """
     🔽🔽🔽 GET with plan=false in querystring
@@ -815,9 +714,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     def test_plan_false__with_scheduler(self):
         """Test /cohort/all without auth"""
@@ -842,9 +739,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     """
     🔽🔽🔽 GET with plan as slug in querystring
@@ -863,9 +758,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     def test_plan_is_slug__with_scheduler(self):
         """Test /cohort/all without auth"""
@@ -896,6 +789,4 @@ class CohortAllTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])

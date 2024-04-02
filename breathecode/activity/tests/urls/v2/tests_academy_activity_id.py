@@ -67,11 +67,7 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_get_one(self):
-        model = self.bc.database.create(user=1,
-                                        academy=1,
-                                        profile_academy=1,
-                                        capability='read_activity',
-                                        role=1)
+        model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability='read_activity', role=1)
 
         self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)

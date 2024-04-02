@@ -18,10 +18,9 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='taskmanager',
             name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('DONE', 'Done'),
-                                            ('CANCELLED', 'Cancelled'), ('REVERSED', 'Reversed'),
-                                            ('PAUSED', 'Paused'), ('ABORTED', 'Aborted'), ('ERROR', 'Error'),
-                                            ('SCHEDULED', 'Scheduled')],
+            field=models.CharField(choices=[('PENDING', 'Pending'), ('DONE', 'Done'), ('CANCELLED', 'Cancelled'),
+                                            ('REVERSED', 'Reversed'), ('PAUSED', 'Paused'), ('ABORTED', 'Aborted'),
+                                            ('ERROR', 'Error'), ('SCHEDULED', 'Scheduled')],
                                    default='PENDING',
                                    max_length=20),
         ),

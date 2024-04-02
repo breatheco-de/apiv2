@@ -175,6 +175,9 @@ class BigQuerySet():
         if key[-4:] == '.lte':
             key = key[:-4]
             operand = '<='
+        if key[-5:] == '.like':
+            key = key[:-5]
+            operand = 'LIKE'
         return key, operand, 'x__' + key.replace('.', '__')
 
     def get_type(self, elem: Any) -> None:
@@ -237,8 +240,7 @@ class BigQuerySet():
         if aggs:
             for agg in aggs:
                 operation, attribute = self.aggregation_parser(agg)
-                query_fields.append(
-                    f'{operation}({attribute}) AS {operation.lower()}__{attribute.replace(".", "__")}')
+                query_fields.append(f'{operation}({attribute}) AS {operation.lower()}__{attribute.replace(".", "__")}')
 
         if len(query_fields) > 0:
             query = f"""SELECT {", ".join(query_fields)} FROM `{self.project_id}.{self.dataset}.{self.table}` """
@@ -471,9 +473,42 @@ class BigQuery(metaclass=BigQueryMeta):
             new_field = new[key]
             if new_field.field_type == bigquery.enums.SqlTypeNames.STRUCT:
                 new_field._fields = cls.schema_difference(old[key].fields, new_field.fields)
-                res.append(new_field)
+                if len(new_field._fields) > 0:
+                    res.append(new_field)
 
             elif new_field != old[key]:
+                res.append(new_field)
+
+        return res
+
+    @classmethod
+    def merge_schema(cls, diff: Schema, schema: Schema) -> BigQuerySet:
+        """Add the difference of the new schema to the original"""
+
+        res = []
+        diff_map = cls._map_schema(diff)
+        schema_map = cls._map_schema(schema)
+
+        diff_keys = set(diff_map.keys())
+        schema_keys = set(schema_map.keys())
+
+        original = schema_keys - diff_keys
+
+        for key in original:
+            field = schema_map[key]
+            res.append(field)
+
+        for key in diff_map:
+            new_field = diff_map[key]
+            if new_field.field_type == bigquery.enums.SqlTypeNames.STRUCT:
+                old_field = schema_map[key]
+
+                new_field._fields = cls.merge_schema(new_field.fields, old_field.fields)
+
+                if len(new_field._fields) > 0:
+                    res.append(new_field)
+
+            elif key not in schema_map:
                 res.append(new_field)
 
         return res

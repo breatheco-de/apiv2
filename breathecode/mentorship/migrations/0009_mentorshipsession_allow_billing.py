@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='mentorshipsession',
             name='allow_billing',
-            field=models.BooleanField(
-                default=True, help_text='If false it will not be included when generating mentorship bills'),
+            field=models.BooleanField(default=True,
+                                      help_text='If false it will not be included when generating mentorship bills'),
         ),
     ]

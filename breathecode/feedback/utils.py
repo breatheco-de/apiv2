@@ -58,11 +58,8 @@ strings = {
             'highest': 'muy útil',
             'lowest': 'poco útil',
         },
-        'button_label':
-        'Answer the question',
-        'survey_subject':
-        'We need your feedback',
-        'survey_message':
-        'Please take 5 minutes to give us feedback about your experience at the academy so far.',
+        'button_label': 'Answer the question',
+        'survey_subject': 'We need your feedback',
+        'survey_message': 'Please take 5 minutes to give us feedback about your experience at the academy so far.',
     }
 }

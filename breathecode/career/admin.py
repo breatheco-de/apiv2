@@ -56,8 +56,8 @@ def get_was_published_date_from_string_admin(modeladmin, request, queryset):
 
 @admin.register(Spider)
 class SpiderAdmin(admin.ModelAdmin):
-    list_display = ('name', 'job_search', 'position', 'spider_last_run_status', 'spider_last_run_desc',
-                    'sync_status', 'sync_desc', 'zyte_last_fetch_date')
+    list_display = ('name', 'job_search', 'position', 'spider_last_run_status', 'spider_last_run_desc', 'sync_status',
+                    'sync_desc', 'zyte_last_fetch_date')
     actions = (
         fetch_sync_all_data_admin,
         run_spider_admin,
@@ -71,8 +71,8 @@ class ZyteProjectAdmin(admin.ModelAdmin):
 
 @admin.register(Job)
 class JobAdmin(admin.ModelAdmin):
-    list_display = ('title', 'spider', 'published_date_raw', 'salary', 'status', 'employer', 'position',
-                    'apply_url', 'currency', 'remote', 'created_at')
+    list_display = ('title', 'spider', 'published_date_raw', 'salary', 'status', 'employer', 'position', 'apply_url',
+                    'currency', 'remote', 'created_at')
     actions = (get_was_published_date_from_string_admin, )
 
 

@@ -36,10 +36,7 @@ def send_email_message(template_slug, to, data=None, force=False, inline_css=Fal
         to = [to]
 
     if os.getenv('EMAIL_NOTIFICATIONS_ENABLED', False) == 'TRUE' or force:
-        template = get_template_content(template_slug,
-                                        data, ['email'],
-                                        inline_css=inline_css,
-                                        academy=academy)
+        template = get_template_content(template_slug, data, ['email'], inline_css=inline_css, academy=academy)
 
         result = requests.post(f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages",
                                auth=('api', os.environ.get('MAILGUN_API_KEY', '')),
@@ -300,14 +297,13 @@ def sync_slack_team_channel(team_id):
     })
 
     channels = data['channels']
-    while 'response_metadata' in data and 'next_cursor' in data['response_metadata'] and data[
-            'response_metadata']['next_cursor'] != '':
-        data = api.get(
-            'conversations.list', {
-                'limit': 300,
-                'cursor': data['response_metadata']['next_cursor'],
-                'types': 'public_channel,private_channel',
-            })
+    while 'response_metadata' in data and 'next_cursor' in data['response_metadata'] and data['response_metadata'][
+            'next_cursor'] != '':
+        data = api.get('conversations.list', {
+            'limit': 300,
+            'cursor': data['response_metadata']['next_cursor'],
+            'types': 'public_channel,private_channel',
+        })
         channels = channels + data['channels']
 
     logger.debug(f'Found {str(len(channels))} channels, starting to sync')
@@ -349,8 +345,8 @@ def sync_slack_team_users(team_id):
     data = api.get('users.list', {'limit': 300})
 
     members = data['members']
-    while 'response_metadata' in data and 'next_cursor' in data['response_metadata'] and data[
-            'response_metadata']['next_cursor'] != '':
+    while 'response_metadata' in data and 'next_cursor' in data['response_metadata'] and data['response_metadata'][
+            'next_cursor'] != '':
         data = api.get('users.list', {'limit': 300, 'cursor': data['response_metadata']['next_cursor']})
         members = members + data['members']
 
@@ -445,8 +441,7 @@ def sync_slack_channel(payload, team=None):
 
         cohort = Cohort.objects.filter(slug=payload['name_normalized']).first()
         if cohort is None:
-            logger.warning(
-                f"Slack channel {payload['name_normalized']} has no corresponding cohort in breathecode")
+            logger.warning(f"Slack channel {payload['name_normalized']} has no corresponding cohort in breathecode")
 
         slack_channel = SlackChannel(
             slack_id=payload['id'],

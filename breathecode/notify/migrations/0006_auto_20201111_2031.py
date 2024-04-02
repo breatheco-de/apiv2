@@ -37,8 +37,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='SlackUserTeam',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('sync_status',
                  models.CharField(choices=[('INCOMPLETED', 'Incompleted'), ('COMPLETED', 'Completed')],
                                   default='INCOMPLETED',
@@ -52,10 +51,8 @@ class Migration(migrations.Migration):
                 ('synqued_at', models.DateTimeField(blank=True, default=None, null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('slack_team',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='notify.slackteam')),
-                ('slack_user',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='notify.slackuser')),
+                ('slack_team', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='notify.slackteam')),
+                ('slack_user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='notify.slackuser')),
             ],
         ),
     ]

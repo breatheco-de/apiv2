@@ -11,8 +11,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         warnings.warn('Execute this command can degrade the performance of the application', stacklevel=3)
 
-        self.stdout.write(
-            self.style.WARNING('The cache will be cleaned in 3 seconds, press Ctrl+C to cancel'))
+        self.stdout.write(self.style.WARNING('The cache will be cleaned in 3 seconds, press Ctrl+C to cancel'))
 
         time.sleep(3)
 

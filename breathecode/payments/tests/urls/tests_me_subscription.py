@@ -84,10 +84,8 @@ def service_item_serializer(self, service_item, service, groups=[], permissions=
 def plan_serializer(self, plan, service, groups=[], permissions=[], service_items=[]):
     return {
         'financing_options': [],
-        'service_items': [
-            service_item_serializer(self, service_item, service, groups, permissions)
-            for service_item in service_items
-        ],
+        'service_items':
+        [service_item_serializer(self, service_item, service, groups, permissions) for service_item in service_items],
         'slug':
         plan.slug,
         'status':
@@ -125,10 +123,8 @@ def get_mentorship_service_set_serializer(mentorship_service_set, academy, mento
         },
         'id':
         mentorship_service_set.id,
-        'mentorship_services': [
-            get_mentorship_service_serializer(mentorship_service, academy)
-            for mentorship_service in mentorship_services
-        ],
+        'mentorship_services':
+        [get_mentorship_service_serializer(mentorship_service, academy) for mentorship_service in mentorship_services],
         'slug':
         mentorship_service_set.slug,
         'academy_services': [],
@@ -208,8 +204,9 @@ def get_plan_financing_serializer(self,
         cohort_set = get_cohort_set_serializer(cohort_set, academy, cohorts=cohorts)
 
     if mentorship_service_set:
-        mentorship_service_set = get_mentorship_service_set_serializer(
-            mentorship_service_set, academy, mentorship_services=mentorship_services)
+        mentorship_service_set = get_mentorship_service_set_serializer(mentorship_service_set,
+                                                                       academy,
+                                                                       mentorship_services=mentorship_services)
 
     if event_type_set:
         event_type_set = get_event_type_set_serializer(event_type_set, academy, event_types=event_types)
@@ -250,15 +247,15 @@ def get_subscription_serializer(self,
                                 mentorship_services=[],
                                 event_types=[],
                                 cohorts=[]):
-    valid_until = self.bc.datetime.to_iso_string(
-        subscription.valid_until) if subscription.valid_until else None
+    valid_until = self.bc.datetime.to_iso_string(subscription.valid_until) if subscription.valid_until else None
 
     if cohort_set:
         cohort_set = get_cohort_set_serializer(cohort_set, academy, cohorts=cohorts)
 
     if mentorship_service_set:
-        mentorship_service_set = get_mentorship_service_set_serializer(
-            mentorship_service_set, academy, mentorship_services=mentorship_services)
+        mentorship_service_set = get_mentorship_service_set_serializer(mentorship_service_set,
+                                                                       academy,
+                                                                       mentorship_services=mentorship_services)
 
     if event_type_set:
         event_type_set = get_event_type_set_serializer(event_type_set, academy, event_types=event_types)
@@ -294,10 +291,8 @@ def get_subscription_serializer(self,
         cohort_set,
         'user':
         user_serializer(user),
-        'service_items': [
-            service_item_serializer(self, service_item, service, groups, permissions)
-            for service_item in service_items
-        ],
+        'service_items':
+        [service_item_serializer(self, service_item, service, groups, permissions) for service_item in service_items],
     }
 
 
@@ -1224,9 +1219,8 @@ class SignalTestSuite(PaymentsTestCase):
                                         academy=academy)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('payments:me_subscription') + (
-            f'?cohort-set-selected={random.choice([1, "slug1"])},'
-            f'{random.choice([2, "slug2"])}')
+        url = reverse_lazy('payments:me_subscription') + (f'?cohort-set-selected={random.choice([1, "slug1"])},'
+                                                          f'{random.choice([2, "slug2"])}')
         response = self.client.get(url)
         self.client.force_authenticate(model.user)
 
@@ -1382,9 +1376,8 @@ class SignalTestSuite(PaymentsTestCase):
                                         academy=academy)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('payments:me_subscription') + (
-            f'?cohort-set-selected={random.choice([3, "slug1"])},'
-            f'{random.choice([4, "slug2"])}')
+        url = reverse_lazy('payments:me_subscription') + (f'?cohort-set-selected={random.choice([3, "slug1"])},'
+                                                          f'{random.choice([4, "slug2"])}')
         response = self.client.get(url)
         self.client.force_authenticate(model.user)
 
@@ -1533,9 +1526,8 @@ class SignalTestSuite(PaymentsTestCase):
                                         academy=academy)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('payments:me_subscription') + (
-            f'?event-type-set-selected={random.choice([1, "slug1"])},'
-            f'{random.choice([2, "slug2"])}')
+        url = reverse_lazy('payments:me_subscription') + (f'?event-type-set-selected={random.choice([1, "slug1"])},'
+                                                          f'{random.choice([2, "slug2"])}')
         response = self.client.get(url)
         self.client.force_authenticate(model.user)
 

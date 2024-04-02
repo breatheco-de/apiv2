@@ -56,8 +56,8 @@ def get_provisioning_vendor(user_id, profile_academy, cohort):
     if for_my_cohort.count() > 1:
         vendors = [f'{p.vendor.name} in profile {p.id}' for p in for_my_cohort]
         raise Exception(
-            'More than one provisioning vendor found for your cohort, please speak with your program manager: '
-            + ','.join(vendors))
+            'More than one provisioning vendor found for your cohort, please speak with your program manager: ' +
+            ','.join(vendors))
     if for_my_cohort.count() == 1:
         p_profile = for_my_cohort.first()
         return p_profile.vendor
@@ -66,8 +66,8 @@ def get_provisioning_vendor(user_id, profile_academy, cohort):
     if entire_academy.count() > 1:
         vendors = [f'{p.vendor.name} in profile {p.id}' for p in entire_academy]
         raise Exception(
-            'More than one provisioning vendor found for the entire academy, please speak with your program manager: '
-            + ','.join(vendors))
+            'More than one provisioning vendor found for the entire academy, please speak with your program manager: ' +
+            ','.join(vendors))
     if entire_academy.count() == 1:
         p_profile = entire_academy.first()
         return p_profile.vendor
@@ -103,10 +103,9 @@ def create_container(user, task, fresh=False, lang='en'):
     credentials = CredentialsGithub.objects.filter(user=user).first()
     if credentials is None:
         raise ValidationException(
-            translation(
-                en='No github github credentials found, please connect your github account',
-                es='No se han encontrado credentials para github, por favor conecta tu cuenta de github',
-                slug='no-github-credentials'))
+            translation(en='No github github credentials found, please connect your github account',
+                        es='No se han encontrado credentials para github, por favor conecta tu cuenta de github',
+                        slug='no-github-credentials'))
 
     #FIXME: the code belog have variables that are not defined, so, it never worked, uncomment it if you want to fix it
     # gb = Github(token=credentials.token, host=provisioning_academy.vendor.api_url)
@@ -142,8 +141,7 @@ class GithubAcademyUserObject(TypedDict):
     ended_at: datetime
 
 
-def get_github_academy_user_logs(academy: Academy, username: str,
-                                 limit: datetime) -> list[GithubAcademyUserObject]:
+def get_github_academy_user_logs(academy: Academy, username: str, limit: datetime) -> list[GithubAcademyUserObject]:
     ret = []
     logs = GithubAcademyUserLog.objects.filter(Q(valid_until__isnull=True)
                                                | Q(valid_until__gte=limit - relativedelta(months=1, weeks=1)),
@@ -195,8 +193,8 @@ class ActivityContext(TypedDict):
 def handle_pending_github_user(organization: str, username: str) -> list[Academy]:
     orgs = AcademyAuthSettings.objects.filter(github_username__iexact=organization)
     orgs = [
-        x for x in orgs if GithubAcademyUser.objects.filter(
-            academy=x.academy, storage_action='ADD', storage_status='SYNCHED').count()
+        x for x in orgs
+        if GithubAcademyUser.objects.filter(academy=x.academy, storage_action='ADD', storage_status='SYNCHED').count()
     ]
 
     if not orgs:
@@ -310,8 +308,7 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
             if (log['storage_action'] == 'DELETE' and log['storage_status'] == 'SYNCHED'
                     and log['starting_at'] <= pytz.utc.localize(date) <= log['ending_at']):
                 provisioning_bills.pop(academy_id, None)
-                ignores.append(
-                    f'User {field["Username"]} was deleted from the academy during this event at {date}')
+                ignores.append(f'User {field["Username"]} was deleted from the academy during this event at {date}')
 
     if not provisioning_bills:
         for academy_id in logs.keys():
@@ -326,9 +323,8 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
                               f'{cohort_user.cohort.slug}')
 
     if not_found:
-        errors.append(
-            f'We could not find enough information about {field["Username"]}, mark this user user as '
-            'deleted if you don\'t recognize it')
+        errors.append(f'We could not find enough information about {field["Username"]}, mark this user user as '
+                      'deleted if you don\'t recognize it')
 
     if not (kind := context['provisioning_activity_kinds'].get((field['Product'], field['SKU']), None)):
         kind, _ = ProvisioningConsumptionKind.objects.get_or_create(
@@ -414,9 +410,7 @@ def add_gitpod_activity(context: ActivityContext, field: dict, position: int):
             user__credentialsgithub__username=field['userName']).order_by('-created_at')
 
         if cohort_users:
-            academies = sorted(list({cohort_user.cohort.academy
-                                     for cohort_user in cohort_users}),
-                               key=lambda x: x.id)
+            academies = sorted(list({cohort_user.cohort.academy for cohort_user in cohort_users}), key=lambda x: x.id)
 
     if not academies:
         if 'academies' not in context:
@@ -425,9 +419,8 @@ def add_gitpod_activity(context: ActivityContext, field: dict, position: int):
 
     errors = []
     if not academies:
-        errors.append(
-            f'We could not find enough information about {field["userName"]}, mark this user user as '
-            'deleted if you don\'t recognize it')
+        errors.append(f'We could not find enough information about {field["userName"]}, mark this user user as '
+                      'deleted if you don\'t recognize it')
 
     pattern = r'^https://github\.com/[^/]+/([^/]+)/?'
     if not (result := re.findall(pattern, field['contextURL'])):

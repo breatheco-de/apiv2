@@ -36,8 +36,7 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
 
     def test_post_event_type_with_no_auth(self):
 
-        url = reverse_lazy('events:academy_eventype_slug_visibilitysetting',
-                           kwargs={'event_type_slug': 'funny_event'})
+        url = reverse_lazy('events:academy_eventype_slug_visibilitysetting', kwargs={'event_type_slug': 'funny_event'})
 
         response = self.client.get(url)
         json = response.json()
@@ -49,8 +48,7 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
     def test_get_visibilitysetting_with_bad_slug(self):
         self.bc.request.set_headers(academy=1)
 
-        url = reverse_lazy('events:academy_eventype_slug_visibilitysetting',
-                           kwargs={'event_type_slug': 'funny_event'})
+        url = reverse_lazy('events:academy_eventype_slug_visibilitysetting', kwargs={'event_type_slug': 'funny_event'})
         self.generate_models(
             authenticate=True,
             profile_academy=1,
@@ -68,8 +66,7 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
     def test_get_visibilitysetting(self):
         self.bc.request.set_headers(academy=1)
 
-        url = reverse_lazy('events:academy_eventype_slug_visibilitysetting',
-                           kwargs={'event_type_slug': 'funny_event'})
+        url = reverse_lazy('events:academy_eventype_slug_visibilitysetting', kwargs={'event_type_slug': 'funny_event'})
         model = self.generate_models(
             authenticate=True,
             profile_academy=1,
@@ -94,8 +91,7 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
     def test_post_visibilitysetting_with_bad_slug(self):
         self.bc.request.set_headers(academy=1)
 
-        url = reverse_lazy('events:academy_eventype_slug_visibilitysetting',
-                           kwargs={'event_type_slug': 'funny_event'})
+        url = reverse_lazy('events:academy_eventype_slug_visibilitysetting', kwargs={'event_type_slug': 'funny_event'})
         self.generate_models(
             authenticate=True,
             profile_academy=1,
@@ -113,8 +109,7 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
     def test_post_visibilitysetting_with_bad_syllabus(self):
         self.bc.request.set_headers(academy=1)
 
-        url = reverse_lazy('events:academy_eventype_slug_visibilitysetting',
-                           kwargs={'event_type_slug': 'funny_event'})
+        url = reverse_lazy('events:academy_eventype_slug_visibilitysetting', kwargs={'event_type_slug': 'funny_event'})
         model = self.generate_models(
             authenticate=True,
             profile_academy=1,
@@ -138,8 +133,7 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
     def test_post_visibilitysetting_with_bad_cohort(self):
         self.bc.request.set_headers(academy=1)
 
-        url = reverse_lazy('events:academy_eventype_slug_visibilitysetting',
-                           kwargs={'event_type_slug': 'funny_event'})
+        url = reverse_lazy('events:academy_eventype_slug_visibilitysetting', kwargs={'event_type_slug': 'funny_event'})
         model = self.generate_models(
             authenticate=True,
             profile_academy=1,
@@ -163,8 +157,7 @@ class AcademyEventTypeVisibilitySettingsTestSuite(EventTestCase):
     def test_post_visibilitysetting(self):
         self.bc.request.set_headers(academy=1)
 
-        url = reverse_lazy('events:academy_eventype_slug_visibilitysetting',
-                           kwargs={'event_type_slug': 'funny_event'})
+        url = reverse_lazy('events:academy_eventype_slug_visibilitysetting', kwargs={'event_type_slug': 'funny_event'})
         model = self.generate_models(
             authenticate=True,
             profile_academy=1,

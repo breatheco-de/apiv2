@@ -12,11 +12,7 @@ from ..mixins import AdmissionsTestCase
 UTC_NOW = timezone.now()
 
 
-def generate_syllabus_json(lesson_slug,
-                           quiz_slug=None,
-                           reply_slug=None,
-                           project_slug=None,
-                           assignment_slug=None):
+def generate_syllabus_json(lesson_slug, quiz_slug=None, reply_slug=None, project_slug=None, assignment_slug=None):
 
     if quiz_slug == None:
         quiz_slug = lesson_slug
@@ -58,19 +54,14 @@ class CertificateTestSuite(AdmissionsTestCase):
     def test_academy_id_syllabus_id_version_without_auth(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('admissions:academy_id_syllabus_id_version',
-                           kwargs={
-                               'academy_id': 1,
-                               'syllabus_id': '1'
-                           })
+        url = reverse_lazy('admissions:academy_id_syllabus_id_version', kwargs={'academy_id': 1, 'syllabus_id': '1'})
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.all_syllabus_schedule_dict(), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
@@ -78,11 +69,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     def test_academy_id_syllabus_id_version_without_capability(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('admissions:academy_id_syllabus_id_version',
-                           kwargs={
-                               'academy_id': 1,
-                               'syllabus_id': '1'
-                           })
+        url = reverse_lazy('admissions:academy_id_syllabus_id_version', kwargs={'academy_id': 1, 'syllabus_id': '1'})
         self.generate_models(authenticate=True)
         response = self.client.get(url)
         json = response.json()
@@ -105,11 +92,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='read_syllabus',
                                      role='potato')
-        url = reverse_lazy('admissions:academy_id_syllabus_id_version',
-                           kwargs={
-                               'academy_id': 1,
-                               'syllabus_id': 1
-                           })
+        url = reverse_lazy('admissions:academy_id_syllabus_id_version', kwargs={'academy_id': 1, 'syllabus_id': 1})
         response = self.client.get(url)
         json = response.json()
         expected = []
@@ -132,11 +115,10 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True)
-        url = reverse_lazy('admissions:academy_id_syllabus_id_version',
-                           kwargs={
-                               'academy_id': 1,
-                               'syllabus_id': 1,
-                           })
+        url = reverse_lazy('admissions:academy_id_syllabus_id_version', kwargs={
+            'academy_id': 1,
+            'syllabus_id': 1,
+        })
         response = self.client.get(url)
         json = response.json()
         expected = [{
@@ -170,9 +152,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(self.all_syllabus_dict(), [{**self.model_to_dict(model, 'syllabus')}])
-        self.assertEqual(self.all_syllabus_version_dict(), [{
-            **self.model_to_dict(model, 'syllabus_version')
-        }])
+        self.assertEqual(self.all_syllabus_version_dict(), [{**self.model_to_dict(model, 'syllabus_version')}])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     def test_syllabus_id_version__post__bad_syllabus_id(self):
@@ -184,11 +164,10 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      capability='crud_syllabus',
                                      role='potato',
                                      syllabus=True)
-        url = reverse_lazy('admissions:academy_id_syllabus_id_version',
-                           kwargs={
-                               'academy_id': 1,
-                               'syllabus_id': 9999,
-                           })
+        url = reverse_lazy('admissions:academy_id_syllabus_id_version', kwargs={
+            'academy_id': 1,
+            'syllabus_id': 9999,
+        })
         data = {}
         response = self.client.post(url, data, format='json')
         json = response.json()
@@ -207,11 +186,10 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      capability='crud_syllabus',
                                      role='potato',
                                      syllabus=True)
-        url = reverse_lazy('admissions:academy_id_syllabus_id_version',
-                           kwargs={
-                               'academy_id': 1,
-                               'syllabus_id': 1,
-                           })
+        url = reverse_lazy('admissions:academy_id_syllabus_id_version', kwargs={
+            'academy_id': 1,
+            'syllabus_id': 1,
+        })
         data = {}
         response = self.client.post(url, data, format='json')
         json = response.json()
@@ -233,11 +211,10 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      asset_alias=asset_alias,
                                      syllabus=True)
-        url = reverse_lazy('admissions:academy_id_syllabus_id_version',
-                           kwargs={
-                               'academy_id': 1,
-                               'syllabus_id': 1,
-                           })
+        url = reverse_lazy('admissions:academy_id_syllabus_id_version', kwargs={
+            'academy_id': 1,
+            'syllabus_id': 1,
+        })
         data = {'json': generate_syllabus_json(slug)}
         response = self.client.post(url, data, format='json')
         json = response.json()
@@ -277,11 +254,10 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      syllabus=True,
                                      asset_alias=asset_alias,
                                      syllabus_version=True)
-        url = reverse_lazy('admissions:academy_id_syllabus_id_version',
-                           kwargs={
-                               'academy_id': 1,
-                               'syllabus_id': 1,
-                           })
+        url = reverse_lazy('admissions:academy_id_syllabus_id_version', kwargs={
+            'academy_id': 1,
+            'syllabus_id': 1,
+        })
         data = {'json': generate_syllabus_json(slug)}
         response = self.client.post(url, data, format='json')
         json = response.json()

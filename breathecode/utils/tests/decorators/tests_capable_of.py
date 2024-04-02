@@ -71,11 +71,7 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_capable_of__function__get_id__with_user__with_capability(self):
-        model = self.bc.database.create(user=1,
-                                        academy=1,
-                                        profile_academy=1,
-                                        role=1,
-                                        capability='can_kill_kenny')
+        model = self.bc.database.create(user=1, academy=1, profile_academy=1, role=1, capability='can_kill_kenny')
 
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny', headers={'academy': 1})
@@ -133,8 +129,7 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_capable_of__function__get_id__with_user__with_capability__status_inactive_with_correct_link(
-            self):
+    def test_capable_of__function__get_id__with_user__with_capability__status_inactive_with_correct_link(self):
         academy_kwargs = {'status': 'INACTIVE'}
         model = self.bc.database.create(user=1,
                                         academy=academy_kwargs,
@@ -214,11 +209,7 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_capable_of__view__get_id__with_user__with_capability(self):
-        model = self.bc.database.create(user=1,
-                                        academy=1,
-                                        profile_academy=1,
-                                        role=1,
-                                        capability='can_kill_kenny')
+        model = self.bc.database.create(user=1, academy=1, profile_academy=1, role=1, capability='can_kill_kenny')
 
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny', headers={'academy': 1})

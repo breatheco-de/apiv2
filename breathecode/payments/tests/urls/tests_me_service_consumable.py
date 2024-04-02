@@ -179,12 +179,8 @@ class TestSignal(LegacyAPITestCase):
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__nine_consumables__random_how_many__related_to_three_cohorts__without_cohorts_in_querystring(
-            self):
-        consumables = [{
-            'how_many': random.randint(1, 30),
-            'cohort_set_id': math.floor(n / 3) + 1
-        } for n in range(9)]
+    def test__nine_consumables__random_how_many__related_to_three_cohorts__without_cohorts_in_querystring(self):
+        consumables = [{'how_many': random.randint(1, 30), 'cohort_set_id': math.floor(n / 3) + 1} for n in range(9)]
         belong_to1 = consumables[:3]
         belong_to2 = consumables[3:6]
         belong_to3 = consumables[6:]
@@ -243,12 +239,8 @@ class TestSignal(LegacyAPITestCase):
         )
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__nine_consumables__random_how_many__related_to_three_cohorts__with_wrong_cohorts_in_querystring(
-            self):
-        consumables = [{
-            'how_many': random.randint(1, 30),
-            'cohort_set_id': math.floor(n / 3) + 1
-        } for n in range(9)]
+    def test__nine_consumables__random_how_many__related_to_three_cohorts__with_wrong_cohorts_in_querystring(self):
+        consumables = [{'how_many': random.randint(1, 30), 'cohort_set_id': math.floor(n / 3) + 1} for n in range(9)]
 
         academy = {'available_as_saas': True}
 
@@ -276,10 +268,7 @@ class TestSignal(LegacyAPITestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__nine_consumables__random_how_many__related_to_three_cohorts__with_cohorts_in_querystring(self):
-        consumables = [{
-            'how_many': random.randint(1, 30),
-            'cohort_set_id': math.floor(n / 3) + 1
-        } for n in range(9)]
+        consumables = [{'how_many': random.randint(1, 30), 'cohort_set_id': math.floor(n / 3) + 1} for n in range(9)]
         belong_to1 = consumables[:3]
         belong_to2 = consumables[3:6]
         belong_to3 = consumables[6:]
@@ -684,12 +673,8 @@ class TestSignal(LegacyAPITestCase):
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__nine_consumables__random_how_many__related_to_three_cohorts__without_cohort_slugs_in_querystring(
-            self):
-        consumables = [{
-            'how_many': random.randint(1, 30),
-            'cohort_set_id': math.floor(n / 3) + 1
-        } for n in range(9)]
+    def test__nine_consumables__random_how_many__related_to_three_cohorts__without_cohort_slugs_in_querystring(self):
+        consumables = [{'how_many': random.randint(1, 30), 'cohort_set_id': math.floor(n / 3) + 1} for n in range(9)]
         belong_to1 = consumables[:3]
         belong_to2 = consumables[3:6]
         belong_to3 = consumables[6:]
@@ -748,12 +733,8 @@ class TestSignal(LegacyAPITestCase):
         )
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__nine_consumables__random_how_many__related_to_three_cohorts__with_wrong_cohort_slugs_in_querystring(
-            self):
-        consumables = [{
-            'how_many': random.randint(1, 30),
-            'cohort_set_id': math.floor(n / 3) + 1
-        } for n in range(9)]
+    def test__nine_consumables__random_how_many__related_to_three_cohorts__with_wrong_cohort_slugs_in_querystring(self):
+        consumables = [{'how_many': random.randint(1, 30), 'cohort_set_id': math.floor(n / 3) + 1} for n in range(9)]
 
         academy = {'available_as_saas': True}
 
@@ -780,12 +761,8 @@ class TestSignal(LegacyAPITestCase):
         )
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__nine_consumables__random_how_many__related_to_three_cohorts__with_cohort_slugs_in_querystring(
-            self):
-        consumables = [{
-            'how_many': random.randint(1, 30),
-            'cohort_set_id': math.floor(n / 3) + 1
-        } for n in range(9)]
+    def test__nine_consumables__random_how_many__related_to_three_cohorts__with_cohort_slugs_in_querystring(self):
+        consumables = [{'how_many': random.randint(1, 30), 'cohort_set_id': math.floor(n / 3) + 1} for n in range(9)]
         belong_to1 = consumables[:3]
         belong_to2 = consumables[3:6]
         belong_to3 = consumables[6:]
@@ -799,8 +776,8 @@ class TestSignal(LegacyAPITestCase):
         model = self.bc.database.create(user=1, consumable=consumables, service_set=3, academy=academy)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('payments:me_service_consumable'
-                           ) + f'?service_set_slug={",".join([x.slug for x in model.service_set])}'
+        url = reverse_lazy(
+            'payments:me_service_consumable') + f'?service_set_slug={",".join([x.slug for x in model.service_set])}'
         response = self.client.get(url)
         self.client.force_authenticate(model.user)
 
@@ -848,12 +825,8 @@ class TestSignal(LegacyAPITestCase):
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__nine_consumables__random_how_many__related_to_three_cohorts__without_cohort_slugs_in_querystring(
-            self):
-        consumables = [{
-            'how_many': random.randint(1, 30),
-            'cohort_set_id': math.floor(n / 3) + 1
-        } for n in range(9)]
+    def test__nine_consumables__random_how_many__related_to_three_cohorts__without_cohort_slugs_in_querystring(self):
+        consumables = [{'how_many': random.randint(1, 30), 'cohort_set_id': math.floor(n / 3) + 1} for n in range(9)]
         belong_to1 = consumables[:3]
         belong_to2 = consumables[3:6]
         belong_to3 = consumables[6:]
@@ -912,12 +885,8 @@ class TestSignal(LegacyAPITestCase):
         )
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__nine_consumables__random_how_many__related_to_three_cohorts__with_wrong_cohort_slugs_in_querystring(
-            self):
-        consumables = [{
-            'how_many': random.randint(1, 30),
-            'cohort_set_id': math.floor(n / 3) + 1
-        } for n in range(9)]
+    def test__nine_consumables__random_how_many__related_to_three_cohorts__with_wrong_cohort_slugs_in_querystring(self):
+        consumables = [{'how_many': random.randint(1, 30), 'cohort_set_id': math.floor(n / 3) + 1} for n in range(9)]
 
         academy = {'available_as_saas': True}
 
@@ -944,12 +913,8 @@ class TestSignal(LegacyAPITestCase):
         )
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__nine_consumables__random_how_many__related_to_three_cohorts__with_cohort_slugs_in_querystring(
-            self):
-        consumables = [{
-            'how_many': random.randint(1, 30),
-            'cohort_set_id': math.floor(n / 3) + 1
-        } for n in range(9)]
+    def test__nine_consumables__random_how_many__related_to_three_cohorts__with_cohort_slugs_in_querystring(self):
+        consumables = [{'how_many': random.randint(1, 30), 'cohort_set_id': math.floor(n / 3) + 1} for n in range(9)]
         belong_to1 = consumables[:3]
         belong_to2 = consumables[3:6]
         belong_to3 = consumables[6:]
@@ -963,8 +928,8 @@ class TestSignal(LegacyAPITestCase):
         model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3, academy=academy)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('payments:me_service_consumable'
-                           ) + f'?cohort_set_slug={",".join([x.slug for x in model.cohort_set])}'
+        url = reverse_lazy(
+            'payments:me_service_consumable') + f'?cohort_set_slug={",".join([x.slug for x in model.cohort_set])}'
         response = self.client.get(url)
         self.client.force_authenticate(model.user)
 
@@ -1013,8 +978,7 @@ class TestSignal(LegacyAPITestCase):
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__nine_consumables__related_to_three_mentorship_services__without_cohort_slugs_in_querystring(
-            self):
+    def test__nine_consumables__related_to_three_mentorship_services__without_cohort_slugs_in_querystring(self):
         consumables = [{
             'how_many': random.randint(1, 30),
             'mentorship_service_set_id': math.floor(n / 3) + 1
@@ -1075,8 +1039,7 @@ class TestSignal(LegacyAPITestCase):
         )
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test__nine_consumables__related_to_three_mentorship_services__with_wrong_cohort_slugs_in_querystring(
-            self):
+    def test__nine_consumables__related_to_three_mentorship_services__with_wrong_cohort_slugs_in_querystring(self):
         consumables = [{
             'how_many': random.randint(1, 30),
             'mentorship_service_set_id': math.floor(n / 3) + 1
@@ -1085,8 +1048,7 @@ class TestSignal(LegacyAPITestCase):
         model = self.bc.database.create(user=1, consumable=consumables, mentorship_service_set=3)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy(
-            'payments:me_service_consumable') + f'?mentorship_service_set_slug=blabla1,blabla2,blabla3'
+        url = reverse_lazy('payments:me_service_consumable') + f'?mentorship_service_set_slug=blabla1,blabla2,blabla3'
         response = self.client.get(url)
         self.client.force_authenticate(model.user)
 
@@ -1434,10 +1396,8 @@ class TestSignal(LegacyAPITestCase):
                     'balance': {
                         'unit': -1,
                     },
-                    'id':
-                    model.cohort_set.id,
-                    'slug':
-                    model.cohort_set.slug,
+                    'id': model.cohort_set.id,
+                    'slug': model.cohort_set.slug,
                     'items': [
                         serialize_consumable(model.consumable[2]),
                         serialize_consumable(model.consumable[3]),
@@ -1449,10 +1409,8 @@ class TestSignal(LegacyAPITestCase):
                     'balance': {
                         'unit': -1,
                     },
-                    'id':
-                    model.event_type_set.id,
-                    'slug':
-                    model.event_type_set.slug,
+                    'id': model.event_type_set.id,
+                    'slug': model.event_type_set.slug,
                     'items': [
                         serialize_consumable(model.consumable[0]),
                         serialize_consumable(model.consumable[1]),
@@ -1464,10 +1422,8 @@ class TestSignal(LegacyAPITestCase):
                     'balance': {
                         'unit': -1,
                     },
-                    'id':
-                    model.mentorship_service_set.id,
-                    'slug':
-                    model.mentorship_service_set.slug,
+                    'id': model.mentorship_service_set.id,
+                    'slug': model.mentorship_service_set.slug,
                     'items': [
                         serialize_consumable(model.consumable[4]),
                         serialize_consumable(model.consumable[5]),
@@ -1479,10 +1435,8 @@ class TestSignal(LegacyAPITestCase):
                     'balance': {
                         'unit': -1,
                     },
-                    'id':
-                    model.service_set.id,
-                    'slug':
-                    model.service_set.slug,
+                    'id': model.service_set.id,
+                    'slug': model.service_set.slug,
                     'items': [
                         serialize_consumable(model.consumable[6]),
                         serialize_consumable(model.consumable[7]),

@@ -42,11 +42,8 @@ class Currency(models.Model):
                             unique=True,
                             db_index=True,
                             help_text='ISO 4217 currency code (e.g. USD, EUR, MXN)')
-    name = models.CharField(max_length=20,
-                            unique=True,
-                            help_text='Currency name (e.g. US Dollar, Euro, Mexican Peso)')
-    decimals = models.IntegerField(default=0,
-                                   help_text='Number of decimals (e.g. 2 for USD and EUR, 0 for JPY)')
+    name = models.CharField(max_length=20, unique=True, help_text='Currency name (e.g. US Dollar, Euro, Mexican Peso)')
+    decimals = models.IntegerField(default=0, help_text='Number of decimals (e.g. 2 for USD and EUR, 0 for JPY)')
 
     countries = models.ManyToManyField(Country,
                                        blank=True,
@@ -126,20 +123,15 @@ PAY_EVERY_UNIT = [
 class AbstractAsset(models.Model):
     """This model represents a product or a service that can be sold."""
 
-    slug = models.CharField(
-        max_length=60,
-        unique=True,
-        db_index=True,
-        help_text='A human-readable identifier, it must be unique and it can only contain letters, '
-        'numbers and hyphens')
+    slug = models.CharField(max_length=60,
+                            unique=True,
+                            db_index=True,
+                            help_text='A human-readable identifier, it must be unique and it can only contain letters, '
+                            'numbers and hyphens')
 
     title = models.CharField(max_length=60, default=None, null=True, blank=True)
 
-    owner = models.ForeignKey(Academy,
-                              on_delete=models.CASCADE,
-                              blank=True,
-                              null=True,
-                              help_text='Academy owner')
+    owner = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text='Academy owner')
     #TODO: visibility and the capacities of disable a asset
     private = models.BooleanField(default=True, help_text='If the asset is private or not', db_index=True)
 
@@ -183,10 +175,7 @@ class Service(AbstractAsset):
                                     blank=True,
                                     help_text='Groups that can access the customer that bought this service')
 
-    type = models.CharField(max_length=22,
-                            choices=SERVICE_TYPES,
-                            default=COHORT_SET,
-                            help_text='Service type')
+    type = models.CharField(max_length=22, choices=SERVICE_TYPES, default=COHORT_SET, help_text='Service type')
 
     def __str__(self):
         return self.slug
@@ -239,15 +228,13 @@ class ServiceItem(AbstractServiceItem):
     service = models.ForeignKey(Service, on_delete=models.CASCADE, help_text='Service')
     is_renewable = models.BooleanField(
         default=False,
-        help_text=
-        'If it\'s marked, the consumables will be renewed according to the renew_at and renew_at_unit values.'
+        help_text='If it\'s marked, the consumables will be renewed according to the renew_at and renew_at_unit values.'
     )
 
     # the below fields are useless when is_renewable=False
-    renew_at = models.IntegerField(
-        default=1,
-        help_text='Renew at (e.g. 1, 2, 3, ...) it going to be used to build the balance of '
-        'customer')
+    renew_at = models.IntegerField(default=1,
+                                   help_text='Renew at (e.g. 1, 2, 3, ...) it going to be used to build the balance of '
+                                   'customer')
     renew_at_unit = models.CharField(max_length=10,
                                      choices=PAY_EVERY_UNIT,
                                      default=MONTH,
@@ -294,8 +281,8 @@ class FinancingOption(models.Model):
     monthly_price = models.FloatField(default=1, help_text='Monthly price (e.g. 1, 2, 3, ...)')
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text='Currency')
 
-    how_many_months = models.IntegerField(
-        default=1, help_text='How many months and installments to collect (e.g. 1, 2, 3, ...)')
+    how_many_months = models.IntegerField(default=1,
+                                          help_text='How many months and installments to collect (e.g. 1, 2, 3, ...)')
 
     def clean(self) -> None:
         if not self.monthly_price:
@@ -320,12 +307,11 @@ class CohortSet(models.Model):
 
     _lang = 'en'
 
-    slug = models.SlugField(
-        max_length=100,
-        unique=True,
-        db_index=True,
-        help_text='A human-readable identifier, it must be unique and it can only contain letters, '
-        'numbers and hyphens')
+    slug = models.SlugField(max_length=100,
+                            unique=True,
+                            db_index=True,
+                            help_text='A human-readable identifier, it must be unique and it can only contain letters, '
+                            'numbers and hyphens')
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     cohorts = models.ManyToManyField(Cohort,
                                      blank=True,
@@ -391,12 +377,11 @@ class CohortSetCohort(models.Model):
 class MentorshipServiceSet(models.Model):
     """M2M between plan and ServiceItem."""
 
-    slug = models.SlugField(
-        max_length=100,
-        unique=True,
-        db_index=True,
-        help_text='A human-readable identifier, it must be unique and it can only contain letters, '
-        'numbers and hyphens')
+    slug = models.SlugField(max_length=100,
+                            unique=True,
+                            db_index=True,
+                            help_text='A human-readable identifier, it must be unique and it can only contain letters, '
+                            'numbers and hyphens')
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     mentorship_services = models.ManyToManyField(MentorshipService, blank=True)
 
@@ -410,19 +395,17 @@ class MentorshipServiceSetTranslation(models.Model):
                             help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US')
     title = models.CharField(max_length=60, help_text='Title of the mentorship service set')
     description = models.CharField(max_length=255, help_text='Description of the mentorship service set')
-    short_description = models.CharField(max_length=255,
-                                         help_text='Short description of the mentorship service set')
+    short_description = models.CharField(max_length=255, help_text='Short description of the mentorship service set')
 
 
 class EventTypeSet(models.Model):
     """M2M between plan and ServiceItem."""
 
-    slug = models.SlugField(
-        max_length=100,
-        unique=True,
-        db_index=True,
-        help_text='A human-readable identifier, it must be unique and it can only contain letters, '
-        'numbers and hyphens')
+    slug = models.SlugField(max_length=100,
+                            unique=True,
+                            db_index=True,
+                            help_text='A human-readable identifier, it must be unique and it can only contain letters, '
+                            'numbers and hyphens')
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text='Academy owner')
     event_types = models.ManyToManyField(EventType, blank=True, help_text='Event types')
 
@@ -448,10 +431,9 @@ class AcademyService(models.Model):
         default=1,
         help_text='Minimum unit size allowed to be bought, example: bundle_size=5, then you are '
         'allowed to buy a minimum of 5 units. Related to the discount ratio')
-    max_items = models.FloatField(
-        default=1, help_text="How many items can be bought in total, it doesn't matter the bundle size")
-    max_amount = models.FloatField(default=1,
-                                   help_text="Limit total amount, it doesn't matter the bundle size")
+    max_items = models.FloatField(default=1,
+                                  help_text="How many items can be bought in total, it doesn't matter the bundle size")
+    max_amount = models.FloatField(default=1, help_text="Limit total amount, it doesn't matter the bundle size")
     discount_ratio = models.FloatField(default=1, help_text='Will be used when calculated by the final price')
 
     available_mentorship_service_sets = models.ManyToManyField(
@@ -460,9 +442,7 @@ class AcademyService(models.Model):
         help_text='Available mentorship service sets to be sold in this service and plan')
 
     available_event_type_sets = models.ManyToManyField(
-        EventTypeSet,
-        blank=True,
-        help_text='Available mentorship service sets to be sold in this service and plan')
+        EventTypeSet, blank=True, help_text='Available mentorship service sets to be sold in this service and plan')
 
     def __str__(self) -> str:
         return f'{self.academy.slug} -> {self.service.slug}'
@@ -492,11 +472,9 @@ class AcademyService(models.Model):
         return amount - discount
 
     def clean(self) -> None:
-        if self.id and len([
-                x for x in
-            [self.available_mentorship_service_sets.count(),
-             self.available_event_type_sets.count()] if x
-        ]) > 1:
+        if self.id and len(
+            [x for x in [self.available_mentorship_service_sets.count(),
+                         self.available_event_type_sets.count()] if x]) > 1:
             raise forms.ValidationError('Only one of available_mentorship_service_sets or '
                                         'available_event_type_sets must be set')
 
@@ -531,26 +509,19 @@ PLAN_STATUS = [
 class Plan(AbstractPriceByTime):
     """A plan is a group of services that can be purchased by a user."""
 
-    slug = models.CharField(
-        max_length=60,
-        unique=True,
-        db_index=True,
-        help_text='A human-readable identifier, it must be unique and it can only contain letters, '
-        'numbers and hyphens')
-    financing_options = models.ManyToManyField(FinancingOption,
-                                               blank=True,
-                                               help_text='Available financing options')
+    slug = models.CharField(max_length=60,
+                            unique=True,
+                            db_index=True,
+                            help_text='A human-readable identifier, it must be unique and it can only contain letters, '
+                            'numbers and hyphens')
+    financing_options = models.ManyToManyField(FinancingOption, blank=True, help_text='Available financing options')
 
     is_renewable = models.BooleanField(
-        default=True,
-        help_text='Is if true, it will create a renewable subscription instead of a plan financing')
+        default=True, help_text='Is if true, it will create a renewable subscription instead of a plan financing')
 
     status = models.CharField(max_length=12, choices=PLAN_STATUS, default=DRAFT, help_text='Status')
 
-    time_of_life = models.IntegerField(default=1,
-                                       blank=True,
-                                       null=True,
-                                       help_text='Plan lifetime (e.g. 1, 2, 3, ...)')
+    time_of_life = models.IntegerField(default=1, blank=True, null=True, help_text='Plan lifetime (e.g. 1, 2, 3, ...)')
     time_of_life_unit = models.CharField(max_length=10,
                                          choices=PAY_EVERY_UNIT,
                                          blank=True,
@@ -569,11 +540,7 @@ class Plan(AbstractPriceByTime):
                                            through='PlanServiceItem',
                                            through_fields=('plan', 'service_item'))
 
-    owner = models.ForeignKey(Academy,
-                              on_delete=models.CASCADE,
-                              blank=True,
-                              null=True,
-                              help_text='Academy owner')
+    owner = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text='Academy owner')
     is_onboarding = models.BooleanField(default=False, help_text='Is onboarding plan?', db_index=True)
     has_waiting_list = models.BooleanField(default=False, help_text='Has waiting list?')
 
@@ -584,13 +551,12 @@ class Plan(AbstractPriceByTime):
                                    default=None,
                                    help_text='Cohort sets to be sold in this service and plan')
 
-    mentorship_service_set = models.ForeignKey(
-        MentorshipServiceSet,
-        on_delete=models.SET_NULL,
-        blank=True,
-        null=True,
-        default=None,
-        help_text='Mentorship service set to be sold in this service and plan')
+    mentorship_service_set = models.ForeignKey(MentorshipServiceSet,
+                                               on_delete=models.SET_NULL,
+                                               blank=True,
+                                               null=True,
+                                               default=None,
+                                               help_text='Mentorship service set to be sold in this service and plan')
 
     event_type_set = models.ForeignKey(EventTypeSet,
                                        on_delete=models.SET_NULL,
@@ -599,10 +565,7 @@ class Plan(AbstractPriceByTime):
                                        default=None,
                                        help_text='Event type set to be sold in this service and plan')
 
-    invites = models.ManyToManyField(UserInvite,
-                                     blank=True,
-                                     help_text='Plan\'s invites',
-                                     related_name='plans')
+    invites = models.ManyToManyField(UserInvite, blank=True, help_text='Plan\'s invites', related_name='plans')
 
     def __str__(self) -> str:
         return self.slug
@@ -610,16 +573,13 @@ class Plan(AbstractPriceByTime):
     def clean(self) -> None:
 
         if not self.is_renewable and (not self.time_of_life or not self.time_of_life_unit):
-            raise forms.ValidationError(
-                'If the plan is not renewable, you must set time_of_life and time_of_life_unit')
+            raise forms.ValidationError('If the plan is not renewable, you must set time_of_life and time_of_life_unit')
 
-        have_price = (self.price_per_month or self.price_per_year or self.price_per_quarter
-                      or self.price_per_half)
+        have_price = (self.price_per_month or self.price_per_year or self.price_per_quarter or self.price_per_half)
 
         if self.is_renewable and have_price and (self.time_of_life or self.time_of_life_unit):
-            raise forms.ValidationError(
-                'If the plan is renewable and have price, you must not set time_of_life and '
-                'time_of_life_unit')
+            raise forms.ValidationError('If the plan is renewable and have price, you must not set time_of_life and '
+                                        'time_of_life_unit')
 
         free_trial_available = self.trial_duration
 
@@ -629,8 +589,8 @@ class Plan(AbstractPriceByTime):
                 'If the plan is renewable and a have free trial available, you must not set time_of_life '
                 'and time_of_life_unit')
 
-        if self.is_renewable and not have_price and not free_trial_available and (not self.time_of_life or
-                                                                                  not self.time_of_life_unit):
+        if self.is_renewable and not have_price and not free_trial_available and (not self.time_of_life
+                                                                                  or not self.time_of_life_unit):
             raise forms.ValidationError(
                 'If the plan is renewable and a not have free trial available, you must set time_of_life '
                 'and time_of_life_unit')
@@ -738,17 +698,12 @@ class Bag(AbstractAmountByTime):
 
     objects = LockManager()
 
-    status = models.CharField(max_length=8,
-                              choices=BAG_STATUS,
-                              default=CHECKING,
-                              help_text='Bag status',
-                              db_index=True)
+    status = models.CharField(max_length=8, choices=BAG_STATUS, default=CHECKING, help_text='Bag status', db_index=True)
     type = models.CharField(max_length=7, choices=BAG_TYPE, default=BAG, help_text='Bag type')
-    chosen_period = models.CharField(
-        max_length=7,
-        choices=CHOSEN_PERIOD,
-        default=NO_SET,
-        help_text='Chosen period used to calculate the amount and build the subscription')
+    chosen_period = models.CharField(max_length=7,
+                                     choices=CHOSEN_PERIOD,
+                                     default=NO_SET,
+                                     help_text='Chosen period used to calculate the amount and build the subscription')
     how_many_installments = models.IntegerField(
         default=0, help_text='How many installments to collect and build the plan financing')
 
@@ -808,8 +763,7 @@ class Invoice(models.Model):
     """Represents a payment made by a user."""
 
     amount = models.FloatField(
-        default=0,
-        help_text='If amount is 0, transaction will not be sent to stripe or any other payment processor.')
+        default=0, help_text='If amount is 0, transaction will not be sent to stripe or any other payment processor.')
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text='Currency of the invoice')
     paid_at = models.DateTimeField(help_text='Date when the invoice was paid')
     refunded_at = models.DateTimeField(null=True,
@@ -902,13 +856,12 @@ class AbstractIOweYou(models.Model):
         blank=True,
         default=None,
         help_text='Mentorship service set which the plans and services is for')
-    selected_event_type_set = models.ForeignKey(
-        EventTypeSet,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        default=None,
-        help_text='Event type set which the plans and services is for')
+    selected_event_type_set = models.ForeignKey(EventTypeSet,
+                                                on_delete=models.CASCADE,
+                                                null=True,
+                                                blank=True,
+                                                default=None,
+                                                help_text='Event type set which the plans and services is for')
 
     # this reminds the plans to change the stock scheduler on change
     plans = models.ManyToManyField(Plan, blank=True, help_text='Plans to be supplied')
@@ -933,15 +886,14 @@ class PlanFinancing(AbstractIOweYou):
         'be issued after pay every installments')
 
     # in this moment the subscription will be expired
-    plan_expires_at = models.DateTimeField(
-        default=None,
-        null=True,
-        blank=False,
-        help_text='Plan expires at, after this date the plan will not be renewed')
+    plan_expires_at = models.DateTimeField(default=None,
+                                           null=True,
+                                           blank=False,
+                                           help_text='Plan expires at, after this date the plan will not be renewed')
 
     # this remember the current price per month
-    monthly_price = models.FloatField(
-        default=0, help_text='Monthly price, we keep this to avoid we changes him/her amount')
+    monthly_price = models.FloatField(default=0,
+                                      help_text='Monthly price, we keep this to avoid we changes him/her amount')
 
     def __str__(self) -> str:
         return f'{self.user.email} ({self.valid_until})'
@@ -955,9 +907,7 @@ class PlanFinancing(AbstractIOweYou):
 
         if not self.plan_expires_at:
             raise forms.ValidationError(
-                translation(settings.lang,
-                            en='Plan expires at is required',
-                            es='Plan expires at es requerido'))
+                translation(settings.lang, en='Plan expires at is required', es='Plan expires at es requerido'))
 
         return super().clean()
 
@@ -980,12 +930,11 @@ class Subscription(AbstractIOweYou):
     next_payment_at = models.DateTimeField(help_text='Next payment date')
 
     # in this moment the subscription will be expired
-    valid_until = models.DateTimeField(
-        default=None,
-        null=True,
-        blank=True,
-        db_index=True,
-        help_text='Valid until, after this date the subscription will be destroyed')
+    valid_until = models.DateTimeField(default=None,
+                                       null=True,
+                                       blank=True,
+                                       db_index=True,
+                                       help_text='Valid until, after this date the subscription will be destroyed')
 
     # this reminds the service items to change the stock scheduler on change
     # only for consuming single items without having a plan, when you buy consumable quantities
@@ -1034,10 +983,9 @@ class SubscriptionServiceItem(models.Model):
     def clean(self):
         if self.id and self.mentorship_service_set and self.cohorts.count():
             raise forms.ValidationError(
-                translation(
-                    self._lang,
-                    en='You can not set cohorts and mentorship service set at the same time',
-                    es='No puedes establecer cohortes y conjunto de servicios de mentoría al mismo tiempo'))
+                translation(self._lang,
+                            en='You can not set cohorts and mentorship service set at the same time',
+                            es='No puedes establecer cohortes y conjunto de servicios de mentoría al mismo tiempo'))
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -1051,12 +999,11 @@ class SubscriptionServiceItem(models.Model):
 class ServiceSet(models.Model):
     _lang = 'en'
 
-    slug = models.SlugField(
-        max_length=100,
-        unique=True,
-        db_index=True,
-        help_text='A human-readable identifier, it must be unique and it can only contain letters, '
-        'numbers and hyphens')
+    slug = models.SlugField(max_length=100,
+                            unique=True,
+                            db_index=True,
+                            help_text='A human-readable identifier, it must be unique and it can only contain letters, '
+                            'numbers and hyphens')
     academy = models.ForeignKey(Academy,
                                 on_delete=models.CASCADE,
                                 help_text='Academy',
@@ -1108,13 +1055,12 @@ class Consumable(AbstractServiceItem):
                                        blank=True,
                                        null=True,
                                        help_text='Event type set which the consumable belongs to')
-    mentorship_service_set = models.ForeignKey(
-        MentorshipServiceSet,
-        on_delete=models.CASCADE,
-        default=None,
-        blank=True,
-        null=True,
-        help_text='Mentorship service set which the consumable belongs to')
+    mentorship_service_set = models.ForeignKey(MentorshipServiceSet,
+                                               on_delete=models.CASCADE,
+                                               default=None,
+                                               blank=True,
+                                               null=True,
+                                               help_text='Mentorship service set which the consumable belongs to')
     service_set = models.ForeignKey(ServiceSet,
                                     on_delete=models.CASCADE,
                                     default=None,
@@ -1268,10 +1214,9 @@ class ConsumptionSession(models.Model):
                               help_text='Status of the session')
     was_discounted = models.BooleanField(default=False, help_text='Was it discounted')
 
-    request = models.JSONField(
-        default=dict,
-        blank=True,
-        help_text='Request parameters, it\'s used to remind and recover and consumption session')
+    request = models.JSONField(default=dict,
+                               blank=True,
+                               help_text='Request parameters, it\'s used to remind and recover and consumption session')
 
     # this should be used to get
     path = models.CharField(max_length=200, blank=True, help_text='Path of the request')
@@ -1453,11 +1398,10 @@ class ServiceStockScheduler(models.Model):
 
     # this reminds which scheduler generated the consumable
     consumables = models.ManyToManyField(Consumable, blank=True, help_text='Consumables')
-    valid_until = models.DateTimeField(
-        null=True,
-        blank=True,
-        default=None,
-        help_text='Valid until, after this date the consumables will be renewed')
+    valid_until = models.DateTimeField(null=True,
+                                       blank=True,
+                                       default=None,
+                                       help_text='Valid until, after this date the consumables will be renewed')
 
     def clean(self) -> None:
         resources = [self.subscription_handler, self.plan_handler]
@@ -1490,10 +1434,7 @@ class ServiceStockScheduler(models.Model):
 
 
 class PaymentContact(models.Model):
-    user = models.OneToOneField(User,
-                                on_delete=models.CASCADE,
-                                related_name='payment_contact',
-                                help_text='Customer')
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='payment_contact', help_text='Customer')
     stripe_id = models.CharField(max_length=20, help_text='Stripe id')  # actually return 18 characters
 
     def __str__(self) -> str:
@@ -1519,19 +1460,10 @@ class FinancialReputation(models.Model):
     If the user has a bad reputation, the user will not be able to buy services.
     """
 
-    user = models.OneToOneField(User,
-                                on_delete=models.CASCADE,
-                                related_name='reputation',
-                                help_text='Customer')
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='reputation', help_text='Customer')
 
-    in_4geeks = models.CharField(max_length=17,
-                                 choices=REPUTATION_STATUS,
-                                 default=GOOD,
-                                 help_text='4Geeks reputation')
-    in_stripe = models.CharField(max_length=17,
-                                 choices=REPUTATION_STATUS,
-                                 default=GOOD,
-                                 help_text='Stripe reputation')
+    in_4geeks = models.CharField(max_length=17, choices=REPUTATION_STATUS, default=GOOD, help_text='4Geeks reputation')
+    in_stripe = models.CharField(max_length=17, choices=REPUTATION_STATUS, default=GOOD, help_text='Stripe reputation')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

@@ -208,10 +208,7 @@ def test__without_capability(bc: Breathecode, client: APIClient):
 
     response = client.get(url, HTTP_ACADEMY=1)
     json = response.json()
-    expected = {
-        'status_code': 403,
-        'detail': "You (user: 1) don't have this capability: read_asset for academy 1"
-    }
+    expected = {'status_code': 403, 'detail': "You (user: 1) don't have this capability: read_asset for academy 1"}
 
     assert json == expected
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -362,9 +359,7 @@ def test_asset__put_many(bc: Breathecode, client: APIClient):
         del item['created_at']
         del item['updated_at']
 
-    expected = [
-        put_serializer(model.academy, model.asset_category, asset) for i, asset in enumerate(model.asset)
-    ]
+    expected = [put_serializer(model.academy, model.asset_category, asset) for i, asset in enumerate(model.asset)]
 
     assert json == expected
     assert response.status_code == status.HTTP_200_OK

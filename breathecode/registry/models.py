@@ -36,9 +36,7 @@ class SyllabusVersionProxy(SyllabusVersion):
 
 
 class AssetTechnology(models.Model):
-    slug = models.SlugField(max_length=200,
-                            unique=True,
-                            help_text='Technologies are unified within all 4geeks.com')
+    slug = models.SlugField(max_length=200, unique=True, help_text='Technologies are unified within all 4geeks.com')
     title = models.CharField(max_length=200, blank=True)
     lang = models.CharField(max_length=2,
                             blank=True,
@@ -48,11 +46,7 @@ class AssetTechnology(models.Model):
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, default=None, blank=True, null=True)
     is_deprecated = models.BooleanField(default=False,
                                         help_text='If True, the technology will be programmatically deleted.')
-    featured_asset = models.ForeignKey('Asset',
-                                       on_delete=models.SET_NULL,
-                                       default=None,
-                                       blank=True,
-                                       null=True)
+    featured_asset = models.ForeignKey('Asset', on_delete=models.SET_NULL, default=None, blank=True, null=True)
     visibility = models.CharField(
         max_length=20,
         choices=VISIBILITY,
@@ -68,8 +62,7 @@ class AssetTechnology(models.Model):
         choices=SORT_PRIORITY,
         blank=False,
         default=3,
-        help_text='Priority to sort technology (1, 2, or 3): One is more important and goes first than three.'
-    )
+        help_text='Priority to sort technology (1, 2, or 3): One is more important and goes first than three.')
 
     def __str__(self):
         return self.title
@@ -93,8 +86,7 @@ class AssetTechnology(models.Model):
 
     def validate(self):
         if self.is_deprecated and self.parent is None:
-            raise Exception(
-                'You cannot mark a technology as deprecated if it doesn\'t have a parent technology')
+            raise Exception('You cannot mark a technology as deprecated if it doesn\'t have a parent technology')
 
 
 class AssetCategory(models.Model):
@@ -130,8 +122,7 @@ class AssetCategory(models.Model):
 
         if self.__old_slug != self.slug:
             # Prevent multiple keywords with same slug
-            cat = AssetCategory.objects.filter(slug=self.slug,
-                                               academy=self.academy).exclude(id=self.id).first()
+            cat = AssetCategory.objects.filter(slug=self.slug, academy=self.academy).exclude(id=self.id).first()
             if cat is not None:
                 raise Exception(f'Category with slug {self.slug} already exists on this academy')
 
@@ -199,11 +190,7 @@ class AssetKeyword(models.Model):
     title = models.CharField(max_length=200)
     lang = models.CharField(max_length=2, help_text='E.g: en, es, it')
 
-    cluster = models.ForeignKey(KeywordCluster,
-                                on_delete=models.SET_NULL,
-                                default=None,
-                                blank=True,
-                                null=True)
+    cluster = models.ForeignKey(KeywordCluster, on_delete=models.SET_NULL, default=None, blank=True, null=True)
 
     expected_monthly_traffic = models.FloatField(null=True,
                                                  blank=True,
@@ -364,8 +351,7 @@ class Asset(models.Model):
         max_length=20,
         choices=VISIBILITY,
         default=PUBLIC,
-        help_text=
-        'This is an internal property. It won\'t be shown internally to other academies unless is public',
+        help_text='This is an internal property. It won\'t be shown internally to other academies unless is public',
         db_index=True)
     asset_type = models.CharField(max_length=20, choices=TYPE, db_index=True)
 
@@ -374,6 +360,11 @@ class Asset(models.Model):
                               default=NOT_STARTED,
                               help_text='It won\'t be shown on the website until the status is published',
                               db_index=True)
+
+    is_auto_subscribed = models.BooleanField(
+        default=True,
+        help_text=
+        'If auto subscribed, the system will attempt to listen to push event and update the asset meta based on github')
     sync_status = models.CharField(max_length=20,
                                    choices=ASSET_SYNC_STATUS,
                                    default=None,
@@ -440,14 +431,13 @@ class Asset(models.Model):
 
     last_cleaning_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
     cleaning_status_details = models.TextField(null=True, blank=True, default=None)
-    cleaning_status = models.CharField(
-        max_length=20,
-        choices=ASSET_SYNC_STATUS,
-        default='PENDING',
-        null=True,
-        blank=True,
-        help_text='Internal state automatically set by the system based on cleanup',
-        db_index=True)
+    cleaning_status = models.CharField(max_length=20,
+                                       choices=ASSET_SYNC_STATUS,
+                                       default='PENDING',
+                                       null=True,
+                                       blank=True,
+                                       help_text='Internal state automatically set by the system based on cleanup',
+                                       db_index=True)
 
     delivery_instructions = models.TextField(null=True,
                                              default=None,
@@ -653,8 +643,7 @@ class Asset(models.Model):
             task_find = findings.pop(0)
             task = task_find.groupdict()
             task['id'] = hashlib.md5(task['label'].encode('utf-8')).hexdigest()
-            task['status'] = 'DONE' if 'status' in task and task['status'].strip().lower(
-            ) == 'x' else 'PENDING'
+            task['status'] = 'DONE' if 'status' in task and task['status'].strip().lower() == 'x' else 'PENDING'
 
             tasks.append(task)
         return tasks
@@ -672,10 +661,7 @@ class Asset(models.Model):
             is_alias = False
 
         if alias is None:
-            AssetErrorLog(slug=AssetErrorLog.SLUG_NOT_FOUND,
-                          path=asset_slug,
-                          asset_type=asset_type,
-                          user=user).save()
+            AssetErrorLog(slug=AssetErrorLog.SLUG_NOT_FOUND, path=asset_slug, asset_type=asset_type, user=user).save()
             return None
         elif asset_type is not None and alias.asset.asset_type.lower() == asset_type.lower():
             AssetErrorLog(slug=AssetErrorLog.DIFFERENT_TYPE,
@@ -752,11 +738,10 @@ class AssetErrorLog(models.Model):
     slug = models.SlugField(max_length=200)
     status = models.CharField(max_length=20, choices=ERROR_STATUS, default=ERROR)
     path = models.CharField(max_length=200)
-    status_text = models.TextField(
-        null=True,
-        blank=True,
-        default=None,
-        help_text='Status details, it may be set automatically if enough error information')
+    status_text = models.TextField(null=True,
+                                   blank=True,
+                                   default=None,
+                                   help_text='Status details, it may be set automatically if enough error information')
     user = models.ForeignKey(User,
                              on_delete=models.SET_NULL,
                              default=None,
@@ -784,8 +769,7 @@ class SEOReport(models.Model):
         self.__shared_state = {}
         self.__log = []
 
-    report_type = models.CharField(max_length=40,
-                                   help_text='Must be one of the services.seo.action script names')
+    report_type = models.CharField(max_length=40, help_text='Must be one of the services.seo.action script names')
     status = models.CharField(max_length=20,
                               choices=ASSET_SYNC_STATUS,
                               default='PENDING',
@@ -793,10 +777,7 @@ class SEOReport(models.Model):
     log = models.JSONField(default=None, null=True, blank=True)
     how_to_fix = models.TextField(default=None, null=True, blank=True)
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
-    rating = models.FloatField(default=None,
-                               null=True,
-                               blank=True,
-                               help_text='Automatically filled (1 to 100)')
+    rating = models.FloatField(default=None, null=True, blank=True, help_text='Automatically filled (1 to 100)')
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
 
     def fatal(self, msg):
@@ -850,13 +831,12 @@ class AssetImage(models.Model):
 
     last_download_at = models.DateTimeField(null=True, blank=True, default=None)
     download_details = models.TextField(null=True, blank=True, default=None)
-    download_status = models.CharField(
-        max_length=20,
-        choices=ASSET_SYNC_STATUS,
-        default='PENDING',
-        null=True,
-        blank=True,
-        help_text='Internal state automatically set by the system based on download')
+    download_status = models.CharField(max_length=20,
+                                       choices=ASSET_SYNC_STATUS,
+                                       default='PENDING',
+                                       null=True,
+                                       blank=True,
+                                       help_text='Internal state automatically set by the system based on download')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -924,8 +904,7 @@ class ContentVariable(models.Model):
     key = models.CharField(max_length=100)
     value = models.TextField()
     default_value = models.TextField(
-        help_text=
-        'If the variable type is fetch or code and the processing fails, the default value will be used')
+        help_text='If the variable type is fetch or code and the processing fails, the default value will be used')
 
     lang = models.CharField(max_length=2,
                             blank=True,
@@ -945,11 +924,10 @@ class ContentVariable(models.Model):
                               default='PENDING',
                               help_text='Code vars accept python code, Fetch vars accept HTTP GET')
 
-    status_text = models.TextField(
-        null=True,
-        default=None,
-        blank=True,
-        help_text='If the var is code or fetch here will be the error processing info')
+    status_text = models.TextField(null=True,
+                                   default=None,
+                                   blank=True,
+                                   help_text='If the var is code or fetch here will be the error processing info')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

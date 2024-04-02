@@ -71,9 +71,8 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
 
-        self.assertEqual(
-            logging.Logger.info.call_args_list,
-            [call('Starting build_service_stock_scheduler_from_subscription for subscription 1')])
+        self.assertEqual(logging.Logger.info.call_args_list,
+                         [call('Starting build_service_stock_scheduler_from_subscription for subscription 1')])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), [
@@ -98,9 +97,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             'next_payment_at': UTC_NOW + relativedelta(months=1),
             'valid_until': UTC_NOW + relativedelta(months=2),
         }
-        model = self.bc.database.create(subscription=subscription,
-                                        service_item=1,
-                                        subscription_service_item=1)
+        model = self.bc.database.create(subscription=subscription, service_item=1, subscription_service_item=1)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []

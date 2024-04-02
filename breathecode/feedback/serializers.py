@@ -198,10 +198,9 @@ class SurveySerializer(serializers.ModelSerializer):
     def validate(self, data):
 
         if data['cohort'].academy.id != int(self.context['academy_id']):
-            raise ValidationException(
-                f'You don\'t have rights for this cohort academy {self.context["academy_id"]}.',
-                code=400,
-                slug='cohort-academy-needs-rights')
+            raise ValidationException(f'You don\'t have rights for this cohort academy {self.context["academy_id"]}.',
+                                      code=400,
+                                      slug='cohort-academy-needs-rights')
 
         if 'duration' in data and data['duration'] < timezone.timedelta(hours=1):
             raise ValidationException('Minimum duration for surveys is one hour.',
@@ -251,8 +250,7 @@ class SurveyPUTSerializer(serializers.ModelSerializer):
             raise ValidationException('This survey was already send, therefore it cannot be updated')
 
         if 'cohort' in data:
-            raise ValidationException(
-                'The cohort cannot be updated in a survey, please create a new survey instead.')
+            raise ValidationException('The cohort cannot be updated in a survey, please create a new survey instead.')
 
         if self.instance.cohort.academy.id != int(self.context['academy_id']):
             raise ValidationException('You don\'t have rights for this cohort academy')
@@ -284,16 +282,13 @@ class ReviewPUTSerializer(serializers.ModelSerializer):
     def validate(self, data):
 
         if 'cohort' in data:
-            raise ValidationException(
-                'The cohort cannot be updated in a review, please create a new review instead.')
+            raise ValidationException('The cohort cannot be updated in a review, please create a new review instead.')
 
         if 'author' in data:
-            raise ValidationException(
-                'The author cannot be updated in a review, please create a new review instead.')
+            raise ValidationException('The author cannot be updated in a review, please create a new review instead.')
 
         if 'platform' in data:
-            raise ValidationException(
-                'The platform cannot be updated in a review, please create a new review instead.')
+            raise ValidationException('The platform cannot be updated in a review, please create a new review instead.')
 
         if self.instance.cohort.academy.id != int(self.context['academy_id']):
             raise ValidationException('You don\'t have rights for this cohort academy')

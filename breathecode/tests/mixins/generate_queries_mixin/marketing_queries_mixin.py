@@ -11,7 +11,7 @@ class MarketingQueriesMixin():
             'module':
             'marketing',
             'models': [
-                'ActiveCampaignAcademy', 'Automation', 'Tag', 'Contact', 'LeadGenerationApp', 'FormEntry',
-                'ShortLink', 'AcademyAlias', 'ActiveCampaignWebhook', 'Downloadable'
+                'ActiveCampaignAcademy', 'Automation', 'Tag', 'Contact', 'LeadGenerationApp', 'FormEntry', 'ShortLink',
+                'AcademyAlias', 'ActiveCampaignWebhook', 'Downloadable'
             ]
         }

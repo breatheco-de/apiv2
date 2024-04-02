@@ -51,8 +51,7 @@ def send_survey_group(survey=None, cohort=None):
                 logger.debug(f'Survey scheduled to send for {uc.user.email}')
                 result['success'].append(f'Survey scheduled to send for {uc.user.email}')
             else:
-                logger.debug(
-                    f"Survey NOT sent to {uc.user.email} because it's not an active or graduated student")
+                logger.debug(f"Survey NOT sent to {uc.user.email} because it's not an active or graduated student")
                 result['error'].append(
                     f"Survey NOT sent to {uc.user.email} because it's not an active or graduated student")
         survey.sent_at = timezone.now()
@@ -88,9 +87,8 @@ def send_question(user, cohort=None):
     ###1
     cu = CohortUser.objects.filter(**cu_kwargs).order_by('-cohort__kickoff_date').first()
     if not cu:
-        raise ValidationException(
-            'Impossible to determine the student cohort, maybe it has more than one, or cero.',
-            slug='without-cohort-or-cannot-determine-cohort')
+        raise ValidationException('Impossible to determine the student cohort, maybe it has more than one, or cero.',
+                                  slug='without-cohort-or-cannot-determine-cohort')
 
     answer.cohort = cu.cohort
     answer.lang = answer.cohort.language.lower()
@@ -99,21 +97,17 @@ def send_question(user, cohort=None):
     has_slackuser = hasattr(user, 'slackuser')
 
     if not user.email and not has_slackuser:
-        raise ValidationException(
-            f'User not have email and slack, this survey cannot be send: {str(user.id)}',
-            slug='without-email-or-slack-user')
+        raise ValidationException(f'User not have email and slack, this survey cannot be send: {str(user.id)}',
+                                  slug='without-email-or-slack-user')
 
     ###2
     if not answer.cohort.syllabus_version:
-        raise ValidationException('Cohort not have one SyllabusVersion',
-                                  slug='cohort-without-syllabus-version')
+        raise ValidationException('Cohort not have one SyllabusVersion', slug='cohort-without-syllabus-version')
 
     if not answer.cohort.schedule:
-        raise ValidationException('Cohort not have one SyllabusSchedule',
-                                  slug='cohort-without-specialty-mode')
+        raise ValidationException('Cohort not have one SyllabusSchedule', slug='cohort-without-specialty-mode')
 
-    question_was_sent_previously = Answer.objects.filter(cohort=answer.cohort, user=user,
-                                                         status='SENT').count()
+    question_was_sent_previously = Answer.objects.filter(cohort=answer.cohort, user=user, status='SENT').count()
 
     question = tasks.build_question(answer)
 
@@ -148,11 +142,7 @@ def send_question(user, cohort=None):
         send_email_message('nps', user.email, data, academy=answer.cohort.academy)
 
     if hasattr(user, 'slackuser') and hasattr(answer.cohort.academy, 'slackteam'):
-        send_slack('nps',
-                   user.slackuser,
-                   answer.cohort.academy.slackteam,
-                   data=data,
-                   academy=answer.cohort.academy)
+        send_slack('nps', user.slackuser, answer.cohort.academy.slackteam, data=data, academy=answer.cohort.academy)
 
     # keep track of sent survays until they get answered
     if not question_was_sent_previously:
@@ -200,13 +190,11 @@ def create_user_graduation_reviews(user, cohort):
             author=user,
         ).count()
         if total_reviews > 0:
-            logger.debug(
-                'No new reviews will be requested, student already has pending requests for this cohort')
+            logger.debug('No new reviews will be requested, student already has pending requests for this cohort')
             return False
 
         platforms = ReviewPlatform.objects.all()
-        logger.debug(
-            f'{platforms.count()} will be requested for student {user.id}, avg NPS score of {average}')
+        logger.debug(f'{platforms.count()} will be requested for student {user.id}, avg NPS score of {average}')
         for plat in platforms:
             review = Review(cohort=cohort, author=user, platform=plat, nps_previous_rating=average)
             review.save()
@@ -242,19 +230,16 @@ def calculate_survey_scores(survey_id: int) -> dict:
     cohort_pattern = strings[survey.lang]['cohort']['title'].split('{}')
     mentor_pattern = strings[survey.lang]['mentor']['title'].split('{}')
 
-    academy = get_average(
-        answers.filter(title__startswith=academy_pattern[0], title__endswith=academy_pattern[1]))
+    academy = get_average(answers.filter(title__startswith=academy_pattern[0], title__endswith=academy_pattern[1]))
 
-    cohort = get_average(
-        answers.filter(title__startswith=cohort_pattern[0], title__endswith=cohort_pattern[1]))
+    cohort = get_average(answers.filter(title__startswith=cohort_pattern[0], title__endswith=cohort_pattern[1]))
 
     all_mentors = {
         x.title
         for x in answers.filter(title__startswith=mentor_pattern[0], title__endswith=mentor_pattern[1])
     }
 
-    full_mentor_pattern = (mentor_pattern[0].replace('?', '\\?') + r'([\w ]+)' +
-                           mentor_pattern[1].replace('?', '\\?'))
+    full_mentor_pattern = (mentor_pattern[0].replace('?', '\\?') + r'([\w ]+)' + mentor_pattern[1].replace('?', '\\?'))
 
     mentors = []
     for mentor in all_mentors:
