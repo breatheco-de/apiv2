@@ -162,6 +162,7 @@ def put_serializer(data={}):
         'starts_at': None,
         'status': 'PENDING',
         'summary': None,
+        'questions_and_answers': None,
         **data,
     }
 
@@ -194,6 +195,7 @@ def mentorship_session_columns(data={}):
         'status_message': None,
         'suggested_accounted_duration': None,
         'summary': None,
+        'questions_and_answers': None,
         **data,
     }
 

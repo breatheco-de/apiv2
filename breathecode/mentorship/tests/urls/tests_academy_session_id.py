@@ -97,6 +97,7 @@ def put_serializer(data={}):
         'starts_at': None,
         'status': 'PENDING',
         'summary': None,
+        'questions_and_answers': None,
         **data,
     }
 
@@ -163,10 +164,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
 
     def test__get__without_data(self):
-        model = self.bc.database.create(user=1,
-                                        role=1,
-                                        capability='read_mentorship_session',
-                                        profile_academy=1)
+        model = self.bc.database.create(user=1, role=1, capability='read_mentorship_session', profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
         self.client.force_authenticate(model.user)

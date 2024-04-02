@@ -660,40 +660,12 @@ class PlanOfferTranslation(models.Model):
     short_description = models.CharField(max_length=255, help_text='Short description of the plan offer')
 
 
-RENEWAL = 'RENEWAL'
-CHECKING = 'CHECKING'
-PAID = 'PAID'
-BAG_STATUS = [
-    (RENEWAL, 'Renewal'),
-    (CHECKING, 'Checking'),
-    (PAID, 'Paid'),
-]
-
-BAG = 'BAG'
-CHARGE = 'CHARGE'
-PREVIEW = 'PREVIEW'
-INVITED = 'INVITED'
-BAG_TYPE = [
-    (BAG, 'Bag'),
-    (CHARGE, 'Charge'),
-    (PREVIEW, 'Preview'),
-    (INVITED, 'Invited'),
-]
-
-NO_SET = 'NO_SET'
-QUARTER = 'QUARTER'
-HALF = 'HALF'
-YEAR = 'YEAR'
-CHOSEN_PERIOD = [
-    (NO_SET, 'No set'),
-    (MONTH, 'Month'),
-    (QUARTER, 'Quarter'),
-    (HALF, 'Half'),
-    (YEAR, 'Year'),
-]
-
-
 class Seller(models.Model):
+
+    class Partner(models.TextChoices):
+        INDIVIDUAL = ('INDIVIDUAL', 'Individual')
+        BUSINESS = ('BUSINESS', 'Business')
+
     name = models.CharField(max_length=30, help_text='Company name or person name')
     user = models.ForeignKey(User,
                              on_delete=models.CASCADE,
@@ -701,12 +673,20 @@ class Seller(models.Model):
                              null=True,
                              limit_choices_to={'is_active': True})
 
+    type = models.CharField(max_length=13, choices=Partner, default=Partner.INDIVIDUAL, db_index=True)
+
     is_hidden = models.BooleanField(default=False, help_text='Is the seller hidden?')
     is_active = models.BooleanField(default=True, help_text='Is the seller active to be selected?')
 
     def clean(self) -> None:
         if self.user and self.__class__.objects.filter(user=self.user).count() > 0:
             raise forms.ValidationError('User already registered as seller')
+
+        if len(self.name) < 3:
+            raise forms.ValidationError('Name must be at least 3 characters long')
+
+        if self.type == self.Partner.BUSINESS and self.__class__.objects.filter(name=self.name).count() > 0:
+            raise forms.ValidationError('Name already registered as seller')
 
         return super().clean()
 
@@ -722,15 +702,15 @@ class Coupon(models.Model):
         self._how_many_offers = self.how_many_offers
 
     class Discount(models.TextChoices):
-        NO_DISCOUNT = 'NO_DISCOUNT', 'No discount'
-        PERCENT_OFF = 'PERCENT_OFF', 'Percent off'
-        FIXED_PRICE = 'FIXED_PRICE', 'Fixed price'
-        HAGGLING = 'HAGGLING', 'Haggling'
+        NO_DISCOUNT = ('NO_DISCOUNT', 'No discount')
+        PERCENT_OFF = ('PERCENT_OFF', 'Percent off')
+        FIXED_PRICE = ('FIXED_PRICE', 'Fixed price')
+        HAGGLING = ('HAGGLING', 'Haggling')
 
     class Referral(models.TextChoices):
-        NO_REFERRAL = 'NO_REFERRAL', 'No referral'
-        PERCENTAGE = 'PERCENTAGE', 'Percentage'
-        FIXED_PRICE = 'FIXED_PRICE', 'Fixed price'
+        NO_REFERRAL = ('NO_REFERRAL', 'No referral')
+        PERCENTAGE = ('PERCENTAGE', 'Percentage')
+        FIXED_PRICE = ('FIXED_PRICE', 'Fixed price')
 
     slug = models.SlugField()
     discount_type = models.CharField(max_length=13, choices=Discount, default=Discount.PERCENT_OFF, db_index=True)
@@ -801,6 +781,39 @@ def limit_coupon_choices():
         Q(expires_at=None) | Q(expires_at__gte=timezone.now()),
         Q(how_many_offers=-1) | Q(how_many_offers__gt=0),
     )
+
+
+RENEWAL = 'RENEWAL'
+CHECKING = 'CHECKING'
+PAID = 'PAID'
+BAG_STATUS = [
+    (RENEWAL, 'Renewal'),
+    (CHECKING, 'Checking'),
+    (PAID, 'Paid'),
+]
+
+BAG = 'BAG'
+CHARGE = 'CHARGE'
+PREVIEW = 'PREVIEW'
+INVITED = 'INVITED'
+BAG_TYPE = [
+    (BAG, 'Bag'),
+    (CHARGE, 'Charge'),
+    (PREVIEW, 'Preview'),
+    (INVITED, 'Invited'),
+]
+
+NO_SET = 'NO_SET'
+QUARTER = 'QUARTER'
+HALF = 'HALF'
+YEAR = 'YEAR'
+CHOSEN_PERIOD = [
+    (NO_SET, 'No set'),
+    (MONTH, 'Month'),
+    (QUARTER, 'Quarter'),
+    (HALF, 'Half'),
+    (YEAR, 'Year'),
+]
 
 
 class Bag(AbstractAmountByTime):

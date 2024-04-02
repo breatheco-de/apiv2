@@ -4,12 +4,42 @@ Test cases for /user
 import re
 import urllib
 from unittest import mock
+
+import pytest
+from django.template import loader
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from django.template import loader
-from ..mixins.new_auth_test_case import AuthTestCase
+
+from breathecode.authenticate.tests.mocks.mocks import FakeResponse, requests_mock
+
 from ...models import Role
+from ..mixins.new_auth_test_case import AuthTestCase
 from ..mocks import GithubRequestsMock
+
+
+@pytest.fixture(autouse=True)
+def setup(monkeypatch):
+    routes = {
+        'https://github.com/login/oauth/access_token':
+        FakeResponse(status_code=200,
+                     data={
+                         'access_token': GithubRequestsMock.token,
+                         'scope': 'repo,gist',
+                         'token_type': 'bearer'
+                     }),
+        'https://rigobot.herokuapp.com/v1/auth/invite':
+        FakeResponse(status_code=200, data={}),
+    }
+
+    def post_mock(url, *args, **kwargs):
+        return routes.get(url, FakeResponse(status_code=404, data={'status': 'fake request, not found'}))
+
+    monkeypatch.setattr('requests.get', GithubRequestsMock.apply_get_requests_mock())
+    monkeypatch.setattr('requests.post', post_mock)
+    monkeypatch.setattr('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
+    monkeypatch.setattr('breathecode.admissions.signals.student_edu_status_updated.send',
+                        mock.MagicMock(return_value=None))
+    yield
 
 
 def render(message):
@@ -68,9 +98,6 @@ def get_credentials_github_fields(data={}):
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
 
-    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
-                mock.MagicMock(return_value=None))
     def test_github_callback__without_code(self):
         """Test /github/callback without auth"""
         url = reverse_lazy('authenticate:github_callback')
@@ -87,11 +114,6 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
 
-    @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
-    @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
-    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
-                mock.MagicMock(return_value=None))
     def test_github_callback__user_not_exist(self):
         """Test /github/callback"""
 
@@ -104,8 +126,8 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
         content = self.bc.format.from_bytes(response.content)
         expected = render('We could not find in our records the email associated to this github account, '
-                          'perhaps you want to signup to the platform first? <a href="' +
-                          original_url_callback + '">Back to 4Geeks.com</a>')
+                          'perhaps you want to signup to the platform first? <a href="' + original_url_callback +
+                          '">Back to 4Geeks.com</a>')
 
         # dump error in external files
         if content != expected:
@@ -123,11 +145,6 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
 
-    @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
-    @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
-    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
-                mock.MagicMock(return_value=None))
     def test_github_callback__user_not_exist_but_waiting_list(self):
         """Test /github/callback"""
 
@@ -142,9 +159,8 @@ class AuthenticateTestSuite(AuthTestCase):
 
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
         content = self.bc.format.from_bytes(response.content)
-        expected = render(
-            'You are still number 1 on the waiting list, we will email you once you are given access '
-            f'<a href="{original_url_callback}">Back to 4Geeks.com</a>')
+        expected = render('You are still number 1 on the waiting list, we will email you once you are given access '
+                          f'<a href="{original_url_callback}">Back to 4Geeks.com</a>')
 
         # dump error in external files
         if content != expected:
@@ -162,11 +178,6 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.CredentialsGithub'), [])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
 
-    @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
-    @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
-    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
-                mock.MagicMock(return_value=None))
     def test_github_callback__with_user(self):
         """Test /github/callback"""
         user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
@@ -174,8 +185,7 @@ class AuthenticateTestSuite(AuthTestCase):
         model = self.generate_models(role=True, user=True, user_kwargs=user_kwargs, role_kwargs=role_kwargs)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') +
-                                   r'\?token=[0-9a-zA-Z]{,40}$')
+        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') + r'\?token=[0-9a-zA-Z]{,40}$')
         code = 'Konan'
 
         url = reverse_lazy('authenticate:github_callback')
@@ -195,11 +205,6 @@ class AuthenticateTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.profile_academy),
         ])
 
-    @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
-    @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
-    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
-                mock.MagicMock(return_value=None))
     def test_github_callback__with_user__with_email_in_uppercase(self):
         """Test /github/callback"""
         user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
@@ -207,8 +212,7 @@ class AuthenticateTestSuite(AuthTestCase):
         model = self.generate_models(role=True, user=True, user_kwargs=user_kwargs, role_kwargs=role_kwargs)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') +
-                                   r'\?token=[0-9a-zA-Z]{,40}$')
+        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') + r'\?token=[0-9a-zA-Z]{,40}$')
         code = 'Konan'
 
         url = reverse_lazy('authenticate:github_callback')
@@ -226,11 +230,6 @@ class AuthenticateTestSuite(AuthTestCase):
         ])
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [])
 
-    @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
-    @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
-    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
-                mock.MagicMock(return_value=None))
     def test_github_callback__with_bad_user_in_querystring(self):
         """Test /github/callback"""
         user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
@@ -260,11 +259,6 @@ class AuthenticateTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.profile_academy),
         ])
 
-    @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
-    @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
-    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
-                mock.MagicMock(return_value=None))
     def test_github_callback__with_user(self):
         """Test /github/callback"""
         user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
@@ -277,8 +271,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                      token=True)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') +
-                                   r'\?token=[0-9a-zA-Z]{,40}$')
+        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') + r'\?token=[0-9a-zA-Z]{,40}$')
         code = 'Konan'
 
         token = self.get_token(1)
@@ -300,11 +293,6 @@ class AuthenticateTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.profile_academy),
         ])
 
-    @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
-    @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
-    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
-                mock.MagicMock(return_value=None))
     def test_github_callback__with_user__profile_without_avatar_url(self):
         """Test /github/callback"""
         user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
@@ -318,8 +306,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                      token=True)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') +
-                                   r'\?token=[0-9a-zA-Z]{,40}$')
+        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') + r'\?token=[0-9a-zA-Z]{,40}$')
         code = 'Konan'
 
         token = self.get_token(1)
@@ -346,11 +333,6 @@ class AuthenticateTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.profile_academy),
         ])
 
-    @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
-    @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
-    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
-                mock.MagicMock(return_value=None))
     def test_github_callback__with_user__profile_with_avatar_url(self):
         """Test /github/callback"""
         user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
@@ -365,8 +347,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                      token=True)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') +
-                                   r'\?token=[0-9a-zA-Z]{,40}$')
+        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') + r'\?token=[0-9a-zA-Z]{,40}$')
         code = 'Konan'
 
         token = self.get_token(1)
@@ -395,21 +376,14 @@ class AuthenticateTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.profile_academy),
         ])
 
-    @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
-    @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
-    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
-                mock.MagicMock(return_value=None))
-    def test_github_callback__with_user_different_email__without_credetials_of_github__without_cohort_user(
-            self):
+    def test_github_callback__with_user_different_email__without_credetials_of_github__without_cohort_user(self):
         """Test /github/callback"""
         user = {'email': 'FJOSE123@GMAIL.COM'}
         role = {'slug': 'student', 'name': 'Student'}
         model = self.generate_models(role=role, user=user, profile_academy=True, token=True)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') +
-                                   r'\?token=[0-9a-zA-Z]{,40}$')
+        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') + r'\?token=[0-9a-zA-Z]{,40}$')
         code = 'Konan'
 
         token = self.get_token(1)
@@ -431,11 +405,6 @@ class AuthenticateTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.profile_academy),
         ])
 
-    @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
-    @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
-    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
-                mock.MagicMock(return_value=None))
     def test_github_callback__with_user_different_email__without_credetials_of_github__with_cohort_user(self):
         """Test /github/callback"""
         user = {'email': 'FJOSE123@GMAIL.COM'}
@@ -443,8 +412,7 @@ class AuthenticateTestSuite(AuthTestCase):
         model = self.generate_models(role=role, user=user, profile_academy=True, cohort_user=1, token=True)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') +
-                                   r'\?token=[0-9a-zA-Z]{,40}$')
+        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') + r'\?token=[0-9a-zA-Z]{,40}$')
         code = 'Konan'
 
         token = self.get_token(1)
@@ -466,13 +434,7 @@ class AuthenticateTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.profile_academy),
         ])
 
-    @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
-    @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
-    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
-                mock.MagicMock(return_value=None))
-    def test_github_callback__with_user_different_email__with_credentials_of_github__without_cohort_user(
-            self):
+    def test_github_callback__with_user_different_email__with_credentials_of_github__without_cohort_user(self):
         """Test /github/callback"""
         users = [{'email': 'FJOSE123@GMAIL.COM'}, {'email': 'jdefreitaspinto@gmail.com'}]
         role = {'slug': 'student', 'name': 'Student'}
@@ -485,8 +447,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                      token=token)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') +
-                                   r'\?token=[0-9a-zA-Z]{,40}$')
+        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') + r'\?token=[0-9a-zA-Z]{,40}$')
         code = 'Konan'
 
         token = model.token
@@ -510,11 +471,6 @@ class AuthenticateTestSuite(AuthTestCase):
             self.bc.format.to_dict(model.profile_academy),
         ])
 
-    @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
-    @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
-    @mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-    @mock.patch('breathecode.admissions.signals.student_edu_status_updated.send',
-                mock.MagicMock(return_value=None))
     def test_github_callback__with_user_different_email__with_credentials_of_github__with_cohort_user(self):
         """Test /github/callback"""
         users = [{'email': 'FJOSE123@GMAIL.COM'}, {'email': 'jdefreitaspinto@gmail.com'}]
@@ -530,8 +486,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                      token=token)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') +
-                                   r'\?token=[0-9a-zA-Z]{,40}$')
+        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') + r'\?token=[0-9a-zA-Z]{,40}$')
         code = 'Konan'
 
         token = model.token

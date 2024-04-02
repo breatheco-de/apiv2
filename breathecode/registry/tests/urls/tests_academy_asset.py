@@ -2,15 +2,17 @@
     🔽🔽🔽 Testing Asset Creation without category
 """
 
-from unittest.mock import MagicMock, patch, call
-from django.urls.base import reverse_lazy
+from unittest.mock import MagicMock, call, patch
+
 import pytest
+from django.urls.base import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
+from rest_framework.test import APIClient
+
+from breathecode.registry import tasks
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 from breathecode.tests.mixins.legacy import LegacyAPITestCase
-from breathecode.registry import tasks
-from django.utils import timezone
-from rest_framework.test import APIClient
 
 UTC_NOW = timezone.now()
 
@@ -68,6 +70,7 @@ def database_item(academy, category, data={}):
         'visibility': 'PUBLIC',
         'with_solutions': False,
         'with_video': False,
+        'is_auto_subscribed': True,
         **data,
     }
 
@@ -208,10 +211,7 @@ def test__without_capability(bc: Breathecode, client: APIClient):
 
     response = client.get(url, HTTP_ACADEMY=1)
     json = response.json()
-    expected = {
-        'status_code': 403,
-        'detail': "You (user: 1) don't have this capability: read_asset for academy 1"
-    }
+    expected = {'status_code': 403, 'detail': "You (user: 1) don't have this capability: read_asset for academy 1"}
 
     assert json == expected
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -333,11 +333,13 @@ def test_asset__put_many(bc: Breathecode, client: APIClient):
         role='potato',
         asset_category={'lang': 'es'},
         asset=[{
+            'test_status': 'OK',
             'category_id': 1,
             'lang': 'es',
             'academy_id': 1,
             'slug': 'asset-1'
         }, {
+            'test_status': 'OK',
             'category_id': 1,
             'lang': 'es',
             'academy_id': 1,
@@ -363,7 +365,9 @@ def test_asset__put_many(bc: Breathecode, client: APIClient):
         del item['updated_at']
 
     expected = [
-        put_serializer(model.academy, model.asset_category, asset) for i, asset in enumerate(model.asset)
+        put_serializer(model.academy, model.asset_category, asset, data={
+            'test_status': 'OK',
+        }) for i, asset in enumerate(model.asset)
     ]
 
     assert json == expected

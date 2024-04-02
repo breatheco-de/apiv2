@@ -8,11 +8,11 @@ from django.db.models import Q, QuerySet
 from django.shortcuts import render
 from django.utils import timezone
 
+import breathecode.activity.tasks as tasks_activity
 from breathecode.mentorship.exceptions import ExtendSessionException
 from breathecode.services.daily.client import DailyClient
 from breathecode.utils.datetime_integer import duration_to_str
 from breathecode.utils.validation_exception import ValidationException
-import breathecode.activity.tasks as tasks_activity
 
 from .models import MentorProfile, MentorshipBill, MentorshipSession
 
@@ -98,10 +98,11 @@ def get_pending_sessions_or_create(token, mentor, service, mentee=None):
     session.mentee = mentee
     session.save()
 
-    tasks_activity.add_activity.delay(mentee.id,
-                                      'mentorship_session_checkin',
-                                      related_type='mentorship.MentorshipSession',
-                                      related_id=session.id)
+    if mentee:
+        tasks_activity.add_activity.delay(mentee.id,
+                                          'mentorship_session_checkin',
+                                          related_type='mentorship.MentorshipSession',
+                                          related_id=session.id)
 
     return MentorshipSession.objects.filter(id=session.id)
 
