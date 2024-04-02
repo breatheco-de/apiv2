@@ -31,7 +31,7 @@ class Assessment(models.Model):
 
     private = models.BooleanField(default=False)
 
-    next = models.URLField(default=False)
+    next = models.URLField(default=None, blank=True, null=True)
 
     is_instant_feedback = models.BooleanField(
         default=True, help_text='If true, users will know immediately if their answer was correct')
@@ -73,8 +73,7 @@ class AssessmentThreshold(models.Model):
         default=None,
         blank=True,
         null=True,
-        help_text=
-        'If null it will be default, but if specified, the only this academy will have this threshold')
+        help_text='If null it will be default, but if specified, the only this academy will have this threshold')
 
     score_threshold = models.IntegerField(
         help_text='You can set a threshold to determine if the user score is successfull')
@@ -111,14 +110,24 @@ class Question(models.Model):
     author = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, blank=True, null=True)
     question_type = models.CharField(max_length=15, choices=QUESTION_TYPE, default=SELECT)
 
+    position = models.IntegerField(default=None, blank=True, null=True)
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'Question {self.id}'
 
 
 class Option(models.Model):
     title = models.TextField()
     help_text = models.CharField(max_length=255, default=None, blank=True, null=True)
     lang = models.CharField(max_length=3, blank=True, default='en')
+
+    is_deleted = models.BooleanField(
+        default=False,
+        help_text='Options with collected answers cannot not be deleted, they will have this bullet true')
+    position = models.IntegerField(default=None, blank=True, null=True)
 
     question = models.ForeignKey(Question, on_delete=models.CASCADE, default=None, blank=True, null=True)
     score = models.FloatField(
@@ -128,6 +137,9 @@ class Option(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'Option {self.id}'
 
 
 DRAFT = 'DRAFT'
@@ -165,11 +177,7 @@ class UserAssessment(models.Model):
 
 class Answer(models.Model):
 
-    user_assesment = models.ForeignKey(UserAssessment,
-                                       on_delete=models.CASCADE,
-                                       default=None,
-                                       blank=True,
-                                       null=True)
+    user_assesment = models.ForeignKey(UserAssessment, on_delete=models.CASCADE, default=None, blank=True, null=True)
     option = models.ForeignKey(Option,
                                on_delete=models.CASCADE,
                                default=None,

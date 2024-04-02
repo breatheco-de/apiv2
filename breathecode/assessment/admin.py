@@ -39,7 +39,7 @@ class AssessmentAdmin(admin.ModelAdmin):
 @admin.register(Question)
 class QuestionAdmin(admin.ModelAdmin):
     search_fields = ['title', 'assessment__title']
-    list_display = ['title', 'lang', 'assessment', 'question_type']
+    list_display = ['title', 'position', 'lang', 'assessment', 'question_type']
     list_filter = ['lang', 'question_type']
 
 
@@ -47,7 +47,7 @@ class QuestionAdmin(admin.ModelAdmin):
 @admin.register(Option)
 class OptionAdmin(admin.ModelAdmin):
     search_fields = ['title', 'question__assessment__title']
-    list_display = ['title', 'lang', 'score', 'question']
+    list_display = ['title', 'position', 'lang', 'score', 'question']
     list_filter = ['lang']
 
 
