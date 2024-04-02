@@ -36,12 +36,12 @@ class Command(BaseCommand):
         mentors = User.objects.filter(id__in=mentor_ids)
         mentor.user_set.set(mentors)
 
-        profile_ids = ProfileAcademy.objects.filter(user__isnull=False,
-                                                    role__slug='student').values_list('user__id', flat=True)
+        profile_ids = ProfileAcademy.objects.filter(user__isnull=False, role__slug='student').values_list('user__id',
+                                                                                                          flat=True)
         students = User.objects.filter(id__in=profile_ids)
         student.user_set.set(students)
 
-        profile_ids = ProfileAcademy.objects.filter(user__isnull=False,
-                                                    role__slug='teacher').values_list('user__id', flat=True)
+        profile_ids = ProfileAcademy.objects.filter(user__isnull=False, role__slug='teacher').values_list('user__id',
+                                                                                                          flat=True)
         teachers = User.objects.filter(id__in=profile_ids)
         teacher.user_set.set(teachers)

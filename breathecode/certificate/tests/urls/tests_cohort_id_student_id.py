@@ -232,25 +232,24 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
-        self.assertEqual(
-            self.all_user_specialty_dict(),
-            [{
-                'academy_id': 1,
-                'cohort_id': 1,
-                'expires_at': None,
-                'id': 1,
-                'layout_id': 1,
-                'preview_url': model['user_specialty'].preview_url,
-                'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
-                'signed_by_role': 'Director',
-                'specialty_id': 1,
-                'status': 'PERSISTED',
-                'issued_at': issued_at,
-                'status_text': 'Certificate successfully queued for PDF generation',
-                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949',
-                'user_id': 1,
-                'update_hash': user_specialty.update_hash,
-            }])
+        self.assertEqual(self.all_user_specialty_dict(),
+                         [{
+                             'academy_id': 1,
+                             'cohort_id': 1,
+                             'expires_at': None,
+                             'id': 1,
+                             'layout_id': 1,
+                             'preview_url': model['user_specialty'].preview_url,
+                             'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
+                             'signed_by_role': 'Director',
+                             'specialty_id': 1,
+                             'status': 'PERSISTED',
+                             'issued_at': issued_at,
+                             'status_text': 'Certificate successfully queued for PDF generation',
+                             'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949',
+                             'user_id': 1,
+                             'update_hash': user_specialty.update_hash,
+                         }])
 
         self.assertEqual(
             signals.user_specialty_saved.send.call_args_list,

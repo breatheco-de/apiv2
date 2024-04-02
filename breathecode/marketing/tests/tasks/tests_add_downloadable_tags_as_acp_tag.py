@@ -86,8 +86,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(self.bc.database.list_of('marketing.Tag'), [])
 
         self.assertEqual(logging.Logger.info.call_args_list, [call(TASK_STARTED_MESSAGE)])
-        self.assertEqual(logging.Logger.error.call_args_list,
-                         [call('Downloadable 1 not found', exc_info=True)])
+        self.assertEqual(logging.Logger.error.call_args_list, [call('Downloadable 1 not found', exc_info=True)])
 
     """
     🔽🔽🔽 Create a Tag in active campaign

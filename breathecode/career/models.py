@@ -24,14 +24,9 @@ class ZyteProject(models.Model):
     zyte_api_key = models.CharField(max_length=150)
     zyte_api_deploy = models.CharField(max_length=50)
     zyte_api_spider_number = models.IntegerField(
-        null=False,
-        blank=False,
-        help_text='This number is the one that corresponds when the ZYTE spider was created.')
+        null=False, blank=False, help_text='This number is the one that corresponds when the ZYTE spider was created.')
     zyte_api_last_job_number = models.IntegerField(
-        default=0,
-        null=True,
-        blank=True,
-        help_text='(Optional field) Start at 0 but increase with each search.')
+        default=0, null=True, blank=True, help_text='(Optional field) Start at 0 but increase with each search.')
 
     platform = models.ForeignKey(Platform, on_delete=models.CASCADE, null=False, blank=False)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -73,8 +68,7 @@ class Spider(models.Model):
                                           null=True,
                                           blank=True,
                                           help_text='Start at 0 but increase on each fetch')
-    zyte_fetch_count = models.IntegerField(default=0,
-                                           help_text='The number of spider job excecutions to fetch')
+    zyte_fetch_count = models.IntegerField(default=0, help_text='The number of spider job excecutions to fetch')
     zyte_last_fetch_date = models.DateTimeField(null=True, blank=True)
     spider_last_run_status = models.CharField(max_length=15, choices=SPIDER_STATUS, default=PENDING)
     spider_last_run_desc = models.CharField(max_length=200, null=True, blank=True)

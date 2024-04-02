@@ -40,11 +40,7 @@ class Calendly:
             _query_string = '?' + urllib.parse.urlencode(query_string)
 
         if json is not None:
-            response = requests.request(_type,
-                                        self.host + url + _query_string,
-                                        headers=_headers,
-                                        timeout=2,
-                                        json=json)
+            response = requests.request(_type, self.host + url + _query_string, headers=_headers, timeout=2, json=json)
         else:
             response = requests.request(_type, self.host + url + _query_string, headers=_headers, timeout=2)
 
@@ -61,11 +57,9 @@ class Calendly:
 
         if result is not None and 'pagination' in result:
             if result['pagination']['next_page'] is not None:
-                new_result = self.request(_type,
-                                          result['pagination']['next_page'],
-                                          query_string={
-                                              **query_string,
-                                          })
+                new_result = self.request(_type, result['pagination']['next_page'], query_string={
+                    **query_string,
+                })
                 if 'collection' in new_result and type(new_result['collection']) == 'list':
                     new_result['collection'] = result['collection'] + new_result['collection']
                 result.update(new_result)
@@ -132,13 +126,11 @@ class Calendly:
             raise Exception('Invalid webhook id or not found')
 
         if not webhook.event or webhook.event == '':
-            raise Exception(
-                'Impossible to determine event action, the webhook should have an event action string')
+            raise Exception('Impossible to determine event action, the webhook should have an event action string')
 
         webhook.organization = CalendlyOrganization.objects.filter(hash=webhook.organization_hash).first()
         if webhook.organization is None:
-            raise Exception(
-                f'Calendly organization with internal hash not found: {webhook.organization_hash}')
+            raise Exception(f'Calendly organization with internal hash not found: {webhook.organization_hash}')
 
         action = webhook.event.replace('.', '_')
 
@@ -185,8 +177,7 @@ class Calendly:
         webhook = CalendlyWebhook()
 
         if 'event' not in context or context['event'] == '':
-            raise Exception(
-                'Impossible to determine event action, the webhook should have an event action string')
+            raise Exception('Impossible to determine event action, the webhook should have an event action string')
 
         webhook.event = context['event']
         webhook.created_by = context['created_by']

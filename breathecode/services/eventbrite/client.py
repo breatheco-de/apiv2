@@ -52,8 +52,7 @@ class Eventbrite:
                 new_result = self.request(_type,
                                           url,
                                           query_string={
-                                              **query_string, 'continuation':
-                                              result['pagination']['continuation']
+                                              **query_string, 'continuation': result['pagination']['continuation']
                                           })
                 for key in new_result:
                     if type(new_result[key]) == 'list':
@@ -68,9 +67,7 @@ class Eventbrite:
 
     def get_organization_events(self, organization_id):
         query_string = {'expand': 'organizer', 'status': 'live'}
-        data = self.request('GET',
-                            f'/organizations/{str(organization_id)}/events/',
-                            query_string=query_string)
+        data = self.request('GET', f'/organizations/{str(organization_id)}/events/', query_string=query_string)
         return data
 
     def get_organization_venues(self, organization_id):

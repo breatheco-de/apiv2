@@ -23,9 +23,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='ServiceItemFeature',
             fields=[
-                ('id',
-                 models.BigAutoField(auto_created=True, primary_key=True, serialize=False,
-                                     verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('unit_type', models.CharField(choices=[('UNIT', 'Unit')], default='UNIT', max_length=10)),
                 ('how_many', models.IntegerField(default=-1)),
                 ('lang',
@@ -43,12 +41,9 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='PlanServiceItemHandler',
             fields=[
-                ('id',
-                 models.BigAutoField(auto_created=True, primary_key=True, serialize=False,
-                                     verbose_name='ID')),
-                ('handler',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
-                                   to='payments.planserviceitem')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('handler', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
+                                              to='payments.planserviceitem')),
                 ('plan_financing',
                  models.ForeignKey(blank=True,
                                    default=None,

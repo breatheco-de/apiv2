@@ -13,9 +13,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='TaskManager',
             fields=[
-                ('id',
-                 models.BigAutoField(auto_created=True, primary_key=True, serialize=False,
-                                     verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('current_page', models.IntegerField(blank=True, default=0, null=True)),
                 ('total_pages', models.IntegerField(blank=True, default=0, null=True)),
                 ('task_module', models.CharField(max_length=200)),
@@ -24,9 +22,8 @@ class Migration(migrations.Migration):
                 ('reverse_name', models.CharField(blank=True, max_length=200, null=True)),
                 ('arguments', models.JSONField(blank=True, default=dict, null=True)),
                 ('status',
-                 models.CharField(choices=[('PENDING', 'Pending'), ('DONE', 'Done'),
-                                           ('CANCELLED', 'Cancelled'), ('REVERSED', 'Reversed'),
-                                           ('PAUSED', 'Paused')],
+                 models.CharField(choices=[('PENDING', 'Pending'), ('DONE', 'Done'), ('CANCELLED', 'Cancelled'),
+                                           ('REVERSED', 'Reversed'), ('PAUSED', 'Paused')],
                                   default='PENDING',
                                   max_length=20)),
                 ('killed', models.BooleanField(default=False)),

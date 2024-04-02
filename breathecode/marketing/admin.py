@@ -206,9 +206,8 @@ class PPCFilter(SimpleListFilter):
 @admin.register(FormEntry)
 class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ['email', 'first_name', 'last_name', 'phone', 'utm_campaign', 'utm_url', 'attribution_id']
-    list_display = ('id', '_attribution_id', '_storage_status', 'created_at', 'first_name', 'last_name',
-                    'email', 'location', 'course', 'academy', 'country', 'city', 'utm_medium', 'utm_url',
-                    'gclid', 'tags')
+    list_display = ('id', '_attribution_id', '_storage_status', 'created_at', 'first_name', 'last_name', 'email',
+                    'location', 'course', 'academy', 'country', 'city', 'utm_medium', 'utm_url', 'gclid', 'tags')
     list_filter = [
         'storage_status', 'location', 'course', 'deal_status', PPCFilter, 'lead_generation_app', 'utm_medium',
         'utm_campaign', 'utm_source'
@@ -217,10 +216,11 @@ class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
         send_to_active_campaign, get_geoinfo, fetch_more_facebook_info, sync_contact_custom_fields_with_deal,
         'async_export_as_csv'
     ] + change_field([
-        'bogota-colombia', 'mexicocity-mexico', 'quito-ecuador', 'buenosaires-argentina', 'caracas-venezuela',
-        'online'
+        'bogota-colombia', 'mexicocity-mexico', 'quito-ecuador', 'buenosaires-argentina', 'caracas-venezuela', 'online'
     ],
-                     name='location')
+                     name='location') + change_field(['full-stack', 'datascience-ml', 'cybersecurity'],
+                                                     name='course') + change_field(['REJECTED', 'DUPLICATED', 'ERROR'],
+                                                                                   name='storage_status')
 
     def _attribution_id(self, obj):
 
@@ -372,8 +372,7 @@ class TagAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     actions = [
         delete_from_everywhere, 'export_as_csv', upload_to_active_campaign, add_dispute, remove_dispute,
         prepend_tech_on_name
-    ] + change_field(['STRONG', 'SOFT', 'DISCOVERY', 'COHORT', 'DOWNLOADABLE', 'EVENT', 'OTHER'],
-                     name='tag_type')
+    ] + change_field(['STRONG', 'SOFT', 'DISCOVERY', 'COHORT', 'DOWNLOADABLE', 'EVENT', 'OTHER'], name='tag_type')
 
     def disputed(self, obj):
         if obj.disputed_at is not None:
@@ -406,8 +405,7 @@ class ShortLinkAdmin(admin.ModelAdmin, AdminExportCsvMixin):
             'NOT_FOUND': 'bg-warning',
         }
 
-        return format_html(
-            f"<span class='badge {colors[obj.destination_status]}'>{obj.destination_status}</span>")
+        return format_html(f"<span class='badge {colors[obj.destination_status]}'>{obj.destination_status}</span>")
 
     def link(self, obj):
         return format_html("<a rel='noopener noreferrer' target='_blank' href='{url}'>{short_link}</a>",
@@ -453,8 +451,7 @@ class ActiveCampaignWebhookAdmin(admin.ModelAdmin):
         if obj.status == 'DONE':
             return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
         return format_html(
-            f"<div><span class='badge {colors[obj.status]}'>{obj.status}</span></div><small>{obj.status_text}</small>"
-        )
+            f"<div><span class='badge {colors[obj.status]}'>{obj.status}</span></div><small>{obj.status_text}</small>")
 
     def formentry(self, obj):
         if obj.form_entry is None:
@@ -475,8 +472,7 @@ class DownloadableAdmin(admin.ModelAdmin):
             'ACTIVE': 'bg-success',
             'NOT_FOUND': 'bg-error',
         }
-        return format_html(
-            f"<span class='badge {colors[obj.destination_status]}'>{obj.destination_status}</span>")
+        return format_html(f"<span class='badge {colors[obj.destination_status]}'>{obj.destination_status}</span>")
 
 
 @admin.display(description='Reset app id')
@@ -520,8 +516,7 @@ class LeadGenerationAppAdmin(admin.ModelAdmin):
         }
         if obj.last_call_status is None:
             return format_html("<span class='badge'>Not yet called</span>")
-        return format_html(
-            f"<span class='badge {colors[obj.last_call_status]}'>{obj.last_call_status}</span>")
+        return format_html(f"<span class='badge {colors[obj.last_call_status]}'>{obj.last_call_status}</span>")
 
 
 def course_module_keys_validation(course_module):

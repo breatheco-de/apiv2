@@ -1,4 +1,6 @@
 from breathecode.utils import serpy
+from .models import Assessment, Question, Option
+from rest_framework import serializers
 
 
 class UserSerializer(serpy.Serializer):
@@ -26,11 +28,13 @@ class GetOptionSerializer(serpy.Serializer):
     title = serpy.Field()
     help_text = serpy.Field()
     score = serpy.Field()
+    position = serpy.Field()
 
 
 class GetQuestionSerializer(serpy.Serializer):
     id = serpy.Field()
     title = serpy.Field()
+    position = serpy.Field()
     help_text = serpy.Field()
     question_type = serpy.Field()
 
@@ -58,4 +62,25 @@ class GetAssessmentBigSerializer(GetAssessmentSerializer):
     is_instant_feedback = serpy.Field()
 
     def get_questions(self, obj):
-        return GetQuestionSerializer(obj.question_set.all(), many=True).data
+        return GetQuestionSerializer(obj.question_set.all().order_by('-position', 'id'), many=True).data
+
+
+class OptionSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Option
+        exclude = ('created_at', 'updated_at')
+
+
+class QuestionSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Question
+        exclude = ('created_at', 'updated_at', 'assessment')
+
+
+class AssessmentPUTSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Assessment
+        exclude = ('slug', 'academy', 'lang', 'author')

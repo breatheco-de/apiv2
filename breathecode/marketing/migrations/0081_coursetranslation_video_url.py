@@ -13,8 +13,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='coursetranslation',
             name='video_url',
-            field=models.URLField(default=None,
-                                  help_text='Video that introduces/promotes this course',
-                                  null=True),
+            field=models.URLField(default=None, help_text='Video that introduces/promotes this course', null=True),
         ),
     ]

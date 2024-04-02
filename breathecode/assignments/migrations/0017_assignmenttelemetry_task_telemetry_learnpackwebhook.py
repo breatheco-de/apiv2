@@ -16,8 +16,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='AssignmentTelemetry',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('asset_slug', models.CharField(max_length=200)),
                 ('telemetry',
                  models.JSONField(blank=True,
@@ -26,8 +25,7 @@ class Migration(migrations.Migration):
                                   null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('user',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],
         ),
         migrations.AddField(
@@ -45,12 +43,11 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='LearnPackWebhook',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('is_streaming', models.BooleanField()),
                 ('event', models.CharField(max_length=15)),
-                ('payload',
-                 models.JSONField(blank=True, default=None, help_text='Will be set by learnpack', null=True)),
+                ('payload', models.JSONField(blank=True, default=None, help_text='Will be set by learnpack',
+                                             null=True)),
                 ('status',
                  models.CharField(choices=[('PENDING', 'Pending'), ('DONE', 'Done'), ('ERROR', 'Error')],
                                   default='PENDING',

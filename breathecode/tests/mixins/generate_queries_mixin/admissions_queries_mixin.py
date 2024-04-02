@@ -11,7 +11,7 @@ class AdmissionsQueriesMixin():
             'module':
             'admissions',
             'models': [
-                'Country', 'City', 'Academy', 'Syllabus', 'SyllabusVersion', 'SyllabusSchedule', 'Cohort',
-                'CohortUser', 'SyllabusScheduleTimeSlot', 'CohortTimeSlot'
+                'Country', 'City', 'Academy', 'Syllabus', 'SyllabusVersion', 'SyllabusSchedule', 'Cohort', 'CohortUser',
+                'SyllabusScheduleTimeSlot', 'CohortTimeSlot'
             ]
         }

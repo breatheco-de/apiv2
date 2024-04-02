@@ -216,13 +216,12 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             call('Could not create event description in eventbrite'),
         ])
 
-        self.assertEqual(
-            self.bc.database.list_of('events.Event'),
-            [{
-                **db,
-                'eventbrite_sync_status': 'ERROR',
-                'eventbrite_sync_description': 'Could not create event description in eventbrite',
-            }])
+        self.assertEqual(self.bc.database.list_of('events.Event'),
+                         [{
+                             **db,
+                             'eventbrite_sync_status': 'ERROR',
+                             'eventbrite_sync_description': 'Could not create event description in eventbrite',
+                         }])
         self.assertEqual(requests.request.call_args_list, [
             call('GET',
                  'https://www.eventbriteapi.com/v3/events/1/structured_content/',
@@ -278,12 +277,11 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(logging.Logger.warning.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
-        self.assertEqual(self.bc.database.list_of('events.Event'),
-                         [{
-                             **db,
-                             'eventbrite_sync_status': 'SYNCHED',
-                             'eventbrite_sync_description': str(UTC_NOW),
-                         }])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [{
+            **db,
+            'eventbrite_sync_status': 'SYNCHED',
+            'eventbrite_sync_description': str(UTC_NOW),
+        }])
 
         self.assertEqual(requests.request.call_args_list, [
             call('GET',

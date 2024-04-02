@@ -30,11 +30,10 @@ class MemberGetDuckTestSuite(AuthTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED,
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED,
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_duck_test__without_capabilities(self):
@@ -54,10 +53,7 @@ class MemberGetDuckTestSuite(AuthTestCase):
     def test_duck_test__with_auth(self):
         for n in range(1, 4):
             self.bc.request.set_headers(academy=n)
-            model = self.bc.database.create(authenticate=True,
-                                            capability='read_invite',
-                                            role='role',
-                                            profile_academy=1)
+            model = self.bc.database.create(authenticate=True, capability='read_invite', role='role', profile_academy=1)
 
             url = reverse_lazy('authenticate:academy_invite_id', kwargs={'invite_id': 1})
             response = self.client.get(url)
@@ -106,11 +102,10 @@ class MemberPutDuckTestSuite(AuthTestCase):
         response = self.client.put(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED,
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED,
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_academy_id_member_id__without_capabilities(self):
@@ -120,11 +115,10 @@ class MemberPutDuckTestSuite(AuthTestCase):
         response = self.client.put(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': "You (user: 1) don't have this capability: invite_resend for academy 1",
-                'status_code': 403,
-            })
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: invite_resend for academy 1",
+            'status_code': 403,
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 

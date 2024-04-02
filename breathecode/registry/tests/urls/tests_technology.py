@@ -112,8 +112,7 @@ class RegistryTestSuite(RegistryTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [
-            get_serializer(x)
-            for x in sorted(model.asset_technology, key=lambda x: x.sort_priority, reverse=True)
+            get_serializer(x) for x in sorted(model.asset_technology, key=lambda x: x.sort_priority, reverse=True)
         ]
 
         self.assertEqual(json, expected)

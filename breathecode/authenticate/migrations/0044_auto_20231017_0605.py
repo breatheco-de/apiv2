@@ -13,10 +13,9 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='profile',
             name='show_tutorial',
-            field=models.BooleanField(
-                db_index=True,
-                default=True,
-                help_text='Set true if you want to show the tutorial on the user UI/UX'),
+            field=models.BooleanField(db_index=True,
+                                      default=True,
+                                      help_text='Set true if you want to show the tutorial on the user UI/UX'),
         ),
         migrations.AlterField(
             model_name='profileacademy',

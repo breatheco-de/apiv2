@@ -84,8 +84,7 @@ def get_serializer(asset, data={}):
         'translations':
         asset_translations,
         'technologies': [tech.slug for tech in asset.technologies.all()] if asset.technologies else [],
-        'seo_keywords':
-        [seo_keyword.slug for seo_keyword in asset.seo_keywords.all()] if asset.seo_keywords else [],
+        'seo_keywords': [seo_keyword.slug for seo_keyword in asset.seo_keywords.all()] if asset.seo_keywords else [],
         'visibility':
         asset.visibility,
         **data,
@@ -319,26 +318,24 @@ def test_lookup_extension(bc: Breathecode, client):
     ]
     model = bc.database.create(asset=assets)
 
-    args, kwargs = bc.format.call('en',
-                                  strings={
-                                      'iexact': [
-                                          'test_status',
-                                          'sync_status',
-                                      ],
-                                      'in': [
-                                          'difficulty', 'status', 'asset_type', 'category__slug',
-                                          'technologies__slug', 'seo_keywords__slug'
-                                      ],
-                                  },
-                                  ids=['author', 'owner'],
-                                  bools={
-                                      'exact': ['with_video', 'interactive', 'graded'],
-                                  },
-                                  overwrite={
-                                      'category': 'category__slug',
-                                      'technologies': 'technologies__slug',
-                                      'seo_keywords': 'seo_keywords__slug'
-                                  })
+    args, kwargs = bc.format.call(
+        'en',
+        strings={
+            'iexact': [
+                'test_status',
+                'sync_status',
+            ],
+            'in': ['difficulty', 'status', 'asset_type', 'category__slug', 'technologies__slug', 'seo_keywords__slug'],
+        },
+        ids=['author', 'owner'],
+        bools={
+            'exact': ['with_video', 'interactive', 'graded'],
+        },
+        overwrite={
+            'category': 'category__slug',
+            'technologies': 'technologies__slug',
+            'seo_keywords': 'seo_keywords__slug'
+        })
 
     query = bc.format.lookup(*args, **kwargs)
     url = reverse_lazy('registry:asset') + '?' + bc.format.querystring(query)

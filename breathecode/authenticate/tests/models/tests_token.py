@@ -416,14 +416,14 @@ class TokenTestSuite(AuthTestCase):
         del db[1]['created']
         del db[1]['key']
 
-        self.assertEqual(db, [
-            self.model_to_dict(model, 'token'), {
+        self.assertEqual(
+            db,
+            [self.model_to_dict(model, 'token'), {
                 'id': 2,
                 'token_type': 'one_time',
                 'user_id': 1,
                 'expires_at': None
-            }
-        ])
+            }])
 
     def test_get_or_create__token_type_permanent__token_exists(self):
         start = timezone.now()
@@ -457,9 +457,7 @@ class TokenTestSuite(AuthTestCase):
         expires_at = timezone.now() - timedelta(days=1, seconds=1)
         token_kwargs = {'expires_at': expires_at, 'token_type': 'login'}
         base = self.generate_models(user=True)
-        models = [
-            self.generate_models(token=True, token_kwargs=token_kwargs, models=base) for _ in range(0, 2)
-        ]
+        models = [self.generate_models(token=True, token_kwargs=token_kwargs, models=base) for _ in range(0, 2)]
 
         Token.get_or_create(base.user, token_type='login')
         end = timezone.now()
@@ -488,9 +486,7 @@ class TokenTestSuite(AuthTestCase):
         expires_at = timezone.now() - timedelta(days=1, seconds=1)
         token_kwargs = {'expires_at': expires_at, 'token_type': 'temporal'}
         base = self.generate_models(user=True)
-        models = [
-            self.generate_models(token=True, token_kwargs=token_kwargs, models=base) for _ in range(0, 2)
-        ]
+        models = [self.generate_models(token=True, token_kwargs=token_kwargs, models=base) for _ in range(0, 2)]
 
         Token.get_or_create(base.user, token_type='temporal')
         end = timezone.now()

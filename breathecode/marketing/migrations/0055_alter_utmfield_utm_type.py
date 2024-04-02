@@ -13,8 +13,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='utmfield',
             name='utm_type',
-            field=models.CharField(choices=[('CONTENT', 'Content'), ('SOURCE', 'Source'),
-                                            ('MEDIUM', 'Medium'), ('CAMPAIGN', 'Campaign')],
+            field=models.CharField(choices=[('CONTENT', 'Content'), ('SOURCE', 'Source'), ('MEDIUM', 'Medium'),
+                                            ('CAMPAIGN', 'Campaign')],
                                    default=None,
                                    max_length=15),
         ),

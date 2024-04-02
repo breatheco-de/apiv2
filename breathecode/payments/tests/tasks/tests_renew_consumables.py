@@ -241,8 +241,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        with patch('django.utils.timezone.now',
-                   MagicMock(return_value=UTC_NOW + relativedelta(days=1, minutes=3))):
+        with patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW + relativedelta(days=1, minutes=3))):
             renew_consumables.delay(1)
 
         self.assertEqual(logging.Logger.info.call_args_list, [

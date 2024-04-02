@@ -33,8 +33,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='provisioningactivity',
             name='multiplier',
-            field=models.FloatField(blank=True,
-                                    default=1,
-                                    help_text='To increase price in a certain percentage'),
+            field=models.FloatField(blank=True, default=1, help_text='To increase price in a certain percentage'),
         ),
     ]

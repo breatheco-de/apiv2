@@ -37,9 +37,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         queryset = Cohort.objects.all()
 
         link_randomly_relations_to_cohorts(None, request, queryset)
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
-            **self.model_to_dict(model, 'cohort')
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
 
     """
     🔽🔽🔽 With one Cohort and SyllabusVersion

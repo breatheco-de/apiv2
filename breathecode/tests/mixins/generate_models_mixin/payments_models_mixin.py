@@ -48,10 +48,9 @@ class PaymentsModelsMixin(ModelsMixin):
         """Generate models"""
         models = models.copy()
 
-        if not 'currency' in models and (is_valid(currency) or is_valid(invoice) or is_valid(plan)
-                                         or is_valid(service) or is_valid(service_item)
-                                         or is_valid(financing_option) or is_valid(academy_service)
-                                         or is_valid(provisioning_price)):
+        if not 'currency' in models and (is_valid(currency) or is_valid(invoice) or is_valid(plan) or is_valid(service)
+                                         or is_valid(service_item) or is_valid(financing_option)
+                                         or is_valid(academy_service) or is_valid(provisioning_price)):
             kargs = {}
 
             if 'country' in models:
@@ -60,8 +59,7 @@ class PaymentsModelsMixin(ModelsMixin):
             models['currency'] = create_models(currency, 'payments.Currency', **kargs)
 
             if 'academy' in models:
-                academies_intances = models['academy'] if isinstance(models['academy'],
-                                                                     list) else [models['academy']]
+                academies_intances = models['academy'] if isinstance(models['academy'], list) else [models['academy']]
 
                 academies_arguments = academy if isinstance(academy, list) else [academy]
 
@@ -70,9 +68,9 @@ class PaymentsModelsMixin(ModelsMixin):
                     academy_argument = academies_arguments[index] or {}
                     academy_instance = academies_intances[index]
 
-                    if isinstance(academy_argument,
-                                  int) or 'main_currency' not in academy_argument or academy_argument[
-                                      'main_currency'] is not None:
+                    if isinstance(
+                            academy_argument, int
+                    ) or 'main_currency' not in academy_argument or academy_argument['main_currency'] is not None:
                         academy_instance.main_currency = just_one(models['currency'])
                         academy_instance.save()
 
@@ -97,13 +95,11 @@ class PaymentsModelsMixin(ModelsMixin):
             if 'service' in models:
                 kargs['service'] = just_one(models['service'])
 
-            models['service_translation'] = create_models(service_translation, 'payments.ServiceTranslation',
-                                                          **kargs)
+            models['service_translation'] = create_models(service_translation, 'payments.ServiceTranslation', **kargs)
 
         if not 'service_item' in models and (is_valid(service_item) or is_valid(consumable)
-                                             or is_valid(service_stock_scheduler)
-                                             or is_valid(subscription_service_item) or
-                                             is_valid(plan_service_item) or is_valid(service_item_feature)):
+                                             or is_valid(service_stock_scheduler) or is_valid(subscription_service_item)
+                                             or is_valid(plan_service_item) or is_valid(service_item_feature)):
             kargs = {}
 
             if 'service' in models:
@@ -117,8 +113,7 @@ class PaymentsModelsMixin(ModelsMixin):
             if 'service_item' in models:
                 kargs['service_item'] = just_one(models['service_item'])
 
-            models['service_item_feature'] = create_models(service_item_feature,
-                                                           'payments.ServiceItemFeature', **kargs)
+            models['service_item_feature'] = create_models(service_item_feature, 'payments.ServiceItemFeature', **kargs)
 
         if not 'financing_option' in models and is_valid(financing_option):
             kargs = {}
@@ -145,8 +140,7 @@ class PaymentsModelsMixin(ModelsMixin):
             if 'cohort' in models:
                 kargs['cohort'] = just_one(models['cohort'])
 
-            models['cohort_set_cohort'] = create_models(cohort_set_cohort, 'payments.CohortSetCohort',
-                                                        **kargs)
+            models['cohort_set_cohort'] = create_models(cohort_set_cohort, 'payments.CohortSetCohort', **kargs)
 
         if not 'cohort_set_translation' in models and is_valid(cohort_set_translation):
             kargs = {}
@@ -167,11 +161,10 @@ class PaymentsModelsMixin(ModelsMixin):
             if 'academy' in models:
                 kargs['academy'] = just_one(models['academy'])
 
-            models['mentorship_service_set'] = create_models(mentorship_service_set,
-                                                             'payments.MentorshipServiceSet', **kargs)
+            models['mentorship_service_set'] = create_models(mentorship_service_set, 'payments.MentorshipServiceSet',
+                                                             **kargs)
 
-        if not 'mentorship_service_set_translation' in models and is_valid(
-                mentorship_service_set_translation):
+        if not 'mentorship_service_set_translation' in models and is_valid(mentorship_service_set_translation):
             kargs = {}
 
             if 'mentorship_service_set' in models:
@@ -180,11 +173,11 @@ class PaymentsModelsMixin(ModelsMixin):
             if 'academy' in models:
                 kargs['academy'] = just_one(models['academy'])
 
-            models['mentorship_service_set_translation'] = create_models(
-                mentorship_service_set_translation, 'payments.MentorshipServiceSetTranslation', **kargs)
+            models['mentorship_service_set_translation'] = create_models(mentorship_service_set_translation,
+                                                                         'payments.MentorshipServiceSetTranslation',
+                                                                         **kargs)
 
-        if not 'event_type_set' in models and (is_valid(event_type_set)
-                                               or is_valid(event_type_set_translation)):
+        if not 'event_type_set' in models and (is_valid(event_type_set) or is_valid(event_type_set_translation)):
             kargs = {}
 
             if 'event_type' in models:
@@ -227,8 +220,8 @@ class PaymentsModelsMixin(ModelsMixin):
 
             models['academy_service'] = create_models(academy_service, 'payments.AcademyService', **kargs)
 
-        if not 'plan' in models and (is_valid(plan) or is_valid(plan_translation)
-                                     or is_valid(plan_service_item) or is_valid(plan_offer)):
+        if not 'plan' in models and (is_valid(plan) or is_valid(plan_translation) or is_valid(plan_service_item)
+                                     or is_valid(plan_offer)):
             kargs = {}
 
             if 'currency' in models:
@@ -282,8 +275,8 @@ class PaymentsModelsMixin(ModelsMixin):
             if 'plan_offer' in models:
                 kargs['offer'] = just_one(models['plan_offer'])
 
-            models['plan_offer_translation'] = create_models(plan_offer_translation,
-                                                             'payments.PlanOfferTranslation', **kargs)
+            models['plan_offer_translation'] = create_models(plan_offer_translation, 'payments.PlanOfferTranslation',
+                                                             **kargs)
 
         if not 'bag' in models and (is_valid(bag) or is_valid(invoice)):
             kargs = {}
@@ -418,8 +411,8 @@ class PaymentsModelsMixin(ModelsMixin):
             if 'academy' in models:
                 kargs['academy'] = just_one(models['academy'])
 
-            models['service_set_translation'] = create_models(service_set_translation,
-                                                              'payments.ServiceSetTranslation', **kargs)
+            models['service_set_translation'] = create_models(service_set_translation, 'payments.ServiceSetTranslation',
+                                                              **kargs)
 
         if not 'consumable' in models and (is_valid(consumable) or is_valid(consumption_session)):
             kargs = {}
@@ -453,11 +446,9 @@ class PaymentsModelsMixin(ModelsMixin):
             if 'user' in models:
                 kargs['user'] = just_one(models['user'])
 
-            models['consumption_session'] = create_models(consumption_session, 'payments.ConsumptionSession',
-                                                          **kargs)
+            models['consumption_session'] = create_models(consumption_session, 'payments.ConsumptionSession', **kargs)
 
-        if not 'plan_service_item' in models and (is_valid(plan_service_item)
-                                                  or is_valid(plan_service_item_handler)):
+        if not 'plan_service_item' in models and (is_valid(plan_service_item) or is_valid(plan_service_item_handler)):
             kargs = {}
 
             if 'plan' in models:
@@ -466,8 +457,7 @@ class PaymentsModelsMixin(ModelsMixin):
             if 'service_item' in models:
                 kargs['service_item'] = just_one(models['service_item'])
 
-            models['plan_service_item'] = create_models(plan_service_item, 'payments.PlanServiceItem',
-                                                        **kargs)
+            models['plan_service_item'] = create_models(plan_service_item, 'payments.PlanServiceItem', **kargs)
 
         if not 'plan_service_item_handler' in models and is_valid(plan_service_item_handler):
             kargs = {}
@@ -496,8 +486,8 @@ class PaymentsModelsMixin(ModelsMixin):
             if 'consumable' in models:
                 kargs['consumables'] = get_list(models['consumable'])
 
-            models['service_stock_scheduler'] = create_models(service_stock_scheduler,
-                                                              'payments.ServiceStockScheduler', **kargs)
+            models['service_stock_scheduler'] = create_models(service_stock_scheduler, 'payments.ServiceStockScheduler',
+                                                              **kargs)
 
         if not 'payment_contact' in models and is_valid(payment_contact):
             kargs = {}
@@ -513,7 +503,7 @@ class PaymentsModelsMixin(ModelsMixin):
             if 'user' in models:
                 kargs['user'] = just_one(models['user'])
 
-            models['financial_reputation'] = create_models(financial_reputation,
-                                                           'payments.FinancialReputation', **kargs)
+            models['financial_reputation'] = create_models(financial_reputation, 'payments.FinancialReputation',
+                                                           **kargs)
 
         return models

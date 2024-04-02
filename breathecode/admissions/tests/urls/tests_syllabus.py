@@ -18,11 +18,10 @@ class CertificateTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.all_syllabus_schedule_dict(), [])
 
@@ -119,10 +118,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     def test_syllabus__post__missing_slug_in_request(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_syllabus',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_syllabus', role='potato')
         url = reverse_lazy('admissions:syllabus')
         data = {}
         response = self.client.post(url, data, format='json')
@@ -137,10 +133,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     def test_syllabus__post__missing_name_in_request(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_syllabus',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_syllabus', role='potato')
         url = reverse_lazy('admissions:syllabus')
         data = {'slug': 'they-killed-kenny'}
         response = self.client.post(url, data, format='json')
@@ -155,10 +148,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     def test_syllabus__post(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_syllabus',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_syllabus', role='potato')
         url = reverse_lazy('admissions:syllabus')
         data = {
             'slug': 'they-killed-kenny',

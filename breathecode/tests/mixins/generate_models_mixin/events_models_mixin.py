@@ -56,10 +56,7 @@ class EventsModelsMixin(ModelsMixin):
             if 'organization' in models or organization:
                 kargs['organization'] = just_one(models['organization'])
 
-            models['organizer'] = create_models(organizer, 'events.Organizer', **{
-                **kargs,
-                **organizer_kwargs
-            })
+            models['organizer'] = create_models(organizer, 'events.Organizer', **{**kargs, **organizer_kwargs})
 
         if not 'venue' in models and is_valid(venue):
             kargs = {}
@@ -85,8 +82,7 @@ class EventsModelsMixin(ModelsMixin):
                 kargs['cohort'] = just_one(models['cohort'])
 
             models['event_type_visibility_setting'] = create_models(event_type_visibility_setting,
-                                                                    'events.EventTypeVisibilitySetting',
-                                                                    **kargs)
+                                                                    'events.EventTypeVisibilitySetting', **kargs)
 
         if not 'event_type' in models and is_valid(event_type):
             kargs = {}
@@ -99,10 +95,7 @@ class EventsModelsMixin(ModelsMixin):
             if 'event_type_visibility_setting' in models:
                 kargs['visibility_settings'] = get_list(models['event_type_visibility_setting'])
 
-            models['event_type'] = create_models(event_type, 'events.EventType', **{
-                **kargs,
-                **event_type_kwargs
-            })
+            models['event_type'] = create_models(event_type, 'events.EventType', **{**kargs, **event_type_kwargs})
 
         if not 'event' in models and is_valid(event):
             kargs = {}

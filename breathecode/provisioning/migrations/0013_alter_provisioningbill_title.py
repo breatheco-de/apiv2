@@ -16,8 +16,7 @@ class Migration(migrations.Migration):
             field=models.CharField(
                 blank=True,
                 default=None,
-                help_text=
-                "This title should describe what the Bill is about. I.e.: April's bill. (MAX 64 chars)",
+                help_text="This title should describe what the Bill is about. I.e.: April's bill. (MAX 64 chars)",
                 max_length=64,
                 null=True),
         ),

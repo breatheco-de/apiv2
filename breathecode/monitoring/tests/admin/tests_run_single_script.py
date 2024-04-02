@@ -38,8 +38,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         result = run_single_script(None, request, MonitorScript.objects.all())
 
         self.assertEqual(result, None)
-        self.assertEqual(mock_run_script.call_args_list,
-                         [call(model['monitor_script'].id) for model in models])
+        self.assertEqual(mock_run_script.call_args_list, [call(model['monitor_script'].id) for model in models])
 
     @patch(RUN_SCRIPT_PATH, RUN_SCRIPT_MOCK)
     def tests_run_single_script_length_3(self):
@@ -52,5 +51,4 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         result = run_single_script(None, request, MonitorScript.objects.all())
 
         self.assertEqual(result, None)
-        self.assertEqual(mock_run_script.call_args_list,
-                         [call(model['monitor_script'].id) for model in models])
+        self.assertEqual(mock_run_script.call_args_list, [call(model['monitor_script'].id) for model in models])

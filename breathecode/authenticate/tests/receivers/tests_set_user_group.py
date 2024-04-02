@@ -47,8 +47,7 @@ class TestModelProfileAcademy(LegacyAPITestCase):
     🔽🔽🔽 Adding a ProfileAcademy and Group match but Role slug match, status INVITED
     """
 
-    def test_adding_a_profile_academy__the_group_name_and_role_slug_match__status_invited(
-            self, enable_signals):
+    def test_adding_a_profile_academy__the_group_name_and_role_slug_match__status_invited(self, enable_signals):
         enable_signals()
 
         # keep separated
@@ -63,8 +62,7 @@ class TestModelProfileAcademy(LegacyAPITestCase):
     🔽🔽🔽 Adding a ProfileAcademy and Group match but Role slug match, status ACTIVE
     """
 
-    def test_adding_a_profile_academy__the_group_name_and_role_slug_match__status_active(
-            self, enable_signals):
+    def test_adding_a_profile_academy__the_group_name_and_role_slug_match__status_active(self, enable_signals):
         enable_signals()
 
         # keep separated

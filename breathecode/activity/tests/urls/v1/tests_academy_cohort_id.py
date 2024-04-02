@@ -187,11 +187,10 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(mock.fetch.call_args_list, [
             call(kind='student_activity', cohort='miami-downtown-pt-xx', limit=5),
         ])
-        self.assertEqual(mock.count.call_args_list,
-                         [call(
-                             kind='student_activity',
-                             cohort='miami-downtown-pt-xx',
-                         )])
+        self.assertEqual(mock.count.call_args_list, [call(
+            kind='student_activity',
+            cohort='miami-downtown-pt-xx',
+        )])
 
     """
     🔽🔽🔽 With limit and offset
@@ -244,11 +243,10 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(mock.fetch.call_args_list, [
             call(kind='student_activity', cohort='miami-downtown-pt-xx', limit=5, offset=5),
         ])
-        self.assertEqual(mock.count.call_args_list,
-                         [call(
-                             kind='student_activity',
-                             cohort='miami-downtown-pt-xx',
-                         )])
+        self.assertEqual(mock.count.call_args_list, [call(
+            kind='student_activity',
+            cohort='miami-downtown-pt-xx',
+        )])
 
     """
     🔽🔽🔽 With offset above the total items
@@ -289,11 +287,10 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(mock.fetch.call_args_list, [
             call(kind='student_activity', cohort='miami-downtown-pt-xx', limit=5, offset=10),
         ])
-        self.assertEqual(mock.count.call_args_list,
-                         [call(
-                             kind='student_activity',
-                             cohort='miami-downtown-pt-xx',
-                         )])
+        self.assertEqual(mock.count.call_args_list, [call(
+            kind='student_activity',
+            cohort='miami-downtown-pt-xx',
+        )])
 
     """
     🔽🔽🔽 Without cohort
@@ -355,8 +352,7 @@ class MediaTestSuite(MediaTestCase):
                              role='potato',
                              cohort_kwargs=cohort_kwargs)
 
-        url = reverse_lazy('activity:academy_cohort_id', kwargs={'cohort_id': 'potato300'
-                                                                 }) + '?slug=breathecode_login'
+        url = reverse_lazy('activity:academy_cohort_id', kwargs={'cohort_id': 'potato300'}) + '?slug=breathecode_login'
         response = self.client.get(url)
 
         json = response.json()
@@ -406,8 +402,8 @@ class MediaTestSuite(MediaTestCase):
                              role='potato',
                              cohort_kwargs=cohort_kwargs)
 
-        url = reverse_lazy('activity:academy_cohort_id',
-                           kwargs={'cohort_id': 1}) + '?slug=breathecode_login' + '&user_id=batman'
+        url = reverse_lazy('activity:academy_cohort_id', kwargs={'cohort_id': 1
+                                                                 }) + '?slug=breathecode_login' + '&user_id=batman'
         response = self.client.get(url)
 
         json = response.json()
@@ -432,8 +428,8 @@ class MediaTestSuite(MediaTestCase):
                              role='potato',
                              cohort_kwargs=cohort_kwargs)
 
-        url = reverse_lazy('activity:academy_cohort_id',
-                           kwargs={'cohort_id': 1}) + '?slug=breathecode_login' + '&user_id=300'
+        url = reverse_lazy('activity:academy_cohort_id', kwargs={'cohort_id': 1
+                                                                 }) + '?slug=breathecode_login' + '&user_id=300'
         response = self.client.get(url)
 
         json = response.json()

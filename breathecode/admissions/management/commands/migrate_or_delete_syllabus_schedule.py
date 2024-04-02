@@ -46,8 +46,7 @@ class Command(BaseCommand):
                                                                    starting_at=timeslot.starting_at,
                                                                    ending_at=timeslot.ending_at,
                                                                    schedule=replica_of_schedule,
-                                                                   timezone=cohort.timezone
-                                                                   or cohort.academy.timezone)
+                                                                   timezone=cohort.timezone or cohort.academy.timezone)
 
                     replica_of_timeslot.save()
 

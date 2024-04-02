@@ -64,8 +64,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call('Starting build_free_subscription for bag 1'),
             ],
         )
-        self.assertEqual(logging.Logger.error.call_args_list,
-                         [call('Bag with id 1 not found', exc_info=True)])
+        self.assertEqual(logging.Logger.error.call_args_list, [call('Bag with id 1 not found', exc_info=True)])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [])
         self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
@@ -212,16 +211,11 @@ class PaymentsTestSuite(PaymentsTestCase):
             unit_type = plan.trial_duration_unit
             db.append(
                 subscription_item({
-                    'id':
-                    plan.id,
-                    'status':
-                    'FREE_TRIAL',
-                    'paid_at':
-                    model.invoice.paid_at,
-                    'next_payment_at':
-                    model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
-                    'valid_until':
-                    model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
+                    'id': plan.id,
+                    'status': 'FREE_TRIAL',
+                    'paid_at': model.invoice.paid_at,
+                    'next_payment_at': model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
+                    'valid_until': model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
                 }))
 
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), db)
@@ -312,12 +306,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         } for _ in range(2)]
         academy = {'available_as_saas': True}
 
-        model = self.bc.database.create(bag=bag,
-                                        invoice=invoice,
-                                        plan=plans,
-                                        cohort=1,
-                                        cohort_set=1,
-                                        academy=academy)
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plans, cohort=1, cohort_set=1, academy=academy)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -352,18 +341,12 @@ class PaymentsTestSuite(PaymentsTestCase):
             unit_type = plan.trial_duration_unit
             db.append(
                 subscription_item({
-                    'id':
-                    plan.id,
-                    'selected_cohort_set_id':
-                    1,
-                    'status':
-                    'FREE_TRIAL',
-                    'paid_at':
-                    model.invoice.paid_at,
-                    'next_payment_at':
-                    model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
-                    'valid_until':
-                    model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
+                    'id': plan.id,
+                    'selected_cohort_set_id': 1,
+                    'status': 'FREE_TRIAL',
+                    'paid_at': model.invoice.paid_at,
+                    'next_payment_at': model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
+                    'valid_until': model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
                 }))
 
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), db)
@@ -430,18 +413,12 @@ class PaymentsTestSuite(PaymentsTestCase):
             unit_type = plan.trial_duration_unit
             db.append(
                 subscription_item({
-                    'id':
-                    plan.id,
-                    'selected_event_type_set_id':
-                    1,
-                    'status':
-                    'FREE_TRIAL',
-                    'paid_at':
-                    model.invoice.paid_at,
-                    'next_payment_at':
-                    model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
-                    'valid_until':
-                    model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
+                    'id': plan.id,
+                    'selected_event_type_set_id': 1,
+                    'status': 'FREE_TRIAL',
+                    'paid_at': model.invoice.paid_at,
+                    'next_payment_at': model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
+                    'valid_until': model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
                 }))
 
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), db)
@@ -508,18 +485,12 @@ class PaymentsTestSuite(PaymentsTestCase):
             unit_type = plan.trial_duration_unit
             db.append(
                 subscription_item({
-                    'id':
-                    plan.id,
-                    'selected_mentorship_service_set_id':
-                    1,
-                    'status':
-                    'FREE_TRIAL',
-                    'paid_at':
-                    model.invoice.paid_at,
-                    'next_payment_at':
-                    model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
-                    'valid_until':
-                    model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
+                    'id': plan.id,
+                    'selected_mentorship_service_set_id': 1,
+                    'status': 'FREE_TRIAL',
+                    'paid_at': model.invoice.paid_at,
+                    'next_payment_at': model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
+                    'valid_until': model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
                 }))
 
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), db)
@@ -588,16 +559,11 @@ class PaymentsTestSuite(PaymentsTestCase):
             unit_type = plan.time_of_life_unit
             db.append(
                 subscription_item({
-                    'id':
-                    plan.id,
-                    'status':
-                    'ACTIVE',
-                    'paid_at':
-                    model.invoice.paid_at,
-                    'next_payment_at':
-                    model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
-                    'valid_until':
-                    model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
+                    'id': plan.id,
+                    'status': 'ACTIVE',
+                    'paid_at': model.invoice.paid_at,
+                    'next_payment_at': model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
+                    'valid_until': model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
                 }))
 
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), db)
@@ -666,16 +632,11 @@ class PaymentsTestSuite(PaymentsTestCase):
             unit_type = plan.time_of_life_unit
             db.append(
                 subscription_item({
-                    'id':
-                    plan.id,
-                    'status':
-                    'ACTIVE',
-                    'paid_at':
-                    model.invoice.paid_at,
-                    'next_payment_at':
-                    model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
-                    'valid_until':
-                    None,
+                    'id': plan.id,
+                    'status': 'ACTIVE',
+                    'paid_at': model.invoice.paid_at,
+                    'next_payment_at': model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
+                    'valid_until': None,
                 }))
 
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), db)

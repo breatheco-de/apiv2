@@ -17,11 +17,10 @@ class CertificateTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.all_syllabus_schedule_dict(), [])
 
@@ -49,10 +48,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         url = reverse_lazy('admissions:syllabus_id', kwargs={
             'syllabus_id': 1,
         })
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='read_syllabus',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='read_syllabus', role='potato')
         response = self.client.get(url)
         json = response.json()
         expected = {'status_code': 404, 'detail': 'syllabus-not-found'}
@@ -125,10 +121,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     def test_syllabus_id__put__setting_slug_as_empty(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_syllabus',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_syllabus', role='potato')
         url = reverse_lazy('admissions:syllabus_id', kwargs={
             'syllabus_id': 1,
         })
@@ -144,10 +137,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     def test_syllabus_id__put__setting_name_as_empty(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_syllabus',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_syllabus', role='potato')
         url = reverse_lazy('admissions:syllabus_id', kwargs={
             'syllabus_id': 1,
         })
@@ -163,10 +153,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     def test_syllabus_id__put__not_found(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_syllabus',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_syllabus', role='potato')
         url = reverse_lazy('admissions:syllabus_id', kwargs={
             'syllabus_id': 1,
         })

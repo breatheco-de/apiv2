@@ -31,8 +31,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
         self.assertEqual(actions.remove_certificate_screenshot.call_args_list, [call(1)])
 
     @patch('breathecode.certificate.actions.certificate_screenshot', MagicMock())
-    @patch('breathecode.certificate.actions.remove_certificate_screenshot',
-           MagicMock(side_effect=Exception()))
+    @patch('breathecode.certificate.actions.remove_certificate_screenshot', MagicMock(side_effect=Exception()))
     def test_reset_screenshot__remove_certificate_screenshot_raise_a_exception(self):
         """reset_screenshot don't call open in development environment"""
 

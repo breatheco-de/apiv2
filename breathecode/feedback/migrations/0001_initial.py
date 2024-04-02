@@ -17,15 +17,13 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Answer',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('title', models.CharField(blank=True, max_length=200)),
                 ('score', models.CharField(blank=True, max_length=250)),
                 ('comment', models.CharField(blank=True, max_length=255)),
                 ('enity_type',
-                 models.CharField(choices=[('EVENT', 'Event'), ('CERTIFICATE', 'Certificate'),
-                                           ('WORKSHOP', 'Workshop'), ('MENTOR', 'Mentor'),
-                                           ('ACADEMY', 'Academy'), ('COHORT', 'Cohort')],
+                 models.CharField(choices=[('EVENT', 'Event'), ('CERTIFICATE', 'Certificate'), ('WORKSHOP', 'Workshop'),
+                                           ('MENTOR', 'Mentor'), ('ACADEMY', 'Academy'), ('COHORT', 'Cohort')],
                                   max_length=12)),
                 ('entity_id', models.PositiveIntegerField()),
                 ('entity_slug', models.SlugField(blank=True, max_length=255)),

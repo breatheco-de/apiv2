@@ -77,8 +77,7 @@ class academyTestSuite(AdmissionsTestCase):
         """Test /academy without auth"""
         statuses = ['INACTIVE', 'ACTIVE', 'DELETED']
         cases = [(x, x, random.choice([y for y in statuses if x != y]))
-                 for x in statuses] + [(x, x.lower(), random.choice([y for y in statuses if x != y]))
-                                       for x in statuses]
+                 for x in statuses] + [(x, x.lower(), random.choice([y for y in statuses if x != y])) for x in statuses]
         model = self.generate_models(authenticate=True, academy=3)
 
         for current, query, bad_status in cases:

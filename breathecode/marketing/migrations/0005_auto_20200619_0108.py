@@ -13,8 +13,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Tag',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('slug', models.CharField(max_length=150, unique=True)),
                 ('tag_type',
                  models.CharField(choices=[('STRONG', 'Strong'), ('SOFT', 'Soft'), ('DISCOVERY', 'Discovery'),
@@ -37,8 +36,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='formentry',
             name='lead_type',
-            field=models.CharField(choices=[('STRONG', 'Strong'), ('SOFT', 'Soft'),
-                                            ('DISCOVERY', 'Discovery')],
+            field=models.CharField(choices=[('STRONG', 'Strong'), ('SOFT', 'Soft'), ('DISCOVERY', 'Discovery')],
                                    default=None,
                                    max_length=15,
                                    null=True),

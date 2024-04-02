@@ -58,10 +58,8 @@ def currency_serializer(currency):
 def plan_serializer(self, plan, service, currency, groups=[], permissions=[], service_items=[]):
     return {
         'financing_options': [],
-        'service_items': [
-            service_item_serializer(self, service_item, service, groups, permissions)
-            for service_item in service_items
-        ],
+        'service_items':
+        [service_item_serializer(self, service_item, service, groups, permissions) for service_item in service_items],
         'currency':
         currency_serializer(currency),
         'slug':
@@ -123,8 +121,7 @@ def get_serializer(self,
         'original_plan': plan_serializer(self, plan1, service, currency, groups, permissions, service_items),
         'suggested_plan': plan_serializer(self, plan2, service, currency, groups, permissions, service_items),
         'show_modal': plan_offer.show_modal,
-        'expires_at':
-        self.bc.datetime.to_iso_string(plan_offer.expires_at) if plan_offer.expires_at else None,
+        'expires_at': self.bc.datetime.to_iso_string(plan_offer.expires_at) if plan_offer.expires_at else None,
     }
 
 

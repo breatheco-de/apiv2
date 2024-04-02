@@ -67,10 +67,9 @@ class RegistryTestSuite(RegistryTestCase):
                 self.assertEqual(response.status_code, current_status)
                 self.assertEqual(self.bc.database.list_of('registry.Asset'), [])
 
-                self.assertEqual(str(AssetThumbnailGenerator.__init__.call_args_list),
-                                 str([
-                                     call(None, width, height),
-                                 ]))
+                self.assertEqual(str(AssetThumbnailGenerator.__init__.call_args_list), str([
+                    call(None, width, height),
+                ]))
                 self.assertEqual(AssetThumbnailGenerator.get_thumbnail_url.call_args_list, [call()])
 
                 # teardown

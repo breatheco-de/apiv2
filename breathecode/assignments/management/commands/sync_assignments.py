@@ -26,12 +26,7 @@ class Command(BaseCommand):
             default=None,
             help='Cohorts slugs to sync',
         )
-        parser.add_argument('--limit',
-                            action='store',
-                            dest='limit',
-                            type=int,
-                            default=0,
-                            help='How many to import')
+        parser.add_argument('--limit', action='store', dest='limit', type=int, default=0, help='How many to import')
 
     def handle(self, *args, **options):
         try:
@@ -53,8 +48,7 @@ class Command(BaseCommand):
                 total += 1
                 if limit and limit > 0 and total > limit:
                     self.stdout.write(
-                        self.style.SUCCESS(
-                            f'Stopped at {total} because there was a limit on the command arguments'))
+                        self.style.SUCCESS(f'Stopped at {total} because there was a limit on the command arguments'))
                     return
 
                 user = User.objects.filter(email=email).first()
@@ -68,8 +62,7 @@ class Command(BaseCommand):
             for u in users:
                 if limit and limit > 0 and total > limit:
                     self.stdout.write(
-                        self.style.SUCCESS(
-                            f'Stopped at {total} because there was a limit on the command arguments'))
+                        self.style.SUCCESS(f'Stopped at {total} because there was a limit on the command arguments'))
                     return
 
                 user = User.objects.get(id=u['user'])

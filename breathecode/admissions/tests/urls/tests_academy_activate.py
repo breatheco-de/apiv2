@@ -73,8 +73,7 @@ class AcademyActivateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(self.bc.database.list_of('admissions.Academy'),
-                         [self.bc.format.to_dict(model.academy)])
+        self.assertEqual(self.bc.database.list_of('admissions.Academy'), [self.bc.format.to_dict(model.academy)])
 
     def test_academy_when_academy_inactive(self):
         """Test /academy/activate with capability"""

@@ -225,12 +225,7 @@ def test_task__post__without_email(bc: Breathecode, client: APIClient):
 @patch('django.utils.timezone.now', MagicMock(return_value=now))
 def test_task__post__without_user_invite(bc: Breathecode, client: APIClient, validation_res):
     url = reverse_lazy('authenticate:subscribe')
-    data = {
-        'email': 'pokemon@potato.io',
-        'first_name': 'lord',
-        'last_name': 'valdomero',
-        'phone': '+123123123'
-    }
+    data = {'email': 'pokemon@potato.io', 'first_name': 'lord', 'last_name': 'valdomero', 'phone': '+123123123'}
 
     access_token = bc.random.string(lower=True, upper=True, number=True, size=40)
     with patch('binascii.hexlify', MagicMock(return_value=bytes(access_token, 'utf-8'))):
@@ -378,8 +373,7 @@ def test_task__post__without_user_invite_with_event_slug(bc: Breathecode, client
 
 
 @patch('django.utils.timezone.now', MagicMock(return_value=now))
-def test_task__post__with_user_invite__already_exists__status_waiting_list(bc: Breathecode,
-                                                                           client: APIClient):
+def test_task__post__with_user_invite__already_exists__status_waiting_list(bc: Breathecode, client: APIClient):
     """
     Descriptions of models are being generated:
 
@@ -581,12 +575,7 @@ def test_task__post__with_user_invite(bc: Breathecode, client: APIClient, valida
     model = bc.database.create(user_invite=user_invite)
 
     url = reverse_lazy('authenticate:subscribe')
-    data = {
-        'email': 'pokemon@potato.io',
-        'first_name': 'lord',
-        'last_name': 'valdomero',
-        'phone': '+123123123'
-    }
+    data = {'email': 'pokemon@potato.io', 'first_name': 'lord', 'last_name': 'valdomero', 'phone': '+123123123'}
 
     access_token = bc.random.string(lower=True, upper=True, number=True, size=40)
     with patch('binascii.hexlify', MagicMock(return_value=bytes(access_token, 'utf-8'))):
@@ -646,12 +635,9 @@ def test_task__post__with_user_invite(bc: Breathecode, client: APIClient, valida
     assert notify_actions.send_email_message.call_args_list == [
         call('verify_email',
              'pokemon@potato.io', {
-                 'LANG':
-                 'en',
-                 'SUBJECT':
-                 '4Geeks - Validate account',
-                 'LINK':
-                 ('/v1/auth/password/' + hashlib.sha512('pokemon@potato.io'.encode('UTF-8') + b).hexdigest())
+                 'LANG': 'en',
+                 'SUBJECT': '4Geeks - Validate account',
+                 'LINK': ('/v1/auth/password/' + hashlib.sha512('pokemon@potato.io'.encode('UTF-8') + b).hexdigest())
              },
              academy=None)
     ]
@@ -670,8 +656,7 @@ def test_task__post__with_user_invite(bc: Breathecode, client: APIClient, valida
 @patch('django.utils.timezone.now', MagicMock(return_value=now))
 @patch('breathecode.notify.actions.send_email_message', MagicMock(return_value=None))
 @patch('breathecode.authenticate.models.Token.get_or_create', MagicMock(wraps=Token.get_or_create))
-def test_task__post__does_not_get_in_waiting_list_using_a_plan(bc: Breathecode, client: APIClient,
-                                                               validation_res):
+def test_task__post__does_not_get_in_waiting_list_using_a_plan(bc: Breathecode, client: APIClient, validation_res):
     """
     Descriptions of models are being generated:
 
@@ -1334,12 +1319,7 @@ def test__post__with_other_invite__plan__waiting_list(bc: Breathecode, client: A
 @patch('breathecode.notify.actions.send_email_message', MagicMock(return_value=None))
 @patch('breathecode.authenticate.models.Token.get_or_create', MagicMock(wraps=Token.get_or_create))
 def test__post__with_other_invite__cohort__waiting_list(bc: Breathecode, client: APIClient, validation_res):
-    user_invite = {
-        'email': 'pokemon@potato.io',
-        'status': 'WAITING_LIST',
-        'cohort_id': None,
-        'syllabus_id': None
-    }
+    user_invite = {'email': 'pokemon@potato.io', 'status': 'WAITING_LIST', 'cohort_id': None, 'syllabus_id': None}
     model = bc.database.create(cohort=1, user_invite=user_invite)
 
     url = reverse_lazy('authenticate:subscribe')
@@ -1434,12 +1414,7 @@ def test__post__with_other_invite__cohort__waiting_list(bc: Breathecode, client:
 @patch('breathecode.notify.actions.send_email_message', MagicMock(return_value=None))
 @patch('breathecode.authenticate.models.Token.get_or_create', MagicMock(wraps=Token.get_or_create))
 def test__post__with_other_invite__syllabus__waiting_list(bc: Breathecode, client: APIClient, validation_res):
-    user_invite = {
-        'email': 'pokemon@potato.io',
-        'status': 'WAITING_LIST',
-        'cohort_id': None,
-        'syllabus_id': None
-    }
+    user_invite = {'email': 'pokemon@potato.io', 'status': 'WAITING_LIST', 'cohort_id': None, 'syllabus_id': None}
     model = bc.database.create(syllabus=1, user_invite=user_invite)
 
     url = reverse_lazy('authenticate:subscribe')

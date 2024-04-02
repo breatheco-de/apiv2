@@ -45,6 +45,9 @@ def setup(db, monkeypatch):
 
     monkeypatch.setattr('requests.get', get_patch)
     monkeypatch.setattr('requests.post', post_patch)
+    monkeypatch.setattr('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
+    monkeypatch.setattr('breathecode.admissions.signals.student_edu_status_updated.send',
+                        mock.MagicMock(return_value=None))
 
     yield
 
@@ -102,8 +105,6 @@ def get_credentials_github_fields(data={}):
     }
 
 
-@mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-@mock.patch('breathecode.admissions.signals.student_edu_status_updated.send', mock.MagicMock(return_value=None))
 def test_github_callback__without_code(bc: Breathecode, client: APIClient):
     """Test /github/callback without auth"""
     url = reverse_lazy('authenticate:github_callback')
@@ -121,8 +122,6 @@ def test_github_callback__without_code(bc: Breathecode, client: APIClient):
     assert bc.database.list_of('authenticate.ProfileAcademy') == []
 
 
-@mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-@mock.patch('breathecode.admissions.signals.student_edu_status_updated.send', mock.MagicMock(return_value=None))
 def test_github_callback__user_not_exist(bc: Breathecode, client: APIClient):
     """Test /github/callback"""
 
@@ -155,8 +154,6 @@ def test_github_callback__user_not_exist(bc: Breathecode, client: APIClient):
     assert bc.database.list_of('authenticate.ProfileAcademy') == []
 
 
-@mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-@mock.patch('breathecode.admissions.signals.student_edu_status_updated.send', mock.MagicMock(return_value=None))
 def test_github_callback__user_not_exist_but_waiting_list(bc: Breathecode, client: APIClient):
     """Test /github/callback"""
 
@@ -191,8 +188,6 @@ def test_github_callback__user_not_exist_but_waiting_list(bc: Breathecode, clien
     assert bc.database.list_of('authenticate.ProfileAcademy') == []
 
 
-@mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-@mock.patch('breathecode.admissions.signals.student_edu_status_updated.send', mock.MagicMock(return_value=None))
 def test_github_callback__with_user(bc: Breathecode, client: APIClient):
     """Test /github/callback"""
     user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
@@ -221,8 +216,6 @@ def test_github_callback__with_user(bc: Breathecode, client: APIClient):
     ]
 
 
-@mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-@mock.patch('breathecode.admissions.signals.student_edu_status_updated.send', mock.MagicMock(return_value=None))
 def test_github_callback__with_user__with_email_in_uppercase(bc: Breathecode, client: APIClient):
     """Test /github/callback"""
     user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
@@ -249,8 +242,6 @@ def test_github_callback__with_user__with_email_in_uppercase(bc: Breathecode, cl
     assert bc.database.list_of('authenticate.ProfileAcademy') == []
 
 
-@mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-@mock.patch('breathecode.admissions.signals.student_edu_status_updated.send', mock.MagicMock(return_value=None))
 def test_github_callback__with_bad_user_in_querystring(bc: Breathecode, client: APIClient):
     """Test /github/callback"""
     user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
@@ -281,8 +272,6 @@ def test_github_callback__with_bad_user_in_querystring(bc: Breathecode, client: 
     ]
 
 
-@mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-@mock.patch('breathecode.admissions.signals.student_edu_status_updated.send', mock.MagicMock(return_value=None))
 def test_github_callback__with_user(bc: Breathecode, client: APIClient):
     """Test /github/callback"""
     user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
@@ -318,8 +307,6 @@ def test_github_callback__with_user(bc: Breathecode, client: APIClient):
     ]
 
 
-@mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-@mock.patch('breathecode.admissions.signals.student_edu_status_updated.send', mock.MagicMock(return_value=None))
 def test_github_callback__with_user__profile_without_avatar_url(bc: Breathecode, client: APIClient):
     """Test /github/callback"""
     user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
@@ -361,8 +348,6 @@ def test_github_callback__with_user__profile_without_avatar_url(bc: Breathecode,
     ]
 
 
-@mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-@mock.patch('breathecode.admissions.signals.student_edu_status_updated.send', mock.MagicMock(return_value=None))
 def test_github_callback__with_user__profile_with_avatar_url(bc: Breathecode, client: APIClient):
     """Test /github/callback"""
     user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
@@ -407,8 +392,6 @@ def test_github_callback__with_user__profile_with_avatar_url(bc: Breathecode, cl
     ]
 
 
-@mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-@mock.patch('breathecode.admissions.signals.student_edu_status_updated.send', mock.MagicMock(return_value=None))
 def test_github_callback__with_user_different_email__without_credetials_of_github__without_cohort_user(
         bc: Breathecode, client: APIClient):
     """Test /github/callback"""
@@ -440,8 +423,6 @@ def test_github_callback__with_user_different_email__without_credetials_of_githu
     ]
 
 
-@mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-@mock.patch('breathecode.admissions.signals.student_edu_status_updated.send', mock.MagicMock(return_value=None))
 def test_github_callback__with_user_different_email__without_credetials_of_github__with_cohort_user(
         bc: Breathecode, client: APIClient):
     """Test /github/callback"""
@@ -473,8 +454,6 @@ def test_github_callback__with_user_different_email__without_credetials_of_githu
     ]
 
 
-@mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-@mock.patch('breathecode.admissions.signals.student_edu_status_updated.send', mock.MagicMock(return_value=None))
 def test_github_callback__with_user_different_email__with_credentials_of_github__without_cohort_user(
         bc: Breathecode, client: APIClient):
     """Test /github/callback"""
@@ -514,8 +493,6 @@ def test_github_callback__with_user_different_email__with_credentials_of_github_
     ]
 
 
-@mock.patch('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-@mock.patch('breathecode.admissions.signals.student_edu_status_updated.send', mock.MagicMock(return_value=None))
 def test_github_callback__with_user_different_email__with_credentials_of_github__with_cohort_user(
         bc: Breathecode, client: APIClient):
     """Test /github/callback"""

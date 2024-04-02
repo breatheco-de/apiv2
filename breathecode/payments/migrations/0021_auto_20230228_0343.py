@@ -89,10 +89,9 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='plan',
             name='available_cohorts',
-            field=models.ManyToManyField(
-                blank=True,
-                help_text='Available cohorts to be sold in this this service and plan',
-                to='admissions.Cohort'),
+            field=models.ManyToManyField(blank=True,
+                                         help_text='Available cohorts to be sold in this this service and plan',
+                                         to='admissions.Cohort'),
         ),
         migrations.AddField(
             model_name='plan',
@@ -122,8 +121,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='service',
             name='type',
-            field=models.CharField(choices=[('COHORT', 'Cohort'),
-                                            ('MENTORSHIP_SERVICE_SET', 'Mentorship service set'),
+            field=models.CharField(choices=[('COHORT', 'Cohort'), ('MENTORSHIP_SERVICE_SET', 'Mentorship service set'),
                                             ('EVENT_TYPE_SET', 'Event type set')],
                                    default='COHORT',
                                    help_text='Service type',
@@ -142,25 +140,20 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='AcademyService',
             fields=[
-                ('id',
-                 models.BigAutoField(auto_created=True, primary_key=True, serialize=False,
-                                     verbose_name='ID')),
-                ('price_per_unit', models.FloatField(default=1,
-                                                     help_text='Price per unit (e.g. 1, 2, 3, ...)')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('price_per_unit', models.FloatField(default=1, help_text='Price per unit (e.g. 1, 2, 3, ...)')),
                 ('cohort_patterns',
-                 models.JSONField(
-                     blank=True,
-                     default=[],
-                     help_text='Array of cohort patterns to find cohorts to be sold in this plan')),
+                 models.JSONField(blank=True,
+                                  default=[],
+                                  help_text='Array of cohort patterns to find cohorts to be sold in this plan')),
                 ('academy',
                  models.ForeignKey(help_text='Academy',
                                    on_delete=django.db.models.deletion.CASCADE,
                                    to='admissions.academy')),
                 ('available_cohorts',
-                 models.ManyToManyField(
-                     blank=True,
-                     help_text='Available cohorts to be sold in this this service and plan',
-                     to='admissions.Cohort')),
+                 models.ManyToManyField(blank=True,
+                                        help_text='Available cohorts to be sold in this this service and plan',
+                                        to='admissions.Cohort')),
                 ('available_event_type_sets',
                  models.ManyToManyField(
                      blank=True,

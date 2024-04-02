@@ -41,8 +41,7 @@ def validate_captcha(function):
                                                    recaptcha_action=recaptcha_action)
 
             if (response.risk_analysis.score < 0.8):
-                raise ValidationException('The action was denied because it was considered suspicious',
-                                          code=429)
+                raise ValidationException('The action was denied because it was considered suspicious', code=429)
 
         except IndexError:
             raise ProgrammingError('Missing request information, use this decorator with DRF View')

@@ -35,8 +35,7 @@ class FakeBucketObject:
 @pytest.fixture(autouse=True)
 def setup(monkeypatch, fake):
 
-    monkeypatch.setattr('breathecode.admissions.actions.get_bucket_object',
-                        lambda x: FakeBucketObject(fake.url()))
+    monkeypatch.setattr('breathecode.admissions.actions.get_bucket_object', lambda x: FakeBucketObject(fake.url()))
     yield
 
 
@@ -106,8 +105,8 @@ def test_payment_exception__no_slug(fake, context, set_env, env, extra):
 @pytest.mark.parametrize('with_data', [True, False])
 @pytest.mark.parametrize('with_queryset', [True, False])
 @pytest.mark.parametrize('extra', [{}, {'silent': False}, {'silent': None}])
-def test_payment_exception__test_env__use_the_slug(fake, context, set_env, extra, get_kwargs, with_data,
-                                                   get_queryset, with_queryset):
+def test_payment_exception__test_env__use_the_slug(fake, context, set_env, extra, get_kwargs, with_data, get_queryset,
+                                                   with_queryset):
     set_env('test')
 
     slug = fake.slug()
@@ -344,8 +343,7 @@ def test_validation_exception__test_env__use_the_slug(fake, context, set_env, ex
 # Then: the message is returned
 @pytest.mark.parametrize('extra', [{}, {'silent': False}, {'silent': None}])
 @pytest.mark.parametrize('env', ['dev', 'prod', 'qa', 'staging', 'development', 'production', ''])
-def test_validation_exception__anything_but_test_env__does_not_use_the_slug(fake, context, set_env, env,
-                                                                            extra):
+def test_validation_exception__anything_but_test_env__does_not_use_the_slug(fake, context, set_env, env, extra):
     set_env(env)
 
     slug = fake.slug()
@@ -475,8 +473,7 @@ def test_validation_exception__test_env__any_status_code__multiple_errors(fake, 
 
 # When: a slug and silent=True is provided and the env is test with multiple errors, 207
 # Then: it returns each error
-def test_validation_exception__test_env__207__multiple_errors(fake, context, set_env, get_kwargs,
-                                                              get_queryset):
+def test_validation_exception__test_env__207__multiple_errors(fake, context, set_env, get_kwargs, get_queryset):
     set_env('test')
 
     slugs = [fake.slug() for _ in range(3)]

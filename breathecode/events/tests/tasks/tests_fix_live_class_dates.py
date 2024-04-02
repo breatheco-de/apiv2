@@ -59,11 +59,10 @@ class AcademyEventTestSuite(EventTestCase):
             'ending_date': UTC_NOW - timedelta(seconds=random.randint(1, 1000)),
         }
 
-        starting_at = self.bc.datetime.to_datetime_integer('America/New_York',
-                                                           UTC_NOW - timedelta(weeks=3 * 4))
+        starting_at = self.bc.datetime.to_datetime_integer('America/New_York', UTC_NOW - timedelta(weeks=3 * 4))
 
-        ending_at = self.bc.datetime.to_datetime_integer(
-            'America/New_York', UTC_NOW - timedelta(weeks=3 * 4) + timedelta(hours=3))
+        ending_at = self.bc.datetime.to_datetime_integer('America/New_York',
+                                                         UTC_NOW - timedelta(weeks=3 * 4) + timedelta(hours=3))
 
         cohort_time_slot = {
             'starting_at': starting_at,
@@ -139,9 +138,7 @@ class AcademyEventTestSuite(EventTestCase):
                 live_classes[key]['ending_at'] -= timedelta(hours=1)
 
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
-            model = self.bc.database.create(cohort_time_slot=cohort_time_slot,
-                                            cohort=cohort,
-                                            live_class=live_classes)
+            model = self.bc.database.create(cohort_time_slot=cohort_time_slot, cohort=cohort, live_class=live_classes)
 
         fix_live_class_dates.delay(1)
 
@@ -152,16 +149,12 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(self.bc.database.list_of('events.LiveClass'), [
             {
                 **self.bc.format.to_dict(model.live_class[0]),
-                'ending_at':
-                datetime(2023, 1, 6, 12, 20, tzinfo=pytz.UTC),
-                'starting_at':
-                datetime(2023, 1, 6, 9, 20, tzinfo=pytz.UTC),
+                'ending_at': datetime(2023, 1, 6, 12, 20, tzinfo=pytz.UTC),
+                'starting_at': datetime(2023, 1, 6, 9, 20, tzinfo=pytz.UTC),
             },
             {
                 **self.bc.format.to_dict(model.live_class[1]),
-                'ending_at':
-                datetime(2023, 1, 13, 12, 20, tzinfo=pytz.UTC),
-                'starting_at':
-                datetime(2023, 1, 13, 9, 20, tzinfo=pytz.UTC),
+                'ending_at': datetime(2023, 1, 13, 12, 20, tzinfo=pytz.UTC),
+                'starting_at': datetime(2023, 1, 13, 9, 20, tzinfo=pytz.UTC),
             },
         ])

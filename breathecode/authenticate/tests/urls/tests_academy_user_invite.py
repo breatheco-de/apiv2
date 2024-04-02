@@ -57,11 +57,10 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.delete(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_academy_user_invite__wrong_academy(self):
@@ -127,14 +126,11 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = [
-            generate_user_invite(self, model, user_invite) for user_invite in reversed(model.user_invite)
-        ]
+        expected = [generate_user_invite(self, model, user_invite) for user_invite in reversed(model.user_invite)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
-                         self.bc.format.to_dict(model.user_invite))
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), self.bc.format.to_dict(model.user_invite))
 
     """
     🔽🔽🔽 GET with two UserInvite with statuses will be ignored
@@ -231,11 +227,10 @@ class AuthenticateTestSuite(AuthTestCase):
 
             json = response.json()
             expected = [
-                generate_user_invite(
-                    self,
-                    model,
-                    user_invite,
-                    arguments={'status': first_status if user_invite.id % 2 == 1 else second_status})
+                generate_user_invite(self,
+                                     model,
+                                     user_invite,
+                                     arguments={'status': first_status if user_invite.id % 2 == 1 else second_status})
                 for user_invite in reversed(model.user_invite)
             ]
 

@@ -10,8 +10,7 @@ class MediaAdmin(admin.ModelAdmin):
     list_filter = ['categories', 'mime', 'academy']
 
     def open_url(self, obj):
-        return format_html(
-            f"<a target='blank' href='/v1/media/file/{obj.slug}'>/v1/media/file/{obj.slug}</span>")
+        return format_html(f"<a target='blank' href='/v1/media/file/{obj.slug}'>/v1/media/file/{obj.slug}</span>")
 
 
 @admin.register(Category)

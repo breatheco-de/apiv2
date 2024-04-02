@@ -14,10 +14,10 @@ class ServicesGetClassScraperFactoryTestCase(CareerTestCase):
         from logging import Logger
 
         scraper_factory('motor')
-        self.assertEqual(Logger.error.call_args_list, [
-            call('There was an error import the library - No '
-                 "module named 'breathecode.career.services.motor'")
-        ])
+        self.assertEqual(
+            Logger.error.call_args_list,
+            [call('There was an error import the library - No '
+                  "module named 'breathecode.career.services.motor'")])
 
     def test_get_class_correctly(self):
         SPIDER = {'name': 'getonboard', 'zyte_spider_number': 1, 'zyte_job_number': 0}

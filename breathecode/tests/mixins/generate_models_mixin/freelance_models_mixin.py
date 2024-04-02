@@ -31,10 +31,7 @@ class FreelanceModelsMixin(ModelsMixin):
             if 'credentials_github' in models:
                 kargs['github_user'] = just_one(models['credentials_github'])
 
-            models['freelancer'] = create_models(freelancer, 'freelance.Freelancer', **{
-                **kargs,
-                **freelancer_kwargs
-            })
+            models['freelancer'] = create_models(freelancer, 'freelance.Freelancer', **{**kargs, **freelancer_kwargs})
 
         if not 'bill' in models and is_valid(bill):
             kargs = {}

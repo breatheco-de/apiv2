@@ -27,8 +27,7 @@ class GenerateLookupsMixin(APIException):
         return value
 
     def __bulk_generator__(self, request: WSGIRequest, fields: list[str], pk=False, many=False):
-        return [(self.__field_name__(field, pk=pk, many=many), self.__field_value__(request, field,
-                                                                                    many=many))
+        return [(self.__field_name__(field, pk=pk, many=many), self.__field_value__(request, field, many=many))
                 for field in fields if self.__field_exists__(request, field)]
 
     def generate_lookups(self,
@@ -55,8 +54,7 @@ class GenerateLookupsMixin(APIException):
             many_relationships = []
 
         kwargs = {}
-        founds = (self.__bulk_generator__(request, fields) +
-                  self.__bulk_generator__(request, many_fields, many=True) +
+        founds = (self.__bulk_generator__(request, fields) + self.__bulk_generator__(request, many_fields, many=True) +
                   self.__bulk_generator__(request, relationships, pk=True) +
                   self.__bulk_generator__(request, many_relationships, pk=True, many=True))
 

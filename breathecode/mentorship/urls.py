@@ -11,14 +11,10 @@ urlpatterns = [
     path('academy/agent', AgentView.as_view(), name='academy_agent'),
     path('academy/supportchannel', SupportChannelView.as_view(), name='academy_supportchannel'),
     path('academy/mentor/<int:mentor_id>', MentorView.as_view(), name='academy_mentor_id'),
-    path('academy/mentor/<int:mentor_id>/session',
-         MentorSessionView.as_view(),
-         name='academy_mentor_id_session'),
+    path('academy/mentor/<int:mentor_id>/session', MentorSessionView.as_view(), name='academy_mentor_id_session'),
     path('academy/session', SessionView.as_view(), name='academy_session'),
     path('academy/session/<int:session_id>', SessionView.as_view(), name='academy_session_id'),
-    path('academy/service/<int:service_id>/session',
-         ServiceSessionView.as_view(),
-         name='academy_service_id_session'),
+    path('academy/service/<int:service_id>/session', ServiceSessionView.as_view(), name='academy_service_id_session'),
     path('academy/bill', BillView.as_view(), name='academy_bill'),
     path('academy/bill/<int:bill_id>', BillView.as_view(), name='academy_bill_id'),
     path('academy/bill/<int:id>/html', render_html_bill, name='academy_bill_id_html'),
@@ -31,7 +27,5 @@ urlpatterns = [
 
     # hash belongs to the calendly organization
     path('calendly/webhook/<str:org_hash>', calendly_webhook, name='calendly_webhook_id'),
-    path('academy/calendly/organization',
-         AcademyCalendlyOrgView.as_view(),
-         name='academy_calendly_organization'),
+    path('academy/calendly/organization', AcademyCalendlyOrgView.as_view(), name='academy_calendly_organization'),
 ]

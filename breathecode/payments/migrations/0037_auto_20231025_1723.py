@@ -14,14 +14,12 @@ class Migration(migrations.Migration):
             model_name='consumable',
             name='sort_priority',
             field=models.IntegerField(
-                default=1,
-                help_text='(e.g. 1, 2, 3, ...) It is going to be used to sort the items on the frontend'),
+                default=1, help_text='(e.g. 1, 2, 3, ...) It is going to be used to sort the items on the frontend'),
         ),
         migrations.AddField(
             model_name='serviceitem',
             name='sort_priority',
             field=models.IntegerField(
-                default=1,
-                help_text='(e.g. 1, 2, 3, ...) It is going to be used to sort the items on the frontend'),
+                default=1, help_text='(e.g. 1, 2, 3, ...) It is going to be used to sort the items on the frontend'),
         ),
     ]

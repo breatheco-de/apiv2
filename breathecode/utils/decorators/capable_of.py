@@ -91,8 +91,7 @@ def get_academy_from_capability(kwargs, request, capability):
 
     if ('academy_id' not in kwargs and 'Academy' not in request.headers and 'academy' not in request.headers
             and 'academy' not in request.GET):
-        raise PermissionDenied(
-            "Missing academy_id parameter expected for the endpoint url or 'Academy' header")
+        raise PermissionDenied("Missing academy_id parameter expected for the endpoint url or 'Academy' header")
 
     elif 'academy_id' in kwargs:
         academy_id = kwargs['academy_id']
@@ -107,8 +106,7 @@ def get_academy_from_capability(kwargs, request, capability):
         academy_id = request.GET['academy']
 
     if not str(academy_id).isdigit():
-        raise ValidationException(f'Academy ID needs to be an integer: {str(academy_id)}',
-                                  slug='invalid-academy-id')
+        raise ValidationException(f'Academy ID needs to be an integer: {str(academy_id)}', slug='invalid-academy-id')
 
     if isinstance(request.user, AnonymousUser):
         raise PermissionDenied('Invalid user')
@@ -119,8 +117,7 @@ def get_academy_from_capability(kwargs, request, capability):
 
     if capable.count() == 0:
         raise PermissionDenied(
-            f"You (user: {request.user.id}) don't have this capability: {capability} for academy {academy_id}"
-        )
+            f"You (user: {request.user.id}) don't have this capability: {capability} for academy {academy_id}")
 
     academy = capable.first().academy
     if academy.status == 'DELETED':

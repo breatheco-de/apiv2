@@ -23,11 +23,10 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
     🔽🔽🔽 with MentorProfile without online_meeting_url
     """
 
-    @patch('requests.head',
-           apply_requests_head_mock([
-               (400, BOOKING_URL, None),
-               (400, ONLINE_MEETING_URL, None),
-           ]))
+    @patch('requests.head', apply_requests_head_mock([
+        (400, BOOKING_URL, None),
+        (400, ONLINE_MEETING_URL, None),
+    ]))
     def test__without_online_meeting_url(self):
         cases = [{'online_meeting_url': x} for x in [None, '']]
 
@@ -52,11 +51,10 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
     🔽🔽🔽 with MentorProfile with online_meeting_url with bad booking_url
     """
 
-    @patch('requests.head',
-           apply_requests_head_mock([
-               (400, BOOKING_URL, None),
-               (400, ONLINE_MEETING_URL, None),
-           ]))
+    @patch('requests.head', apply_requests_head_mock([
+        (400, BOOKING_URL, None),
+        (400, ONLINE_MEETING_URL, None),
+    ]))
     def test__with_online_meeting_url__with_bad_booking_url(self):
         cases = [{
             'online_meeting_url': self.bc.fake.url(),
@@ -68,8 +66,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
             mentor_profile_db = self.bc.format.to_dict(model.mentor_profile)
 
             with self.assertRaisesMessage(
-                    Exception,
-                    f'Mentor {model.mentor_profile.name} booking_url must point to calendly, update the '
+                    Exception, f'Mentor {model.mentor_profile.name} booking_url must point to calendly, update the '
                     'value before activating.'):
                 mentor_is_ready(model.mentor_profile)
 
@@ -84,11 +81,10 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
     🔽🔽🔽 with MentorProfile with online_meeting_url with booking_url
     """
 
-    @patch('requests.head',
-           apply_requests_head_mock([
-               (400, BOOKING_URL, None),
-               (400, ONLINE_MEETING_URL, None),
-           ]))
+    @patch('requests.head', apply_requests_head_mock([
+        (400, BOOKING_URL, None),
+        (400, ONLINE_MEETING_URL, None),
+    ]))
     def test__with_online_meeting_url__with_booking_url(self):
         mentor_profile = {
             'online_meeting_url': self.bc.fake.url(),
@@ -99,8 +95,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
         mentor_profile_db = self.bc.format.to_dict(model.mentor_profile)
 
         with self.assertRaisesMessage(
-                Exception,
-                f'Mentor {model.mentor_profile.name} has no syllabus associated, update the value before '
+                Exception, f'Mentor {model.mentor_profile.name} has no syllabus associated, update the value before '
                 'activating.'):
             mentor_is_ready(model.mentor_profile)
 
@@ -112,11 +107,10 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
     🔽🔽🔽 with MentorProfile and Syllabus with online_meeting_url with booking_url
     """
 
-    @patch('requests.head',
-           apply_requests_head_mock([
-               (400, BOOKING_URL, None),
-               (400, ONLINE_MEETING_URL, None),
-           ]))
+    @patch('requests.head', apply_requests_head_mock([
+        (400, BOOKING_URL, None),
+        (400, ONLINE_MEETING_URL, None),
+    ]))
     def test__with_online_meeting_url__with_booking_url__with_syllabus(self):
         mentor_profile = {
             'online_meeting_url': self.bc.fake.url(),
@@ -127,8 +121,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
         model = self.bc.database.create(mentor_profile=mentor_profile, syllabus=1)
         mentor_profile_db = self.bc.format.to_dict(model.mentor_profile)
 
-        with self.assertRaisesMessage(Exception,
-                                      f'Mentor {model.mentor_profile.name} booking URL is failing'):
+        with self.assertRaisesMessage(Exception, f'Mentor {model.mentor_profile.name} booking URL is failing'):
             mentor_is_ready(model.mentor_profile)
 
         self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
@@ -139,11 +132,10 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
     🔽🔽🔽 with MentorProfile and Syllabus with online_meeting_url with booking_url, booking status 200
     """
 
-    @patch('requests.head',
-           apply_requests_head_mock([
-               (200, BOOKING_URL, None),
-               (400, ONLINE_MEETING_URL, None),
-           ]))
+    @patch('requests.head', apply_requests_head_mock([
+        (200, BOOKING_URL, None),
+        (400, ONLINE_MEETING_URL, None),
+    ]))
     def test__with_online_meeting_url__with_booking_url__with_syllabus__booking_status_200(self):
         mentor_profile = {
             'online_meeting_url': self.bc.fake.url(),
@@ -155,8 +147,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
         model = self.bc.database.create(mentor_profile=mentor_profile, syllabus=1)
         mentor_profile_db = self.bc.format.to_dict(model.mentor_profile)
 
-        with self.assertRaisesMessage(Exception,
-                                      f'Mentor {model.mentor_profile.name} online meeting URL is failing'):
+        with self.assertRaisesMessage(Exception, f'Mentor {model.mentor_profile.name} online meeting URL is failing'):
             mentor_is_ready(model.mentor_profile)
 
         self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
@@ -168,11 +159,10 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
     status 200
     """
 
-    @patch('requests.head',
-           apply_requests_head_mock([
-               (200, BOOKING_URL, None),
-               (200, ONLINE_MEETING_URL, None),
-           ]))
+    @patch('requests.head', apply_requests_head_mock([
+        (200, BOOKING_URL, None),
+        (200, ONLINE_MEETING_URL, None),
+    ]))
     def test__with_online_meeting_url__with_booking_url__with_syllabus__booking_status_200__online_meeting_status_200(
             self):
         mentor_profile = {

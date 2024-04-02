@@ -140,11 +140,10 @@ class Stripe:
 
             logger.error(str(e))
 
-            raise PaymentException(translation(
-                self.language,
-                en='Payment service are down, try again later',
-                es='El servicio de pago está caído, inténtalo de nuevo más tarde',
-                slug='payment-service-are-down'),
+            raise PaymentException(translation(self.language,
+                                               en='Payment service are down, try again later',
+                                               es='El servicio de pago está caído, inténtalo de nuevo más tarde',
+                                               slug='payment-service-are-down'),
                                    slug='payment-service-are-down',
                                    silent=True)
 

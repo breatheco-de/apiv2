@@ -138,9 +138,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         from django.contrib import messages
 
         academy = {'timezone': 'Pacific/Pago_Pago'}
-        model = self.bc.database.create(academy=(2, academy),
-                                        syllabus_schedule=1,
-                                        syllabus_schedule_time_slot=1)
+        model = self.bc.database.create(academy=(2, academy), syllabus_schedule=1, syllabus_schedule_time_slot=1)
 
         request = HttpRequest()
         queryset = SyllabusSchedule.objects.all()
@@ -179,9 +177,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         from django.contrib import messages
 
         academy = {'timezone': 'Pacific/Pago_Pago'}
-        model = self.bc.database.create(academy=(2, academy),
-                                        syllabus_schedule=1,
-                                        syllabus_schedule_time_slot=2)
+        model = self.bc.database.create(academy=(2, academy), syllabus_schedule=1, syllabus_schedule_time_slot=2)
 
         request = HttpRequest()
         queryset = SyllabusSchedule.objects.all()

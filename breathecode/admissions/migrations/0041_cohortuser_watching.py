@@ -13,8 +13,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='cohortuser',
             name='watching',
-            field=models.BooleanField(
-                default=False,
-                help_text='You can active students to the watch list and monitor them closely'),
+            field=models.BooleanField(default=False,
+                                      help_text='You can active students to the watch list and monitor them closely'),
         ),
     ]

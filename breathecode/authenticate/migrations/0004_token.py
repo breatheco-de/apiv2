@@ -16,8 +16,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Token',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('created', models.DateTimeField(auto_now_add=True, verbose_name='Created')),
                 ('key', models.CharField(db_index=True, max_length=40, unique=True)),
                 ('token_type', models.CharField(default='temporal', max_length=64)),

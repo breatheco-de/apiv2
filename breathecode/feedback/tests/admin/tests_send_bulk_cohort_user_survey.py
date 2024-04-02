@@ -58,11 +58,10 @@ class SendSurveyTestSuite(FeedbackTestCase):
         self.assertEqual(result, None)
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), db)
 
-        self.assertEqual(
-            str(api.add_message.call_args_list),
-            str([
-                call(request, 25, 'Survey was successfully sent', extra_tags='', fail_silently=False),
-            ]))
+        self.assertEqual(str(api.add_message.call_args_list),
+                         str([
+                             call(request, 25, 'Survey was successfully sent', extra_tags='', fail_silently=False),
+                         ]))
         self.assertEqual(actions.send_question.call_args_list, [
             call(model.user, model.cohort),
             call(model.user, model.cohort),

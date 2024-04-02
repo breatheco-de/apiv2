@@ -221,13 +221,9 @@ class MediaTestSuite(MediaTestCase):
 
                 self.assertEqual(NDB.__init__.call_args_list, [call(StudentActivity)])
                 self.assertEqual(NDB.fetch.call_args_list, [
+                    call([StudentActivity.cohort == model.cohort.slug, StudentActivity.slug == 'classroom_attendance']),
                     call([
-                        StudentActivity.cohort == model.cohort.slug, StudentActivity.slug
-                        == 'classroom_attendance'
-                    ]),
-                    call([
-                        StudentActivity.cohort == model.cohort.slug, StudentActivity.slug
-                        == 'classroom_unattendance'
+                        StudentActivity.cohort == model.cohort.slug, StudentActivity.slug == 'classroom_unattendance'
                     ]),
                 ])
 
@@ -429,13 +425,9 @@ class MediaTestSuite(MediaTestCase):
 
                 self.assertEqual(NDB.__init__.call_args_list, [call(StudentActivity)])
                 self.assertEqual(NDB.fetch.call_args_list, [
+                    call([StudentActivity.cohort == model.cohort.slug, StudentActivity.slug == 'classroom_attendance']),
                     call([
-                        StudentActivity.cohort == model.cohort.slug, StudentActivity.slug
-                        == 'classroom_attendance'
-                    ]),
-                    call([
-                        StudentActivity.cohort == model.cohort.slug, StudentActivity.slug
-                        == 'classroom_unattendance'
+                        StudentActivity.cohort == model.cohort.slug, StudentActivity.slug == 'classroom_unattendance'
                     ]),
                 ])
 
@@ -633,19 +625,14 @@ class MediaTestSuite(MediaTestCase):
             logging.Logger.info.call_args_list = []
             logging.Logger.error.call_args_list = []
 
-            with patch('breathecode.utils.ndb.NDB.fetch',
-                       MagicMock(side_effect=[attendance_seed, unattendance_seed])):
+            with patch('breathecode.utils.ndb.NDB.fetch', MagicMock(side_effect=[attendance_seed, unattendance_seed])):
                 get_attendancy_log.delay(model.cohort.id)
 
                 self.assertEqual(NDB.__init__.call_args_list, [call(StudentActivity)])
                 self.assertEqual(NDB.fetch.call_args_list, [
+                    call([StudentActivity.cohort == model.cohort.slug, StudentActivity.slug == 'classroom_attendance']),
                     call([
-                        StudentActivity.cohort == model.cohort.slug, StudentActivity.slug
-                        == 'classroom_attendance'
-                    ]),
-                    call([
-                        StudentActivity.cohort == model.cohort.slug, StudentActivity.slug
-                        == 'classroom_unattendance'
+                        StudentActivity.cohort == model.cohort.slug, StudentActivity.slug == 'classroom_unattendance'
                     ]),
                 ])
 
@@ -1007,13 +994,9 @@ class MediaTestSuite(MediaTestCase):
 
                 self.assertEqual(NDB.__init__.call_args_list, [call(StudentActivity)])
                 self.assertEqual(NDB.fetch.call_args_list, [
+                    call([StudentActivity.cohort == model.cohort.slug, StudentActivity.slug == 'classroom_attendance']),
                     call([
-                        StudentActivity.cohort == model.cohort.slug, StudentActivity.slug
-                        == 'classroom_attendance'
-                    ]),
-                    call([
-                        StudentActivity.cohort == model.cohort.slug, StudentActivity.slug
-                        == 'classroom_unattendance'
+                        StudentActivity.cohort == model.cohort.slug, StudentActivity.slug == 'classroom_unattendance'
                     ]),
                 ])
 
@@ -1417,13 +1400,9 @@ class MediaTestSuite(MediaTestCase):
 
                 self.assertEqual(NDB.__init__.call_args_list, [call(StudentActivity)])
                 self.assertEqual(NDB.fetch.call_args_list, [
+                    call([StudentActivity.cohort == model.cohort.slug, StudentActivity.slug == 'classroom_attendance']),
                     call([
-                        StudentActivity.cohort == model.cohort.slug, StudentActivity.slug
-                        == 'classroom_attendance'
-                    ]),
-                    call([
-                        StudentActivity.cohort == model.cohort.slug, StudentActivity.slug
-                        == 'classroom_unattendance'
+                        StudentActivity.cohort == model.cohort.slug, StudentActivity.slug == 'classroom_unattendance'
                     ]),
                 ])
 
@@ -1491,8 +1470,7 @@ class MediaTestSuite(MediaTestCase):
                 **self.bc.format.to_dict(model.syllabus_version),
             }])
 
-            self.assertEqual(tasks.get_attendancy_log_per_cohort_user.delay.call_args_list,
-                             [call(1), call(2)])
+            self.assertEqual(tasks.get_attendancy_log_per_cohort_user.delay.call_args_list, [call(1), call(2)])
 
             # teardown
             NDB.__init__.call_args_list = []
@@ -1827,13 +1805,9 @@ class MediaTestSuite(MediaTestCase):
 
                 self.assertEqual(NDB.__init__.call_args_list, [call(StudentActivity)])
                 self.assertEqual(NDB.fetch.call_args_list, [
+                    call([StudentActivity.cohort == model.cohort.slug, StudentActivity.slug == 'classroom_attendance']),
                     call([
-                        StudentActivity.cohort == model.cohort.slug, StudentActivity.slug
-                        == 'classroom_attendance'
-                    ]),
-                    call([
-                        StudentActivity.cohort == model.cohort.slug, StudentActivity.slug
-                        == 'classroom_unattendance'
+                        StudentActivity.cohort == model.cohort.slug, StudentActivity.slug == 'classroom_unattendance'
                     ]),
                 ])
 

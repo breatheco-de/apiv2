@@ -131,12 +131,11 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(logging.Logger.info.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
-        self.assertEqual(self.all_organization_dict(),
-                         [{
-                             **self.model_to_dict(model, 'organization'),
-                             'sync_status': 'ERROR',
-                             'sync_desc': 'Error: Random error in creating',
-                         }])
+        self.assertEqual(self.all_organization_dict(), [{
+            **self.model_to_dict(model, 'organization'),
+            'sync_status': 'ERROR',
+            'sync_desc': 'Error: Random error in creating',
+        }])
 
         self.assertEqual(self.bc.database.list_of('events.Event'), [])
 
@@ -198,8 +197,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         sync_org_events(model['organization'])
 
-        self.assertEqual(actions.export_event_to_eventbrite.call_args_list,
-                         [call(model.event, model.organization)])
+        self.assertEqual(actions.export_event_to_eventbrite.call_args_list, [call(model.event, model.organization)])
         self.assertEqual(actions.update_or_create_event.call_args_list,
                          [call(EVENTBRITE_EVENTS['events'][0], model.organization)])
 

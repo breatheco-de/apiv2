@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import (test_email, preview_template, process_interaction, slack_command, preview_slack_template,
-                    HooksView, get_sample_data)
+from .views import (test_email, preview_template, process_interaction, slack_command, preview_slack_template, HooksView,
+                    get_sample_data)
 
 app_name = 'notify'
 urlpatterns = [

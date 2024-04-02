@@ -359,7 +359,7 @@ class EventSerializer(serializers.ModelSerializer):
 
         academy = self.context.get('academy_id')
 
-        if 'tags' not in data or data['tags'] == '':
+        if ('tags' not in data and self.instance.tags == '') or ('tags' in data and data['tags'] == ''):
             raise ValidationException(
                 translation(lang,
                             en='Event must have at least one tag',
@@ -435,9 +435,12 @@ class EventSerializer(serializers.ModelSerializer):
 
 class EventPUTSerializer(serializers.ModelSerializer):
     banner = serializers.URLField(required=False)
+    tags = serializers.CharField(required=False)
     capacity = serializers.IntegerField(required=False)
     starting_at = serializers.DateTimeField(required=False)
     ending_at = serializers.DateTimeField(required=False)
+    online_event = serializers.BooleanField(required=False)
+    status = serializers.CharField(required=False)
 
     class Meta:
         model = Event

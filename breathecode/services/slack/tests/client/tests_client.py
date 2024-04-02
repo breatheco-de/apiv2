@@ -41,16 +41,15 @@ class SlackTestSuite(SlackTestCase):
         result = slack.execute_command(data)
         self.assertEqual(result, expected)
         self.assertEqual(slack._execute_command.call_args_list, [
-            call(
-                commands, 'student', {
-                    'users': [],
-                    'context': {
-                        'text': 'student',
-                        'user_id': 'name',
-                        'team_id': 'team',
-                        'channel_id': 'test'
-                    }
-                })
+            call(commands, 'student', {
+                'users': [],
+                'context': {
+                    'text': 'student',
+                    'user_id': 'name',
+                    'team_id': 'team',
+                    'channel_id': 'test'
+                }
+            })
         ])
 
     def test_slack__execute_command__test_executor(self):

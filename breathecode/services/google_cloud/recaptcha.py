@@ -46,11 +46,9 @@ class Recaptcha:
         if not response.token_properties.valid:
             from breathecode.utils.validation_exception import ValidationException
             logger.error('The CreateAssessment call failed because the token was ' +
-                         'invalid for for the following reasons: ' +
-                         str(response.token_properties.invalid_reason))
+                         'invalid for for the following reasons: ' + str(response.token_properties.invalid_reason))
             raise ValidationException(
-                f'Invalid token for the following reasons: {str(response.token_properties.invalid_reason)}',
-                code=400)
+                f'Invalid token for the following reasons: {str(response.token_properties.invalid_reason)}', code=400)
 
         # Check if the expected action was executed.
         if response.token_properties.action != recaptcha_action:

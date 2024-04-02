@@ -197,11 +197,7 @@ class MediaTestSuite(MediaTestCase):
     def test_get_all_fields(self):
         expected_query = 'SELECT * FROM `test.4geeks.activity` '
         url = reverse_lazy('v2:activity:report')
-        model = self.bc.database.create(user=1,
-                                        academy=1,
-                                        profile_academy=1,
-                                        capability='read_activity',
-                                        role=1)
+        model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability='read_activity', role=1)
 
         self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
@@ -225,11 +221,7 @@ class MediaTestSuite(MediaTestCase):
     def test_get_all_fields_limit(self):
         expected_query = 'SELECT * FROM `test.4geeks.activity`  LIMIT 5'
         url = reverse_lazy('v2:activity:report') + f'?limit=5'
-        model = self.bc.database.create(user=1,
-                                        academy=1,
-                                        profile_academy=1,
-                                        capability='read_activity',
-                                        role=1)
+        model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability='read_activity', role=1)
 
         self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
@@ -254,11 +246,7 @@ class MediaTestSuite(MediaTestCase):
     def test_get_group(self):
         expected_query = 'SELECT kind FROM `test.4geeks.activity`  GROUP BY kind'
         url = reverse_lazy('v2:activity:report') + f'?by=kind&fields=kind'
-        model = self.bc.database.create(user=1,
-                                        academy=1,
-                                        profile_academy=1,
-                                        capability='read_activity',
-                                        role=1)
+        model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability='read_activity', role=1)
 
         self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
@@ -283,11 +271,7 @@ class MediaTestSuite(MediaTestCase):
         json_query = '{ "filter": { "user_id__lte": 5 } }'
         expected_query = 'SELECT * FROM `test.4geeks.activity` WHERE user_id <= @x__user_id'
         url = reverse_lazy('v2:activity:report') + f'?query={json_query}'
-        model = self.bc.database.create(user=1,
-                                        academy=1,
-                                        profile_academy=1,
-                                        capability='read_activity',
-                                        role=1)
+        model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability='read_activity', role=1)
 
         self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
@@ -312,11 +296,7 @@ class MediaTestSuite(MediaTestCase):
         json_query = '{ "filter": { "user_id__lt": 5 } }'
         expected_query = 'SELECT * FROM `test.4geeks.activity` WHERE user_id < @x__user_id'
         url = reverse_lazy('v2:activity:report') + f'?query={json_query}'
-        model = self.bc.database.create(user=1,
-                                        academy=1,
-                                        profile_academy=1,
-                                        capability='read_activity',
-                                        role=1)
+        model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability='read_activity', role=1)
 
         self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
@@ -341,11 +321,7 @@ class MediaTestSuite(MediaTestCase):
         json_query = '{ "filter": { "user_id__gte": 5 } }'
         expected_query = 'SELECT * FROM `test.4geeks.activity` WHERE user_id >= @x__user_id'
         url = reverse_lazy('v2:activity:report') + f'?query={json_query}'
-        model = self.bc.database.create(user=1,
-                                        academy=1,
-                                        profile_academy=1,
-                                        capability='read_activity',
-                                        role=1)
+        model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability='read_activity', role=1)
 
         self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
@@ -370,11 +346,7 @@ class MediaTestSuite(MediaTestCase):
         json_query = '{ "filter": { "user_id__gt": 5 } }'
         expected_query = 'SELECT * FROM `test.4geeks.activity` WHERE user_id > @x__user_id'
         url = reverse_lazy('v2:activity:report') + f'?query={json_query}'
-        model = self.bc.database.create(user=1,
-                                        academy=1,
-                                        profile_academy=1,
-                                        capability='read_activity',
-                                        role=1)
+        model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability='read_activity', role=1)
 
         self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
@@ -399,11 +371,7 @@ class MediaTestSuite(MediaTestCase):
         json_query = '{ "grouping_function": { "sum": ["id"] } }'
         expected_query = 'SELECT SUM(id) AS sum__id FROM `test.4geeks.activity` '
         url = reverse_lazy('v2:activity:report') + f'?query={json_query}'
-        model = self.bc.database.create(user=1,
-                                        academy=1,
-                                        profile_academy=1,
-                                        capability='read_activity',
-                                        role=1)
+        model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability='read_activity', role=1)
 
         self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
@@ -428,11 +396,7 @@ class MediaTestSuite(MediaTestCase):
         json_query = '{ "grouping_function": { "count": ["kind"] } }'
         expected_query = 'SELECT COUNT(kind) AS count__kind FROM `test.4geeks.activity` '
         url = reverse_lazy('v2:activity:report') + f'?query={json_query}'
-        model = self.bc.database.create(user=1,
-                                        academy=1,
-                                        profile_academy=1,
-                                        capability='read_activity',
-                                        role=1)
+        model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability='read_activity', role=1)
 
         self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
@@ -457,11 +421,7 @@ class MediaTestSuite(MediaTestCase):
         json_query = '{ "grouping_function": { "avg": ["user_id"] } }'
         expected_query = 'SELECT AVG(user_id) AS avg__user_id FROM `test.4geeks.activity` '
         url = reverse_lazy('v2:activity:report') + f'?query={json_query}'
-        model = self.bc.database.create(user=1,
-                                        academy=1,
-                                        profile_academy=1,
-                                        capability='read_activity',
-                                        role=1)
+        model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability='read_activity', role=1)
 
         self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)

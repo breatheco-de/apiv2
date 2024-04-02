@@ -7,8 +7,8 @@ from breathecode.tests.mixins import (BreathecodeMixin, CacheMixin, DatetimeMixi
                                       GenerateQueriesMixin, TokenMixin)
 
 
-class PaymentsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin,
-                       DatetimeMixin, BreathecodeMixin):
+class PaymentsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin, DatetimeMixin,
+                       BreathecodeMixin):
     """MarketingTestCase with auth methods"""
 
     def tearDown(self):

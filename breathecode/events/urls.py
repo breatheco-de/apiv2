@@ -1,11 +1,10 @@
 from django.urls import path
 from .views import (AcademyEventJoinView, AcademyEventTypeView, AcademyLiveClassView, EventMeView,
-                    EventTypeVisibilitySettingView, EventView, EventTypeView, AcademyEventCheckinView,
-                    MeLiveClassView, get_events, eventbrite_webhook, AcademyEventView, AcademyVenueView,
-                    ICalCohortsView, ICalEventView, ICalStudentView, AcademyOrganizationView,
-                    OrganizationWebhookView, AcademyOrganizerView, AcademyOrganizationOrganizerView,
-                    EventCheckinView, AcademyLiveClassJoinView, join_event, EventMeCheckinView,
-                    join_live_class, EventPublicView)
+                    EventTypeVisibilitySettingView, EventView, EventTypeView, AcademyEventCheckinView, MeLiveClassView,
+                    get_events, eventbrite_webhook, AcademyEventView, AcademyVenueView, ICalCohortsView, ICalEventView,
+                    ICalStudentView, AcademyOrganizationView, OrganizationWebhookView, AcademyOrganizerView,
+                    AcademyOrganizationOrganizerView, EventCheckinView, AcademyLiveClassJoinView, join_event,
+                    EventMeCheckinView, join_live_class, EventPublicView)
 from .syndication import LatestEventsFeed
 
 app_name = 'events'
@@ -46,9 +45,7 @@ urlpatterns = [
     path('ical/student/<int:user_id>', ICalStudentView.as_view(), name='ical_student_id'),
     path('academy/venues', AcademyVenueView.as_view(), name='academy_venues'),
     path('academy/eventype', AcademyEventTypeView.as_view(), name='academy_eventype'),
-    path('academy/eventype/<slug:event_type_slug>',
-         AcademyEventTypeView.as_view(),
-         name='academy_eventype_slug'),
+    path('academy/eventype/<slug:event_type_slug>', AcademyEventTypeView.as_view(), name='academy_eventype_slug'),
     path('academy/eventype/<slug:event_type_slug>/visibilitysetting',
          EventTypeVisibilitySettingView.as_view(),
          name='academy_eventype_slug_visibilitysetting'),

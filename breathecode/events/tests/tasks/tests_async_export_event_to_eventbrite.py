@@ -20,8 +20,7 @@ class AcademyEventTestSuite(EventTestCase):
         async_export_event_to_eventbrite(1)
 
         self.assertEqual(actions.export_event_to_eventbrite.call_args_list, [])
-        self.assertEqual(logging.Logger.info.call_args_list,
-                         [call('Starting async_export_event_to_eventbrite')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call('Starting async_export_event_to_eventbrite')])
         self.assertEqual(logging.Logger.error.call_args_list, [call('Event 1 not fount')])
         self.assertEqual(event_saved.send.call_args_list, [])
         self.assertEqual(self.bc.database.list_of('events.Event'), [])
@@ -46,10 +45,8 @@ class AcademyEventTestSuite(EventTestCase):
         async_export_event_to_eventbrite(1)
 
         self.assertEqual(actions.export_event_to_eventbrite.call_args_list, [])
-        self.assertEqual(logging.Logger.info.call_args_list,
-                         [call('Starting async_export_event_to_eventbrite')])
-        self.assertEqual(logging.Logger.error.call_args_list,
-                         [call('Event 1 not have a organization assigned')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call('Starting async_export_event_to_eventbrite')])
+        self.assertEqual(logging.Logger.error.call_args_list, [call('Event 1 not have a organization assigned')])
 
         self.assertEqual(event_saved.send.call_args_list,
                          [call(instance=model.event, created=True, sender=model.event.__class__)])
@@ -75,11 +72,9 @@ class AcademyEventTestSuite(EventTestCase):
 
         async_export_event_to_eventbrite(1)
 
-        self.assertEqual(actions.export_event_to_eventbrite.call_args_list,
-                         [call(model.event, model.organization)])
+        self.assertEqual(actions.export_event_to_eventbrite.call_args_list, [call(model.event, model.organization)])
 
-        self.assertEqual(logging.Logger.info.call_args_list,
-                         [call('Starting async_export_event_to_eventbrite')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call('Starting async_export_event_to_eventbrite')])
         self.assertEqual(logging.Logger.error.call_args_list, [])
         self.assertEqual(event_saved.send.call_args_list,
                          [call(instance=model.event, created=True, sender=model.event.__class__)])

@@ -89,8 +89,7 @@ class UserSpecialtyAdmin(admin.ModelAdmin):
         if obj.preview_url is None or obj.preview_url == '':
             return format_html('No available')
 
-        return format_html("<a rel='noopener noreferrer' target='_blank' href='{url}'>preview</a>",
-                           url=obj.preview_url)
+        return format_html("<a rel='noopener noreferrer' target='_blank' href='{url}'>preview</a>", url=obj.preview_url)
 
     def get_readonly_fields(self, request, obj=None):
         return ['token', 'expires_at']

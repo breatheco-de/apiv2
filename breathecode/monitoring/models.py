@@ -94,9 +94,8 @@ class MonitorScript(models.Model):
     script_slug = models.SlugField(default=None, null=True, blank=True)
     script_body = models.TextField(default=None, null=True, blank=True)
 
-    frequency_delta = models.DurationField(
-        default=timedelta(minutes=30),
-        help_text='How long to wait for the next execution, defaults to 30 minutes')
+    frequency_delta = models.DurationField(default=timedelta(minutes=30),
+                                           help_text='How long to wait for the next execution, defaults to 30 minutes')
     status_code = models.IntegerField(default=200)
     severity_level = models.IntegerField(default=0)
     notify_email = models.CharField(
@@ -104,8 +103,7 @@ class MonitorScript(models.Model):
         blank=True,
         default=None,
         null=True,
-        help_text=
-        'Only specify if need to override the application.notify_email, you can add many comma separated.')
+        help_text='Only specify if need to override the application.notify_email, you can add many comma separated.')
     status_text = models.CharField(max_length=255, default=None, null=True, blank=True, editable=False)
     special_status_text = models.CharField(max_length=255,
                                            default=None,
@@ -174,7 +172,8 @@ class CSVUpload(models.Model):
     finished_at = models.DateTimeField(auto_now=True, editable=False)
 
 
-SUBSCRIPTION_STATUS = ((OPERATIONAL, 'Operational'), (CRITICAL, 'Critical'))
+DISABLED = 'DISABLED'
+SUBSCRIPTION_STATUS = ((OPERATIONAL, 'Operational'), (CRITICAL, 'Critical'), (DISABLED, 'Disabled'))
 
 
 class RepositorySubscription(models.Model):
@@ -187,6 +186,7 @@ class RepositorySubscription(models.Model):
 
     hook_id = models.IntegerField(default=None, null=True, blank=True, help_text='Assigned from github')
 
+    # disabled means it will be ignored from now on
     status = models.CharField(max_length=20, choices=SUBSCRIPTION_STATUS, default=CRITICAL)
     status_message = models.TextField(null=True, blank=True, default='Waiting for ping')
 
@@ -254,27 +254,21 @@ class StripeEvent(models.Model):
 
 class RepositoryWebhook(models.Model):
 
-    webhook_action = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        default=None,
-        help_text='The specific action that was triggered on github for this webhook')
+    webhook_action = models.CharField(max_length=100,
+                                      blank=True,
+                                      null=True,
+                                      default=None,
+                                      help_text='The specific action that was triggered on github for this webhook')
     scope = models.CharField(
         max_length=100,
         blank=True,
         null=True,
         default=None,
-        help_text='The specific entity that triggered this webhook, for example: issues, issues_comment, etc.'
-    )
-    run_at = models.DateTimeField(help_text='Date/time that the webhook ran',
-                                  blank=True,
-                                  null=True,
-                                  default=None)
+        help_text='The specific entity that triggered this webhook, for example: issues, issues_comment, etc.')
+    run_at = models.DateTimeField(help_text='Date/time that the webhook ran', blank=True, null=True, default=None)
     repository = models.URLField(max_length=255, help_text='Github repo where the event occured')
 
-    payload = models.JSONField(
-        help_text='Info that came on the request, it varies depending on the webhook type')
+    payload = models.JSONField(help_text='Info that came on the request, it varies depending on the webhook type')
 
     academy_slug = models.SlugField()
 

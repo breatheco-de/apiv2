@@ -38,8 +38,7 @@ class AcademyEventTestSuite(AuthTestCase):
         print(LaunchDarkly.context.call_args_list)
 
         self.assertEqual(LaunchDarkly.context.call_args_list, [
-            call('1', f'{model.user.first_name} {model.user.last_name} ({model.user.email})', 'user',
-                 contexts),
+            call('1', f'{model.user.first_name} {model.user.last_name} ({model.user.email})', 'user', contexts),
         ])
 
         self.assertEqual(result, value)

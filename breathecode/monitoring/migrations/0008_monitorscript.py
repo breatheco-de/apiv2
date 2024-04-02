@@ -14,18 +14,15 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='MonitorScript',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('script_slug', models.SlugField(blank=True, default=None, null=True)),
                 ('script_body', models.TextField(blank=True, default=None, null=True)),
                 ('frequency_delta',
-                 models.DurationField(
-                     default='00:30:00',
-                     help_text='How long to wait for the next execution, defaults to 30 minutes')),
+                 models.DurationField(default='00:30:00',
+                                      help_text='How long to wait for the next execution, defaults to 30 minutes')),
                 ('status_code', models.FloatField(default=200)),
                 ('severity_level', models.IntegerField(default=0)),
-                ('status_text',
-                 models.CharField(blank=True, default=None, editable=False, max_length=255, null=True)),
+                ('status_text', models.CharField(blank=True, default=None, editable=False, max_length=255, null=True)),
                 ('special_status_text',
                  models.CharField(blank=True,
                                   default=None,

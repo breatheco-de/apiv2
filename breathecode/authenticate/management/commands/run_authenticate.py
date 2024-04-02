@@ -28,12 +28,7 @@ class Command(BaseCommand):
             default=None,
             help='Cohorts slugs to sync',
         )
-        parser.add_argument('--limit',
-                            action='store',
-                            dest='limit',
-                            type=int,
-                            default=0,
-                            help='How many to import')
+        parser.add_argument('--limit', action='store', dest='limit', type=int, default=0, help='How many to import')
 
     def handle(self, *args, **options):
         try:

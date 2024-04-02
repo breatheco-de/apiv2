@@ -47,9 +47,8 @@ class Migration(migrations.Migration):
             name='type',
             field=models.CharField(choices=[('COHORT_SET', 'Cohort set'),
                                             ('MENTORSHIP_SERVICE_SET', 'Mentorship service set'),
-                                            ('EVENT_TYPE_SET', 'Event type set'),
-                                            ('CHAT_SUPPORT', 'Chat support'), ('CODE_REVIEW', 'Code review'),
-                                            ('BUILD_PROJECT', 'Build project'),
+                                            ('EVENT_TYPE_SET', 'Event type set'), ('CHAT_SUPPORT', 'Chat support'),
+                                            ('CODE_REVIEW', 'Code review'), ('BUILD_PROJECT', 'Build project'),
                                             ('TEST_PROJECT', 'Test project')],
                                    default='COHORT_SET',
                                    help_text='Service type',
@@ -58,9 +57,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='AppService',
             fields=[
-                ('id',
-                 models.BigAutoField(auto_created=True, primary_key=True, serialize=False,
-                                     verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('service', models.SlugField(help_text='Microservice slug')),
                 ('app',
                  models.ForeignKey(blank=True,
