@@ -91,6 +91,7 @@ class AcademyTinySerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+    logo_url = serpy.Field()
 
 
 class CohortTinySerializer(serpy.Serializer):

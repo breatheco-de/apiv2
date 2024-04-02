@@ -18,6 +18,7 @@ def generate_user_invite(self, model, user_invite, arguments={}):
             'id': model.academy.id,
             'name': model.academy.name,
             'slug': model.academy.slug,
+            'logo_url': model.academy.logo_url,
         },
         'cohort': {
             'name': model.cohort.name,
@@ -359,6 +360,7 @@ class AuthenticateTestSuite(AuthTestCase):
                 'id': model['academy'].id,
                 'slug': model['academy'].slug,
                 'name': model['academy'].name,
+                'logo_url': model['academy'].logo_url,
             },
             'role': {
                 'id': 'potato',
