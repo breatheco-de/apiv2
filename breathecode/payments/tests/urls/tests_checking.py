@@ -2277,13 +2277,20 @@ def test_providing_coupons(bc: Breathecode, client: APIClient, auto, how_many_of
     ])
 
 
-@pytest.mark.parametrize('how_many_offers', [-1, 10])
+@pytest.mark.parametrize('how_many_offers, how_many_subscriptions, how_many_plan_financings', [
+    (-1, 0, 0),
+    (6, 0, 0),
+    (6, 5, 0),
+    (6, 0, 5),
+    (6, 3, 3),
+])
 @pytest.mark.parametrize('offered_at, expires_at', [
     (None, None),
     (UTC_NOW - timedelta(days=10), None),
     (UTC_NOW - timedelta(days=10), UTC_NOW + timedelta(days=10)),
 ])
-def test_getting_coupons(bc: Breathecode, client: APIClient, how_many_offers, offered_at, expires_at):
+def test_getting_coupons(bc: Breathecode, client: APIClient, how_many_offers, offered_at, expires_at,
+                         how_many_subscriptions, how_many_plan_financings):
     auto = True
     bag = {
         'status': 'CHECKING',
@@ -2313,6 +2320,7 @@ def test_getting_coupons(bc: Breathecode, client: APIClient, how_many_offers, of
     how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
     service_item = {'how_many': how_many1}
     subscription = {'valid_until': UTC_NOW - timedelta(seconds=1)}
+    plan_financing = {'plan_expires_at': UTC_NOW - timedelta(seconds=1), 'monthly_price': random.random() * 100}
     academy = {'available_as_saas': True}
     coupon = {
         'discount_value': random.random() * 100,
@@ -2323,10 +2331,11 @@ def test_getting_coupons(bc: Breathecode, client: APIClient, how_many_offers, of
     }
 
     model = bc.database.create(user=1,
+                               subscription=(how_many_subscriptions, subscription),
+                               plan_financing=(how_many_plan_financings, plan_financing),
                                bag=bag,
                                coupon=(3, coupon),
                                academy=academy,
-                               subscription=subscription,
                                cohort=1,
                                cohort_set=1,
                                service_item=service_item,
