@@ -457,22 +457,22 @@ def async_synchonize_repository_content(self, webhook):
                     f'The file {file_path} was modified, searching for matches in our registry with {base_repo_url}/blob/{default_branch}/{file_path}'
                 )
 
-                # include readme files and quiz json files
-                all_readme_files = Q(readme_url__icontains=f'{base_repo_url}/blob/{default_branch}/{file_path}')
+                # If the file being updated is a readme file
+                base_query = Q(readme_url__icontains=f'{base_repo_url}/blob/{default_branch}/{file_path}')
 
-                # Conditional query for when 'learn.json' is in file_path
-                learn_json_files = Q(asset_type__in=['EXERCISE', 'PROJECT'],
-                                     readme_url__icontains=f'{base_repo_url}/blob/{default_branch}/'
-                                     ) if 'learn.json' in file_path else Q()
+                # If its a learn.json for exercises and projects only
+                learnpack_query = Q(asset_type__in=['EXERCISE', 'PROJECT'],
+                                    readme_url__icontains=f'{base_repo_url}/blob/{default_branch}/'
+                                    ) if 'learn.json' in file_path else Q()
 
                 # Execute the combined query
-                assets = Asset.objects.filter(all_readme_files | learn_json_files)
+                assets = Asset.objects.filter(base_query | learnpack_query)
                 for a in assets:
                     if commit['id'] == a.github_commit_hash:
                         # ignore asset because the commit content is already on the asset
                         # probably the asset was updated in github using the breathecode api
                         continue
-                    logger.debug(f'Pulling asset readme from github for asset: {a.slug}')
+                    logger.debug(f'Pulling asset from github for asset: {a.slug}')
                     async_pull_from_github.delay(a.slug)
 
     return webhook
