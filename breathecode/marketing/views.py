@@ -1,58 +1,82 @@
-import os, re, datetime, logging, csv, pytz, json, hashlib
-from urllib import parse
-from django.utils import timezone
+import csv
+import datetime
+import hashlib
+import json
+import logging
+import os
+import re
 from datetime import timedelta
+from urllib import parse
+
+import pandas as pd
+import pytz
+from circuitbreaker import CircuitBreakerError
+from django.contrib.auth.models import AnonymousUser
+from django.db.models import CharField, Count, F, Func, Q, Value
+from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
+from django.utils import timezone
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes, renderer_classes
+from rest_framework.parsers import FileUploadParser, MultiPartParser
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework_csv.renderers import CSVRenderer
+
+import breathecode.marketing.tasks as tasks
+from breathecode.admissions.models import Academy
 from breathecode.authenticate.actions import get_user_language
+from breathecode.marketing.caches import CourseCache
 from breathecode.monitoring.models import CSVUpload
 from breathecode.renderers import PlainTextRenderer
-from breathecode.marketing.caches import CourseCache
-from rest_framework.decorators import renderer_classes
-from django.http import HttpResponseNotFound, HttpResponse, HttpResponseRedirect
-from django.contrib.auth.models import AnonymousUser
-from rest_framework.response import Response
-from rest_framework import status
-from django.db.models import Q
-from rest_framework.permissions import AllowAny
-from rest_framework.parsers import FileUploadParser, MultiPartParser
-from rest_framework.decorators import api_view, permission_classes
-from django.db.models import Count, F, Func, Value, CharField
-from breathecode.utils import (APIException, localize_query, capable_of, ValidationException, GenerateLookupsMixin,
-                               HeaderLimitOffsetPagination)
+from breathecode.services.activecampaign import ActiveCampaign
+from breathecode.utils import (
+    APIException,
+    GenerateLookupsMixin,
+    HeaderLimitOffsetPagination,
+    ValidationException,
+    capable_of,
+    localize_query,
+)
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.i18n import translation
-from breathecode.utils.decorators import validate_captcha
+
+from .actions import convert_data_frame, sync_automations, sync_tags, validate_email
+from .models import (
+    AcademyAlias,
+    ActiveCampaignAcademy,
+    Automation,
+    Course,
+    Downloadable,
+    FormEntry,
+    LeadGenerationApp,
+    ShortLink,
+    Tag,
+    UTMField,
+)
 from .serializers import (
-    GetCourseSerializer,
-    GetCourseSmallSerializer,
-    PostFormEntrySerializer,
-    FormEntrySerializer,
-    FormEntrySmallSerializer,
-    FormEntryBigSerializer,
-    ShortlinkSmallSerializer,
-    TagSmallSerializer,
-    AutomationSmallSerializer,
-    DownloadableSerializer,
-    ShortLinkSerializer,
-    PUTTagSerializer,
-    UTMSmallSerializer,
-    LeadgenAppSmallSerializer,
     AcademyAliasSmallSerializer,
     ActiveCampaignAcademyBigSerializer,
     ActiveCampaignAcademySerializer,
+    AutomationSmallSerializer,
+    DownloadableSerializer,
+    FormEntryBigSerializer,
     FormEntryHookSerializer,
+    FormEntrySerializer,
+    FormEntrySmallSerializer,
+    GetCourseSerializer,
+    GetCourseSmallSerializer,
+    LeadgenAppSmallSerializer,
+    PostFormEntrySerializer,
     PUTAutomationSerializer,
+    PUTTagSerializer,
+    ShortLinkSerializer,
+    ShortlinkSmallSerializer,
+    TagSmallSerializer,
+    UTMSmallSerializer,
 )
-from breathecode.services.activecampaign import ActiveCampaign
-from .actions import convert_data_frame, sync_tags, sync_automations, validate_email
-from .tasks import persist_single_lead, update_link_viewcount, async_activecampaign_webhook
-from .models import Course, ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable, LeadGenerationApp, UTMField, AcademyAlias
-from breathecode.admissions.models import Academy
-from breathecode.utils.find_by_full_name import query_like_by_full_name
-from rest_framework.views import APIView
-import breathecode.marketing.tasks as tasks
-import pandas as pd
-from circuitbreaker import CircuitBreakerError
+from .tasks import async_activecampaign_webhook, persist_single_lead, update_link_viewcount
 
 logger = logging.getLogger(__name__)
 MIME_ALLOW = 'text/csv'

@@ -9,7 +9,7 @@ from breathecode.services.eventbrite import Eventbrite
 from breathecode.utils import TaskPriority
 from breathecode.utils.datetime_integer import DatetimeInteger
 
-from .models import Event, EventbriteWebhook, LiveClass, Organization
+from .models import EventbriteWebhook, LiveClass, Organization
 
 logger = logging.getLogger(__name__)
 

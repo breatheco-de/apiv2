@@ -3,7 +3,6 @@ import logging
 import os
 import pathlib
 import re
-import time
 from typing import Optional
 
 import requests
@@ -29,11 +28,11 @@ from .actions import (
     add_syllabus_translations,
     asset_images_bucket,
     clean_asset_readme,
+    generate_screenshot,
     pull_from_github,
     screenshots_bucket,
     test_asset,
     upload_image_to_bucket,
-    generate_screenshot,
 )
 from .models import Asset, AssetImage
 

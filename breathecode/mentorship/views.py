@@ -1,10 +1,9 @@
 import hashlib
-import logging
-import re
-import os
 import hmac
+import logging
+import os
+import re
 import time
-from base64 import b64decode
 
 import timeago
 from django.contrib import messages
@@ -19,16 +18,15 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+import breathecode.activity.tasks as tasks_activity
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy, Token
 from breathecode.mentorship import actions
 from breathecode.mentorship.caches import MentorProfileCache
 from breathecode.mentorship.exceptions import ExtendSessionException
-import breathecode.activity.tasks as tasks_activity
 from breathecode.notify.actions import get_template_content
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.calendly import Calendly
-import breathecode.activity.tasks as tasks_activity
 from breathecode.utils import (
     GenerateLookupsMixin,
     HeaderLimitOffsetPagination,

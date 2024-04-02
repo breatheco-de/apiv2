@@ -1,13 +1,25 @@
-import os, ast
-from django.contrib import admin
+import ast
+import os
+
 from django import forms
+from django.contrib import admin
 from django.utils import timezone
-from .signals import github_webhook
-from .tasks import async_unsubscribe_repo, async_subscribe_repo
-from .actions import unsubscribe_repository, subscribe_repository
-from .models import Endpoint, Application, MonitorScript, CSVDownload, CSVUpload, RepositoryWebhook, RepositorySubscription
-from breathecode.notify.models import SlackChannel
 from django.utils.html import format_html
+
+from breathecode.notify.models import SlackChannel
+
+from .actions import subscribe_repository, unsubscribe_repository
+from .models import (
+    Application,
+    CSVDownload,
+    CSVUpload,
+    Endpoint,
+    MonitorScript,
+    RepositorySubscription,
+    RepositoryWebhook,
+)
+from .signals import github_webhook
+from .tasks import async_unsubscribe_repo
 
 
 @admin.display(description='Run Applications Diagnostic')

@@ -1,5 +1,9 @@
+import logging
+
+import requests
 from bs4 import BeautifulSoup
-import requests, logging
+
+from breathecode.authenticate.models import CredentialsGithub
 from breathecode.services.github import Github
 
 logger = logging.getLogger(__name__)
@@ -82,15 +86,15 @@ class AssetValidator():
 
     def readme_url(self):
         if self.asset.readme_url is not None or self.asset.readme_url != '':
-            if not asset.owner:
-                raise Exception(f'Asset must have an owner and the owner must have write access to the readme file')
+            if not self.asset.owner:
+                raise Exception('Asset must have an owner and the owner must have write access to the readme file')
 
-            credentials = CredentialsGithub.objects.filter(user=asset.owner).first()
+            credentials = CredentialsGithub.objects.filter(user=self.asset.owner).first()
             if credentials is None:
-                raise Exception(f'Github credentials for asset owner were not found')
+                raise Exception('Github credentials for asset owner were not found')
 
             gb = Github(credentials.token)
-            return gb.check_file(asset.readme_url)
+            return gb.check_file(self.asset.readme_url)
 
         return True
 
