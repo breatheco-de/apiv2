@@ -1237,5 +1237,5 @@ class CourseView(APIView):
         items = items.annotate(lang=Value(lang, output_field=CharField()))
 
         items = handler.queryset(items)
-        serializer = GetCourseSmallSerializer(items, context={'lang': lang}, many=True)
+        serializer = GetCourseSerializer(items, context={'lang': lang}, many=True)
         return handler.response(serializer.data)
