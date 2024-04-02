@@ -1,8 +1,8 @@
 from django.urls import path
 
-from .views import (AcademyBillView, AcademyInvoiceMemberView, AcademyProjectInvoiceView,
-                    AcademyProjectMemberView, AcademyProjectView, BillView, SingleBillView, SingleInvoiceView,
-                    get_issues, get_latest_bill, render_html_all_bills, render_html_bill, sync_user_issues)
+from .views import (AcademyBillView, AcademyInvoiceMemberView, AcademyProjectInvoiceView, AcademyProjectMemberView,
+                    AcademyProjectView, BillView, SingleBillView, SingleInvoiceView, get_issues, get_latest_bill,
+                    render_html_all_bills, render_html_bill, sync_user_issues)
 
 app_name = 'freelance'
 urlpatterns = [

@@ -53,10 +53,7 @@ def test_two_cohort_sets(bc: Breathecode):
 
     cohort_set_cohorts = [{'cohort_id': x + 1} for x in range(2)]
 
-    model = bc.database.create(cohort=(2, cohort),
-                               academy=academy,
-                               cohort_set=2,
-                               cohort_set_cohort=cohort_set_cohorts)
+    model = bc.database.create(cohort=(2, cohort), academy=academy, cohort_set=2, cohort_set_cohort=cohort_set_cohorts)
 
     CohortSet = bc.database.get_model('payments.CohortSet')
     queryset = CohortSet.objects.all()

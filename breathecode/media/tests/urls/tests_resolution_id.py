@@ -66,11 +66,10 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.delete(url, data)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': "You (user: 1) don't have this capability: crud_media_resolution for academy 1",
-                'status_code': 403
-            })
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: crud_media_resolution for academy 1",
+            'status_code': 403
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())

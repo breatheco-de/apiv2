@@ -13,8 +13,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='mentorshipsession',
             name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('STARTED', 'Started'),
-                                            ('COMPLETED', 'Completed'), ('FAILED', 'Failed')],
+            field=models.CharField(choices=[('PENDING', 'Pending'), ('STARTED', 'Started'), ('COMPLETED', 'Completed'),
+                                            ('FAILED', 'Failed')],
                                    default='PENDING',
                                    help_text='Options are: PENDING, STARTED, COMPLETED, FAILED',
                                    max_length=15),

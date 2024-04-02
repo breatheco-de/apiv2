@@ -61,8 +61,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
             'bill_id': n,
             'accounted_duration': timedelta(hours=random.randint(0, 10000)),
         } for n in range(1, 3)]
-        model = self.bc.database.create(mentorship_bill=mentorship_bills,
-                                        mentorship_session=mentorship_sessions)
+        model = self.bc.database.create(mentorship_bill=mentorship_bills, mentorship_session=mentorship_sessions)
 
         MentorshipBill = self.bc.database.get_model('mentorship.MentorshipBill')
         queryset = MentorshipBill.objects.filter()

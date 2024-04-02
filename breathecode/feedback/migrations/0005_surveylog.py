@@ -16,8 +16,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='SurveyLog',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('answered_at', models.DateTimeField(blank=True, default=None, null=True)),
                 ('token', models.CharField(max_length=255)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),

@@ -16,8 +16,7 @@ JOBS = [{
     'Job_description': 'Vuln exploitation Security reports',
     'Salary': '$1800 - 2100 USD/month',
     'Tags': ['api', 'back-end', 'full-stack', 'git', 'java', 'mvc', 'python', 'ruby'],
-    'Apply_to':
-    'https://www.getonbrd.com/jobs/programming/desarrollador-full-stack-developer-centry-santiago',
+    'Apply_to': 'https://www.getonbrd.com/jobs/programming/desarrollador-full-stack-developer-centry-santiago',
     '_type': 'dict'
 }, {
     'Searched_job': 'junior web developer',
@@ -29,8 +28,7 @@ JOBS = [{
     'Job_description': 'Vuln exploitation Security reports',
     'Salary': '$1800 - 2000 USD/month',
     'Tags': [],
-    'Apply_to':
-    'https://www.getonbrd.com/jobs/programming/desarrollodor-fullstack-python-react-alluxi-remote',
+    'Apply_to': 'https://www.getonbrd.com/jobs/programming/desarrollodor-fullstack-python-react-alluxi-remote',
     '_type': 'dict'
 }, {
     'Searched_job':
@@ -50,8 +48,8 @@ JOBS = [{
     'Salary':
     'Not supplied',
     'Tags': [
-        'angularjs', 'back-end', 'express', 'front-end', 'full-stack', 'javascript', 'magento',
-        'mobile development', 'node.js', 'php', 'react', 'redis', 'responsive', 'symfony', 'ui design'
+        'angularjs', 'back-end', 'express', 'front-end', 'full-stack', 'javascript', 'magento', 'mobile development',
+        'node.js', 'php', 'react', 'redis', 'responsive', 'symfony', 'ui design'
     ],
     'Apply_to':
     'https://www.getonbrd.com/jobs/programming/full-stack-developer-aaxis-commerce-santiago-3c8e',
@@ -111,8 +109,8 @@ JOBS = [{
     'Salary':
     '18000 USD/month',
     'Tags': [
-        'angularjs', 'api', 'back-end', 'ci/cd', 'css', 'docker', 'front-end', 'html5', 'javascript', 'json',
-        'mongodb', 'node.js', 'nosql', 'postgresql', 'react', 'responsive', 'ui design', 'virtualization'
+        'angularjs', 'api', 'back-end', 'ci/cd', 'css', 'docker', 'front-end', 'html5', 'javascript', 'json', 'mongodb',
+        'node.js', 'nosql', 'postgresql', 'react', 'responsive', 'ui design', 'virtualization'
     ],
     'Apply_to':
     'https://www.getonbrd.com/jobs/programming/junior-web-developer-reign-remote',
@@ -427,8 +425,7 @@ class ActionSaveDataTestCase(CareerTestCase):
             'published_date_raw': 'January 19, 2022',
             'published_date_processed': None,
             'status': 'OPENED',
-            'apply_url':
-            'https://www.getonbrd.com/jobs/programming/desarrollador-full-stack-developer-centry-santiago',
+            'apply_url': 'https://www.getonbrd.com/jobs/programming/desarrollador-full-stack-developer-centry-santiago',
             'currency': 'USD',
             'min_salary': 21600.0,
             'max_salary': 25200.0,
@@ -445,8 +442,7 @@ class ActionSaveDataTestCase(CareerTestCase):
             'published_date_raw': 'January 14, 2022',
             'published_date_processed': None,
             'status': 'OPENED',
-            'apply_url':
-            'https://www.getonbrd.com/jobs/programming/desarrollodor-fullstack-python-react-alluxi-remote',
+            'apply_url': 'https://www.getonbrd.com/jobs/programming/desarrollodor-fullstack-python-react-alluxi-remote',
             'currency': 'USD',
             'min_salary': 21600.0,
             'max_salary': 24000.0,
@@ -463,8 +459,7 @@ class ActionSaveDataTestCase(CareerTestCase):
             'published_date_raw': 'January 17, 2022',
             'published_date_processed': None,
             'status': 'OPENED',
-            'apply_url':
-            'https://www.getonbrd.com/jobs/programming/full-stack-developer-aaxis-commerce-santiago-3c8e',
+            'apply_url': 'https://www.getonbrd.com/jobs/programming/full-stack-developer-aaxis-commerce-santiago-3c8e',
             'currency': 'USD',
             'min_salary': 0.0,
             'max_salary': 0.0,
@@ -481,8 +476,7 @@ class ActionSaveDataTestCase(CareerTestCase):
             'published_date_raw': 'November 05, 2021',
             'published_date_processed': None,
             'status': 'OPENED',
-            'apply_url':
-            'https://www.getonbrd.com/jobs/cybersecurity/security-engineer-rule-1-ventures-remote',
+            'apply_url': 'https://www.getonbrd.com/jobs/cybersecurity/security-engineer-rule-1-ventures-remote',
             'currency': 'USD',
             'min_salary': 0.0,
             'max_salary': 0.0,
@@ -499,8 +493,7 @@ class ActionSaveDataTestCase(CareerTestCase):
             'published_date_raw': 'January 24, 2022',
             'published_date_processed': None,
             'status': 'OPENED',
-            'apply_url':
-            'https://www.getonbrd.com/jobs/programming/fronted-developer-id-business-intelligence-remote',
+            'apply_url': 'https://www.getonbrd.com/jobs/programming/fronted-developer-id-business-intelligence-remote',
             'currency': 'USD',
             'min_salary': 0.0,
             'max_salary': 0.0,

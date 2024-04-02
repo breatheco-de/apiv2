@@ -288,10 +288,7 @@ class LookupExtension(ExtensionBase):
     def _fixer(self, querystring: dict[str, str], fix) -> dict[str, str]:
         return querystring
 
-    def build(self,
-              lang: str,
-              overwrite: Optional[dict] = None,
-              **kwargs: dict | tuple) -> tuple[tuple, dict]:
+    def build(self, lang: str, overwrite: Optional[dict] = None, **kwargs: dict | tuple) -> tuple[tuple, dict]:
         if overwrite is None:
             overwrite = {}
 
@@ -322,12 +319,7 @@ class LookupExtension(ExtensionBase):
         # request
         querystring = dict([(x, self._request.GET.get(x)) for x in self._request.GET])
 
-        lookup = compile_lookup(ids=ids,
-                                slugs=slugs,
-                                ints=ints,
-                                strings=strings,
-                                datetimes=datetimes,
-                                bools=bools)
+        lookup = compile_lookup(ids=ids, slugs=slugs, ints=ints, strings=strings, datetimes=datetimes, bools=bools)
 
         if fix:
             querystring = self._fixer(querystring, fix)

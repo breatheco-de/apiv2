@@ -28,10 +28,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='assettechnology',
             name='icon_url',
-            field=models.URLField(blank=True,
-                                  default=None,
-                                  help_text='Image icon to show on website',
-                                  null=True),
+            field=models.URLField(blank=True, default=None, help_text='Image icon to show on website', null=True),
         ),
         migrations.AddField(
             model_name='assettechnology',

@@ -395,8 +395,7 @@ class Format:
 
             elif attr.__class__.__name__ == 'ManyRelatedManager':
                 instances = [
-                    f'{attr.model.__name__}({self._get_pk_name(x)}={self._repr_pk(x.pk)})'
-                    for x in attr.get_queryset()
+                    f'{attr.model.__name__}({self._get_pk_name(x)}={self._repr_pk(x.pk)})' for x in attr.get_queryset()
                 ]
                 result[key] = instances
 
@@ -413,9 +412,8 @@ class Format:
 
         attrs = [
             x for x in dir(model)
-            if hasattr(model.__class__, x) and (isinstance(getattr(model.__class__, x), SlugField)
-                                                or isinstance(getattr(model.__class__, x), SlugField))
-            and getattr(model.__class__, x).primary_key
+            if hasattr(model.__class__, x) and (isinstance(getattr(model.__class__, x), SlugField) or isinstance(
+                getattr(model.__class__, x), SlugField)) and getattr(model.__class__, x).primary_key
         ]
 
         for key in dir(model):

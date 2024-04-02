@@ -19,11 +19,10 @@ class CertificateTestSuite(AdmissionsTestCase):
         response = self.client.put(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.all_syllabus_schedule_dict(), [])
 

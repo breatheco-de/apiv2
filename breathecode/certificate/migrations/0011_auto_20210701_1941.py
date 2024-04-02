@@ -25,7 +25,6 @@ class Migration(migrations.Migration):
             name='is_default',
             field=models.BooleanField(
                 default=False,
-                help_text=
-                'Will be used as default for all future certificates. Only one default layout per academy.'),
+                help_text='Will be used as default for all future certificates. Only one default layout per academy.'),
         ),
     ]

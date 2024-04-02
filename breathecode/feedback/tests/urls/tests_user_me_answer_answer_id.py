@@ -241,8 +241,8 @@ def test_answer_id_put_with_all_valid_scores(bc: Breathecode, client: APIClient,
     assert json == expected
 
     dicts = [
-        answer for answer in bc.database.list_of('feedback.Answer') if not 'updated_at' in answer
-        or isinstance(answer['updated_at'], datetime) and answer.pop('updated_at')
+        answer for answer in bc.database.list_of('feedback.Answer')
+        if not 'updated_at' in answer or isinstance(answer['updated_at'], datetime) and answer.pop('updated_at')
     ]
 
     assert response.status_code == status.HTTP_200_OK

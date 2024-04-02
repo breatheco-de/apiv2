@@ -33,11 +33,10 @@ class CertificateTestSuite(CertificateTestCase):
         response = self.client.post(url, {})
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
         self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
@@ -278,23 +277,22 @@ class CertificateTestSuite(CertificateTestCase):
         del certificates[0]['issued_at']
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
-        self.assertEqual(
-            certificates, [{
-                'academy_id': 1,
-                'cohort_id': 1,
-                'expires_at': None,
-                'id': 1,
-                'layout_id': 1,
-                'preview_url': model['user_specialty'].preview_url,
-                'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
-                'signed_by_role': 'Director',
-                'specialty_id': 1,
-                'status': 'PERSISTED',
-                'status_text': 'Certificate successfully queued for PDF generation',
-                'user_id': 1,
-                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949',
-                'update_hash': user_specialty.update_hash,
-            }])
+        self.assertEqual(certificates, [{
+            'academy_id': 1,
+            'cohort_id': 1,
+            'expires_at': None,
+            'id': 1,
+            'layout_id': 1,
+            'preview_url': model['user_specialty'].preview_url,
+            'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
+            'signed_by_role': 'Director',
+            'specialty_id': 1,
+            'status': 'PERSISTED',
+            'status_text': 'Certificate successfully queued for PDF generation',
+            'user_id': 1,
+            'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949',
+            'update_hash': user_specialty.update_hash,
+        }])
 
         self.assertEqual(
             signals.user_specialty_saved.send.call_args_list,

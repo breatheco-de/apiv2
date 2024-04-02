@@ -13,11 +13,10 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='event',
             name='ended_at',
-            field=models.DateTimeField(
-                blank=True,
-                default=None,
-                help_text='This field contains the value of when the event actually finished.',
-                null=True),
+            field=models.DateTimeField(blank=True,
+                                       default=None,
+                                       help_text='This field contains the value of when the event actually finished.',
+                                       null=True),
         ),
         migrations.AlterField(
             model_name='event',

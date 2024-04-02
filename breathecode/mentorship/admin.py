@@ -1,8 +1,8 @@
 import pytz, logging, requests, re
 from django.contrib import admin, messages
 from django import forms
-from .models import (MentorProfile, MentorshipService, MentorshipSession, MentorshipBill, SupportAgent,
-                     SupportChannel, ChatBot, CalendlyOrganization, CalendlyWebhook)
+from .models import (MentorProfile, MentorshipService, MentorshipSession, MentorshipBill, SupportAgent, SupportChannel,
+                     ChatBot, CalendlyOrganization, CalendlyWebhook)
 from breathecode.services.calendly import Calendly
 from django.utils.html import format_html
 import breathecode.mentorship.tasks as tasks
@@ -149,8 +149,8 @@ class MentorAdmin(admin.ModelAdmin):
     list_filter = ['services__academy__slug', 'status', 'services__slug']
     readonly_fields = ('token', )
     filter_horizontal = ('syllabus', 'services')
-    actions = [generate_bill, mark_as_active, generate_slug_based_on_calendly] + change_field(
-        ['INNACTIVE', 'INVITED'], name='status')
+    actions = [generate_bill, mark_as_active, generate_slug_based_on_calendly] + change_field(['INNACTIVE', 'INVITED'],
+                                                                                              name='status')
 
     def current_status(self, obj):
         colors = {
@@ -173,8 +173,7 @@ class MentorAdmin(admin.ModelAdmin):
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='/mentor/{obj.slug}'>book</a>")
 
     def meet_url(self, obj):
-        return format_html(
-            f"<a rel='noopener noreferrer' target='_blank' href='/mentor/meet/{obj.slug}'>meet</a>")
+        return format_html(f"<a rel='noopener noreferrer' target='_blank' href='/mentor/meet/{obj.slug}'>meet</a>")
 
 
 def avoid_billing_this_session(modeladmin, request, queryset):
@@ -210,9 +209,7 @@ class SessionAdmin(admin.ModelAdmin):
         'mentee__first_name', 'mentee__last_name', 'mentee__email', 'mentor__user__first_name',
         'mentor__user__last_name', 'mentor__user__email'
     ]
-    list_filter = [
-        BilledFilter, 'allow_billing', 'status', 'mentor__services__academy', 'mentor__services__slug'
-    ]
+    list_filter = [BilledFilter, 'allow_billing', 'status', 'mentor__services__academy', 'mentor__services__slug']
     actions = [avoid_billing_this_session, allow_billing_this_session] + change_field(
         ['COMPLETED', 'FAILED', 'STARTED', 'PENDING'], name='status')
 
@@ -255,11 +252,9 @@ def release_sessions_from_bill(modeladmin, request, queryset):
 
 @admin.register(MentorshipBill)
 class MentorshipBillAdmin(admin.ModelAdmin):
-    list_display = ('id', 'mentor', 'status', 'total_duration_in_hours', 'total_price', 'paid_at',
-                    'invoice_url')
+    list_display = ('id', 'mentor', 'status', 'total_duration_in_hours', 'total_price', 'paid_at', 'invoice_url')
     list_filter = ['status']
-    actions = [release_sessions_from_bill] + change_field(['DUE', 'APPROVED', 'PAID', 'IGNORED'],
-                                                          name='status')
+    actions = [release_sessions_from_bill] + change_field(['DUE', 'APPROVED', 'PAID', 'IGNORED'], name='status')
 
     def invoice_url(self, obj):
         return format_html(

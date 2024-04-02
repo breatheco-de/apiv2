@@ -13,9 +13,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='serviceitemfeature',
             name='title',
-            field=models.CharField(default=None,
-                                   help_text='Title of the service item',
-                                   max_length=30,
-                                   null=True),
+            field=models.CharField(default=None, help_text='Title of the service item', max_length=30, null=True),
         ),
     ]

@@ -21,8 +21,7 @@ class Migration(migrations.Migration):
                 null=True,
                 validators=[
                     django.core.validators.RegexValidator(
-                        message=
-                        "Phone number must be entered in the format: '+99999999'. Up to 15 digits allowed.",
+                        message="Phone number must be entered in the format: '+99999999'. Up to 15 digits allowed.",
                         regex='^\\+?1?\\d{8,15}$')
                 ]),
         ),

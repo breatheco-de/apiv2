@@ -75,7 +75,6 @@ def test_with_webhooks_requirements_meet(bc: Breathecode, status, delta):
     command = Command()
     command.handle()
 
-    assert bc.database.list_of('marketing.ActiveCampaignWebhook') == bc.format.to_dict(
-        model.active_campaign_webhook)
+    assert bc.database.list_of('marketing.ActiveCampaignWebhook') == bc.format.to_dict(model.active_campaign_webhook)
 
     assert tasks.async_activecampaign_webhook.delay.call_args_list == [call(n + 1) for n in range(3)]

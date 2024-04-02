@@ -19,8 +19,7 @@ if how_many_bills > 0 or how_many_activities > 0:
         f'There are {str(bills.count())} provisioning bills and {str(activities.count())} provisioning '
         'user consumptions with errors',
         status='CRITICAL',
-        title=
-        f'There are {str(bills.count())} bills and {str(activities.count())} user consumptions with errors',
+        title=f'There are {str(bills.count())} bills and {str(activities.count())} user consumptions with errors',
         slug=f'{how_many_bills}-bills-and-{how_many_activities}-activities-with-errors')
 
 print('All good')

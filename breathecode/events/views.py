@@ -235,9 +235,7 @@ class EventMeView(APIView):
                                           'Event not found or you dont have access',
                                           academy=single_event.academy)
                 if single_event.live_stream_url is None or single_event.live_stream_url == '':
-                    return render_message(request,
-                                          'Event live stream URL is not found',
-                                          academy=single_event.academy)
+                    return render_message(request, 'Event live stream URL is not found', academy=single_event.academy)
                 return redirect(single_event.live_stream_url)
 
             serializer = EventBigSerializer(single_event, many=False)
@@ -389,11 +387,10 @@ class AcademyLiveClassView(APIView):
     def post(self, request, academy_id=None):
         lang = get_user_language(request)
 
-        serializer = LiveClassSerializer(data=request.data,
-                                         context={
-                                             'lang': lang,
-                                             'academy_id': academy_id,
-                                         })
+        serializer = LiveClassSerializer(data=request.data, context={
+            'lang': lang,
+            'academy_id': academy_id,
+        })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -412,12 +409,10 @@ class AcademyLiveClassView(APIView):
                             es=f'Clase en vivo no encontrada para esta academia {academy_id}',
                             slug='not-found'))
 
-        serializer = LiveClassSerializer(already,
-                                         data=request.data,
-                                         context={
-                                             'lang': lang,
-                                             'academy_id': academy_id,
-                                         })
+        serializer = LiveClassSerializer(already, data=request.data, context={
+            'lang': lang,
+            'academy_id': academy_id,
+        })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -436,20 +431,14 @@ class AcademyLiveClassJoinView(APIView):
 
         if not live_class:
             raise ValidationException(
-                translation(lang,
-                            en='Live class not found',
-                            es='Clase en vivo no encontrada',
-                            slug='not-found'))
+                translation(lang, en='Live class not found', es='Clase en vivo no encontrada', slug='not-found'))
 
         if not live_class.cohort_time_slot.cohort.online_meeting_url:
             message = translation(lang,
                                   en='Live class has no online meeting url',
                                   es='La clase en vivo no tiene una URL de reunión en línea',
                                   slug='no-meeting-url')
-            return render_message(request,
-                                  message,
-                                  status=400,
-                                  academy=live_class.cohort_time_slot.cohort.academy)
+            return render_message(request, message, status=400, academy=live_class.cohort_time_slot.cohort.academy)
 
         return redirect(live_class.cohort_time_slot.cohort.online_meeting_url)
 
@@ -609,16 +598,13 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
         lookups = self.generate_lookups(request, many_fields=['id'])
 
         if not lookups and not event_id:
-            raise ValidationException('provide arguments in the url',
-                                      code=400,
-                                      slug='without-lookups-and-event-id')
+            raise ValidationException('provide arguments in the url', code=400, slug='without-lookups-and-event-id')
 
         if lookups and event_id:
-            raise ValidationException(
-                'event_id in url '
-                'in bulk mode request, use querystring style instead',
-                code=400,
-                slug='lookups-and-event-id-together')
+            raise ValidationException('event_id in url '
+                                      'in bulk mode request, use querystring style instead',
+                                      code=400,
+                                      slug='lookups-and-event-id-together')
 
         if lookups:
             alls = Event.objects.filter(**lookups)
@@ -654,8 +640,7 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
 
         event = Event.objects.filter(academy__id=academy_id, id=event_id).first()
         if event is None:
-            raise ValidationException('Event doest not exist or does not belong to this academy',
-                                      slug='not-found')
+            raise ValidationException('Event doest not exist or does not belong to this academy', slug='not-found')
 
         if event.status != 'DRAFT':
             raise ValidationException('Only draft events can be deleted', slug='non-draft-event')
@@ -715,8 +700,7 @@ class AcademyEventTypeView(APIView):
         if event_type_slug is not None:
             event_type = EventType.objects.filter(academy__id=academy_id, slug=event_type_slug).first()
             if not event_type:
-                raise ValidationException('Event Type not found for this academy',
-                                          slug='event-type-not-found')
+                raise ValidationException('Event Type not found for this academy', slug='event-type-not-found')
 
             serializer = EventTypeBigSerializer(event_type, many=False)
             return Response(serializer.data)
@@ -770,10 +754,7 @@ class EventTypeVisibilitySettingView(APIView):
         event_type = EventType.objects.filter(slug=event_type_slug).first()
         if not event_type:
             raise ValidationException(
-                translation(lang,
-                            en='Event type not found',
-                            es='Tipo de evento no encontrado',
-                            slug='not-found'), )
+                translation(lang, en='Event type not found', es='Tipo de evento no encontrado', slug='not-found'), )
 
         if event_type.allow_shared_creation or event_type.academy.id == academy_id:
             items = event_type.visibility_settings.filter(academy__id=academy_id)
@@ -806,9 +787,7 @@ class EventTypeVisibilitySettingView(APIView):
                                                id=request.data['syllabus']).first()
             if syllabus is None:
                 raise ValidationException(
-                    translation(lang,
-                                en='Syllabus not found',
-                                es='Syllabus no encontrado',
+                    translation(lang, en='Syllabus not found', es='Syllabus no encontrado',
                                 slug='syllabus-not-found'), )
 
         cohort = None
@@ -816,10 +795,7 @@ class EventTypeVisibilitySettingView(APIView):
             cohort = Cohort.objects.filter(id=request.data['cohort'], academy=academy_id).first()
             if cohort is None:
                 raise ValidationException(
-                    translation(lang,
-                                en='Cohort not found',
-                                es='Cohorte no encontrada',
-                                slug='cohort-not-found'), )
+                    translation(lang, en='Cohort not found', es='Cohorte no encontrada', slug='cohort-not-found'), )
 
         visibility_setting, created = EventTypeVisibilitySetting.objects.get_or_create(syllabus=syllabus,
                                                                                        academy=academy,
@@ -852,9 +828,8 @@ class EventTypeVisibilitySettingView(APIView):
                                                   slug='event-type-visibility-setting-not-found'),
                                       code=404)
 
-        other_event_type = EventType.objects.filter(
-            visibility_settings__id=visibility_setting_id,
-            academy=academy_id).exclude(slug=event_type_slug).exists()
+        other_event_type = EventType.objects.filter(visibility_settings__id=visibility_setting_id,
+                                                    academy=academy_id).exclude(slug=event_type_slug).exists()
 
         if other_event_type:
             event_type.visibility_settings.remove(item)
@@ -888,8 +863,7 @@ def join_event(request, token, event):
         })
 
     # if the event is happening right now and I have not joined yet
-    checkin = EventCheckin.objects.filter(Q(email=token.user.email) | Q(attendee=token.user),
-                                          event=event).first()
+    checkin = EventCheckin.objects.filter(Q(email=token.user.email) | Q(attendee=token.user), event=event).first()
     if checkin is None:
         checkin = EventCheckin(event=event, attendee=token.user, email=token.user.email)
 
@@ -946,8 +920,7 @@ class EventMeCheckinView(APIView):
                 raise ValidationException(translation(
                     lang,
                     en='Tu plan no te permite tener acceso a eventos de este tipo: ' + event.event_type.name,
-                    es='Your current plan does not include access to this type of events: ' +
-                    event.event_type.name,
+                    es='Your current plan does not include access to this type of events: ' + event.event_type.name,
                     slug='event-not-found'),
                                           code=404)
 
@@ -975,8 +948,7 @@ class EventMeCheckinView(APIView):
                 raise ValidationException(translation(
                     lang,
                     en='Tu plan no te permite tener acceso a eventos de este tipo: ' + event.event_type.name,
-                    es='Your current plan does not include access to this type of events: ' +
-                    event.event_type.name,
+                    es='Your current plan does not include access to this type of events: ' + event.event_type.name,
                     slug='event-not-found'),
                                           code=404)
 
@@ -1262,8 +1234,7 @@ class ICalStudentView(APIView):
             until_date = item.removed_at or item.cohort.ending_date
 
             if not until_date:
-                until_date = timezone.make_aware(
-                    datetime(year=2100, month=12, day=31, hour=12, minute=00, second=00))
+                until_date = timezone.make_aware(datetime(year=2100, month=12, day=31, hour=12, minute=00, second=00))
 
             ending_at = DatetimeInteger.to_datetime(item.timezone, item.ending_at)
             ending_at = fix_datetime_weekday(item.cohort.kickoff_date, ending_at, next=True)
@@ -1326,8 +1297,7 @@ class ICalCohortsView(APIView):
                                           academy__id__in=ids).order_by('id')
 
         elif slugs:
-            items = Cohort.objects.filter(ending_date__isnull=False,
-                                          never_ends=False,
+            items = Cohort.objects.filter(ending_date__isnull=False, never_ends=False,
                                           academy__slug__in=slugs).order_by('id')
 
         else:
@@ -1335,8 +1305,7 @@ class ICalCohortsView(APIView):
 
         if not ids and not slugs:
             raise ValidationException(
-                'You need to specify at least one academy or academy_slug (comma separated) in the querystring'
-            )
+                'You need to specify at least one academy or academy_slug (comma separated) in the querystring')
 
         if (Academy.objects.filter(id__in=ids).count() != len(ids)
                 or Academy.objects.filter(slug__in=slugs).count() != len(slugs)):
@@ -1509,8 +1478,7 @@ class ICalEventView(APIView):
 
         if not ids and not slugs:
             raise ValidationException(
-                'You need to specify at least one academy or academy_slug (comma separated) in the querystring'
-            )
+                'You need to specify at least one academy or academy_slug (comma separated) in the querystring')
 
         if (Academy.objects.filter(id__in=ids).count() != len(ids)
                 or Academy.objects.filter(slug__in=slugs).count() != len(slugs)):
@@ -1591,8 +1559,7 @@ class ICalEventView(APIView):
                 organizer.params['role'] = vText('OWNER')
                 event['organizer'] = organizer
 
-            if item.venue and (item.venue.country or item.venue.state or item.venue.city
-                               or item.venue.street_address):
+            if item.venue and (item.venue.country or item.venue.state or item.venue.city or item.venue.street_address):
                 value = ''
 
                 if item.venue.street_address:

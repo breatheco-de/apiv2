@@ -36,10 +36,7 @@ class AssessmentModelsMixin(ModelsMixin):
             if 'user' in models or user:
                 kargs['author'] = just_one(models['user'])
 
-            models['assessment'] = create_models(assessment, 'assessment.Assessment', **{
-                **kargs,
-                **assessment_kwargs
-            })
+            models['assessment'] = create_models(assessment, 'assessment.Assessment', **{**kargs, **assessment_kwargs})
 
         if not 'question' in models and is_valid(question):
             kargs = {}
@@ -50,10 +47,7 @@ class AssessmentModelsMixin(ModelsMixin):
             if 'user' in models or user:
                 kargs['author'] = just_one(models['user'])
 
-            models['question'] = create_models(question, 'assessment.Question', **{
-                **kargs,
-                **question_kwargs
-            })
+            models['question'] = create_models(question, 'assessment.Question', **{**kargs, **question_kwargs})
 
         if not 'option' in models and is_valid(option):
             kargs = {}
@@ -75,11 +69,10 @@ class AssessmentModelsMixin(ModelsMixin):
             if 'user' in models or user:
                 kargs['student'] = just_one(models['user'])
 
-            models['student_assessment'] = create_models(student_assessment, 'assessment.StudentAssessment',
-                                                         **{
-                                                             **kargs,
-                                                             **student_assessment_kwargs
-                                                         })
+            models['student_assessment'] = create_models(student_assessment, 'assessment.StudentAssessment', **{
+                **kargs,
+                **student_assessment_kwargs
+            })
 
         if not 'answer' in models and is_valid(answer):
             kargs = {}

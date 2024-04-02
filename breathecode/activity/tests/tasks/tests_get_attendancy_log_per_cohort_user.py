@@ -50,8 +50,7 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
 
-        self.assertEqual(logging.Logger.info.call_args_list,
-                         [call('Executing get_attendancy_log_per_cohort_user')])
+        self.assertEqual(logging.Logger.info.call_args_list, [call('Executing get_attendancy_log_per_cohort_user')])
         self.assertEqual(logging.Logger.error.call_args_list, [call('Cohort user not found')])
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])

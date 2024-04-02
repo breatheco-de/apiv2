@@ -1,12 +1,12 @@
 from datetime import timedelta
 from django.utils import timezone
 from unittest.mock import patch, MagicMock, call, mock_open
-from breathecode.tests.mocks import (GOOGLE_CLOUD_PATH, apply_google_cloud_client_mock,
-                                     apply_google_cloud_bucket_mock, apply_google_cloud_blob_mock,
-                                     MAILGUN_PATH, MAILGUN_INSTANCES, apply_mailgun_requests_post_mock,
-                                     SLACK_PATH, SLACK_INSTANCES, apply_slack_requests_request_mock,
-                                     REQUESTS_PATH, REQUESTS_INSTANCES, apply_requests_get_mock, LOGGING_PATH,
-                                     LOGGING_INSTANCES, apply_logging_logger_mock)
+from breathecode.tests.mocks import (GOOGLE_CLOUD_PATH, apply_google_cloud_client_mock, apply_google_cloud_bucket_mock,
+                                     apply_google_cloud_blob_mock, MAILGUN_PATH, MAILGUN_INSTANCES,
+                                     apply_mailgun_requests_post_mock, SLACK_PATH, SLACK_INSTANCES,
+                                     apply_slack_requests_request_mock, REQUESTS_PATH, REQUESTS_INSTANCES,
+                                     apply_requests_get_mock, LOGGING_PATH, LOGGING_INSTANCES,
+                                     apply_logging_logger_mock)
 from ...mixins import MonitoringTestCase
 from ....management.commands.monitor import Command
 
@@ -173,13 +173,12 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             **self.model_to_dict(model, 'application'),
         }])
 
-        self.assertEqual(self.all_endpoint_dict(),
-                         [{
-                             **self.model_to_dict(model, 'endpoint'),
-                             'frequency_in_minutes': 30.0,
-                             'severity_level': 0,
-                             'status_text': None,
-                         }])
+        self.assertEqual(self.all_endpoint_dict(), [{
+            **self.model_to_dict(model, 'endpoint'),
+            'frequency_in_minutes': 30.0,
+            'severity_level': 0,
+            'status_text': None,
+        }])
 
         import requests
         mock_breathecode = requests.get
@@ -268,12 +267,11 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             **self.model_to_dict(model, 'application'),
         }])
 
-        self.assertEqual(self.all_endpoint_dict(),
-                         [{
-                             **self.model_to_dict(model, 'endpoint'),
-                             'frequency_in_minutes': 30.0,
-                             'severity_level': 0,
-                         }])
+        self.assertEqual(self.all_endpoint_dict(), [{
+            **self.model_to_dict(model, 'endpoint'),
+            'frequency_in_minutes': 30.0,
+            'severity_level': 0,
+        }])
 
         import requests
         mock_breathecode = requests.get
@@ -295,9 +293,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         mock_slack = SLACK_INSTANCES['request']
         mock_slack.call_args_list = []
 
-        model = self.generate_models(application=True,
-                                     endpoint=True,
-                                     endpoint_kwargs={'url': 'https://potato.io'})
+        model = self.generate_models(application=True, endpoint=True, endpoint_kwargs={'url': 'https://potato.io'})
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
@@ -328,9 +324,8 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         import requests
         mock_breathecode = requests.get
 
-        self.assertEqual(
-            mock_breathecode.call_args_list,
-            [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
+        self.assertEqual(mock_breathecode.call_args_list,
+                         [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -345,9 +340,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         mock_slack = SLACK_INSTANCES['request']
         mock_slack.call_args_list = []
 
-        model = self.generate_models(application=True,
-                                     endpoint=True,
-                                     endpoint_kwargs={'url': 'https://potato.io'})
+        model = self.generate_models(application=True, endpoint=True, endpoint_kwargs={'url': 'https://potato.io'})
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
@@ -375,9 +368,8 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
-        self.assertEqual(
-            mock_breathecode.call_args_list,
-            [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
+        self.assertEqual(mock_breathecode.call_args_list,
+                         [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -423,9 +415,8 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
-        self.assertEqual(
-            mock_breathecode.call_args_list,
-            [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
+        self.assertEqual(mock_breathecode.call_args_list,
+                         [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -469,9 +460,8 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
-        self.assertEqual(
-            mock_breathecode.call_args_list,
-            [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
+        self.assertEqual(mock_breathecode.call_args_list,
+                         [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -486,9 +476,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         mock_slack = SLACK_INSTANCES['request']
         mock_slack.call_args_list = []
 
-        model = self.generate_models(application=True,
-                                     endpoint=True,
-                                     endpoint_kwargs={'url': 'https://potato.io'})
+        model = self.generate_models(application=True, endpoint=True, endpoint_kwargs={'url': 'https://potato.io'})
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
@@ -518,9 +506,8 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
-        self.assertEqual(
-            mock_breathecode.call_args_list,
-            [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
+        self.assertEqual(mock_breathecode.call_args_list,
+                         [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -535,9 +522,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         mock_slack = SLACK_INSTANCES['request']
         mock_slack.call_args_list = []
 
-        model = self.generate_models(application=True,
-                                     endpoint=True,
-                                     endpoint_kwargs={'url': 'https://potato.io'})
+        model = self.generate_models(application=True, endpoint=True, endpoint_kwargs={'url': 'https://potato.io'})
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
@@ -567,9 +552,8 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
-        self.assertEqual(
-            mock_breathecode.call_args_list,
-            [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
+        self.assertEqual(mock_breathecode.call_args_list,
+                         [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -616,9 +600,8 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
-        self.assertEqual(
-            mock_breathecode.call_args_list,
-            [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
+        self.assertEqual(mock_breathecode.call_args_list,
+                         [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -633,9 +616,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         mock_slack = SLACK_INSTANCES['request']
         mock_slack.call_args_list = []
 
-        model = self.generate_models(application=True,
-                                     endpoint=True,
-                                     endpoint_kwargs={'url': 'https://potato.io'})
+        model = self.generate_models(application=True, endpoint=True, endpoint_kwargs={'url': 'https://potato.io'})
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
@@ -665,9 +646,8 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
-        self.assertEqual(
-            mock_breathecode.call_args_list,
-            [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
+        self.assertEqual(mock_breathecode.call_args_list,
+                         [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -719,9 +699,8 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         self.assertEqual(len(mock_mailgun.call_args_list), 1)
         self.assertEqual(mock_slack.call_args_list, [])
-        self.assertEqual(
-            mock_breathecode.call_args_list,
-            [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
+        self.assertEqual(mock_breathecode.call_args_list,
+                         [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -775,9 +754,8 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
-        self.assertEqual(
-            mock_breathecode.call_args_list,
-            [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
+        self.assertEqual(mock_breathecode.call_args_list,
+                         [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -829,9 +807,8 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
-        self.assertEqual(
-            mock_breathecode.call_args_list,
-            [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
+        self.assertEqual(mock_breathecode.call_args_list,
+                         [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -885,9 +862,8 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(len(mock_slack.call_args_list), 1)
-        self.assertEqual(
-            mock_breathecode.call_args_list,
-            [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
+        self.assertEqual(mock_breathecode.call_args_list,
+                         [call('https://potato.io', headers={'User-Agent': 'BreathecodeMonitoring/1.0'}, timeout=2)])
 
     """
     🔽🔽🔽 Scripts entity 🔽🔽🔽
@@ -1026,15 +1002,14 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         monitor_scripts = [{
             **x, 'last_run': None
         } for x in self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
-        self.assertEqual(monitor_scripts, [{
-            **self.model_to_dict(model, 'monitor_script'),
-            'response_text':
-            monitor_scripts[0]['response_text'],
-            'status':
-            'MINOR',
-            'status_code':
-            1,
-        }])
+        self.assertEqual(
+            monitor_scripts,
+            [{
+                **self.model_to_dict(model, 'monitor_script'),
+                'response_text': monitor_scripts[0]['response_text'],
+                'status': 'MINOR',
+                'status_code': 1,
+            }])
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
@@ -1072,15 +1047,14 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         monitor_scripts = [{
             **x, 'last_run': None
         } for x in self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
-        self.assertEqual(monitor_scripts, [{
-            **self.model_to_dict(model, 'monitor_script'),
-            'response_text':
-            monitor_scripts[0]['response_text'],
-            'status':
-            'CRITICAL',
-            'status_code':
-            1,
-        }])
+        self.assertEqual(
+            monitor_scripts,
+            [{
+                **self.model_to_dict(model, 'monitor_script'),
+                'response_text': monitor_scripts[0]['response_text'],
+                'status': 'CRITICAL',
+                'status_code': 1,
+            }])
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
@@ -1156,15 +1130,14 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         monitor_scripts = [{
             **x, 'last_run': None
         } for x in self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
-        self.assertEqual(monitor_scripts, [{
-            **self.model_to_dict(model, 'monitor_script'),
-            'response_text':
-            monitor_scripts[0]['response_text'],
-            'status':
-            'MINOR',
-            'status_code':
-            1,
-        }])
+        self.assertEqual(
+            monitor_scripts,
+            [{
+                **self.model_to_dict(model, 'monitor_script'),
+                'response_text': monitor_scripts[0]['response_text'],
+                'status': 'MINOR',
+                'status_code': 1,
+            }])
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
@@ -1202,15 +1175,14 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         monitor_scripts = [{
             **x, 'last_run': None
         } for x in self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
-        self.assertEqual(monitor_scripts, [{
-            **self.model_to_dict(model, 'monitor_script'),
-            'response_text':
-            monitor_scripts[0]['response_text'],
-            'status':
-            'CRITICAL',
-            'status_code':
-            1,
-        }])
+        self.assertEqual(
+            monitor_scripts,
+            [{
+                **self.model_to_dict(model, 'monitor_script'),
+                'response_text': monitor_scripts[0]['response_text'],
+                'status': 'CRITICAL',
+                'status_code': 1,
+            }])
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
@@ -1257,15 +1229,14 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         monitor_scripts = [{
             **x, 'last_run': None
         } for x in self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
-        self.assertEqual(monitor_scripts, [{
-            **self.model_to_dict(model, 'monitor_script'),
-            'response_text':
-            monitor_scripts[0]['response_text'],
-            'status':
-            'CRITICAL',
-            'status_code':
-            1,
-        }])
+        self.assertEqual(
+            monitor_scripts,
+            [{
+                **self.model_to_dict(model, 'monitor_script'),
+                'response_text': monitor_scripts[0]['response_text'],
+                'status': 'CRITICAL',
+                'status_code': 1,
+            }])
 
         self.assertEqual(len(mock_mailgun.call_args_list), 1)
         self.assertEqual(len(mock_slack.call_args_list), 1)

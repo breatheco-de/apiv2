@@ -13,8 +13,8 @@ from django.db import models
 from circuitbreaker import circuit
 
 from django.db.models.fields.related_descriptors import (ReverseManyToOneDescriptor, ManyToManyDescriptor,
-                                                         ForwardManyToOneDescriptor,
-                                                         ReverseOneToOneDescriptor, ForwardOneToOneDescriptor)
+                                                         ForwardManyToOneDescriptor, ReverseOneToOneDescriptor,
+                                                         ForwardOneToOneDescriptor)
 import zstandard
 
 __all__ = ['Cache', 'CACHE_DESCRIPTORS', 'CACHE_DEPENDENCIES']

@@ -22,10 +22,9 @@ from .career_queries_mixin import CareerQueriesMixin
 __all__ = ['GenerateQueriesMixin']
 
 
-class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin, AssessmentQueriesMixin,
-                           AssignmentsQueriesMixin, AuthenticateQueriesMixin, CertificateQueriesMixin,
-                           EventsQueriesMixin, FeedbackQueriesMixin, FreelanceQueriesMixin,
-                           MarketingQueriesMixin, NotifyQueriesMixin, MonitoringQueriesMixin,
+class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin, AssessmentQueriesMixin, AssignmentsQueriesMixin,
+                           AuthenticateQueriesMixin, CertificateQueriesMixin, EventsQueriesMixin, FeedbackQueriesMixin,
+                           FreelanceQueriesMixin, MarketingQueriesMixin, NotifyQueriesMixin, MonitoringQueriesMixin,
                            MediaQueriesMixin, CareerQueriesMixin):
     __project__ = 'breathecode'
     __generate_queries_was_loaded__ = False
@@ -79,11 +78,9 @@ class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin, AssessmentQuerie
         snake_case_name = re.sub(r'(?<!^)(?=[A-Z])', '_', Model.__name__).lower()
 
         setattr(self, f'get_{snake_case_name}', self.__get_model__(f'get_{snake_case_name}', Model))
-        setattr(self, f'get_{snake_case_name}_dict',
-                self.__get_model_dict__(f'get_{snake_case_name}_dict', Model))
+        setattr(self, f'get_{snake_case_name}_dict', self.__get_model_dict__(f'get_{snake_case_name}_dict', Model))
         setattr(self, f'all_{snake_case_name}', self.__all_model__(f'all_{snake_case_name}', Model))
-        setattr(self, f'all_{snake_case_name}_dict',
-                self.__all_model_dict__(f'all_{snake_case_name}_dict', Model))
+        setattr(self, f'all_{snake_case_name}_dict', self.__all_model_dict__(f'all_{snake_case_name}_dict', Model))
         setattr(self, f'count_{snake_case_name}', self.__count_model__(f'count_{snake_case_name}', Model))
 
     def generate_queries(self):

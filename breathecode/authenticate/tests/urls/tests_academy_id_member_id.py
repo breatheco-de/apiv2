@@ -27,29 +27,20 @@ class MemberGetDuckTestSuite(AuthTestCase):
 
     def test_academy_id_member_id_without_auth(self):
         """Test /academy/:id/member without auth"""
-        url = reverse_lazy('authenticate:academy_id_member_id',
-                           kwargs={
-                               'academy_id': 1,
-                               'user_id_or_email': '1'
-                           })
+        url = reverse_lazy('authenticate:academy_id_member_id', kwargs={'academy_id': 1, 'user_id_or_email': '1'})
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED,
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED,
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_academy_id_member_id__without_capabilities(self):
         self.bc.request.set_headers(academy=1)
         model = self.bc.database.create(authenticate=True)
-        url = reverse_lazy('authenticate:academy_id_member_id',
-                           kwargs={
-                               'academy_id': 1,
-                               'user_id_or_email': '1'
-                           })
+        url = reverse_lazy('authenticate:academy_id_member_id', kwargs={'academy_id': 1, 'user_id_or_email': '1'})
         response = self.client.get(url)
         json = response.json()
 
@@ -63,10 +54,7 @@ class MemberGetDuckTestSuite(AuthTestCase):
     def test_academy_id_member_id__with_auth(self):
         for n in range(1, 4):
             self.bc.request.set_headers(academy=n)
-            model = self.bc.database.create(authenticate=True,
-                                            capability='read_member',
-                                            role='role',
-                                            profile_academy=1)
+            model = self.bc.database.create(authenticate=True, capability='read_member', role='role', profile_academy=1)
             url = reverse_lazy('authenticate:academy_id_member_id',
                                kwargs={
                                    'academy_id': n,
@@ -116,29 +104,20 @@ class MemberPutDuckTestSuite(AuthTestCase):
 
     def test_academy_id_member_id_without_auth(self):
         """Test /academy/:id/member without auth"""
-        url = reverse_lazy('authenticate:academy_id_member_id',
-                           kwargs={
-                               'academy_id': 1,
-                               'user_id_or_email': '1'
-                           })
+        url = reverse_lazy('authenticate:academy_id_member_id', kwargs={'academy_id': 1, 'user_id_or_email': '1'})
         response = self.client.put(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED,
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED,
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_academy_id_member_id__without_capabilities(self):
         self.bc.request.set_headers(academy=1)
         model = self.bc.database.create(authenticate=True)
-        url = reverse_lazy('authenticate:academy_id_member_id',
-                           kwargs={
-                               'academy_id': 1,
-                               'user_id_or_email': '1'
-                           })
+        url = reverse_lazy('authenticate:academy_id_member_id', kwargs={'academy_id': 1, 'user_id_or_email': '1'})
         response = self.client.put(url)
         json = response.json()
 
@@ -163,11 +142,7 @@ class MemberPutDuckTestSuite(AuthTestCase):
                                             role='role',
                                             profile_academy=profile_academy)
 
-            url = reverse_lazy('authenticate:academy_id_member_id',
-                               kwargs={
-                                   'academy_id': n,
-                                   'user_id_or_email': '1'
-                               })
+            url = reverse_lazy('authenticate:academy_id_member_id', kwargs={'academy_id': n, 'user_id_or_email': '1'})
             response = self.client.put(url)
 
             json = response.json()
@@ -177,18 +152,11 @@ class MemberPutDuckTestSuite(AuthTestCase):
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_academy_id_member_id__with_wrong_required_fields(self):
-        model = self.bc.database.create(authenticate=True,
-                                        capability='crud_member',
-                                        role='role',
-                                        profile_academy=1)
+        model = self.bc.database.create(authenticate=True, capability='crud_member', role='role', profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
 
-        url = reverse_lazy('authenticate:academy_id_member_id',
-                           kwargs={
-                               'academy_id': 1,
-                               'user_id_or_email': '1'
-                           })
+        url = reverse_lazy('authenticate:academy_id_member_id', kwargs={'academy_id': 1, 'user_id_or_email': '1'})
         response = self.client.put(url)
 
         json = response.json()
@@ -235,29 +203,20 @@ class MemberDeleteDuckTestSuite(AuthTestCase):
 
     def test_academy_id_member_id_without_auth(self):
         """Test /academy/:id/member without auth"""
-        url = reverse_lazy('authenticate:academy_id_member_id',
-                           kwargs={
-                               'academy_id': 1,
-                               'user_id_or_email': '1'
-                           })
+        url = reverse_lazy('authenticate:academy_id_member_id', kwargs={'academy_id': 1, 'user_id_or_email': '1'})
         response = self.client.delete(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED,
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED,
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_academy_id_member_id__without_capabilities(self):
         self.bc.request.set_headers(academy=1)
         model = self.bc.database.create(authenticate=True)
-        url = reverse_lazy('authenticate:academy_id_member_id',
-                           kwargs={
-                               'academy_id': 1,
-                               'user_id_or_email': '1'
-                           })
+        url = reverse_lazy('authenticate:academy_id_member_id', kwargs={'academy_id': 1, 'user_id_or_email': '1'})
         response = self.client.delete(url)
         json = response.json()
 
@@ -271,10 +230,7 @@ class MemberDeleteDuckTestSuite(AuthTestCase):
     def test_academy_id_member_id__with_auth(self):
         for n in range(1, 4):
             self.bc.request.set_headers(academy=n)
-            model = self.bc.database.create(authenticate=True,
-                                            capability='crud_member',
-                                            role='role',
-                                            profile_academy=1)
+            model = self.bc.database.create(authenticate=True, capability='crud_member', role='role', profile_academy=1)
 
             url = reverse_lazy('authenticate:academy_id_member_id',
                                kwargs={

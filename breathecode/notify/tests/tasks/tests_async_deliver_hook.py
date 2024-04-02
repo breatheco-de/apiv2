@@ -83,12 +83,9 @@ class TestAsyncDeliverHook(LegacyAPITestCase):
         assert self.bc.database.list_of('notify.Hook') == [
             {
                 **self.bc.format.to_dict(model.hook),
-                'total_calls':
-                model.hook.total_calls + 1,
-                'last_call_at':
-                UTC_NOW,
-                'last_response_code':
-                201,
+                'total_calls': model.hook.total_calls + 1,
+                'last_call_at': UTC_NOW,
+                'last_response_code': 201,
                 'sample_data': [
                     {
                         **data,

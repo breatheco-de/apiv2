@@ -28,16 +28,15 @@ class TestRegistry(LegacyAPITestCase):
     🔽🔽🔽 GET with status not ok
     """
 
-    @patch('requests.get',
-           apply_requests_get_mock([(
-               200,
-               original_url,
-               {
-                   'headers': {
-                       'content-type': 'image/png'
-                   }
-               },
-           )]))
+    @patch('requests.get', apply_requests_get_mock([(
+        200,
+        original_url,
+        {
+            'headers': {
+                'content-type': 'image/png'
+            }
+        },
+    )]))
     def test__with_wrong_file_format(self):
         asset_image = {'name': 'john', 'original_url': original_url, 'bucket_url': 'https://www.f.com'}
         model = self.bc.database.create(asset={'slug': 'fake_slug'}, asset_image=asset_image)

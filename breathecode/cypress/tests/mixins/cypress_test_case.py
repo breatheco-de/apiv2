@@ -9,8 +9,8 @@ from breathecode.tests.mixins import (CacheMixin, DatetimeMixin, GenerateModelsM
                                       HeadersMixin, ICallMixin, BreathecodeMixin)
 
 
-class CypressTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, HeadersMixin,
-                      DatetimeMixin, ICallMixin, BreathecodeMixin):
+class CypressTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, HeadersMixin, DatetimeMixin,
+                      ICallMixin, BreathecodeMixin):
     """AdmissionsTestCase with auth methods"""
 
     def setUp(self):

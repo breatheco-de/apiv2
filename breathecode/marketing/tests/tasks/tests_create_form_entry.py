@@ -225,8 +225,7 @@ class CreateFormEntryTestSuite(MarketingTestCase):
             call('Create form entry started'),
             call('Create form entry started'),
         ])
-        self.assertEqual(logging.Logger.error.call_args_list,
-                         [call('No CSVUpload found with this id', exc_info=True)])
+        self.assertEqual(logging.Logger.error.call_args_list, [call('No CSVUpload found with this id', exc_info=True)])
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
@@ -335,8 +334,7 @@ class CreateFormEntryTestSuite(MarketingTestCase):
     def test_create_form_entry_with_dict_with_correct_format(self):
         """Test create_form_entry task without data"""
 
-        model = self.bc.database.create(csv_upload={'log': ''},
-                                        academy={'active_campaign_slug': self.bc.fake.slug()})
+        model = self.bc.database.create(csv_upload={'log': ''}, academy={'active_campaign_slug': self.bc.fake.slug()})
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -352,13 +350,13 @@ class CreateFormEntryTestSuite(MarketingTestCase):
 
         del data['academy']
 
-        self.assertEqual(self.bc.database.list_of('marketing.FormEntry'), [
-            form_entry_field({
+        self.assertEqual(
+            self.bc.database.list_of('marketing.FormEntry'),
+            [form_entry_field({
                 **data,
                 'attribution_id': '75b36c508866d18732305da14fe9a0',
                 'academy_id': 1,
-            })
-        ])
+            })])
         self.assertEqual(self.bc.database.list_of('monitoring.CSVUpload'),
                          [{
                              **self.bc.format.to_dict(model.csv_upload),

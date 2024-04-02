@@ -208,8 +208,7 @@ class AppSlugLeadTestSuite(MarketingTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(self.all_lead_generation_app_dict(),
-                         [self.model_to_dict(model, 'lead_generation_app')])
+        self.assertEqual(self.all_lead_generation_app_dict(), [self.model_to_dict(model, 'lead_generation_app')])
 
         self.assertEqual(persist_single_lead.delay.call_args_list, [])
 
@@ -455,13 +454,12 @@ class AppSlugLeadTestSuite(MarketingTestCase):
 
         db[0]['last_call_at'] = None
 
-        self.assertEqual(
-            db, [{
-                **self.model_to_dict(model, 'lead_generation_app'),
-                'hits': 1,
-                'last_call_status': 'OK',
-                'last_request_data': '{"language": "eo", "utm_url": "https:/bad_url/google.co.ve/"}',
-            }])
+        self.assertEqual(db, [{
+            **self.model_to_dict(model, 'lead_generation_app'),
+            'hits': 1,
+            'last_call_status': 'OK',
+            'last_request_data': '{"language": "eo", "utm_url": "https:/bad_url/google.co.ve/"}',
+        }])
 
         form_entry['academy'] = 1
         form_entry['contact'] = None
@@ -537,15 +535,13 @@ class AppSlugLeadTestSuite(MarketingTestCase):
 
         db[0]['last_call_at'] = None
 
-        self.assertEqual(db, [{
-            **self.model_to_dict(model, 'lead_generation_app'),
-            'hits':
-            1,
-            'last_call_status':
-            'OK',
-            'last_request_data':
-            '{"language": "eo", "automations": "they-killed-kenny1,they-killed-kenny2"}',
-        }])
+        self.assertEqual(
+            db, [{
+                **self.model_to_dict(model, 'lead_generation_app'),
+                'hits': 1,
+                'last_call_status': 'OK',
+                'last_request_data': '{"language": "eo", "automations": "they-killed-kenny1,they-killed-kenny2"}',
+            }])
 
         form_entry['academy'] = 1
         form_entry['contact'] = None
@@ -678,13 +674,13 @@ class AppSlugLeadTestSuite(MarketingTestCase):
 
         db[0]['last_call_at'] = None
 
-        self.assertEqual(
-            db, [{
-                **self.model_to_dict(model, 'lead_generation_app'),
-                'hits': 1,
-                'last_call_status': 'OK',
-                'last_request_data': '{"language": "eo", "tags": "they-killed-kenny1,they-killed-kenny2"}',
-            }])
+        self.assertEqual(db,
+                         [{
+                             **self.model_to_dict(model, 'lead_generation_app'),
+                             'hits': 1,
+                             'last_call_status': 'OK',
+                             'last_request_data': '{"language": "eo", "tags": "they-killed-kenny1,they-killed-kenny2"}',
+                         }])
 
         form_entry['academy'] = 1
         form_entry['contact'] = None

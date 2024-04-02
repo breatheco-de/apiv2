@@ -34,5 +34,4 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         get_attendancy_logs(None, request, queryset)
 
-        self.assertEqual(tasks.get_attendancy_log.delay.call_args_list,
-                         [call(n) for n in range(1, how_many + 1)])
+        self.assertEqual(tasks.get_attendancy_log.delay.call_args_list, [call(n) for n in range(1, how_many + 1)])

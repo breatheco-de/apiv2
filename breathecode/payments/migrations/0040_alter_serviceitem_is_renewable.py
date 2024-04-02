@@ -16,7 +16,6 @@ class Migration(migrations.Migration):
             field=models.BooleanField(
                 default=False,
                 help_text=
-                "If it's marked, the consumables will be renewed according to the renew_at and renew_at_unit values."
-            ),
+                "If it's marked, the consumables will be renewed according to the renew_at and renew_at_unit values."),
         ),
     ]

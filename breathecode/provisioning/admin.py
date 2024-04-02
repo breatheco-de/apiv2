@@ -4,8 +4,8 @@ from django.utils.html import format_html
 from breathecode.utils.admin import change_field
 from breathecode.provisioning import tasks
 from .models import (ProvisioningConsumptionEvent, ProvisioningConsumptionKind, ProvisioningPrice,
-                     ProvisioningUserConsumption, ProvisioningVendor, ProvisioningMachineTypes,
-                     ProvisioningAcademy, ProvisioningBill, ProvisioningContainer, ProvisioningProfile)
+                     ProvisioningUserConsumption, ProvisioningVendor, ProvisioningMachineTypes, ProvisioningAcademy,
+                     ProvisioningBill, ProvisioningContainer, ProvisioningProfile)
 
 logger = logging.getLogger(__name__)
 
@@ -77,8 +77,7 @@ class ProvisioningUserConsumptionAdmin(admin.ModelAdmin):
                 return colors[s]
             return ''
 
-        return format_html(
-            f"<p class='{from_status(obj.status)}'>{obj.status}</p><small>{obj.status_text}</small>")
+        return format_html(f"<p class='{from_status(obj.status)}'>{obj.status}</p><small>{obj.status_text}</small>")
 
 
 def force_calculate_bill(modeladmin, request, queryset):
@@ -98,8 +97,7 @@ class ProvisioningBillAdmin(admin.ModelAdmin):
     search_fields = ['academy__name', 'academy__slug', 'id', 'title']
     list_filter = ['academy', 'status', 'vendor']
 
-    actions = [force_calculate_bill, reverse_bill] + change_field(['DUE', 'DISPUTED', 'PAID', 'PENDING'],
-                                                                  name='status')
+    actions = [force_calculate_bill, reverse_bill] + change_field(['DUE', 'DISPUTED', 'PAID', 'PENDING'], name='status')
 
     def invoice_url(self, obj):
         return format_html(
@@ -120,16 +118,13 @@ class ProvisioningBillAdmin(admin.ModelAdmin):
                 return colors[s]
             return ''
 
-        return format_html(
-            f"<p class='{from_status(obj.status)}'>{obj.status}</p><small>{obj.status_details}</small>")
+        return format_html(f"<p class='{from_status(obj.status)}'>{obj.status}</p><small>{obj.status_details}</small>")
 
 
 @admin.register(ProvisioningContainer)
 class ProvisioningContainerAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'status', 'display_name', 'last_used_at')
-    search_fields = [
-        'display_name', 'user__firstname', 'user__lastname', 'user__email', 'task_associated_slug'
-    ]
+    search_fields = ['display_name', 'user__firstname', 'user__lastname', 'user__email', 'task_associated_slug']
     list_filter = ['status']
     actions = []
 

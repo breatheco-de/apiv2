@@ -73,8 +73,9 @@ class SlackUserTeamAdmin(admin.ModelAdmin, AdminExportCsvMixin):
 
     def breathecode_user(self, obj):
         if obj.slack_user.user is not None:
-            return format_html('<a href="%s">%s</a>' % (reverse(
-                'admin:auth_user_change', args=(obj.slack_user.user.id, )), escape(obj.slack_user.user)))
+            return format_html(
+                '<a href="%s">%s</a>' %
+                (reverse('admin:auth_user_change', args=(obj.slack_user.user.id, )), escape(obj.slack_user.user)))
         else:
             return 'Missing BC user'
 
@@ -148,9 +149,7 @@ class HookForm(forms.ModelForm):
 
 
 class HookAdmin(admin.ModelAdmin):
-    list_display = [
-        'user', 'target', 'event', 'service_id', 'total_calls', 'last_response_code', 'last_call_at'
-    ]
+    list_display = ['user', 'target', 'event', 'service_id', 'total_calls', 'last_response_code', 'last_call_at']
     search_fields = ['user__username', 'event', 'target', 'service_id']
     list_filter = ['event', 'last_response_code']
     raw_id_fields = [

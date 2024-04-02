@@ -20,9 +20,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='ServiceSet',
             fields=[
-                ('id',
-                 models.BigAutoField(auto_created=True, primary_key=True, serialize=False,
-                                     verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('slug',
                  models.SlugField(
                      help_text=
@@ -52,18 +50,15 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='ServiceSetTranslation',
             fields=[
-                ('id',
-                 models.BigAutoField(auto_created=True, primary_key=True, serialize=False,
-                                     verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('lang',
-                 models.CharField(
-                     help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US',
-                     max_length=5,
-                     validators=[breathecode.utils.validators.language.validate_language_code])),
+                 models.CharField(help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US',
+                                  max_length=5,
+                                  validators=[breathecode.utils.validators.language.validate_language_code])),
                 ('title', models.CharField(help_text='Title of the cohort set', max_length=60)),
                 ('description', models.CharField(help_text='Description of the cohort set', max_length=255)),
-                ('short_description',
-                 models.CharField(help_text='Short description of the cohort set', max_length=255)),
+                ('short_description', models.CharField(help_text='Short description of the cohort set',
+                                                       max_length=255)),
                 ('service_set',
                  models.ForeignKey(help_text='Service set',
                                    on_delete=django.db.models.deletion.CASCADE,

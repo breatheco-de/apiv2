@@ -64,10 +64,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """
         from django.core.management.base import OutputWrapper
 
-        model = self.bc.database.create(syllabus_schedule=1,
-                                        academy=1,
-                                        skip_cohort=True,
-                                        syllabus_schedule_time_slot=1)
+        model = self.bc.database.create(syllabus_schedule=1, academy=1, skip_cohort=True, syllabus_schedule_time_slot=1)
         command = Command()
 
         result = command.handle()
@@ -98,10 +95,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """
         from django.core.management.base import OutputWrapper
 
-        model = self.bc.database.create(syllabus_schedule=1,
-                                        academy=1,
-                                        cohort=1,
-                                        syllabus_schedule_time_slot=1)
+        model = self.bc.database.create(syllabus_schedule=1, academy=1, cohort=1, syllabus_schedule_time_slot=1)
         command = Command()
 
         result = command.handle()
@@ -142,10 +136,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         from django.core.management.base import OutputWrapper
 
         cohorts = [{'schedule_id': 1}, {'schedule': None}]
-        model = self.bc.database.create(syllabus_schedule=1,
-                                        academy=2,
-                                        cohort=cohorts,
-                                        syllabus_schedule_time_slot=1)
+        model = self.bc.database.create(syllabus_schedule=1, academy=2, cohort=cohorts, syllabus_schedule_time_slot=1)
         command = Command()
 
         result = command.handle()
@@ -169,8 +160,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(OutputWrapper.write.call_args_list, [call('Done!')])
 
     @patch('django.core.management.base.OutputWrapper.write', MagicMock())
-    def test_migrate_or_delete_syllabus_schedule__other_academy_with_two_schedules__inferred_from_cohort(
-            self):
+    def test_migrate_or_delete_syllabus_schedule__other_academy_with_two_schedules__inferred_from_cohort(self):
         from django.core.management.base import OutputWrapper
 
         cohorts = [{'schedule_id': 1, 'academy_id': 1}, {'schedule_id': 1, 'academy_id': 2}]

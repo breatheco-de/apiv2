@@ -97,8 +97,7 @@ class TestAcademyEvent(LegacyAPITestCase):
 
     @patch('breathecode.certificate.tasks.reset_screenshot.delay', MagicMock())
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
-    def test_user_specialty_saved__status_persisted__preview_url_is_empty__changing_signed_by(
-            self, enable_signals):
+    def test_user_specialty_saved__status_persisted__preview_url_is_empty__changing_signed_by(self, enable_signals):
         enable_signals()
 
         user_specialty = {'status': 'PERSISTED', 'preview_url': ''}
@@ -151,8 +150,7 @@ class TestAcademyEvent(LegacyAPITestCase):
 
     @patch('breathecode.certificate.tasks.reset_screenshot.delay', MagicMock())
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
-    def test_user_specialty_saved__status_persisted__preview_url_is_empty__changing_layout(
-            self, enable_signals):
+    def test_user_specialty_saved__status_persisted__preview_url_is_empty__changing_layout(self, enable_signals):
         enable_signals()
 
         user_specialty = {'status': 'PERSISTED', 'preview_url': ''}
@@ -179,8 +177,7 @@ class TestAcademyEvent(LegacyAPITestCase):
 
     @patch('breathecode.certificate.tasks.reset_screenshot.delay', MagicMock())
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
-    def test_user_specialty_saved__status_persisted__preview_url_is_empty__changing_expires_at(
-            self, enable_signals):
+    def test_user_specialty_saved__status_persisted__preview_url_is_empty__changing_expires_at(self, enable_signals):
         enable_signals()
 
         user_specialty = {'status': 'PERSISTED', 'preview_url': ''}
@@ -207,8 +204,7 @@ class TestAcademyEvent(LegacyAPITestCase):
 
     @patch('breathecode.certificate.tasks.reset_screenshot.delay', MagicMock())
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
-    def test_user_specialty_saved__status_persisted__preview_url_is_empty__changing_issued_at(
-            self, enable_signals):
+    def test_user_specialty_saved__status_persisted__preview_url_is_empty__changing_issued_at(self, enable_signals):
         enable_signals()
 
         user_specialty = {'status': 'PERSISTED', 'preview_url': ''}
@@ -255,8 +251,7 @@ class TestAcademyEvent(LegacyAPITestCase):
 
     @patch('breathecode.certificate.tasks.reset_screenshot.delay', MagicMock())
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
-    def test_user_specialty_saved__status_persisted__preview_url_set__changing_signed_by(
-            self, enable_signals):
+    def test_user_specialty_saved__status_persisted__preview_url_set__changing_signed_by(self, enable_signals):
         enable_signals()
 
         user_specialty = {'status': 'PERSISTED', 'preview_url': 'GOD 🤷‍♂️'}
@@ -282,8 +277,7 @@ class TestAcademyEvent(LegacyAPITestCase):
 
     @patch('breathecode.certificate.tasks.reset_screenshot.delay', MagicMock())
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
-    def test_user_specialty_saved__status_persisted__preview_url_set__changing_signed_by_role(
-            self, enable_signals):
+    def test_user_specialty_saved__status_persisted__preview_url_set__changing_signed_by_role(self, enable_signals):
         enable_signals()
 
         user_specialty = {'status': 'PERSISTED', 'preview_url': 'GOD 🤷‍♂️'}
@@ -336,8 +330,7 @@ class TestAcademyEvent(LegacyAPITestCase):
 
     @patch('breathecode.certificate.tasks.reset_screenshot.delay', MagicMock())
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
-    def test_user_specialty_saved__status_persisted__preview_url_set__changing_expires_at(
-            self, enable_signals):
+    def test_user_specialty_saved__status_persisted__preview_url_set__changing_expires_at(self, enable_signals):
         enable_signals()
 
         user_specialty = {'status': 'PERSISTED', 'preview_url': 'GOD 🤷‍♂️'}
@@ -364,8 +357,7 @@ class TestAcademyEvent(LegacyAPITestCase):
 
     @patch('breathecode.certificate.tasks.reset_screenshot.delay', MagicMock())
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
-    def test_user_specialty_saved__status_persisted__preview_url_set__changing_issued_at(
-            self, enable_signals):
+    def test_user_specialty_saved__status_persisted__preview_url_set__changing_issued_at(self, enable_signals):
         enable_signals()
 
         user_specialty = {'status': 'PERSISTED', 'preview_url': 'GOD 🤷‍♂️'}

@@ -16,11 +16,10 @@ class Command(BaseCommand):
         count_done = webhooks.count()
         webhooks.delete()
 
-        webhooks = EventbriteWebhook.objects.filter(
-            created_at__lte=timezone.now() - timedelta(days=how_many_days_with_error)).exclude(status='DONE')
+        webhooks = EventbriteWebhook.objects.filter(created_at__lte=timezone.now() -
+                                                    timedelta(days=how_many_days_with_error)).exclude(status='DONE')
         count_error = webhooks.count()
         webhooks.delete()
         self.stdout.write(
             self.style.SUCCESS(
-                f"Successfully deleted {str(count_done)} done, and {str(count_error)} errored EventbriteWebhook's"
-            ))
+                f"Successfully deleted {str(count_done)} done, and {str(count_error)} errored EventbriteWebhook's"))

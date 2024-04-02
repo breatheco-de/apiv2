@@ -15,8 +15,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='LiveClass',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('log', models.JSONField(default=dict)),
                 ('remote_meeting_url', models.URLField()),
                 ('hash', models.CharField(max_length=40, unique=True)),
@@ -27,8 +26,7 @@ class Migration(migrations.Migration):
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('cohort_time_slot',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
-                                   to='admissions.cohorttimeslot')),
+                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.cohorttimeslot')),
             ],
         ),
     ]

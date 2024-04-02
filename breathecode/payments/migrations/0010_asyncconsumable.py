@@ -14,15 +14,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='AsyncConsumable',
             fields=[
-                ('id',
-                 models.BigAutoField(auto_created=True, primary_key=True, serialize=False,
-                                     verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('expires_at', models.DateTimeField()),
                 ('path', models.CharField(max_length=200)),
                 ('related_pk', models.CharField(blank=True, default=None, max_length=200, null=True)),
                 ('related_slug', models.CharField(blank=True, default=None, max_length=200, null=True)),
-                ('service',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='payments.service')),
+                ('service', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='payments.service')),
             ],
         ),
     ]

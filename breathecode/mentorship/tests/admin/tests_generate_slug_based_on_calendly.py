@@ -65,8 +65,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                          self.bc.format.to_dict(model.mentor_profile))
 
         self.assertEqual(messages.error.call_args_list, [
-            call(request, f'Mentor {x.id} booking url is not calendly: {x.booking_url}')
-            for x in model.mentor_profile
+            call(request, f'Mentor {x.id} booking url is not calendly: {x.booking_url}') for x in model.mentor_profile
         ])
 
     """

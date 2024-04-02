@@ -60,5 +60,5 @@ class Command(BaseCommand):
                 github_user.storage_action = 'DELETE'
                 github_user.storage_status = 'PENDING'
                 github_user.save()
-                print('Schedule the following github user for deletion in Academy ' +
-                      github_user.academy.name + '. User: ' + github_user.user.email)
+                print('Schedule the following github user for deletion in Academy ' + github_user.academy.name +
+                      '. User: ' + github_user.user.email)

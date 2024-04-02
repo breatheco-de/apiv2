@@ -25,10 +25,7 @@ class SurveyTestSuite(FeedbackTestCase):
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     def test__without_survey(self):
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='read_survey',
-                                     role=1)
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='read_survey', role=1)
 
         with self.assertRaisesMessage(ValidationException, 'not-found'):
             calculate_survey_scores(1)

@@ -73,18 +73,17 @@ class HookManagerClass(object):
                 return django_apps.get_model(model_label, require_ready=False)
             except ValueError:
                 raise ImproperlyConfigured(
-                    f"Invalid model {model_label}, HOOK_CUSTOM_MODEL must be of the form 'app_label.model_name'"
-                )
+                    f"Invalid model {model_label}, HOOK_CUSTOM_MODEL must be of the form 'app_label.model_name'")
             except LookupError:
-                raise ImproperlyConfigured(
-                    "HOOK_CUSTOM_MODEL refers to model '%s' that has not been installed" % model_label)
+                raise ImproperlyConfigured("HOOK_CUSTOM_MODEL refers to model '%s' that has not been installed" %
+                                           model_label)
         else:
             if model_label not in (None, 'notify.Hook'):
                 try:
                     self.get_module(settings.HOOK_CUSTOM_MODEL)
                 except ImportError:
-                    raise ImproperlyConfigured(
-                        "HOOK_CUSTOM_MODEL refers to model '%s' that cannot be imported" % model_label)
+                    raise ImproperlyConfigured("HOOK_CUSTOM_MODEL refers to model '%s' that cannot be imported" %
+                                               model_label)
 
     def find_and_fire_hook(self,
                            event_name,
@@ -115,8 +114,7 @@ class HookManagerClass(object):
             filters['user__username__in'] = [instance.academy.slug] + list(superadmins)
         else:
             logger.debug(
-                f'Only admin will receive hook notification for {event_name} because entity has not academy property'
-            )
+                f'Only admin will receive hook notification for {event_name} because entity has not academy property')
             # Only the admin can retrieve events from objects that don't belong to any academy
             filters['user__is_superuser'] = True
 
@@ -134,10 +132,7 @@ class HookManagerClass(object):
         hook_model_cls = self.get_hook_model()
         hooks = hook_model_cls.objects.filter(**filters)
         for hook in hooks:
-            self.deliver_hook(hook,
-                              instance,
-                              payload_override=payload_override,
-                              academy_override=academy_override)
+            self.deliver_hook(hook, instance, payload_override=payload_override, academy_override=academy_override)
 
     def process_model_event(
         self,

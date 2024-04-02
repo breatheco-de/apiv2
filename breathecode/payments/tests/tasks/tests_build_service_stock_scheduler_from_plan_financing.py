@@ -75,9 +75,8 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
 
-        self.assertEqual(
-            logging.Logger.info.call_args_list,
-            [call('Starting build_service_stock_scheduler_from_plan_financing for subscription 1')])
+        self.assertEqual(logging.Logger.info.call_args_list,
+                         [call('Starting build_service_stock_scheduler_from_plan_financing for subscription 1')])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), [
@@ -104,10 +103,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             'monthly_price': (random.random() * 99.99) + 0.01,
         }
         plan = {'is_renewable': False}
-        model = self.bc.database.create(plan_financing=subscription,
-                                        service_item=1,
-                                        plan_service_item=1,
-                                        plan=plan)
+        model = self.bc.database.create(plan_financing=subscription, service_item=1, plan_service_item=1, plan=plan)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []

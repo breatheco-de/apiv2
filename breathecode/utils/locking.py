@@ -61,8 +61,7 @@ class LockManager(models.Manager):
                         instance, created = super().get_or_create(**kwargs)
             except LockError:
                 # Handle the timeout, e.g., by logging, retrying, or returning an error
-                logger.error(
-                    f'Could not acquire lock for {class_name} on get_or_create, operation timed out.')
+                logger.error(f'Could not acquire lock for {class_name} on get_or_create, operation timed out.')
                 return None, False  # Indicate that the operation was not successful
         else:
             instance, created = super().get_or_create(**kwargs)

@@ -21,11 +21,10 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED,
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED,
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
@@ -38,12 +37,11 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': "You (user: 1) don't have this capability: read_student "
-                'for academy 1',
-                'status_code': 403
-            })
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: read_student "
+            'for academy 1',
+            'status_code': 403
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     """
@@ -55,10 +53,7 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /academy/:id/member/:id"""
         role = 'konan'
         self.bc.request.set_headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='read_student',
-                                     profile_academy=True)
+        model = self.generate_models(authenticate=True, role=role, capability='read_student', profile_academy=True)
         url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': '2'})
         response = self.client.get(url)
         json = response.json()
@@ -84,10 +79,7 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /academy/:id/member/:id"""
         self.headers(academy=1)
         role = 'konan'
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='read_student',
-                                     profile_academy=True)
+        model = self.generate_models(authenticate=True, role=role, capability='read_student', profile_academy=True)
         url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': '1'})
         response = self.client.get(url)
         json = response.json()
@@ -142,10 +134,7 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /academy/:id/member/:id"""
         self.headers(academy=1)
         role = 'konan'
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='read_student',
-                                     profile_academy=True)
+        model = self.generate_models(authenticate=True, role=role, capability='read_student', profile_academy=True)
         url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': model.user.email})
         response = self.client.get(url)
         json = response.json()
@@ -342,12 +331,11 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.put(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': "You (user: 1) don't have this capability: crud_student "
-                'for academy 1',
-                'status_code': 403
-            })
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: crud_student "
+            'for academy 1',
+            'status_code': 403
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     """
@@ -359,10 +347,7 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /academy/:id/member/:id"""
         role = 'student'
         self.bc.request.set_headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='crud_student',
-                                     profile_academy=True)
+        model = self.generate_models(authenticate=True, role=role, capability='crud_student', profile_academy=True)
         url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': 'dude@dude.dude'})
 
         response = self.client.put(url)
@@ -384,10 +369,7 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /academy/:id/member/:id"""
         role = 'student'
         self.bc.request.set_headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='crud_student',
-                                     profile_academy=True)
+        model = self.generate_models(authenticate=True, role=role, capability='crud_student', profile_academy=True)
         url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': '2'})
 
         response = self.client.put(url)
@@ -587,10 +569,7 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /academy/:id/member/:id"""
         role = 'crud_student'
         self.bc.request.set_headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='crud_student',
-                                     profile_academy=1)
+        model = self.generate_models(authenticate=True, role=role, capability='crud_student', profile_academy=1)
         url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': '1'})
 
         response = self.client.put(url)
@@ -613,10 +592,7 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /academy/:id/member/:id"""
         role = 'student'
         self.bc.request.set_headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='crud_student',
-                                     profile_academy=True)
+        model = self.generate_models(authenticate=True, role=role, capability='crud_student', profile_academy=True)
         url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': '1'})
 
         data = {'first_name': 'Lord', 'last_name': 'Valdomero'}
@@ -652,10 +628,7 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /academy/:id/member/:id"""
         role = 'student'
         self.bc.request.set_headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='crud_student',
-                                     profile_academy=True)
+        model = self.generate_models(authenticate=True, role=role, capability='crud_student', profile_academy=True)
         url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': 'dude@dude.dude'})
         response = self.client.delete(url)
         json = response.json()

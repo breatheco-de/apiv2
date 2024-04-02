@@ -9,8 +9,7 @@ from breathecode.tests.mixins.models_mixin import ModelsMixin
 from .utils import create_models, is_valid, just_one
 
 TIMEZONES = [
-    'America/New_York', 'America/Bogota', 'America/Santiago', 'America/Buenos_Aires', 'Europe/Madrid',
-    'America/Caracas'
+    'America/New_York', 'America/Bogota', 'America/Santiago', 'America/Buenos_Aires', 'Europe/Madrid', 'America/Caracas'
 ]
 
 
@@ -87,16 +86,14 @@ class AdmissionsModelsMixin(ModelsMixin):
 
         if not 'country' in models and (is_valid(country) or is_valid(city) or is_valid(academy)
                                         or is_valid(profile_academy) or is_valid(event_type)
-                                        or is_valid(event_type_visibility_setting)
-                                        or is_valid(mentorship_service_set)):
+                                        or is_valid(event_type_visibility_setting) or is_valid(mentorship_service_set)):
             kargs = {}
 
             models['country'] = create_models(country, 'admissions.Country', **{**kargs, **country_kwargs})
 
         if not 'city' in models and (is_valid(city) or is_valid(country) or is_valid(academy)
                                      or is_valid(profile_academy) or is_valid(event_type)
-                                     or is_valid(event_type_visibility_setting)
-                                     or is_valid(mentorship_service_set)):
+                                     or is_valid(event_type_visibility_setting) or is_valid(mentorship_service_set)):
             kargs = {}
 
             if 'country' in models:
@@ -109,13 +106,13 @@ class AdmissionsModelsMixin(ModelsMixin):
                 or is_valid(monitor_script) or is_valid(mentorship_service) or is_valid(mentor_profile)
                 or is_valid(user_specialty) or is_valid(asset_category) or is_valid(keyword_cluster)
                 or is_valid(asset_keyword) or is_valid(bag) or is_valid(subscription) or is_valid(event_type)
-                or is_valid(event_type_visibility_setting) or is_valid(mentorship_service_set)
-                or is_valid(course) or is_valid(course_translation) or is_valid(event_type_set)
-                or is_valid(event_type_set_translation) or is_valid(mentorship_service_set)
-                or is_valid(mentorship_service_set_translation) or is_valid(provisioning_profile) or
-                is_valid(provisioning_academy) or is_valid(provisioning_bill) or is_valid(github_academy_user)
-                or is_valid(github_academy_user_log) or is_valid(cohort_set) or is_valid(invoice)
-                or is_valid(plan_financing) or is_valid(service_set) or is_valid(service_set_translation)):
+                or is_valid(event_type_visibility_setting) or is_valid(mentorship_service_set) or is_valid(course)
+                or is_valid(course_translation) or is_valid(event_type_set) or is_valid(event_type_set_translation)
+                or is_valid(mentorship_service_set) or is_valid(mentorship_service_set_translation)
+                or is_valid(provisioning_profile) or is_valid(provisioning_academy) or is_valid(provisioning_bill)
+                or is_valid(github_academy_user) or is_valid(github_academy_user_log) or is_valid(cohort_set)
+                or is_valid(invoice) or is_valid(plan_financing) or is_valid(service_set)
+                or is_valid(service_set_translation)):
             kargs = {}
 
             if 'country' in models:
@@ -133,10 +130,7 @@ class AdmissionsModelsMixin(ModelsMixin):
             if 'academy' in models:
                 kargs['academy_owner'] = just_one(models['academy'])
 
-            models['syllabus'] = create_models(syllabus, 'admissions.Syllabus', **{
-                **kargs,
-                **syllabus_kwargs
-            })
+            models['syllabus'] = create_models(syllabus, 'admissions.Syllabus', **{**kargs, **syllabus_kwargs})
 
         if not 'syllabus_version' in models and is_valid(syllabus_version):
             kargs = {}
@@ -149,8 +143,7 @@ class AdmissionsModelsMixin(ModelsMixin):
                 **syllabus_version_kwargs
             })
 
-        if not 'syllabus_schedule' in models and (is_valid(syllabus_schedule)
-                                                  or is_valid(syllabus_schedule_time_slot)):
+        if not 'syllabus_schedule' in models and (is_valid(syllabus_schedule) or is_valid(syllabus_schedule_time_slot)):
             kargs = {}
 
             if 'syllabus' in models:
@@ -209,11 +202,11 @@ class AdmissionsModelsMixin(ModelsMixin):
             if 'syllabus_schedule' in models:
                 kargs['schedule'] = just_one(models['syllabus_schedule'])
 
-            models['syllabus_schedule_time_slot'] = create_models(
-                syllabus_schedule_time_slot, 'admissions.SyllabusScheduleTimeSlot', **{
-                    **kargs,
-                    **syllabus_schedule_time_slot_kwargs
-                })
+            models['syllabus_schedule_time_slot'] = create_models(syllabus_schedule_time_slot,
+                                                                  'admissions.SyllabusScheduleTimeSlot', **{
+                                                                      **kargs,
+                                                                      **syllabus_schedule_time_slot_kwargs
+                                                                  })
 
         if not 'cohort_time_slot' in models and (is_valid(cohort_time_slot) or is_valid(live_class)):
             kargs = {

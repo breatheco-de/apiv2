@@ -59,8 +59,7 @@ def post_serializer(self, i_owe_you, cohort_set, cohorts=[], academy=None, user=
         'status': i_owe_you.status,
         'status_message': i_owe_you.status_message,
         'user': user_serializer(user),
-        'valid_until':
-        self.bc.datetime.to_iso_string(i_owe_you.valid_until) if i_owe_you.valid_until else None,
+        'valid_until': self.bc.datetime.to_iso_string(i_owe_you.valid_until) if i_owe_you.valid_until else None,
         **data,
     }
 
@@ -216,12 +215,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         response = self.client.post(url)
         json = response.json()
         resource = model.subscription if is_a_subscription else model.plan_financing
-        expected = post_serializer(self,
-                                   resource,
-                                   model.cohort_set, [model.cohort],
-                                   model.academy,
-                                   model.user,
-                                   data={})
+        expected = post_serializer(self, resource, model.cohort_set, [model.cohort], model.academy, model.user, data={})
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)

@@ -52,8 +52,8 @@ def test__nothing_to_migrate(bc: Breathecode):
         (storage_actions[3], storage_actions[1], storage_actions[3]),  # +2
         (storage_actions[3], storage_actions[2], storage_actions[1]),  # +3
     ])
-def test__storage_action_does_not_avoid_the_indexation(bc: Breathecode, monkeypatch, storage_status,
-                                                       storage_action1, storage_action2, storage_action3):
+def test__storage_action_does_not_avoid_the_indexation(bc: Breathecode, monkeypatch, storage_status, storage_action1,
+                                                       storage_action2, storage_action3):
 
     delta = timezone.timedelta(hours=random.randint(1, 24))
     base_user1 = bc.database.create(user=1, github_academy_user=1)
@@ -176,8 +176,8 @@ def test__storage_action_does_not_avoid_the_indexation(bc: Breathecode, monkeypa
         (storage_statuses[4], storage_statuses[2], storage_statuses[0]),  # +3
         (storage_statuses[4], storage_statuses[3], storage_statuses[2]),  # +4
     ])
-def test__storage_status_does_not_avoid_the_indexation(bc: Breathecode, monkeypatch, storage_action,
-                                                       storage_status1, storage_status2, storage_status3):
+def test__storage_status_does_not_avoid_the_indexation(bc: Breathecode, monkeypatch, storage_action, storage_status1,
+                                                       storage_status2, storage_status3):
     delta = timezone.timedelta(hours=random.randint(1, 24))
     base_user1 = bc.database.create(user=1, github_academy_user=1)
     base_user2 = bc.database.create(user=1, github_academy_user=1)

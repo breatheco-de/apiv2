@@ -4,8 +4,8 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.utils.html import format_html
 import breathecode.events.tasks as tasks
-from .models import (Event, EventTypeVisibilitySetting, LiveClass, Venue, EventType, EventCheckin,
-                     Organization, Organizer, EventbriteWebhook)
+from .models import (Event, EventTypeVisibilitySetting, LiveClass, Venue, EventType, EventCheckin, Organization,
+                     Organizer, EventbriteWebhook)
 from .actions import sync_org_venues, sync_org_events
 from breathecode.utils import AdminExportCsvMixin
 import breathecode.marketing.tasks as marketing_tasks
@@ -138,8 +138,7 @@ class EventbriteWebhookAdmin(admin.ModelAdmin):
         if obj.status == 'DONE':
             return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
         return format_html(
-            f"<div><span class='badge {colors[obj.status]}'>{obj.status}</span></div><small>{obj.status_text}</small>"
-        )
+            f"<div><span class='badge {colors[obj.status]}'>{obj.status}</span></div><small>{obj.status_text}</small>")
 
     def user_attendee(self, obj):
         if obj.attendee is None:
@@ -160,8 +159,8 @@ class EventTypeVisibilitySettingAdmin(admin.ModelAdmin):
 
 @admin.register(LiveClass)
 class LiveClassAdmin(admin.ModelAdmin):
-    list_display = ('cohort_time_slot', 'remote_meeting_url', 'starting_at', 'ending_at', 'started_at',
-                    'ended_at', 'did_it_close_automatically')
+    list_display = ('cohort_time_slot', 'remote_meeting_url', 'starting_at', 'ending_at', 'started_at', 'ended_at',
+                    'did_it_close_automatically')
     list_filter = ['cohort_time_slot__recurrent', 'cohort_time_slot__recurrency_type']
     search_fields = ['id', 'remote_meeting_url']
 

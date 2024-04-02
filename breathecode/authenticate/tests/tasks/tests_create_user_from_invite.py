@@ -88,19 +88,12 @@ def test_user_exists(bc: Breathecode, fake, is_linked_the_user):
     ]
     assert bc.database.list_of('auth.User') == [bc.format.to_dict(model.user)]
 
-    assert logging.Logger.error.call_args_list == [
-        call('User invite is already associated to a user', exc_info=True)
-    ]
+    assert logging.Logger.error.call_args_list == [call('User invite is already associated to a user', exc_info=True)]
 
 
 def test_invite_accepted(bc: Breathecode, fake):
     email = fake.email()
-    user_invite = {
-        'status': 'ACCEPTED',
-        'email': email,
-        'first_name': fake.first_name(),
-        'last_name': fake.last_name()
-    }
+    user_invite = {'status': 'ACCEPTED', 'email': email, 'first_name': fake.first_name(), 'last_name': fake.last_name()}
 
     model = bc.database.create(user_invite=user_invite)
 

@@ -24,9 +24,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='leadgenerationapp',
             name='app_id',
-            field=models.CharField(
-                help_text='Unique token generated only for this app, can be reset to revoke access',
-                max_length=255,
-                unique=True),
+            field=models.CharField(help_text='Unique token generated only for this app, can be reset to revoke access',
+                                   max_length=255,
+                                   unique=True),
         ),
     ]

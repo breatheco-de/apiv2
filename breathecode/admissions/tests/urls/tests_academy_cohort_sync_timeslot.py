@@ -18,11 +18,10 @@ class CertificateTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
@@ -171,17 +170,16 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_cohort_time_slot_dict(),
-                         [{
-                             'id': 1,
-                             'cohort_id': model.cohort.id,
-                             'removed_at': model.syllabus_schedule_time_slot.removed_at,
-                             'starting_at': model.syllabus_schedule_time_slot.starting_at,
-                             'ending_at': model.syllabus_schedule_time_slot.ending_at,
-                             'recurrent': model.syllabus_schedule_time_slot.recurrent,
-                             'recurrency_type': model.syllabus_schedule_time_slot.recurrency_type,
-                             'timezone': 'America/Caracas'
-                         }])
+        self.assertEqual(self.all_cohort_time_slot_dict(), [{
+            'id': 1,
+            'cohort_id': model.cohort.id,
+            'removed_at': model.syllabus_schedule_time_slot.removed_at,
+            'starting_at': model.syllabus_schedule_time_slot.starting_at,
+            'ending_at': model.syllabus_schedule_time_slot.ending_at,
+            'recurrent': model.syllabus_schedule_time_slot.recurrent,
+            'recurrency_type': model.syllabus_schedule_time_slot.recurrency_type,
+            'timezone': 'America/Caracas'
+        }])
 
     def test_academy_cohort_sync_timeslot__with_two_certificate_timeslot(self):
         """Test /certificate without auth"""

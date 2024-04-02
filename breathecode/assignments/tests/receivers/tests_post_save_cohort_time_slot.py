@@ -39,8 +39,7 @@ class TestMedia(LegacyAPITestCase):
         model.task[1].title = self.bc.fake.name()[:150]
         model.task[1].save()
 
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
-                         self.bc.database.list_of('admissions.Cohort'))
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), self.bc.database.list_of('admissions.Cohort'))
         self.assertEqual(tasks.set_cohort_user_assignments.delay.call_args_list, [])
 
     @patch('breathecode.assignments.tasks.set_cohort_user_assignments.delay', MagicMock())
@@ -58,6 +57,5 @@ class TestMedia(LegacyAPITestCase):
         model.task[1].task_status = 'DONE' if model.task[1].task_status == 'PENDING' else 'PENDING'
         model.task[1].save()
 
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
-                         self.bc.database.list_of('admissions.Cohort'))
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), self.bc.database.list_of('admissions.Cohort'))
         self.assertEqual(tasks.set_cohort_user_assignments.delay.call_args_list, [call(1), call(2)])

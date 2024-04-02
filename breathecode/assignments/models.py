@@ -77,8 +77,7 @@ class Task(models.Model):
         null=True,
         blank=True,
         help_text=
-        'Learnpack telemetry json will be stored and shared among all the assignments form the same associalted_slug'
-    )
+        'Learnpack telemetry json will be stored and shared among all the assignments form the same associalted_slug')
 
     associated_slug = models.SlugField(max_length=150, db_index=True)
     title = models.CharField(max_length=150, db_index=True)
@@ -169,11 +168,10 @@ class FinalProject(models.Model):
                                       choices=TASK_STATUS,
                                       default=PENDING,
                                       help_text='Done projects will be reviewed for publication')
-    revision_status = models.CharField(
-        max_length=15,
-        choices=REVISION_STATUS,
-        default=PENDING,
-        help_text='Only approved projects will display on the feature projects list')
+    revision_status = models.CharField(max_length=15,
+                                       choices=REVISION_STATUS,
+                                       default=PENDING,
+                                       help_text='Only approved projects will display on the feature projects list')
     revision_message = models.TextField(null=True, blank=True, default=None)
 
     visibility_status = models.CharField(max_length=15,
@@ -210,11 +208,7 @@ class LearnPackWebhook(models.Model):
     event = models.CharField(max_length=15)
     payload = models.JSONField(blank=True, null=True, default=None, help_text='Will be set by learnpack')
     student = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, default=None)
-    telemetry = models.ForeignKey(AssignmentTelemetry,
-                                  on_delete=models.CASCADE,
-                                  blank=True,
-                                  null=True,
-                                  default=None)
+    telemetry = models.ForeignKey(AssignmentTelemetry, on_delete=models.CASCADE, blank=True, null=True, default=None)
 
     status = models.CharField(max_length=9, choices=LEARNPACK_WEBHOOK_STATUS, default=PENDING)
     status_text = models.TextField(default=None, null=True, blank=True)

@@ -8,8 +8,7 @@ from django.utils import timezone
 from breathecode.mentorship.models import MentorshipSession
 
 from .models import Consumable, Plan
-from .signals import (consume_service, grant_service_permissions, lose_service_permissions,
-                      reimburse_service_units)
+from .signals import (consume_service, grant_service_permissions, lose_service_permissions, reimburse_service_units)
 from breathecode.mentorship.signals import mentorship_session_status
 from breathecode.payments import tasks
 from django.db.models.signals import m2m_changed
@@ -35,8 +34,7 @@ def consume_service_receiver(sender: Type[Consumable], instance: Consumable, how
 
 
 @receiver(reimburse_service_units, sender=Consumable)
-def reimburse_service_units_receiver(sender: Type[Consumable], instance: Consumable, how_many: float,
-                                     **kwargs):
+def reimburse_service_units_receiver(sender: Type[Consumable], instance: Consumable, how_many: float, **kwargs):
     if instance.how_many == -1:
         return
 

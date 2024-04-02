@@ -31,8 +31,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'warning', MagicMock())
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(timezone, 'now', MagicMock(return_value=UTC_NOW))
-    @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([(200, eventbrite_get_url, eventbrite_bad_get_event)]))
+    @patch(REQUESTS_PATH['request'], apply_requests_request_mock([(200, eventbrite_get_url, eventbrite_bad_get_event)]))
     def test_update_event_description_from_eventbrite__without_event(self):
         import logging
         import requests
@@ -52,8 +51,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'warning', MagicMock())
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(timezone, 'now', MagicMock(return_value=UTC_NOW))
-    @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([(200, eventbrite_get_url, eventbrite_bad_get_event)]))
+    @patch(REQUESTS_PATH['request'], apply_requests_request_mock([(200, eventbrite_get_url, eventbrite_bad_get_event)]))
     def test_update_event_description_from_eventbrite__without_eventbrite_id(self):
         import logging
         import requests
@@ -78,8 +76,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'warning', MagicMock())
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(timezone, 'now', MagicMock(return_value=UTC_NOW))
-    @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([(200, eventbrite_get_url, eventbrite_bad_get_event)]))
+    @patch(REQUESTS_PATH['request'], apply_requests_request_mock([(200, eventbrite_get_url, eventbrite_bad_get_event)]))
     def test_update_event_description_from_eventbrite__with_event(self):
         import logging
         import requests
@@ -105,8 +102,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'warning', MagicMock())
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(timezone, 'now', MagicMock(return_value=UTC_NOW))
-    @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([(200, eventbrite_get_url, eventbrite_bad_get_event)]))
+    @patch(REQUESTS_PATH['request'], apply_requests_request_mock([(200, eventbrite_get_url, eventbrite_bad_get_event)]))
     def test_update_event_description_from_eventbrite__without_event_in_eventbrite(self):
         import logging
         import requests
@@ -155,13 +151,12 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(logging.Logger.warning.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
-        self.assertEqual(self.bc.database.list_of('events.Event'),
-                         [{
-                             **db,
-                             'description': 'They Killed Kenny',
-                             'eventbrite_sync_status': 'PERSISTED',
-                             'eventbrite_sync_description': str(UTC_NOW),
-                         }])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [{
+            **db,
+            'description': 'They Killed Kenny',
+            'eventbrite_sync_status': 'PERSISTED',
+            'eventbrite_sync_description': str(UTC_NOW),
+        }])
 
         self.assertEqual(requests.request.call_args_list, [
             call('GET',

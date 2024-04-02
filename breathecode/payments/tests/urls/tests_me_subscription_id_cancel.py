@@ -49,8 +49,7 @@ def get_serializer(self, subscription, academy, user, data={}):
         'status': subscription.status,
         'status_message': subscription.status_message,
         'user': user_serializer(user),
-        'valid_until':
-        self.bc.datetime.to_iso_string(subscription.valid_until) if subscription.valid_until else None,
+        'valid_until': self.bc.datetime.to_iso_string(subscription.valid_until) if subscription.valid_until else None,
         **data,
     }
 
@@ -94,16 +93,11 @@ class SignalTestSuite(PaymentsTestCase):
 
             self.client.force_authenticate(model.user)
 
-            url = reverse_lazy('payments:me_subscription_id_cancel',
-                               kwargs={'subscription_id': model.subscription.id})
+            url = reverse_lazy('payments:me_subscription_id_cancel', kwargs={'subscription_id': model.subscription.id})
             response = self.client.put(url)
 
             json = response.json()
-            expected = get_serializer(self,
-                                      model.subscription,
-                                      model.academy,
-                                      model.user,
-                                      data={'status': 'CANCELLED'})
+            expected = get_serializer(self, model.subscription, model.academy, model.user, data={'status': 'CANCELLED'})
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -123,8 +117,7 @@ class SignalTestSuite(PaymentsTestCase):
 
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('payments:me_subscription_id_cancel',
-                           kwargs={'subscription_id': model.subscription.id})
+        url = reverse_lazy('payments:me_subscription_id_cancel', kwargs={'subscription_id': model.subscription.id})
         response = self.client.put(url)
 
         json = response.json()
@@ -145,8 +138,7 @@ class SignalTestSuite(PaymentsTestCase):
 
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('payments:me_subscription_id_cancel',
-                           kwargs={'subscription_id': model.subscription.id})
+        url = reverse_lazy('payments:me_subscription_id_cancel', kwargs={'subscription_id': model.subscription.id})
         response = self.client.put(url)
 
         json = response.json()

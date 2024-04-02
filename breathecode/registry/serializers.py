@@ -126,7 +126,8 @@ class AssessmentSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     title = serpy.Field()
-  
+
+
 class KeywordClusterSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()

@@ -15,8 +15,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='CalendlyOrganization',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('username', models.CharField(help_text='Calendly username', max_length=100)),
                 ('access_token', models.TextField(blank=True, default=None, null=True)),
                 ('hash', models.CharField(max_length=40, unique=True)),
@@ -40,8 +39,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='CalendlyWebhook',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('organization_hash', models.CharField(max_length=50)),
                 ('created_by', models.CharField(max_length=2500)),
                 ('event', models.CharField(max_length=100)),

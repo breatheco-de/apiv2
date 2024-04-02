@@ -33,9 +33,7 @@ class ProvisioningProfile(models.Model):
     vendor = models.ForeignKey(ProvisioningVendor, on_delete=models.SET_NULL, null=True, default=None)
 
     cohorts = models.ManyToManyField(
-        Cohort,
-        blank=True,
-        help_text='If set, only these cohorts will be provisioned with this vendor in this academy')
+        Cohort, blank=True, help_text='If set, only these cohorts will be provisioned with this vendor in this academy')
     members = models.ManyToManyField(
         ProfileAcademy,
         blank=True,
@@ -99,11 +97,7 @@ BILL_STATUS = (
 
 
 class ProvisioningBill(models.Model):
-    vendor = models.ForeignKey(ProvisioningVendor,
-                               on_delete=models.SET_NULL,
-                               null=True,
-                               default=None,
-                               blank=True)
+    vendor = models.ForeignKey(ProvisioningVendor, on_delete=models.SET_NULL, null=True, default=None, blank=True)
     total_amount = models.FloatField(default=0)
     fee = models.FloatField(default=0)
     hash = models.CharField(max_length=64, blank=True, null=True, default=None, db_index=True)
@@ -138,8 +132,7 @@ class ProvisioningBill(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return str(self.id) + ' ' + str(self.academy) + ' - ' + str(self.total_amount) + str(
-            self.currency_code)
+        return str(self.id) + ' ' + str(self.academy) + ' - ' + str(self.total_amount) + str(self.currency_code)
 
 
 PENDING = 'PENDING'
@@ -182,11 +175,7 @@ class ProvisioningConsumptionEvent(models.Model):
 
     external_pk = models.CharField(max_length=100, blank=True, null=True, default=None)
     csv_row = models.IntegerField()
-    vendor = models.ForeignKey(ProvisioningVendor,
-                               on_delete=models.CASCADE,
-                               null=True,
-                               blank=True,
-                               default=None)
+    vendor = models.ForeignKey(ProvisioningVendor, on_delete=models.CASCADE, null=True, blank=True, default=None)
 
     quantity = models.FloatField()
     price = models.ForeignKey(ProvisioningPrice, on_delete=models.CASCADE)
@@ -200,8 +189,8 @@ class ProvisioningConsumptionEvent(models.Model):
 
 
 class ProvisioningUserConsumption(models.Model):
-    username = models.CharField(
-        max_length=80, help_text='Native username in the provisioning platform, E.g: github username')
+    username = models.CharField(max_length=80,
+                                help_text='Native username in the provisioning platform, E.g: github username')
     hash = models.CharField(max_length=64, blank=True, null=True, default=None)
     kind = models.ForeignKey(ProvisioningConsumptionKind, on_delete=models.CASCADE)
 

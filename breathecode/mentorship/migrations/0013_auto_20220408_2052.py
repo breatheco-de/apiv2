@@ -13,8 +13,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='mentorprofile',
             name='status',
-            field=models.CharField(choices=[('INVITED', 'Invited'), ('ACTIVE', 'Active'),
-                                            ('UNLISTED', 'Unlisted'), ('INNACTIVE', 'Innactive')],
+            field=models.CharField(choices=[('INVITED', 'Invited'), ('ACTIVE', 'Active'), ('UNLISTED', 'Unlisted'),
+                                            ('INNACTIVE', 'Innactive')],
                                    default='INVITED',
                                    help_text='Options are: INVITEDACTIVEUNLISTEDINNACTIVE',
                                    max_length=15),
@@ -22,8 +22,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='mentorshipservice',
             name='status',
-            field=models.CharField(choices=[('DRAFT', 'Draft'), ('ACTIVE', 'Active'),
-                                            ('UNLISTED', 'Unlisted'), ('INNACTIVE', 'Innactive')],
+            field=models.CharField(choices=[('DRAFT', 'Draft'), ('ACTIVE', 'Active'), ('UNLISTED', 'Unlisted'),
+                                            ('INNACTIVE', 'Innactive')],
                                    default='DRAFT',
                                    max_length=15),
         ),

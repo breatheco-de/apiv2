@@ -53,10 +53,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
     def test_with_data(self):
         """Test /cohort/all without auth"""
-        model = self.generate_models(authenticate=True,
-                                     cohort_user=True,
-                                     profile_academy=True,
-                                     syllabus_version=True)
+        model = self.generate_models(authenticate=True, cohort_user=True, profile_academy=True, syllabus_version=True)
 
         url = reverse_lazy('admissions:public_cohort_user')
         response = self.client.get(url)

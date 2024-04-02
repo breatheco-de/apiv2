@@ -16,16 +16,13 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='App',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name',
-                 models.CharField(help_text='Descriptive and unique name of the app',
-                                  max_length=25,
-                                  unique=True)),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(help_text='Descriptive and unique name of the app',
+                                          max_length=25,
+                                          unique=True)),
                 ('slug',
                  models.SlugField(
-                     help_text=
-                     'Unique slug for the app, it must be url friendly and please avoid to change it',
+                     help_text='Unique slug for the app, it must be url friendly and please avoid to change it',
                      unique=True)),
                 ('description',
                  models.CharField(help_text='Description of the app, it will appear on the authorize UI',
@@ -43,8 +40,7 @@ class Migration(migrations.Migration):
                  models.CharField(
                      choices=[('LINK', 'Link')],
                      default='LINK',
-                     help_text=
-                     'Schema to use for the auth process to r2epresent how the apps will communicate',
+                     help_text='Schema to use for the auth process to r2epresent how the apps will communicate',
                      max_length=4)),
                 ('agreement_version',
                  models.IntegerField(default=1, help_text='Version of the agreement, based in the scopes')),
@@ -63,39 +59,33 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Scope',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name',
                  models.CharField(help_text='Descriptive and unique name that appears on the authorize UI',
                                   max_length=25,
                                   unique=True)),
-                ('slug',
-                 models.CharField(help_text='{action}:{data} for example read:repo',
-                                  max_length=15,
-                                  unique=True)),
+                ('slug', models.CharField(help_text='{action}:{data} for example read:repo', max_length=15,
+                                          unique=True)),
                 ('description', models.CharField(help_text='Description of the scope', max_length=255)),
             ],
         ),
         migrations.CreateModel(
             name='OptionalScopeSet',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('optional_scopes', models.ManyToManyField(blank=True, to='authenticate.Scope')),
             ],
         ),
         migrations.CreateModel(
             name='LegacyKey',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('algorithm',
                  models.CharField(choices=[('HMAC_SHA256', 'HMAC-SHA256'), ('HMAC_SHA512', 'HMAC_SHA512'),
                                            ('ED25519', 'ED25519')],
                                   max_length=11)),
                 ('strategy',
-                 models.CharField(choices=[('JWT', 'Json Web Token'), ('SIGNATURE', 'Signature')],
-                                  max_length=9)),
+                 models.CharField(choices=[('JWT', 'Json Web Token'), ('SIGNATURE', 'Signature')], max_length=9)),
                 ('schema', models.CharField(choices=[('LINK', 'Link')], max_length=4)),
                 ('private_key', models.CharField(blank=True, max_length=255)),
                 ('public_key', models.CharField(blank=True, default=None, max_length=255, null=True)),
@@ -112,26 +102,22 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='AppUserAgreement',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('agreement_version',
                  models.IntegerField(default=1, help_text='Version of the agreement that was accepted')),
                 ('agreed_at', models.DateTimeField()),
-                ('app', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
-                                          to='authenticate.app')),
+                ('app', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='authenticate.app')),
                 ('optional_scope_set',
                  models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
                                    related_name='app_user_agreement',
                                    to='authenticate.optionalscopeset')),
-                ('user',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],
         ),
         migrations.CreateModel(
             name='AppRequiredScope',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('agreed_at', models.DateTimeField()),
                 ('app',
                  models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
@@ -146,8 +132,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='AppOptionalScope',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('agreed_at', models.DateTimeField()),
                 ('app',
                  models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,

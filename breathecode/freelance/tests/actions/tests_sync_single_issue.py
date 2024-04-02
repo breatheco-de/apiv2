@@ -40,11 +40,9 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
         result = sync_single_issue({})
         self.assertEqual(result, None)
         self.assertEqual(self.bc.database.list_of('freelance.Issue'), [])
-        self.assertEqual(Logger.info.call_args_list, [
-            call(
-                'Impossible to identify issue because it does not have a node_id (number:None), ignoring synch: {}'
-            )
-        ])
+        self.assertEqual(
+            Logger.info.call_args_list,
+            [call('Impossible to identify issue because it does not have a node_id (number:None), ignoring synch: {}')])
 
     @patch('logging.Logger.info', MagicMock())
     def test_IssueWithFakeSlug(self):
@@ -102,15 +100,14 @@ class GetOrCreateSessionTestSuite(FreelanceTestCase):
         url = self.bc.fake.url()
         number = random.randint(1, 10)
 
-        result = sync_single_issue(
-            {
-                'node_id': 1,
-                'title': title,
-                'body': body,
-                'html_url': url,
-                'number': number
-            },
-            freelancer=models1.freelancer)
+        result = sync_single_issue({
+            'node_id': 1,
+            'title': title,
+            'body': body,
+            'html_url': url,
+            'number': number
+        },
+                                   freelancer=models1.freelancer)
 
         self.assertEqual(self.bc.database.list_of('freelance.Issue'), [
             issue_item({

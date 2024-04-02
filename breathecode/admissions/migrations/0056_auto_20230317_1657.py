@@ -13,8 +13,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='cohort',
             name='accepts_enrollment_suggestions',
-            field=models.BooleanField(
-                default=True, help_text='The system will suggest won leads to be added to this cohort'),
+            field=models.BooleanField(default=True,
+                                      help_text='The system will suggest won leads to be added to this cohort'),
         ),
         migrations.AlterField(
             model_name='cohort',
@@ -22,7 +22,6 @@ class Migration(migrations.Migration):
             field=models.BooleanField(
                 default=False,
                 help_text=
-                'It will not show on the public API endpoints but you will still be able to add people manually'
-            ),
+                'It will not show on the public API endpoints but you will still be able to add people manually'),
         ),
     ]
