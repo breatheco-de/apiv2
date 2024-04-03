@@ -193,6 +193,54 @@ class GetAssessmentView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class AssessmentOptionView(APIView):
+
+    @capable_of('crud_assessment')
+    def delete(self, request, assessment_slug, option_id=None, academy_id=None):
+
+        lang = get_user_language(request)
+
+        option = Option.objects.filter(id=option_id, question__assessment__slug=assessment_slug).first()
+        if option is None:
+            raise ValidationException(
+                translation(lang,
+                            en=f'Option {option_id} not found on assessment {assessment_slug}',
+                            es=f'Option de pregunta {option_id} no encontrada para el assessment {assessment_slug}',
+                            slug='not-found'))
+
+        if option.answer_set.count() > 0:
+            option.is_deleted = True
+            option.save()
+        else:
+            option.delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AssessmentQuestionView(APIView):
+
+    @capable_of('crud_assessment')
+    def delete(self, request, assessment_slug, question_id=None, academy_id=None):
+
+        lang = get_user_language(request)
+
+        question = Question.objects.filter(id=question_id, assessment__slug=assessment_slug).first()
+        if question is None:
+            raise ValidationException(
+                translation(lang,
+                            en=f'Question {question_id} not found on assessment {assessment_slug}',
+                            es=f'La pregunta {question_id} no fue encontrada para el assessment {assessment_slug}',
+                            slug='not-found'))
+
+        if question.answer_set.count() > 0:
+            question.is_deleted = True
+            question.save()
+        else:
+            question.delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
 class GetThresholdView(APIView):
     """
     List all snippets, or create a new snippet.

@@ -1,7 +1,7 @@
 import logging
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
-from .models import Assessment, UserAssessment, UserProxy, Question, Option, AssessmentThreshold
+from .models import (Assessment, UserAssessment, UserProxy, Question, Option, AssessmentThreshold, Answer)
 from .actions import send_assestment
 
 logger = logging.getLogger(__name__)
@@ -39,16 +39,16 @@ class AssessmentAdmin(admin.ModelAdmin):
 @admin.register(Question)
 class QuestionAdmin(admin.ModelAdmin):
     search_fields = ['title', 'assessment__title']
-    list_display = ['title', 'position', 'lang', 'assessment', 'question_type']
-    list_filter = ['lang', 'question_type']
+    list_display = ['title', 'is_deleted', 'position', 'lang', 'assessment', 'question_type']
+    list_filter = ['lang', 'question_type', 'is_deleted']
 
 
 # Register your models here.
 @admin.register(Option)
 class OptionAdmin(admin.ModelAdmin):
     search_fields = ['title', 'question__assessment__title']
-    list_display = ['title', 'position', 'lang', 'score', 'question']
-    list_filter = ['lang']
+    list_display = ['title', 'is_deleted', 'position', 'lang', 'score', 'question']
+    list_filter = ['lang', 'is_deleted']
 
 
 # Register your models here.
@@ -59,9 +59,15 @@ class UserAssessmentAdmin(admin.ModelAdmin):
     list_filter = ['lang']
 
 
-# Register your models here.
 @admin.register(AssessmentThreshold)
 class UserAssessmentThresholdAdmin(admin.ModelAdmin):
     search_fields = ['assessment__slug', 'assessment__title']
     list_display = ['id', 'score_threshold', 'assessment']
     list_filter = ['assessment__slug']
+
+
+@admin.register(Answer)
+class AnswerAdmin(admin.ModelAdmin):
+    search_fields = ['user_assesment__owner', 'user_assesment__title']
+    list_display = ['id', 'question', 'option', 'value']
+    list_filter = ['user_assesment__assessment__slug']
