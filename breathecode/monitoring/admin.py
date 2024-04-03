@@ -1,5 +1,5 @@
 import os, ast
-from django.contrib import admin
+from django.contrib import admin, messages
 from django import forms
 from django.utils import timezone
 from .signals import github_webhook
@@ -192,7 +192,11 @@ def disable_subscription(modeladmin, request, queryset):
 def activate_subscription(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
     for subs in queryset.all():
-        subscribe_repository(subs.id)
+        try:
+            subscribe_repository(subs.id)
+        except Exception as e:
+            messages.error(request, str(e))
+            return False
 
 
 @admin.register(RepositorySubscription)
