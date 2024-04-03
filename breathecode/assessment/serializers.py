@@ -41,7 +41,7 @@ class GetQuestionSerializer(serpy.Serializer):
     options = serpy.MethodField()
 
     def get_options(self, obj):
-        return GetOptionSerializer(obj.option_set.all(), many=True).data
+        return GetOptionSerializer(obj.option_set.filter(is_deleted=False), many=True).data
 
 
 class GetAssessmentSerializer(serpy.Serializer):
@@ -62,7 +62,8 @@ class GetAssessmentBigSerializer(GetAssessmentSerializer):
     is_instant_feedback = serpy.Field()
 
     def get_questions(self, obj):
-        return GetQuestionSerializer(obj.question_set.all().order_by('-position', 'id'), many=True).data
+        return GetQuestionSerializer(obj.question_set.filter(is_deleted=False).order_by('-position', 'id'),
+                                     many=True).data
 
 
 class OptionSerializer(serializers.ModelSerializer):

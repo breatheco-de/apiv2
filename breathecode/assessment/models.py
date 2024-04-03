@@ -110,6 +110,9 @@ class Question(models.Model):
     author = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, blank=True, null=True)
     question_type = models.CharField(max_length=15, choices=QUESTION_TYPE, default=SELECT)
 
+    is_deleted = models.BooleanField(
+        default=False, help_text='Question collected answers cannot not be deleted, they will have this bullet true')
+
     position = models.IntegerField(default=None, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)

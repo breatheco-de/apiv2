@@ -164,7 +164,7 @@ class GetAssessmentView(APIView):
                         if not opt_serializer.is_valid():
                             return Response(opt_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-                        score = opt['score'] if 'score' in opt else opt_serializer.data['score']
+                        score = float(opt['score']) if 'score' in opt else float(opt_serializer.data['score'])
                         if score > 0: total_score += score
 
                 if total_score <= 0:
@@ -195,6 +195,68 @@ class GetAssessmentView(APIView):
 
             return Response(GetAssessmentBigSerializer(first_instance).data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AssessmentOptionView(APIView):
+
+    @capable_of('crud_assessment')
+    def delete(self, request, assessment_slug, option_id=None, academy_id=None):
+
+        lang = get_user_language(request)
+
+        option = Option.objects.filter(id=option_id, question__assessment__slug=assessment_slug).first()
+        if option is None:
+            raise ValidationException(
+                translation(lang,
+                            en=f'Option {option_id} not found on assessment {assessment_slug}',
+                            es=f'Option de pregunta {option_id} no encontrada para el assessment {assessment_slug}',
+                            slug='not-found'))
+
+        if option.question.option_set.filter(is_deleted=False).count() <= 2:
+            raise ValidationException(
+                translation(lang,
+                            en=f'Question {option.question.id} needs at least 2 options',
+                            es=f'La pregunta {option.question.id} necesita al menos dos opciones',
+                            slug='at-least-two'))
+
+        if option.answer_set.count() > 0:
+            option.is_deleted = True
+            option.save()
+        else:
+            option.delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AssessmentQuestionView(APIView):
+
+    @capable_of('crud_assessment')
+    def delete(self, request, assessment_slug, question_id=None, academy_id=None):
+
+        lang = get_user_language(request)
+
+        question = Question.objects.filter(id=question_id, assessment__slug=assessment_slug).first()
+        if question is None:
+            raise ValidationException(
+                translation(lang,
+                            en=f'Question {question_id} not found on assessment {assessment_slug}',
+                            es=f'La pregunta {question_id} no fue encontrada para el assessment {assessment_slug}',
+                            slug='not-found'))
+
+        if question.assessment.question_set.filter(is_deleted=False).count() <= 2:
+            raise ValidationException(
+                translation(lang,
+                            en=f'Assessment {assessment_slug} needs at least 2 questions',
+                            es=f'La evaluación {assessment_slug} necesita al menos dos preguntas',
+                            slug='at-least-two'))
+
+        if question.answer_set.count() > 0:
+            question.is_deleted = True
+            question.save()
+        else:
+            question.delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
 class GetThresholdView(APIView):

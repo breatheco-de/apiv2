@@ -693,6 +693,21 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
             asset.solution_video_url = get_video_url(str(config['video-id']))
             asset.with_video = True
 
+        if 'video' in config and isinstance(config['video'], dict):
+            if 'intro' in config['video'] and config['video']['intro'] is not None:
+                if isinstance(config['video']['intro'], str):
+                    asset.intro_video_url = get_video_url(str(config['video']['intro']))
+                elif asset.lang in config['video']['intro']:
+                    asset.intro_video_url = get_video_url(str(config['video']['intro'][asset.lang]))
+
+            if 'solution' in config['video'] and config['video']['solution'] is not None:
+                if isinstance(config['video']['solution'], str):
+                    asset.solution_video_url = get_video_url(str(config['video']['solution']))
+                    asset.with_video = True
+                elif asset.lang in config['video']['solution']:
+                    asset.solution_video_url = get_video_url(str(config['video']['solution'][asset.lang]))
+                    asset.with_video = True
+
         if 'duration' in config:
             asset.duration = config['duration']
         if 'difficulty' in config:

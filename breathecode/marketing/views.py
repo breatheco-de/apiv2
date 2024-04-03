@@ -133,6 +133,7 @@ def get_alias(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@validate_captcha
 def create_lead(request):
     data = request.data.copy()
 
@@ -1244,5 +1245,5 @@ class CourseView(APIView):
         items = items.annotate(lang=Value(lang, output_field=CharField()))
 
         items = handler.queryset(items)
-        serializer = GetCourseSmallSerializer(items, context={'lang': lang}, many=True)
+        serializer = GetCourseSerializer(items, context={'lang': lang}, many=True)
         return handler.response(serializer.data)
