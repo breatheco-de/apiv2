@@ -208,6 +208,13 @@ class AssessmentOptionView(APIView):
                             es=f'Option de pregunta {option_id} no encontrada para el assessment {assessment_slug}',
                             slug='not-found'))
 
+        if option.question.option_set.filter(is_deleted=False).count() <= 2:
+            raise ValidationException(
+                translation(lang,
+                            en=f'Question {option.question.id} needs at least 2 options',
+                            es=f'La pregunta {option.question.id} necesita al menos dos opciones',
+                            slug='at-least-two'))
+
         if option.answer_set.count() > 0:
             option.is_deleted = True
             option.save()
@@ -231,6 +238,13 @@ class AssessmentQuestionView(APIView):
                             en=f'Question {question_id} not found on assessment {assessment_slug}',
                             es=f'La pregunta {question_id} no fue encontrada para el assessment {assessment_slug}',
                             slug='not-found'))
+
+        if question.assessment.question_set.filter(is_deleted=False).count() <= 2:
+            raise ValidationException(
+                translation(lang,
+                            en=f'Assessment {assessment_slug} needs at least 2 questions',
+                            es=f'La evaluación {assessment_slug} necesita al menos dos preguntas',
+                            slug='at-least-two'))
 
         if question.answer_set.count() > 0:
             question.is_deleted = True
