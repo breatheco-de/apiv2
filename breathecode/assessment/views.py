@@ -160,7 +160,7 @@ class GetAssessmentView(APIView):
                         if not opt_serializer.is_valid():
                             return Response(opt_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-                        score = opt['score'] if 'score' in opt else opt_serializer.data['score']
+                        score = float(opt['score']) if 'score' in opt else float(opt_serializer.data['score'])
                         if score > 0: total_score += score
 
                 if total_score <= 0:
