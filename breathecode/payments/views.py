@@ -23,6 +23,7 @@ from breathecode.payments.actions import (
     get_available_coupons,
     get_balance_by_resource,
     get_discounted_price,
+    max_coupons_allowed,
 )
 from breathecode.payments.caches import PlanOfferCache
 from breathecode.payments.models import (
@@ -1121,6 +1122,13 @@ class BagView(APIView):
                                                   slug='invalid-coupons'),
                                       code=400)
 
+        if 'coupons' in request.data and len(request.data['coupons']) > (max := max_coupons_allowed()):
+            raise ValidationException(translation(lang,
+                                                  en=f'Too many coupons (max {max})',
+                                                  es=f'Demasiados cupones (max {max})',
+                                                  slug='too-many-coupons'),
+                                      code=400)
+
         # do no show the bags of type preview they are build
         bag, _ = Bag.objects.get_or_create(lock=True, user=request.user, status='CHECKING', type='BAG')
         add_items_to_bag(request, bag, lang)
@@ -1128,8 +1136,7 @@ class BagView(APIView):
         plan = bag.plans.first()
         if plan:
             coupons = get_available_coupons(plan, request.data.get('coupons', []))
-            if coupons:
-                bag.coupons.set(coupons)
+            bag.coupons.set(coupons)
 
         # actions.check_dependencies_in_bag(bag, lang)
 
@@ -1215,6 +1222,13 @@ class CheckingView(APIView):
                                                               en='Coupons must be a list of strings',
                                                               es='Cupones debe ser una lista de cadenas',
                                                               slug='invalid-coupons'),
+                                                  code=400)
+
+                    if 'coupons' in request.data and len(request.data['coupons']) > (max := max_coupons_allowed()):
+                        raise ValidationException(translation(lang,
+                                                              en=f'Too many coupons (max {max})',
+                                                              es=f'Demasiados cupones (max {max})',
+                                                              slug='too-many-coupons'),
                                                   code=400)
 
                     # Locked operation to avoid creating twice if 2 web instances are requesting in parallel

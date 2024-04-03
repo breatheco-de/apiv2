@@ -1,4 +1,6 @@
+import os
 import re
+from functools import lru_cache
 from typing import Optional, Type
 
 from dateutil.relativedelta import relativedelta
@@ -642,22 +644,44 @@ def get_balance_by_resource(queryset: QuerySet, key: str):
     return result
 
 
+@lru_cache(maxsize=1)
+def max_coupons_allowed():
+    try:
+        return int(os.getenv('MAX_COUPONS_ALLOWED', '1'))
+
+    except Exception:
+        return 1
+
+
 def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None) -> list[Coupon]:
+
+    def get_total_spent_coupons(coupon: Coupon) -> int:
+        sub_kwargs = {'invoices__bag__coupons': coupon}
+        if coupon.offered_at:
+            sub_kwargs['created_at__gte'] = coupon.offered_at
+
+        if coupon.expires_at:
+            sub_kwargs['created_at__lte'] = coupon.expires_at
+
+        how_many_subscriptions = Subscription.objects.filter(**sub_kwargs).count()
+        how_many_plan_financings = PlanFinancing.objects.filter(**sub_kwargs).count()
+        total_spent_coupons = how_many_subscriptions + how_many_plan_financings
+
+        return total_spent_coupons
 
     def manage_coupon(coupon: Coupon) -> None:
         if coupon.slug not in founded_coupon_slugs:
-            sub_kwargs = {'invoices__bag__coupon': coupon}
-            if coupon.offered_at:
-                sub_kwargs['created_at__gte'] = coupon.offered_at
+            if coupon.how_many_offers == -1:
+                founded_coupons.append(coupon)
+                founded_coupon_slugs.append(coupon.slug)
+                return
 
-            if coupon.expires_at:
-                sub_kwargs['created_at__lte'] = coupon.expires_at
+            if coupon.how_many_offers == 0:
+                founded_coupon_slugs.append(coupon.slug)
+                return
 
-            how_many_subscriptions = Subscription.objects.filter(**sub_kwargs).count()
-            how_many_plan_financings = PlanFinancing.objects.filter(**sub_kwargs).count()
-            total_spent_coupons = how_many_subscriptions + how_many_plan_financings
-
-            if total_spent_coupons >= coupon.how_many_offers:
+            total_spent_coupons = get_total_spent_coupons(coupon)
+            if coupon.how_many_offers >= total_spent_coupons:
                 founded_coupons.append(coupon)
 
             founded_coupon_slugs.append(coupon.slug)
@@ -682,7 +706,8 @@ def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None) -> li
     valid_coupons = Coupon.objects.filter(*cou_args, slug__in=coupons,
                                           auto=False).exclude(how_many_offers=0).only(*cou_fields)
 
-    for coupon in valid_coupons:
+    max = max_coupons_allowed()
+    for coupon in valid_coupons[0:max]:
         manage_coupon(coupon)
 
     return founded_coupons
