@@ -158,8 +158,7 @@ class TestLead(LegacyAPITestCase):
 
     @patch('breathecode.feedback.tasks.send_mentorship_session_survey.delay', MagicMock())
     @patch('breathecode.payments.tasks.refund_mentoring_session.delay', MagicMock())
-    def test_mentorship_session_status__with_status_completed__duration_equal_to_five_minutes(
-            self, enable_signals):
+    def test_mentorship_session_status__with_status_completed__duration_equal_to_five_minutes(self, enable_signals):
         enable_signals()
 
         from breathecode.feedback.tasks import send_mentorship_session_survey
@@ -185,8 +184,7 @@ class TestLead(LegacyAPITestCase):
 
     @patch('breathecode.feedback.tasks.send_mentorship_session_survey.delay', MagicMock())
     @patch('breathecode.payments.tasks.refund_mentoring_session.delay', MagicMock())
-    def test_mentorship_session_status__with_status_completed__duration_greater_than_five_minutes(
-            self, enable_signals):
+    def test_mentorship_session_status__with_status_completed__duration_greater_than_five_minutes(self, enable_signals):
         enable_signals()
 
         from breathecode.feedback.tasks import send_mentorship_session_survey

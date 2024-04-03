@@ -62,9 +62,7 @@ def mentorship_service_by_url_param(context: PermissionContextType, args: tuple,
 
     if (mentor_profile.user.id == request.user.id and is_saas and (mentee := request.GET.get('mentee'))
             and not mentee.isdigit()):
-        raise ValidationException(translation(lang,
-                                              en='mentee must be a number',
-                                              es='mentee debe ser un número'),
+        raise ValidationException(translation(lang, en='mentee must be a number', es='mentee debe ser un número'),
                                   code=400)
 
     if (mentor_profile.user.id == request.user.id and is_saas and mentee
@@ -74,13 +72,12 @@ def mentorship_service_by_url_param(context: PermissionContextType, args: tuple,
                                               es=f'No se encontró el mentee con id {mentee}'),
                                   code=400)
 
-    if (mentor_profile.user.id == request.user.id and is_saas and mentee
-            and not (consumable := Consumable.get(
-                lang=lang,
-                user=mentee,
-                permission=context['permission'],
-                extra={'mentorship_service_set__mentorship_services': mentorship_service},
-            ))):
+    if (mentor_profile.user.id == request.user.id and is_saas and mentee and not (consumable := Consumable.get(
+            lang=lang,
+            user=mentee,
+            permission=context['permission'],
+            extra={'mentorship_service_set__mentorship_services': mentorship_service},
+    ))):
 
         raise ValidationException(translation(
             lang,
@@ -91,8 +88,7 @@ def mentorship_service_by_url_param(context: PermissionContextType, args: tuple,
                                   code=402)
 
     if consumable:
-        session = ConsumptionSession.build_session(request, consumable, mentorship_service.max_duration,
-                                                   mentee)
+        session = ConsumptionSession.build_session(request, consumable, mentorship_service.max_duration, mentee)
         session.will_consume(1)
 
     return (context, args, kwargs)

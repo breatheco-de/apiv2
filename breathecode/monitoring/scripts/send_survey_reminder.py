@@ -45,8 +45,7 @@ else:
     not_sent = 'No other surveys have issues'
 
 for cohort in cohorts:
-    lastest_survey = Survey.objects.filter(cohort__id=cohort.id,
-                                           status__in=['SENT', 'PARTIAL'],
+    lastest_survey = Survey.objects.filter(cohort__id=cohort.id, status__in=['SENT', 'PARTIAL'],
                                            sent_at__isnull=False).order_by('-sent_at').first()
 
     if lastest_survey is None:
@@ -72,8 +71,7 @@ if len(cohorts_with_pending_surveys) > 0:
         f'\n\n Also, the following surveys have no sent date, you should delete or resolve their issues: \n'
         f'\n {not_sent}',
         status='MINOR',
-        title=
-        f'There are {str(len(cohorts_with_pending_surveys))} surveys pending to be sent at {academy.name}',
+        title=f'There are {str(len(cohorts_with_pending_surveys))} surveys pending to be sent at {academy.name}',
         slug='cohort-have-pending-surveys')
 
 print('No reminders')

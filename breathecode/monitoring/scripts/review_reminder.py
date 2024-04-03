@@ -38,10 +38,9 @@ if total_reviews == 0:
 
 else:
     review_names = ('\n').join([
-        '- Ask ' +
-        (r.author.first_name + ' ' + r.author.last_name + ' (' +
-         str(r.nps_previous_rating if not None else '0') + '/10) from ' + r.cohort.name +
-         ' to review us at ' + '<a href="' + r.platform.review_signup + '">' + r.platform.name + '</a>')
+        '- Ask ' + (r.author.first_name + ' ' + r.author.last_name + ' (' +
+                    str(r.nps_previous_rating if not None else '0') + '/10) from ' + r.cohort.name +
+                    ' to review us at ' + '<a href="' + r.platform.review_signup + '">' + r.platform.name + '</a>')
         for r in reviews
     ])
 

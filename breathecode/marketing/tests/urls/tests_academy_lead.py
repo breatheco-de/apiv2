@@ -114,10 +114,7 @@ class CohortUserTestSuite(MarketingTestCase):
     def test_academy_lead__without_academy_header(self):
         """Test /cohort/:id/user without auth"""
         url = reverse_lazy('marketing:academy_lead')
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='read_lead',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='read_lead', role='potato')
 
         response = self.client.get(url)
         json = response.json()
@@ -139,10 +136,7 @@ class CohortUserTestSuite(MarketingTestCase):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('marketing:academy_lead')
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='read_lead',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='read_lead', role='potato')
 
         response = self.client.get(url)
         json = response.json()
@@ -538,8 +532,7 @@ class CohortUserTestSuite(MarketingTestCase):
                                          form_entry_kwargs=form_entry_kwargs,
                                          models=base)
 
-            url = (reverse_lazy('marketing:academy_lead') + f'?{field}=' +
-                   str(getattr(model['form_entry'], field)))
+            url = (reverse_lazy('marketing:academy_lead') + f'?{field}=' + str(getattr(model['form_entry'], field)))
             response = self.client.delete(url)
 
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
@@ -572,9 +565,8 @@ class CohortUserTestSuite(MarketingTestCase):
                                           form_entry_kwargs=form_entry_kwargs,
                                           models=base)
 
-            url = (reverse_lazy('marketing:academy_lead') + f'?{field}=' +
-                   str(getattr(model1['form_entry'], field)) + ',' +
-                   str(getattr(model2['form_entry'], field)))
+            url = (reverse_lazy('marketing:academy_lead') + f'?{field}=' + str(getattr(model1['form_entry'], field)) +
+                   ',' + str(getattr(model2['form_entry'], field)))
             response = self.client.delete(url)
 
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
@@ -615,9 +607,7 @@ class CohortUserTestSuite(MarketingTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_form_entry_dict(), [{
-            **self.model_to_dict(model, 'form_entry')
-        } for model in models])
+        self.assertEqual(self.all_form_entry_dict(), [{**self.model_to_dict(model, 'form_entry')} for model in models])
 
     def test_academy_lead__with_first_name_in_querystring(self):
         """Test /academy/lead """
@@ -649,9 +639,7 @@ class CohortUserTestSuite(MarketingTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_form_entry_dict(), [{
-            **self.model_to_dict(model, 'form_entry')
-        } for model in models])
+        self.assertEqual(self.all_form_entry_dict(), [{**self.model_to_dict(model, 'form_entry')} for model in models])
 
     def test_academy_lead__with_last_name_in_querystring(self):
         """Test /academy/lead """
@@ -684,9 +672,7 @@ class CohortUserTestSuite(MarketingTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_form_entry_dict(), [{
-            **self.model_to_dict(model, 'form_entry')
-        } for model in models])
+        self.assertEqual(self.all_form_entry_dict(), [{**self.model_to_dict(model, 'form_entry')} for model in models])
 
     def test_academy_lead__with_email_in_querystring(self):
         """Test /academy/lead """
@@ -717,9 +703,7 @@ class CohortUserTestSuite(MarketingTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_form_entry_dict(), [{
-            **self.model_to_dict(model, 'form_entry')
-        } for model in models])
+        self.assertEqual(self.all_form_entry_dict(), [{**self.model_to_dict(model, 'form_entry')} for model in models])
 
     """
     🔽🔽🔽 Spy extensions
@@ -730,10 +714,7 @@ class CohortUserTestSuite(MarketingTestCase):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('marketing:academy_lead')
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='read_lead',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='read_lead', role='potato')
 
         self.client.get(url)
 
@@ -746,10 +727,7 @@ class CohortUserTestSuite(MarketingTestCase):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('marketing:academy_lead')
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='read_lead',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='read_lead', role='potato')
 
         self.client.get(url)
 

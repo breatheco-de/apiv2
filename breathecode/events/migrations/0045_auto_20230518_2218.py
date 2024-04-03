@@ -23,7 +23,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='eventbritewebhook',
             name='payload',
-            field=models.JSONField(blank=True, default=None, help_text='Will be set by async task',
-                                   null=True),
+            field=models.JSONField(blank=True, default=None, help_text='Will be set by async task', null=True),
         ),
     ]

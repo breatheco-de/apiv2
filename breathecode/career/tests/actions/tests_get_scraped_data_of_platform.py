@@ -88,32 +88,21 @@ JOBS = [{
     'Job_description': '',
     'Salary': '$1800 - 2100 USD/month',
     'Tags': ['api', 'back-end', 'full-stack', 'git', 'java', 'mvc', 'python', 'ruby'],
-    'Apply_to':
-    'https://www.getonbrd.com/jobs/programming/desarrollador-full-stack-developer-centry-santiago',
+    'Apply_to': 'https://www.getonbrd.com/jobs/programming/desarrollador-full-stack-developer-centry-santiago',
     '_type': 'dict'
 }, {
-    'Searched_job':
-    'junior web developer',
-    'Job_title':
-    'Desarrollador Full-Stack Python/React',
-    'Location':
-    'Remote',
-    'Company_name':
-    'Alluxi',
-    'Post_date':
-    'January 14, 2022',
-    'Extract_date':
-    '2022-01-30',
+    'Searched_job': 'junior web developer',
+    'Job_title': 'Desarrollador Full-Stack Python/React',
+    'Location': 'Remote',
+    'Company_name': 'Alluxi',
+    'Post_date': 'January 14, 2022',
+    'Extract_date': '2022-01-30',
     'Job_description':
     'Al menos 1 año de experiencia trabajando con Python y Django Al menos 1 año de experiencia trabajando con React.js Experiencia desarrollando APIs REST Ingles Conversacional Buscamos un desarrollador responsable, autodidacta, proactivo, eficiente y organizado.',
-    'Salary':
-    '$1800 - 2000 USD/month',
-    'Tags':
-    ['api', 'back-end', 'django', 'english', 'front-end', 'full-stack', 'javascript', 'python', 'react'],
-    'Apply_to':
-    'https://www.getonbrd.com/jobs/programming/desarrollodor-fullstack-python-react-alluxi-remote',
-    '_type':
-    'dict'
+    'Salary': '$1800 - 2000 USD/month',
+    'Tags': ['api', 'back-end', 'django', 'english', 'front-end', 'full-stack', 'javascript', 'python', 'react'],
+    'Apply_to': 'https://www.getonbrd.com/jobs/programming/desarrollodor-fullstack-python-react-alluxi-remote',
+    '_type': 'dict'
 }, {
     'Searched_job':
     'junior web developer',
@@ -132,8 +121,8 @@ JOBS = [{
     'Salary':
     'Not supplied',
     'Tags': [
-        'angularjs', 'back-end', 'express', 'front-end', 'full-stack', 'javascript', 'magento',
-        'mobile development', 'node.js', 'php', 'react', 'redis', 'responsive', 'symfony', 'ui design'
+        'angularjs', 'back-end', 'express', 'front-end', 'full-stack', 'javascript', 'magento', 'mobile development',
+        'node.js', 'php', 'react', 'redis', 'responsive', 'symfony', 'ui design'
     ],
     'Apply_to':
     'https://www.getonbrd.com/jobs/programming/full-stack-developer-aaxis-commerce-santiago-3c8e',
@@ -194,8 +183,8 @@ JOBS = [{
     'Salary':
     'Not supplied',
     'Tags': [
-        'angularjs', 'api', 'back-end', 'ci/cd', 'css', 'docker', 'front-end', 'html5', 'javascript', 'json',
-        'mongodb', 'node.js', 'nosql', 'postgresql', 'react', 'responsive', 'ui design', 'virtualization'
+        'angularjs', 'api', 'back-end', 'ci/cd', 'css', 'docker', 'front-end', 'html5', 'javascript', 'json', 'mongodb',
+        'node.js', 'nosql', 'postgresql', 'react', 'responsive', 'ui design', 'virtualization'
     ],
     'Apply_to':
     'https://www.getonbrd.com/jobs/programming/junior-web-developer-reign-remote',
@@ -272,13 +261,11 @@ class ActionGetScrapedDataOfPlatformTestCase(CareerTestCase):
 
     @patch(
         REQUESTS_PATH['get'],
-        apply_requests_get_mock([
-            (400, 'https://storage.scrapinghub.com/items/223344/3/35?apikey=1234567&format=json', [{
-                'status_code':
-                400,
-                'data': []
-            }])
-        ]))
+        apply_requests_get_mock([(400, 'https://storage.scrapinghub.com/items/223344/3/35?apikey=1234567&format=json',
+                                  [{
+                                      'status_code': 400,
+                                      'data': []
+                                  }])]))
     @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
     @patch('django.contrib.messages.add_message', MagicMock())
     @patch('logging.Logger.error', MagicMock())
@@ -290,9 +277,8 @@ class ActionGetScrapedDataOfPlatformTestCase(CareerTestCase):
             result = get_scraped_data_of_platform(model.spider, DATA)
 
             self.assertEqual(result, [{'status_code': 400, 'data': []}])
-            self.assertEqual(
-                requests.get.call_args_list,
-                [call('https://storage.scrapinghub.com/items/223344/3/35?apikey=1234567&format=json')])
+            self.assertEqual(requests.get.call_args_list,
+                             [call('https://storage.scrapinghub.com/items/223344/3/35?apikey=1234567&format=json')])
 
         except Exception as e:
             self.assertEqual(str(e), ('bad-response-fetch'))

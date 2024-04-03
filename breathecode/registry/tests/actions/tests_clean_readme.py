@@ -42,8 +42,7 @@ class RegistryTestSuite(RegistryTestCase):
         readme = asset.get_readme()
         self.assertEqual(asset.readme_raw, Asset.encode(original_content))
         self.assertEqual(
-            readme['decoded'],
-            """For example, we need the following application URLs to match the following components:
+            readme['decoded'], """For example, we need the following application URLs to match the following components:
 
 ## Defining your Application Routes""")
 
@@ -69,8 +68,7 @@ class RegistryTestSuite(RegistryTestCase):
 
         self.assertEqual(asset.readme_raw, original_content)
         self.assertEqual(
-            readme['decoded'],
-            """For example, we need the following application URLs to match the following components:
+            readme['decoded'], """For example, we need the following application URLs to match the following components:
 
 ![react router](https://github.com/breatheco-de/content/blob/master/src/content/lesson/../../assets/images/6fd2b44b-598b-4ddb-85ba-9c32b086127f.png?raw=true)
 
@@ -100,8 +98,7 @@ i should hide
         self.assertEqual(asset.readme_raw, original_content)
         self.assertEqual(
             asset.readme,
-            Asset.encode(
-                """For example, we need the following application URLs to match the following components:
+            Asset.encode("""For example, we need the following application URLs to match the following components:
 
 ![react router](https://github.com/breatheco-de/content/blob/master/src/content/lesson/../../assets/images/6fd2b44b-598b-4ddb-85ba-9c32b086127f.png?raw=true)
 

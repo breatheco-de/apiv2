@@ -43,10 +43,7 @@ class ActiveCampaignIdTestSuite(MarketingTestCase):
         self.headers(academy=1)
         response = self.client.put(url, data)
         json = response.json()
-        expected = {
-            'detail': "You (user: 1) don't have this capability: crud_lead for academy 1",
-            'status_code': 403
-        }
+        expected = {'detail': "You (user: 1) don't have this capability: crud_lead for academy 1", 'status_code': 403}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

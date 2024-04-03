@@ -13,10 +13,9 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='cohort',
             name='available_as_saas',
-            field=models.BooleanField(
-                blank=True,
-                default=False,
-                help_text='Cohorts available as SAAS will be sold through plans at 4Geeks.com',
-                null=True),
+            field=models.BooleanField(blank=True,
+                                      default=False,
+                                      help_text='Cohorts available as SAAS will be sold through plans at 4Geeks.com',
+                                      null=True),
         ),
     ]

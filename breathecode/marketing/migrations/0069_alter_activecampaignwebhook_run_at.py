@@ -13,9 +13,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='activecampaignwebhook',
             name='run_at',
-            field=models.DateTimeField(blank=True,
-                                       default=None,
-                                       help_text='Date/time that the webhook ran',
-                                       null=True),
+            field=models.DateTimeField(blank=True, default=None, help_text='Date/time that the webhook ran', null=True),
         ),
     ]

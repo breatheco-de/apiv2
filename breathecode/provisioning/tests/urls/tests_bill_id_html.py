@@ -52,11 +52,7 @@ def provisioning_user_consumption_serializer(provisioning_user_consumption,
         quantity += event.quantity
         p = event.quantity * provisioning_price.price_per_unit * provisioning_price.multiplier
         price += p
-        prices.append({
-            'price': p,
-            'price_per_unit': provisioning_price.price_per_unit,
-            'quantity': event.quantity
-        })
+        prices.append({'price': p, 'price_per_unit': provisioning_price.price_per_unit, 'quantity': event.quantity})
 
     resume = ''
 
@@ -134,11 +130,10 @@ def render_successfully(provisioning_bill=None,
         **data, 'bill':
         provisioning_bill_serializer(provisioning_bill, academy),
         'consumptions': [
-            provisioning_user_consumption_serializer(
-                provisioning_user_consumption,
-                provisioning_consumption_kind,
-                provisioning_price,
-                provisioning_consumption_events=provisioning_consumption_events)
+            provisioning_user_consumption_serializer(provisioning_user_consumption,
+                                                     provisioning_consumption_kind,
+                                                     provisioning_price,
+                                                     provisioning_consumption_events=provisioning_consumption_events)
             for provisioning_user_consumption in provisioning_user_consumptions
         ],
         'status':

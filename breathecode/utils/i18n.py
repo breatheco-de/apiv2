@@ -63,10 +63,7 @@ def format_date(code: Optional[str], date: date, format='medium'):
 
 
 # parse a date to a str with the local format
-def format_datetime(code: Optional[str],
-                    date: datetime,
-                    tz: pytz.BaseTzInfo | str = pytz.UTC,
-                    format='medium'):
+def format_datetime(code: Optional[str], date: datetime, tz: pytz.BaseTzInfo | str = pytz.UTC, format='medium'):
     """Translate the datetime to the local language"""
 
     if not code:

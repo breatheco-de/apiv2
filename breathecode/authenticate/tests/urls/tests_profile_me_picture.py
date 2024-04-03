@@ -108,11 +108,10 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.put(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED,
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED,
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [])
 
@@ -155,8 +154,7 @@ class AuthenticateTestSuite(AuthTestCase):
         file_name=PropertyMock(),
         upload=MagicMock(),
         exists=MagicMock(return_value=True),
-        url=MagicMock(
-            return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100'),
+        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100'),
         create=True)
     @patch(
         'os.getenv',
@@ -205,8 +203,7 @@ class AuthenticateTestSuite(AuthTestCase):
         file_name=PropertyMock(),
         upload=MagicMock(),
         exists=MagicMock(return_value=True),
-        url=MagicMock(
-            return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100'),
+        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100'),
         create=True)
     @patch(
         'os.getenv',
@@ -257,8 +254,7 @@ class AuthenticateTestSuite(AuthTestCase):
         file_name=PropertyMock(),
         upload=MagicMock(),
         exists=MagicMock(return_value=True),
-        url=MagicMock(
-            return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100'),
+        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100'),
         create=True)
     @patch(
         'os.getenv',
@@ -291,13 +287,11 @@ class AuthenticateTestSuite(AuthTestCase):
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [
-                profile_row(
-                    {
-                        'user_id': model.user.id,
-                        'id': model.profile.id,
-                        'avatar_url':
-                        'https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100',
-                    }),
+                profile_row({
+                    'user_id': model.user.id,
+                    'id': model.profile.id,
+                    'avatar_url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100',
+                }),
             ])
 
             self.assertEqual(Storage.__init__.call_args_list, [call()])
@@ -328,8 +322,7 @@ class AuthenticateTestSuite(AuthTestCase):
         delete=MagicMock(),
         upload=MagicMock(),
         exists=MagicMock(return_value=False),
-        url=MagicMock(
-            return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100'),
+        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100'),
         create=True)
     @patch(
         'os.getenv',
@@ -362,12 +355,11 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [
-            profile_row(
-                {
-                    'user_id': 1,
-                    'id': 1,
-                    'avatar_url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100',
-                }),
+            profile_row({
+                'user_id': 1,
+                'id': 1,
+                'avatar_url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100',
+            }),
         ])
 
         self.assertEqual(Storage.__init__.call_args_list, [call()])
@@ -392,8 +384,7 @@ class AuthenticateTestSuite(AuthTestCase):
         delete=MagicMock(),
         upload=MagicMock(),
         exists=MagicMock(return_value=False),
-        url=MagicMock(
-            return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100'),
+        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url-100x100'),
         create=True)
     @patch(
         'os.getenv',

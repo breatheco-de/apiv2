@@ -113,14 +113,10 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                                            user=1,
                                            mentorship_service=1,
                                            mentorship_session={
-                                               'status':
-                                               'COMPLETED',
-                                               'started_at':
-                                               datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
-                                               'ended_at':
-                                               datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
-                                               'accounted_duration':
-                                               datetime.timedelta(hours=1)
+                                               'status': 'COMPLETED',
+                                               'started_at': datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
+                                               'ended_at': datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                                               'accounted_duration': datetime.timedelta(hours=1)
                                            })
         models = self.bc.database.create(mentor_profile=1,
                                          user=1,
@@ -171,61 +167,55 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
         bill3 = round((models.mentorship_session[2].accounted_duration.seconds) / 60 / 60,
                       2) * models.mentor_profile.price_per_hour
 
-        self.assertEqual(
-            list_bills, [
-                mentorship_bill_field(
-                    {
-                        'academy_id': 2,
-                        'started_at': datetime.datetime(2021, 10, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
-                        'ended_at': datetime.datetime(2021, 10, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
-                        'id': 1,
-                        'mentor_id': 2,
-                        'overtime_minutes': 60.0,
-                        'total_duration_in_hours': 3.0,
-                        'total_duration_in_minutes': 180.0,
-                        'total_price': bill2,
-                    }),
-                mentorship_bill_field(
-                    {
-                        'academy_id': 2,
-                        'started_at': datetime.datetime(2021, 11, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
-                        'ended_at': datetime.datetime(2021, 11, 30, 23, 59, 59, 999999, tzinfo=pytz.UTC),
-                        'id': 2,
-                        'mentor_id': 2,
-                        'overtime_minutes': 60.0,
-                        'total_duration_in_hours': 2.0,
-                        'total_duration_in_minutes': 120.0,
-                        'total_price': bill3,
-                    }),
-            ])
+        self.assertEqual(list_bills, [
+            mentorship_bill_field({
+                'academy_id': 2,
+                'started_at': datetime.datetime(2021, 10, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
+                'ended_at': datetime.datetime(2021, 10, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                'id': 1,
+                'mentor_id': 2,
+                'overtime_minutes': 60.0,
+                'total_duration_in_hours': 3.0,
+                'total_duration_in_minutes': 180.0,
+                'total_price': bill2,
+            }),
+            mentorship_bill_field({
+                'academy_id': 2,
+                'started_at': datetime.datetime(2021, 11, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
+                'ended_at': datetime.datetime(2021, 11, 30, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                'id': 2,
+                'mentor_id': 2,
+                'overtime_minutes': 60.0,
+                'total_duration_in_hours': 2.0,
+                'total_duration_in_minutes': 120.0,
+                'total_price': bill3,
+            }),
+        ])
 
-        self.assertEqual(
-            self.bc.database.list_of('mentorship.MentorshipBill'), [
-                mentorship_bill_field(
-                    {
-                        'academy_id': 2,
-                        'started_at': datetime.datetime(2021, 10, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
-                        'ended_at': datetime.datetime(2021, 10, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
-                        'id': 1,
-                        'mentor_id': 2,
-                        'overtime_minutes': 60.0,
-                        'total_duration_in_hours': 3.0,
-                        'total_duration_in_minutes': 180.0,
-                        'total_price': bill2,
-                    }),
-                mentorship_bill_field(
-                    {
-                        'academy_id': 2,
-                        'started_at': datetime.datetime(2021, 11, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
-                        'ended_at': datetime.datetime(2021, 11, 30, 23, 59, 59, 999999, tzinfo=pytz.UTC),
-                        'id': 2,
-                        'mentor_id': 2,
-                        'overtime_minutes': 60.0,
-                        'total_duration_in_hours': 2.0,
-                        'total_duration_in_minutes': 120.0,
-                        'total_price': bill3,
-                    }),
-            ])
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipBill'), [
+            mentorship_bill_field({
+                'academy_id': 2,
+                'started_at': datetime.datetime(2021, 10, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
+                'ended_at': datetime.datetime(2021, 10, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                'id': 1,
+                'mentor_id': 2,
+                'overtime_minutes': 60.0,
+                'total_duration_in_hours': 3.0,
+                'total_duration_in_minutes': 180.0,
+                'total_price': bill2,
+            }),
+            mentorship_bill_field({
+                'academy_id': 2,
+                'started_at': datetime.datetime(2021, 11, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
+                'ended_at': datetime.datetime(2021, 11, 30, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                'id': 2,
+                'mentor_id': 2,
+                'overtime_minutes': 60.0,
+                'total_duration_in_hours': 2.0,
+                'total_duration_in_minutes': 120.0,
+                'total_price': bill3,
+            }),
+        ])
 
         status_message = ('The mentor never joined the meeting, no time will be '
                           'accounted for.')
@@ -299,14 +289,10 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
         models_a = self.bc.database.create(mentor_profile=1,
                                            user=1,
                                            mentorship_session={
-                                               'status':
-                                               'COMPLETED',
-                                               'started_at':
-                                               datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
-                                               'ended_at':
-                                               datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
-                                               'accounted_duration':
-                                               datetime.timedelta(hours=1)
+                                               'status': 'COMPLETED',
+                                               'started_at': datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
+                                               'ended_at': datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                                               'accounted_duration': datetime.timedelta(hours=1)
                                            },
                                            mentorship_service=1,
                                            mentorship_bill={
@@ -361,85 +347,79 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
         bill3 = round((models.mentorship_session[2].accounted_duration.seconds) / 60 / 60,
                       2) * models.mentor_profile.price_per_hour
 
-        self.assertEqual(
-            list_bills, [
-                mentorship_bill_field({
-                    'academy_id': 1,
-                    'started_at': start_month,
-                    'ended_at': end_month,
-                    'id': 1,
-                    'mentor_id': 1,
-                    'overtime_minutes': 0,
-                    'total_duration_in_hours': 1.0,
-                    'total_duration_in_minutes': 60.0,
-                    'total_price': bill1,
-                    'reviewer_id': None,
-                }),
-                mentorship_bill_field(
-                    {
-                        'academy_id': 1,
-                        'started_at': datetime.datetime(2021, 11, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
-                        'ended_at': datetime.datetime(2021, 11, 30, 23, 59, 59, 999999, tzinfo=pytz.UTC),
-                        'id': 2,
-                        'mentor_id': 1,
-                        'overtime_minutes': 60.0,
-                        'total_duration_in_hours': 3.0,
-                        'total_duration_in_minutes': 180.0,
-                        'total_price': bill2,
-                    }),
-                mentorship_bill_field(
-                    {
-                        'academy_id': 1,
-                        'started_at': datetime.datetime(2021, 12, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
-                        'ended_at': datetime.datetime(2021, 12, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
-                        'id': 3,
-                        'mentor_id': 1,
-                        'overtime_minutes': 60.0,
-                        'total_duration_in_hours': 2.0,
-                        'total_duration_in_minutes': 120.0,
-                        'total_price': bill3,
-                    }),
-            ])
+        self.assertEqual(list_bills, [
+            mentorship_bill_field({
+                'academy_id': 1,
+                'started_at': start_month,
+                'ended_at': end_month,
+                'id': 1,
+                'mentor_id': 1,
+                'overtime_minutes': 0,
+                'total_duration_in_hours': 1.0,
+                'total_duration_in_minutes': 60.0,
+                'total_price': bill1,
+                'reviewer_id': None,
+            }),
+            mentorship_bill_field({
+                'academy_id': 1,
+                'started_at': datetime.datetime(2021, 11, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
+                'ended_at': datetime.datetime(2021, 11, 30, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                'id': 2,
+                'mentor_id': 1,
+                'overtime_minutes': 60.0,
+                'total_duration_in_hours': 3.0,
+                'total_duration_in_minutes': 180.0,
+                'total_price': bill2,
+            }),
+            mentorship_bill_field({
+                'academy_id': 1,
+                'started_at': datetime.datetime(2021, 12, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
+                'ended_at': datetime.datetime(2021, 12, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                'id': 3,
+                'mentor_id': 1,
+                'overtime_minutes': 60.0,
+                'total_duration_in_hours': 2.0,
+                'total_duration_in_minutes': 120.0,
+                'total_price': bill3,
+            }),
+        ])
 
-        self.assertEqual(
-            self.bc.database.list_of('mentorship.MentorshipBill'), [
-                mentorship_bill_field({
-                    'academy_id': 1,
-                    'started_at': start_month,
-                    'ended_at': end_month,
-                    'id': 1,
-                    'mentor_id': 1,
-                    'overtime_minutes': 0.0,
-                    'total_duration_in_hours': 1.0,
-                    'total_duration_in_minutes': 60.0,
-                    'total_price': bill1,
-                    'reviewer_id': None,
-                }),
-                mentorship_bill_field(
-                    {
-                        'academy_id': 1,
-                        'started_at': datetime.datetime(2021, 11, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
-                        'ended_at': datetime.datetime(2021, 11, 30, 23, 59, 59, 999999, tzinfo=pytz.UTC),
-                        'id': 2,
-                        'mentor_id': 1,
-                        'overtime_minutes': 60.0,
-                        'total_duration_in_hours': 3.0,
-                        'total_duration_in_minutes': 180.0,
-                        'total_price': bill2,
-                    }),
-                mentorship_bill_field(
-                    {
-                        'academy_id': 1,
-                        'started_at': datetime.datetime(2021, 12, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
-                        'ended_at': datetime.datetime(2021, 12, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
-                        'id': 3,
-                        'mentor_id': 1,
-                        'overtime_minutes': 60.0,
-                        'total_duration_in_hours': 2.0,
-                        'total_duration_in_minutes': 120.0,
-                        'total_price': bill3,
-                    }),
-            ])
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipBill'), [
+            mentorship_bill_field({
+                'academy_id': 1,
+                'started_at': start_month,
+                'ended_at': end_month,
+                'id': 1,
+                'mentor_id': 1,
+                'overtime_minutes': 0.0,
+                'total_duration_in_hours': 1.0,
+                'total_duration_in_minutes': 60.0,
+                'total_price': bill1,
+                'reviewer_id': None,
+            }),
+            mentorship_bill_field({
+                'academy_id': 1,
+                'started_at': datetime.datetime(2021, 11, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
+                'ended_at': datetime.datetime(2021, 11, 30, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                'id': 2,
+                'mentor_id': 1,
+                'overtime_minutes': 60.0,
+                'total_duration_in_hours': 3.0,
+                'total_duration_in_minutes': 180.0,
+                'total_price': bill2,
+            }),
+            mentorship_bill_field({
+                'academy_id': 1,
+                'started_at': datetime.datetime(2021, 12, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
+                'ended_at': datetime.datetime(2021, 12, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                'id': 3,
+                'mentor_id': 1,
+                'overtime_minutes': 60.0,
+                'total_duration_in_hours': 2.0,
+                'total_duration_in_minutes': 120.0,
+                'total_price': bill3,
+            }),
+        ])
 
         status_message = ('The mentor never joined the meeting, no time will be '
                           'accounted for.')
@@ -516,14 +496,10 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
         models_a = self.bc.database.create(mentor_profile=1,
                                            user=1,
                                            mentorship_session={
-                                               'status':
-                                               'COMPLETED',
-                                               'started_at':
-                                               datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
-                                               'ended_at':
-                                               datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
-                                               'accounted_duration':
-                                               datetime.timedelta(hours=1)
+                                               'status': 'COMPLETED',
+                                               'started_at': datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
+                                               'ended_at': datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                                               'accounted_duration': datetime.timedelta(hours=1)
                                            },
                                            mentorship_service=1,
                                            mentorship_bill={
@@ -578,83 +554,77 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
         bill3 = round((models.mentorship_session[2].accounted_duration.seconds) / 60 / 60,
                       2) * models.mentor_profile.price_per_hour
 
-        self.assertEqual(
-            list_bills, [
-                mentorship_bill_field({
-                    'academy_id': 1,
-                    'started_at': start_month,
-                    'ended_at': end_month,
-                    'id': 1,
-                    'mentor_id': 1,
-                    'overtime_minutes': 0,
-                    'total_duration_in_hours': 1.0,
-                    'total_duration_in_minutes': 60.0,
-                    'total_price': bill1,
-                }),
-                mentorship_bill_field(
-                    {
-                        'academy_id': 1,
-                        'started_at': datetime.datetime(2021, 11, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
-                        'ended_at': datetime.datetime(2021, 11, 30, 23, 59, 59, 999999, tzinfo=pytz.UTC),
-                        'id': 2,
-                        'mentor_id': 1,
-                        'overtime_minutes': 60.0,
-                        'total_duration_in_hours': 3.0,
-                        'total_duration_in_minutes': 180.0,
-                        'total_price': bill2,
-                    }),
-                mentorship_bill_field(
-                    {
-                        'academy_id': 1,
-                        'started_at': datetime.datetime(2021, 12, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
-                        'ended_at': datetime.datetime(2021, 12, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
-                        'id': 3,
-                        'mentor_id': 1,
-                        'overtime_minutes': 60.0,
-                        'total_duration_in_hours': 2.0,
-                        'total_duration_in_minutes': 120.0,
-                        'total_price': bill3,
-                    }),
-            ])
+        self.assertEqual(list_bills, [
+            mentorship_bill_field({
+                'academy_id': 1,
+                'started_at': start_month,
+                'ended_at': end_month,
+                'id': 1,
+                'mentor_id': 1,
+                'overtime_minutes': 0,
+                'total_duration_in_hours': 1.0,
+                'total_duration_in_minutes': 60.0,
+                'total_price': bill1,
+            }),
+            mentorship_bill_field({
+                'academy_id': 1,
+                'started_at': datetime.datetime(2021, 11, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
+                'ended_at': datetime.datetime(2021, 11, 30, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                'id': 2,
+                'mentor_id': 1,
+                'overtime_minutes': 60.0,
+                'total_duration_in_hours': 3.0,
+                'total_duration_in_minutes': 180.0,
+                'total_price': bill2,
+            }),
+            mentorship_bill_field({
+                'academy_id': 1,
+                'started_at': datetime.datetime(2021, 12, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
+                'ended_at': datetime.datetime(2021, 12, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                'id': 3,
+                'mentor_id': 1,
+                'overtime_minutes': 60.0,
+                'total_duration_in_hours': 2.0,
+                'total_duration_in_minutes': 120.0,
+                'total_price': bill3,
+            }),
+        ])
 
-        self.assertEqual(
-            self.bc.database.list_of('mentorship.MentorshipBill'), [
-                mentorship_bill_field({
-                    'academy_id': 1,
-                    'started_at': start_month,
-                    'ended_at': end_month,
-                    'id': 1,
-                    'mentor_id': 1,
-                    'overtime_minutes': 0.0,
-                    'total_duration_in_hours': 1.0,
-                    'total_duration_in_minutes': 60.0,
-                    'total_price': bill1,
-                }),
-                mentorship_bill_field(
-                    {
-                        'academy_id': 1,
-                        'started_at': datetime.datetime(2021, 11, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
-                        'ended_at': datetime.datetime(2021, 11, 30, 23, 59, 59, 999999, tzinfo=pytz.UTC),
-                        'id': 2,
-                        'mentor_id': 1,
-                        'overtime_minutes': 60.0,
-                        'total_duration_in_hours': 3.0,
-                        'total_duration_in_minutes': 180.0,
-                        'total_price': bill2,
-                    }),
-                mentorship_bill_field(
-                    {
-                        'academy_id': 1,
-                        'started_at': datetime.datetime(2021, 12, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
-                        'ended_at': datetime.datetime(2021, 12, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
-                        'id': 3,
-                        'mentor_id': 1,
-                        'overtime_minutes': 60.0,
-                        'total_duration_in_hours': 2.0,
-                        'total_duration_in_minutes': 120.0,
-                        'total_price': bill3,
-                    }),
-            ])
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipBill'), [
+            mentorship_bill_field({
+                'academy_id': 1,
+                'started_at': start_month,
+                'ended_at': end_month,
+                'id': 1,
+                'mentor_id': 1,
+                'overtime_minutes': 0.0,
+                'total_duration_in_hours': 1.0,
+                'total_duration_in_minutes': 60.0,
+                'total_price': bill1,
+            }),
+            mentorship_bill_field({
+                'academy_id': 1,
+                'started_at': datetime.datetime(2021, 11, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
+                'ended_at': datetime.datetime(2021, 11, 30, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                'id': 2,
+                'mentor_id': 1,
+                'overtime_minutes': 60.0,
+                'total_duration_in_hours': 3.0,
+                'total_duration_in_minutes': 180.0,
+                'total_price': bill2,
+            }),
+            mentorship_bill_field({
+                'academy_id': 1,
+                'started_at': datetime.datetime(2021, 12, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
+                'ended_at': datetime.datetime(2021, 12, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                'id': 3,
+                'mentor_id': 1,
+                'overtime_minutes': 60.0,
+                'total_duration_in_hours': 2.0,
+                'total_duration_in_minutes': 120.0,
+                'total_price': bill3,
+            }),
+        ])
 
         status_message = ('The mentor never joined the meeting, no time will be '
                           'accounted for.')

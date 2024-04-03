@@ -19,8 +19,8 @@ class Migration(migrations.Migration):
             model_name='event',
             name='sync_status',
             field=models.CharField(
-                choices=[('PENDING', 'Pending'), ('PERSISTED', 'Persisted'), ('ERROR', 'Error'),
-                         ('WARNING', 'Warning'), ('SYNCHED', 'Synched')],
+                choices=[('PENDING', 'Pending'), ('PERSISTED', 'Persisted'), ('ERROR', 'Error'), ('WARNING', 'Warning'),
+                         ('SYNCHED', 'Synched')],
                 default='PENDING',
                 help_text='One of: PENDING, PERSISTED or ERROR depending on how the eventbrite sync status',
                 max_length=9),
@@ -29,8 +29,8 @@ class Migration(migrations.Migration):
             model_name='organization',
             name='sync_status',
             field=models.CharField(
-                choices=[('PENDING', 'Pending'), ('PERSISTED', 'Persisted'),
-                         ('ERROR', 'Error'), ('WARNING', 'Warning'), ('SYNCHED', 'Synched')],
+                choices=[('PENDING', 'Pending'), ('PERSISTED', 'Persisted'), ('ERROR', 'Error'), ('WARNING', 'Warning'),
+                         ('SYNCHED', 'Synched')],
                 default='PENDING',
                 help_text='One of: PENDING, PERSISTED or ERROR depending on how the eventbrite sync status',
                 max_length=9),

@@ -30,8 +30,7 @@ class NotifyTestSuite(NotifyTestCase):
         self.assertEqual(Slack.execute_command.call_args_list, [call(context=data)])
 
     @patch('breathecode.services.slack.client.Slack.__init__', MagicMock(return_value=None))
-    @patch('breathecode.services.slack.client.Slack.execute_command',
-           MagicMock(side_effect=Exception('pokemon')))
+    @patch('breathecode.services.slack.client.Slack.execute_command', MagicMock(side_effect=Exception('pokemon')))
     def test_slack_command___raise_exception(self):
         """Testing when exception is prompted."""
 

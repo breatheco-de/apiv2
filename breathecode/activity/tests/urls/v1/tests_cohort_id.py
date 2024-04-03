@@ -79,12 +79,11 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': ("You (user: 1) don't have this capability: read_activity for "
-                           'academy 1'),
-                'status_code': 403,
-            })
+        self.assertEqual(json, {
+            'detail': ("You (user: 1) don't have this capability: read_activity for "
+                       'academy 1'),
+            'status_code': 403,
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     """
@@ -240,10 +239,8 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(ndb_init_mock.call_args_list, [call(StudentActivity)])
         self.assertEqual(mock.fetch.call_args_list, [
-            call([
-                FilterNode('slug', '=', 'classroom_attendance'),
-                FilterNode('cohort', '=', model.cohort.slug)
-            ],
+            call([FilterNode('slug', '=', 'classroom_attendance'),
+                  FilterNode('cohort', '=', model.cohort.slug)],
                  limit=None,
                  offset=None)
         ])

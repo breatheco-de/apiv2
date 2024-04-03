@@ -24,8 +24,7 @@ def mentorship_service_serializer(self, mentorship_service, academy):
         'language': mentorship_service.language,
         'logo_url': mentorship_service.logo_url,
         'max_duration': self.bc.datetime.from_timedelta(mentorship_service.max_duration),
-        'missed_meeting_duration':
-        self.bc.datetime.from_timedelta(mentorship_service.missed_meeting_duration),
+        'missed_meeting_duration': self.bc.datetime.from_timedelta(mentorship_service.missed_meeting_duration),
         'name': mentorship_service.name,
         'slug': mentorship_service.slug,
         'status': mentorship_service.status,
@@ -63,8 +62,7 @@ def academy_service_serialize(academy_service, academy, currency, service):
     }
 
 
-def get_serializer(self, mentorship_service_set, mentorship_services, academy, academy_services, currency,
-                   service):
+def get_serializer(self, mentorship_service_set, mentorship_services, academy, academy_services, currency, service):
     return {
         'academy_services': [
             academy_service_serialize(academy_service, academy, currency, service)

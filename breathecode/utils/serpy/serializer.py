@@ -70,13 +70,11 @@ class Serializer(serpy.Serializer):
 
             method_field = f'get_{include_field}'
 
-            if isinstance(attr, MethodField) and hasattr(self, method_field) and callable(
-                    getattr(self, method_field)):
+            if isinstance(attr, MethodField) and hasattr(self, method_field) and callable(getattr(self, method_field)):
                 setattr(self, include_field, serpy.MethodField())
                 continue
 
-            raise ValidationException(
-                f'The field {include_field} is not a allowed field or is bad configured')
+            raise ValidationException(f'The field {include_field} is not a allowed field or is bad configured')
 
     def _load_ref(self):
         if self._loaded:

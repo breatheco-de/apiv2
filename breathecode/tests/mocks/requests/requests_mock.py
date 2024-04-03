@@ -11,13 +11,12 @@ def request_mock(endpoints=None):
 
     def base(url: str, *args, **kwargs):
         """Requests get mock"""
-        if (url == 'GET' or url == 'POST' or url == 'PUT' or url == 'PATCH' or url == 'DELETE'
-                or url == 'HEAD' or url == 'REQUEST'):
+        if (url == 'GET' or url == 'POST' or url == 'PUT' or url == 'PATCH' or url == 'DELETE' or url == 'HEAD'
+                or url == 'REQUEST'):
             url = args[0]
 
         if len(endpoints[0]) == 4:
-            match = [(status, data, headers) for (status, endpoint, data, headers) in endpoints
-                     if url == endpoint]
+            match = [(status, data, headers) for (status, endpoint, data, headers) in endpoints if url == endpoint]
         else:
             match = [(status, data) for (status, endpoint, data) in endpoints if url == endpoint]
 

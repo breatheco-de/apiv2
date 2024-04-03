@@ -13,12 +13,9 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         model = self.generate_models(organization=True, organization_kwargs=organization_kwargs)
 
         with self.assertRaises(Exception) as cm:
-            create_or_update_organizer(EVENTBRITE_EVENTS['events'][0],
-                                       model['organization'],
-                                       force_update=False)
+            create_or_update_organizer(EVENTBRITE_EVENTS['events'][0], model['organization'], force_update=False)
 
-        self.assertEqual(str(cm.exception),
-                         'First you must specify to which academy this organization belongs')
+        self.assertEqual(str(cm.exception), 'First you must specify to which academy this organization belongs')
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
         self.assertEqual(self.all_organizer_dict(), [])
@@ -88,9 +85,8 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
 
         organizer = EVENTBRITE_EVENTS['events'][0]['organizer']
-        self.assertEqual(self.all_organizer_dict(),
-                         [{
-                             **self.model_to_dict(model, 'organizer'),
-                             'name': organizer['name'],
-                             'description': organizer['description']['text'],
-                         }])
+        self.assertEqual(self.all_organizer_dict(), [{
+            **self.model_to_dict(model, 'organizer'),
+            'name': organizer['name'],
+            'description': organizer['description']['text'],
+        }])

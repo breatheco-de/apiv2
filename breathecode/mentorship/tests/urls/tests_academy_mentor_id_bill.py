@@ -34,26 +34,16 @@ def get_serializer(self, mentorship_bill, mentor_profile, mentorship_service, us
             'booking_url': mentor_profile.booking_url,
             'id': mentor_profile.id,
             'service': {
-                'allow_mentee_to_extend':
-                mentorship_service.allow_mentee_to_extend,
-                'allow_mentors_to_extend':
-                mentorship_service.allow_mentors_to_extend,
-                'duration':
-                self.bc.datetime.from_timedelta(mentorship_service.duration),
-                'id':
-                mentorship_service.id,
-                'language':
-                mentorship_service.language,
-                'max_duration':
-                self.bc.datetime.from_timedelta(mentorship_service.max_duration),
-                'missed_meeting_duration':
-                self.bc.datetime.from_timedelta(mentorship_service.missed_meeting_duration),
-                'name':
-                mentorship_service.name,
-                'slug':
-                mentorship_service.slug,
-                'status':
-                mentorship_service.status,
+                'allow_mentee_to_extend': mentorship_service.allow_mentee_to_extend,
+                'allow_mentors_to_extend': mentorship_service.allow_mentors_to_extend,
+                'duration': self.bc.datetime.from_timedelta(mentorship_service.duration),
+                'id': mentorship_service.id,
+                'language': mentorship_service.language,
+                'max_duration': self.bc.datetime.from_timedelta(mentorship_service.max_duration),
+                'missed_meeting_duration': self.bc.datetime.from_timedelta(mentorship_service.missed_meeting_duration),
+                'name': mentorship_service.name,
+                'slug': mentorship_service.slug,
+                'status': mentorship_service.status,
             },
             'slug': mentor_profile.slug,
             'status': mentor_profile.status,
@@ -311,8 +301,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.bc.request.set_headers(academy=model.academy.id)
             self.client.force_authenticate(model.user)
 
-            url = reverse_lazy('mentorship:academy_mentor_id_bill',
-                               kwargs={'mentor_id': model.mentor_profile.id})
+            url = reverse_lazy('mentorship:academy_mentor_id_bill', kwargs={'mentor_id': model.mentor_profile.id})
             response = self.client.post(url)
 
             json = response.json()

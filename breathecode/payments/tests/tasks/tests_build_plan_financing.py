@@ -63,8 +63,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 # retrying
                 call('Starting build_plan_financing for bag 1'),
             ])
-        self.assertEqual(logging.Logger.error.call_args_list,
-                         [call('Bag with id 1 not found', exc_info=True)])
+        self.assertEqual(logging.Logger.error.call_args_list, [call('Bag with id 1 not found', exc_info=True)])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [])
         self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
@@ -96,8 +95,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 # retrying
                 call('Starting build_plan_financing for bag 1'),
             ])
-        self.assertEqual(logging.Logger.error.call_args_list,
-                         [call('Invoice with id 1 not found', exc_info=True)])
+        self.assertEqual(logging.Logger.error.call_args_list, [call('Invoice with id 1 not found', exc_info=True)])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [self.bc.format.to_dict(model.bag)])
         self.assertEqual(self.bc.database.list_of('payments.Invoice'), [])
@@ -224,13 +222,11 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'next_payment_at':
                 model.invoice.paid_at + relativedelta(months=1),
                 'plan_expires_at':
-                model.invoice.paid_at +
-                calculate_relative_delta(model.plan.time_of_life, model.plan.time_of_life_unit),
+                model.invoice.paid_at + calculate_relative_delta(model.plan.time_of_life, model.plan.time_of_life_unit),
             }),
         ])
 
-        self.assertEqual(tasks.build_service_stock_scheduler_from_plan_financing.delay.call_args_list,
-                         [call(1)])
+        self.assertEqual(tasks.build_service_stock_scheduler_from_plan_financing.delay.call_args_list, [call(1)])
         self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
             call(1, 'bag_created', related_type='payments.Bag', related_id=1),
         ])
@@ -254,12 +250,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         plan = {'is_renewable': False}
         academy = {'available_as_saas': True}
 
-        model = self.bc.database.create(bag=bag,
-                                        invoice=invoice,
-                                        plan=plan,
-                                        cohort=1,
-                                        cohort_set=1,
-                                        academy=academy)
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plan, cohort=1, cohort_set=1, academy=academy)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -304,8 +295,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'next_payment_at':
                 model.invoice.paid_at + relativedelta(months=1),
                 'plan_expires_at':
-                model.invoice.paid_at +
-                calculate_relative_delta(model.plan.time_of_life, model.plan.time_of_life_unit),
+                model.invoice.paid_at + calculate_relative_delta(model.plan.time_of_life, model.plan.time_of_life_unit),
             }),
         ])
 
@@ -377,8 +367,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'next_payment_at':
                 model.invoice.paid_at + relativedelta(months=1),
                 'plan_expires_at':
-                model.invoice.paid_at +
-                calculate_relative_delta(model.plan.time_of_life, model.plan.time_of_life_unit),
+                model.invoice.paid_at + calculate_relative_delta(model.plan.time_of_life, model.plan.time_of_life_unit),
             }),
         ])
 
@@ -450,8 +439,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'next_payment_at':
                 model.invoice.paid_at + relativedelta(months=1),
                 'plan_expires_at':
-                model.invoice.paid_at +
-                calculate_relative_delta(model.plan.time_of_life, model.plan.time_of_life_unit),
+                model.invoice.paid_at + calculate_relative_delta(model.plan.time_of_life, model.plan.time_of_life_unit),
             }),
         ])
 

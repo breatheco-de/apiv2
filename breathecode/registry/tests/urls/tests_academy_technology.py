@@ -92,10 +92,7 @@ class RegistryTestSuite(RegistryTestCase):
 
     def test_with_zero_asset_technologies(self):
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     role=1,
-                                     capability='read_technology')
+        model = self.generate_models(authenticate=True, profile_academy=True, role=1, capability='read_technology')
         url = reverse_lazy('registry:academy_technology')
         response = self.client.get(url)
         json = response.json()
@@ -121,9 +118,7 @@ class RegistryTestSuite(RegistryTestCase):
         url = reverse_lazy('registry:academy_technology')
         response = self.client.get(url)
         json = response.json()
-        expected = [
-            get_serializer(x) for x in sorted(model.asset_technology, key=lambda x: x.slug, reverse=True)
-        ]
+        expected = [get_serializer(x) for x in sorted(model.asset_technology, key=lambda x: x.slug, reverse=True)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -237,9 +232,7 @@ class RegistryTestSuite(RegistryTestCase):
             url = reverse_lazy('registry:academy_technology') + f'?language={query}'
             response = self.client.get(url)
             json = response.json()
-            expected = [
-                get_serializer(x) for x in sorted(model.asset_technology, key=lambda x: x.slug, reverse=True)
-            ]
+            expected = [get_serializer(x) for x in sorted(model.asset_technology, key=lambda x: x.slug, reverse=True)]
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -325,9 +318,7 @@ class RegistryTestSuite(RegistryTestCase):
         url = reverse_lazy('registry:academy_technology') + f'?sort_priority={query}'
         response = self.client.get(url)
         json = response.json()
-        expected = [
-            get_serializer(x) for x in sorted(model.asset_technology, key=lambda x: x.slug, reverse=True)
-        ]
+        expected = [get_serializer(x) for x in sorted(model.asset_technology, key=lambda x: x.slug, reverse=True)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -391,9 +382,7 @@ class RegistryTestSuite(RegistryTestCase):
             url = reverse_lazy('registry:academy_technology') + f'?like={query}'
             response = self.client.get(url)
             json = response.json()
-            expected = [
-                get_serializer(x) for x in sorted(model.asset_technology, key=lambda x: x.slug, reverse=True)
-            ]
+            expected = [get_serializer(x) for x in sorted(model.asset_technology, key=lambda x: x.slug, reverse=True)]
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -722,10 +711,7 @@ class RegistryTestSuite(RegistryTestCase):
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call([
-                'CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension',
-                'SortExtension'
-            ]),
+            call(['CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension', 'SortExtension']),
         ])
 
         self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [

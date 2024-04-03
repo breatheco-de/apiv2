@@ -33,10 +33,7 @@ class CertificateModelsMixin(ModelsMixin):
             if 'syllabus' in models or syllabus:
                 kargs['syllabus'] = just_one(models['syllabus'])
 
-            models['specialty'] = create_models(specialty, 'certificate.Specialty', **{
-                **kargs,
-                **syllabus_kwargs
-            })
+            models['specialty'] = create_models(specialty, 'certificate.Specialty', **{**kargs, **syllabus_kwargs})
         if not 'badge' in models and badge:
             kargs = {}
 

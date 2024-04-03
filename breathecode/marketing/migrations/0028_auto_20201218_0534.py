@@ -15,9 +15,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='contact',
             name='academy',
-            field=models.ForeignKey(default=1,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='admissions.academy'),
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to='admissions.academy'),
             preserve_default=False,
         ),
         migrations.AddField(
@@ -31,8 +29,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='ActiveCampaignAcademy',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('ac_key', models.CharField(max_length=150)),
                 ('ac_url', models.CharField(max_length=150)),
                 ('sync_status',
@@ -49,8 +46,7 @@ class Migration(migrations.Migration):
                 ('last_interaction_at', models.DateTimeField(blank=True, default=None, null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('academy',
-                 models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
+                ('academy', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
             ],
         ),
         migrations.AddField(

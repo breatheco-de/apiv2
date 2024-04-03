@@ -23,8 +23,8 @@ CREDIT_PRICE = random.randint(1, 20)
 
 GOOGLE_CLOUD_KEY = os.getenv('GOOGLE_CLOUD_KEY', None)
 MONTHS = [
-    'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October',
-    'November', 'December'
+    'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November',
+    'December'
 ]
 
 fake = Faker()
@@ -91,9 +91,7 @@ def gitpod_csv(lines=1, data={}):
     effective_times = [datetime_to_iso(UTC_NOW - timedelta(days=n)) for n in range(lines)]
     kinds = [fake.slug() for _ in range(lines)]
     usernames = [fake.slug() for _ in range(lines)]
-    contextURLs = [
-        f'https://github.com/{username}/{fake.slug()}/tree/{fake.slug()}/' for username in usernames
-    ]
+    contextURLs = [f'https://github.com/{username}/{fake.slug()}/tree/{fake.slug()}/' for username in usernames]
 
     # dictionary of lists
     return {
@@ -145,8 +143,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
     def test_bill_but_hash_does_not_match(self):
         slug = self.bc.fake.slug()
         provisioning_bill = {'hash': slug, 'total_amount': 0.0}
-        model = self.bc.database.create(provisioning_bill=provisioning_bill,
-                                        provisioning_vendor={'name': 'Gitpod'})
+        model = self.bc.database.create(provisioning_bill=provisioning_bill, provisioning_vendor={'name': 'Gitpod'})
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -182,27 +179,24 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     def test_bill_exists(self):
         slug = self.bc.fake.slug()
         provisioning_bill = {'hash': slug, 'total_amount': 0.0}
         csv = gitpod_csv(10)
-        model = self.bc.database.create(provisioning_bill=provisioning_bill,
-                                        provisioning_vendor={'name': 'Gitpod'})
+        model = self.bc.database.create(provisioning_bill=provisioning_bill, provisioning_vendor={'name': 'Gitpod'})
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        with patch('breathecode.services.google_cloud.File.download',
-                   MagicMock(side_effect=csv_file_mock(csv))):
+        with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
             calculate_bill_amounts(slug)
 
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [])
@@ -235,15 +229,14 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     def test_bill_exists_and_activities__gitpod(self):
         slug = self.bc.fake.slug()
         provisioning_bill = {'hash': slug, 'total_amount': 0.0}
@@ -263,8 +256,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         } for _ in range(2)]
 
         amount = sum([
-            provisioning_prices[n]['price_per_unit'] * provisioning_consumption_events[n]['quantity']
-            for n in range(2)
+            provisioning_prices[n]['price_per_unit'] * provisioning_consumption_events[n]['quantity'] for n in range(2)
         ]) * 2
 
         model = self.bc.database.create(provisioning_bill=provisioning_bill,
@@ -276,8 +268,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        with patch('breathecode.services.google_cloud.File.download',
-                   MagicMock(side_effect=csv_file_mock(csv))):
+        with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
             calculate_bill_amounts(slug)
 
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
@@ -319,15 +310,14 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     def test_bill_exists_and_activities__codespaces(self):
         slug = self.bc.fake.slug()
         provisioning_bill = {'hash': slug, 'total_amount': 0.0}
@@ -347,8 +337,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         } for _ in range(2)]
 
         amount = sum([
-            provisioning_prices[n]['price_per_unit'] * provisioning_consumption_events[n]['quantity']
-            for n in range(2)
+            provisioning_prices[n]['price_per_unit'] * provisioning_consumption_events[n]['quantity'] for n in range(2)
         ]) * 2
 
         model = self.bc.database.create(provisioning_bill=provisioning_bill,
@@ -360,8 +349,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        with patch('breathecode.services.google_cloud.File.download',
-                   MagicMock(side_effect=csv_file_mock(csv))):
+        with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
             calculate_bill_amounts(slug)
 
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
@@ -408,15 +396,14 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     def test_bill_exists_and_activities_with_random_amounts__bill_amount_is_override(self):
         slug = self.bc.fake.slug()
         provisioning_bill = {'hash': slug, 'total_amount': random.random() * 1000}
@@ -436,8 +423,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         } for _ in range(2)]
 
         amount = sum([
-            provisioning_prices[n]['price_per_unit'] * provisioning_consumption_events[n]['quantity']
-            for n in range(2)
+            provisioning_prices[n]['price_per_unit'] * provisioning_consumption_events[n]['quantity'] for n in range(2)
         ]) * 2
         q = sum([provisioning_consumption_events[n]['quantity'] for n in range(2)])
         model = self.bc.database.create(provisioning_bill=provisioning_bill,
@@ -452,15 +438,13 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         stripe_url = self.bc.fake.url()
         with patch('breathecode.payments.services.stripe.Stripe.create_payment_link',
                    MagicMock(return_value=(stripe_id, stripe_url))):
-            with patch('breathecode.services.google_cloud.File.download',
-                       MagicMock(side_effect=csv_file_mock(csv))):
+            with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
                 calculate_bill_amounts(slug)
 
                 quantity = math.ceil(amount / CREDIT_PRICE)
                 new_amount = quantity * CREDIT_PRICE
 
-                self.bc.check.calls(Stripe.create_payment_link.call_args_list,
-                                    [call(STRIPE_PRICE_ID, quantity)])
+                self.bc.check.calls(Stripe.create_payment_link.call_args_list, [call(STRIPE_PRICE_ID, quantity)])
 
         fee = new_amount - amount
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
@@ -576,15 +560,14 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
                     create=True)
-    @patch.multiple(
-        'breathecode.services.google_cloud.File',
-        __init__=MagicMock(return_value=None),
-        bucket=PropertyMock(),
-        file_name=PropertyMock(),
-        upload=MagicMock(),
-        exists=MagicMock(return_value=True),
-        url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
-        create=True)
+    @patch.multiple('breathecode.services.google_cloud.File',
+                    __init__=MagicMock(return_value=None),
+                    bucket=PropertyMock(),
+                    file_name=PropertyMock(),
+                    upload=MagicMock(),
+                    exists=MagicMock(return_value=True),
+                    url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
+                    create=True)
     def test_academy_reacted_to_bill__no_paid__force(self):
         slug = self.bc.fake.slug()
         provisioning_bill = {
@@ -608,8 +591,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         } for _ in range(2)]
 
         amount = sum([
-            provisioning_prices[n]['price_per_unit'] * provisioning_consumption_events[n]['quantity']
-            for n in range(2)
+            provisioning_prices[n]['price_per_unit'] * provisioning_consumption_events[n]['quantity'] for n in range(2)
         ]) * 2
         q = sum([provisioning_consumption_events[n]['quantity'] for n in range(2)])
         model = self.bc.database.create(provisioning_bill=provisioning_bill,
@@ -625,8 +607,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         stripe_url = self.bc.fake.url()
         with patch('breathecode.payments.services.stripe.Stripe.create_payment_link',
                    MagicMock(return_value=(stripe_id, stripe_url))):
-            with patch('breathecode.services.google_cloud.File.download',
-                       MagicMock(side_effect=csv_file_mock(csv))):
+            with patch('breathecode.services.google_cloud.File.download', MagicMock(side_effect=csv_file_mock(csv))):
                 calculate_bill_amounts(slug, force=True)
 
             quantity = math.ceil(amount / CREDIT_PRICE)

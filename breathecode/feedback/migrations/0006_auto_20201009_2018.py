@@ -13,8 +13,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='answer',
             name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('SENT', 'Send'),
-                                            ('ANSWERED', 'Answered'), ('EXPIRED', 'Expired')],
+            field=models.CharField(choices=[('PENDING', 'Pending'), ('SENT', 'Send'), ('ANSWERED', 'Answered'),
+                                            ('EXPIRED', 'Expired')],
                                    default='PENDING',
                                    max_length=15),
         ),

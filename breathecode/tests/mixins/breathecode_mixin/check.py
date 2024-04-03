@@ -118,12 +118,8 @@ class Check:
                                      msg=f'Does not have same length\n\n{first}\n\n!=\n\n{second}')
 
             for i in range(0, len(first)):
-                self._parent.assertEqual(first[i].args,
-                                         second[i].args,
-                                         msg=f'args in index {i} does not match')
-                self._parent.assertEqual(first[i].kwargs,
-                                         second[i].kwargs,
-                                         msg=f'kwargs in index {i} does not match')
+                self._parent.assertEqual(first[i].args, second[i].args, msg=f'args in index {i} does not match')
+                self._parent.assertEqual(first[i].kwargs, second[i].kwargs, msg=f'kwargs in index {i} does not match')
 
         else:
             assert len(first) == len(second), f'not have same length than {first}\n{second}'
@@ -228,8 +224,7 @@ class Check:
         queries = [query['sql'] for query in connections[db].queries]
 
         if not verbose:
-            self._parent.assertEqual(n, len(queries),
-                                     'different number of queries, use verbose=True to see more info')
+            self._parent.assertEqual(n, len(queries), 'different number of queries, use verbose=True to see more info')
 
         if verbose and n != len(queries):
             result = '\n'

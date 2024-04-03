@@ -86,11 +86,10 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_user_me_invite__wrong_academy(self):
@@ -185,8 +184,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
-                         self.bc.format.to_dict(model.user_invite))
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), self.bc.format.to_dict(model.user_invite))
 
     """
     🔽🔽🔽 GET with 4 UserInvite with different statuses, email match between User and UserInvite
@@ -209,8 +207,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
-                         self.bc.format.to_dict(model.user_invite))
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), self.bc.format.to_dict(model.user_invite))
 
     """
     🔽🔽🔽 PUT without new status in the url

@@ -4,8 +4,8 @@ from breathecode.tests.mixins import (GenerateModelsMixin, CacheMixin, GenerateQ
                                       DatetimeMixin, TokenMixin, BreathecodeMixin)
 
 
-class AuthTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, HeadersMixin,
-                   DatetimeMixin, TokenMixin, BreathecodeMixin):
+class AuthTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, HeadersMixin, DatetimeMixin,
+                   TokenMixin, BreathecodeMixin):
     """AdmissionsTestCase with auth methods"""
 
     def setUp(self):

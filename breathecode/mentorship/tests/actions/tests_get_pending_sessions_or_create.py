@@ -68,10 +68,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         mentor = models.mentor_profile
         mentor_token, created = Token.get_or_create(mentor.user, token_type='permanent')
 
-        pending_sessions = get_pending_sessions_or_create(mentor_token,
-                                                          mentor,
-                                                          models.mentorship_service,
-                                                          mentee=None)
+        pending_sessions = get_pending_sessions_or_create(mentor_token, mentor, models.mentorship_service, mentee=None)
 
         self.bc.check.queryset_of(pending_sessions, MentorshipSession)
         self.bc.check.queryset_with_pks(pending_sessions, [1])
@@ -103,18 +100,13 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         """
 
         mentorship_session = {'mentee_id': None}
-        models = self.bc.database.create(mentor_profile=1,
-                                         mentorship_session=mentorship_session,
-                                         mentorship_service=1)
+        models = self.bc.database.create(mentor_profile=1, mentorship_session=mentorship_session, mentorship_service=1)
         mentor = models.mentor_profile
 
         mentor_token, created = Token.get_or_create(mentor.user, token_type='permanent')
 
         # since there is a previous session without mentee, it should re use it
-        pending_sessions = get_pending_sessions_or_create(mentor_token,
-                                                          mentor,
-                                                          models.mentorship_service,
-                                                          mentee=None)
+        pending_sessions = get_pending_sessions_or_create(mentor_token, mentor, models.mentorship_service, mentee=None)
 
         self.bc.check.queryset_of(pending_sessions, MentorshipSession)
         self.bc.check.queryset_with_pks(pending_sessions, [1])
@@ -299,10 +291,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         # other random mentoring session precreated just for better testing
 
         mentorship_session = {'status': 'PENDING'}
-        self.bc.database.create(mentor_profile=1,
-                                user=1,
-                                mentorship_session=mentorship_session,
-                                mentorship_service=1)
+        self.bc.database.create(mentor_profile=1, user=1, mentorship_session=mentorship_session, mentorship_service=1)
 
         models = self.bc.database.create(mentor_profile=1,
                                          user=1,

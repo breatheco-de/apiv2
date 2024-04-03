@@ -56,10 +56,7 @@ class AcademyCohortTestSuite(EventTestCase):
     def test_ical_events__dont_get_status_draft(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
-        model = self.generate_models(academy=True,
-                                     event=True,
-                                     device_id=True,
-                                     device_id_kwargs=device_id_kwargs)
+        model = self.generate_models(academy=True, event=True, device_id=True, device_id_kwargs=device_id_kwargs)
 
         url = reverse_lazy('events:ical_events')
         args = {'academy': '1'}
@@ -151,8 +148,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_event_{event.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event.url}\\nAcademy: '
                             f'{event.academy.name}\\n'),
-            self.line_limit(
-                f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
             'END:VEVENT',
             'END:VCALENDAR',
             '',
@@ -197,8 +193,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_event_{event.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event.url}\\nAcademy: '
                             f'{event.academy.name}\\nLocation: online\\n'),
-            self.line_limit(
-                f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
             'END:VEVENT',
             'END:VCALENDAR',
             '',
@@ -254,8 +249,7 @@ class AcademyCohortTestSuite(EventTestCase):
                             f'{event.academy.name}\\nVenue: {event.venue.title}\\n'
                             ''),
             'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
-            self.line_limit(
-                f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
             'END:VEVENT',
             'END:VCALENDAR',
             '',
@@ -357,8 +351,7 @@ class AcademyCohortTestSuite(EventTestCase):
                             f'{event.academy.name}\\nVenue: {event.venue.title}\\n'
                             ''),
             'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
-            self.line_limit(
-                f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
             'END:VEVENT',
             'END:VCALENDAR',
             '',
@@ -405,8 +398,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_event_{event1.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event1.url}\\nAcademy: '
                             f'{event1.academy.name}\\n'),
-            self.line_limit(
-                f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
@@ -416,8 +408,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_event_{event2.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event2.url}\\nAcademy: '
                             f'{event2.academy.name}\\n'),
-            self.line_limit(
-                f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
             'END:VEVENT',
             'END:VCALENDAR',
             '',
@@ -483,8 +474,7 @@ class AcademyCohortTestSuite(EventTestCase):
                             f'{event1.academy.name}\\nVenue: {event1.venue.title}\\n'
                             ''),
             'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
-            self.line_limit(
-                f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
@@ -496,8 +486,7 @@ class AcademyCohortTestSuite(EventTestCase):
                             f'{event2.academy.name}\\nVenue: {event2.venue.title}\\n'
                             ''),
             'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
-            self.line_limit(
-                f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
             'END:VEVENT',
             'END:VCALENDAR',
             '',
@@ -538,18 +527,10 @@ class AcademyCohortTestSuite(EventTestCase):
         base2 = self.generate_models(academy=True, models=base)
 
         models = models + [
-            self.generate_models(user=True,
-                                 event=True,
-                                 venue=True,
-                                 event_kwargs=event_kwargs,
-                                 venue_kwargs=venue_kwargs,
-                                 models=base2),
-            self.generate_models(user=True,
-                                 event=True,
-                                 venue=True,
-                                 event_kwargs=event_kwargs,
-                                 venue_kwargs=venue_kwargs,
-                                 models=base2),
+            self.generate_models(
+                user=True, event=True, venue=True, event_kwargs=event_kwargs, venue_kwargs=venue_kwargs, models=base2),
+            self.generate_models(
+                user=True, event=True, venue=True, event_kwargs=event_kwargs, venue_kwargs=venue_kwargs, models=base2),
         ]
 
         url = reverse_lazy('events:ical_events')
@@ -586,8 +567,7 @@ class AcademyCohortTestSuite(EventTestCase):
                             f'{event1.academy.name}\\nVenue: {event1.venue.title}\\n'
                             ''),
             'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
-            self.line_limit(
-                f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
@@ -599,8 +579,7 @@ class AcademyCohortTestSuite(EventTestCase):
                             f'{event2.academy.name}\\nVenue: {event2.venue.title}\\n'
                             ''),
             'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
-            self.line_limit(
-                f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
@@ -612,8 +591,7 @@ class AcademyCohortTestSuite(EventTestCase):
                             f'{event3.academy.name}\\nVenue: {event3.venue.title}\\n'
                             ''),
             'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
-            self.line_limit(
-                f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'),
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
@@ -625,8 +603,7 @@ class AcademyCohortTestSuite(EventTestCase):
                             f'{event4.academy.name}\\nVenue: {event4.venue.title}\\n'
                             ''),
             'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
-            self.line_limit(
-                f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'),
             'END:VEVENT',
             'END:VCALENDAR',
             '',
@@ -667,18 +644,10 @@ class AcademyCohortTestSuite(EventTestCase):
         base2 = self.generate_models(academy=True, models=base)
 
         models = models + [
-            self.generate_models(user=True,
-                                 event=True,
-                                 venue=True,
-                                 event_kwargs=event_kwargs,
-                                 venue_kwargs=venue_kwargs,
-                                 models=base2),
-            self.generate_models(user=True,
-                                 event=True,
-                                 venue=True,
-                                 event_kwargs=event_kwargs,
-                                 venue_kwargs=venue_kwargs,
-                                 models=base2),
+            self.generate_models(
+                user=True, event=True, venue=True, event_kwargs=event_kwargs, venue_kwargs=venue_kwargs, models=base2),
+            self.generate_models(
+                user=True, event=True, venue=True, event_kwargs=event_kwargs, venue_kwargs=venue_kwargs, models=base2),
         ]
 
         url = reverse_lazy('events:ical_events')
@@ -715,8 +684,7 @@ class AcademyCohortTestSuite(EventTestCase):
                             f'{event1.academy.name}\\nVenue: {event1.venue.title}\\n'
                             ''),
             'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
-            self.line_limit(
-                f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
@@ -728,8 +696,7 @@ class AcademyCohortTestSuite(EventTestCase):
                             f'{event2.academy.name}\\nVenue: {event2.venue.title}\\n'
                             ''),
             'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
-            self.line_limit(
-                f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
@@ -741,8 +708,7 @@ class AcademyCohortTestSuite(EventTestCase):
                             f'{event3.academy.name}\\nVenue: {event3.venue.title}\\n'
                             ''),
             'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
-            self.line_limit(
-                f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'),
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
@@ -754,8 +720,7 @@ class AcademyCohortTestSuite(EventTestCase):
                             f'{event4.academy.name}\\nVenue: {event4.venue.title}\\n'
                             ''),
             'LOCATION:Street 2 #10-51\\, Gaira\\, Magdalena\\, Colombia',
-            self.line_limit(
-                f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'),
+            self.line_limit(f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'),
             'END:VEVENT',
             'END:VCALENDAR',
             '',

@@ -34,11 +34,10 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
@@ -64,11 +63,10 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': "You (user: 1) don't have this capability: read_all_cohort for academy 1",
-                'status_code': 403,
-            })
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: read_all_cohort for academy 1",
+            'status_code': 403,
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
@@ -143,8 +141,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     def test__recurrency_type_in_querystring__found(self):
         statuses = ['DAILY', 'WEEKLY', 'MONTHLY']
         cases = [(x, x, random.choice([y for y in statuses if x != y]))
-                 for x in statuses] + [(x, x.lower(), random.choice([y for y in statuses if x != y]))
-                                       for x in statuses]
+                 for x in statuses] + [(x, x.lower(), random.choice([y for y in statuses if x != y])) for x in statuses]
 
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -197,10 +194,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test__post__without_timezone(self):
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_cohort', role='potato')
         url = reverse_lazy('admissions:academy_cohort_id_timeslot', kwargs={'cohort_id': 1})
         data = {}
         response = self.client.post(url, data, format='json')
@@ -269,18 +263,17 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(
-            self.all_cohort_time_slot_dict(),
-            [{
-                'cohort_id': 1,
-                'removed_at': None,
-                'ending_at': DatetimeInteger.from_datetime(model.academy.timezone, ending_at),
-                'id': 1,
-                'recurrent': True,
-                'starting_at': DatetimeInteger.from_datetime(model.academy.timezone, starting_at),
-                'timezone': 'America/Caracas',
-                'recurrency_type': recurrency_type,
-            }])
+        self.assertEqual(self.all_cohort_time_slot_dict(),
+                         [{
+                             'cohort_id': 1,
+                             'removed_at': None,
+                             'ending_at': DatetimeInteger.from_datetime(model.academy.timezone, ending_at),
+                             'id': 1,
+                             'recurrent': True,
+                             'starting_at': DatetimeInteger.from_datetime(model.academy.timezone, starting_at),
+                             'timezone': 'America/Caracas',
+                             'recurrency_type': recurrency_type,
+                         }])
 
     @patch('breathecode.events.tasks.build_live_classes_from_timeslot.delay', MagicMock())
     def test__post__passing_all_status__in_uppercase(self):
@@ -314,15 +307,14 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(
-            self.all_cohort_time_slot_dict(),
-            [{
-                'cohort_id': 1,
-                'removed_at': None,
-                'ending_at': DatetimeInteger.from_datetime(model.academy.timezone, ending_at),
-                'id': 1,
-                'recurrent': True,
-                'starting_at': DatetimeInteger.from_datetime(model.academy.timezone, starting_at),
-                'timezone': 'America/Caracas',
-                'recurrency_type': recurrency_type,
-            }])
+        self.assertEqual(self.all_cohort_time_slot_dict(),
+                         [{
+                             'cohort_id': 1,
+                             'removed_at': None,
+                             'ending_at': DatetimeInteger.from_datetime(model.academy.timezone, ending_at),
+                             'id': 1,
+                             'recurrent': True,
+                             'starting_at': DatetimeInteger.from_datetime(model.academy.timezone, starting_at),
+                             'timezone': 'America/Caracas',
+                             'recurrency_type': recurrency_type,
+                         }])

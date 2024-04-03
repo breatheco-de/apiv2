@@ -87,10 +87,7 @@ def new_cohort_stage_updated(sender, instance, **kwargs):
     model_label = get_model_label(instance)
 
     serializer = CohortHookSerializer(instance)
-    HookManager.process_model_event(instance,
-                                    model_label,
-                                    'cohort_stage_updated',
-                                    payload_override=serializer.data)
+    HookManager.process_model_event(instance, model_label, 'cohort_stage_updated', payload_override=serializer.data)
 
 
 @receiver(new_form_entry_deal, sender=FormEntry)
@@ -131,10 +128,7 @@ def handle_event_status_updated(sender, instance, **kwargs):
     # logger.debug('Sending event_status_updated hook with new event status')
     model_label = get_model_label(instance)
     serializer = EventJoinSmallSerializer(instance)
-    HookManager.process_model_event(instance,
-                                    model_label,
-                                    'event_status_updated',
-                                    payload_override=serializer.data)
+    HookManager.process_model_event(instance, model_label, 'event_status_updated', payload_override=serializer.data)
 
 
 @receiver(asset_status_updated, sender=Asset)
@@ -142,10 +136,7 @@ def handle_asset_status_updated(sender, instance, **kwargs):
     logger.debug('Sending asset to hook with new status')
     model_label = get_model_label(instance)
     serializer = AssetHookSerializer(instance)
-    HookManager.process_model_event(instance,
-                                    model_label,
-                                    'asset_status_updated',
-                                    payload_override=serializer.data)
+    HookManager.process_model_event(instance, model_label, 'asset_status_updated', payload_override=serializer.data)
 
 
 @receiver(invite_status_updated, sender=UserInvite)

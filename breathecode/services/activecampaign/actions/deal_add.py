@@ -44,8 +44,7 @@ def deal_add(self, webhook, payload: dict, acp_ids):
 
         entry.deal_status = status[payload['deal[status]']]
         entry.ac_deal_owner_id = payload['deal[owner]']
-        entry.ac_deal_owner_full_name = payload['deal[owner_firstname]'] + ' ' + payload[
-            'deal[owner_lastname]']
+        entry.ac_deal_owner_full_name = payload['deal[owner_firstname]'] + ' ' + payload['deal[owner_lastname]']
 
         entry.ac_deal_amount = float(payload['deal[value_raw]'])
         entry.ac_deal_currency_code = payload['deal[currency]']

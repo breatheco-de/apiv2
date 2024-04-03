@@ -26,9 +26,9 @@ class Command(BaseCommand):
                 stu.last_name = stu.user.last_name
             stu.save()
 
-        students_to_sync = ProfileAcademy.objects.filter(
-            Q(user__first_name__isnull=True)
-            | Q(user__first_name='')).exclude(Q(first_name__isnull=True) | Q(first_name=''))
+        students_to_sync = ProfileAcademy.objects.filter(Q(user__first_name__isnull=True)
+                                                         | Q(user__first_name='')).exclude(
+                                                             Q(first_name__isnull=True) | Q(first_name=''))
         logger.debug(f'Found {students_to_sync.count()} User\'s to sync')
         for stu in students_to_sync:
             if stu.user is None:

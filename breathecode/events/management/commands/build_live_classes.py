@@ -25,12 +25,10 @@ class Command(BaseCommand):
             if total_cohort_timeslots == 0:
                 self.stderr.write(
                     self.style.ERROR(
-                        f'Cohort {cohort.slug} live classes will not be generated because it does not have timeslots'
-                    ))
+                        f'Cohort {cohort.slug} live classes will not be generated because it does not have timeslots'))
             else:
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f'Adding cohort {cohort.slug} to the generation queue, it ends on {str(cohort.ending_date)}'
-                    ))
+                        f'Adding cohort {cohort.slug} to the generation queue, it ends on {str(cohort.ending_date)}'))
                 for timeslot in timeslots:
                     tasks.build_live_classes_from_timeslot.delay(timeslot.id)

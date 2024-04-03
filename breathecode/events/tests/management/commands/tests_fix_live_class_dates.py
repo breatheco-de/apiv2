@@ -102,15 +102,12 @@ class TestSyncOrgVenues(LegacyAPITestCase):
         cohorts = [{'never_ends': False, 'ending_date': UTC_NOW + DELTA} for _ in range(2)]
         cohort_time_slots = [{'cohort_id': 1} for n in range(2)]
         cohort_time_slots += [{'cohort_id': 2} for n in range(2)]
-        model = self.bc.database.create(live_class=live_classes,
-                                        cohort=cohorts,
-                                        cohort_time_slot=cohort_time_slots)
+        model = self.bc.database.create(live_class=live_classes, cohort=cohorts, cohort_time_slot=cohort_time_slots)
 
         command = Command()
         command.handle()
 
-        self.assertEqual(self.bc.database.list_of('events.LiveClass'),
-                         self.bc.format.to_dict(model.live_class))
+        self.assertEqual(self.bc.database.list_of('events.LiveClass'), self.bc.format.to_dict(model.live_class))
 
         self.bc.check.calls(tasks.fix_live_class_dates.delay.call_args_list, [
             call(1),

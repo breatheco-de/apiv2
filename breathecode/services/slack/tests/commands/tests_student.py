@@ -94,19 +94,13 @@ class SlackTestSuite(SlackTestCase):
                                 academy=1,
                                 slack_team=slack_team)
 
-        data = {
-            'text': 'student <@fdd2325|244372eew>',
-            'user_id': 'name',
-            'team_id': 'team',
-            'channel_id': 'test'
-        }
+        data = {'text': 'student <@fdd2325|244372eew>', 'user_id': 'name', 'team_id': 'team', 'channel_id': 'test'}
         with self.assertRaisesMessage(SlackException, 'cohort-user-not-found'):
             result = execute(users=['fdd2325'], context=data)
 
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
-    def test_slack_command___user_registered_in_a_cohort__without_financial_status_or_educational_status(
-            self):
+    def test_slack_command___user_registered_in_a_cohort__without_financial_status_or_educational_status(self):
         """Testing when user is registered in a cohort."""
 
         slack_users = [{'slack_id': 'name'}, {'slack_id': 'percybrown', 'user_id': 2}]
@@ -122,12 +116,7 @@ class SlackTestSuite(SlackTestCase):
                                         slack_team=slack_team,
                                         cohort_user=cohort_user)
 
-        data = {
-            'text': 'student <@percybrown|244372eew>',
-            'user_id': 'name',
-            'team_id': 'team',
-            'channel_id': 'test'
-        }
+        data = {'text': 'student <@percybrown|244372eew>', 'user_id': 'name', 'team_id': 'team', 'channel_id': 'test'}
 
         avatar_number = random.randint(1, 21)
         expected = {
@@ -160,8 +149,7 @@ class SlackTestSuite(SlackTestCase):
 
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
-    def test_slack_command___user_registered_in_two_cohorts__with_financial_status_and_educational_status(
-            self):
+    def test_slack_command___user_registered_in_two_cohorts__with_financial_status_and_educational_status(self):
         """Testing when user is registered in a cohort."""
 
         slack_users = [{'slack_id': 'name'}, {'slack_id': 'percybrown', 'user_id': 2}]
@@ -187,12 +175,7 @@ class SlackTestSuite(SlackTestCase):
                                         cohort_user=cohort_user,
                                         cohort=2)
 
-        data = {
-            'text': 'student <@percybrown|244372eew>',
-            'user_id': 'name',
-            'team_id': 'team',
-            'channel_id': 'test'
-        }
+        data = {'text': 'student <@percybrown|244372eew>', 'user_id': 'name', 'team_id': 'team', 'channel_id': 'test'}
 
         avatar_number = random.randint(1, 21)
         expected = {
@@ -254,12 +237,7 @@ class SlackTestSuite(SlackTestCase):
                                         cohort_user=cohort_user,
                                         cohort=2)
 
-        data = {
-            'text': 'student <@percybrown|244372eew>',
-            'user_id': 'name',
-            'team_id': 'team',
-            'channel_id': 'test'
-        }
+        data = {'text': 'student <@percybrown|244372eew>', 'user_id': 'name', 'team_id': 'team', 'channel_id': 'test'}
 
         avatar_number = random.randint(1, 21)
         expected = {
@@ -328,12 +306,7 @@ class SlackTestSuite(SlackTestCase):
                                         cohort_user=cohort_user,
                                         cohort=2)
 
-        data = {
-            'text': 'student <@percybrown|244372eew>',
-            'user_id': 'name',
-            'team_id': 'team',
-            'channel_id': 'test'
-        }
+        data = {'text': 'student <@percybrown|244372eew>', 'user_id': 'name', 'team_id': 'team', 'channel_id': 'test'}
 
         avatar_number = random.randint(1, 21)
         expected = {
@@ -415,12 +388,7 @@ class SlackTestSuite(SlackTestCase):
                                         cohort_user=cohort_user,
                                         cohort=2)
 
-        data = {
-            'text': 'student <@percybrown|244372eew>',
-            'user_id': 'name',
-            'team_id': 'team',
-            'channel_id': 'test'
-        }
+        data = {'text': 'student <@percybrown|244372eew>', 'user_id': 'name', 'team_id': 'team', 'channel_id': 'test'}
 
         avatar_number = random.randint(1, 21)
         expected = {

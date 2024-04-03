@@ -44,8 +44,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
             'mentor_joined_at': None,
         }
         mentorship_service = {'missed_meeting_duration': timedelta(minutes=10)}
-        model = self.bc.database.create(mentorship_session=mentorship_session,
-                                        mentorship_service=mentorship_service)
+        model = self.bc.database.create(mentorship_session=mentorship_session, mentorship_service=mentorship_service)
         mentorship_session_db = self.bc.format.to_dict(model.mentorship_session)
 
         result = get_accounted_time(model.mentorship_session)
@@ -70,8 +69,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
             'mentor_joined_at': now,
         }
         mentorship_service = {'missed_meeting_duration': timedelta(minutes=0)}
-        model = self.bc.database.create(mentorship_session=mentorship_session,
-                                        mentorship_service=mentorship_service)
+        model = self.bc.database.create(mentorship_session=mentorship_session, mentorship_service=mentorship_service)
         mentorship_session_db = self.bc.format.to_dict(model.mentorship_session)
 
         result = get_accounted_time(model.mentorship_session)
@@ -96,8 +94,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
             'mentor_joined_at': now,
         }
         mentorship_service = {'missed_meeting_duration': timedelta(minutes=10)}
-        model = self.bc.database.create(mentorship_session=mentorship_session,
-                                        mentorship_service=mentorship_service)
+        model = self.bc.database.create(mentorship_session=mentorship_session, mentorship_service=mentorship_service)
         mentorship_session_db = self.bc.format.to_dict(model.mentorship_session)
 
         result = get_accounted_time(model.mentorship_session)
@@ -122,8 +119,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
             'mentor_joined_at': None,
         }
         mentorship_service = {'missed_meeting_duration': timedelta(minutes=10)}
-        model = self.bc.database.create(mentorship_session=mentorship_session,
-                                        mentorship_service=mentorship_service)
+        model = self.bc.database.create(mentorship_session=mentorship_session, mentorship_service=mentorship_service)
         mentorship_session_db = self.bc.format.to_dict(model.mentorship_session)
 
         result = get_accounted_time(model.mentorship_session)
@@ -148,8 +144,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
             'mentor_joined_at': now,
         }
         mentorship_service = {'missed_meeting_duration': timedelta(minutes=10)}
-        model = self.bc.database.create(mentorship_session=mentorship_session,
-                                        mentorship_service=mentorship_service)
+        model = self.bc.database.create(mentorship_session=mentorship_session, mentorship_service=mentorship_service)
         mentorship_session_db = self.bc.format.to_dict(model.mentorship_session)
 
         result = get_accounted_time(model.mentorship_session)
@@ -280,8 +275,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
             'ended_at': now - timedelta(seconds=1),
         }
         mentorship_service = {'missed_meeting_duration': timedelta(minutes=10)}
-        model = self.bc.database.create(mentorship_session=mentorship_session,
-                                        mentorship_service=mentorship_service)
+        model = self.bc.database.create(mentorship_session=mentorship_session, mentorship_service=mentorship_service)
         mentorship_session_db = self.bc.format.to_dict(model.mentorship_session)
 
         result = get_accounted_time(model.mentorship_session)
@@ -307,8 +301,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
             'ended_at': now + timedelta(days=1),
         }
         mentorship_service = {'missed_meeting_duration': timedelta(minutes=10)}
-        model = self.bc.database.create(mentorship_session=mentorship_session,
-                                        mentorship_service=mentorship_service)
+        model = self.bc.database.create(mentorship_session=mentorship_session, mentorship_service=mentorship_service)
         mentorship_session_db = self.bc.format.to_dict(model.mentorship_session)
 
         result = get_accounted_time(model.mentorship_session)
@@ -329,8 +322,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
     duration
     """
 
-    def test__with_started_at__with_mentor_joined_at__with_ended_at__with_mentee_left_at__one_days_of_duration(
-            self):
+    def test__with_started_at__with_mentor_joined_at__with_ended_at__with_mentee_left_at__one_days_of_duration(self):
         now = timezone.now()
         diff = timedelta(seconds=random.randint(0, 10000))
         mentorship_session = {
@@ -340,8 +332,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
             'ended_at': now + timedelta(days=1),
         }
         mentorship_service = {'missed_meeting_duration': timedelta(minutes=10)}
-        model = self.bc.database.create(mentorship_session=mentorship_session,
-                                        mentorship_service=mentorship_service)
+        model = self.bc.database.create(mentorship_session=mentorship_session, mentorship_service=mentorship_service)
         mentorship_session_db = self.bc.format.to_dict(model.mentorship_session)
 
         result = get_accounted_time(model.mentorship_session)
@@ -368,8 +359,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
     with max max_duration
     """
 
-    def test__with_started_at__with_mentor_joined_at__with_ended_at__less_one_days_of_duration__with_max_duration(
-            self):
+    def test__with_started_at__with_mentor_joined_at__with_ended_at__less_one_days_of_duration__with_max_duration(self):
         now = timezone.now()
         mentorship_session = {
             'started_at': now,
@@ -377,8 +367,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
             'ended_at': now + timedelta(seconds=random.randint(7201, 85399)),  # less one day
         }
         mentorship_service = {'missed_meeting_duration': timedelta(minutes=10)}
-        model = self.bc.database.create(mentorship_session=mentorship_session,
-                                        mentorship_service=mentorship_service)
+        model = self.bc.database.create(mentorship_session=mentorship_session, mentorship_service=mentorship_service)
         mentorship_session_db = self.bc.format.to_dict(model.mentorship_session)
 
         result = get_accounted_time(model.mentorship_session)
@@ -410,8 +399,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
             'ended_at': now + diff,
         }
         mentorship_service = {'missed_meeting_duration': timedelta(minutes=10), 'max_duration': timedelta(0)}
-        model = self.bc.database.create(mentorship_session=mentorship_session,
-                                        mentorship_service=mentorship_service)
+        model = self.bc.database.create(mentorship_session=mentorship_session, mentorship_service=mentorship_service)
         mentorship_session_db = self.bc.format.to_dict(model.mentorship_session)
 
         result = get_accounted_time(model.mentorship_session)

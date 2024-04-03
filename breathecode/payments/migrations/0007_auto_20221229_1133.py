@@ -16,9 +16,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='PlanOffer',
             fields=[
-                ('id',
-                 models.BigAutoField(auto_created=True, primary_key=True, serialize=False,
-                                     verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('from_syllabus', models.ManyToManyField(to='admissions.Syllabus')),
             ],
         ),
@@ -44,17 +42,14 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='PlanOfferTranslation',
             fields=[
-                ('id',
-                 models.BigAutoField(auto_created=True, primary_key=True, serialize=False,
-                                     verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('lang',
                  models.CharField(max_length=5,
                                   validators=[breathecode.utils.validators.language.validate_language_code])),
                 ('title', models.CharField(max_length=60)),
                 ('description', models.CharField(max_length=255)),
                 ('short_description', models.CharField(max_length=255)),
-                ('offer',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='payments.planoffer')),
+                ('offer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='payments.planoffer')),
             ],
         ),
         migrations.AddField(
@@ -65,7 +60,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='planoffer',
             name='suggested_plans',
-            field=models.ManyToManyField(related_name='_payments_planoffer_suggested_plans_+',
-                                         to='payments.Plan'),
+            field=models.ManyToManyField(related_name='_payments_planoffer_suggested_plans_+', to='payments.Plan'),
         ),
     ]

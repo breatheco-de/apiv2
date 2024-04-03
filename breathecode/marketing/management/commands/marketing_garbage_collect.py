@@ -12,8 +12,6 @@ class Command(BaseCommand):
     def delete_old_webhooks(self):
         cursor = connection.cursor()
         #status = 'ERROR' or status = 'PENDING' AND
-        cursor.execute(
-            "DELETE FROM marketing_activecampaignwebhook WHERE created_at < NOW() - INTERVAL '30 days'")
+        cursor.execute("DELETE FROM marketing_activecampaignwebhook WHERE created_at < NOW() - INTERVAL '30 days'")
 
-        cursor.execute(
-            "DELETE FROM marketing_activecampaignwebhook WHERE status <> 'ERROR' AND status <> 'PENDING'")
+        cursor.execute("DELETE FROM marketing_activecampaignwebhook WHERE status <> 'ERROR' AND status <> 'PENDING'")

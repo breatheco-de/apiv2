@@ -14,12 +14,11 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='tag',
             name='automation',
-            field=models.ForeignKey(
-                default=None,
-                help_text='Leads that contain this tag will be asociated to this automation',
-                null=True,
-                on_delete=django.db.models.deletion.CASCADE,
-                to='marketing.Automation'),
+            field=models.ForeignKey(default=None,
+                                    help_text='Leads that contain this tag will be asociated to this automation',
+                                    null=True,
+                                    on_delete=django.db.models.deletion.CASCADE,
+                                    to='marketing.Automation'),
         ),
         migrations.AlterField(
             model_name='automation',

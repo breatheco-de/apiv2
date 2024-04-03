@@ -53,10 +53,7 @@ class SurveyTestSuite(FeedbackTestCase):
         self.bc.database.create(authenticate=True)
         response = self.client.get(url)
         json = response.json()
-        expected = {
-            'detail': "You (user: 1) don't have this capability: read_survey for academy 1",
-            'status_code': 403
-        }
+        expected = {'detail': "You (user: 1) don't have this capability: read_survey for academy 1", 'status_code': 403}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -385,10 +382,7 @@ class SurveyTestSuite(FeedbackTestCase):
         self.bc.database.create(authenticate=True)
         response = self.client.post(url, {})
         json = response.json()
-        expected = {
-            'detail': "You (user: 1) don't have this capability: crud_survey for academy 1",
-            'status_code': 403
-        }
+        expected = {'detail': "You (user: 1) don't have this capability: crud_survey for academy 1", 'status_code': 403}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -556,11 +550,7 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-    @patch('breathecode.feedback.actions.send_survey_group',
-           MagicMock(return_value={
-               'success': [],
-               'error': []
-           }))
+    @patch('breathecode.feedback.actions.send_survey_group', MagicMock(return_value={'success': [], 'error': []}))
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_academy_survey__post__when_send_survey_group_is_called(self):

@@ -24,8 +24,7 @@ def mocks(db, monkeypatch):
     }), False, 2),
 ])
 def test_nothing_happens(bc: Breathecode, enable_signals, mocks, plan, empty, service_item):
-    enable_signals('django.db.models.signals.m2m_changed',
-                   'breathecode.payments.signals.update_plan_m2m_service_items')
+    enable_signals('django.db.models.signals.m2m_changed', 'breathecode.payments.signals.update_plan_m2m_service_items')
 
     mock = mocks
     model = bc.database.create(plan=plan, service_item=service_item)
@@ -46,8 +45,7 @@ def test_nothing_happens(bc: Breathecode, enable_signals, mocks, plan, empty, se
     }),
 ])
 def test__consumable_how_many_minus_1__consume_gte_1(bc: Breathecode, enable_signals, mocks, attr, value):
-    enable_signals('django.db.models.signals.m2m_changed',
-                   'breathecode.payments.signals.update_plan_m2m_service_items')
+    enable_signals('django.db.models.signals.m2m_changed', 'breathecode.payments.signals.update_plan_m2m_service_items')
 
     extra = {}
     if attr == 'plan_financing':

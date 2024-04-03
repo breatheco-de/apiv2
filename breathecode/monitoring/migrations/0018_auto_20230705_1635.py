@@ -13,10 +13,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='StripeEvent',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('stripe_id',
-                 models.CharField(blank=True, default=None, help_text='Stripe id', max_length=32, null=True)),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('stripe_id', models.CharField(blank=True,
+                                               default=None,
+                                               help_text='Stripe id',
+                                               max_length=32,
+                                               null=True)),
                 ('type', models.CharField(help_text='Stripe event type', max_length=50)),
                 ('status',
                  models.CharField(choices=[('PENDING', 'Pending'), ('DONE', 'Done'), ('ERROR', 'Error')],

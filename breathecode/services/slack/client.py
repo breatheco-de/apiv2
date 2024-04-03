@@ -105,8 +105,7 @@ class Slack:
             payload['action_state'] = _data
 
         except Exception:
-            raise Exception(
-                'Invalid slack action format, must be json with class and method properties at least')
+            raise Exception('Invalid slack action format, must be json with class and method properties at least')
 
         logger.debug(f'Executing {action_class} => {method}')
         if hasattr(actions, action_class):
@@ -118,8 +117,7 @@ class Slack:
             _class = getattr(_module, action_class.capitalize())(payload)  #factory the class
 
             if not hasattr(_class, method):
-                raise Exception(
-                    f'Method {method} not found in slack action class {action_class.capitalize()}')
+                raise Exception(f'Method {method} not found in slack action class {action_class.capitalize()}')
             response = getattr(_class, method)(payload=payload)  # call action method
 
             if 'response_url' in payload and response:

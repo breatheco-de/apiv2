@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import (AnswerMeView, GetAnswerView, track_survey_open, get_survey_questions, SurveyView,
-                    AcademyAnswerView, get_reviews, ReviewView, get_review_platform)
+from .views import (AnswerMeView, GetAnswerView, track_survey_open, get_survey_questions, SurveyView, AcademyAnswerView,
+                    get_reviews, ReviewView, get_review_platform)
 
 app_name = 'feedback'
 urlpatterns = [

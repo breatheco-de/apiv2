@@ -116,10 +116,9 @@ def test_type_and_no_id_or_slug(bc: Breathecode):
 
     assert logging.Logger.info.call_args_list == [call(f'Executing add_activity related to {kind}')]
     assert logging.Logger.error.call_args_list == [
-        call(
-            'If related_type is provided, either related_id or related_slug must be provided, '
-            'but not both.',
-            exc_info=True),
+        call('If related_type is provided, either related_id or related_slug must be provided, '
+             'but not both.',
+             exc_info=True),
     ]
     assert actions.get_activity_meta.call_args_list == []
 
@@ -145,8 +144,7 @@ def test_type_with_id_and_slug(bc: Breathecode):
 
     assert logging.Logger.info.call_args_list == [call(f'Executing add_activity related to {kind}')]
     assert logging.Logger.error.call_args_list == [
-        call('If related_type is not provided, both related_id and related_slug must also be absent.',
-             exc_info=True),
+        call('If related_type is not provided, both related_id and related_slug must also be absent.', exc_info=True),
     ]
     assert actions.get_activity_meta.call_args_list == []
 
@@ -199,12 +197,9 @@ def test_adding_the_resource_with_id_and_no_meta(bc: Breathecode, decompress_and
                                      bigquery.enums.SqlTypeNames.STRUCT,
                                      'NULLABLE',
                                      fields=[
-                                         bigquery.SchemaField('type', bigquery.enums.SqlTypeNames.STRING,
-                                                              'NULLABLE'),
-                                         bigquery.SchemaField('id', bigquery.enums.SqlTypeNames.INT64,
-                                                              'NULLABLE'),
-                                         bigquery.SchemaField('slug', bigquery.enums.SqlTypeNames.STRING,
-                                                              'NULLABLE'),
+                                         bigquery.SchemaField('type', bigquery.enums.SqlTypeNames.STRING, 'NULLABLE'),
+                                         bigquery.SchemaField('id', bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
+                                         bigquery.SchemaField('slug', bigquery.enums.SqlTypeNames.STRING, 'NULLABLE'),
                                      ]),
                 bigquery.SchemaField('meta', bigquery.enums.SqlTypeNames.STRUCT, 'NULLABLE', fields=[]),
             ],
@@ -260,12 +255,9 @@ def test_adding_the_resource_with_slug_and_no_meta(bc: Breathecode, decompress_a
                                      bigquery.enums.SqlTypeNames.STRUCT,
                                      'NULLABLE',
                                      fields=[
-                                         bigquery.SchemaField('type', bigquery.enums.SqlTypeNames.STRING,
-                                                              'NULLABLE'),
-                                         bigquery.SchemaField('id', bigquery.enums.SqlTypeNames.INT64,
-                                                              'NULLABLE'),
-                                         bigquery.SchemaField('slug', bigquery.enums.SqlTypeNames.STRING,
-                                                              'NULLABLE'),
+                                         bigquery.SchemaField('type', bigquery.enums.SqlTypeNames.STRING, 'NULLABLE'),
+                                         bigquery.SchemaField('id', bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
+                                         bigquery.SchemaField('slug', bigquery.enums.SqlTypeNames.STRING, 'NULLABLE'),
                                      ]),
                 bigquery.SchemaField('meta', bigquery.enums.SqlTypeNames.STRUCT, 'NULLABLE', fields=[]),
             ],
@@ -329,20 +321,15 @@ def test_adding_the_resource_with_meta(bc: Breathecode, set_activity_meta, decom
                                      bigquery.enums.SqlTypeNames.STRUCT,
                                      'NULLABLE',
                                      fields=[
-                                         bigquery.SchemaField('type', bigquery.enums.SqlTypeNames.STRING,
-                                                              'NULLABLE'),
-                                         bigquery.SchemaField('id', bigquery.enums.SqlTypeNames.INT64,
-                                                              'NULLABLE'),
-                                         bigquery.SchemaField('slug', bigquery.enums.SqlTypeNames.STRING,
-                                                              'NULLABLE'),
+                                         bigquery.SchemaField('type', bigquery.enums.SqlTypeNames.STRING, 'NULLABLE'),
+                                         bigquery.SchemaField('id', bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
+                                         bigquery.SchemaField('slug', bigquery.enums.SqlTypeNames.STRING, 'NULLABLE'),
                                      ]),
-                bigquery.SchemaField('meta',
-                                     bigquery.enums.SqlTypeNames.STRUCT,
-                                     'NULLABLE',
-                                     fields=[
-                                         bigquery.SchemaField(x, bigquery.enums.SqlTypeNames.STRING,
-                                                              'NULLABLE') for x in meta
-                                     ]),
+                bigquery.SchemaField(
+                    'meta',
+                    bigquery.enums.SqlTypeNames.STRUCT,
+                    'NULLABLE',
+                    fields=[bigquery.SchemaField(x, bigquery.enums.SqlTypeNames.STRING, 'NULLABLE') for x in meta]),
             ],
         },
     ]
@@ -456,20 +443,15 @@ def test_adding_the_resource_with_meta__called_two_times(bc: Breathecode, monkey
                                      bigquery.enums.SqlTypeNames.STRUCT,
                                      'NULLABLE',
                                      fields=[
-                                         bigquery.SchemaField('type', bigquery.enums.SqlTypeNames.STRING,
-                                                              'NULLABLE'),
-                                         bigquery.SchemaField('id', bigquery.enums.SqlTypeNames.INT64,
-                                                              'NULLABLE'),
-                                         bigquery.SchemaField('slug', bigquery.enums.SqlTypeNames.STRING,
-                                                              'NULLABLE'),
+                                         bigquery.SchemaField('type', bigquery.enums.SqlTypeNames.STRING, 'NULLABLE'),
+                                         bigquery.SchemaField('id', bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
+                                         bigquery.SchemaField('slug', bigquery.enums.SqlTypeNames.STRING, 'NULLABLE'),
                                      ]),
-                bigquery.SchemaField('meta',
-                                     bigquery.enums.SqlTypeNames.STRUCT,
-                                     'NULLABLE',
-                                     fields=[
-                                         bigquery.SchemaField(x, bigquery.enums.SqlTypeNames.STRING,
-                                                              'NULLABLE') for x in meta
-                                     ]),
+                bigquery.SchemaField(
+                    'meta',
+                    bigquery.enums.SqlTypeNames.STRUCT,
+                    'NULLABLE',
+                    fields=[bigquery.SchemaField(x, bigquery.enums.SqlTypeNames.STRING, 'NULLABLE') for x in meta]),
             ],
         },
     ]
@@ -496,20 +478,15 @@ def test_adding_the_resource_with_meta__called_two_times(bc: Breathecode, monkey
                                      bigquery.enums.SqlTypeNames.STRUCT,
                                      'NULLABLE',
                                      fields=[
-                                         bigquery.SchemaField('type', bigquery.enums.SqlTypeNames.STRING,
-                                                              'NULLABLE'),
-                                         bigquery.SchemaField('id', bigquery.enums.SqlTypeNames.INT64,
-                                                              'NULLABLE'),
-                                         bigquery.SchemaField('slug', bigquery.enums.SqlTypeNames.STRING,
-                                                              'NULLABLE'),
+                                         bigquery.SchemaField('type', bigquery.enums.SqlTypeNames.STRING, 'NULLABLE'),
+                                         bigquery.SchemaField('id', bigquery.enums.SqlTypeNames.INT64, 'NULLABLE'),
+                                         bigquery.SchemaField('slug', bigquery.enums.SqlTypeNames.STRING, 'NULLABLE'),
                                      ]),
-                bigquery.SchemaField('meta',
-                                     bigquery.enums.SqlTypeNames.STRUCT,
-                                     'NULLABLE',
-                                     fields=[
-                                         bigquery.SchemaField(x, bigquery.enums.SqlTypeNames.STRING,
-                                                              'NULLABLE') for x in meta
-                                     ]),
+                bigquery.SchemaField(
+                    'meta',
+                    bigquery.enums.SqlTypeNames.STRUCT,
+                    'NULLABLE',
+                    fields=[bigquery.SchemaField(x, bigquery.enums.SqlTypeNames.STRING, 'NULLABLE') for x in meta]),
             ],
         },
     ]

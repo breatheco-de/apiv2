@@ -44,10 +44,7 @@ class MonitoringModelsMixin(ModelsMixin):
             if 'application' in models:
                 kargs['application'] = just_one(models['application'])
 
-            models['endpoint'] = create_models(endpoint, 'monitoring.Endpoint', **{
-                **kargs,
-                **endpoint_kwargs
-            })
+            models['endpoint'] = create_models(endpoint, 'monitoring.Endpoint', **{**kargs, **endpoint_kwargs})
 
         if not 'monitor_script' in models and is_valid(monitor_script):
             kargs = {}

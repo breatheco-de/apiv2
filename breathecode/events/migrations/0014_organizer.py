@@ -15,8 +15,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Organizer',
             fields=[
-                ('id',
-                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('eventbrite_id', models.CharField(blank=True, max_length=30, unique=True)),
                 ('name', models.CharField(blank=True, default=None, max_length=100, null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
@@ -26,8 +25,8 @@ class Migration(migrations.Migration):
                                    null=True,
                                    on_delete=django.db.models.deletion.CASCADE,
                                    to='admissions.academy')),
-                ('organization',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='events.organization')),
+                ('organization', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
+                                                   to='events.organization')),
             ],
         ),
     ]

@@ -63,10 +63,7 @@ class MediaTestSuite(MediaTestCase):
     def test_category_without_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        models = self.generate_models(authenticate=True,
-                                      profile_academy=True,
-                                      capability='read_media',
-                                      role='potato')
+        models = self.generate_models(authenticate=True, profile_academy=True, capability='read_media', role='potato')
         url = reverse_lazy('media:category')
         response = self.client.get(url)
         json = response.json()
@@ -129,10 +126,7 @@ class MediaTestSuite(MediaTestCase):
     def test_category_post(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_media',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_media', role='potato')
         url = reverse_lazy('media:category')
         data = {
             'name': 'They killed kenny',
@@ -159,10 +153,7 @@ class MediaTestSuite(MediaTestCase):
     def test_category__spy_extensions(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        models = self.generate_models(authenticate=True,
-                                      profile_academy=True,
-                                      capability='read_media',
-                                      role='potato')
+        models = self.generate_models(authenticate=True, profile_academy=True, capability='read_media', role='potato')
 
         url = reverse_lazy('media:category')
         self.client.get(url)
@@ -178,10 +169,7 @@ class MediaTestSuite(MediaTestCase):
     def test_category__spy_extension_arguments(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        models = self.generate_models(authenticate=True,
-                                      profile_academy=True,
-                                      capability='read_media',
-                                      role='potato')
+        models = self.generate_models(authenticate=True, profile_academy=True, capability='read_media', role='potato')
 
         url = reverse_lazy('media:category')
         self.client.get(url)

@@ -21,10 +21,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='formentry',
             name='tags',
-            field=models.CharField(blank=True,
-                                   default='',
-                                   help_text='Comma separated list of tags',
-                                   max_length=100),
+            field=models.CharField(blank=True, default='', help_text='Comma separated list of tags', max_length=100),
         ),
         migrations.AlterField(
             model_name='leadgenerationapp',

@@ -30,11 +30,10 @@ class ProvisioningModelsMixin(ModelsMixin):
                                                     or is_valid(provisioning_consumption_event)):
             kargs = {}
 
-            models['provisioning_vendor'] = create_models(provisioning_vendor,
-                                                          'provisioning.ProvisioningVendor', **{
-                                                              **kargs,
-                                                              **provisioning_vendor_kwargs
-                                                          })
+            models['provisioning_vendor'] = create_models(provisioning_vendor, 'provisioning.ProvisioningVendor', **{
+                **kargs,
+                **provisioning_vendor_kwargs
+            })
 
         if not 'provisioning_profile' in models and is_valid(provisioning_profile):
             kargs = {}
@@ -51,11 +50,10 @@ class ProvisioningModelsMixin(ModelsMixin):
             if 'profile_academy' in models:
                 kargs['members'] = get_list(models['profile_academy'])
 
-            models['provisioning_profile'] = create_models(provisioning_profile,
-                                                           'provisioning.ProvisioningProfile', **{
-                                                               **kargs,
-                                                               **provisioning_profile_kwargs
-                                                           })
+            models['provisioning_profile'] = create_models(provisioning_profile, 'provisioning.ProvisioningProfile', **{
+                **kargs,
+                **provisioning_profile_kwargs
+            })
 
         if not 'provisioning_machine_types' in models and is_valid(provisioning_machine_types):
             kargs = {}
@@ -64,8 +62,7 @@ class ProvisioningModelsMixin(ModelsMixin):
                 kargs['vendor'] = just_one(models['provisioning_vendor'])
 
             models['provisioning_machine_types'] = create_models(provisioning_machine_types,
-                                                                 'provisioning.ProvisioningMachineTypes',
-                                                                 **kargs)
+                                                                 'provisioning.ProvisioningMachineTypes', **kargs)
 
         if not 'provisioning_academy' in models and is_valid(provisioning_academy):
             kargs = {}
@@ -79,8 +76,8 @@ class ProvisioningModelsMixin(ModelsMixin):
             if 'provisioning_machine_types' in models:
                 kargs['allowed_machine_types'] = get_list(models['provisioning_machine_types'])
 
-            models['provisioning_academy'] = create_models(provisioning_academy,
-                                                           'provisioning.ProvisioningAcademy', **kargs)
+            models['provisioning_academy'] = create_models(provisioning_academy, 'provisioning.ProvisioningAcademy',
+                                                           **kargs)
 
         if not 'provisioning_bill' in models and is_valid(provisioning_bill):
             kargs = {}
@@ -94,15 +91,14 @@ class ProvisioningModelsMixin(ModelsMixin):
             if 'provisioning_machine_types' in models:
                 kargs['allowed_machine_types'] = get_list(models['provisioning_machine_types'])
 
-            models['provisioning_bill'] = create_models(provisioning_bill, 'provisioning.ProvisioningBill',
-                                                        **kargs)
+            models['provisioning_bill'] = create_models(provisioning_bill, 'provisioning.ProvisioningBill', **kargs)
 
         if not 'provisioning_consumption_kind' in models and (is_valid(provisioning_consumption_kind)
                                                               or is_valid(provisioning_user_consumption)):
             kargs = {}
 
-            models['provisioning_consumption_kind'] = create_models(
-                provisioning_consumption_kind, 'provisioning.ProvisioningConsumptionKind', **kargs)
+            models['provisioning_consumption_kind'] = create_models(provisioning_consumption_kind,
+                                                                    'provisioning.ProvisioningConsumptionKind', **kargs)
 
         if not 'provisioning_price' in models and (is_valid(provisioning_price)
                                                    or is_valid(provisioning_consumption_event)):
@@ -111,8 +107,7 @@ class ProvisioningModelsMixin(ModelsMixin):
             if 'currency' in models:
                 kargs['currency'] = just_one(models['currency'])
 
-            models['provisioning_price'] = create_models(provisioning_price, 'provisioning.ProvisioningPrice',
-                                                         **kargs)
+            models['provisioning_price'] = create_models(provisioning_price, 'provisioning.ProvisioningPrice', **kargs)
 
         if not 'provisioning_consumption_event' in models and is_valid(provisioning_consumption_event):
             kargs = {}
@@ -123,8 +118,9 @@ class ProvisioningModelsMixin(ModelsMixin):
             if 'provisioning_price' in models:
                 kargs['price'] = just_one(models['provisioning_price'])
 
-            models['provisioning_consumption_event'] = create_models(
-                provisioning_consumption_event, 'provisioning.ProvisioningConsumptionEvent', **kargs)
+            models['provisioning_consumption_event'] = create_models(provisioning_consumption_event,
+                                                                     'provisioning.ProvisioningConsumptionEvent',
+                                                                     **kargs)
 
         if not 'provisioning_user_consumption' in models and is_valid(provisioning_user_consumption):
             kargs = {}
@@ -138,8 +134,8 @@ class ProvisioningModelsMixin(ModelsMixin):
             if 'provisioning_consumption_event' in models:
                 kargs['events'] = get_list(models['provisioning_consumption_event'])
 
-            models['provisioning_user_consumption'] = create_models(
-                provisioning_user_consumption, 'provisioning.ProvisioningUserConsumption', **kargs)
+            models['provisioning_user_consumption'] = create_models(provisioning_user_consumption,
+                                                                    'provisioning.ProvisioningUserConsumption', **kargs)
 
         if not 'provisioning_activity' in models and is_valid(provisioning_activity):
             kargs = {}
@@ -147,8 +143,8 @@ class ProvisioningModelsMixin(ModelsMixin):
             if 'provisioning_bill' in models:
                 kargs['bill'] = just_one(models['provisioning_bill'])
 
-            models['provisioning_activity'] = create_models(provisioning_activity,
-                                                            'provisioning.ProvisioningActivity', **kargs)
+            models['provisioning_activity'] = create_models(provisioning_activity, 'provisioning.ProvisioningActivity',
+                                                            **kargs)
 
         if not 'provisioning_container' in models and is_valid(provisioning_container):
             kargs = {}

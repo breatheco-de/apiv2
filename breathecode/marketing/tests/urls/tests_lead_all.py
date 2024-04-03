@@ -111,10 +111,7 @@ class CohortUserTestSuite(MarketingTestCase):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('marketing:lead_all')
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='read_lead',
-                                     role='potato')
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='read_lead', role='potato')
 
         response = self.client.get(url)
         json = response.json()
@@ -277,8 +274,7 @@ class CohortUserTestSuite(MarketingTestCase):
                                  role='potato',
                                  form_entry=True,
                                  models=base,
-                                 academy_kwargs={'slug': 'konan' if index == 0 else 'freyja'})
-            for index in range(0, 2)
+                                 academy_kwargs={'slug': 'konan' if index == 0 else 'freyja'}) for index in range(0, 2)
         ]
 
         models.sort(key=lambda x: x.form_entry.created_at)
@@ -324,9 +320,7 @@ class CohortUserTestSuite(MarketingTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_form_entry_dict(), [{
-            **self.model_to_dict(model, 'form_entry')
-        } for model in models])
+        self.assertEqual(self.all_form_entry_dict(), [{**self.model_to_dict(model, 'form_entry')} for model in models])
 
     """
     🔽🔽🔽 Start in querystring

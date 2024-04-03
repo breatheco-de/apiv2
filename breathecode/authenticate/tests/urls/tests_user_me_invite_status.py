@@ -72,11 +72,10 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.put(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED
-            })
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED
+        })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     @patch('breathecode.authenticate.signals.invite_status_updated.send', MagicMock())
@@ -180,70 +179,68 @@ class AuthenticateTestSuite(AuthTestCase):
                                       user_invite_kwargs=invite_kwargs,
                                       models=base)
 
-        url = reverse_lazy('authenticate:user_me_invite_status', kwargs={'new_status': 'accepted'
-                                                                         }) + '?id=1,2'
+        url = reverse_lazy('authenticate:user_me_invite_status', kwargs={'new_status': 'accepted'}) + '?id=1,2'
         response = self.client.put(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json(), [])
-        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'),
-                         [{
-                             'user_id': 1,
-                             'academy_id': 1,
-                             'author_id': 1,
-                             'cohort_id': 1,
-                             'email': 'a@a.com',
-                             'first_name': None,
-                             'conversion_info': None,
-                             'has_marketing_consent': False,
-                             'event_slug': None,
-                             'asset_slug': None,
-                             'id': 1,
-                             'is_email_validated': False,
-                             'last_name': None,
-                             'phone': '',
-                             'role_id': 'potato',
-                             'sent_at': None,
-                             'status': 'ACCEPTED',
-                             'token': model1['user_invite'].token,
-                             'process_message': '',
-                             'process_status': 'PENDING',
-                             'syllabus_id': None,
-                             'city': None,
-                             'country': None,
-                             'latitude': None,
-                             'longitude': None,
-                             'email_quality': None,
-                             'email_status': None,
-                         }, {
-                             'user_id': 1,
-                             'academy_id': 1,
-                             'author_id': 1,
-                             'cohort_id': 2,
-                             'email': 'a@a.com',
-                             'first_name': None,
-                             'conversion_info': None,
-                             'has_marketing_consent': False,
-                             'event_slug': None,
-                             'asset_slug': None,
-                             'id': 2,
-                             'is_email_validated': False,
-                             'last_name': None,
-                             'phone': '',
-                             'role_id': 'potato',
-                             'sent_at': None,
-                             'status': 'ACCEPTED',
-                             'token': model2['user_invite'].token,
-                             'process_message': '',
-                             'process_status': 'PENDING',
-                             'syllabus_id': None,
-                             'city': None,
-                             'country': None,
-                             'latitude': None,
-                             'longitude': None,
-                             'email_quality': None,
-                             'email_status': None,
-                         }])
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [{
+            'user_id': 1,
+            'academy_id': 1,
+            'author_id': 1,
+            'cohort_id': 1,
+            'email': 'a@a.com',
+            'first_name': None,
+            'conversion_info': None,
+            'has_marketing_consent': False,
+            'event_slug': None,
+            'asset_slug': None,
+            'id': 1,
+            'is_email_validated': False,
+            'last_name': None,
+            'phone': '',
+            'role_id': 'potato',
+            'sent_at': None,
+            'status': 'ACCEPTED',
+            'token': model1['user_invite'].token,
+            'process_message': '',
+            'process_status': 'PENDING',
+            'syllabus_id': None,
+            'city': None,
+            'country': None,
+            'latitude': None,
+            'longitude': None,
+            'email_quality': None,
+            'email_status': None,
+        }, {
+            'user_id': 1,
+            'academy_id': 1,
+            'author_id': 1,
+            'cohort_id': 2,
+            'email': 'a@a.com',
+            'first_name': None,
+            'conversion_info': None,
+            'has_marketing_consent': False,
+            'event_slug': None,
+            'asset_slug': None,
+            'id': 2,
+            'is_email_validated': False,
+            'last_name': None,
+            'phone': '',
+            'role_id': 'potato',
+            'sent_at': None,
+            'status': 'ACCEPTED',
+            'token': model2['user_invite'].token,
+            'process_message': '',
+            'process_status': 'PENDING',
+            'syllabus_id': None,
+            'city': None,
+            'country': None,
+            'latitude': None,
+            'longitude': None,
+            'email_quality': None,
+            'email_status': None,
+        }])
 
         self.assertEqual(self.bc.database.list_of('auth.User'), [
             self.bc.format.to_dict(model1.user),
@@ -274,8 +271,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                       user_invite_kwargs=invite_kwargs,
                                       models=base)
 
-        url = reverse_lazy('authenticate:user_me_invite_status', kwargs={'new_status': 'accepted'
-                                                                         }) + '?id=1,2'
+        url = reverse_lazy('authenticate:user_me_invite_status', kwargs={'new_status': 'accepted'}) + '?id=1,2'
         response = self.client.put(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)

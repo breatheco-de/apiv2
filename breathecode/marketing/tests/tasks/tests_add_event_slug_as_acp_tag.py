@@ -110,8 +110,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(logging.Logger.info.call_args_list, [
             call(TASK_STARTED_MESSAGE),
         ])
-        self.assertEqual(logging.Logger.error.call_args_list,
-                         [call('Event 1 does not have slug', exc_info=True)])
+        self.assertEqual(logging.Logger.error.call_args_list, [call('Event 1 does not have slug', exc_info=True)])
 
     """
     🔽🔽🔽 Event slug already exists
@@ -228,9 +227,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         active_campaign_academy = {'ac_url': AC_HOST}
         event = {'slug': 'event-they-killed-kenny'}
 
-        model = self.bc.database.create(academy=1,
-                                        active_campaign_academy=active_campaign_academy,
-                                        event=event)
+        model = self.bc.database.create(academy=1, active_campaign_academy=active_campaign_academy, event=event)
 
         logging.Logger.info.call_args_list = []
 
@@ -269,9 +266,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         active_campaign_academy = {'ac_url': AC_HOST}
         event = {'slug': 'event-they-killed-kenny'}
-        model = self.bc.database.create(academy=1,
-                                        event=event,
-                                        active_campaign_academy=active_campaign_academy)
+        model = self.bc.database.create(academy=1, event=event, active_campaign_academy=active_campaign_academy)
 
         logging.Logger.info.call_args_list = []
 

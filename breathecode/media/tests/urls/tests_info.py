@@ -432,10 +432,7 @@ class MediaTestSuite(MediaTestCase):
     def test_info__delete__two_media(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='crud_media',
-                                    role='potato')
+        base = self.generate_models(authenticate=True, profile_academy=True, capability='crud_media', role='potato')
 
         for _ in range(0, 2):
             self.generate_models(media=True, models=base)

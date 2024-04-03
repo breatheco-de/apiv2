@@ -339,8 +339,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             call({model.tag.slug}),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('No automation was specified and the the specified tag has no automation either',
-                 exc_info=True),
+            call('No automation was specified and the the specified tag has no automation either', exc_info=True),
         ])
 
         self.assertEqual(requests.get.error.call_args_list, [])
@@ -358,10 +357,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     def test_with_tag_type_strong__with_automation(self):
         """Test /answer/:id without auth"""
-        model = self.generate_models(academy=1,
-                                     active_campaign_academy=1,
-                                     tag={'tag_type': 'STRONG'},
-                                     automation=1)
+        model = self.generate_models(academy=1, active_campaign_academy=1, tag={'tag_type': 'STRONG'}, automation=1)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -380,8 +376,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             call('found tags'),
             call({model.tag.slug}),
         ])
-        self.assertEqual(logging.Logger.error.call_args_list,
-                         [call("The email doesn't exist", exc_info=True)])
+        self.assertEqual(logging.Logger.error.call_args_list, [call("The email doesn't exist", exc_info=True)])
 
         self.assertEqual(requests.get.error.call_args_list, [])
         self.assertEqual(requests.post.error.call_args_list, [])
@@ -398,19 +393,12 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     def test_with_automations__not_found(self):
         """Test /answer/:id without auth"""
-        model = self.generate_models(academy=1,
-                                     active_campaign_academy=1,
-                                     tag={'tag_type': 'STRONG'},
-                                     automation=1)
+        model = self.generate_models(academy=1, active_campaign_academy=1, tag={'tag_type': 'STRONG'}, automation=1)
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        data = {
-            'location': model['academy'].slug,
-            'tags': model['tag'].slug,
-            'automations': 'they-killed-kenny'
-        }
+        data = {'location': model['academy'].slug, 'tags': model['tag'].slug, 'automations': 'they-killed-kenny'}
 
         persist_single_lead.delay(data)
 
@@ -418,8 +406,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             call('Starting persist_single_lead'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The specified automation they-killed-kenny was not found for this AC Academy',
-                 exc_info=True),
+            call('The specified automation they-killed-kenny was not found for this AC Academy', exc_info=True),
         ])
 
         self.assertEqual(requests.get.error.call_args_list, [])
@@ -447,11 +434,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
 
-        data = {
-            'location': model['academy'].slug,
-            'tags': model['tag'].slug,
-            'automations': model['automation'].slug
-        }
+        data = {'location': model['academy'].slug, 'tags': model['tag'].slug, 'automations': model['automation'].slug}
 
         persist_single_lead.delay(data)
 
@@ -463,8 +446,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             call({model.tag.slug}),
         ])
 
-        self.assertEqual(logging.Logger.error.call_args_list,
-                         [call("The email doesn't exist", exc_info=True)])
+        self.assertEqual(logging.Logger.error.call_args_list, [call("The email doesn't exist", exc_info=True)])
 
         self.assertEqual(requests.get.error.call_args_list, [])
         self.assertEqual(requests.post.error.call_args_list, [])
@@ -734,16 +716,15 @@ class AnswerIdTestSuite(MarketingTestCase):
     def test_with_form_entry_with_data_invalid(self):
         mock_old_breathecode = OLD_BREATHECODE_INSTANCES['request']
         mock_old_breathecode.call_args_list = []
-        model = self.generate_models(
-            academy=True,
-            active_campaign_academy=True,
-            tag=True,
-            tag_kwargs={'tag_type': 'STRONG'},
-            automation=True,
-            automation_kwargs={'slug': 'they-killed-kenny'},
-            form_entry=True,
-            form_entry_kwargs=generate_form_entry_kwargs(),
-            active_campaign_academy_kwargs={'ac_url': 'https://old.hardcoded.breathecode.url'})
+        model = self.generate_models(academy=True,
+                                     active_campaign_academy=True,
+                                     tag=True,
+                                     tag_kwargs={'tag_type': 'STRONG'},
+                                     automation=True,
+                                     automation_kwargs={'slug': 'they-killed-kenny'},
+                                     form_entry=True,
+                                     form_entry_kwargs=generate_form_entry_kwargs(),
+                                     active_campaign_academy_kwargs={'ac_url': 'https://old.hardcoded.breathecode.url'})
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []
@@ -930,15 +911,14 @@ class AnswerIdTestSuite(MarketingTestCase):
             }),
         ]
 
-        model = self.generate_models(
-            academy=True,
-            active_campaign_academy=True,
-            tag=True,
-            tag_kwargs={'tag_type': 'STRONG'},
-            automation=True,
-            automation_kwargs={'slug': 'they-killed-kenny'},
-            form_entry=form_entries,
-            active_campaign_academy_kwargs={'ac_url': 'https://old.hardcoded.breathecode.url'})
+        model = self.generate_models(academy=True,
+                                     active_campaign_academy=True,
+                                     tag=True,
+                                     tag_kwargs={'tag_type': 'STRONG'},
+                                     automation=True,
+                                     automation_kwargs={'slug': 'they-killed-kenny'},
+                                     form_entry=form_entries,
+                                     active_campaign_academy_kwargs={'ac_url': 'https://old.hardcoded.breathecode.url'})
 
         logging.Logger.info.call_args_list = []
         logging.Logger.error.call_args_list = []

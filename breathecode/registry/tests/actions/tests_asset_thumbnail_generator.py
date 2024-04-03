@@ -72,8 +72,7 @@ class RegistryTestSuite(RegistryTestCase):
         for url in urls:
             for args, result in constructor_cases:
                 generator = AssetThumbnailGenerator(*args)
-                with patch('os.getenv',
-                           MagicMock(side_effect=apply_get_env({'DEFAULT_ASSET_PREVIEW_URL': url}))):
+                with patch('os.getenv', MagicMock(side_effect=apply_get_env({'DEFAULT_ASSET_PREVIEW_URL': url}))):
                     default_url = generator._get_default_url()
 
                 self.assertEqual(default_url, url)
@@ -107,8 +106,7 @@ class RegistryTestSuite(RegistryTestCase):
         for url in urls:
             for args, result in constructor_cases:
                 generator = AssetThumbnailGenerator(*args)
-                with patch('os.getenv',
-                           MagicMock(side_effect=apply_get_env({'DEFAULT_ASSET_PREVIEW_URL': url}))):
+                with patch('os.getenv', MagicMock(side_effect=apply_get_env({'DEFAULT_ASSET_PREVIEW_URL': url}))):
                     default_url = generator._get_default_url()
 
                 self.assertEqual(default_url, url)
@@ -146,8 +144,7 @@ class RegistryTestSuite(RegistryTestCase):
         for url in urls:
             for args, result in constructor_cases:
                 generator = AssetThumbnailGenerator(*args)
-                with patch('os.getenv',
-                           MagicMock(side_effect=apply_get_env({'DEFAULT_ASSET_PREVIEW_URL': url}))):
+                with patch('os.getenv', MagicMock(side_effect=apply_get_env({'DEFAULT_ASSET_PREVIEW_URL': url}))):
                     default_url = generator._get_asset_url()
 
                 self.assertEqual(default_url, url)
@@ -181,8 +178,7 @@ class RegistryTestSuite(RegistryTestCase):
         for url in urls:
             for args, result in constructor_cases:
                 generator = AssetThumbnailGenerator(*args)
-                with patch('os.getenv',
-                           MagicMock(side_effect=apply_get_env({'DEFAULT_ASSET_PREVIEW_URL': url}))):
+                with patch('os.getenv', MagicMock(side_effect=apply_get_env({'DEFAULT_ASSET_PREVIEW_URL': url}))):
                     default_url = generator._get_asset_url()
 
                 self.assertEqual(default_url, model.asset.preview)
@@ -271,10 +267,7 @@ class RegistryTestSuite(RegistryTestCase):
         asset_category = {'slug': asset_category_slug}
         media = {'slug': f'{academy_slug}-{asset_category_slug}-{asset_slug}'}
         academy = {'slug': academy_slug}
-        model = self.bc.database.create(asset=asset,
-                                        media=media,
-                                        asset_category=asset_category,
-                                        academy=academy)
+        model = self.bc.database.create(asset=asset, media=media, asset_category=asset_category, academy=academy)
         constructor_cases = [
             ((model.asset, ), (model.asset, 0, 0)),
             ((model.asset, 0, 0), (model.asset, 0, 0)),
@@ -364,8 +357,7 @@ class RegistryTestSuite(RegistryTestCase):
     🔽🔽🔽 _get_media_resolution with media, with MediaResolution, hash match, resolution don't match
     """
 
-    def test__get_media_resolution__with_media__with_media_resolution__hash_match__resolution_does_not_match(
-            self):
+    def test__get_media_resolution__with_media__with_media_resolution__hash_match__resolution_does_not_match(self):
         width = randint(1, 2000)
         height = randint(1, 2000)
         slug = self.bc.fake.slug()
@@ -499,8 +491,7 @@ class RegistryTestSuite(RegistryTestCase):
     def test__get_thumbnail_url__without_asset(self):
         generator = AssetThumbnailGenerator(None)
         default_url = self.bc.fake.url()
-        with patch('os.getenv',
-                   MagicMock(side_effect=apply_get_env({'DEFAULT_ASSET_PREVIEW_URL': default_url}))):
+        with patch('os.getenv', MagicMock(side_effect=apply_get_env({'DEFAULT_ASSET_PREVIEW_URL': default_url}))):
             url = generator.get_thumbnail_url()
 
         self.assertEqual(url, (default_url, False))
@@ -527,8 +518,7 @@ class RegistryTestSuite(RegistryTestCase):
         model = self.bc.database.create(asset=1, academy=1, asset_category=1)
         generator = AssetThumbnailGenerator(model.asset)
         default_url = self.bc.fake.url()
-        with patch('os.getenv',
-                   MagicMock(side_effect=apply_get_env({'DEFAULT_ASSET_PREVIEW_URL': default_url}))):
+        with patch('os.getenv', MagicMock(side_effect=apply_get_env({'DEFAULT_ASSET_PREVIEW_URL': default_url}))):
             url = generator.get_thumbnail_url()
 
         self.assertEqual(url, (default_url, False))
@@ -560,8 +550,7 @@ class RegistryTestSuite(RegistryTestCase):
         model = self.bc.database.create(asset=1, media=1, academy=1)
         generator = AssetThumbnailGenerator(model.asset)
         default_url = self.bc.fake.url()
-        with patch('os.getenv',
-                   MagicMock(side_effect=apply_get_env({'DEFAULT_ASSET_PREVIEW_URL': default_url}))):
+        with patch('os.getenv', MagicMock(side_effect=apply_get_env({'DEFAULT_ASSET_PREVIEW_URL': default_url}))):
             url = generator.get_thumbnail_url()
 
         self.assertEqual(url, (default_url, False))
@@ -598,15 +587,11 @@ class RegistryTestSuite(RegistryTestCase):
         asset_category = {'slug': asset_category_slug}
         media = {'slug': f'{academy_slug}-{asset_category_slug}-{asset_slug}'}
         academy = {'slug': academy_slug}
-        model = self.bc.database.create(asset=asset,
-                                        media=media,
-                                        asset_category=asset_category,
-                                        academy=academy)
+        model = self.bc.database.create(asset=asset, media=media, asset_category=asset_category, academy=academy)
         generator = AssetThumbnailGenerator(model.asset)
         default_url = self.bc.fake.url()
 
-        with patch('os.getenv',
-                   MagicMock(side_effect=apply_get_env({'DEFAULT_ASSET_PREVIEW_URL': default_url}))):
+        with patch('os.getenv', MagicMock(side_effect=apply_get_env({'DEFAULT_ASSET_PREVIEW_URL': default_url}))):
             url = generator.get_thumbnail_url()
 
         self.assertEqual(generator.asset, model.asset)
@@ -617,11 +602,10 @@ class RegistryTestSuite(RegistryTestCase):
             self.bc.format.to_dict(model.asset),
         ])
 
-        self.assertEqual(self.bc.database.list_of('media.Media'),
-                         [{
-                             **self.bc.format.to_dict(model.media),
-                             'hits': 1,
-                         }])
+        self.assertEqual(self.bc.database.list_of('media.Media'), [{
+            **self.bc.format.to_dict(model.media),
+            'hits': 1,
+        }])
 
         self.assertEqual(self.bc.database.list_of('media.MediaResolution'), [])
 
@@ -662,8 +646,7 @@ class RegistryTestSuite(RegistryTestCase):
             generator = AssetThumbnailGenerator(*args)
             default_url = self.bc.fake.url()
 
-            with patch('os.getenv',
-                       MagicMock(side_effect=apply_get_env({'DEFAULT_ASSET_PREVIEW_URL': default_url}))):
+            with patch('os.getenv', MagicMock(side_effect=apply_get_env({'DEFAULT_ASSET_PREVIEW_URL': default_url}))):
                 url = generator.get_thumbnail_url()
 
             self.assertEqual(generator.asset, model.asset)

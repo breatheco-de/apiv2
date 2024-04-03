@@ -75,11 +75,7 @@ def map_ids(contact_customfield_id):
 class ActiveCampaignClient(Client):
 
     def _request(self, method, endpoint, headers=None, **kwargs):
-        _headers = {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Api-Token': self.api_key
-        }
+        _headers = {'Accept': 'application/json', 'Content-Type': 'application/json', 'Api-Token': self.api_key}
         if headers:
             _headers.update(headers)
 
@@ -185,9 +181,7 @@ class ActiveCampaign:
     def get_deal(self, deal_id):
         #/api/3/deals/id
         #Api-Token
-        resp = requests.get(f'{self.host}/api/3/deals/{deal_id}',
-                            headers={'Api-Token': self.token},
-                            timeout=2)
+        resp = requests.get(f'{self.host}/api/3/deals/{deal_id}', headers={'Api-Token': self.token}, timeout=2)
         logger.debug(f'Get deal {self.host}/api/3/deals/{deal_id}', resp.status_code)
         return resp.json()
 
@@ -196,8 +190,8 @@ class ActiveCampaign:
 
         #The following are the fields that can be updated on the deal
         _allowed_fields = [
-            'contact', 'account', 'description', 'currency', 'group', 'owner', 'percent', 'stage', 'status',
-            'title', 'value', 'fields'
+            'contact', 'account', 'description', 'currency', 'group', 'owner', 'percent', 'stage', 'status', 'title',
+            'value', 'fields'
         ]
         _allowed_custom_ids = [x for x in acp_ids['deal'].values()]
         # {
@@ -233,9 +227,7 @@ class ActiveCampaign:
         _to_be_updated = {'fields': []}
         for field_key in fields:
             if field_key not in _allowed_fields:
-                logger.error(
-                    f'Error updating deal `{id}`, field "{field_key}" does not exist on active campaign deals'
-                )
+                logger.error(f'Error updating deal `{id}`, field "{field_key}" does not exist on active campaign deals')
                 raise Exception(f'Field {field_key} does not exist for active campaign deals')
 
             # include all non-custom fields on the payload to be updated
@@ -247,11 +239,9 @@ class ActiveCampaign:
             for cf in fields['fields']:
                 if cf['customFieldId'] not in _allowed_custom_ids:
                     logger.error(
-                        f'Error updating deal `{id}`, custom field with id "{cf["customFieldId"]}" does not exist'
-                    )
+                        f'Error updating deal `{id}`, custom field with id "{cf["customFieldId"]}" does not exist')
                     raise Exception(
-                        f'Custom field with id {cf["customFieldId"]} does not exist for active campaign deals'
-                    )
+                        f'Custom field with id {cf["customFieldId"]} does not exist for active campaign deals')
 
             _to_be_updated['fields'] = fields['fields'].copy()
 
@@ -261,10 +251,7 @@ class ActiveCampaign:
             }
         }
 
-        resp = requests.put(f'{self.host}/api/3/deals/{id}',
-                            headers={'Api-Token': self.token},
-                            json=body,
-                            timeout=2)
+        resp = requests.put(f'{self.host}/api/3/deals/{id}', headers={'Api-Token': self.token}, json=body, timeout=2)
         logger.info(f'Updating lead `{id}` on active campaign')
 
         if resp.status_code in [201, 200]:
@@ -275,10 +262,8 @@ class ActiveCampaign:
                 return body['deal']
 
             else:
-                logger.error(
-                    f'Failed to update deal with id `{id}` because the structure of response was changed')
-                raise Exception(
-                    f'Failed to update deal with id `{id}` because the structure of response was changed')
+                logger.error(f'Failed to update deal with id `{id}` because the structure of response was changed')
+                raise Exception(f'Failed to update deal with id `{id}` because the structure of response was changed')
 
         else:
             logger.error(f'Error updating deal `{id}` with status={str(resp.status_code)}')
@@ -388,8 +373,7 @@ class ActiveCampaign:
                             headers={'Api-Token': self.token},
                             timeout=2)
         logger.debug(
-            f'Get contact field values {self.host}/api/3/contacts/{id}/fieldValues => status={resp.status_code}'
-        )
+            f'Get contact field values {self.host}/api/3/contacts/{id}/fieldValues => status={resp.status_code}')
         data = resp.json()
         if data and 'fieldValues' in data:
             return data['fieldValues']
@@ -446,10 +430,7 @@ class ActiveCampaign:
         #/api/3/deals/id
         #Api-Token
         body = {'tag': {'tag': slugify(slug), 'tagType': 'contact', 'description': description}}
-        resp = requests.post(f'{self.host}/api/3/tags',
-                             headers={'Api-Token': self.token},
-                             json=body,
-                             timeout=2)
+        resp = requests.post(f'{self.host}/api/3/tags', headers={'Api-Token': self.token}, json=body, timeout=2)
         logger.info(f'Creating tag `{body["tag"]["tag"]}` on active campaign')
 
         if resp.status_code == 201:
@@ -461,8 +442,7 @@ class ActiveCampaign:
 
             else:
                 logger.error(f'Failed to create tag `{slug}` because the structure of response was changed')
-                raise Exception(
-                    f'Failed to create tag `{slug}` because the structure of response was changed')
+                raise Exception(f'Failed to create tag `{slug}` because the structure of response was changed')
 
         else:
             logger.error(f'Error creating tag `{slug}` with status={str(resp.status_code)}')
@@ -485,8 +465,7 @@ class ActiveCampaign:
         logger.debug(f'Deleting tag {str(tag_id)} on active campaign')
 
         if resp.status_code == 200 or resp.status_code == 404:
-            logger.debug(
-                f'Tag deleted successfully or not existent {str(resp.status_code)} /api/3/tag/{tag_id}')
+            logger.debug(f'Tag deleted successfully or not existent {str(resp.status_code)} /api/3/tag/{tag_id}')
             return True
         else:
             logger.error(f'Error deleting tag `{str(tag_id)}` with status={str(resp.status_code)}')
@@ -647,11 +626,7 @@ class ACOldClient(object):
         if aditional_data is not None:
             for aditional in aditional_data:
                 params.append(aditional)
-        response = requests.request(method,
-                                    self._base_url + '/admin/api.php',
-                                    params=params,
-                                    data=data,
-                                    timeout=3)
+        response = requests.request(method, self._base_url + '/admin/api.php', params=params, data=data, timeout=3)
 
         if response.status_code >= 200 and response.status_code < 400:
             data = response.json()

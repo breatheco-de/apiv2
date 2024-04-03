@@ -18,10 +18,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='assetcategory',
             name='preview_generation_url',
-            field=models.URLField(blank=True,
-                                  default=None,
-                                  help_text='Will be POSTed to get preview image',
-                                  null=True),
+            field=models.URLField(blank=True, default=None, help_text='Will be POSTed to get preview image', null=True),
         ),
         migrations.AlterField(
             model_name='asset',

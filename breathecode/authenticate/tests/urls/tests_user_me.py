@@ -103,12 +103,10 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = get_serializer(self,
-                                  model.user,
-                                  data={'settings': {
-                                      'lang': 'en',
-                                      'main_currency': None,
-                                  }})
+        expected = get_serializer(self, model.user, data={'settings': {
+            'lang': 'en',
+            'main_currency': None,
+        }})
 
         self.assertEqual(json, expected)
 

@@ -24,8 +24,7 @@ class Migration(migrations.Migration):
             field=models.BooleanField(
                 db_index=True,
                 default=True,
-                help_text=
-                "Determines if the cohorts will be shown in the dashboard if it's status is 'PREWORK'"),
+                help_text="Determines if the cohorts will be shown in the dashboard if it's status is 'PREWORK'"),
         ),
         migrations.AlterField(
             model_name='academy',
@@ -45,8 +44,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='academy',
             name='status',
-            field=models.CharField(choices=[('INACTIVE', 'Inactive'), ('ACTIVE', 'Active'),
-                                            ('DELETED', 'Deleted')],
+            field=models.CharField(choices=[('INACTIVE', 'Inactive'), ('ACTIVE', 'Active'), ('DELETED', 'Deleted')],
                                    db_index=True,
                                    default='ACTIVE',
                                    max_length=15),
@@ -69,20 +67,18 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='cohort',
             name='accepts_enrollment_suggestions',
-            field=models.BooleanField(
-                db_index=True,
-                default=True,
-                help_text='The system will suggest won leads to be added to this cohort'),
+            field=models.BooleanField(db_index=True,
+                                      default=True,
+                                      help_text='The system will suggest won leads to be added to this cohort'),
         ),
         migrations.AlterField(
             model_name='cohort',
             name='available_as_saas',
-            field=models.BooleanField(
-                blank=True,
-                db_index=True,
-                default=False,
-                help_text='Cohorts available as SAAS will be sold through plans at 4Geeks.com',
-                null=True),
+            field=models.BooleanField(blank=True,
+                                      db_index=True,
+                                      default=False,
+                                      help_text='Cohorts available as SAAS will be sold through plans at 4Geeks.com',
+                                      null=True),
         ),
         migrations.AlterField(
             model_name='cohort',
@@ -96,8 +92,7 @@ class Migration(migrations.Migration):
                 blank=True,
                 db_index=True,
                 default=True,
-                help_text=
-                "Determines if the cohort will be shown in the dashboard if it's status is 'PREWORK'",
+                help_text="Determines if the cohort will be shown in the dashboard if it's status is 'PREWORK'",
                 null=True),
         ),
         migrations.AlterField(
@@ -127,8 +122,7 @@ class Migration(migrations.Migration):
                 db_index=True,
                 default=False,
                 help_text=
-                'It will not show on the public API endpoints but you will still be able to add people manually'
-            ),
+                'It will not show on the public API endpoints but you will still be able to add people manually'),
         ),
         migrations.AlterField(
             model_name='cohort',
@@ -146,9 +140,9 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='cohort',
             name='stage',
-            field=models.CharField(choices=[('INACTIVE', 'Inactive'), ('PREWORK', 'Prework'),
-                                            ('STARTED', 'Started'), ('FINAL_PROJECT', 'Final Project'),
-                                            ('ENDED', 'Ended'), ('DELETED', 'Deleted')],
+            field=models.CharField(choices=[('INACTIVE', 'Inactive'), ('PREWORK', 'Prework'), ('STARTED', 'Started'),
+                                            ('FINAL_PROJECT', 'Final Project'), ('ENDED', 'Ended'),
+                                            ('DELETED', 'Deleted')],
                                    db_index=True,
                                    default='INACTIVE',
                                    max_length=15),
@@ -246,10 +240,9 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='cohortuser',
             name='watching',
-            field=models.BooleanField(
-                db_index=True,
-                default=False,
-                help_text='You can active students to the watch list and monitor them closely'),
+            field=models.BooleanField(db_index=True,
+                                      default=False,
+                                      help_text='You can active students to the watch list and monitor them closely'),
         ),
         migrations.AlterField(
             model_name='country',
@@ -355,8 +348,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='syllabusversion',
             name='integrity_status',
-            field=models.CharField(choices=[('ERROR', 'Error'), ('PENDING', 'Pending'),
-                                            ('WARNING', 'Warning'), ('OK', 'Ok')],
+            field=models.CharField(choices=[('ERROR', 'Error'), ('PENDING', 'Pending'), ('WARNING', 'Warning'),
+                                            ('OK', 'Ok')],
                                    db_index=True,
                                    default='PENDING',
                                    max_length=15),

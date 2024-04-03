@@ -45,11 +45,10 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': "You (user: 1) don't have this capability: read_single_cohort for academy 1",
-                'status_code': 403
-            })
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: read_single_cohort for academy 1",
+            'status_code': 403
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
@@ -888,17 +887,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
 
-        url = reverse_lazy(
-            'admissions:academy_cohort_me') + f'?location={model["academy"].slug},they-killed-kenny'
+        url = reverse_lazy('admissions:academy_cohort_me') + f'?location={model["academy"].slug},they-killed-kenny'
         self.client.get(url)
 
         self.assertEqual(
             str(APIViewExtensionHandlers._spy_extensions.call_args_list),
             str([
-                call([
-                    'CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension',
-                    'SortExtension'
-                ]),
+                call(['CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension',
+                      'SortExtension']),
             ]))
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
@@ -923,8 +919,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
 
-        url = reverse_lazy(
-            'admissions:academy_cohort_me') + f'?location={model["academy"].slug},they-killed-kenny'
+        url = reverse_lazy('admissions:academy_cohort_me') + f'?location={model["academy"].slug},they-killed-kenny'
         self.client.get(url)
 
         self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [

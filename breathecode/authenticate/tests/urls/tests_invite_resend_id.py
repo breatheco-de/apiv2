@@ -86,11 +86,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
         response = self.client.put(url)
         json = response.json()
-        expected = post_serializer(self,
-                                   model.user_invite,
-                                   data={
-                                       'sent_at': self.bc.datetime.to_iso_string(UTC_NOW),
-                                   })
+        expected = post_serializer(self, model.user_invite, data={
+            'sent_at': self.bc.datetime.to_iso_string(UTC_NOW),
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
@@ -134,11 +132,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
         response = self.client.put(url)
         json = response.json()
-        expected = post_serializer(self,
-                                   model.user_invite,
-                                   data={
-                                       'sent_at': self.bc.datetime.to_iso_string(UTC_NOW),
-                                   })
+        expected = post_serializer(self, model.user_invite, data={
+            'sent_at': self.bc.datetime.to_iso_string(UTC_NOW),
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
@@ -238,11 +234,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
         response = self.client.put(url)
         json = response.json()
-        expected = post_serializer(self,
-                                   model.user_invite,
-                                   data={
-                                       'sent_at': self.bc.datetime.to_iso_string(UTC_NOW),
-                                   })
+        expected = post_serializer(self, model.user_invite, data={
+            'sent_at': self.bc.datetime.to_iso_string(UTC_NOW),
+        })
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)

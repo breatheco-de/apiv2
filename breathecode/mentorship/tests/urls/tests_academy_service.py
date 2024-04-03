@@ -29,8 +29,7 @@ def get_serializer(self, mentorship_service, academy, data={}):
         'language': mentorship_service.language,
         'logo_url': mentorship_service.logo_url,
         'max_duration': self.bc.datetime.from_timedelta(mentorship_service.max_duration),
-        'missed_meeting_duration':
-        self.bc.datetime.from_timedelta(mentorship_service.missed_meeting_duration),
+        'missed_meeting_duration': self.bc.datetime.from_timedelta(mentorship_service.missed_meeting_duration),
         'name': mentorship_service.name,
         'slug': mentorship_service.slug,
         'status': mentorship_service.status,
@@ -138,10 +137,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
 
     def test__get__without_data(self):
-        model = self.bc.database.create(user=1,
-                                        role=1,
-                                        capability='read_mentorship_service',
-                                        profile_academy=1)
+        model = self.bc.database.create(user=1, role=1, capability='read_mentorship_service', profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
         self.client.force_authenticate(model.user)
@@ -363,10 +359,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
     @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
     def test__get__spy_extensions(self):
-        model = self.bc.database.create(user=1,
-                                        role=1,
-                                        capability='read_mentorship_service',
-                                        profile_academy=1)
+        model = self.bc.database.create(user=1, role=1, capability='read_mentorship_service', profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
         self.client.force_authenticate(model.user)
@@ -409,10 +402,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
 
     def test__post__without_required_fields_in_body(self):
-        model = self.bc.database.create(user=1,
-                                        role=1,
-                                        capability='crud_mentorship_service',
-                                        profile_academy=1)
+        model = self.bc.database.create(user=1, role=1, capability='crud_mentorship_service', profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
         self.client.force_authenticate(model.user)
@@ -431,10 +421,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     """
 
     def test__post__creating_a_element(self):
-        model = self.bc.database.create(user=1,
-                                        role=1,
-                                        capability='crud_mentorship_service',
-                                        profile_academy=1)
+        model = self.bc.database.create(user=1, role=1, capability='crud_mentorship_service', profile_academy=1)
 
         self.bc.request.set_headers(academy=1)
         self.client.force_authenticate(model.user)

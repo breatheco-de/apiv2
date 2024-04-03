@@ -16,8 +16,7 @@ class Migration(migrations.Migration):
             field=models.BooleanField(
                 blank=True,
                 default=True,
-                help_text=
-                "Determines if the cohort will be shown in the dashboard if it's status is 'PREWORK'",
+                help_text="Determines if the cohort will be shown in the dashboard if it's status is 'PREWORK'",
                 null=True),
         ),
     ]

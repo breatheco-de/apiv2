@@ -117,8 +117,7 @@ class MediaPUTSerializer(serializers.ModelSerializer):
     def validate(self, data):
         if 'hash' in data and 'academy' in data and isinstance(data['academy'], Academy):
             data['id'] = Media.objects.filter(hash=data['hash'],
-                                              academy__id=data['academy'].id).values_list('id',
-                                                                                          flat=True).first()
+                                              academy__id=data['academy'].id).values_list('id', flat=True).first()
 
         return data
 

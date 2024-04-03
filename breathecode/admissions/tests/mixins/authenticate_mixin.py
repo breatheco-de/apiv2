@@ -68,12 +68,7 @@ class AuthenticateMixin(APITestCase, DevelopmentEnvironment, DateFormatterMixin)
     def all_profile_academy_dict(self):
         return [self.remove_dinamics_fields(data.__dict__.copy()) for data in ProfileAcademy.objects.filter()]
 
-    def generate_credentials(self,
-                             profile_academy=False,
-                             capability='',
-                             role='',
-                             models=None,
-                             external_models=None):
+    def generate_credentials(self, profile_academy=False, capability='', role='', models=None, external_models=None):
 
         if models is None:
             models = {}

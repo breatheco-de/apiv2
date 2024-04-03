@@ -1718,6 +1718,10 @@ def render_invite(request, token, member_id=None):
                               'Invitation not found with this token or it was already accepted' + callback_msg,
                               academy=academy)
 
+    if request.method == 'GET' and request.META.get('CONTENT_TYPE') == 'application/json':
+        serializer = UserInviteSerializer(invite, many=False)
+        return Response(serializer.data)
+
     if request.method == 'GET':
 
         if invite and User.objects.filter(email=invite.email).exists():

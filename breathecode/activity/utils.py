@@ -32,8 +32,7 @@ def validate_activity_fields(data):
     for field in data:
         if field not in ACTIVITY_FIELDS:
             slug = field.replace('_', '-')
-            raise ValidationException(f'Field {field} is not allowed in the request',
-                                      slug=f'{slug}-not-allowed')
+            raise ValidationException(f'Field {field} is not allowed in the request', slug=f'{slug}-not-allowed')
 
 
 def validate_require_activity_fields(data):
