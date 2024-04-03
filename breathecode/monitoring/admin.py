@@ -182,7 +182,11 @@ def delete_subscription(modeladmin, request, queryset):
 def disable_subscription(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
     for subs in queryset.all():
-        unsubscribe_repository(subs.id, force_delete=False)
+        if subs.hook_id is not None and subs.hook_id != "": 
+            unsubscribe_repository(subs.id, force_delete=False)
+        else:
+            subs.status = 'DISABLED'
+            subs.save()
 
 
 def activate_subscription(modeladmin, request, queryset):
