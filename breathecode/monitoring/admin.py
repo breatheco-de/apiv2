@@ -197,9 +197,9 @@ def activate_subscription(modeladmin, request, queryset):
 
 @admin.register(RepositorySubscription)
 class RepositorySubscriptionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'current_status', 'hook_id', 'repository', 'owner', 'shared')
-    list_filter = ['owner', 'status']
-    search_fields = ['repository', 'token']
+    list_display = ('id', 'current_status', 'hook_id', 'repo', 'owner', 'shared')
+    list_filter = ['status','owner']
+    search_fields = ['repository', 'token','hook_id']
     readonly_fields = ['token']
     actions = [delete_subscription, disable_subscription, activate_subscription]
 
@@ -214,6 +214,11 @@ class RepositorySubscriptionAdmin(admin.ModelAdmin):
         # You can add additional logic here if you want to conditionally
         # enable the delete button for certain cases.
         return False
+
+    def repo(self, obj):
+        return format_html(f"""
+            <a rel='noopener noreferrer' target='_blank' href='{obj.repository}/settings/hooks'>{obj.repository}</a>
+        """)
 
     def shared(self, obj):
         return format_html(''.join([o.name for o in obj.shared_with.all()]))
