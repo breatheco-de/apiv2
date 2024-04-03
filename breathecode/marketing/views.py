@@ -1190,8 +1190,7 @@ class CourseView(APIView):
             serializer = GetCourseSerializer(item, context={'lang': lang}, many=False)
             return handler.response(serializer.data)
 
-        items = Course.objects.filter().exclude(status='DELETED').exclude(visibility='PRIVATE').exclude(
-            visibility='UNLISTED')
+        items = Course.objects.filter().exclude(status='DELETED').exclude(visibility='PRIVATE')
 
         if academy := request.GET.get('academy'):
             args, kwargs = self.get_lookup('academy', academy)

@@ -1,5 +1,5 @@
 import os, ast
-from django.contrib import admin
+from django.contrib import admin, messages
 from django import forms
 from django.utils import timezone
 from .signals import github_webhook
@@ -182,20 +182,28 @@ def delete_subscription(modeladmin, request, queryset):
 def disable_subscription(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
     for subs in queryset.all():
-        unsubscribe_repository(subs.id, force_delete=False)
+        if subs.hook_id is not None and subs.hook_id != "": 
+            unsubscribe_repository(subs.id, force_delete=False)
+        else:
+            subs.status = 'DISABLED'
+            subs.save()
 
 
 def activate_subscription(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
     for subs in queryset.all():
-        subscribe_repository(subs.id)
+        try:
+            subscribe_repository(subs.id)
+        except Exception as e:
+            messages.error(request, str(e))
+            return False
 
 
 @admin.register(RepositorySubscription)
 class RepositorySubscriptionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'current_status', 'hook_id', 'repository', 'owner', 'shared')
-    list_filter = ['owner', 'status']
-    search_fields = ['repository', 'token']
+    list_display = ('id', 'current_status', 'hook_id', 'repo', 'owner', 'shared')
+    list_filter = ['status','owner']
+    search_fields = ['repository', 'token','hook_id']
     readonly_fields = ['token']
     actions = [delete_subscription, disable_subscription, activate_subscription]
 
@@ -210,6 +218,11 @@ class RepositorySubscriptionAdmin(admin.ModelAdmin):
         # You can add additional logic here if you want to conditionally
         # enable the delete button for certain cases.
         return False
+
+    def repo(self, obj):
+        return format_html(f"""
+            <a rel='noopener noreferrer' target='_blank' href='{obj.repository}/settings/hooks'>{obj.repository}</a>
+        """)
 
     def shared(self, obj):
         return format_html(''.join([o.name for o in obj.shared_with.all()]))
