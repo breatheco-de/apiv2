@@ -35,6 +35,7 @@ class Command(BaseCommand):
                     repository=repo_url,
                     owner=a.academy,
                 )
+                subs.save()
 
                 try:
                     if settings[academy_id] is not None:
