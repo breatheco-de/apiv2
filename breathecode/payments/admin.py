@@ -354,8 +354,8 @@ class ConsumptionSessionAdmin(admin.ModelAdmin):
 
 @admin.register(Seller)
 class SellerAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'user', 'is_hidden', 'is_active')
-    list_filter = ['is_hidden', 'is_active']
+    list_display = ('id', 'name', 'user', 'is_active')
+    list_filter = ['is_active']
     search_fields = ['name', 'user__email', 'user__id', 'user__first_name', 'user__last_name']
     raw_id_fields = ['user']
 

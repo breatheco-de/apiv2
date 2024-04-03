@@ -674,8 +674,6 @@ class Seller(models.Model):
                              limit_choices_to={'is_active': True})
 
     type = models.CharField(max_length=13, choices=Partner, default=Partner.INDIVIDUAL, db_index=True)
-
-    is_hidden = models.BooleanField(default=False, help_text='Is the seller hidden?')
     is_active = models.BooleanField(default=True, help_text='Is the seller active to be selected?')
 
     def clean(self) -> None:
@@ -693,6 +691,9 @@ class Seller(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return self.name
 
 
 class Coupon(models.Model):
@@ -779,6 +780,9 @@ class Coupon(models.Model):
         super().save(*args, **kwargs)
 
         self._how_many_offers = self.how_many_offers
+
+    def __str__(self) -> str:
+        return self.slug
 
 
 def limit_coupon_choices():

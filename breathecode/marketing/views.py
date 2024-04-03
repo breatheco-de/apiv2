@@ -39,6 +39,7 @@ from breathecode.utils import (
     localize_query,
 )
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from breathecode.utils.decorators import validate_captcha
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.i18n import translation
 
