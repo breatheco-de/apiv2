@@ -692,6 +692,8 @@ class CohortSerializerMixin(serializers.ModelSerializer):
 
 class CohortSerializer(CohortSerializerMixin):
     academy = AcademySerializer(many=False, required=False, read_only=True)
+    ending_date = serializers.DateTimeField(required=False, allow_null=True)
+    is_hidden_on_prework = serializers.BooleanField(required=False, allow_null=True)
 
     class Meta:
         model = Cohort
