@@ -43,6 +43,8 @@ class PaymentsModelsMixin(ModelsMixin):
                                  cohort_set_translation=False,
                                  service_set=False,
                                  service_set_translation=False,
+                                 seller=False,
+                                 coupon=False,
                                  models={},
                                  **kwargs):
         """Generate models"""
@@ -278,6 +280,25 @@ class PaymentsModelsMixin(ModelsMixin):
             models['plan_offer_translation'] = create_models(plan_offer_translation, 'payments.PlanOfferTranslation',
                                                              **kargs)
 
+        if not 'seller' in models and is_valid(seller):
+            kargs = {}
+
+            if 'user' in models:
+                kargs['user'] = just_one(models['user'])
+
+            models['seller'] = create_models(seller, 'payments.Seller', **kargs)
+
+        if not 'coupon' in models and is_valid(coupon):
+            kargs = {}
+
+            if 'seller' in models:
+                kargs['seller'] = just_one(models['seller'])
+
+            if 'plan' in models:
+                kargs['plans'] = get_list(models['plan'])
+
+            models['coupon'] = create_models(coupon, 'payments.Coupon', **kargs)
+
         if not 'bag' in models and (is_valid(bag) or is_valid(invoice)):
             kargs = {}
 
@@ -295,6 +316,9 @@ class PaymentsModelsMixin(ModelsMixin):
 
             if 'plan' in models:
                 kargs['plans'] = get_list(models['plan'])
+
+            if 'coupon' in models:
+                kargs['coupons'] = get_list(models['coupon'])
 
             models['bag'] = create_models(bag, 'payments.Bag', **kargs)
 

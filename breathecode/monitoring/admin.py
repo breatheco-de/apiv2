@@ -1,13 +1,25 @@
-import os, ast
-from django.contrib import admin, messages
+import ast
+import os
+
 from django import forms
+from django.contrib import admin, messages
 from django.utils import timezone
-from .signals import github_webhook
-from .tasks import async_unsubscribe_repo, async_subscribe_repo
-from .actions import unsubscribe_repository, subscribe_repository
-from .models import Endpoint, Application, MonitorScript, CSVDownload, CSVUpload, RepositoryWebhook, RepositorySubscription
-from breathecode.notify.models import SlackChannel
 from django.utils.html import format_html
+
+from breathecode.notify.models import SlackChannel
+
+from .actions import subscribe_repository, unsubscribe_repository
+from .models import (
+    Application,
+    CSVDownload,
+    CSVUpload,
+    Endpoint,
+    MonitorScript,
+    RepositorySubscription,
+    RepositoryWebhook,
+)
+from .signals import github_webhook
+from .tasks import async_unsubscribe_repo
 
 
 @admin.display(description='Run Applications Diagnostic')
@@ -182,7 +194,7 @@ def delete_subscription(modeladmin, request, queryset):
 def disable_subscription(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
     for subs in queryset.all():
-        if subs.hook_id is not None and subs.hook_id != "": 
+        if subs.hook_id is not None and subs.hook_id != '':
             unsubscribe_repository(subs.id, force_delete=False)
         else:
             subs.status = 'DISABLED'
@@ -202,8 +214,8 @@ def activate_subscription(modeladmin, request, queryset):
 @admin.register(RepositorySubscription)
 class RepositorySubscriptionAdmin(admin.ModelAdmin):
     list_display = ('id', 'current_status', 'hook_id', 'repo', 'owner', 'shared')
-    list_filter = ['status','owner']
-    search_fields = ['repository', 'token','hook_id']
+    list_filter = ['status', 'owner']
+    search_fields = ['repository', 'token', 'hook_id']
     readonly_fields = ['token']
     actions = [delete_subscription, disable_subscription, activate_subscription]
 

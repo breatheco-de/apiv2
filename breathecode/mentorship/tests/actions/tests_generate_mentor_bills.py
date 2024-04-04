@@ -2,15 +2,14 @@
 Test mentorships
 """
 import datetime
-from unittest.mock import patch
 from unittest.mock import MagicMock, patch
 
 import pytz
 
 from breathecode.utils.validation_exception import ValidationException
 
-from ..mixins import MentorshipTestCase
 from ...actions import generate_mentor_bills
+from ..mixins import MentorshipTestCase
 
 NOW = datetime.datetime(year=2022, month=1, day=5, hour=0, minute=0, second=0, microsecond=0, tzinfo=pytz.UTC)
 
@@ -61,6 +60,7 @@ def mentorship_session_field(data={}):
         'mentor_left_at': None,
         'mentee_left_at': None,
         'suggested_accounted_duration': None,
+        'questions_and_answers': None,
         **data,
     }
 

@@ -70,6 +70,7 @@ def database_item(academy, category, data={}):
         'visibility': 'PUBLIC',
         'with_solutions': False,
         'with_video': False,
+        'is_auto_subscribed': True,
         **data,
     }
 
@@ -131,6 +132,7 @@ def post_serializer(academy, category, data={}):
 def put_serializer(academy, category, asset, data={}):
 
     return {
+        'assessment': asset.assessment,
         'asset_type': asset.asset_type,
         'author': asset.author,
         'authors_username': None,
@@ -332,12 +334,14 @@ def test_asset__put_many(bc: Breathecode, client: APIClient):
         role='potato',
         asset_category={'lang': 'es'},
         asset=[{
+            'test_status': 'OK',
             'category_id': 1,
             'lang': 'es',
             'academy_id': 1,
             'slug': 'asset-1',
             'test_status': 'OK',
         }, {
+            'test_status': 'OK',
             'category_id': 1,
             'lang': 'es',
             'academy_id': 1,

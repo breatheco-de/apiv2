@@ -4,7 +4,7 @@ import logging
 import math
 import os
 from datetime import timedelta
-from typing import Optional
+from typing import Any, Optional
 
 from currencies import Currency as CurrencyFormatter
 from django import forms
@@ -660,6 +660,139 @@ class PlanOfferTranslation(models.Model):
     short_description = models.CharField(max_length=255, help_text='Short description of the plan offer')
 
 
+class Seller(models.Model):
+
+    class Partner(models.TextChoices):
+        INDIVIDUAL = ('INDIVIDUAL', 'Individual')
+        BUSINESS = ('BUSINESS', 'Business')
+
+    name = models.CharField(max_length=30, help_text='Company name or person name')
+    user = models.ForeignKey(User,
+                             on_delete=models.CASCADE,
+                             blank=True,
+                             null=True,
+                             limit_choices_to={'is_active': True})
+
+    type = models.CharField(max_length=13, choices=Partner, default=Partner.INDIVIDUAL, db_index=True)
+    is_active = models.BooleanField(default=True, help_text='Is the seller active to be selected?')
+
+    def clean(self) -> None:
+        if self.user and self.__class__.objects.filter(user=self.user).count() > 0:
+            raise forms.ValidationError('User already registered as seller')
+
+        if len(self.name) < 3:
+            raise forms.ValidationError('Name must be at least 3 characters long')
+
+        if self.type == self.Partner.BUSINESS and self.__class__.objects.filter(name=self.name).count() > 0:
+            raise forms.ValidationError('Name already registered as seller')
+
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Coupon(models.Model):
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self._how_many_offers = self.how_many_offers
+
+    class Discount(models.TextChoices):
+        NO_DISCOUNT = ('NO_DISCOUNT', 'No discount')
+        PERCENT_OFF = ('PERCENT_OFF', 'Percent off')
+        FIXED_PRICE = ('FIXED_PRICE', 'Fixed price')
+        HAGGLING = ('HAGGLING', 'Haggling')
+
+    class Referral(models.TextChoices):
+        NO_REFERRAL = ('NO_REFERRAL', 'No referral')
+        PERCENTAGE = ('PERCENTAGE', 'Percentage')
+        FIXED_PRICE = ('FIXED_PRICE', 'Fixed price')
+
+    slug = models.SlugField()
+    discount_type = models.CharField(max_length=13, choices=Discount, default=Discount.PERCENT_OFF, db_index=True)
+    discount_value = models.FloatField(help_text='if type is PERCENT_OFF it\'s a percentage (range 0-1)')
+
+    referral_type = models.CharField(max_length=13, choices=Referral, default=Referral.NO_REFERRAL, db_index=True)
+    referral_value = models.FloatField(help_text='If set, the seller will receive a reward', default=0)
+
+    auto = models.BooleanField(default=False,
+                               db_index=True,
+                               help_text='Automatically apply this coupon (like a special offer)')
+
+    how_many_offers = models.IntegerField(
+        default=-1, help_text='if -1 means no limits in the offers provided, if 0 nobody can\'t use this coupon')
+
+    seller = models.ForeignKey(Seller,
+                               on_delete=models.CASCADE,
+                               blank=True,
+                               null=True,
+                               limit_choices_to={'is_active': True},
+                               help_text='Seller')
+    plans = models.ManyToManyField(
+        Plan,
+        blank=True,
+        help_text='Available plans, if refferal type is not NO_REFERRAL it should keep empty, '
+        'so, in this case, all plans will be available')
+
+    offered_at = models.DateTimeField(default=None, null=True, blank=True)
+    expires_at = models.DateTimeField(default=None, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def clean(self) -> None:
+        if self.discount_value < 0:
+            raise forms.ValidationError('Discount value must be positive')
+
+        if self.referral_value < 0:
+            raise forms.ValidationError('Referral value must be positive')
+
+        if self.referral_value != 0 and self.referral_type == self.Referral.NO_REFERRAL:
+            raise forms.ValidationError('If referral type is NO_REFERRAL, referral value must be None')
+
+        elif self.referral_value is None:
+            raise forms.ValidationError('Referral value must be set if referral status is not NO_REFERRAL')
+
+        available_with_slug = self.__class__.objects.filter(Q(expires_at=None) | Q(expires_at__gt=timezone.now()),
+                                                            slug=self.slug)
+
+        if self.id:
+            available_with_slug = available_with_slug.exclude(id=self.id)
+
+        if available_with_slug.count() > 0:
+            raise forms.ValidationError('a valid coupon with this name already exists')
+
+        if self.auto and self.discount_type == self.Discount.NO_DISCOUNT:
+            raise forms.ValidationError('If auto is True, discount type must not be NO_DISCOUNT')
+
+        if self._how_many_offers != self.how_many_offers or self.offered_at is None:
+            self.offered_at = timezone.now()
+
+        return super().clean()
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+
+        super().save(*args, **kwargs)
+
+        self._how_many_offers = self.how_many_offers
+
+    def __str__(self) -> str:
+        return self.slug
+
+
+def limit_coupon_choices():
+    return Q(
+        Q(offered_at=None) | Q(offered_at__lte=timezone.now()),
+        Q(expires_at=None) | Q(expires_at__gte=timezone.now()),
+        Q(how_many_offers=-1) | Q(how_many_offers__gt=0),
+    )
+
+
 RENEWAL = 'RENEWAL'
 CHECKING = 'CHECKING'
 PAID = 'PAID'
@@ -706,6 +839,11 @@ class Bag(AbstractAmountByTime):
                                      help_text='Chosen period used to calculate the amount and build the subscription')
     how_many_installments = models.IntegerField(
         default=0, help_text='How many installments to collect and build the plan financing')
+
+    coupons = models.ManyToManyField(Coupon,
+                                     blank=True,
+                                     help_text='Coupons applied during the sale',
+                                     limit_choices_to=limit_coupon_choices)
 
     academy = models.ForeignKey('admissions.Academy', on_delete=models.CASCADE, help_text='Academy owner')
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text='Customer')

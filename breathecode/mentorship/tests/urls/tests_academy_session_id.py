@@ -97,6 +97,7 @@ def put_serializer(data={}):
         'starts_at': None,
         'status': 'PENDING',
         'summary': None,
+        'questions_and_answers': None,
         **data,
     }
 

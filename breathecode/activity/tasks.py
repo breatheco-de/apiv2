@@ -13,7 +13,6 @@ from django.core.cache import cache
 from django.utils import timezone
 from django_redis import get_redis_connection
 from google.cloud import bigquery
-from google.cloud.bigquery.schema import SchemaField
 from redis.exceptions import LockError
 from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task

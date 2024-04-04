@@ -12,6 +12,7 @@ from breathecode.payments.models import (
     CohortSetTranslation,
     Consumable,
     ConsumptionSession,
+    Coupon,
     Currency,
     EventTypeSet,
     EventTypeSetTranslation,
@@ -28,6 +29,7 @@ from breathecode.payments.models import (
     PlanServiceItem,
     PlanServiceItemHandler,
     PlanTranslation,
+    Seller,
     Service,
     ServiceItem,
     ServiceItemFeature,
@@ -348,3 +350,23 @@ class ConsumptionSessionAdmin(admin.ModelAdmin):
         'consumable__service_item__service__slug'
     ]
     raw_id_fields = ['user', 'consumable']
+
+
+@admin.register(Seller)
+class SellerAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'user', 'is_active')
+    list_filter = ['is_active']
+    search_fields = ['name', 'user__email', 'user__id', 'user__first_name', 'user__last_name']
+    raw_id_fields = ['user']
+
+
+@admin.register(Coupon)
+class CouponAdmin(admin.ModelAdmin):
+    list_display = ('id', 'slug', 'discount_type', 'discount_value', 'referral_type', 'referral_value', 'auto',
+                    'seller', 'offered_at', 'expires_at')
+    list_filter = ['discount_type', 'referral_type', 'auto']
+    search_fields = [
+        'slug', 'seller__name', 'seller__user__email', 'seller__user__id', 'seller__user__first_name',
+        'seller__user__last_name'
+    ]
+    raw_id_fields = ['seller']

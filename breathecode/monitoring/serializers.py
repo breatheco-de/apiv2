@@ -1,13 +1,13 @@
 import logging
-from breathecode.utils import serpy
+
 from rest_framework import serializers
-from breathecode.utils.i18n import translation
-from breathecode.monitoring.models import RepositorySubscription
-from breathecode.services.github import Github
-from breathecode.utils import ValidationException
+
 from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.monitoring.actions import subscribe_repository
+from breathecode.monitoring.models import RepositorySubscription
 from breathecode.monitoring.tasks import async_subscribe_repo, async_unsubscribe_repo
+from breathecode.utils import ValidationException, serpy
+from breathecode.utils.i18n import translation
 
 logger = logging.getLogger(__name__)
 
@@ -133,9 +133,6 @@ class RepositorySubscriptionSerializer(serializers.ModelSerializer):
                             slug='github-error'))
 
     def update(self, instance, validated_data):
-        academy_id = self.context['academy']
-        lang = self.context['lang']
-
         if instance.status == 'DISABLED' and validated_data['status'] == 'OPERATIONAL':
             async_subscribe_repo.delay(instance.id)
 

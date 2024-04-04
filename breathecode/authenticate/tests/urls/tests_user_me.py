@@ -43,6 +43,8 @@ def get_serializer(self,
         user.first_name,
         'last_name':
         user.last_name,
+        'username':
+        user.username,
         'settings':
         user_setting_serializer(user_setting) if user_setting else None,
         'permissions': [get_permission_serializer(x) for x in permissions],

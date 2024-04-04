@@ -13,42 +13,35 @@ from rest_framework.test import APIClient
 
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
+from breathecode.authenticate.tests.mocks.mocks import FakeResponse
+
 from ...models import Role
 from ..mixins.new_auth_test_case import AuthTestCase
 from ..mocks import GithubRequestsMock
 
 
-class ResponseMock:
-
-    def __init__(self, status_code):
-        self.status_code = status_code
-
-
 @pytest.fixture(autouse=True)
-def setup(db, monkeypatch):
-
-    get_routes = {
-        'https://api.github.com/user': GithubRequestsMock.user(),
-        'https://api.github.com/user/emails': GithubRequestsMock.user_emails(),
+def setup(monkeypatch):
+    routes = {
+        'https://github.com/login/oauth/access_token':
+        FakeResponse(status_code=200,
+                     data={
+                         'access_token': GithubRequestsMock.token,
+                         'scope': 'repo,gist',
+                         'token_type': 'bearer'
+                     }),
+        'https://rigobot.herokuapp.com/v1/auth/invite':
+        FakeResponse(status_code=200, data={}),
     }
 
-    post_routes = {
-        'https://github.com/login/oauth/access_token': GithubRequestsMock.access_token(),
-        'https://rigobot.herokuapp.com/v1/auth/invite': ResponseMock(200),
-    }
+    def post_mock(url, *args, **kwargs):
+        return routes.get(url, FakeResponse(status_code=404, data={'status': 'fake request, not found'}))
 
-    def get_patch(url, *args, **kwargs):
-        return get_routes.get(url)
-
-    def post_patch(url, *args, **kwargs):
-        return post_routes.get(url)
-
-    monkeypatch.setattr('requests.get', get_patch)
-    monkeypatch.setattr('requests.post', post_patch)
+    monkeypatch.setattr('requests.get', GithubRequestsMock.apply_get_requests_mock())
+    monkeypatch.setattr('requests.post', post_mock)
     monkeypatch.setattr('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
     monkeypatch.setattr('breathecode.admissions.signals.student_edu_status_updated.send',
                         mock.MagicMock(return_value=None))
-
     yield
 
 

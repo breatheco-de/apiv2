@@ -3,7 +3,7 @@ class FakeResponse():
     status_code = 200
     data = {}
 
-    def __init__(self, status_code, data):
+    def __init__(self, status_code, data, timeout=None):
         self.data = data
         self.status_code = status_code
 
