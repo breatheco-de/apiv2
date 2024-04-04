@@ -4,7 +4,7 @@ from django.db.models.signals import post_delete
 from .models import Asset, AssetAlias, AssetImage
 from .tasks import (async_regenerate_asset_readme, async_delete_asset_images, async_remove_img_from_cloud,
                     async_synchonize_repository_content, async_create_asset_thumbnail_legacy,
-                    async_add_syllabus_translations, async_update_frontend_asset_cache)
+                    async_add_syllabus_translations, async_update_frontend_asset_cache, async_create_asset_thumbnail)
 from .signals import (asset_slug_modified, asset_readme_modified, asset_title_modified)
 from breathecode.assignments.signals import assignment_created
 from breathecode.assignments.models import Task
@@ -53,14 +53,14 @@ def asset_title_was_updated(sender, instance, **kwargs):
     # taking thumbnail for the first time
     if instance.preview is None or instance.preview == '':
         logger.debug('Creating asset screenshot')
-        async_create_asset_thumbnail_legacy.delay(instance.slug)
+        async_create_asset_thumbnail.delay(instance.slug)
         return True
 
     # retaking a thumbnail if it was generated automatically
     # we know this because bucket_name is inside instance.preview
     if bucket_name in instance.preview:
         logger.debug('Retaking asset screenshot because title was updated')
-        async_create_asset_thumbnail_legacy.delay(instance.slug)
+        async_create_asset_thumbnail.delay(instance.slug)
         return True
 
 
