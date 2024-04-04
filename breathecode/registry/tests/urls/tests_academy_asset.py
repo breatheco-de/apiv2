@@ -338,13 +338,15 @@ def test_asset__put_many(bc: Breathecode, client: APIClient):
             'category_id': 1,
             'lang': 'es',
             'academy_id': 1,
-            'slug': 'asset-1'
+            'slug': 'asset-1',
+            'test_status': 'OK',
         }, {
             'test_status': 'OK',
             'category_id': 1,
             'lang': 'es',
             'academy_id': 1,
-            'slug': 'asset-2'
+            'slug': 'asset-2',
+            'test_status': 'OK',
         }],
     )
     client.force_authenticate(user=model.user)

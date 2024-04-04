@@ -37,6 +37,8 @@ def get_serializer(self,
         user.id,
         'email':
         user.email,
+        'username':
+        user.username,
         'first_name':
         user.first_name,
         'last_name':
