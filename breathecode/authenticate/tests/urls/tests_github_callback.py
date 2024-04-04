@@ -21,7 +21,7 @@ from ..mocks import GithubRequestsMock
 
 
 @pytest.fixture(autouse=True)
-def setup(monkeypatch):
+def setup(db, monkeypatch):
     routes = {
         'https://github.com/login/oauth/access_token':
         FakeResponse(status_code=200,
