@@ -774,7 +774,9 @@ def pull_quiz_asset(github, asset: Asset):
     asset.config = json.loads(decoded_config)
     asset.save()
 
-    asset = create_from_asset(asset)
+    if asset.assessment is None:
+        asset = create_from_asset(asset)
+
     return asset
 
 
