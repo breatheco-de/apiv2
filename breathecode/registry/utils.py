@@ -92,7 +92,7 @@ class AssetValidator():
 
             gb = Github(credentials.token)
             if not gb.check_file(self.asset.readme_url):
-                raise AssetException('Readme URL points to a missing file, severity='ERROR')
+                raise AssetException('Readme URL points to a missing file', severity='ERROR')
 
     def urls(self):
 
