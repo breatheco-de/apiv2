@@ -80,6 +80,13 @@ class SmallAsset(serpy.Serializer):
     slug = serpy.Field()
 
 
+class AssetAliasSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    slug = serpy.Field()
+    asset = SmallAsset()
+
+
 class AssetImageSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
