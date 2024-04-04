@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import requests, logging
 from breathecode.services.github import Github
+from breathecode.authenticate.models import CredentialsGithub
 
 logger = logging.getLogger(__name__)
 
