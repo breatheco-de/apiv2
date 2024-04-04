@@ -1,11 +1,15 @@
-import logging, os
+import logging
+import os
+
+from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import Task, FinalProject, UserAttachment
-from breathecode.utils import ValidationException, serpy
+
+import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import ProfileAcademy, Token
-from django.contrib.auth.models import User
-import breathecode.activity.tasks as tasks_activity
+from breathecode.utils import ValidationException, serpy
+
+from .models import FinalProject, Task, UserAttachment
 
 logger = logging.getLogger(__name__)
 
@@ -354,7 +358,7 @@ class PUTFinalProjectSerializer(serializers.ModelSerializer):
         if (self.instance.project_status == 'PENDING' and 'revision_status' in data
                 and data['revision_status'] == 'APPROVED'):
             raise ValidationException('Only projects that are DONE should be approved by the teacher',
-                                      slug='task-marked-approved-when-pending')
+                                      slug='project-marked-approved-when-pending')
 
         if 'revision_status' in data and data['revision_status'] != self.instance.revision_status:
             student_cohorts = CohortUser.objects.filter(user__in=self.instance.members.all(),

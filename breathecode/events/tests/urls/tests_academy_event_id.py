@@ -512,7 +512,7 @@ class AcademyEventIdTestSuite(EventTestCase):
         response = self.client.put(url, data, format='json')
         json = response.json()
 
-        expected = {'detail': 'empty-tags', 'status_code': 400}
+        expected = {'tags': ['This field may not be blank.']}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
