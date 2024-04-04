@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import requests, logging
 from breathecode.services.github import Github
+from breathecode.authenticate.models import CredentialsGithub
 
 logger = logging.getLogger(__name__)
 
@@ -90,9 +91,8 @@ class AssetValidator():
                 raise Exception(f'Github credentials for asset owner were not found')
 
             gb = Github(credentials.token)
-            return gb.check_file(self.asset.readme_url)
-
-        return True
+            if not gb.check_file(self.asset.readme_url):
+                raise AssetException('Readme URL points to a missing file, severity='ERROR')
 
     def urls(self):
 
