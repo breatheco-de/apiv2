@@ -28,9 +28,15 @@ def validate_captcha(function):
 
             apply_captcha = os.getenv('APPLY_CAPTCHA', False)
 
+            logger.info(f'CAPTCHA DECORATOR')
+            print('CAPTCHA DECORATOR')
+            logger.info('apply_captcha')
+            print(apply_captcha)
+
             if not apply_captcha:
                 return function(*args, **kwargs)
 
+            logger.info(f'VERIFYING THE CAPTCHA')
             print('VERIFYING THE CAPTCHA')
 
             project_id = os.getenv('GOOGLE_PROJECT_ID', '')
@@ -47,6 +53,8 @@ def validate_captcha(function):
                                                    token=token,
                                                    recaptcha_action=recaptcha_action)
 
+            logger.info(f'response risk_analysis score')
+            logger.info(response.risk_analysis.score)
             print('response risk_analysis score')
             print(response.risk_analysis.score)
 
