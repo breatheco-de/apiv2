@@ -31,6 +31,8 @@ def validate_captcha(function):
             if not apply_captcha:
                 return function(*args, **kwargs)
 
+            prints('VERIFYING THE CAPTCHA')
+
             project_id = os.getenv('GOOGLE_PROJECT_ID', '')
 
             site_key = os.getenv('GOOGLE_CAPTCHA_KEY', '')
@@ -44,6 +46,9 @@ def validate_captcha(function):
                                                    recaptcha_site_key=site_key,
                                                    token=token,
                                                    recaptcha_action=recaptcha_action)
+
+            prints('response risk_analysis score')
+            prints(response.risk_analysis.score)
 
             if (response.risk_analysis.score < 0.8):
                 raise ValidationException('The action was denied because it was considered suspicious', code=429)
