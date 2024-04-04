@@ -1,15 +1,24 @@
-import logging, time, requests, csv
+import csv
+import json
+import logging
+import os
+import re
+import sys
+import time
 from io import StringIO
-import json, re, os, sys
+
+import requests
 from django.utils import timezone
-from breathecode.utils import ScriptNotification
+
 from breathecode.admissions.models import Academy
 from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.services.github import Github
+from breathecode.services.slack.actions.monitoring import render_snooze_script, render_snooze_text_endpoint
+from breathecode.utils import ScriptNotification
 from breathecode.utils.script_notification import WrongScriptConfiguration
 from breathecode.utils.validation_exception import ValidationException
-from .models import Endpoint, CSVDownload, RepositoryWebhook, StripeEvent, RepositorySubscription
-from breathecode.services.slack.actions.monitoring import render_snooze_text_endpoint, render_snooze_script
+
+from .models import CSVDownload, Endpoint, RepositorySubscription, RepositoryWebhook, StripeEvent
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +86,7 @@ def subscribe_repository(subs_id, settings=None):
                     f'Github credentials and settings have not been found for the academy {subscription.owner.id}')
 
         if settings.academy.id != subscription.owner.id:
-            raise Exception(f'Provided auth settings don\'t belong to the academy subscription owner')
+            raise Exception('Provided auth settings don\'t belong to the academy subscription owner')
 
         _owner, _repo_name = subscription.get_repo_name()
         gb = Github(org=settings.github_username, token=settings.github_owner.credentialsgithub.token)
@@ -257,8 +266,8 @@ def run_script(script):
         'severity_level': 0,
     }
 
-    from io import StringIO
     import contextlib
+    from io import StringIO
 
     @contextlib.contextmanager
     def stdout_io(stdout=None):
@@ -421,7 +430,7 @@ def unsubscribe_repository(subs_id, force_delete=True):
         gb = Github(org=settings.github_username, token=settings.github_owner.credentialsgithub.token)
 
         _owner, _repo_name = subs.get_repo_name()
-        result = gb.unsubscribe_from_repo(_owner, _repo_name, subs.hook_id)
+        gb.unsubscribe_from_repo(_owner, _repo_name, subs.hook_id)
 
         # you can delete the subscription after unsubscribing
         if force_delete: subs.delete()

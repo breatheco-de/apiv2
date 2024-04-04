@@ -171,10 +171,12 @@ class AssignmentTelemetryView(APIView, GenerateLookupsMixin):
         if webhook:
             tasks.async_learnpack_webhook.delay(webhook.id)
         else:
-            logger.debug('One request cannot be parsed, maybe you should update `LearnPack'
+            logger.debug('A request cannot be parsed, maybe you should update `LearnPack'
                          '.add_webhook_to_log`')
             logger.debug(request.data)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response('this request couldn\'t no be processed',
+                            status=status.HTTP_400_BAD_REQUEST,
+                            content_type='text/plain')
 
         return Response('ok', content_type='text/plain')
 

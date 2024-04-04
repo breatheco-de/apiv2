@@ -34,7 +34,7 @@ os.environ['ENV'] = 'test'
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 
 _fake = Faker()
-pytest_plugins = ('celery.contrib.pytest', )
+pytest_plugins = ('celery.contrib.pytest', 'pytest_bc')
 urlopen = HTTPConnectionPool.urlopen
 
 from breathecode.tests.mixins.breathecode_mixin import Breathecode

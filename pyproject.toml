@@ -3,3 +3,7 @@ column_limit = 120
 
 [tool.isort]
 line_length = 120
+profile = "black"
+
+[tool.black]
+line-length = 120 # Set your desired line length here

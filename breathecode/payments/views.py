@@ -20,7 +20,10 @@ from breathecode.payments.actions import (
     filter_consumables,
     get_amount,
     get_amount_by_chosen_period,
+    get_available_coupons,
     get_balance_by_resource,
+    get_discounted_price,
+    max_coupons_allowed,
 )
 from breathecode.payments.caches import PlanOfferCache
 from breathecode.payments.models import (
@@ -44,6 +47,7 @@ from breathecode.payments.models import (
 from breathecode.payments.serializers import (
     GetAcademyServiceSmallSerializer,
     GetBagSerializer,
+    GetCouponSerializer,
     GetEventTypeSetSerializer,
     GetEventTypeSetSmallSerializer,
     GetInvoiceSerializer,
@@ -1111,9 +1115,29 @@ class BagView(APIView):
         s.set_language(lang)
         s.add_contact(request.user)
 
+        if 'coupons' in request.data and not isinstance(request.data['coupons'], list):
+            raise ValidationException(translation(lang,
+                                                  en='Coupons must be a list of strings',
+                                                  es='Cupones debe ser una lista de cadenas',
+                                                  slug='invalid-coupons'),
+                                      code=400)
+
+        if 'coupons' in request.data and len(request.data['coupons']) > (max := max_coupons_allowed()):
+            raise ValidationException(translation(lang,
+                                                  en=f'Too many coupons (max {max})',
+                                                  es=f'Demasiados cupones (max {max})',
+                                                  slug='too-many-coupons'),
+                                      code=400)
+
         # do no show the bags of type preview they are build
         bag, _ = Bag.objects.get_or_create(lock=True, user=request.user, status='CHECKING', type='BAG')
         add_items_to_bag(request, bag, lang)
+
+        plan = bag.plans.first()
+        if plan:
+            coupons = get_available_coupons(plan, request.data.get('coupons', []))
+            bag.coupons.set(coupons)
+
         # actions.check_dependencies_in_bag(bag, lang)
 
         serializer = GetBagSerializer(bag, many=False)
@@ -1193,6 +1217,20 @@ class CheckingView(APIView):
                             slug='not-found'),
                                                   code=404)
 
+                    if 'coupons' in request.data and not isinstance(request.data['coupons'], list):
+                        raise ValidationException(translation(lang,
+                                                              en='Coupons must be a list of strings',
+                                                              es='Cupones debe ser una lista de cadenas',
+                                                              slug='invalid-coupons'),
+                                                  code=400)
+
+                    if 'coupons' in request.data and len(request.data['coupons']) > (max := max_coupons_allowed()):
+                        raise ValidationException(translation(lang,
+                                                              en=f'Too many coupons (max {max})',
+                                                              es=f'Demasiados cupones (max {max})',
+                                                              slug='too-many-coupons'),
+                                                  code=400)
+
                     # Locked operation to avoid creating twice if 2 web instances are requesting in parallel
                     bag, created = Bag.objects.get_or_create(lock=True,
                                                              user=request.user,
@@ -1202,6 +1240,11 @@ class CheckingView(APIView):
                                                              currency=academy.main_currency)
 
                     add_items_to_bag(request, bag, lang)
+
+                    plan = bag.plans.first()
+                    if plan and bag.coupons.count() == 0:
+                        coupons = get_available_coupons(plan, request.data.get('coupons', []))
+                        bag.coupons.set(coupons)
                     # actions.check_dependencies_in_bag(bag, lang)
 
                 utc_now = timezone.now()
@@ -1523,16 +1566,27 @@ class PayView(APIView):
                         slug='invalid-how-many-installments'),
                                               code=400)
 
+                if 'coupons' in request.data and not isinstance(request.data['coupons'], list):
+                    raise ValidationException(translation(lang,
+                                                          en='Coupons must be a list of strings',
+                                                          es='Cupones debe ser una lista de cadenas',
+                                                          slug='invalid-coupons'),
+                                              code=400)
+
                 if (not available_for_free_trial and not available_free and not chosen_period
                         and how_many_installments):
                     bag.how_many_installments = how_many_installments
+
+                coupons = bag.coupons.none()
 
                 if not available_for_free_trial and not available_free and bag.how_many_installments > 0:
                     try:
                         plan = bag.plans.filter().first()
                         option = plan.financing_options.filter(how_many_months=bag.how_many_installments).first()
-                        amount = option.monthly_price
-                        bag.monthly_price = amount
+                        coupons = bag.coupons.all()
+                        amount = get_discounted_price(option.monthly_price, coupons)
+
+                        bag.monthly_price = option.monthly_price
                     except Exception:
                         raise ValidationException(translation(
                             lang,
@@ -1543,6 +1597,8 @@ class PayView(APIView):
 
                 elif not available_for_free_trial and not available_free:
                     amount = get_amount_by_chosen_period(bag, chosen_period, lang)
+                    coupons = bag.coupons.all()
+                    amount = get_discounted_price(amount, coupons)
 
                 else:
                     amount = 0
@@ -1630,7 +1686,11 @@ class PayView(APIView):
                                                   related_type='payments.Invoice',
                                                   related_id=serializer.instance.id)
 
-                return Response(serializer.data, status=201)
+                data = serializer.data
+                serializer = GetCouponSerializer(coupons, many=True)
+                data['coupons'] = serializer.data
+
+                return Response(data, status=201)
 
             except Exception as e:
                 transaction.savepoint_rollback(sid)

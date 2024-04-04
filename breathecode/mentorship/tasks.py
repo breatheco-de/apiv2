@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Any
 
 import requests
@@ -6,9 +7,9 @@ from celery import shared_task
 from task_manager.core.exceptions import AbortTask
 from task_manager.django.decorators import task
 
+import breathecode.activity.tasks as tasks_activity
 from breathecode.services.calendly import Calendly
 from breathecode.services.calendly.actions import invitee_created
-import breathecode.activity.tasks as tasks_activity
 from breathecode.utils.decorators import TaskPriority
 
 from .models import CalendlyOrganization, CalendlyWebhook, MentorProfile

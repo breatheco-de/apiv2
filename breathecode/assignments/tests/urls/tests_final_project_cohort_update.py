@@ -107,6 +107,35 @@ def test_project_not_found(bc: Breathecode, client: APIClient):
 
 def test_put_undone_project(bc: Breathecode, client: APIClient):
 
+    model = bc.database.create(
+        cohort_user={'role': 'STUDENT'},
+        cohort=1,
+        profile_academy=1,
+        role=1,
+        capability='crud_assignment',
+        user=1,
+        final_project={'members': [1]},
+    )
+    client.force_authenticate(model.user)
+
+    url = reverse_lazy('assignments:final_project_cohort_update', kwargs={'cohort_id': 1, 'final_project_id': 1})
+    response = client.put(url,
+                          headers={'academy': 1},
+                          data={
+                              'revision_status': 'APPROVED',
+                              'members': [1],
+                              'cohort': 1,
+                          })
+
+    expected = {'detail': 'project-marked-approved-when-pending', 'status_code': 400}
+    json = response.json()
+
+    assert expected == json
+    assert response.status_code == 400
+
+
+def test_no_github_members(bc: Breathecode, client: APIClient):
+
     model_cohort = bc.database.create(
         cohort=1,
         profile_academy=1,
@@ -119,6 +148,7 @@ def test_put_undone_project(bc: Breathecode, client: APIClient):
     model = bc.database.create(
         user=1,
         final_project={
+            'project_status': 'DONE',
             'cohort': model_cohort.cohort,
             'members': [cohort_user_model.user]
         },
@@ -134,8 +164,7 @@ def test_put_undone_project(bc: Breathecode, client: APIClient):
                               'cohort': 1,
                           })
 
-    final_project = model.final_project
-    expected = {'detail': 'task-marked-approved-when-pending', 'status_code': 400}
+    expected = {'detail': 'put-project-property-from-none-members', 'status_code': 400}
     json = response.json()
 
     assert expected == json
@@ -143,28 +172,26 @@ def test_put_undone_project(bc: Breathecode, client: APIClient):
 
 
 def test_put_project(bc: Breathecode, client: APIClient):
-
-    model_cohort = bc.database.create(
+    model = bc.database.create(
+        user=2,
         cohort=1,
         profile_academy=1,
         role=1,
         capability='crud_assignment',
-    )
-
-    cohort_user_model = bc.database.create(cohort_user={'cohort': model_cohort.cohort, 'role': 'STUDENT'})
-
-    model = bc.database.create(
-        user=1,
+        cohort_user=[{
+            'user_id': n + 1,
+            'role': 'STUDENT'
+        } for n in range(2)],
         final_project={
-            'cohort': model_cohort.cohort,
-            'members': [cohort_user_model.user],
+            'members': [1],
             'project_status': 'DONE',
         },
     )
-    client.force_authenticate(model_cohort.user)
+    client.force_authenticate(model.user[0])
 
     url = reverse_lazy('assignments:final_project_cohort_update', kwargs={'cohort_id': 1, 'final_project_id': 1})
     payload = {
+        'project_status': 'DONE',
         'revision_status': 'APPROVED',
         'members': [2],
         'cohort': 1,
