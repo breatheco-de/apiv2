@@ -1,13 +1,15 @@
 from django.urls import path
-from .views import (CourseView, create_lead, sync_tags_with_active_campaign, sync_automations_with_active_campaign,
-                    receive_facebook_lead, get_leads, get_leads_report, AcademyLeadView, AcademyWonLeadView,
-                    AcademyTagView, AcademyAutomationView, activecampaign_webhook, googleads_enrollments, googleads_csv,
-                    get_downloadable, ShortLinkView, create_lead_from_app, UTMView, AcademyProcessView, AcademyAppView,
-                    AcademyAliasView, ActiveCampaignView, UploadView, validate_email_from_app, get_alias)
+from .views import (CourseView, create_lead, create_lead_captcha, sync_tags_with_active_campaign,
+                    sync_automations_with_active_campaign, receive_facebook_lead, get_leads, get_leads_report,
+                    AcademyLeadView, AcademyWonLeadView, AcademyTagView, AcademyAutomationView, activecampaign_webhook,
+                    googleads_enrollments, googleads_csv, get_downloadable, ShortLinkView, create_lead_from_app,
+                    UTMView, AcademyProcessView, AcademyAppView, AcademyAliasView, ActiveCampaignView, UploadView,
+                    validate_email_from_app, get_alias)
 
 app_name = 'marketing'
 urlpatterns = [
     path('lead', create_lead, name='lead'),
+    path('lead-captcha', create_lead_captcha, name='lead_captcha'),
     path('app', AcademyAppView.as_view(), name='app'),
     path('app/<slug:app_slug>/lead', create_lead_from_app, name='app_slug_lead'),
     path('app/validateemail', validate_email_from_app, name='app_email_validate'),
