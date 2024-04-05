@@ -1,13 +1,16 @@
 from __future__ import annotations
-from io import TextIOWrapper
+
 import os
 import random
 import string
-from rest_framework.test import APITestCase
-from faker import Faker
-import numpy as np
-from PIL import Image
 import tempfile
+from io import TextIOWrapper
+
+import numpy as np
+from faker import Faker
+from PIL import Image
+from rest_framework.test import APITestCase
+
 from . import interfaces
 
 __all__ = ['Random', 'fake']
