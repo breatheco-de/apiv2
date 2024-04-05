@@ -725,6 +725,7 @@ class CohortPUTSerializer(CohortSerializerMixin):
     stage = serializers.CharField(required=False)
     language = serializers.CharField(required=False)
     is_hidden_on_prework = serializers.BooleanField(required=False, allow_null=True)
+    never_ends = serializers.BooleanField(required=False, allow_null=True)
 
     class Meta:
         model = Cohort
