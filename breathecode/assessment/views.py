@@ -71,6 +71,9 @@ class GetAssessmentView(APIView):
             param = self.request.GET.get('lang')
             lookup['lang'] = param
 
+        if 'no_asset' in self.request.GET and self.request.GET.get('no_asset').lower() == 'true':
+            lookup['asset__isnull'] = True
+
         if 'author' in self.request.GET:
             param = self.request.GET.get('author')
             lookup['author__id'] = param
