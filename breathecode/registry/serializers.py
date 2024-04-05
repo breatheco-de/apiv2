@@ -756,7 +756,7 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                 raise ValidationException('This asset has to pass tests successfully before publishing',
                                           status.HTTP_400_BAD_REQUEST)
 
-        if 'visibility' in data and data['visibility'] in ['PUBLIC', 'UNLISTED', 'PRIVATE'
+        if 'visibility' in data and data['visibility'] in ['PUBLIC', 'UNLISTED'
                                                            ] and self.instance.test_status not in ['OK', 'WARNING']:
             raise ValidationException('This asset has to pass tests successfully before publishing', code=400)
 
