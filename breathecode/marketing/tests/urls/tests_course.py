@@ -3,10 +3,12 @@ Test /academy/lead
 """
 import random
 from random import choice, choices, randint
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from django.urls.base import reverse_lazy
-from rest_framework import status
 from faker import Faker
+from rest_framework import status
+
 from ..mixins import MarketingTestCase
 
 fake = Faker()
@@ -24,7 +26,26 @@ def course_translation_serializer(course_translation):
     }
 
 
-def get_serializer(course, academy, syllabus=[], course_translation=None, data={}):
+def academy_serializer(academy):
+    return {
+        'icon_url': academy.icon_url,
+        'id': academy.id,
+        'logo_url': academy.logo_url,
+        'name': academy.name,
+        'slug': academy.slug,
+    }
+
+
+def syllabus_serializer(syllabus):
+    return {
+        'id': syllabus.id,
+        'logo': syllabus.logo,
+        'name': syllabus.name,
+        'slug': syllabus.slug,
+    }
+
+
+def get_serializer(course, academy, syllabus=[], course_translation=None, cohort=None, data={}):
     if course_translation:
         course_translation = course_translation_serializer(course_translation)
 
@@ -32,9 +53,13 @@ def get_serializer(course, academy, syllabus=[], course_translation=None, data={
         'slug': course.slug,
         'icon_url': course.icon_url,
         'color': course.color,
+        'status': course.status,
+        'visibility': course.visibility,
         'technologies': course.technologies,
-        'academy': academy.id,
-        'syllabus': [x.id for x in syllabus],
+        'academy': academy_serializer(academy),
+        'cohort': cohort.id if cohort else None,
+        'syllabus': [syllabus_serializer(x) for x in syllabus],
+        'plan_slug': course.plan_slug,
         'course_translation': course_translation,
         **data,
     }

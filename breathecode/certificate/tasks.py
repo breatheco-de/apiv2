@@ -61,7 +61,7 @@ def generate_cohort_certificates(self, cohort_id, **_):
 
 
 @task(bind=True, priority=TaskPriority.CERTIFICATE.value)
-def generate_one_certificate(self, cohort_id, user_id, layout, **_):
+def async_generate_certificate(self, cohort_id, user_id, layout=None, **_):
     logger.info('Starting generate_cohort_certificates', slug='starting-generating-certificate')
     from .actions import generate_certificate
 
