@@ -6,8 +6,8 @@ from django.dispatch import receiver
 
 import breathecode.authenticate.actions as authenticate_actions
 from breathecode.assignments.models import Task
-from breathecode.assignments.signals import assignment_status_updated
-from breathecode.certificate.actions import generate_certificate, get_assets_from_syllabus, how_many_pending_tasks
+from breathecode.assignments.signals import revision_status_updated
+from breathecode.certificate.actions import how_many_pending_tasks
 
 from ..activity import tasks as activity_tasks
 from .models import Cohort, CohortUser
@@ -41,7 +41,7 @@ async def new_cohort_user(sender: Type[Cohort], instance: Cohort, **kwargs: Any)
                                             })
 
 
-@receiver(assignment_status_updated, sender=Task, weak=False)
+@receiver(revision_status_updated, sender=Task, weak=False)
 def mark_saas_student_as_graduated(sender: Type[Task], instance: Task, **kwargs: Any):
     logger.info('Processing available as saas student\'s tasks and marking as GRADUATED if it is')
 
