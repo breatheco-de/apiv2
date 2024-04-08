@@ -50,18 +50,9 @@ def asset_title_was_updated(sender, instance, **kwargs):
     if instance.title is None or instance.title == '':
         return False
 
-    # taking thumbnail for the first time
-    if instance.preview is None or instance.preview == '':
-        logger.debug('Creating asset screenshot')
-        async_create_asset_thumbnail.delay(instance.slug)
-        return True
-
-    # retaking a thumbnail if it was generated automatically
-    # we know this because bucket_name is inside instance.preview
-    if bucket_name in instance.preview:
-        logger.debug('Retaking asset screenshot because title was updated')
-        async_create_asset_thumbnail.delay(instance.slug)
-        return True
+    logger.debug('Creating asset screenshot because title was updated')
+    async_create_asset_thumbnail.delay(instance.slug)
+    return True
 
 
 @receiver(asset_readme_modified, sender=Asset)
