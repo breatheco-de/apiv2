@@ -720,6 +720,7 @@ class AssetPUTSerializer(serializers.ModelSerializer):
     url = serializers.CharField(required=False)
     technologies = serializers.ListField(required=False)
     slug = serializers.CharField(required=False)
+    status = serializers.CharField(required=False)
     asset_type = serializers.CharField(required=False)
 
     class Meta:
