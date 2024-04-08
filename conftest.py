@@ -46,10 +46,9 @@ def get_kwargs(random: Random) -> Generator[callable, None, None]:
     yield random.kwargs
 
 
-# it does not work yet
 @pytest.fixture
-def bc(request):
-    return Breathecode(request.instance)
+def bc():
+    return Breathecode(None)
 
 
 @pytest.fixture

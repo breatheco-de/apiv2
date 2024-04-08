@@ -525,6 +525,8 @@ class CohortUser(models.Model):
         if on_create:
             signals.cohort_user_created.send(instance=self, sender=self.__class__)
 
+        self.__old_edu_status = self.educational_status
+
         return result
 
 

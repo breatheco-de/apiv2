@@ -2,14 +2,21 @@
 Certificate actions
 """
 import hashlib
-import requests, os, logging
-from django.utils import timezone
+import json
+import logging
+import os
 from urllib.parse import urlencode
-from breathecode.admissions.models import CohortUser, FULLY_PAID, UP_TO_DATE
+
+import requests
+from django.contrib.auth.models import User
+from django.utils import timezone
+
+from breathecode.admissions.models import FULLY_PAID, UP_TO_DATE, CohortUser, SyllabusVersion
 from breathecode.assignments.models import Task
 from breathecode.utils import ValidationException
-from .models import ERROR, PERSISTED, Specialty, UserSpecialty, LayoutDesign
+
 from ..services.google_cloud import Storage
+from .models import ERROR, PERSISTED, LayoutDesign, Specialty, UserSpecialty
 
 logger = logging.getLogger(__name__)
 ENVIRONMENT = os.getenv('ENV', None)
@@ -34,6 +41,76 @@ def certificate_set_default_issued_at():
             UserSpecialty.objects.filter(id=item.id).update(issued_at=item.cohort.ending_date)
 
     return query
+
+
+def syllabus_weeks_to_days(json):
+
+    days = []
+    weeks = json.pop('weeks', [])
+    for week in weeks:
+        days += week['days']
+
+    if 'days' not in json:
+        json['days'] = days
+
+    return json
+
+
+def get_assets_from_syllabus(syllabus_version: SyllabusVersion | int, only_mandatory=False):
+    if not isinstance(syllabus_version, SyllabusVersion):
+        syllabus = SyllabusVersion.objects.filter(id=syllabus_version).first()
+
+    else:
+        syllabus = syllabus_version
+
+    key_map = {
+        'QUIZ': 'quizzes',
+        'LESSON': 'lessons',
+        'EXERCISE': 'replits',
+        'PROJECT': 'assignments',
+    }
+
+    findings = []
+
+    if isinstance(syllabus.json, str):
+        syllabus.json = json.loads(syllabus.json)
+
+    syllabus.json = syllabus_weeks_to_days(syllabus.json)
+
+    for day in syllabus.json['days']:
+        for atype in key_map:
+            if key_map[atype] not in day:
+                continue
+
+            for asset in day[key_map[atype]]:
+                if (only_mandatory and asset.get('mandatory', True) == True) or only_mandatory is False:
+                    findings.append(asset['slug'])
+
+    return findings
+
+
+def how_many_pending_tasks(syllabus_version: SyllabusVersion | int, user: User | int, task_types: list[str],
+                           only_mandatory: bool) -> int:
+
+    extra = {}
+    if (n_task_types := len(task_types)) == 1:
+
+        extra['task_type'] = task_types[0]
+
+    elif n_task_types > 1:
+        extra['task_type__in'] = task_types
+
+    if not isinstance(user, User):
+        extra['user__id'] = user.id
+
+    else:
+        extra['user'] = user
+
+    slugs = get_assets_from_syllabus(syllabus_version, only_mandatory=only_mandatory)
+    how_many_pending_tasks = Task.objects.filter(associated_slug__in=slugs,
+                                                 **extra).exclude(revision_status__in=['APPROVED', 'IGNORED']).count()
+
+    return how_many_pending_tasks
 
 
 def generate_certificate(user, cohort=None, layout=None):
@@ -102,29 +179,14 @@ def generate_certificate(user, cohort=None, layout=None):
 
     try:
         uspe.academy = cohort.academy
+        pending_tasks = how_many_pending_tasks(cohort.syllabus_version,
+                                               user,
+                                               task_types=['PROJECT'],
+                                               only_mandatory=True)
 
-        tasks_pending = Task.objects.filter(user__id=user.id,
-                                            cohort__id=cohort.id,
-                                            task_type='PROJECT',
-                                            revision_status='PENDING')
-
-        mandatory_slugs = []
-        for task in tasks_pending:
-            if 'days' in task.cohort.syllabus_version.__dict__['json']:
-                for day in task.cohort.syllabus_version.__dict__['json']['days']:
-                    for assignment in day['assignments']:
-                        if 'mandatory' not in assignment or ('mandatory' in assignment
-                                                             and assignment['mandatory'] == True):
-                            mandatory_slugs.append(assignment['slug'])
-
-        tasks_count_pending = Task.objects.filter(
-            user=user,
-            associated_slug__in=mandatory_slugs).exclude(revision_status__in=['APPROVED', 'IGNORED']).count()
-
-        if tasks_count_pending:
-            raise ValidationException(f'The student has {tasks_count_pending} '
-                                      'pending tasks',
-                                      slug=f'with-pending-tasks-{tasks_count_pending}')
+        if pending_tasks:
+            raise ValidationException(f'The student has {pending_tasks} pending tasks',
+                                      slug=f'with-pending-tasks-{pending_tasks}')
 
         if not (cohort_user.finantial_status == FULLY_PAID or cohort_user.finantial_status == UP_TO_DATE):
             message = 'The student must have finantial status FULLY_PAID or UP_TO_DATE'

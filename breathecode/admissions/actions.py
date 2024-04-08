@@ -1,9 +1,13 @@
-import logging, json
+import json
+import logging
+from math import asin, cos, radians, sin, sqrt
+
 from django.db.models.query_utils import Q
-from .models import Cohort, SyllabusScheduleTimeSlot, SyllabusVersion
+
 from breathecode.services.google_cloud import Storage
+
+from .models import Cohort, SyllabusScheduleTimeSlot, SyllabusVersion
 from .signals import syllabus_asset_slug_updated
-from math import radians, cos, sin, asin, sqrt
 
 BUCKET_NAME = 'admissions-breathecode'
 logger = logging.getLogger(__name__)
@@ -52,7 +56,7 @@ class ImportCohortTimeSlots:
         CohortTimeSlot.objects.filter(cohort=self.cohort).delete()
 
     def sync(self) -> None:
-        from breathecode.admissions.models import SyllabusScheduleTimeSlot, CohortTimeSlot
+        from breathecode.admissions.models import CohortTimeSlot, SyllabusScheduleTimeSlot
 
         if not self.cohort:
             return
@@ -104,48 +108,8 @@ class ImportCohortTimeSlots:
         return cohort_timeslot
 
 
-def weeks_to_days(json):
-
-    days = []
-    weeks = json.pop('weeks', [])
-    for week in weeks:
-        days += week['days']
-
-    if 'days' not in json:
-        json['days'] = days
-
-    return json
-
-
-def get_assets_on_syllabus(syllabus_version_id, only_mandatory=False):
-    syllabus = SyllabusVersion.objects.filter(id=syllabus_version_id).first()
-    key_map = {
-        'QUIZ': 'quizzes',
-        'LESSON': 'lessons',
-        'EXERCISE': 'replits',
-        'PROJECT': 'assignments',
-    }
-
-    findings = []
-
-    if isinstance(syllabus.json, str):
-        syllabus.json = json.loads(syllabus.json)
-
-    syllabus.json = weeks_to_days(syllabus.json)
-
-    for day in syllabus.json['days']:
-        for atype in key_map:
-            if key_map[atype] not in day:
-                continue
-
-            for asset in day[key_map[atype]]:
-                if isinstance(asset, dict) and (not only_mandatory or asset['mandatory']):
-                    findings.append(asset['slug'])
-
-    return findings
-
-
 def find_asset_on_json(asset_slug, asset_type=None):
+    from breathecode.certificate.actions import syllabus_weeks_to_days
 
     logger.debug(f'Searching slug {asset_slug} in all the syllabus and versions')
     syllabus_list = SyllabusVersion.objects.all()
@@ -164,7 +128,7 @@ def find_asset_on_json(asset_slug, asset_type=None):
             s.json = json.loads(s.json)
 
         # in case the json contains "weeks" instead of "days"
-        s.json = weeks_to_days(s.json)
+        s.json = syllabus_weeks_to_days(s.json)
 
         for day in s.json['days']:
             module_index += 1
@@ -198,6 +162,7 @@ def find_asset_on_json(asset_slug, asset_type=None):
 
 
 def update_asset_on_json(from_slug, to_slug, asset_type, simulate=True):
+    from breathecode.certificate.actions import syllabus_weeks_to_days
 
     asset_type = asset_type.upper()
     logger.debug(f'Replacing {asset_type} slug {from_slug} with {to_slug} in all the syllabus and versions')
@@ -217,7 +182,7 @@ def update_asset_on_json(from_slug, to_slug, asset_type, simulate=True):
             s.json = json.loads(s.json)
 
         # in case the json contains "weeks" instead of "days"
-        s.json = weeks_to_days(s.json)
+        s.json = syllabus_weeks_to_days(s.json)
 
         for day in s.json['days']:
             module_index += 1
