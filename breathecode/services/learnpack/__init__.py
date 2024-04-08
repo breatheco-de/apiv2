@@ -1,1 +1,1 @@
-from .client import LearnPack
+from .client import LearnPack  # noqa F401

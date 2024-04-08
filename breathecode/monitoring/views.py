@@ -1,27 +1,33 @@
-import os, logging
-import stripe
+import logging
+import os
 
-from breathecode.authenticate.actions import get_user_language
-from breathecode.utils.i18n import translation
-from breathecode.admissions.models import Academy
-from .signals import github_webhook
-from .models import CSVDownload, CSVUpload, RepositorySubscription, RepositoryWebhook
-from rest_framework.permissions import AllowAny
-from .serializers import CSVDownloadSmallSerializer, CSVUploadSmallSerializer, RepositorySubscriptionSerializer
-from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework import status
-from django.http import StreamingHttpResponse
-from .actions import add_github_webhook, add_stripe_webhook
-from .tasks import async_unsubscribe_repo
-from .serializers import RepoSubscriptionSmallSerializer
-from breathecode.monitoring import signals
+import stripe
 from circuitbreaker import CircuitBreakerError
-from rest_framework.views import APIView
 from django.db.models import Q
+from django.http import StreamingHttpResponse
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from breathecode.admissions.models import Academy
 from breathecode.authenticate.actions import get_user_language
+from breathecode.monitoring import signals
 from breathecode.utils import GenerateLookupsMixin, ValidationException, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from breathecode.utils.i18n import translation
+
+from .actions import add_github_webhook, add_stripe_webhook
+from .models import CSVDownload, CSVUpload, RepositorySubscription, RepositoryWebhook
+from .serializers import (
+    CSVDownloadSmallSerializer,
+    CSVUploadSmallSerializer,
+    RepositorySubscriptionSerializer,
+    RepoSubscriptionSmallSerializer,
+)
+from .signals import github_webhook
+from .tasks import async_unsubscribe_repo
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +128,7 @@ def process_github_webhook(request, subscription_token):
         raise ValidationException(f'Subscription not found with token {subscription_token}')
 
     if subscription.status == 'DISABLED':
-        logger.debug(f'Ignored because subscription has been disabled')
+        logger.debug('Ignored because subscription has been disabled')
         async_unsubscribe_repo.delayed(subscription.hook_id, force_delete=False)
         return Response('Ignored because subscription has been disabled', status=status.HTTP_200_OK)
 
@@ -185,7 +191,6 @@ class RepositorySubscriptionView(APIView, GenerateLookupsMixin):
 
     @capable_of('read_asset')
     def get(self, request, academy_id=None):
-        lang = get_user_language(request)
         handler = self.extensions(request)
 
         _academy = Academy.objects.get(id=academy_id)

@@ -1,9 +1,12 @@
 """
 Test cases for /user
 """
-import pytz, datetime
+import datetime
+
+import pytz
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
 from ..mixins.new_auth_test_case import AuthTestCase
 
 
@@ -34,10 +37,14 @@ def get_serializer(self,
         user.id,
         'email':
         user.email,
+        'username':
+        user.username,
         'first_name':
         user.first_name,
         'last_name':
         user.last_name,
+        'username':
+        user.username,
         'settings':
         user_setting_serializer(user_setting) if user_setting else None,
         'permissions': [get_permission_serializer(x) for x in permissions],

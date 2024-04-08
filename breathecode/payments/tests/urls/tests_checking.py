@@ -1,15 +1,47 @@
 import random
-from datetime import timedelta
+import re
+from datetime import UTC, timedelta
+from typing import Any
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+from django.db.models.query import QuerySet
 from django.urls import reverse_lazy
 from django.utils import timezone
 from rest_framework import status
+from rest_framework.test import APIClient
 
 import breathecode.activity.tasks as activity_tasks
-from breathecode.payments import actions
 from breathecode.payments.tests.mixins.payments_test_case import PaymentsTestCase
+from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
+
+
+def queryset_with_pks(query: Any, pks: list[int]) -> None:
+    """
+    Check if the queryset have the following primary keys.
+
+    Usage:
+
+    ```py
+    from breathecode.admissions.models import Cohort, Academy
+
+    self.bc.database.create(cohort=1)
+
+    collection = []
+    queryset = Cohort.objects.filter()
+
+    # pass because the QuerySet has the primary keys 1
+    self.bc.check.queryset_with_pks(queryset, [1])  # 🟢
+
+    # fail because the QuerySet has the primary keys 1 but the second argument is empty
+    self.bc.check.queryset_with_pks(queryset, [])  # 🔴
+    ```
+    """
+
+    assert isinstance(query, QuerySet), 'The first argument is not a QuerySet'
+
+    assert [x.pk for x in query] == pks
+
 
 UTC_NOW = timezone.now()
 
@@ -79,6 +111,24 @@ def service_item_serializer(service_item, service, cohorts=[], data={}):
     }
 
 
+def to_iso(date):
+    return re.sub(r'\+00:00$', 'Z', date.replace(tzinfo=UTC).isoformat())
+
+
+def format_coupon(coupon, data={}):
+    return {
+        'auto': coupon.auto,
+        'discount_type': coupon.discount_type,
+        'discount_value': coupon.discount_value,
+        'expires_at': to_iso(coupon.expires_at) if coupon.expires_at else None,
+        'offered_at': to_iso(coupon.offered_at) if coupon.offered_at else None,
+        'referral_type': coupon.referral_type,
+        'referral_value': coupon.referral_value,
+        'slug': coupon.slug,
+        **data,
+    }
+
+
 def get_serializer(bag,
                    plans=[],
                    plan_service_items=[],
@@ -87,6 +137,7 @@ def get_serializer(bag,
                    cohorts=[],
                    financing_options=[],
                    currency=None,
+                   coupons=[],
                    data={}):
     return {
         'amount_per_month':
@@ -112,13 +163,15 @@ def get_serializer(bag,
         bag.type,
         'was_delivered':
         bag.was_delivered,
+        'coupons': [format_coupon(x) for x in coupons],
         **data,
     }
 
 
 @pytest.fixture(autouse=True)
-def setup(monkeypatch):
+def setup(db, monkeypatch, set_datetime):
     monkeypatch.setattr(activity_tasks.add_activity, 'delay', MagicMock())
+    set_datetime(UTC_NOW)
     yield
 
 
@@ -2091,3 +2144,578 @@ class SignalTestSuite(PaymentsTestCase):
         self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
             call(1, 'bag_created', related_type='payments.Bag', related_id=1),
         ])
+
+
+def test_exceding_coupon_limit(bc: Breathecode, client: APIClient):
+    bag = {
+        'status': 'CHECKING',
+        'type': 'PREVIEW',
+        'plans': [],
+        'service_items': [],
+        'coupons': [],
+    }
+
+    currency = {'code': 'USD', 'name': 'United States dollar'}
+
+    plan = {
+        'price_per_month': 0,
+        'price_per_quarter': 0,
+        'price_per_half': 0,
+        'price_per_year': 0,
+        'is_renewable': False,
+        'time_of_life': random.randint(1, 100),
+        'time_of_life_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
+        'trial_duration': random.randint(1, 10),
+    }
+
+    service = {
+        'price_per_unit': random.random() * 100,
+    }
+
+    how_many1 = random.randint(1, 5)
+    how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+    service_item = {'how_many': how_many1}
+    subscription = {'valid_until': UTC_NOW - timedelta(seconds=1)}
+    academy = {'available_as_saas': True}
+    coupon = {
+        'discount_value': random.random() * 100,
+        'offered_at': None,
+        'expires_at': None,
+        'auto': False,
+        'how_many_offers': random.randint(1, 5),
+    }
+
+    model = bc.database.create(user=1,
+                               bag=bag,
+                               coupon=(2, coupon),
+                               academy=academy,
+                               subscription=subscription,
+                               cohort=1,
+                               cohort_set=1,
+                               service_item=service_item,
+                               service=service,
+                               plan=plan,
+                               plan_service_item=1,
+                               financing_option=1,
+                               currency=currency)
+    client.force_authenticate(model.user)
+
+    service_item = bc.database.get('payments.ServiceItem', 1, dict=False)
+    service_item.how_many = how_many2
+
+    url = reverse_lazy('payments:checking')
+    data = {
+        'academy': 1,
+        'type': 'PREVIEW',
+        'plans': [1],
+        'cohort_set': 1,
+        'coupons': [x.slug for x in model.coupon],
+    }
+
+    token = bc.random.string(lower=True, upper=True, number=True, size=40)
+    with patch('rest_framework.authtoken.models.Token.generate_key', MagicMock(return_value=token)):
+        response = client.put(url, data, format='json')
+
+    json = response.json()
+
+    price_per_month = model.plan.price_per_month
+    price_per_quarter = model.plan.price_per_quarter
+    price_per_half = model.plan.price_per_half
+    price_per_year = model.plan.price_per_year
+    expected = {
+        'detail': 'too-many-coupons',
+        'status_code': 400,
+    }
+
+    assert json == expected
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    assert bc.database.list_of('payments.Bag') == [
+        {
+            **bc.format.to_dict(model.bag),
+            'amount_per_month': price_per_month,
+            'amount_per_quarter': price_per_quarter,
+            'amount_per_half': price_per_half,
+            'amount_per_year': price_per_year,
+            'expires_at': None,
+            'token': None,
+        },
+    ]
+    assert bc.database.list_of('authenticate.UserSetting') == [
+        format_user_setting({
+            'lang': 'en',
+            'id': model.user.id,
+            'user_id': model.user.id,
+        }),
+    ]
+    queryset_with_pks(model.bag.service_items.all(), [])
+    queryset_with_pks(model.bag.plans.all(), [])
+    queryset_with_pks(model.bag.coupons.all(), [])
+    bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+        call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+    ])
+
+
+@pytest.mark.parametrize('how_many_offers', [-1, 10])
+@pytest.mark.parametrize('offered_at, expires_at', [
+    (None, None),
+    (UTC_NOW - timedelta(days=10), None),
+    (UTC_NOW - timedelta(days=10), UTC_NOW + timedelta(days=10)),
+])
+def test_providing_coupons(bc: Breathecode, client: APIClient, how_many_offers, offered_at, expires_at):
+    bag = {
+        'status': 'CHECKING',
+        'type': 'PREVIEW',
+        'plans': [],
+        'service_items': [],
+        'coupons': [],
+    }
+
+    currency = {'code': 'USD', 'name': 'United States dollar'}
+
+    plan = {
+        'price_per_month': 0,
+        'price_per_quarter': 0,
+        'price_per_half': 0,
+        'price_per_year': 0,
+        'is_renewable': False,
+        'time_of_life': random.randint(1, 100),
+        'time_of_life_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
+        'trial_duration': random.randint(1, 10),
+    }
+
+    service = {
+        'price_per_unit': random.random() * 100,
+    }
+
+    how_many1 = random.randint(1, 5)
+    how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+    service_item = {'how_many': how_many1}
+    subscription = {'valid_until': UTC_NOW - timedelta(seconds=1)}
+    academy = {'available_as_saas': True}
+    coupons = [{
+        'discount_value': random.random() * 100,
+        'offered_at': offered_at,
+        'expires_at': expires_at,
+        'auto': auto,
+        'how_many_offers': how_many_offers,
+    } for auto in [True, True, False]]
+
+    model = bc.database.create(user=1,
+                               bag=bag,
+                               coupon=coupons,
+                               academy=academy,
+                               subscription=subscription,
+                               cohort=1,
+                               cohort_set=1,
+                               service_item=service_item,
+                               service=service,
+                               plan=plan,
+                               plan_service_item=1,
+                               financing_option=1,
+                               currency=currency)
+    client.force_authenticate(model.user)
+
+    service_item = bc.database.get('payments.ServiceItem', 1, dict=False)
+    service_item.how_many = how_many2
+
+    url = reverse_lazy('payments:checking')
+    data = {
+        'academy': 1,
+        'type': 'PREVIEW',
+        'plans': [1],
+        'cohort_set': 1,
+        'coupons': [model.coupon[2].slug],
+    }
+
+    token = bc.random.string(lower=True, upper=True, number=True, size=40)
+    with patch('rest_framework.authtoken.models.Token.generate_key', MagicMock(return_value=token)):
+        response = client.put(url, data, format='json')
+
+    json = response.json()
+
+    price_per_month = model.plan.price_per_month
+    price_per_quarter = model.plan.price_per_quarter
+    price_per_half = model.plan.price_per_half
+    price_per_year = model.plan.price_per_year
+    expected = get_serializer(
+        model.bag,
+        [model.plan],
+        [model.service_item],
+        [],
+        model.service,
+        [model.cohort],
+        [model.financing_option],
+        model.currency,
+        coupons=model.coupon,
+        data={
+            'amount_per_month': price_per_month,
+            'amount_per_quarter': price_per_quarter,
+            'amount_per_half': price_per_half,
+            'amount_per_year': price_per_year,
+            'expires_at': bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
+            'token': token,
+        },
+    )
+
+    assert json == expected
+    assert response.status_code == status.HTTP_200_OK
+
+    assert bc.database.list_of('payments.Bag') == [
+        {
+            **bc.format.to_dict(model.bag),
+            'amount_per_month': price_per_month,
+            'amount_per_quarter': price_per_quarter,
+            'amount_per_half': price_per_half,
+            'amount_per_year': price_per_year,
+            'expires_at': UTC_NOW + timedelta(minutes=60),
+            'token': token,
+        },
+    ]
+    assert bc.database.list_of('authenticate.UserSetting') == [
+        format_user_setting({
+            'lang': 'en',
+            'id': model.user.id,
+            'user_id': model.user.id,
+        }),
+    ]
+    queryset_with_pks(model.bag.service_items.all(), [])
+    queryset_with_pks(model.bag.plans.all(), [1])
+    queryset_with_pks(model.bag.coupons.all(), [1, 2, 3])
+    bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+        call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+    ])
+
+
+@pytest.mark.parametrize('how_many_offers, how_many_subscriptions, how_many_plan_financings', [
+    (-1, 0, 0),
+    (6, 0, 0),
+    (6, 5, 0),
+    (6, 0, 5),
+    (6, 3, 3),
+])
+@pytest.mark.parametrize('offered_at, expires_at', [
+    (None, None),
+    (UTC_NOW - timedelta(days=10), None),
+    (UTC_NOW - timedelta(days=10), UTC_NOW + timedelta(days=10)),
+])
+def test_getting_coupons(bc: Breathecode, client: APIClient, how_many_offers, offered_at, expires_at,
+                         how_many_subscriptions, how_many_plan_financings):
+    auto = True
+    bags = [
+        {
+            'status': 'CHECKING',
+            'type': 'PREVIEW',
+            'plans': [],
+            'service_items': [],
+            'coupons': [],
+            'user_id': 1,
+        },
+        {
+            'status': 'CHECKING',
+            'type': 'PREVIEW',
+            'plans': [],
+            'service_items': [],
+            'user_id': 2,
+            'coupons': [1, 2, 3],
+        },
+    ]
+    invoice = {'user_id': 2, 'bag_id': 2}
+
+    currency = {'code': 'USD', 'name': 'United States dollar'}
+
+    plan = {
+        'price_per_month': 0,
+        'price_per_quarter': 0,
+        'price_per_half': 0,
+        'price_per_year': 0,
+        'is_renewable': False,
+        'time_of_life': random.randint(1, 100),
+        'time_of_life_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
+        'trial_duration': random.randint(1, 10),
+    }
+
+    service = {
+        'price_per_unit': random.random() * 100,
+    }
+
+    how_many1 = random.randint(1, 5)
+    how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+    service_item = {'how_many': how_many1}
+    subscription = {
+        'user_id': 2,
+        'valid_until': UTC_NOW - timedelta(seconds=1),
+    }
+    plan_financing = {
+        'user_id': 2,
+        'plan_expires_at': UTC_NOW - timedelta(seconds=1),
+        'monthly_price': random.random() * 100,
+    }
+    academy = {'available_as_saas': True}
+    coupon = {
+        'discount_value': random.random() * 100,
+        'offered_at': offered_at,
+        'expires_at': expires_at,
+        'auto': auto,
+        'how_many_offers': how_many_offers,
+    }
+
+    model = bc.database.create(user=2,
+                               subscription=(how_many_subscriptions, subscription),
+                               plan_financing=(how_many_plan_financings, plan_financing),
+                               bag=bags,
+                               invoice=invoice,
+                               coupon=(3, coupon),
+                               academy=academy,
+                               cohort=1,
+                               cohort_set=1,
+                               service_item=service_item,
+                               service=service,
+                               plan=plan,
+                               plan_service_item=1,
+                               financing_option=1,
+                               currency=currency)
+    client.force_authenticate(model.user[0])
+    activity_tasks.add_activity.delay.call_args_list = []
+
+    service_item = bc.database.get('payments.ServiceItem', 1, dict=False)
+    service_item.how_many = how_many2
+
+    url = reverse_lazy('payments:checking')
+    data = {
+        'academy': 1,
+        'type': 'PREVIEW',
+        'plans': [1],
+        'cohort_set': 1,
+    }
+
+    token = bc.random.string(lower=True, upper=True, number=True, size=40)
+    with patch('rest_framework.authtoken.models.Token.generate_key', MagicMock(return_value=token)):
+        response = client.put(url, data, format='json')
+
+    json = response.json()
+
+    price_per_month = model.plan.price_per_month
+    price_per_quarter = model.plan.price_per_quarter
+    price_per_half = model.plan.price_per_half
+    price_per_year = model.plan.price_per_year
+    expected = get_serializer(
+        model.bag[0],
+        [model.plan],
+        [model.service_item],
+        [],
+        model.service,
+        [model.cohort],
+        [model.financing_option],
+        model.currency,
+        coupons=model.coupon,
+        data={
+            'amount_per_month': price_per_month,
+            'amount_per_quarter': price_per_quarter,
+            'amount_per_half': price_per_half,
+            'amount_per_year': price_per_year,
+            'expires_at': bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
+            'token': token,
+        },
+    )
+
+    assert json == expected
+    assert response.status_code == status.HTTP_200_OK
+
+    assert bc.database.list_of('payments.Bag') == [
+        {
+            **bc.format.to_dict(model.bag[0]),
+            'amount_per_month': price_per_month,
+            'amount_per_quarter': price_per_quarter,
+            'amount_per_half': price_per_half,
+            'amount_per_year': price_per_year,
+            'expires_at': UTC_NOW + timedelta(minutes=60),
+            'token': token,
+        },
+        bc.format.to_dict(model.bag[1]),
+    ]
+    assert bc.database.list_of('authenticate.UserSetting') == [
+        format_user_setting({
+            'lang': 'en',
+            'id': 1,
+            'user_id': model.user[1].id,
+        }),
+        format_user_setting({
+            'lang': 'en',
+            'id': 2,
+            'user_id': model.user[0].id,
+        }),
+    ]
+
+    queryset_with_pks(model.bag[0].service_items.all(), [])
+    queryset_with_pks(model.bag[0].plans.all(), [1])
+    queryset_with_pks(model.bag[0].coupons.all(), [1, 2, 3])
+    queryset_with_pks(model.bag[1].service_items.all(), [])
+    queryset_with_pks(model.bag[1].plans.all(), [])
+    queryset_with_pks(model.bag[1].coupons.all(), [1, 2, 3])
+    bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
+
+
+@pytest.mark.parametrize('how_many_offers, offered_at, expires_at, how_many_subscriptions, how_many_plan_financings', [
+    (0, None, None, 0, 0),
+    (5, None, None, 6, 0),
+    (5, None, None, 0, 6),
+    (5, None, None, 3, 3),
+    (6, UTC_NOW - timedelta(days=20), UTC_NOW - timedelta(days=10), 0, 0),
+    (5, UTC_NOW - timedelta(days=10), UTC_NOW + timedelta(days=10), 6, 0),
+    (5, UTC_NOW - timedelta(days=10), UTC_NOW + timedelta(days=10), 0, 6),
+    (5, UTC_NOW - timedelta(days=10), UTC_NOW + timedelta(days=10), 3, 3),
+])
+def test_exausted_coupons(bc: Breathecode, client: APIClient, how_many_offers, offered_at, expires_at,
+                          how_many_subscriptions, how_many_plan_financings):
+    bags = [
+        {
+            'status': 'CHECKING',
+            'type': 'PREVIEW',
+            'plans': [],
+            'service_items': [],
+            'coupons': [],
+            'user_id': 1,
+        },
+        {
+            'status': 'CHECKING',
+            'type': 'PREVIEW',
+            'plans': [],
+            'service_items': [],
+            'user_id': 2,
+            'coupons': [1, 2, 3],
+        },
+    ]
+    invoice = {'user_id': 2, 'bag_id': 2}
+
+    currency = {'code': 'USD', 'name': 'United States dollar'}
+
+    plan = {
+        'price_per_month': 0,
+        'price_per_quarter': 0,
+        'price_per_half': 0,
+        'price_per_year': 0,
+        'is_renewable': False,
+        'time_of_life': random.randint(1, 100),
+        'time_of_life_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
+        'trial_duration': random.randint(1, 10),
+    }
+
+    service = {
+        'price_per_unit': random.random() * 100,
+    }
+
+    how_many1 = random.randint(1, 5)
+    how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+    service_item = {'how_many': how_many1}
+    subscription = {
+        'user_id': 2,
+        'valid_until': UTC_NOW - timedelta(seconds=1),
+    }
+    plan_financing = {
+        'user_id': 2,
+        'plan_expires_at': UTC_NOW - timedelta(seconds=1),
+        'monthly_price': random.random() * 100,
+    }
+    academy = {'available_as_saas': True}
+    coupons = [{
+        'discount_value': random.random() * 100,
+        'offered_at': offered_at,
+        'expires_at': expires_at,
+        'auto': auto,
+        'how_many_offers': how_many_offers,
+    } for auto in [True, True, False]]
+
+    model = bc.database.create(user=2,
+                               bag=bags,
+                               invoice=invoice,
+                               coupon=coupons,
+                               academy=academy,
+                               subscription=(how_many_subscriptions, subscription),
+                               plan_financing=(how_many_plan_financings, plan_financing),
+                               cohort=1,
+                               cohort_set=1,
+                               service_item=service_item,
+                               service=service,
+                               plan=plan,
+                               plan_service_item=1,
+                               financing_option=1,
+                               currency=currency)
+    client.force_authenticate(model.user[0])
+    activity_tasks.add_activity.delay.call_args_list = []
+
+    service_item = bc.database.get('payments.ServiceItem', 1, dict=False)
+    service_item.how_many = how_many2
+
+    url = reverse_lazy('payments:checking')
+    data = {
+        'academy': 1,
+        'type': 'PREVIEW',
+        'plans': [1],
+        'cohort_set': 1,
+        'coupons': [model.coupon[2].slug],
+    }
+
+    token = bc.random.string(lower=True, upper=True, number=True, size=40)
+    with patch('rest_framework.authtoken.models.Token.generate_key', MagicMock(return_value=token)):
+        response = client.put(url, data, format='json')
+
+    json = response.json()
+
+    price_per_month = model.plan.price_per_month
+    price_per_quarter = model.plan.price_per_quarter
+    price_per_half = model.plan.price_per_half
+    price_per_year = model.plan.price_per_year
+    expected = get_serializer(
+        model.bag[0],
+        [model.plan],
+        [model.service_item],
+        [],
+        model.service,
+        [model.cohort],
+        [model.financing_option],
+        model.currency,
+        data={
+            'amount_per_month': price_per_month,
+            'amount_per_quarter': price_per_quarter,
+            'amount_per_half': price_per_half,
+            'amount_per_year': price_per_year,
+            'expires_at': bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
+            'token': token,
+        },
+    )
+
+    assert json == expected
+    assert response.status_code == status.HTTP_200_OK
+
+    assert bc.database.list_of('payments.Bag') == [
+        {
+            **bc.format.to_dict(model.bag[0]),
+            'amount_per_month': price_per_month,
+            'amount_per_quarter': price_per_quarter,
+            'amount_per_half': price_per_half,
+            'amount_per_year': price_per_year,
+            'expires_at': UTC_NOW + timedelta(minutes=60),
+            'token': token,
+        },
+        bc.format.to_dict(model.bag[1]),
+    ]
+    assert bc.database.list_of('authenticate.UserSetting') == [
+        format_user_setting({
+            'lang': 'en',
+            'id': 1,
+            'user_id': model.user[1].id,
+        }),
+        format_user_setting({
+            'lang': 'en',
+            'id': 2,
+            'user_id': model.user[0].id,
+        }),
+    ]
+    queryset_with_pks(model.bag[0].service_items.all(), [])
+    queryset_with_pks(model.bag[0].plans.all(), [1])
+    queryset_with_pks(model.bag[0].coupons.all(), [])
+    queryset_with_pks(model.bag[1].service_items.all(), [])
+    queryset_with_pks(model.bag[1].plans.all(), [])
+    queryset_with_pks(model.bag[1].coupons.all(), [1, 2, 3])
+    bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])

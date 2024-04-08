@@ -5,13 +5,20 @@ import logging
 import random
 from unittest.mock import MagicMock, call
 
-from django.utils import timezone
 import pytest
+from django.utils import timezone
+
+from bc.django.pytest.fixtures import QuerySet
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 from ...tasks import refund_mentoring_session
 
 UTC_NOW = timezone.now()
+
+
+@pytest.fixture
+def get_queryset_pks(queryset: QuerySet):
+    yield queryset.get_pks
 
 
 @pytest.fixture(autouse=True)

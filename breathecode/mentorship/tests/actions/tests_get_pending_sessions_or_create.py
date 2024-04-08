@@ -1,17 +1,18 @@
 """
 Test mentorhips
 """
-from unittest.mock import patch
-from django.utils import timezone
 from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
-from breathecode.tests.mocks.requests import REQUESTS_PATH, apply_requests_request_mock
+
+from django.utils import timezone
 
 from breathecode.authenticate.models import Token
+from breathecode.tests.mocks.requests import REQUESTS_PATH, apply_requests_request_mock
+
 from ... import actions
-from ..mixins import MentorshipTestCase
-from ...models import MentorshipSession
 from ...actions import get_pending_sessions_or_create
+from ...models import MentorshipSession
+from ..mixins import MentorshipTestCase
 
 daily_url = '/v1/rooms'
 daily_payload = {'url': 'https://4geeks.daily.com/asdasd', 'name': 'asdasd'}
@@ -47,6 +48,7 @@ def format_mentorship_session_attrs(attrs={}):
         'status_message': None,
         'suggested_accounted_duration': None,
         'summary': None,
+        'questions_and_answers': None,
         **attrs,
     }
 
