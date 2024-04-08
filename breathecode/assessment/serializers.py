@@ -45,6 +45,7 @@ class GetQuestionSerializer(serpy.Serializer):
 
 
 class GetAssessmentSerializer(serpy.Serializer):
+    id = serpy.Field()
     slug = serpy.Field()
     title = serpy.Field()
     lang = serpy.Field()

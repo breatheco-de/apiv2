@@ -4,6 +4,10 @@ logger = logging.getLogger(__name__)
 API_URL = os.getenv('API_URL', '')
 
 
+class GithubAuthException(Exception):
+    pass
+
+
 class Github:
     HOST = 'https://api.github.com'
     headers = {}
@@ -59,16 +63,16 @@ class Github:
         resp = requests.request(method=method_name, url=url, headers=self.headers, params=params, json=json, timeout=2)
 
         if resp.status_code >= 200 and resp.status_code < 300:
-            data = None
-            if method_name != 'DELETE':
-                data = resp.json()
+            if method_name in ['DELETE', 'HEAD']:
+                return resp
 
-            # if data['ok'] == False:
-            #     raise Exception('Github API Error ' + data['error'])
-            # else:
+            data = resp.json()
             return data
         else:
             logger.debug(f'Error call {method_name}: /{action_name}')
+            if resp.status_code == 401:
+                raise GithubAuthException('Invalid credentials when calling the Github API')
+
             error_message = str(resp.status_code)
             try:
                 error = resp.json()
@@ -98,29 +102,20 @@ class Github:
     def unsubscribe_from_repo(self, owner, repo_name, hook_id):
         return self.delete(f'/repos/{owner}/{repo_name}/hooks/{hook_id}')
 
-    def check_file(self, url):
+    def file_exists(self, url):
         # Example URL: https://github.com/owner/repo/blob/branch/path/to/file
         # Extract necessary parts of the URL
         parts = url.split('/')
-        try:
-            owner = parts[3]
-            repo = parts[4]
-            branch = parts[6]
-            path_to_file = '/'.join(parts[7:])  # Join the remaining parts to form the path
+        owner = parts[3]
+        repo_name = parts[4]
+        branch = parts[6]
+        path_to_file = '/'.join(parts[7:])  # Join the remaining parts to form the path
 
-            # Make a request to the GitHub API
-            response = self.head(f'/repos/{owner}/{repo_name}/contents/{path_to_file}?ref={branch}')
+        # Make a request to the GitHub API
+        response = self.head(f'/repos/{owner}/{repo_name}/contents/{path_to_file}?ref={branch}')
 
-            # Check if the file exists
-            if response.status_code == 200:
-                print('The file exists.')
-                return True
-            else:
-                print('The file does not exist.')
-                return False
-        except Exception as e:
-            print(f'An error occurred: {e}')
-            return False
+        # Check if the file exists
+        return response.status_code == 200
 
     def create_container(self, repo_name):
         return self.post(f'/repos/{self.org}/{repo_name}/codespaces')

@@ -134,8 +134,32 @@ def get_alias(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-@validate_captcha
 def create_lead(request):
+    data = request.data.copy()
+
+    # remove spaces from phone
+    if 'phone' in data:
+        data['phone'] = data['phone'].replace(' ', '')
+
+    if 'utm_url' in data and ('//localhost:' in data['utm_url'] or 'gitpod.io' in data['utm_url']):
+        print('Ignoring lead because its coming from development team')
+        return Response(data, status=status.HTTP_201_CREATED)
+
+    serializer = PostFormEntrySerializer(data=data)
+    if serializer.is_valid():
+        serializer.save()
+
+        persist_single_lead.delay(serializer.data)
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@validate_captcha
+def create_lead_captcha(request):
     data = request.data.copy()
 
     # remove spaces from phone
