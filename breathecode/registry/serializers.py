@@ -721,6 +721,7 @@ class AssetPUTSerializer(serializers.ModelSerializer):
     technologies = serializers.ListField(required=False)
     slug = serializers.CharField(required=False)
     status = serializers.CharField(required=False)
+    visibility = serializers.CharField(required=False)
     asset_type = serializers.CharField(required=False)
 
     class Meta:
