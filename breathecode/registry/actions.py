@@ -370,6 +370,8 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
 
 
 def clean_asset_readme(asset: Asset):
+    print('cleaning asset readme')
+    print(asset.slug)
     if asset.readme_raw is None or asset.readme_raw == '':
         return asset
 
@@ -487,6 +489,18 @@ def clean_h1s(asset: Asset):
     readme = asset.get_readme()
     content = readme['decoded'].strip()
 
+    frontmatter = ''
+    frontmatter_regex = r'---\n(.*?\n)*?---\n'
+
+    match = re.search(frontmatter_regex, content, flags=re.DOTALL)
+
+    if match:
+
+        frontmatter_content = match.group()
+        frontmatter = frontmatter_content.strip() if frontmatter_content else ''
+
+        content = content[match.end():].strip()
+
     end = r'.*\n'
     lines = list(re.finditer(end, content))
     if len(lines) == 0:
@@ -501,6 +515,8 @@ def clean_h1s(asset: Asset):
     findings = list(re.finditer(regex, content[:first_line_end]))
     if len(findings) > 0:
         replaced = content[first_line_end:].strip()
+        if frontmatter != '':
+            replaced = f'{frontmatter}\n{replaced}'
         asset.set_readme(replaced)
 
     return asset
