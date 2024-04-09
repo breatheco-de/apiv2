@@ -774,7 +774,9 @@ def pull_quiz_asset(github, asset: Asset):
     asset.config = json.loads(decoded_config)
     asset.save()
 
-    asset = create_from_asset(asset)
+    if asset.assessment is None:
+        asset = create_from_asset(asset)
+
     return asset
 
 
@@ -804,14 +806,14 @@ def test_asset(asset: Asset):
         asset.test_status = e.severity
         asset.last_test_at = timezone.now()
         asset.save()
-        # raise e
+        raise e
         return False
     except Exception as e:
         asset.status_text = str(e)
         asset.test_status = 'ERROR'
         asset.last_test_at = timezone.now()
         asset.save()
-        # raise e
+        raise e
         return False
 
 

@@ -24,13 +24,11 @@ def create_from_asset(asset):
         if a is not None:
             raise ValidationException(f'There is already an assessment with slug {asset.slug}')
 
-        a = Assessment.objects.create(
-            title=asset.title,
-            lang=asset.lang,
-            slug=asset.slug,
-            academy=asset.academy,
-            author=asset.author,
-        )
+        a = Assessment.objects.create(title=asset.title,
+                                      lang=asset.lang,
+                                      slug=asset.slug,
+                                      academy=asset.academy,
+                                      author=asset.author)
 
     if a.question_set.count() > 0:
         raise ValidationException(
@@ -54,7 +52,10 @@ def create_from_asset(asset):
             )
             o.save()
 
-    return a
+    asset.assessment = a
+    asset.save()
+
+    return asset
 
 
 def send_assestment(user_assessment):

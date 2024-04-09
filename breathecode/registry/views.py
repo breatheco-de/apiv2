@@ -40,6 +40,7 @@ from .caches import (
     ContentVariableCache,
     KeywordCache,
     TechnologyCache,
+    AssetAliasCache,
 )
 from .models import (Asset, AssetAlias, AssetCategory, AssetComment, AssetErrorLog, AssetKeyword, AssetTechnology,
                      ContentVariable, KeywordCluster, OriginalityScan, SEOReport, AssetImage)
@@ -73,6 +74,7 @@ from .serializers import (
     TechnologyPUTSerializer,
     VariableSmallSerializer,
     AssetImageSmallSerializer,
+    AssetAliasSerializer,
 )
 from .tasks import async_pull_from_github
 
@@ -1192,6 +1194,77 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
             raise ValidationException('This comment does not exist', 404)
 
         comment.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyAssetAliasView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
+    @capable_of('read_asset')
+    def get(self, request, alias_slug=None, academy_id=None):
+
+        handler = self.extensions(request)
+        # cache = handler.cache.get()
+        # if cache is not None:
+        #     return cache
+
+        lang = get_user_language(request)
+
+        if alias_slug:
+            item = AssetAlias.objects.filter(slug=alias_slug, asset__academy__id=academy_id).first()
+            if not item:
+                raise ValidationException(
+                    translation(lang,
+                                en='Asset alias with slug {alias_slug} not found for this academy',
+                                es='No se ha encontrado el alias {alias_slug} para esta academia',
+                                slug='not-found'))
+
+            serializer = AssetAliasSerializer(items)
+            return handler.response(serializer.data)
+
+        items = AssetAlias.objects.filter(asset__academy__id=academy_id)
+        lookup = {}
+
+        if 'asset' in self.request.GET:
+            param = self.request.GET.get('asset')
+            lookup['asset__slug__in'] = [p.lower() for p in param.split(',')]
+
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+
+        serializer = AssetAliasSerializer(items, many=True)
+        return handler.response(serializer.data)
+
+    @capable_of('crud_asset')
+    def delete(self, request, alias_slug=None, academy_id=None):
+        lang = get_user_language(request)
+        if not alias_slug:
+            raise ValidationException(
+                translation(lang,
+                            en='Missing alias slug',
+                            es='Especifica el slug del alias que deseas eliminar',
+                            slug='missing-alias-slug'))
+
+        item = AssetAlias.objects.filter(slug=alias_slug, asset__academy__id=academy_id).first()
+        if not item:
+            raise ValidationException(
+                translation(lang,
+                            en=f'Asset alias with slug {alias_slug} not found for this academy',
+                            es=f'No se ha encontrado el alias {alias_slug} para esta academia',
+                            slug='not-found'))
+
+        if item.asset.slug == item.slug:
+            raise ValidationException(
+                translation(lang,
+                            en='Rename the asset slug before deleting this alias',
+                            es='Necesitas renombrar el slug principal del asset antes de eliminar este alias',
+                            slug='rename-asset-slug'))
+
+        item.delete()
+
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 

@@ -23,6 +23,7 @@ from .views import (
     AcademyAssetOriginalityView,
     AcademyContentVariableView,
     AssetImageView,
+    AcademyAssetAliasView,
 )
 
 app_name = 'registry'
@@ -42,6 +43,8 @@ urlpatterns = [
     path('academy/asset/comment', AcademyAssetCommentView.as_view()),
     path('academy/asset/comment/<str:comment_id>', AcademyAssetCommentView.as_view()),
     path('academy/asset/action/<str:action_slug>', AcademyAssetActionView.as_view()),
+    path('academy/asset/alias', AcademyAssetAliasView.as_view()),
+    path('academy/asset/alias/<str:alias_slug>', AcademyAssetAliasView.as_view()),
     path('academy/asset/<str:asset_slug>/action/<str:action_slug>', AcademyAssetActionView.as_view()),
     path('academy/asset/<str:asset_slug>/seo_report', AcademyAssetSEOReportView.as_view()),
     path('academy/asset/<str:asset_slug>/originality', AcademyAssetOriginalityView.as_view()),

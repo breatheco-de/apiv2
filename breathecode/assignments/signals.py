@@ -6,3 +6,4 @@ from django import dispatch
 
 assignment_created = dispatch.Signal()
 assignment_status_updated = dispatch.Signal()
+revision_status_updated = dispatch.Signal()
