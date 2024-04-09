@@ -1,8 +1,9 @@
 import logging
-from io import StringIO, BytesIO, TextIOWrapper, BufferedReader
+from io import BufferedReader, BytesIO, StringIO, TextIOWrapper
 from typing import Optional, overload
-from google.cloud.storage import Bucket, Blob
+
 from circuitbreaker import circuit
+from google.cloud.storage import Blob, Bucket
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,9 @@ class File:
     def upload(self, content, public: bool = False, content_type: str = 'text/plain') -> None:
         """Upload Blob from Bucket"""
         self.blob = self.bucket.blob(self.file_name)
+
+        if content_type is None:
+            content_type = 'application/octet-stream'
 
         if (isinstance(content, str) or isinstance(content, bytes)):
             self.blob.upload_from_string(content, content_type=content_type)
