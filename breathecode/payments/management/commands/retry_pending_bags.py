@@ -17,12 +17,9 @@ class Command(BaseCommand):
         hm_processed = 0
         hm_failed = 0
 
-        print(bags)
-
         for bag in bags:
             invoice: Invoice | None = bag.invoice_set.first()
             if invoice is None:
-                print('here')
                 continue
 
             if bag.how_many_installments > 0:
@@ -35,7 +32,6 @@ class Command(BaseCommand):
                 tasks.build_free_subscription.delay(bag.id, invoice.id)
 
         total = hm_processed + hm_failed
-        print('aaaa')
         self.stdout.write(
             self.style.SUCCESS(
                 f'Rescheduled {total} bags where {hm_processed} were processed and {hm_failed} were failed.'))
