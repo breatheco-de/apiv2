@@ -370,8 +370,6 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
 
 
 def clean_asset_readme(asset: Asset):
-    print('cleaning asset readme')
-    print(asset.slug)
     if asset.readme_raw is None or asset.readme_raw == '':
         return asset
 
