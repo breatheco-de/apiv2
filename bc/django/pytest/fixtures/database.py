@@ -3,12 +3,14 @@ from __future__ import annotations
 import functools
 import random
 import re
-from typing import Generator, Type, final
+from typing import Any, Generator, Type, final
 
 import pytest
+from asgiref.sync import sync_to_async
 from django.apps import apps
 from django.conf import settings
 from django.db import models
+from django.db.models import Model
 
 # from django.db.models.query_utils import DeferredAttribute
 from django.db.models.fields.related_descriptors import (
@@ -27,8 +29,113 @@ __all__ = ['database', 'Database']
 _fake = Faker()
 
 
+def _remove_dinamics_fields(dict, fields=['_state', 'created_at', 'updated_at', '_password']):
+    """Remove dinamics fields from django models as dict"""
+    if not dict:
+        return None
+
+    result = dict.copy()
+    for field in fields:
+        if field in result:
+            del result[field]
+
+    # remove any field starting with __ (double underscore) because it is considered private
+    without_private_keys = result.copy()
+    for key in result:
+        if '__' in key or key.startswith('_'):
+            del without_private_keys[key]
+
+    return without_private_keys
+
+
 @final
 class Database:
+    _cache = {}
+
+    @classmethod
+    def get_model(cls, path: str) -> Model:
+        """
+        Return the model matching the given app_label and model_name.
+
+        As a shortcut, app_label may be in the form <app_label>.<model_name>.
+
+        model_name is case-insensitive.
+
+        Raise LookupError if no application exists with this label, or no
+        model exists with this name in the application. Raise ValueError if
+        called with a single argument that doesn't contain exactly one dot.
+
+        Usage:
+
+        ```py
+        # class breathecode.admissions.models.Cohort
+        Cohort = self.bc.database.get_model('admissions.Cohort')
+        ```
+
+        Keywords arguments:
+        - path(`str`): path to a model, for example `admissions.CohortUser`.
+        """
+
+        if path in cls._cache:
+            return cls._cache[path]
+
+        app_label, model_name = path.split('.')
+        cls._cache[path] = apps.get_model(app_label, model_name)
+
+        return cls._cache[path]
+
+    @classmethod
+    def list_of(cls, path: str, dict: bool = True) -> list[Model | dict[str, Any]]:
+        """
+        This is a wrapper for `Model.objects.filter()`, get a list of values of models as `list[dict]` if
+        `dict=True` else get a list of `Model` instances.
+
+        Usage:
+
+        ```py
+        # get all the Cohort as list of dict
+        self.bc.database.get('admissions.Cohort')
+
+        # get all the Cohort as list of instances of model
+        self.bc.database.get('admissions.Cohort', dict=False)
+        ```
+
+        Keywords arguments:
+        - path(`str`): path to a model, for example `admissions.CohortUser`.
+        - dict(`bool`): if true return dict of values of model else return model instance.
+        """
+
+        model = Database.get_model(path)
+        result = model.objects.filter()
+
+        if dict:
+            result = [_remove_dinamics_fields(data.__dict__) for data in result]
+
+        return result
+
+    @classmethod
+    @sync_to_async
+    def alist_of(cls, path: str, dict: bool = True) -> list[Model | dict[str, Any]]:
+        """
+        This is a wrapper for `Model.objects.filter()`, get a list of values of models as `list[dict]` if
+        `dict=True` else get a list of `Model` instances.
+
+        Usage:
+
+        ```py
+        # get all the Cohort as list of dict
+        self.bc.database.get('admissions.Cohort')
+
+        # get all the Cohort as list of instances of model
+        self.bc.database.get('admissions.Cohort', dict=False)
+        ```
+
+        Keywords arguments:
+        - path(`str`): path to a model, for example `admissions.CohortUser`.
+        - dict(`bool`): if true return dict of values of model else return model instance.
+        """
+
+        return cls.list_of(path, dict)
 
     @classmethod
     def _get_random_attrs(cls, model):
@@ -325,11 +432,17 @@ class Database:
                 to_reevaluate = []
 
                 # dep not found, maybe it is a m2m, that was temporally disabled
+                print(exec_order)
                 try:
                     dep_index = exec_order.index(dep_path)
                 except ValueError:
                     continue
-                model_index = exec_order.index(model_path)
+
+                # check this
+                try:
+                    model_index = exec_order.index(model_path)
+                except ValueError:
+                    continue
 
                 if dep_index > model_index:
                     exec_order.pop(dep_index)
@@ -406,5 +519,5 @@ class Database:
 
 
 @pytest.fixture
-def database(db) -> Generator[Type[Database], None, None]:
-    yield Database
+def database(db) -> Generator[Database, None, None]:
+    yield Database()

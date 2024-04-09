@@ -2,7 +2,6 @@ from django.core.management.base import BaseCommand
 
 from breathecode.payments.models import Service, ServiceTranslation
 
-# GROUP = {'codename': 'CLASSROOM'}
 GROUP = {'codename': 'CLASSROOM'}
 
 SERVICES = [

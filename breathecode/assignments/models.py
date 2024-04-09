@@ -126,7 +126,7 @@ class Task(models.Model):
         if not creating and self.task_status != self._current_task_status:
             signals.assignment_status_updated.send(instance=self, sender=self.__class__)
 
-        if self.revision_status != self._current_revision_status:
+        if not creating and self.revision_status != self._current_revision_status:
             signals.revision_status_updated.send(instance=self, sender=self.__class__)
 
         # only validate this on creation
