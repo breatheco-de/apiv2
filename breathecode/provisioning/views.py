@@ -108,7 +108,7 @@ def redirect_new_container_public(request):
         if v not in urls:
             return render_message(request, f'Invalid provisioning vendor: {v}')
 
-        buttons.append({'label': f'Open in {v.capitalize()}', 'url': (urls[v] + repo)})
+        buttons.append({'label': f'Open in {v.capitalize()}', 'url': (urls[v] + repo), 'icon': f'/static/img/{v}.svg'})
 
     data = {
         # 'title': item.academy.name,

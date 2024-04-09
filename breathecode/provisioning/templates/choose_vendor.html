@@ -5,137 +5,63 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM"
         crossorigin="anonymous">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
 <style>
-    .invoice-box {
-        max-width: 800px;
-        margin: auto;
-        padding: 30px;
-        border: 1px solid #eee;
-        box-shadow: 0 0 10px rgba(0, 0, 0, .15);
-        font-size: 16px;
-        line-height: 24px;
-        font-family: 'Helvetica Neue', 'Helvetica', Helvetica, Arial, sans-serif;
-        color: #555;
+    body{ text-align: left; letter-spacing: 0.05em;
+        font-family: "Lato", sans-serif;
+        font-weight: 400;
+        font-style: normal;
     }
-
-    .invoice-box table {
-        width: 100%;
-        line-height: inherit;
-        text-align: left;
+    h1, h2, p{ text-align: left; }
+    img{
+        max-width: 80px !important;
     }
-
-    .invoice-box table td {
-        padding: 5px;
-        vertical-align: top;
+    .center-box{
+        margin-top: 50vh; margin-left: 50vw; transform: translate(-50%, -100%); position: absolute;
+        background: #FFFFFF; border: 1px solid #BDBDBD; padding: 5px 10px 0px 10px; border-radius: 5px;
     }
-
-    .invoice-box table tr td:nth-child(5) {
-        text-align: right;
-    }
-
-    .invoice-box table tr.top table td {
-        padding-bottom: 10px;
-    }
-
-    .invoice-box table tr.top table td.title {
-        font-size: 45px;
-        line-height: 45px;
-        color: #333;
-    }
-
-    .invoice-box table tr.information table td {
-        padding-bottom: 10px;
-    }
-
-    .invoice-box table tr.heading td {
-        background: #eee;
-        border-bottom: 1px solid #ddd;
-        font-weight: bold;
-    }
-
-    .invoice-box table tr.details td {
-        padding-bottom: 20px;
-    }
-
-    .invoice-box table tr.item td {
-        border-bottom: 1px solid #eee;
-    }
-
-    .invoice-box table tr.item.last td {
-        border-bottom: none;
-    }
-
-    .invoice-box table tr.total td:nth-child(5) {
-        border-top: 2px solid #eee;
-        font-weight: bold;
-    }
-
-    .price {
-        text-align: right;
-    }
-
-    @media only screen and (max-width: 600px) {
-        .invoice-box table tr.top table td {
-            width: 100%;
-            display: block;
-            text-align: center;
-        }
-
-        .invoice-box table tr.information table td {
-            width: 100%;
-            display: block;
-            text-align: center;
-        }
-    }
-
-    /** RTL **/
-    .rtl {
-        direction: rtl;
-        font-family: Tahoma, 'Helvetica Neue', 'Helvetica', Helvetica, Arial, sans-serif;
-    }
-
-
-    .rtl table {
-        text-align: right;
-    }
-
-    .rtl table tr td:nth-child(5) {
-        text-align: right;
-    }
-
-    .capitalize {
-        text-transform: uppercase;
-    }
-
-    .PENDING {
-        color: rgb(153, 0, 0);
-    }
-
-    .READY_TO_PAY {
-        color: rgb(0, 100, 50);
-    }
-
-    .alert td {
-        width: 100%;
-    }
-
+    .warning{ background-color: rgb(208, 238, 255);}
+    a{ display: inline; }
+    .emptiness{ height: 50vh; }
+    tr td p{text-align: center;}
+    .text-left{ text-align: left !important;}
 </style>
 </head>
 
 <body>
-        {% if buttons %}
-            {% for button in buttons %}
-                <button class="btn btn-primary mx-auto" >
-                    <a class="page-link" href="{{ button.url }}">{{ button.label }}</a>
-                </button>
-            {% endfor %}
-        {% else %}
-        <p>No buttons available.</p>
-        {% endif %}
 
+    <div class="col-12 col-sm-8 center-box">
+        <div class="row">
+            <div class="col-12 col-sm-6">
+                <h1>No configuration.</h1>
+                <h2>Straight to coding learning instead!</h2>
+                <p class="mt-1 text-left">Now, you can instantly open this project on VSCode, with no installations and instant feedback from Rigobot (our internally developed AI). Choose one of the following vendors:</p>
+            </div>
+            <div class="col-12 col-sm-6 d-flex align-items-center">
+                <div class="mx-auto">
+                    {% if buttons %}
+                    {% for button in buttons %}
+                    <button class="btn btn-dark mx-auto d-block mb-2 d-flex align-items-center" style="font-size: 18px; font-weight: 800; width: 240px;" >
+                        <img src="{{ button.icon }}" style="margin-right: 5px;" />
+                        <a class="page-link" href="{{ button.url }}">{{ button.label }}</a>
+                    </button>
+                    {% endfor %}
+                    {% else %}
+                    <p>No buttons available.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="row p-2 warning mt-2">
+            <div class="col-12">Setup and configuration are big barriers to learning coding-related skills; <br />That's why we developed the <a target="_blank" href="https://4geeks.com/provisioning">4Geeks Provisioning Bridge</a> and <a targe="_blank" href="https://www.learnpack.co">LearnPack</a>.</div>
+        </div>
+    </div>
+    <div class="emptiness"></div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
 
 </body>
