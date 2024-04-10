@@ -1626,10 +1626,14 @@ def pick_password(request, token):
                     if 'heading' not in obj:
                         obj['heading'] = invite.academy.name
 
-                return render(request, 'message.html', {
-                    'MESSAGE': 'You password has been reset successfully, you can close this window.',
-                    **obj
-                })
+                return render(
+                    request, 'message.html', {
+                        'MESSAGE': 'You password has been successfully set.',
+                        'BUTTON': 'Continue to sign in',
+                        'BUTTON_TARGET': '_self',
+                        'LINK': os.getenv('APP_URL', 'https://4geeks.com') + '/login',
+                        **obj
+                    })
 
     return render(request, 'form.html', {'form': form})
 
