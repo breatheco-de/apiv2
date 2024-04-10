@@ -514,7 +514,7 @@ def clean_h1s(asset: Asset):
     if len(findings) > 0:
         replaced = content[first_line_end:].strip()
         if frontmatter != '':
-            replaced = f'{frontmatter}\n{replaced}'
+            replaced = f'{frontmatter}\n\n{replaced}'
         asset.set_readme(replaced)
 
     return asset
