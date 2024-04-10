@@ -1305,6 +1305,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                                       silent=True)
 
         self.user = user
+        self.email = data['email']
         self.plan = plan
         self.course = course
 
@@ -1457,6 +1458,10 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         if obj.status != 'ACCEPTED':
             return None
+
+        # if should be created within the signal
+        if not self.user:
+            self.user = User.objects.filter(email=self.email).first()
 
         if not self.user:
             self.user = User(email=obj.email,
