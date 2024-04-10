@@ -62,6 +62,17 @@ md_no_h1 = """<p>
   </a>
 </p>"""
 
+md_with_jumplines = """
+
+
+
+# Hello World with React boilerplate
+<p>
+  <a href="https://gitpod.io#https://github.com/4GeeksAcademy/react-hello.git"><img src="https://raw.githubusercontent.com/4GeeksAcademy/react-hello/master/open-in-gitpod.svg?sanitize=true" />
+  </a>
+</p>
+"""
+
 
 def test__with_frontmatter(bc: Breathecode):
     model = bc.database.create(
@@ -115,6 +126,21 @@ def test__without_frontmatter_without_h1(bc: Breathecode):
             'https://github.com/breatheco-de/content/blob/master/src/content/lesson/how-to-networkt-yourself-into-a-software-development-job.es.md',
             'readme_raw': Asset.encode(md_no_h1),
             'readme': Asset.encode(md_no_h1)
+        })
+
+    asset = clean_h1s(model['asset'])
+    readme = asset.get_readme()
+
+    assert readme['decoded'] == md_no_h1
+
+
+def test__without_frontmatter_without_h1_many_jumplines(bc: Breathecode):
+    model = bc.database.create(
+        asset={
+            'readme_url':
+            'https://github.com/breatheco-de/content/blob/master/src/content/lesson/how-to-networkt-yourself-into-a-software-development-job.es.md',
+            'readme_raw': Asset.encode(md_with_jumplines),
+            'readme': Asset.encode(md_with_jumplines)
         })
 
     asset = clean_h1s(model['asset'])
