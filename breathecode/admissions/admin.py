@@ -250,7 +250,7 @@ def link_randomly_relations_to_cohorts(modeladmin, request, queryset):
 class CohortAdmin(admin.ModelAdmin):
     form = CohortForm
     search_fields = ['slug', 'name', 'academy__city__name']
-    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'schedule')
+    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'schedule', 'academy')
     list_filter = ['stage', 'academy__slug', 'schedule__name', 'syllabus_version__version']
 
     if os.getenv('ENV') == 'development':
