@@ -71,7 +71,6 @@ def signals_map():
     ]
 
     for module_path in signal_files:
-        print(module_path)
         module = importlib.import_module(module_path)
         signals = [
             x for x in dir(module)
