@@ -158,5 +158,5 @@ class LearnPackWebhookAdmin(admin.ModelAdmin):
             return ''
 
         return format_html(
-            f"<div><span class='badge {from_status(obj.status)}'>{obj.status}</span></div><small>{obj.status_text}</small>"
+            f"<div><span class='badge'>{obj.status}</span></div><small>{obj.status_text}</small>"
         )
