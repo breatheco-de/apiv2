@@ -1,8 +1,8 @@
 {% extends "form_base.html" %}
 {% block content %}
-<h1 class="text-center">{{ heading }}</h1>
-<p class="alert alert-light text-center">{{ intro }}</p>
-<form method="post" class="container">
+<h1 class="text-center">{{ form.meta.heading }}</h1>
+<p class="alert alert-light text-center">{{ form.meta.intro }}</p>
+<form method="post" class="container rounded bg-light" style="padding: 20px;">
     {% if messages %}
     {% for message in messages %}
     <div class="alert {{ message.tags }}" role="alert">
@@ -13,11 +13,12 @@
     {% csrf_token %}
     {{ form }}
 
-    {% if not disabled %}
-    <button class="btn btn-primary" type="submit">{{btn_lable|default:"SEND" }}</button>
-    {% else %}
-    <button class="btn btn-secondary" disabled="disabled" type="submit">{{btn_lable|default:"SEND" }}</button>
-    {% endif %}
+    <button
+        class="btn {% if not disabled %}btn-primary{% else %}btn-secondary{% endif %}"
+        {% if disabled %}disabled="disabled"{% endif %}
+        type="submit">
+        {% if form.meta.btn_label %}{{ form.meta.btn_label }}{% elif btn_label %}{{ btn_label }}{% else %}SEND{% endif %}
+    </button>
 
 </form>
 {% endblock %}

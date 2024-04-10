@@ -1524,7 +1524,7 @@ def reset_password_view(request):
         _dict = request.GET.copy()
         _dict['callback'] = request.GET.get('callback', '')
         form = ResetPasswordForm(_dict)
-    return render(request, 'form.html', {'form': form})
+        return render(request, 'form.html', {'form': form})
 
 
 def pick_password(request, token):
@@ -1715,7 +1715,7 @@ def render_invite(request, token, member_id=None):
             academy = invite.academy
 
         return render_message(request,
-                              'Invitation not found with this token or it was already accepted' + callback_msg,
+                              'Invitation not found or it was already accepted' + callback_msg,
                               academy=academy)
 
     if request.method == 'GET' and request.META.get('CONTENT_TYPE') == 'application/json':

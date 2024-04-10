@@ -22,6 +22,13 @@ class ResetPasswordForm(forms.Form):
         super(forms.Form, self).__init__(params, *args, **kwargs)
         self.fields['callback'].widget.attrs.update({'initial': params.get('callback')})
 
+        self.meta = {
+            'heading': 'Forgot password',
+            'intro':
+            'Fill out your email and we will send a password reset link if we find your email in our database.',
+            'btn_label': 'Get password reset link',
+        }
+
 
 class LoginForm(forms.Form):
     url = forms.CharField(required=False, widget=forms.HiddenInput())
@@ -45,13 +52,14 @@ class PickPasswordForm(forms.Form):
     callback = forms.CharField(required=False, widget=forms.HiddenInput())
     password1 = forms.CharField(
         min_length=8,
+        label='New password',
         widget=forms.PasswordInput(attrs={
             'type': 'password',
-            'label': 'hello',
             'class': 'form-control',
         }),
     )
     password2 = forms.CharField(min_length=8,
+                                label='Repeat your new password',
                                 widget=forms.PasswordInput(attrs={
                                     'type': 'password',
                                     'class': 'form-control',
@@ -61,6 +69,12 @@ class PickPasswordForm(forms.Form):
         super(forms.Form, self).__init__(params, *args, **kwargs)
         self.fields['token'].widget.attrs.update({'initial': params.get('token')})
         self.fields['callback'].widget.attrs.update({'initial': params.get('callback')})
+
+        self.meta = {
+            'heading': 'Choose a password for your account',
+            'intro': 'Fill out both of the password fields with the same value',
+            'btn_label': 'Set my password',
+        }
 
 
 class InviteForm(forms.Form):
