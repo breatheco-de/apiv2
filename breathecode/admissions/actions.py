@@ -313,10 +313,6 @@ def is_no_saas_student_up_to_date_in_any_cohort(user: User,
             extra).exclude(finantial_status='LATE').exists():
         return True
 
-    extra = {}
-    if cohort:
-        extra['cohort'] = cohort
-
     if CohortUser.objects.filter(no_available_as_saas,
                                  user=user,
                                  finantial_status='LATE',

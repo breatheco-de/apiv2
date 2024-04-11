@@ -2784,6 +2784,7 @@ def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: fx
         token = 1
 
         model = bc.database.create(mentor_profile=mentor_profile,
+                                   academy=base.academy,
                                    mentorship_session=mentorship_session,
                                    user=user,
                                    token=token,
