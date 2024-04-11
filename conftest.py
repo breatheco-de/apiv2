@@ -1,5 +1,5 @@
 import os
-from typing import Any, Generator
+from typing import Generator
 from unittest.mock import MagicMock, patch
 
 import pytest

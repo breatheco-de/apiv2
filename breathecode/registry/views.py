@@ -33,25 +33,31 @@ from .actions import (
     scan_asset_originality,
     test_asset,
 )
-from .caches import (
-    AssetCache,
-    AssetCommentCache,
-    CategoryCache,
-    ContentVariableCache,
-    KeywordCache,
-    TechnologyCache,
-    AssetAliasCache,
+from .caches import AssetCache, AssetCommentCache, CategoryCache, ContentVariableCache, KeywordCache, TechnologyCache
+from .models import (
+    Asset,
+    AssetAlias,
+    AssetCategory,
+    AssetComment,
+    AssetErrorLog,
+    AssetImage,
+    AssetKeyword,
+    AssetTechnology,
+    ContentVariable,
+    KeywordCluster,
+    OriginalityScan,
+    SEOReport,
 )
-from .models import (Asset, AssetAlias, AssetCategory, AssetComment, AssetErrorLog, AssetKeyword, AssetTechnology,
-                     ContentVariable, KeywordCluster, OriginalityScan, SEOReport, AssetImage)
 from .serializers import (
     AcademyAssetSerializer,
     AcademyCommentSerializer,
+    AssetAliasSerializer,
     AssetAndTechnologySerializer,
     AssetBigAndTechnologyPublishedSerializer,
     AssetBigSerializer,
     AssetBigTechnologySerializer,
     AssetCategorySerializer,
+    AssetImageSmallSerializer,
     AssetKeywordBigSerializer,
     AssetKeywordSerializer,
     AssetMidSerializer,
@@ -73,8 +79,6 @@ from .serializers import (
     SEOReportSerializer,
     TechnologyPUTSerializer,
     VariableSmallSerializer,
-    AssetImageSmallSerializer,
-    AssetAliasSerializer,
 )
 from .tasks import async_pull_from_github
 
@@ -1222,7 +1226,7 @@ class AcademyAssetAliasView(APIView, GenerateLookupsMixin):
                                 es='No se ha encontrado el alias {alias_slug} para esta academia',
                                 slug='not-found'))
 
-            serializer = AssetAliasSerializer(items)
+            serializer = AssetAliasSerializer(item, many=False)
             return handler.response(serializer.data)
 
         items = AssetAlias.objects.filter(asset__academy__id=academy_id)

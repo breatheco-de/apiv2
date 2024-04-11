@@ -1,7 +1,10 @@
-import requests, logging
+import logging
+
+import requests
 from bs4 import BeautifulSoup
-from breathecode.services.github import Github, GithubAuthException
+
 from breathecode.authenticate.models import CredentialsGithub
+from breathecode.services.github import Github, GithubAuthException
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +97,7 @@ class AssetValidator():
             try:
                 if not gb.file_exists(self.asset.readme_url):
                     raise AssetException('Readme URL points to a missing file', severity='ERROR')
-            except GithubAuthException as e:
+            except GithubAuthException:
                 raise AssetException('Cannot connect to github to validate readme url, please fix owner or credentials',
                                      severity='ERROR')
             except Exception as e:

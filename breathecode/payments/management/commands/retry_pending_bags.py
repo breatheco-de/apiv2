@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from ... import tasks
-from ...models import Bag, Invoice, PlanFinancing, ServiceStockScheduler, Subscription
+from ...models import Bag, Invoice
 
 
 # renew the credits every 1 hours
