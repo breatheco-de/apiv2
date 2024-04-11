@@ -1,4 +1,6 @@
 import logging
+
+from breathecode.admissions.actions import is_no_saas_student_up_to_date_in_any_cohort
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import User
 from breathecode.mentorship.models import MentorProfile, MentorshipService
@@ -43,6 +45,13 @@ def mentorship_service_by_url_param(context: PermissionContextType, args: tuple,
 
     # avoid do more stuff if it's a consumption session
     if context['is_consumption_session']:
+        return (context, args, kwargs)
+
+    context['request']
+
+    if is_no_saas_student_up_to_date_in_any_cohort(context['request'].user, academy=mentor_profile.academy) is False:
+        context['consumables'] = Consumable.objects.none()
+        context['will_consume'] = True
         return (context, args, kwargs)
 
     context['consumables'] = context['consumables'].filter(

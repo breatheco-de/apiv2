@@ -1,10 +1,12 @@
 """
 Test cases for /academy/:id/member/:id
 """
+import os
 import random
 from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
+import pytest
 import timeago
 from django.core.handlers.wsgi import WSGIRequest
 from django.template import loader
@@ -13,9 +15,11 @@ from django.urls.base import reverse_lazy
 from django.utils import timezone
 from rest_framework import status
 
+from bc.rest_framework.pytest import fixtures as fx
 from breathecode.mentorship.exceptions import ExtendSessionException
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.payments import tasks
+from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 from breathecode.tests.mocks.requests import apply_requests_request_mock
 
 from ..mixins import MentorshipTestCase
@@ -25,6 +29,13 @@ URL = 'https://netscape.bankruptcy.story'
 ROOM_NAME = 'carlos-two'
 ROOM_URL = ''
 API_KEY = random.randint(1, 1000000000)
+
+
+@pytest.fixture(autouse=True)
+def setup(db, fake):
+    os.environ['APP_URL'] = fake.url()
+
+    yield
 
 
 def format_consumable(data={}):
@@ -78,6 +89,13 @@ def apply_get_env(configuration={}):
         return configuration.get(key, value)
 
     return get_env
+
+
+def render_message(message, data={}):
+    request = None
+    context = {'MESSAGE': message, 'BUTTON': None, 'BUTTON_TARGET': '_blank', 'LINK': None, **data}
+
+    return loader.render_to_string('message.html', context, request)
 
 
 def get_empty_mentorship_session_queryset(*args, **kwargs):
@@ -2564,3 +2582,264 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 # teardown
                 self.bc.database.delete('mentorship.MentorProfile')
                 self.bc.database.delete('auth.Permission')
+
+
+# Given: A no SAAS student who has paid
+# When: auth
+# Then: response 200
+@pytest.mark.parametrize('cohort_user', [
+    {
+        'finantial_status': 'FULLY_PAID',
+        'educational_status': 'ACTIVE',
+    },
+    {
+        'finantial_status': 'UP_TO_DATE',
+        'educational_status': 'ACTIVE',
+    },
+])
+@pytest.mark.parametrize('academy, cohort', [
+    (
+        {
+            'available_as_saas': True
+        },
+        {
+            'available_as_saas': False
+        },
+    ),
+    (
+        {
+            'available_as_saas': False
+        },
+        {
+            'available_as_saas': None
+        },
+    ),
+])
+@patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
+@patch('os.getenv', MagicMock(side_effect=apply_get_env({
+    'DAILY_API_URL': URL,
+    'DAILY_API_KEY': API_KEY,
+})))
+@patch('requests.request',
+       apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
+           'name': ROOM_NAME,
+           'url': ROOM_URL,
+       })]))
+@patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+@patch('breathecode.mentorship.actions.get_pending_sessions_or_create',
+       MagicMock(side_effect=get_empty_mentorship_session_queryset))
+def test__post__auth__no_saas__finantial_status_no_late(bc: Breathecode, client: fx.Client, academy, cohort,
+                                                        cohort_user):
+
+    mentor_profile_cases = [{
+        'status': x,
+        'online_meeting_url': bc.fake.url(),
+        'booking_url': bc.fake.url(),
+    } for x in ['ACTIVE', 'UNLISTED']]
+
+    id = 0
+    for mentor_profile in mentor_profile_cases:
+        id += 1
+
+        user = {'first_name': '', 'last_name': ''}
+        permission = {'codename': 'join_mentorship'}
+        base = bc.database.create(user=user,
+                                  token=1,
+                                  group=1,
+                                  permission=permission,
+                                  academy=academy,
+                                  cohort=cohort,
+                                  cohort_user=cohort_user)
+
+        ends_at = UTC_NOW - timedelta(seconds=3600 / 2 + 1)
+
+        mentorship_session_base = {'mentee_id': base.user.id, 'ends_at': ends_at}
+        mentorship_session = {
+            **mentorship_session_base,
+            'allow_mentee_to_extend': True,
+        }
+        token = 1
+
+        model = bc.database.create(mentor_profile=mentor_profile,
+                                   mentorship_session=mentorship_session,
+                                   user=user,
+                                   token=token,
+                                   mentorship_service=1,
+                                   group=1,
+                                   permission=base.permission)
+
+        model.mentorship_session.mentee = None
+        model.mentorship_session.save()
+
+        token = base.token
+
+        querystring = bc.format.to_querystring({
+            'token': token.key,
+            'extend': 'true',
+            'mentee': base.user.id,
+            'session': model.mentorship_session.id,
+        })
+        url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
+                           kwargs={
+                               'mentor_slug': model.mentor_profile.slug,
+                               'service_slug': model.mentorship_service.slug
+                           }) + f'?{querystring}'
+        response = client.get(url)
+
+        content = bc.format.from_bytes(response.content)
+        url = (f'/mentor/meet/{model.mentor_profile.slug}?token={token.key}&extend=true&'
+               f'mentee={base.user.id}&session={model.mentorship_session.id}')
+        expected = ''
+
+        # dump error in external files
+        if content != expected:
+            with open('content.html', 'w') as f:
+                f.write(content)
+
+            with open('expected.html', 'w') as f:
+                f.write(expected)
+
+        assert content == expected
+        expired_at = timeago.format(model.mentorship_session.ends_at, UTC_NOW)
+        minutes = round(((model.mentorship_session.service.duration.total_seconds() / 3600) * 60) / 2)
+        message = (f'You have a session that expired {expired_at}. Only sessions with less than '
+                   f'{minutes}min from expiration can be extended (if allowed by the academy)').replace(' ', '%20')
+        assert response.url == f'/mentor/session/{model.mentorship_session.id}?token={token.key}&message={message}'
+        assert response.status_code, status.HTTP_302_FOUND
+        assert bc.database.list_of('mentorship.MentorProfile') == [
+            bc.format.to_dict(model.mentor_profile),
+        ]
+        assert bc.database.list_of('payments.Consumable') == []
+        assert bc.database.list_of('payments.ConsumptionSession') == []
+
+        # teardown
+        bc.database.delete('mentorship.MentorProfile')
+        bc.database.delete('auth.Permission')
+
+
+# Given: A no SAAS student who hasn't paid
+# When: auth
+# Then: response 402
+@pytest.mark.parametrize('academy, cohort', [
+    (
+        {
+            'available_as_saas': True
+        },
+        {
+            'available_as_saas': False
+        },
+    ),
+    (
+        {
+            'available_as_saas': False
+        },
+        {
+            'available_as_saas': None
+        },
+    ),
+])
+@patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
+@patch('os.getenv', MagicMock(side_effect=apply_get_env({
+    'DAILY_API_URL': URL,
+    'DAILY_API_KEY': API_KEY,
+})))
+@patch('requests.request',
+       apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
+           'name': ROOM_NAME,
+           'url': ROOM_URL,
+       })]))
+@patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+@patch('breathecode.mentorship.actions.get_pending_sessions_or_create',
+       MagicMock(side_effect=get_empty_mentorship_session_queryset))
+def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: fx.Client, academy, cohort):
+
+    mentor_profile_cases = [{
+        'status': x,
+        'online_meeting_url': bc.fake.url(),
+        'booking_url': bc.fake.url(),
+    } for x in ['ACTIVE', 'UNLISTED']]
+
+    id = 0
+    for mentor_profile in mentor_profile_cases:
+        id += 1
+
+        user = {'first_name': '', 'last_name': ''}
+        permission = {'codename': 'join_mentorship'}
+        cohort_user = {'finantial_status': 'LATE', 'educational_status': 'ACTIVE'}
+        base = bc.database.create(user=user,
+                                  token=1,
+                                  group=1,
+                                  permission=permission,
+                                  academy=academy,
+                                  cohort=cohort,
+                                  cohort_user=cohort_user)
+
+        ends_at = UTC_NOW - timedelta(seconds=3600 / 2 + 1)
+
+        mentorship_session_base = {'mentee_id': base.user.id, 'ends_at': ends_at}
+        mentorship_session = {
+            **mentorship_session_base,
+            'allow_mentee_to_extend': True,
+        }
+        token = 1
+
+        model = bc.database.create(mentor_profile=mentor_profile,
+                                   mentorship_session=mentorship_session,
+                                   user=user,
+                                   token=token,
+                                   mentorship_service=1,
+                                   group=1,
+                                   permission=base.permission)
+
+        model.mentorship_session.mentee = None
+        model.mentorship_session.save()
+
+        token = base.token
+
+        querystring = bc.format.to_querystring({
+            'token': token.key,
+            'extend': 'true',
+            'mentee': base.user.id,
+            'session': model.mentorship_session.id,
+        })
+        url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
+                           kwargs={
+                               'mentor_slug': model.mentor_profile.slug,
+                               'service_slug': model.mentorship_service.slug
+                           }) + f'?{querystring}'
+        response = client.get(url)
+
+        content = bc.format.from_bytes(response.content)
+        url = (f'/mentor/meet/{model.mentor_profile.slug}?token={token.key}&extend=true&'
+               f'mentee={base.user.id}&session={model.mentorship_session.id}')
+        expected = render_message('You must get a plan in order to access this service',
+                                  data={
+                                      'GO_BACK': 'Go back to Dashboard',
+                                      'URL_BACK': 'https://4geeks.com/choose-program',
+                                      'BUTTON': 'Get a plan',
+                                      'LINK': f'https://4geeks.com/checkout?plan=basic&token={base.token.key}',
+                                  })
+
+        # dump error in external files
+        if content != expected:
+            with open('content.html', 'w') as f:
+                f.write(content)
+
+            with open('expected.html', 'w') as f:
+                f.write(expected)
+
+        assert content == expected
+        expired_at = timeago.format(model.mentorship_session.ends_at, UTC_NOW)
+        minutes = round(((model.mentorship_session.service.duration.total_seconds() / 3600) * 60) / 2)
+        message = (f'You have a session that expired {expired_at}. Only sessions with less than '
+                   f'{minutes}min from expiration can be extended (if allowed by the academy)').replace(' ', '%20')
+        assert response.status_code, status.HTTP_402_PAYMENT_REQUIRED
+        assert bc.database.list_of('mentorship.MentorProfile') == [
+            bc.format.to_dict(model.mentor_profile),
+        ]
+        assert bc.database.list_of('payments.Consumable') == []
+        assert bc.database.list_of('payments.ConsumptionSession') == []
+
+        # teardown
+        bc.database.delete('mentorship.MentorProfile')
+        bc.database.delete('auth.Permission')

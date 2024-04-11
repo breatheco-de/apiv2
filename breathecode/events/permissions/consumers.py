@@ -1,13 +1,17 @@
 import logging
+
 from django.db.models import Q
+from django.utils import timezone
+
+from breathecode.admissions.actions import is_no_saas_student_up_to_date_in_any_cohort
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.events.actions import get_my_event_types
 from breathecode.events.models import Event, LiveClass
+from breathecode.payments.models import Consumable
 from breathecode.utils.decorators import PermissionContextType
 from breathecode.utils.i18n import translation
 from breathecode.utils.validation_exception import ValidationException
-from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +53,11 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
         return (context, args, kwargs)
 
     event_type = event.event_type
+
+    if is_no_saas_student_up_to_date_in_any_cohort(context['request'].user, academy=event.academy) is False:
+        context['consumables'] = Consumable.objects.none()
+        context['will_consume'] = True
+        return (context, args, kwargs)
 
     context['consumables'] = context['consumables'].filter(event_type_set__event_types=event_type)
 
@@ -109,6 +118,13 @@ def live_class_by_url_param(context: PermissionContextType, args: tuple, kwargs:
     del kwargs['hash']
 
     if context['is_consumption_session']:
+        return (context, args, kwargs)
+
+    # CohortSet requires that Academy be available as saas, this line should be uncovered
+    if is_no_saas_student_up_to_date_in_any_cohort(context['request'].user,
+                                                   cohort=live_class.cohort_time_slot.cohort) is False:
+        context['consumables'] = Consumable.objects.none()
+        context['will_consume'] = True
         return (context, args, kwargs)
 
     context['consumables'] = context['consumables'].filter(
