@@ -9,7 +9,7 @@ from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import ProfileAcademy, Token
 from breathecode.utils import ValidationException, serpy
 
-from .models import FinalProject, Task, UserAttachment
+from .models import FinalProject, Task, UserAttachment, AssignmentTelemetry
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +49,16 @@ class TaskGETSerializer(serpy.Serializer):
     user = UserSmallSerializer()
     opened_at = serpy.Field()
     delivered_at = serpy.Field()
+    assignment_telemetry = serpy.MethodField()
 
     created_at = serpy.Field()
     updated_at = serpy.Field()
+
+    def get_assignment_telemetry(self, obj):
+        telemetry = AssignmentTelemetry.objects.filter(user=obj.user, asset_slug=obj.associated_slug).first()
+        if telemetry is not None:
+            return telemetry.telemetry
+        return None
 
 
 class TaskGETSmallSerializer(serpy.Serializer):
