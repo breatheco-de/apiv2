@@ -1,7 +1,7 @@
-"""
-Requests mock
-"""
+"""Requests mock."""
+
 from unittest.mock import Mock
+
 from .response_mock import ResponseMock
 
 
@@ -10,7 +10,8 @@ def request_mock(endpoints=None):
         endpoints = []
 
     def base(url: str, *args, **kwargs):
-        """Requests get mock"""
+        """Requests get mock."""
+
         if (url == 'GET' or url == 'POST' or url == 'PUT' or url == 'PATCH' or url == 'DELETE' or url == 'HEAD'
                 or url == 'REQUEST'):
             url = args[0]

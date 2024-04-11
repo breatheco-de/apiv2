@@ -1,13 +1,12 @@
 from functools import cache
 from typing import Any, Callable, Optional
 
-from breathecode.utils.api_view_extensions.extension_base import ExtensionBase
-
 from django.db.models import Q
-from breathecode.utils.i18n import translation
-
-from breathecode.utils.validation_exception import ValidationException
 from django.utils import dateparse
+
+from breathecode.utils.api_view_extensions.extension_base import ExtensionBase
+from breathecode.utils.i18n import translation
+from breathecode.utils.validation_exception import ValidationException
 
 __all__ = ['LookupExtension']
 
@@ -206,7 +205,7 @@ class CompileLookupField:
 @cache
 def compile_lookup(ids: tuple, slugs: tuple, ints: frozenset, strings: frozenset, datetimes: frozenset,
                    bools: frozenset) -> tuple[tuple, dict]:
-    """Compile the available lookup fields once"""
+    """Compile the available lookup fields once."""
 
     strings = dict(strings)
     lookup = {}
