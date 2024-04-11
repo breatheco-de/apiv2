@@ -25,6 +25,12 @@ from django.dispatch import Signal
 __all__ = ['signals', 'Signals', 'signals_map']
 
 
+def check_path(dir: str, pattern: str):
+    linux_path = dir.replace('\\', '/')
+    windows_path = dir.replace('/', '\\')
+    return linux_path not in dir and windows_path not in dir
+
+
 @pytest.fixture(scope='session')
 def signals_map():
     import os
@@ -61,7 +67,7 @@ def signals_map():
 
     signal_files = [
         '.'.join(x.replace(root_directory + separator, '').replace('.py', '').split(separator)) for x in signal_files
-        if '/bc/django/' not in x and '\\bc\\django\\' not in x
+        if check_path(dir=x, pattern='/bc/django/') and check_path(dir=x, pattern='.venv') and check_path(dir=x, pattern='.env')
     ]
 
     for module_path in signal_files:
