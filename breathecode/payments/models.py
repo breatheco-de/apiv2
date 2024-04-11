@@ -1290,7 +1290,7 @@ class Consumable(AbstractServiceItem):
         return cls.list(user=user, lang=lang, service=service, permission=permission, extra=extra).first()
 
     def clean(self) -> None:
-        resources = [self.event_type_set, self.mentorship_service_set, self.service_set]
+        resources = [self.event_type_set, self.mentorship_service_set, self.service_set, self.cohort_set]
 
         how_many_resources_are_set = len([r for r in resources if r])
         settings = get_user_settings(self.user.id)
@@ -1299,8 +1299,8 @@ class Consumable(AbstractServiceItem):
             raise forms.ValidationError(
                 translation(
                     settings.lang,
-                    en='A consumable can only be associated with one resource (excluding cohort set)',
-                    es='Un consumible solo se puede asociar con un recurso (excluyendo conjunto de cohortes)',
+                    en='A consumable can only be associated with one resource',
+                    es='Un consumible solo se puede asociar con un recurso',
                 ))
 
         if self.service_item is None:
