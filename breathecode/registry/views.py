@@ -19,9 +19,11 @@ from rest_framework.views import APIView
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.notify.actions import send_email_message
+from breathecode.registry.permissions.consumers import asset_by_slug
 from breathecode.services.seo import SEOAnalyzer
 from breathecode.utils import GenerateLookupsMixin, ValidationException, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from breathecode.utils.decorators.has_permission import has_permission
 from breathecode.utils.i18n import translation
 from breathecode.utils.views import render_message
 
@@ -1070,6 +1072,19 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
             async_pull_from_github.delay(instance.slug)
             return Response(AssetBigSerializer(instance).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class V2AcademyAssetView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+    extensions = APIViewExtensions(cache=AssetCache, sort='-published_at', paginate=True)
+
+    @capable_of('read_asset')
+    @has_permission('read-lesson', consumer=asset_by_slug)
+    def get(self, request, asset: Asset, academy_id: int):
+        serializer = AcademyAssetSerializer(asset)
+        return Response(serializer.data)
 
 
 class AssetImageView(APIView, GenerateLookupsMixin):

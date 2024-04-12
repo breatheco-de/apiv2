@@ -1,7 +1,9 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, call, patch
 from django.urls.base import reverse_lazy
 from django.utils import timezone
+
 from breathecode.tests.mixins.breathecode_mixin import Breathecode
 from breathecode.utils.api_view_extensions.extensions import lookup_extension
 

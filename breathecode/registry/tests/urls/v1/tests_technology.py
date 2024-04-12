@@ -1,17 +1,12 @@
 """
 Test /answer
 """
-from random import randint
 import random
-import string
-from unittest.mock import MagicMock, patch, call
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
 
-from breathecode.registry.actions import AssetThumbnailGenerator
-from breathecode.registry.caches import TechnologyCache
-from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
-from ..mixins import RegistryTestCase
+from ...mixins import RegistryTestCase
 
 
 def get_serializer(asset_technology, assets=[], asset_technologies=[]):
