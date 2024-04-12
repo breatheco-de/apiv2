@@ -50,9 +50,11 @@ def asset_title_was_updated(sender, instance, **kwargs):
     if instance.title is None or instance.title == '':
         return False
 
-    logger.debug('Creating asset screenshot because title was updated')
-    async_create_asset_thumbnail.delay(instance.slug)
-    return True
+    # taking thumbnail for the first time
+    if instance.preview is None or instance.preview == '':
+        logger.debug('Creating asset screenshot')
+        async_create_asset_thumbnail.delay(instance.slug)
+        return True
 
 
 @receiver(asset_readme_modified, sender=Asset)
