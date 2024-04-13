@@ -628,13 +628,20 @@ class CohortSerializerMixin(serializers.ModelSerializer):
 
             [syllabus_slug, syllabus_version_number] = strings
 
-            syllabus_version = SyllabusVersion.objects.filter(
-                Q(syllabus__private=False) | Q(syllabus__academy_owner__id=self.context['academy'].id),
-                syllabus__slug=syllabus_slug,
-                version=syllabus_version_number).first()
+            syllabus_version = None
+            if syllabus_version_number == 'latest':
+                syllabus_version = SyllabusVersion.objects.filter(
+                    Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
+                    Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
+                ).filter(status='PUBLISHED').order_by('-version').first()
+            else:
+                syllabus_version = SyllabusVersion.objects.filter(
+                    Q(syllabus__private=False) | Q(syllabus__academy_owner__id=self.context['academy'].id),
+                    syllabus__slug=syllabus_slug,
+                    version=syllabus_version_number).first()
 
             if not syllabus_version:
-                raise ValidationException('Syllabus doesn\'t exist', slug='syllabus-version-not-found')
+                raise ValidationException(f'Syllabus {syllabus_version} doesn\'t exist', slug='syllabus-version-not-found')
 
             if syllabus_version_number == '1':
                 raise ValidationException(
