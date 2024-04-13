@@ -42,6 +42,7 @@ def plan_db_item(plan, data={}):
         'event_type_set_id': plan.event_type_set.id if plan.event_type_set else None,
         'mentorship_service_set_id': plan.mentorship_service_set.id if plan.mentorship_service_set else None,
         'cohort_set_id': plan.cohort_set.id if plan.cohort_set else None,
+        'service_set_id': plan.service_set.id if plan.service_set else None,
         'currency_id': plan.currency.id,
         'slug': plan.slug,
         'status': plan.status,
