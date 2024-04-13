@@ -631,8 +631,8 @@ class CohortSerializerMixin(serializers.ModelSerializer):
             syllabus_version = None
             if syllabus_version_number == 'latest':
                 syllabus_version = SyllabusVersion.objects.filter(
-                    Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
-                    Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
+                    Q(syllabus__academy_owner__id=self.context['academy'].id) | Q(syllabus__private=False),
+                    syllabus__slug=syllabus_slug,
                 ).filter(status='PUBLISHED').order_by('-version').first()
             else:
                 syllabus_version = SyllabusVersion.objects.filter(
