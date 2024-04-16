@@ -51,6 +51,7 @@ def get_serializer(self, task, user):
         'task_status': task.task_status,
         'task_type': task.task_type,
         'title': task.title,
+        'assignment_telemetry': task.telemetry.telemetry if task.telemetry else None,
         'description': task.description,
         'opened_at': self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
         'delivered_at': self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
