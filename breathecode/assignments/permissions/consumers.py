@@ -17,7 +17,7 @@ def code_revision_service(context: PermissionContextType, args: tuple, kwargs: d
     if is_no_saas_student_up_to_date_in_any_cohort(context['request'].user) is False:
         raise PaymentException(
             translation(lang,
-                        en=f'You can\'t access this asset because you finantial status is not up to date',
+                        en=f'You can\'t access this asset because your finantial status is not up to date',
                         es=f'No puedes acceder a este recurso porque tu estado financiero no está al dia',
                         slug='cohort-user-status-later'))
 
