@@ -271,7 +271,11 @@ class PublicCohortView(APIView):
 
         syllabus_slug = request.GET.get('syllabus_slug', '')
         if syllabus_slug:
-            items = items.filter(syllabus_version__syllabus__slug=syllabus_slug)
+            items = items.filter(syllabus_version__syllabus__slug__in=syllabus_slug.split(','))
+
+        syllabus_slug_like = request.GET.get('syllabus_slug_like', '')
+        if syllabus_slug_like:
+            items = items.filter(syllabus_version__syllabus__slug__icontains=syllabus_slug_like)
 
         plan = request.GET.get('plan', '')
         if plan == 'true':
