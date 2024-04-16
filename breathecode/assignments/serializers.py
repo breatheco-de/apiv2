@@ -9,7 +9,7 @@ from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import ProfileAcademy, Token
 from breathecode.utils import ValidationException, serpy
 
-from .models import FinalProject, Task, UserAttachment, AssignmentTelemetry
+from .models import AssignmentTelemetry, FinalProject, Task, UserAttachment
 
 logger = logging.getLogger(__name__)
 

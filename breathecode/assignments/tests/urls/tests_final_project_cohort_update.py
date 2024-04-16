@@ -159,7 +159,7 @@ def test_no_github_members(bc: Breathecode, client: APIClient):
     response = client.put(url,
                           headers={'academy': 1},
                           data={
-                              'revision_status': 'APPROVED',
+                              'project_status': 'PENDING',
                               'members': [2],
                               'cohort': 1,
                           })

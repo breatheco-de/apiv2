@@ -960,7 +960,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
         json = response.json()
         expected = post_serializer({
-            'allow_billing': True,
+            'allow_billing': False,
             'service': {
                 'id': model.mentorship_service.id,
                 'name': model.mentorship_service.name,
@@ -983,7 +983,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
             mentorship_session_columns({
-                'allow_billing': True,
+                'allow_billing': False,
                 'service_id': 1,
             }),
         ])
@@ -1019,7 +1019,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
         json = response.json()
         expected = post_serializer({
-            'allow_billing': True,
+            'allow_billing': False,
             'service': {
                 'id': model.mentorship_service.id,
                 'name': model.mentorship_service.name,
@@ -1042,7 +1042,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
             mentorship_session_columns({
-                'allow_billing': True,
+                'allow_billing': False,
                 'service_id': 1,
             }),
         ])
@@ -1113,7 +1113,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
             json = response.json()
             expected = post_serializer({
-                'allow_billing': True,
+                'allow_billing': False,
                 'id': id,
                 'service': {
                     'id': model.mentorship_service.id,
@@ -1138,7 +1138,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
             self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
                 mentorship_session_columns({
-                    'allow_billing': True,
+                    'allow_billing': False,
                     'id': id,
                     'service_id': 1,
                     field: date,

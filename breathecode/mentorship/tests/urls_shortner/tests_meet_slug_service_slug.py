@@ -2596,6 +2596,14 @@ class AuthenticateTestSuite(MentorshipTestCase):
         'finantial_status': 'UP_TO_DATE',
         'educational_status': 'ACTIVE',
     },
+    {
+        'finantial_status': 'FULLY_PAID',
+        'educational_status': 'GRADUATED',
+    },
+    {
+        'finantial_status': 'UP_TO_DATE',
+        'educational_status': 'GRADUATED',
+    },
 ])
 @pytest.mark.parametrize('academy, cohort', [
     (
