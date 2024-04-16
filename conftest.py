@@ -16,7 +16,6 @@ os.environ['ENV'] = 'test'
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 
 pytest_plugins = (
-    'celery.contrib.pytest',
     'bc.newrelic.pytest',
     'bc.django.pytest',
     'bc.rest_framework.pytest',

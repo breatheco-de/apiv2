@@ -309,7 +309,7 @@ def is_no_saas_student_up_to_date_in_any_cohort(user: User,
         extra['cohort__academy'] = academy
 
     if cohort is None and CohortUser.objects.filter(
-            no_available_as_saas, user=user, educational_status='ACTIVE', **
+            no_available_as_saas, user=user, educational_status__in=['ACTIVE', 'GRADUATED'], **
             extra).exclude(finantial_status='LATE').exists():
         return True
 

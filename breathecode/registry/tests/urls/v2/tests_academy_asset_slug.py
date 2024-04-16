@@ -196,6 +196,14 @@ def test_with_asset(bc: Breathecode, client: APIClient):
         'finantial_status': 'UP_TO_DATE',
         'educational_status': 'ACTIVE',
     },
+    {
+        'finantial_status': 'FULLY_PAID',
+        'educational_status': 'GRADUATED',
+    },
+    {
+        'finantial_status': 'UP_TO_DATE',
+        'educational_status': 'GRADUATED',
+    },
 ])
 @pytest.mark.parametrize('academy, cohort', [
     (
@@ -283,7 +291,7 @@ def test_with_asset__no_saas__finantial_status_late(bc: Breathecode, client: API
 
     response = client.get(url, HTTP_ACADEMY=1)
     json = response.json()
-    expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
+    expected = {'detail': 'cohort-user-status-later', 'status_code': 402}
 
     assert json == expected
     assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED

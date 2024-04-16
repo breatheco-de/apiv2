@@ -7,6 +7,7 @@ from breathecode.mentorship.models import MentorProfile, MentorshipService
 from breathecode.payments.models import Consumable, ConsumptionSession
 from breathecode.utils.decorators import PermissionContextType
 from breathecode.utils.i18n import translation
+from breathecode.utils.payment_exception import PaymentException
 from breathecode.utils.validation_exception import ValidationException
 
 logger = logging.getLogger(__name__)
@@ -49,22 +50,22 @@ def mentorship_service_by_url_param(context: PermissionContextType, args: tuple,
 
     context['request']
 
-    if is_no_saas_student_up_to_date_in_any_cohort(context['request'].user, academy=mentor_profile.academy) is False:
-        context['consumables'] = Consumable.objects.none()
-        context['will_consume'] = True
-        return (context, args, kwargs)
-
-    context['consumables'] = context['consumables'].filter(
-        mentorship_service_set__mentorship_services=mentorship_service)
-
     is_saas = mentorship_service and mentorship_service.academy.available_as_saas
 
     # avoid call LaunchDarkly if mentorship_service is empty
     if mentor_profile.user.id != request.user.id and is_saas:
         context['will_consume'] = True
 
-    else:
-        context['will_consume'] = False
+    if context['will_consume'] is False and is_no_saas_student_up_to_date_in_any_cohort(
+            context['request'].user, academy=mentor_profile.academy) is False:
+        raise PaymentException(
+            translation(lang,
+                        en=f'You can\'t access this asset because you finantial status is not up to date',
+                        es=f'No puedes acceder a este recurso porque tu estado financiero no está al dia',
+                        slug='cohort-user-status-later'))
+
+    context['consumables'] = context['consumables'].filter(
+        mentorship_service_set__mentorship_services=mentorship_service)
 
     if context['will_consume']:
         context['time_of_life'] = mentorship_service.max_duration

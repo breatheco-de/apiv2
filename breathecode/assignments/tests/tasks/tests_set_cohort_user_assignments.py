@@ -53,7 +53,7 @@ class MediaTestSuite(AssignmentsTestCase):
     """
 
     def test__with_one_task(self):
-        model = self.bc.database.create(task=1)
+        model = self.bc.database.create(task=1, cohort=1)
 
         Logger.info.call_args_list = []
 

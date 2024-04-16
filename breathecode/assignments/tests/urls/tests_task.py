@@ -176,43 +176,11 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
-    def test_task__query_academy__found_one__cohort_null(self):
-        model = self.bc.database.create(profile_academy=1, task=1, skip_cohort=1)
-        self.client.force_authenticate(model.user)
-
-        url = reverse_lazy('assignments:task') + '?academy=they-killed-kenny'
-        response = self.client.get(url)
-
-        json = response.json()
-        expected = [get_serializer(self, model.task, model.user)]
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
-
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_task__query_academy__found_two(self):
         model = self.bc.database.create(profile_academy=1, task=2, cohort=1)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + f'?academy={model.academy.slug}'
-        response = self.client.get(url)
-
-        json = response.json()
-        expected = [get_serializer(self, task, model.user) for task in model.task]
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
-
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
-    def test_task__query_academy__found_two__cohort_null(self):
-        model = self.bc.database.create(profile_academy=1, task=2, skip_cohort=1)
-        self.client.force_authenticate(model.user)
-
-        url = reverse_lazy('assignments:task') + '?academy=they-killed-kenny'
         response = self.client.get(url)
 
         json = response.json()

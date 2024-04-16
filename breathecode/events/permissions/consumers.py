@@ -11,6 +11,7 @@ from breathecode.events.models import Event, LiveClass
 from breathecode.payments.models import Consumable
 from breathecode.utils.decorators import PermissionContextType
 from breathecode.utils.i18n import translation
+from breathecode.utils.payment_exception import PaymentException
 from breathecode.utils.validation_exception import ValidationException
 
 logger = logging.getLogger(__name__)
@@ -54,13 +55,6 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
 
     event_type = event.event_type
 
-    if is_no_saas_student_up_to_date_in_any_cohort(context['request'].user, academy=event.academy) is False:
-        context['consumables'] = Consumable.objects.none()
-        context['will_consume'] = True
-        return (context, args, kwargs)
-
-    context['consumables'] = context['consumables'].filter(event_type_set__event_types=event_type)
-
     is_host = event.host_user == request.user
     is_free_for_all = event.free_for_all
     is_free_for_bootcamps = is_free_for_all or ((event.free_for_bootcamps) or
@@ -73,6 +67,16 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
 
     if not is_host and not is_free_for_all and (not is_free_for_bootcamps or not user_with_available_as_saas_false):
         context['will_consume'] = True
+
+    if context['will_consume'] is False and is_no_saas_student_up_to_date_in_any_cohort(context['request'].user,
+                                                                                        academy=event.academy) is False:
+        raise PaymentException(
+            translation(lang,
+                        en=f'You can\'t access this asset because you finantial status is not up to date',
+                        es=f'No puedes acceder a este recurso porque tu estado financiero no está al dia',
+                        slug='cohort-user-status-later'))
+
+    context['consumables'] = context['consumables'].filter(event_type_set__event_types=event_type)
 
     utc_now = timezone.now()
     if event.ending_at < utc_now:
@@ -120,16 +124,6 @@ def live_class_by_url_param(context: PermissionContextType, args: tuple, kwargs:
     if context['is_consumption_session']:
         return (context, args, kwargs)
 
-    # CohortSet requires that Academy be available as saas, this line should be uncovered
-    if is_no_saas_student_up_to_date_in_any_cohort(context['request'].user,
-                                                   cohort=live_class.cohort_time_slot.cohort) is False:
-        context['consumables'] = Consumable.objects.none()
-        context['will_consume'] = True
-        return (context, args, kwargs)
-
-    context['consumables'] = context['consumables'].filter(
-        cohort_set__cohortsetcohort__cohort=live_class.cohort_time_slot.cohort)
-
     # avoid to be taken if the cohort is available as saas is not set
     cohort_available_as_saas = (live_class.cohort_time_slot.cohort.available_as_saas is not None
                                 and live_class.cohort_time_slot.cohort.available_as_saas)
@@ -141,6 +135,18 @@ def live_class_by_url_param(context: PermissionContextType, args: tuple, kwargs:
 
     if cohort_available_as_saas or academy_available_as_saas:
         context['will_consume'] = True
+
+    # CohortSet requires that Academy be available as saas, this line should be uncovered
+    if context['will_consume'] is False and is_no_saas_student_up_to_date_in_any_cohort(
+            context['request'].user, cohort=live_class.cohort_time_slot.cohort) is False:
+        raise PaymentException(
+            translation(lang,
+                        en=f'You can\'t access this asset because you finantial status is not up to date',
+                        es=f'No puedes acceder a este recurso porque tu estado financiero no está al dia',
+                        slug='cohort-user-status-later'))
+
+    context['consumables'] = context['consumables'].filter(
+        cohort_set__cohortsetcohort__cohort=live_class.cohort_time_slot.cohort)
 
     utc_now = timezone.now()
     if live_class.ending_at < utc_now:

@@ -541,7 +541,7 @@ def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: AP
             assert requests.post.call_args_list == []
 
     x = response.json()
-    expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
+    expected = {'detail': 'cohort-user-status-later', 'status_code': 402}
 
     assert x == expected
     assert response.status_code == 402
