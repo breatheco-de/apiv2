@@ -67,7 +67,6 @@ from .serializers import (
     FormEntrySerializer,
     FormEntrySmallSerializer,
     GetCourseSerializer,
-    GetCourseSmallSerializer,
     LeadgenAppSmallSerializer,
     PostFormEntrySerializer,
     PUTAutomationSerializer,

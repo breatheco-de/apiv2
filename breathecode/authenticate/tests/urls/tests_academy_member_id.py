@@ -910,7 +910,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'address': model.profile_academy.address,
             'first_name': model.profile_academy.first_name,
             'last_name': model.profile_academy.last_name,
-            'phone': '',
+            'phone': model.profile_academy.phone,
             'role': role,
             'user': model.user.id,
         }
@@ -918,10 +918,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
-            {
-                **self.bc.format.to_dict(model.profile_academy),
-                'phone': '',
-            },
+            self.bc.format.to_dict(model.profile_academy),
         ])
 
     @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
@@ -954,7 +951,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'address': model.profile_academy.address,
             'first_name': model.profile_academy.first_name,
             'last_name': model.profile_academy.last_name,
-            'phone': '',
+            'phone': model.profile_academy.phone,
             'role': role,
             'user': model.user.id,
         }
@@ -962,10 +959,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
-            {
-                **self.bc.format.to_dict(model.profile_academy),
-                'phone': '',
-            },
+            self.bc.format.to_dict(model.profile_academy),
         ])
 
     """
@@ -998,7 +992,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'address': model.profile_academy.address,
             'first_name': 'Lord',
             'last_name': 'Valdomero',
-            'phone': '',
+            'phone': model.profile_academy.phone,
             'role': role,
             'user': model.user.id,
         }
@@ -1008,7 +1002,6 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
             {
                 **self.bc.format.to_dict(model.profile_academy),
-                'phone': '',
                 'first_name': 'Lord',
                 'last_name': 'Valdomero',
             },

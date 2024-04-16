@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import random
 import re
-from typing import Any, Generator, Type, final
+from typing import Any, Generator, final
 
 import pytest
 from asgiref.sync import sync_to_async
@@ -29,8 +29,11 @@ __all__ = ['database', 'Database']
 _fake = Faker()
 
 
-def _remove_dinamics_fields(dict, fields=['_state', 'created_at', 'updated_at', '_password']):
+def _remove_dinamics_fields(dict, fields=None):
     """Remove dinamics fields from django models as dict"""
+    if fields is None:
+        fields = ['_state', 'created_at', 'updated_at', '_password']
+
     if not dict:
         return None
 
@@ -350,7 +353,7 @@ class Database:
         pending = {}
 
         # get descriptors
-        for model_alias, value in models.items():
+        for model_alias, _value in models.items():
             try:
                 path = name_map[model_alias]
 
@@ -404,7 +407,7 @@ class Database:
 
                 processed.add(model_descriptor['path'])
 
-                for related_field, field_type, field_attrs in model_descriptor['related_fields']:
+                for _related_field, _field_type, field_attrs in model_descriptor['related_fields']:
 
                     if field_attrs['path'] in processed:
                         continue
@@ -425,9 +428,9 @@ class Database:
                 break
 
         # sort dependencies
-        for model_path, (model_descriptor, value) in cache.items():
+        for model_path, (model_descriptor, _value) in cache.items():
 
-            for related_field, field_type, field_attrs in model_descriptor['related_fields']:
+            for _related_field, _field_type, field_attrs in model_descriptor['related_fields']:
                 dep_path = field_attrs['path']
                 to_reevaluate = []
 
@@ -453,7 +456,7 @@ class Database:
                     to_re_reevaluate = []
 
                     for x in to_reevaluate:
-                        for related_field, field_type, field_attrs in cache[x][0]['related_fields']:
+                        for _related_field, _field_type, field_attrs in cache[x][0]['related_fields']:
 
                             dep_path = field_attrs['path']
 
@@ -484,7 +487,7 @@ class Database:
 
             how_many, arguments = argument_parser(value)[0]
 
-            for related_field, field_type, field_attrs in model_descriptor['related_fields']:
+            for _related_field, field_type, field_attrs in model_descriptor['related_fields']:
                 if field_attrs['path'] in generated:
 
                     # no implemented yet

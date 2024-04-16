@@ -1,10 +1,8 @@
-"""
-Requests mock
-"""
+"""Requests mock."""
 
 
 class ResponseMock():
-    """Simutate Response to be used by mocks"""
+    """Simutate Response to be used by mocks."""
     status_code = None
     data = None
     content = None
@@ -18,10 +16,10 @@ class ResponseMock():
             self.data = data
 
     def json(self) -> dict:
-        """Convert Response to JSON"""
+        """Convert Response to JSON."""
         return self.data
 
 
 def get_mock(url: str, stream=False):
-    """Requests get mock"""
+    """Requests get mock."""
     return ResponseMock(data='ok', status_code=200)

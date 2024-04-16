@@ -1,10 +1,30 @@
 from django.urls import path
 
-from .views import (AcademyCohortSetCohortView, AcademyPlanView, AcademyServiceView, AcademyAcademyServiceView,
-                    AcademySubscriptionView, BagView, CardView, CheckingView, ConsumableCheckoutView, EventTypeSetView,
-                    MeConsumableView, MeInvoiceView, AcademyInvoiceView, MeSubscriptionCancelView,
-                    MeSubscriptionChargeView, MentorshipServiceSetView, PayView, PlanOfferView, PlanView,
-                    ServiceItemView, ServiceView, MeSubscriptionView)
+from .views import (
+    AcademyAcademyServiceView,
+    AcademyCohortSetCohortView,
+    AcademyInvoiceView,
+    AcademyPlanView,
+    AcademyServiceView,
+    AcademySubscriptionView,
+    BagView,
+    CardView,
+    CheckingView,
+    ConsumableCheckoutView,
+    CouponView,
+    EventTypeSetView,
+    MeConsumableView,
+    MeInvoiceView,
+    MentorshipServiceSetView,
+    MeSubscriptionCancelView,
+    MeSubscriptionChargeView,
+    MeSubscriptionView,
+    PayView,
+    PlanOfferView,
+    PlanView,
+    ServiceItemView,
+    ServiceView,
+)
 
 app_name = 'payments'
 urlpatterns = [
@@ -43,6 +63,7 @@ urlpatterns = [
     path('me/invoice/<int:invoice_id>', MeInvoiceView.as_view()),
     path('academy/invoice', AcademyInvoiceView.as_view()),
     path('academy/invoice/<int:invoice_id>', AcademyInvoiceView.as_view()),
+    path('coupon', CouponView.as_view(), name='coupon'),
     path('card', CardView.as_view(), name='card'),
     path('bag', BagView.as_view()),
     path('checking', CheckingView.as_view(), name='checking'),

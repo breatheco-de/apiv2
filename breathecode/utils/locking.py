@@ -1,4 +1,6 @@
 """
+Custom lock manager for Django models.
+
 Example usage:
 
 class Bag(models.Model):

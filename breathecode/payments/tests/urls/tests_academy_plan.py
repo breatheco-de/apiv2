@@ -103,6 +103,7 @@ def post_serializer(currency, service=None, academy=None, service_items=[], fina
         'mentorship_service_set': None,
         'cohort_set': None,
         'event_type_set': None,
+        'service_set': None,
         'invites': [],
         **data,
     }
@@ -129,6 +130,7 @@ def row(currency, academy=None, data={}):
         'mentorship_service_set_id': None,
         'cohort_set_id': None,
         'event_type_set_id': None,
+        'service_set_id': None,
         **data,
     }
 

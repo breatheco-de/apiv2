@@ -5,15 +5,15 @@ import logging
 import random
 from unittest.mock import MagicMock, call, patch
 
-from django.utils import timezone
 import pytest
+from django.utils import timezone
+
+import breathecode.activity.tasks as activity_tasks
 from breathecode.payments import tasks
 from breathecode.payments.actions import calculate_relative_delta
 
 from ...tasks import build_free_subscription
-
 from ..mixins import PaymentsTestCase
-import breathecode.activity.tasks as activity_tasks
 
 UTC_NOW = timezone.now()
 
@@ -29,6 +29,7 @@ def subscription_item(data={}):
         'selected_cohort_set_id': None,
         'selected_event_type_set_id': None,
         'selected_mentorship_service_set_id': None,
+        'selected_service_set_id': None,
         'status': 'ACTIVE',
         'status_message': None,
         'user_id': 1,

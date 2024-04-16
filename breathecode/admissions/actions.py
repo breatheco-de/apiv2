@@ -1,12 +1,14 @@
 import json
 import logging
 from math import asin, cos, radians, sin, sqrt
+from typing import Optional
 
 from django.db.models.query_utils import Q
 
+from breathecode.authenticate.models import User
 from breathecode.services.google_cloud import Storage
 
-from .models import Cohort, SyllabusScheduleTimeSlot, SyllabusVersion
+from .models import Cohort, CohortUser, SyllabusScheduleTimeSlot, SyllabusVersion
 from .signals import syllabus_asset_slug_updated
 
 BUCKET_NAME = 'admissions-breathecode'
@@ -291,3 +293,32 @@ def test_syllabus(syl, validate_assets=False, ignore=None):
             return syllabus_log
 
     return syllabus_log
+
+
+def is_no_saas_student_up_to_date_in_any_cohort(user: User,
+                                                cohort: Optional[Cohort] = None,
+                                                academy: Optional[Cohort] = None) -> str:
+    no_available_as_saas = Q(cohort__available_as_saas=False) | Q(cohort__available_as_saas=None,
+                                                                  cohort__academy__available_as_saas=False)
+
+    extra = {}
+    if cohort:
+        extra['cohort'] = cohort
+
+    if academy:
+        extra['cohort__academy'] = academy
+
+    if cohort is None and CohortUser.objects.filter(
+            no_available_as_saas, user=user, educational_status__in=['ACTIVE', 'GRADUATED'], **
+            extra).exclude(finantial_status='LATE').exists():
+        return True
+
+    if CohortUser.objects.filter(no_available_as_saas,
+                                 user=user,
+                                 finantial_status='LATE',
+                                 educational_status='ACTIVE',
+                                 **extra).exists():
+        return False
+
+    # if no cohorts were found, we assume that the user is up to date
+    return True

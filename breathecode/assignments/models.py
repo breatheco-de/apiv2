@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib.auth.models import User
 from django.db import models
 
@@ -114,6 +115,10 @@ class Task(models.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._current_task_status = self.task_status
+
+    def clean(self):
+        if self.cohort is None:
+            raise forms.ValidationError('Cohort is required')
 
     def save(self, *args, **kwargs):
         # check the fields before saving

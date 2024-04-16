@@ -1,19 +1,26 @@
 import os
 import random
-from datetime import datetime, timedelta
+from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
+import pytest
 from django.template import loader
 from django.urls.base import reverse_lazy
 from django.utils import timezone
 
+from bc.rest_framework.pytest import fixtures as fx
 from breathecode.events.caches import EventCache
 from breathecode.payments import tasks
-from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
+from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 from ..mixins.new_events_tests_case import EventTestCase
 
 UTC_NOW = timezone.now()
+
+
+@pytest.fixture(autouse=True)
+def setup(db):
+    yield
 
 
 def consumption_session(event, event_type_set, user, consumable, data={}):
@@ -1385,3 +1392,207 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(self.bc.database.list_of('events.EventCheckin'), [])
 
         self.bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [])
+
+
+# Given: A no SAAS student who has paid
+# When: auth
+# Then: response 200
+@pytest.mark.parametrize('cohort_user', [
+    {
+        'finantial_status': 'FULLY_PAID',
+        'educational_status': 'ACTIVE',
+    },
+    {
+        'finantial_status': 'UP_TO_DATE',
+        'educational_status': 'ACTIVE',
+    },
+    {
+        'finantial_status': 'FULLY_PAID',
+        'educational_status': 'GRADUATED',
+    },
+    {
+        'finantial_status': 'UP_TO_DATE',
+        'educational_status': 'GRADUATED',
+    },
+])
+@pytest.mark.parametrize('academy, cohort', [
+    (
+        {
+            'available_as_saas': True
+        },
+        {
+            'available_as_saas': False
+        },
+    ),
+    (
+        {
+            'available_as_saas': False
+        },
+        {
+            'available_as_saas': None
+        },
+    ),
+])
+@patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+@patch('breathecode.events.permissions.flags.Release.enable_consume_live_events', MagicMock(return_value=True))
+@patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+@patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+@patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
+def test__post__auth__no_saas__finantial_status_no_late(bc: Breathecode, client: fx.Client, academy, cohort,
+                                                        cohort_user):
+    permission = {'codename': 'event_join'}
+    online_meeting_url = bc.fake.url()
+    delta = timedelta(seconds=random.randint(1, 1000))
+    event = {
+        'host_user_id': 1,
+        'starting_at': UTC_NOW + delta,
+        'ending_at': UTC_NOW + delta,
+        'live_stream_url': online_meeting_url,
+    }
+    event_type = {'icon_url': bc.fake.url()}
+
+    is_subscription = bool(random.randbytes(1))
+    i_owe_you = {
+        'next_payment_at': UTC_NOW + timedelta(weeks=4),
+        'valid_until': UTC_NOW + timedelta(weeks=4),
+    }
+
+    if is_subscription and bool(random.randbytes(1)):
+        i_owe_you['valid_until'] = None
+
+    extra = {'subscription' if is_subscription else 'plan_financing': i_owe_you}
+    model = bc.database.create(user=1,
+                               academy=academy,
+                               cohort=cohort,
+                               cohort_user=cohort_user,
+                               group=1,
+                               permission=permission,
+                               event=event,
+                               event_type=event_type,
+                               token=1,
+                               **extra)
+    querystring = bc.format.to_querystring({'token': model.token.key})
+
+    url = reverse_lazy('events:me_event_id_join', kwargs={'event_id': model.event.id}) + f'?{querystring}'
+
+    response = client.get(url)
+
+    content = bc.format.from_bytes(response.content)
+    expected = render_countdown(model.event, model.token, academy=model.academy)
+
+    # dump error in external files
+    if content != expected:
+        with open('content.html', 'w') as f:
+            f.write(content)
+
+        with open('expected.html', 'w') as f:
+            f.write(expected)
+
+    assert content, expected
+    assert response.status_code == 200
+
+    assert bc.database.list_of('events.Event') == [
+        bc.format.to_dict(model.event),
+    ]
+    assert bc.database.list_of('payments.Consumable') == []
+
+    assert bc.database.list_of('payments.ConsumptionSession') == []
+    assert bc.database.list_of('events.EventCheckin') == []
+
+    bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [])
+
+
+# Given: A no SAAS student who hasn't paid
+# When: auth
+# Then: response 402
+@pytest.mark.parametrize('academy, cohort', [
+    (
+        {
+            'available_as_saas': True
+        },
+        {
+            'available_as_saas': False
+        },
+    ),
+    (
+        {
+            'available_as_saas': False
+        },
+        {
+            'available_as_saas': None
+        },
+    ),
+])
+@patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+@patch('breathecode.events.permissions.flags.Release.enable_consume_live_events', MagicMock(return_value=True))
+@patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+@patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+@patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
+def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: fx.Client, academy, cohort):
+    permission = {'codename': 'event_join'}
+    online_meeting_url = bc.fake.url()
+    delta = timedelta(seconds=random.randint(1, 1000))
+    event = {
+        'host_user_id': 1,
+        'starting_at': UTC_NOW + delta,
+        'ending_at': UTC_NOW + delta,
+        'live_stream_url': online_meeting_url,
+    }
+    event_type = {'icon_url': bc.fake.url()}
+
+    is_subscription = bool(random.randbytes(1))
+    i_owe_you = {
+        'next_payment_at': UTC_NOW + timedelta(weeks=4),
+        'valid_until': UTC_NOW + timedelta(weeks=4),
+    }
+
+    if is_subscription and bool(random.randbytes(1)):
+        i_owe_you['valid_until'] = None
+
+    extra = {'subscription' if is_subscription else 'plan_financing': i_owe_you}
+    cohort_user = {'finantial_status': 'LATE', 'educational_status': 'ACTIVE'}
+    model = bc.database.create(user=1,
+                               academy=academy,
+                               cohort=cohort,
+                               cohort_user=cohort_user,
+                               group=1,
+                               permission=permission,
+                               event=event,
+                               event_type=event_type,
+                               token=1,
+                               **extra)
+    querystring = bc.format.to_querystring({'token': model.token.key})
+
+    url = reverse_lazy('events:me_event_id_join', kwargs={'event_id': model.event.id}) + f'?{querystring}'
+
+    response = client.get(url)
+
+    content = bc.format.from_bytes(response.content)
+    expected = render_message('You must get a plan in order to access this service',
+                              data={
+                                  'GO_BACK': 'Go back to Dashboard',
+                                  'URL_BACK': 'https://4geeks.com/choose-program',
+                                  'BUTTON': 'Get a plan',
+                                  'LINK': f'https://4geeks.com/checkout?plan=basic&token={model.token.key}',
+                              })
+
+    # dump error in external files
+    if content != expected:
+        with open('content.html', 'w') as f:
+            f.write(content)
+
+        with open('expected.html', 'w') as f:
+            f.write(expected)
+
+    assert content == expected
+    assert response.status_code == 402
+
+    assert bc.database.list_of('events.Event') == [
+        bc.format.to_dict(model.event),
+    ]
+    assert bc.database.list_of('payments.Consumable') == []
+
+    assert bc.database.list_of('payments.ConsumptionSession') == []
+    assert bc.database.list_of('events.EventCheckin') == []
+
+    bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [])

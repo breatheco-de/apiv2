@@ -2,7 +2,8 @@ import json
 
 
 class ResponseMock():
-    """Simutate Response to be used by mocks"""
+    """Simutate Response to be used by mocks."""
+
     status_code = None
     reason = None
     data = None
@@ -35,5 +36,5 @@ class ResponseMock():
             self.content = content.encode('utf-8')
 
     def json(self) -> dict:
-        """Convert Response to JSON"""
+        """Convert Response to JSON."""
         return self.data

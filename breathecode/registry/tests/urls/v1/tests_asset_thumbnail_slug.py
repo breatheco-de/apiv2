@@ -2,12 +2,14 @@
 Test /answer
 """
 from random import randint
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, call, patch
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
 
 from breathecode.registry.actions import AssetThumbnailGenerator
-from ..mixins import RegistryTestCase
+
+from ...mixins import RegistryTestCase
 
 
 class RegistryTestSuite(RegistryTestCase):

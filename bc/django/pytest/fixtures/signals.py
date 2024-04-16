@@ -67,7 +67,8 @@ def signals_map():
 
     signal_files = [
         '.'.join(x.replace(root_directory + separator, '').replace('.py', '').split(separator)) for x in signal_files
-        if check_path(dir=x, pattern='/bc/django/') and check_path(dir=x, pattern='.venv') and check_path(dir=x, pattern='.env')
+        if check_path(dir=x, pattern='/bc/django/') and check_path(dir=x, pattern='.venv')
+        and check_path(dir=x, pattern='.env')
     ]
 
     for module_path in signal_files:
