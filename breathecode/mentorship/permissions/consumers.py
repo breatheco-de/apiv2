@@ -60,7 +60,7 @@ def mentorship_service_by_url_param(context: PermissionContextType, args: tuple,
             context['request'].user, academy=mentor_profile.academy) is False:
         raise PaymentException(
             translation(lang,
-                        en=f'You can\'t access this asset because you finantial status is not up to date',
+                        en=f'You can\'t access this asset because your finantial status is not up to date',
                         es=f'No puedes acceder a este recurso porque tu estado financiero no está al dia',
                         slug='cohort-user-status-later'))
 
