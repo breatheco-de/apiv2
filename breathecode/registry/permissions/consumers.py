@@ -16,6 +16,16 @@ logger = logging.getLogger(__name__)
 
 def asset_by_slug(context: PermissionContextType, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
 
+    def count_cohorts(available_as_saas: bool) -> int:
+
+        available_as_saas_bool = Q(cohort__available_as_saas=available_as_saas) | Q(
+            cohort__available_as_saas=None, cohort__academy__available_as_saas=available_as_saas)
+        return CohortUser.objects.filter(available_as_saas_bool,
+                                         user=request.user,
+                                         educational_status__in=['ACTIVE', 'GRADUATED'],
+                                         cohort__academy__id=academy_id,
+                                         cohort__syllabus_version__json__icontains=asset_slug).count()
+
     request = context['request']
 
     lang = get_user_language(request)
@@ -24,27 +34,14 @@ def asset_by_slug(context: PermissionContextType, args: tuple, kwargs: dict) -> 
     academy_id = kwargs.get('academy_id')
     asset = Asset.get_by_slug(asset_slug, request)
 
-    if asset is None or (asset.academy is not None and asset.academy.id != int(academy_id)):
+    if asset is None:
         raise ValidationException(
             translation(lang,
-                        en=f'Asset {asset_slug} not found for this academy',
-                        es=f'El recurso {asset_slug} no existe para esta academia',
+                        en=f'Asset {asset_slug} not found',
+                        es=f'El recurso {asset_slug} no existe',
                         slug='asset-not-found'), 404)
 
-    #############
-
-    no_available_as_saas = Q(cohort__available_as_saas=False) | Q(cohort__available_as_saas=None,
-                                                                  cohort__academy__available_as_saas=False)
-    cu = CohortUser.objects.filter(no_available_as_saas,
-                                   user=request.user,
-                                   educational_status__in=['ACTIVE', 'GRADUATED'],
-                                   cohort__academy=asset.academy).first()
-
-    cohort = cu.cohort if cu else None
-    if cohort is None:
-        context['will_consume'] = asset.academy.available_as_saas
-
-    elif cohort.available_as_saas is False or cohort.available_as_saas is None and asset.academy.available_as_saas is False:
+    if count_cohorts(available_as_saas=False):
         context['will_consume'] = False
 
     else:

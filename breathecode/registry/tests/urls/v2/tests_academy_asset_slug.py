@@ -127,8 +127,7 @@ def test_no_consumables(bc: Breathecode, client: APIClient):
     assert bc.database.list_of('registry.Asset') == []
 
 
-@pytest.mark.parametrize('asset, academy', [(0, 0), ({'academy_id': 2}, 2)])
-def test_no_asset(bc: Breathecode, client: APIClient, asset, academy):
+def test_no_asset(bc: Breathecode, client: APIClient):
     """Test /certificate without auth"""
     model = bc.database.create(user=1,
                                profile_academy=1,
@@ -136,12 +135,9 @@ def test_no_asset(bc: Breathecode, client: APIClient, asset, academy):
                                capability='read_asset',
                                permission={'codename': 'read-lesson'},
                                group=1,
-                               consumable=1,
-                               asset=asset,
-                               academy=academy)
+                               consumable=1)
     client.force_authenticate(user=model.user)
-    url = reverse_lazy('v2:registry:academy_asset_slug',
-                       kwargs={'asset_slug': model.asset.slug if asset else 'model_slug'})
+    url = reverse_lazy('v2:registry:academy_asset_slug', kwargs={'asset_slug': 'model_slug'})
 
     response = client.get(url, HTTP_ACADEMY=1)
     json = response.json()
@@ -152,12 +148,7 @@ def test_no_asset(bc: Breathecode, client: APIClient, asset, academy):
 
     assert json == expected
     assert response.status_code == status.HTTP_404_NOT_FOUND
-
-    if asset:
-        assert bc.database.list_of('registry.Asset') == [bc.format.to_dict(model.asset)]
-
-    else:
-        assert bc.database.list_of('registry.Asset') == []
+    assert bc.database.list_of('registry.Asset') == []
 
 
 def test_with_asset(bc: Breathecode, client: APIClient):
@@ -271,9 +262,10 @@ def test_with_asset__no_saas__finantial_status_no_late(bc: Breathecode, client: 
         },
     ),
 ])
-def test_with_asset__no_saas__finantial_status_late(bc: Breathecode, client: APIClient, academy, cohort):
+def test_with_asset__no_saas__finantial_status_late(bc: Breathecode, client: APIClient, academy, cohort, fake):
     """Test /certificate without auth"""
     cohort_user = {'finantial_status': 'LATE', 'educational_status': 'ACTIVE'}
+    slug = fake.slug()
     model = bc.database.create(user=1,
                                profile_academy=1,
                                role=1,
@@ -281,7 +273,12 @@ def test_with_asset__no_saas__finantial_status_late(bc: Breathecode, client: API
                                permission={'codename': 'read-lesson'},
                                group=1,
                                consumable=1,
-                               asset=1,
+                               asset={'slug': slug},
+                               syllabus_version={
+                                   'json': {
+                                       'x': slug,
+                                   },
+                               },
                                asset_category=1,
                                academy=academy,
                                cohort=cohort,
