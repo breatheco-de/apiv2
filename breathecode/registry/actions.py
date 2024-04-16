@@ -487,6 +487,18 @@ def clean_h1s(asset: Asset):
     readme = asset.get_readme()
     content = readme['decoded'].strip()
 
+    frontmatter = ''
+    frontmatter_regex = r'---\n(.*?\n)*?---\n'
+
+    match = re.search(frontmatter_regex, content, flags=re.DOTALL)
+
+    if match:
+
+        frontmatter_content = match.group()
+        frontmatter = frontmatter_content.strip() if frontmatter_content else ''
+
+        content = content[match.end():].strip()
+
     end = r'.*\n'
     lines = list(re.finditer(end, content))
     if len(lines) == 0:
@@ -501,6 +513,8 @@ def clean_h1s(asset: Asset):
     findings = list(re.finditer(regex, content[:first_line_end]))
     if len(findings) > 0:
         replaced = content[first_line_end:].strip()
+        if frontmatter != '':
+            replaced = f'{frontmatter}\n\n{replaced}'
         asset.set_readme(replaced)
 
     return asset
