@@ -73,6 +73,67 @@ md_with_jumplines = """
 </p>
 """
 
+md_with_frontmatter_and_new_lines = """
+---
+title: "Working with or manipulating strings with Python"
+status: "published"
+syntaxis: ["python"]
+tags: ["python","string-concatenation"]
+
+---
+
+# Hello World with React boilerplate
+<p>
+  <a href="https://gitpod.io#https://github.com/4GeeksAcademy/react-hello.git"><img src="https://raw.githubusercontent.com/4GeeksAcademy/react-hello/master/open-in-gitpod.svg?sanitize=true" />
+  </a>
+</p>
+
+---
+
+<p>lorem ipsum</p>
+
+"""
+
+md_with_frontmatter_and_new_lines_no_h1 = """---
+title: "Working with or manipulating strings with Python"
+status: "published"
+syntaxis: ["python"]
+tags: ["python","string-concatenation"]
+
+---
+
+<p>
+  <a href="https://gitpod.io#https://github.com/4GeeksAcademy/react-hello.git"><img src="https://raw.githubusercontent.com/4GeeksAcademy/react-hello/master/open-in-gitpod.svg?sanitize=true" />
+  </a>
+</p>
+
+---
+
+<p>lorem ipsum</p>"""
+
+md_with_new_lines = """
+
+# Hello World with React boilerplate
+<p>
+  <a href="https://gitpod.io#https://github.com/4GeeksAcademy/react-hello.git"><img src="https://raw.githubusercontent.com/4GeeksAcademy/react-hello/master/open-in-gitpod.svg?sanitize=true" />
+  </a>
+</p>
+
+---
+
+<p>lorem ipsum</p>
+
+"""
+
+md_with_new_lines_no_h1 = """<p>
+  <a href="https://gitpod.io#https://github.com/4GeeksAcademy/react-hello.git"><img src="https://raw.githubusercontent.com/4GeeksAcademy/react-hello/master/open-in-gitpod.svg?sanitize=true" />
+  </a>
+</p>
+
+---
+
+<p>lorem ipsum</p>"""
+
 
 def test__with_frontmatter(bc: Breathecode):
     model = bc.database.create(
@@ -147,3 +208,48 @@ def test__without_frontmatter_without_h1_many_jumplines(bc: Breathecode):
     readme = asset.get_readme()
 
     assert readme['decoded'] == md_no_h1
+
+
+def test__with_frontmatter_and_new_lines(bc: Breathecode):
+    model = bc.database.create(
+        asset={
+            'readme_url':
+            'https://github.com/breatheco-de/content/blob/master/src/content/lesson/how-to-networkt-yourself-into-a-software-development-job.es.md',
+            'readme_raw': Asset.encode(md_with_frontmatter_and_new_lines),
+            'readme': Asset.encode(md_with_frontmatter_and_new_lines)
+        })
+
+    asset = clean_h1s(model['asset'])
+    readme = asset.get_readme()
+
+    assert readme['decoded'] == md_with_frontmatter_and_new_lines_no_h1
+
+
+def test__with_frontmatter_and_new_lines_no_h1(bc: Breathecode):
+    model = bc.database.create(
+        asset={
+            'readme_url':
+            'https://github.com/breatheco-de/content/blob/master/src/content/lesson/how-to-networkt-yourself-into-a-software-development-job.es.md',
+            'readme_raw': Asset.encode(md_with_frontmatter_and_new_lines_no_h1),
+            'readme': Asset.encode(md_with_frontmatter_and_new_lines_no_h1)
+        })
+
+    asset = clean_h1s(model['asset'])
+    readme = asset.get_readme()
+
+    assert readme['decoded'] == md_with_frontmatter_and_new_lines_no_h1
+
+
+def test__with_new_lines(bc: Breathecode):
+    model = bc.database.create(
+        asset={
+            'readme_url':
+            'https://github.com/breatheco-de/content/blob/master/src/content/lesson/how-to-networkt-yourself-into-a-software-development-job.es.md',
+            'readme_raw': Asset.encode(md_with_new_lines),
+            'readme': Asset.encode(md_with_new_lines)
+        })
+
+    asset = clean_h1s(model['asset'])
+    readme = asset.get_readme()
+
+    assert readme['decoded'] == md_with_new_lines_no_h1
