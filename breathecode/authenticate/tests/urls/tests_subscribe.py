@@ -158,8 +158,10 @@ b = os.urandom(16)
 
 
 @pytest.fixture(autouse=True)
-def setup(monkeypatch, db):
+def setup(monkeypatch: pytest.MonkeyPatch, db):
     monkeypatch.setattr('os.urandom', lambda _: b)
+    monkeypatch.setattr('breathecode.authenticate.tasks.create_user_from_invite.delay', MagicMock())
+
     yield
 
 

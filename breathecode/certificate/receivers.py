@@ -1,10 +1,13 @@
 import logging
+
 from django.dispatch import receiver
+
 import breathecode.certificate.tasks as tasks
+from breathecode.admissions.models import CohortUser
+from breathecode.admissions.signals import student_edu_status_updated
+
 from .models import UserSpecialty
 from .signals import user_specialty_saved
-from breathecode.admissions.signals import student_edu_status_updated
-from breathecode.admissions.models import CohortUser
 
 logger = logging.getLogger(__name__)
 
@@ -21,4 +24,4 @@ def post_save_user_specialty(sender, instance: UserSpecialty, **kwargs):
 @receiver(student_edu_status_updated, sender=CohortUser)
 def generate_certificate(sender, instance: CohortUser, **kwargs):
     if instance.cohort.available_as_saas and instance.educational_status == 'GRADUATED':
-        tasks.generate_one_certificate(instance.cohort.id, instance.user.id, None)
+        tasks.async_generate_certificate.delay(instance.cohort.id, instance.user.id)

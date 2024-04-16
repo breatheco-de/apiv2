@@ -6,10 +6,10 @@ from django.dispatch import receiver
 
 import breathecode.authenticate.actions as authenticate_actions
 from breathecode.assignments.models import Task
-from breathecode.assignments.signals import assignment_status_updated
+from breathecode.assignments.signals import revision_status_updated
+from breathecode.certificate.actions import how_many_pending_tasks
 
 from ..activity import tasks as activity_tasks
-from .actions import get_assets_on_syllabus
 from .models import Cohort, CohortUser
 from .signals import cohort_log_saved, cohort_user_created
 
@@ -41,7 +41,7 @@ async def new_cohort_user(sender: Type[Cohort], instance: Cohort, **kwargs: Any)
                                             })
 
 
-@receiver(assignment_status_updated, sender=Task, weak=False)
+@receiver(revision_status_updated, sender=Task, weak=False)
 def mark_saas_student_as_graduated(sender: Type[Task], instance: Task, **kwargs: Any):
     logger.info('Processing available as saas student\'s tasks and marking as GRADUATED if it is')
 
@@ -53,13 +53,12 @@ def mark_saas_student_as_graduated(sender: Type[Task], instance: Task, **kwargs:
     if not cohort.available_as_saas:
         return
 
-    syllabus_assets = get_assets_on_syllabus(cohort.syllabus_version.id, True)
-    how_many_mandatory_tasks = Task.objects.filter(cohort=cohort.id,
-                                                   user=instance.user.id,
-                                                   task_status='DONE',
-                                                   associated_slug__in=syllabus_assets).count()
+    pending_tasks = how_many_pending_tasks(cohort.syllabus_version,
+                                           instance.user,
+                                           task_types=['PROJECT'],
+                                           only_mandatory=True)
 
-    if len(syllabus_assets) == how_many_mandatory_tasks:
+    if pending_tasks == 0:
         cohort_user = CohortUser.objects.filter(user=instance.user.id, cohort=cohort.id).first()
         cohort_user.educational_status = 'GRADUATED'
         cohort_user.save()

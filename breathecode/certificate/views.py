@@ -1,21 +1,23 @@
-from breathecode.authenticate.models import ProfileAcademy
 import logging
 
+from rest_framework import serializers, status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.exceptions import NotFound
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from breathecode.admissions.models import CohortUser
+from breathecode.authenticate.models import ProfileAcademy
+from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, ValidationException, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
-from .models import Specialty, Badge, UserSpecialty, LayoutDesign
-from breathecode.admissions.models import CohortUser
-from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
-from .serializers import SpecialtySerializer, UserSpecialtySerializer, LayoutDesignSerializer
-from rest_framework.exceptions import NotFound
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
-from rest_framework import status, serializers
-from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
-from .tasks import generate_one_certificate
-from .actions import generate_certificate
 from breathecode.utils.find_by_full_name import query_like_by_full_name
+
+from .actions import generate_certificate
+from .models import Badge, LayoutDesign, Specialty, UserSpecialty
+from .serializers import LayoutDesignSerializer, SpecialtySerializer, UserSpecialtySerializer
+from .tasks import async_generate_certificate
 
 logger = logging.getLogger(__name__)
 
@@ -249,7 +251,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
                                           slug='no-user-specialty')
 
             layout = cert.layout.slug if cert.layout is not None else 'default'
-            generate_one_certificate.delay(cu.cohort_id, cu.user_id, layout=layout)
+            async_generate_certificate.delay(cu.cohort_id, cu.user_id, layout=layout)
 
         serializer = UserSpecialtySerializer(certs, many=True)
 
