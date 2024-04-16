@@ -16,6 +16,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from breathecode.admissions.models import Academy
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.notify.actions import send_email_message
@@ -1082,7 +1083,7 @@ class V2AcademyAssetView(APIView):
 
     @capable_of('read_asset')
     @has_permission('read-lesson', consumer=asset_by_slug)
-    def get(self, request, asset: Asset, academy_id: int):
+    def get(self, request, asset: Asset, academy: Academy):
         serializer = AcademyAssetSerializer(asset)
         return Response(serializer.data)
 

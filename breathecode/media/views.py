@@ -1,32 +1,42 @@
 # from breathecode.media.schemas import MediaSchema
-from breathecode.authenticate.actions import get_user_language
-from breathecode.media.schemas import FileSchema, MediaSchema
-import os, hashlib, requests, logging, datetime
-from breathecode.services.google_cloud import FunctionV1
+import datetime
+import hashlib
+import logging
+import os
+
+import requests
+from circuitbreaker import CircuitBreakerError
+from django.db.models import Q
+from django.http import StreamingHttpResponse
 from django.shortcuts import redirect
-from breathecode.media.models import Media, Category, MediaResolution
-from breathecode.utils import GenerateLookupsMixin, num_to_roman
+from rest_framework import status
+from rest_framework.parsers import FileUploadParser, MultiPartParser
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
-from breathecode.utils import ValidationException, capable_of
-from rest_framework.response import Response
-from rest_framework.parsers import FileUploadParser, MultiPartParser
-from rest_framework import status
-from rest_framework.permissions import AllowAny
-from django.http import StreamingHttpResponse
-from django.db.models import Q
-from breathecode.media.serializers import (GetMediaSerializer, MediaSerializer, MediaPUTSerializer,
-                                           GetCategorySerializer, CategorySerializer, GetResolutionSerializer)
 from slugify import slugify
 
+from breathecode.authenticate.actions import get_user_language
+from breathecode.media.models import Category, Media, MediaResolution
+from breathecode.media.schemas import FileSchema, MediaSchema
+from breathecode.media.serializers import (
+    CategorySerializer,
+    GetCategorySerializer,
+    GetMediaSerializer,
+    GetResolutionSerializer,
+    MediaPUTSerializer,
+    MediaSerializer,
+)
+from breathecode.services.google_cloud import FunctionV1
+from breathecode.utils import GenerateLookupsMixin, ValidationException, capable_of, num_to_roman
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.i18n import translation
-from circuitbreaker import CircuitBreakerError
 
 logger = logging.getLogger(__name__)
 MIME_ALLOW = [
     'image/png', 'image/svg+xml', 'image/jpeg', 'image/gif', 'video/quicktime', 'video/mp4', 'audio/mpeg',
-    'application/pdf', 'image/jpg'
+    'application/pdf', 'image/jpg', 'application/octet-stream'
 ]
 
 
@@ -433,7 +443,9 @@ class UploadView(APIView):
         for index in range(0, len(files)):
             file = files[index]
             if file.content_type not in MIME_ALLOW:
-                raise ValidationException(f'You can upload only files on the following formats: {",".join(MIME_ALLOW)}')
+                raise ValidationException(
+                    f'You can upload only files on the following formats: {",".join(MIME_ALLOW)}, got {file.content_type}',
+                    code=400)
 
         for index in range(0, len(files)):
             file = files[index]

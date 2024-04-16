@@ -3,7 +3,7 @@ import logging
 from django.db.models import Q
 
 from breathecode.admissions.actions import is_no_saas_student_up_to_date_in_any_cohort
-from breathecode.admissions.models import Cohort, CohortUser
+from breathecode.admissions.models import Academy, Cohort, CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.registry.models import Asset
 from breathecode.utils.decorators import PermissionContextType
@@ -33,6 +33,7 @@ def asset_by_slug(context: PermissionContextType, args: tuple, kwargs: dict) -> 
     asset_slug = kwargs.get('asset_slug')
     academy_id = kwargs.get('academy_id')
     asset = Asset.get_by_slug(asset_slug, request)
+    academy = Academy.objects.filter(id=academy_id).first()
 
     if asset is None:
         raise ValidationException(
@@ -48,10 +49,12 @@ def asset_by_slug(context: PermissionContextType, args: tuple, kwargs: dict) -> 
         context['will_consume'] = True
 
     kwargs['asset'] = asset
+    kwargs['academy'] = academy
     del kwargs['asset_slug']
+    del kwargs['academy_id']
 
     if context['will_consume'] is False and is_no_saas_student_up_to_date_in_any_cohort(context['request'].user,
-                                                                                        academy=asset.academy) is False:
+                                                                                        academy=academy) is False:
         raise PaymentException(
             translation(lang,
                         en=f'You can\'t access this asset because your finantial status is not up to date',
