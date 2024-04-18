@@ -152,9 +152,9 @@ def render_preview_html(request, asset_slug):
 @permission_classes([AllowAny])
 def get_technologies(request):
     lang = get_user_language(request)
-    
+
     items = AssetTechnology.objects.filter(parent__isnull=True)
-    
+
     if 'sort_priority' in request.GET:
         param = request.GET.get('sort_priority')
 
@@ -170,8 +170,8 @@ def get_technologies(request):
                             es='El parametró debera ser un entero y nada mas ',
                             slug='integer-not-found'))
 
-    if 'language' in request.GET:
-        param = request.GET.get('language')
+    if 'lang' in request.GET:
+        param = request.GET.get('lang')
         if param == 'en':
             param = 'us'
         items = items.filter(Q(lang__iexact=param) | Q(lang='') | Q(lang__isnull=True))
@@ -211,8 +211,11 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
         if self.request.GET.get('include_children') != 'true' and not has_valid_parent:
             items = items.filter(parent__isnull=True)
 
-        if 'language' in self.request.GET:
-            param = self.request.GET.get('language')
+        if 'language' in self.request.GET or 'lang' in self.request.GET:
+            param = self.request.GET.get('language', '')
+            if not param:
+                param = self.request.GET.get('lang')
+
             if param == 'en':
                 param = 'us'
             items = items.filter(Q(lang__iexact=param) | Q(lang='') | Q(lang__isnull=True))
