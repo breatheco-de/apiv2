@@ -1,5 +1,6 @@
 import ast
 import os
+import json
 
 from django import forms
 from django.contrib import admin, messages
@@ -257,7 +258,7 @@ def process_webhook(modeladmin, request, queryset):
 
 @admin.register(RepositoryWebhook)
 class RepositoryWebhookAdmin(admin.ModelAdmin):
-    list_display = ('id', 'webhook_action', 'scope', 'current_status', 'run_at', 'academy_slug', 'created_at')
+    list_display = ('id', 'webhook_action', 'scope', 'current_status', 'run_at', 'academy_slug', 'diff')
     list_filter = ['status', 'webhook_action', 'scope', 'academy_slug']
     actions = [process_webhook]
 
@@ -268,3 +269,16 @@ class RepositoryWebhookAdmin(admin.ModelAdmin):
             'PENDING': 'bg-warning',
         }
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
+
+    def diff(self, obj):
+        label = 'nothing to compare'
+        if obj.payload:
+            _payload = json.loads(obj.payload)
+            if 'compare' in _payload:
+                label = 'compare'
+                if 'head_commit' in _payload:
+                    _l = len(_payload['head_commit']['id'])
+                    label = _payload['head_commit']['id'][_l - 8:]
+
+                return format_html(f"<a target='_blank' href='{_payload['compare']}'>{label}</a>")
+        return label

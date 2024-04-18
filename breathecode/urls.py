@@ -56,6 +56,7 @@ apps = [
     ('s/', 'breathecode.marketing.urls_shortner', 'marketing_shortner'),
     ('mentor/', 'breathecode.mentorship.urls_shortner', 'mentorship_shortner'),
     ('asset/', 'breathecode.registry.urls_shortner', 'registry_shortner'),
+    ('start', 'breathecode.provisioning.urls_shortner', 'provisioning_shortner'),
 ]
 
 urlpatterns_apps = [path(url, include(urlconf, namespace=namespace)) for url, urlconf, namespace in apps]

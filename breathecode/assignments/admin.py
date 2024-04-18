@@ -143,7 +143,7 @@ class AssignmentTelemetryAdmin(admin.ModelAdmin):
 
 @admin.register(LearnPackWebhook)
 class LearnPackWebhookAdmin(admin.ModelAdmin):
-    list_display = ('id', 'event', 'current_status', 'student', 'created_at')
+    list_display = ('id', 'event', 'status', 'student', 'created_at')
     search_fields = ['telemetry__asset_slug', 'telemetry__user__email']
     list_filter = ['status', 'event']
     raw_id_fields = ['student', 'telemetry']
@@ -164,5 +164,5 @@ class LearnPackWebhookAdmin(admin.ModelAdmin):
             return ''
 
         return format_html(
-            f"<div><span class='badge {from_status(obj.status)}'>{obj.status}</span></div><small>{obj.status_text}</small>"
+            f"<div><span class='badge'>{obj.status}</span></div><small>{obj.status_text}</small>"
         )

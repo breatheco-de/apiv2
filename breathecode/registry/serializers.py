@@ -381,6 +381,7 @@ class AssetAndTechnologySerializer(AssetSerializer):
 
 class AssetTechnologySerializer(ParentAssetTechnologySerializer):
     parent = ParentAssetTechnologySerializer(required=False)
+    lang = serpy.Field(required=False)
 
 
 class AssetBigTechnologySerializer(AssetTechnologySerializer):
