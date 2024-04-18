@@ -1,7 +1,8 @@
 import os
+from logging import Logger as BaseLogger
+from logging import getLogger as getBaseLogger
+from logging import root
 from typing import Annotated, Optional
-
-from logging import Logger as BaseLogger, root, getLogger as getBaseLogger
 
 IS_TEST_ENV = 'ENV' in os.environ and os.environ['ENV'] == 'test'
 
@@ -23,7 +24,7 @@ getLogger.__doc__ = getBaseLogger.__doc__
 
 
 class Logger:
-    """Wrapper of Logger module that provide print the slug instead of a message in a test environment"""
+    """Wrapper of Logger module that provide print the slug instead of a message in a test environment."""
 
     _base: Base
 

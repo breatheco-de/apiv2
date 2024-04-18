@@ -1,7 +1,6 @@
-"""
-Google Cloud Storage Mocks
-"""
+"""Google Cloud Storage Mocks."""
 from unittest.mock import Mock
+
 from .requests_mock import request_mock
 
 SLACK_PATH = {
@@ -12,5 +11,5 @@ SLACK_INSTANCES = {'request': Mock(side_effect=request_mock)}
 
 
 def apply_slack_requests_request_mock():
-    """Apply Storage Blob Mock"""
+    """Apply Storage Blob Mock."""
     return SLACK_INSTANCES['request']

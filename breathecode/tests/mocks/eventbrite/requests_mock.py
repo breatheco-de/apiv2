@@ -1,13 +1,20 @@
-"""
-Requests mock
-"""
-from .constants import (EVENTBRITE_ORDER, EVENTBRITE_EVENT, EVENTBRITE_ATTENDEE, EVENTBRITE_TICKET_CLASS,
-                        EVENTBRITE_ORDER_URL, EVENTBRITE_EVENT_URL, EVENTBRITE_ATTENDEE_URL,
-                        EVENTBRITE_TICKET_CLASS_URL)
+"""Requests mock."""
+
+from .constants import (
+    EVENTBRITE_ATTENDEE,
+    EVENTBRITE_ATTENDEE_URL,
+    EVENTBRITE_EVENT,
+    EVENTBRITE_EVENT_URL,
+    EVENTBRITE_ORDER,
+    EVENTBRITE_ORDER_URL,
+    EVENTBRITE_TICKET_CLASS,
+    EVENTBRITE_TICKET_CLASS_URL,
+)
 
 
 class ResponseMock():
-    """Simutate Response to be used by mocks"""
+    """Simutate Response to be used by mocks."""
+
     status_code = None
     data = None
     content = None
@@ -21,12 +28,14 @@ class ResponseMock():
             self.data = data
 
     def json(self) -> dict:
-        """Convert Response to JSON"""
+        """Convert Response to JSON."""
+
         return self.data
 
 
 def request_mock(url: str, auth=None, data=None, method=None, headers=None, params=None, json=None, timeout=30):
-    """Requests get mock"""
+    """Requests get mock."""
+
     if url == EVENTBRITE_ORDER_URL:
         return ResponseMock(data=EVENTBRITE_ORDER, status_code=200)
 

@@ -12,7 +12,6 @@ from rest_framework.test import APIClient
 
 from breathecode.registry import tasks
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
-from breathecode.tests.mixins.legacy import LegacyAPITestCase
 
 UTC_NOW = timezone.now()
 

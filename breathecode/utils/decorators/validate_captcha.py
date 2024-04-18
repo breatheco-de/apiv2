@@ -1,8 +1,11 @@
-import os
 import logging
+import os
+
 from rest_framework.views import APIView
+
 from breathecode.services.google_cloud import Recaptcha
 from breathecode.utils.exceptions import ProgrammingError
+
 from ..validation_exception import ValidationException
 
 logger = logging.getLogger(__name__)
@@ -28,7 +31,7 @@ def validate_captcha(function):
 
             apply_captcha = os.getenv('APPLY_CAPTCHA', False)
 
-            logger.info(f'CAPTCHA DECORATOR')
+            logger.info('CAPTCHA DECORATOR')
             print('CAPTCHA DECORATOR')
             logger.info('apply_captcha')
             print(apply_captcha)
@@ -36,7 +39,7 @@ def validate_captcha(function):
             if not apply_captcha:
                 return function(*args, **kwargs)
 
-            logger.info(f'VERIFYING THE CAPTCHA')
+            logger.info('VERIFYING THE CAPTCHA')
             print('VERIFYING THE CAPTCHA')
 
             project_id = os.getenv('GOOGLE_PROJECT_ID', '')
@@ -53,7 +56,7 @@ def validate_captcha(function):
                                                    token=token,
                                                    recaptcha_action=recaptcha_action)
 
-            logger.info(f'response risk_analysis score')
+            logger.info('response risk_analysis score')
             logger.info(response.risk_analysis.score)
             print('response risk_analysis score')
             print(response.risk_analysis.score)

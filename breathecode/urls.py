@@ -31,6 +31,7 @@ ENVIRONMENT = os.environ.get('ENV')
 versions = {
     'v2': [
         path('activity/', include('breathecode.activity.urls.v2', namespace='activity')),
+        path('registry/', include('breathecode.registry.urls.v2', namespace='registry')),
     ],
 }
 
@@ -40,7 +41,7 @@ apps = [
     ('v1/assignment/', 'breathecode.assignments.urls', 'assignments'),
     ('v1/freelance/', 'breathecode.freelance.urls', 'freelance'),
     ('v1/events/', 'breathecode.events.urls', 'events'),
-    ('v1/registry/', 'breathecode.registry.urls', 'registry'),
+    ('v1/registry/', 'breathecode.registry.urls.v1', 'registry'),
     ('v1/activity/', 'breathecode.activity.urls.v1', 'activity'),
     ('v1/feedback/', 'breathecode.feedback.urls', 'feedback'),
     ('v1/messaging/', 'breathecode.notify.urls', 'notify'),

@@ -1089,6 +1089,45 @@ class PlanOfferView(APIView):
         return handler.response(serializer.data)
 
 
+class CouponView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        plan_pk: str = request.GET.get('plan')
+        if not plan_pk:
+            raise ValidationException(translation(get_user_language(request),
+                                                  en='Missing plan in query string',
+                                                  es='Falta el plan en la consulta',
+                                                  slug='missing-plan'),
+                                      code=404)
+
+        extra = {}
+        if plan_pk.isnumeric():
+            extra['id'] = int(plan_pk)
+
+        else:
+            extra['slug'] = plan_pk
+
+        plan = Plan.objects.filter(**extra).first()
+        if not plan:
+            raise ValidationException(translation(get_user_language(request),
+                                                  en='Plan not found',
+                                                  es='El plan no existe',
+                                                  slug='plan-not-found'),
+                                      code=404)
+
+        coupon_codes = request.GET.get('coupons', '')
+        if coupon_codes:
+            coupon_codes = coupon_codes.split(',')
+        else:
+            coupon_codes = []
+
+        coupons = get_available_coupons(plan, coupons=coupon_codes)
+        serializer = GetCouponSerializer(coupons, many=True)
+
+        return Response(serializer.data)
+
+
 class BagView(APIView):
     extensions = APIViewExtensions(sort='-id', paginate=True)
 

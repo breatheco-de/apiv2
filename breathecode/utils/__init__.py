@@ -1,6 +1,4 @@
-"""
-this is one wrapper to import utils like one package
-"""
+"""this is one wrapper to import utils like one package."""
 
 from .admin_export_csv_mixin import *  # noqa: F401
 from .api_view_extensions import *  # noqa: F401

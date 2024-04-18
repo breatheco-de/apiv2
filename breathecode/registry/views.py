@@ -16,12 +16,15 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from breathecode.admissions.models import Academy
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.notify.actions import send_email_message
+from breathecode.registry.permissions.consumers import asset_by_slug
 from breathecode.services.seo import SEOAnalyzer
 from breathecode.utils import GenerateLookupsMixin, ValidationException, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from breathecode.utils.decorators.has_permission import has_permission
 from breathecode.utils.i18n import translation
 from breathecode.utils.views import render_message
 
@@ -33,25 +36,31 @@ from .actions import (
     scan_asset_originality,
     test_asset,
 )
-from .caches import (
-    AssetCache,
-    AssetCommentCache,
-    CategoryCache,
-    ContentVariableCache,
-    KeywordCache,
-    TechnologyCache,
-    AssetAliasCache,
+from .caches import AssetCache, AssetCommentCache, CategoryCache, ContentVariableCache, KeywordCache, TechnologyCache
+from .models import (
+    Asset,
+    AssetAlias,
+    AssetCategory,
+    AssetComment,
+    AssetErrorLog,
+    AssetImage,
+    AssetKeyword,
+    AssetTechnology,
+    ContentVariable,
+    KeywordCluster,
+    OriginalityScan,
+    SEOReport,
 )
-from .models import (Asset, AssetAlias, AssetCategory, AssetComment, AssetErrorLog, AssetKeyword, AssetTechnology,
-                     ContentVariable, KeywordCluster, OriginalityScan, SEOReport, AssetImage)
 from .serializers import (
     AcademyAssetSerializer,
     AcademyCommentSerializer,
+    AssetAliasSerializer,
     AssetAndTechnologySerializer,
     AssetBigAndTechnologyPublishedSerializer,
     AssetBigSerializer,
     AssetBigTechnologySerializer,
     AssetCategorySerializer,
+    AssetImageSmallSerializer,
     AssetKeywordBigSerializer,
     AssetKeywordSerializer,
     AssetMidSerializer,
@@ -73,8 +82,6 @@ from .serializers import (
     SEOReportSerializer,
     TechnologyPUTSerializer,
     VariableSmallSerializer,
-    AssetImageSmallSerializer,
-    AssetAliasSerializer,
 )
 from .tasks import async_pull_from_github
 
@@ -1078,6 +1085,19 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class V2AcademyAssetView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+    extensions = APIViewExtensions(cache=AssetCache, sort='-published_at', paginate=True)
+
+    @capable_of('read_asset')
+    @has_permission('read-lesson', consumer=asset_by_slug)
+    def get(self, request, asset: Asset, academy: Academy):
+        serializer = AcademyAssetSerializer(asset)
+        return Response(serializer.data)
+
+
 class AssetImageView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
@@ -1232,7 +1252,7 @@ class AcademyAssetAliasView(APIView, GenerateLookupsMixin):
                                 es='No se ha encontrado el alias {alias_slug} para esta academia',
                                 slug='not-found'))
 
-            serializer = AssetAliasSerializer(items)
+            serializer = AssetAliasSerializer(item, many=False)
             return handler.response(serializer.data)
 
         items = AssetAlias.objects.filter(asset__academy__id=academy_id)
