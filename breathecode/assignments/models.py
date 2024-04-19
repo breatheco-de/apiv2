@@ -116,9 +116,9 @@ class Task(models.Model):
         super().__init__(*args, **kwargs)
         self._current_task_status = self.task_status
 
-    def clean(self):
-        if self.cohort is None:
-            raise forms.ValidationError('Cohort is required')
+    # def clean(self):
+    #     if self.cohort is None:
+    #         raise forms.ValidationError('Cohort is required')
 
     def save(self, *args, **kwargs):
         # check the fields before saving
