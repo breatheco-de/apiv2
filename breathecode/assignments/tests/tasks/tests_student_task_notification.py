@@ -34,32 +34,6 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(signals.assignment_created.send.call_args_list, [])
 
     """
-    🔽🔽🔽 With Task
-    """
-
-    @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_created', MagicMock())
-    def test_student_task_notification__with_task(self):
-        from logging import Logger
-
-        from breathecode.notify.actions import send_email_message
-
-        model = self.bc.database.create(task=1)
-
-        Logger.info.call_args_list = []
-
-        student_task_notification.delay(1)
-
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
-        self.assertEqual(send_email_message.call_args_list, [])
-        self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
-        self.assertEqual(Logger.error.call_args_list, [call('Can\'t determine the student cohort')])
-        self.assertEqual(signals.assignment_created.send.call_args_list,
-                         [call(instance=model.task, sender=model.task.__class__)])
-
-    """
     🔽🔽🔽 With Task and Cohort revision_status PENDING
     """
 

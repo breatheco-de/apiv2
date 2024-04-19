@@ -1,9 +1,9 @@
 import random
 from unittest.mock import MagicMock, call, patch
 
-from breathecode.assignments import tasks
 from django.utils import timezone
 
+from breathecode.assignments import tasks
 from breathecode.tests.mixins.legacy import LegacyAPITestCase
 
 UTC_NOW = timezone.now()
@@ -31,7 +31,7 @@ class TestMedia(LegacyAPITestCase):
     def test_with_two_tasks__without_change_task_status(self, enable_signals):
         enable_signals()
 
-        model = self.bc.database.create(task=2)
+        model = self.bc.database.create(task=2, cohort=1)
 
         model.task[0].title = self.bc.fake.name()[:150]
         model.task[0].save()
@@ -49,7 +49,7 @@ class TestMedia(LegacyAPITestCase):
 
         statuses = ['PENDING', 'DONE']
         task = [{'task_status': random.choice(statuses)} for _ in range(2)]
-        model = self.bc.database.create(task=task)
+        model = self.bc.database.create(task=task, cohort=1)
 
         model.task[0].task_status = 'DONE' if model.task[0].task_status == 'PENDING' else 'PENDING'
         model.task[0].save()

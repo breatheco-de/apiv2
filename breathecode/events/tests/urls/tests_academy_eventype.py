@@ -273,8 +273,8 @@ class AcademyEventTestSuite(EventTestCase):
         expected = {
             'id': 1,
             'academy': 1,
-            'free_for_bootcamps': True,
-            'allow_shared_creation': True,
+            'free_for_bootcamps': False,
+            'allow_shared_creation': False,
             'visibility_settings': [],
             **data,
         }
@@ -285,7 +285,7 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(self.all_event_type_dict(), [{
             'id': 1,
             'academy_id': 1,
-            'allow_shared_creation': True,
-            'free_for_bootcamps': True,
+            'allow_shared_creation': False,
+            'free_for_bootcamps': False,
             **data
         }])

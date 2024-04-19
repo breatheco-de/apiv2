@@ -1,5 +1,5 @@
-from rest_framework.exceptions import APIException
 from django.core.handlers.wsgi import WSGIRequest
+from rest_framework.exceptions import APIException
 
 __all__ = ['GenerateLookupsMixin']
 
@@ -36,10 +36,7 @@ class GenerateLookupsMixin(APIException):
                          relationships=None,
                          many_fields=None,
                          many_relationships=None):
-        """
-        This method get the variables through of querystring, returns one list
-        ready to be used by the filter method
-        """
+        """Get the variables through of querystring, returns one list ready to be used by the filter method."""
 
         if fields is None:
             fields = []

@@ -53,7 +53,7 @@ def format_and_assert_code(code: str, from_kwargs: bool = False) -> None:
 
 # parse a date to a str with the local format
 def format_date(code: Optional[str], date: date, format='medium'):
-    """Translate the date to the local language"""
+    """Translate the date to the local language."""
 
     if not code:
         code = 'en'
@@ -64,7 +64,7 @@ def format_date(code: Optional[str], date: date, format='medium'):
 
 # parse a date to a str with the local format
 def format_datetime(code: Optional[str], date: datetime, tz: pytz.BaseTzInfo | str = pytz.UTC, format='medium'):
-    """Translate the datetime to the local language"""
+    """Translate the datetime to the local language."""
 
     if not code:
         code = 'en'
@@ -78,7 +78,7 @@ def format_datetime(code: Optional[str], date: datetime, tz: pytz.BaseTzInfo | s
 
 
 def format_time(code: Optional[str], date: time, format='full', **kwargs: str):
-    """Translate the time to the local language"""
+    """Translate the time to the local language."""
 
     if not code:
         code = 'en'
@@ -88,7 +88,7 @@ def format_time(code: Optional[str], date: time, format='full', **kwargs: str):
 
 
 def format_timedelta(code: Optional[str], date: time):
-    """Translate the timedelta to the local language"""
+    """Translate the timedelta to the local language."""
 
     if not code:
         code = 'en'
@@ -98,7 +98,7 @@ def format_timedelta(code: Optional[str], date: time):
 
 
 def format_languages(code: str) -> list:
-    """Translate the language to the local language"""
+    """Translate the language to the local language."""
 
     languages = set()
 
@@ -136,7 +136,7 @@ def try_to_translate(code, **kwargs: str) -> str | None:
 
 @cache
 def translation(code: Optional[str] = 'en', slug: Optional[str] = None, **kwargs: str) -> str:
-    """Get the translation"""
+    """Get the translation."""
 
     if not code:
         code = 'en'

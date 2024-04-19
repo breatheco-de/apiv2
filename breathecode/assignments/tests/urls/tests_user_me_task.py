@@ -143,7 +143,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_user_me_task__with_one_task(self):
-        model = self.bc.database.create(user=1, task=1)
+        model = self.bc.database.create(user=1, task=1, cohort=1)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:user_me_task')
@@ -165,7 +165,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_user_me_task__with_two_task(self):
-        model = self.bc.database.create(user=1, task=2)
+        model = self.bc.database.create(user=1, task=2, cohort=1)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:user_me_task')
@@ -187,7 +187,13 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_user_me_task__with_query_string_assets(self):
-        model = self.bc.database.create(user=1, task=[{'associated_slug': 'fine'}, {'associated_slug': 'super'}])
+        model = self.bc.database.create(user=1,
+                                        task=[{
+                                            'associated_slug': 'fine'
+                                        }, {
+                                            'associated_slug': 'super'
+                                        }],
+                                        cohort=1)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:user_me_task') + '?associated_slug=fine,super'
@@ -209,7 +215,13 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_user_me_task__with_query_string_assets_no_results(self):
-        model = self.bc.database.create(user=1, task=[{'associated_slug': 'fine'}, {'associated_slug': 'super'}])
+        model = self.bc.database.create(user=1,
+                                        task=[{
+                                            'associated_slug': 'fine'
+                                        }, {
+                                            'associated_slug': 'super'
+                                        }],
+                                        cohort=1)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:user_me_task') + '?associated_slug=kenny'
@@ -232,7 +244,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_user_me_task__with_one_task__but_the_other_user(self):
         task = {'user_id': 2}
-        model = self.bc.database.create(user=2, task=task)
+        model = self.bc.database.create(user=2, task=task, cohort=1)
         self.bc.request.authenticate(model.user[0])
 
         url = reverse_lazy('assignments:user_me_task')
@@ -255,7 +267,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_user_me_task__with_two_tasks__but_the_other_user(self):
         task = {'user_id': 2}
-        model = self.bc.database.create(user=2, task=(2, task))
+        model = self.bc.database.create(user=2, task=(2, task), cohort=1)
         self.bc.request.authenticate(model.user[0])
 
         url = reverse_lazy('assignments:user_me_task')
@@ -278,7 +290,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_delete_tasks_in_bulk_found_and_deleted(self):
 
-        model = self.bc.database.create(user=1, task=2)
+        model = self.bc.database.create(user=1, task=2, cohort=1)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:user_me_task') + '?id=1,2'
@@ -330,7 +342,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_delete_task_in_bulk_associated_with_another_user(self):
 
-        model = self.bc.database.create(user=2, task=2)
+        model = self.bc.database.create(user=2, task=2, cohort=1)
         self.bc.request.authenticate(model.user[1])
 
         url = reverse_lazy('assignments:user_me_task') + '?id=1,2'
@@ -463,7 +475,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
     def test_put_passing_taks_id(self):
-        model = self.bc.database.create(user=1, task=2)
+        model = self.bc.database.create(user=1, task=2, cohort=1)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('assignments:user_me_task')
@@ -539,7 +551,7 @@ class MediaTestSuite(AssignmentsTestCase):
             current_status = statuses[index]
             next_status = statuses[index - 1 if index > 0 else 2]
             task = {'revision_status': current_status, 'task_status': 'DONE'}
-            model = self.bc.database.create(user=1, task=task)
+            model = self.bc.database.create(user=1, task=task, cohort=1)
             self.client.force_authenticate(model.user)
 
             url = reverse_lazy('assignments:user_me_task')
@@ -591,7 +603,7 @@ class MediaTestSuite(AssignmentsTestCase):
                 },
             ]
             with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
-                model = self.bc.database.create(user=2, task=task, cohort_user=cohort_users)
+                model = self.bc.database.create(user=2, task=task, cohort_user=cohort_users, cohort=1)
             self.bc.request.authenticate(model.user[1])
 
             url = reverse_lazy('assignments:user_me_task')

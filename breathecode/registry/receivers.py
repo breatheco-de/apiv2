@@ -1,19 +1,27 @@
-import logging, os
-from django.dispatch import receiver
-from django.db.models.signals import post_delete
-from .models import Asset, AssetAlias, AssetImage
-from .tasks import (async_regenerate_asset_readme, async_delete_asset_images, async_remove_img_from_cloud,
-                    async_synchonize_repository_content, async_create_asset_thumbnail_legacy,
-                    async_add_syllabus_translations, async_update_frontend_asset_cache, async_create_asset_thumbnail)
-from .signals import (asset_slug_modified, asset_readme_modified, asset_title_modified)
-from breathecode.assignments.signals import assignment_created
-from breathecode.assignments.models import Task
+import logging
+import os
 
-from breathecode.monitoring.signals import github_webhook
-from breathecode.monitoring.models import RepositoryWebhook
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 
 from breathecode.admissions.models import SyllabusVersion
 from breathecode.admissions.signals import syllabus_version_json_updated
+from breathecode.assignments.models import Task
+from breathecode.assignments.signals import assignment_created
+from breathecode.monitoring.models import RepositoryWebhook
+from breathecode.monitoring.signals import github_webhook
+
+from .models import Asset, AssetAlias, AssetImage
+from .signals import asset_readme_modified, asset_slug_modified, asset_title_modified
+from .tasks import (
+    async_add_syllabus_translations,
+    async_create_asset_thumbnail,
+    async_delete_asset_images,
+    async_regenerate_asset_readme,
+    async_remove_img_from_cloud,
+    async_synchonize_repository_content,
+    async_update_frontend_asset_cache,
+)
 
 logger = logging.getLogger(__name__)
 

@@ -1,21 +1,24 @@
 """
 Test /v1/media/upload
 """
-import tempfile
-import os
 import hashlib
+import os
+import tempfile
 from unittest.mock import MagicMock, PropertyMock, call, patch
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from ..mixins import MediaTestCase
+
 from breathecode.media.views import MIME_ALLOW
+
+from ..mixins import MediaTestCase
 
 
 class MediaTestSuite(MediaTestCase):
     """Test /answer"""
 
     def test_upload_without_auth(self):
-        from breathecode.services.google_cloud import Storage, File
+        from breathecode.services.google_cloud import File, Storage
 
         self.headers(content_disposition='attachment; filename="filename.jpg"')
 
@@ -27,7 +30,7 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_upload_wrong_academy(self):
-        from breathecode.services.google_cloud import Storage, File
+        from breathecode.services.google_cloud import File, Storage
 
         self.headers(academy=1, content_disposition='attachment; filename="filename.jpg"')
 
@@ -39,7 +42,7 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_upload_without_capability(self):
-        from breathecode.services.google_cloud import Storage, File
+        from breathecode.services.google_cloud import File, Storage
 
         self.headers(academy=1, content_disposition='attachment; filename="filename.jpg"')
 
@@ -67,7 +70,7 @@ class MediaTestSuite(MediaTestCase):
                     url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
                     create=True)
     def test_upload_without_data(self):
-        from breathecode.services.google_cloud import Storage, File
+        from breathecode.services.google_cloud import File, Storage
 
         self.headers(academy=1)
 
@@ -101,7 +104,7 @@ class MediaTestSuite(MediaTestCase):
                     url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
                     create=True)
     def test_upload(self):
-        from breathecode.services.google_cloud import Storage, File
+        from breathecode.services.google_cloud import File, Storage
 
         self.headers(academy=1)
 
@@ -178,7 +181,7 @@ class MediaTestSuite(MediaTestCase):
                     url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
                     create=True)
     def test_upload_with_media(self):
-        from breathecode.services.google_cloud import Storage, File
+        from breathecode.services.google_cloud import File, Storage
 
         self.headers(academy=1)
 
@@ -244,7 +247,7 @@ class MediaTestSuite(MediaTestCase):
                     url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
                     create=True)
     def test_upload_with_media_with_same_slug(self):
-        from breathecode.services.google_cloud import Storage, File
+        from breathecode.services.google_cloud import File, Storage
 
         self.headers(academy=1)
 
@@ -326,7 +329,7 @@ class MediaTestSuite(MediaTestCase):
                     url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
                     create=True)
     def test_upload_categories(self):
-        from breathecode.services.google_cloud import Storage, File
+        from breathecode.services.google_cloud import File, Storage
 
         self.headers(academy=1)
 
@@ -408,7 +411,7 @@ class MediaTestSuite(MediaTestCase):
                     url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
                     create=True)
     def test_upload_categories_in_headers(self):
-        from breathecode.services.google_cloud import Storage, File
+        from breathecode.services.google_cloud import File, Storage
 
         self.headers(academy=1, categories=1)
 
@@ -492,7 +495,7 @@ class MediaTestSuite(MediaTestCase):
                     create=True)
     def test_upload_categories_in_headers__two_items(self):
         """Test /answer without auth"""
-        from breathecode.services.google_cloud import Storage, File
+        from breathecode.services.google_cloud import File, Storage
 
         self.headers(academy=1, categories=1)
 
@@ -609,7 +612,7 @@ class MediaTestSuite(MediaTestCase):
                     url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
                     create=True)
     def test_upload_valid_format(self):
-        from breathecode.services.google_cloud import Storage, File
+        from breathecode.services.google_cloud import File, Storage
 
         self.headers(academy=1)
 
@@ -680,7 +683,7 @@ class MediaTestSuite(MediaTestCase):
                     url=MagicMock(return_value='https://storage.cloud.google.com/media-breathecode/hardcoded_url'),
                     create=True)
     def test_upload_invalid_format(self):
-        from breathecode.services.google_cloud import Storage, File
+        from breathecode.services.google_cloud import File, Storage
 
         self.headers(academy=1)
 

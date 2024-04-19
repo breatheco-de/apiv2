@@ -1,6 +1,3 @@
-from typing import Generator
-from unittest.mock import patch
-
 import pytest
 
 __all__ = ['disable_newrelic_prints']

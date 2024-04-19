@@ -3,15 +3,20 @@ from logging import Logger
 from random import choice
 from unittest.mock import MagicMock, call, patch
 
-import pytz
-
 # from datetime import datetime
+import pytest
 from django.utils import timezone
 
 from breathecode.authenticate.tasks import async_accept_user_from_waiting_list
 from breathecode.notify import actions as notify_actions
 
 from ..mixins.new_auth_test_case import AuthTestCase
+
+
+@pytest.fixture(autouse=True)
+def setup(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr('breathecode.authenticate.tasks.create_user_from_invite.apply_async', MagicMock())
+    yield
 
 
 class ModelProfileAcademyTestSuite(AuthTestCase):
