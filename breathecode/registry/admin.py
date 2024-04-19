@@ -12,7 +12,7 @@ from .models import (Asset, AssetTechnology, AssetAlias, AssetErrorLog, KeywordC
 from .tasks import (async_pull_from_github, async_test_asset, async_download_readme_images, async_remove_img_from_cloud,
                     async_upload_image_to_bucket, async_update_frontend_asset_cache)
 from .actions import (get_user_from_github_username, AssetThumbnailGenerator, scan_asset_originality,
-                      add_syllabus_translations, clean_asset_readme)
+                      add_syllabus_translations, clean_asset_readme, process_asset_config)
 
 logger = logging.getLogger(__name__)
 lang_flags = {
@@ -44,6 +44,12 @@ def make_external(modeladmin, request, queryset):
 @admin.display(description='Make it an INTERNAL resource (same window)')
 def make_internal(modeladmin, request, queryset):
     queryset.update(external=False)
+
+
+def process_config_object(modeladmin, request, queryset):
+    assets = queryset.all()
+    for a in assets:
+        process_asset_config(a, a.config)
 
 
 def pull_content_from_github(modeladmin, request, queryset):
@@ -335,6 +341,7 @@ class AssetAdmin(admin.ModelAdmin):
         test_asset_integrity,
         add_gitpod,
         remove_gitpod,
+        process_config_object,
         pull_content_from_github,
         pull_content_from_github_override_meta,
         seo_optimization_off,
