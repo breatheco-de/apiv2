@@ -152,7 +152,7 @@ def run_supervisor(supervisor_id: int, **_: Any):
 
     try:
         func = getattr(module, supervisor.task_name)
-    except AttributeError as e:
+    except AttributeError:
         raise AbortTask(f'Supervisor {supervisor.task_module}.{supervisor.task_name} not found')
 
     supervisor.ran_at = timezone.now()

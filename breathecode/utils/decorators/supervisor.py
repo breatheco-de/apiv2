@@ -29,7 +29,6 @@ def supervisor(fn: Optional[callable] = None,
                 fn_name = fn.__name__
                 fn_module = fn.__module__
 
-                from unittest.mock import call
                 instance, created = Supervisor.objects.get_or_create(task_module=fn_module,
                                                                      task_name=fn_name,
                                                                      defaults={
