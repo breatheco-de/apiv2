@@ -51,7 +51,7 @@ logger = logging.getLogger(__name__)
 
 MIME_ALLOW = [
     'image/png', 'image/svg+xml', 'image/jpeg', 'image/gif', 'video/quicktime', 'video/mp4', 'audio/mpeg',
-    'application/pdf', 'image/jpg'
+    'application/pdf', 'image/jpg', 'application/octet-stream'
 ]
 
 IMAGES_MIME_ALLOW = ['image/png', 'image/svg+xml', 'image/jpeg', 'image/jpg']
@@ -535,7 +535,9 @@ class TaskMeAttachmentView(APIView):
         for index in range(0, len(files)):
             file = files[index]
             if file.content_type not in mime_allow:
-                raise ValidationException(f'You can upload only files on the following formats: {",".join(mime_allow)}')
+                raise ValidationException(
+                    f'You can upload only files on the following formats: {",".join(mime_allow)}, got {file.content_type}',
+                )
 
         for index in range(0, len(files)):
             file = files[index]

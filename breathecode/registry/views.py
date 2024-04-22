@@ -159,7 +159,8 @@ def render_preview_html(request, asset_slug):
 @permission_classes([AllowAny])
 def get_technologies(request):
     lang = get_user_language(request)
-    lookup = {}
+
+    items = AssetTechnology.objects.filter(parent__isnull=True)
 
     if 'sort_priority' in request.GET:
         param = request.GET.get('sort_priority')
@@ -168,20 +169,26 @@ def get_technologies(request):
 
             param = int(param)
 
-            lookup['sort_priority__exact'] = param
+            items = items.filter(sort_priority__exact=param)
         except Exception:
             raise ValidationException(
                 translation(lang,
-                            en='The parameter must be an integer nothing else',
+                            en='The parameter must be an integer, nothing else',
                             es='El parametró debera ser un entero y nada mas ',
                             slug='integer-not-found'))
 
+    if 'lang' in request.GET:
+        param = request.GET.get('lang')
+        if param == 'en':
+            param = 'us'
+        items = items.filter(Q(lang__iexact=param) | Q(lang='') | Q(lang__isnull=True))
+
     if 'is_deprecated' not in request.GET or request.GET.get('is_deprecated').lower() == 'false':
-        lookup['is_deprecated'] = False
+        items = items.filter(is_deprecated=False)
 
-    tech = AssetTechnology.objects.filter(parent__isnull=True, **lookup).order_by('sort_priority')
+    items = items.order_by('sort_priority')
 
-    serializer = AssetTechnologySerializer(tech, many=True)
+    serializer = AssetTechnologySerializer(items, many=True)
     return Response(serializer.data)
 
 
@@ -211,8 +218,11 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
         if self.request.GET.get('include_children') != 'true' and not has_valid_parent:
             items = items.filter(parent__isnull=True)
 
-        if 'language' in self.request.GET:
-            param = self.request.GET.get('language')
+        if 'language' in self.request.GET or 'lang' in self.request.GET:
+            param = self.request.GET.get('language', '')
+            if not param:
+                param = self.request.GET.get('lang')
+
             if param == 'en':
                 param = 'us'
             items = items.filter(Q(lang__iexact=param) | Q(lang='') | Q(lang__isnull=True))
