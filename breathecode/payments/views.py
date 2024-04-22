@@ -1217,142 +1217,145 @@ class CheckingView(APIView):
 
         lang = get_user_language(request)
 
-        with transaction.atomic():
-            sid = transaction.savepoint()
-            try:
-                if bag_type == 'BAG' and not (bag := Bag.objects.filter(
-                        user=request.user, status='CHECKING', type=bag_type).first()):
-                    raise ValidationException(translation(lang,
-                                                          en='Bag not found',
-                                                          es='Bolsa no encontrada',
-                                                          slug='not-found'),
-                                              code=404)
-                if bag_type == 'PREVIEW':
+        client = None
+        if IS_DJANGO_REDIS:
+            client = get_redis_connection('default')
 
-                    academy = request.data.get('academy')
-                    kwargs = {}
-
-                    if academy and (isinstance(academy, int) or academy.isnumeric()):
-                        kwargs['id'] = int(academy)
-                    else:
-                        kwargs['slug'] = academy
-
-                    academy = Academy.objects.filter(main_currency__isnull=False, **kwargs).first()
-
-                    if not academy:
-                        cohort = request.data.get('cohort')
-
-                        kwargs = {}
-
-                        if cohort and (isinstance(cohort, int) or cohort.isnumeric()):
-                            kwargs['id'] = int(cohort)
-                        else:
-                            kwargs['slug'] = cohort
-
-                        cohort = Cohort.objects.filter(academy__main_currency__isnull=False, **kwargs).first()
-                        if cohort:
-                            academy = cohort.academy
-                            request.data['cohort'] = cohort.id
-
-                    if not academy and (plans := request.data.get('plans')) and len(plans) == 1:
-                        kwargs = {}
-                        pk = plans[0]
-                        if isinstance(pk, int):
-                            kwargs['id'] = int(pk)
-
-                        else:
-                            kwargs['slug'] = pk
-
-                        plan = Plan.objects.filter(owner__main_currency__isnull=False, **kwargs).first()
-
-                        if plan:
-                            academy = plan.owner
-
-                    if not academy:
-                        raise ValidationException(translation(
-                            lang,
-                            en='Academy not found or not configured properly',
-                            es='Academia no encontrada o no configurada correctamente',
-                            slug='not-found'),
-                                                  code=404)
-
-                    if 'coupons' in request.data and not isinstance(request.data['coupons'], list):
-                        raise ValidationException(translation(lang,
-                                                              en='Coupons must be a list of strings',
-                                                              es='Cupones debe ser una lista de cadenas',
-                                                              slug='invalid-coupons'),
-                                                  code=400)
-
-                    if 'coupons' in request.data and len(request.data['coupons']) > (max := max_coupons_allowed()):
-                        raise ValidationException(translation(lang,
-                                                              en=f'Too many coupons (max {max})',
-                                                              es=f'Demasiados cupones (max {max})',
-                                                              slug='too-many-coupons'),
-                                                  code=400)
-
-                    client = None
-                    if IS_DJANGO_REDIS:
-                        client = get_redis_connection('default')
-
+        try:
+            # the lock must wrap the transaction
+            with Lock(client, f'lock:bag:user-{request.user.email}', timeout=30, blocking_timeout=30):
+                with transaction.atomic():
+                    sid = transaction.savepoint()
                     try:
-                        with Lock(client, f'lock:bag:user-{request.user.email}', timeout=30, blocking_timeout=30):
+                        if bag_type == 'BAG' and not (bag := Bag.objects.filter(
+                                user=request.user, status='CHECKING', type=bag_type).first()):
+                            raise ValidationException(translation(lang,
+                                                                  en='Bag not found',
+                                                                  es='Bolsa no encontrada',
+                                                                  slug='not-found'),
+                                                      code=404)
+                        if bag_type == 'PREVIEW':
+
+                            academy = request.data.get('academy')
+                            kwargs = {}
+
+                            if academy and (isinstance(academy, int) or academy.isnumeric()):
+                                kwargs['id'] = int(academy)
+                            else:
+                                kwargs['slug'] = academy
+
+                            academy = Academy.objects.filter(main_currency__isnull=False, **kwargs).first()
+
+                            if not academy:
+                                cohort = request.data.get('cohort')
+
+                                kwargs = {}
+
+                                if cohort and (isinstance(cohort, int) or cohort.isnumeric()):
+                                    kwargs['id'] = int(cohort)
+                                else:
+                                    kwargs['slug'] = cohort
+
+                                cohort = Cohort.objects.filter(academy__main_currency__isnull=False, **kwargs).first()
+                                if cohort:
+                                    academy = cohort.academy
+                                    request.data['cohort'] = cohort.id
+
+                            if not academy and (plans := request.data.get('plans')) and len(plans) == 1:
+                                kwargs = {}
+                                pk = plans[0]
+                                if isinstance(pk, int):
+                                    kwargs['id'] = int(pk)
+
+                                else:
+                                    kwargs['slug'] = pk
+
+                                plan = Plan.objects.filter(owner__main_currency__isnull=False, **kwargs).first()
+
+                                if plan:
+                                    academy = plan.owner
+
+                            if not academy:
+                                raise ValidationException(translation(
+                                    lang,
+                                    en='Academy not found or not configured properly',
+                                    es='Academia no encontrada o no configurada correctamente',
+                                    slug='not-found'),
+                                                          code=404)
+
+                            if 'coupons' in request.data and not isinstance(request.data['coupons'], list):
+                                raise ValidationException(translation(lang,
+                                                                      en='Coupons must be a list of strings',
+                                                                      es='Cupones debe ser una lista de cadenas',
+                                                                      slug='invalid-coupons'),
+                                                          code=400)
+
+                            if 'coupons' in request.data and len(request.data['coupons']) > (max :=
+                                                                                             max_coupons_allowed()):
+                                raise ValidationException(translation(lang,
+                                                                      en=f'Too many coupons (max {max})',
+                                                                      es=f'Demasiados cupones (max {max})',
+                                                                      slug='too-many-coupons'),
+                                                          code=400)
+
                             bag, created = Bag.objects.get_or_create(user=request.user,
                                                                      status='CHECKING',
                                                                      type=bag_type,
                                                                      academy=academy,
                                                                      currency=academy.main_currency)
 
-                    except LockError:
-                        raise ValidationException(translation(lang,
-                                                              en='Timeout reached, operation timed out.',
-                                                              es='Tiempo de espera alcanzado, operación agotada.',
-                                                              slug='timeout'),
-                                                  code=408)
+                            add_items_to_bag(request, bag, lang)
 
-                    add_items_to_bag(request, bag, lang)
+                            plan = bag.plans.first()
+                            if plan and bag.coupons.count() == 0:
+                                coupons = get_available_coupons(plan, request.data.get('coupons', []))
+                                bag.coupons.set(coupons)
+                            # actions.check_dependencies_in_bag(bag, lang)
 
-                    plan = bag.plans.first()
-                    if plan and bag.coupons.count() == 0:
-                        coupons = get_available_coupons(plan, request.data.get('coupons', []))
-                        bag.coupons.set(coupons)
-                    # actions.check_dependencies_in_bag(bag, lang)
+                        utc_now = timezone.now()
 
-                utc_now = timezone.now()
+                        bag.token = Token.generate_key()
+                        bag.expires_at = utc_now + timedelta(minutes=60)
 
-                bag.token = Token.generate_key()
-                bag.expires_at = utc_now + timedelta(minutes=60)
+                        plan = bag.plans.filter(status='CHECKING').first()
 
-                plan = bag.plans.filter(status='CHECKING').first()
+                        #FIXME: the service items should be bought without renewals
+                        if not plan or plan.is_renewable:
+                            bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = \
+                                get_amount(bag, bag.academy.main_currency, lang)
 
-                #FIXME: the service items should be bought without renewals
-                if not plan or plan.is_renewable:
-                    bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = \
-                        get_amount(bag, bag.academy.main_currency, lang)
+                        else:
+                            actions.ask_to_add_plan_and_charge_it_in_the_bag(bag, request.user, lang)
 
-                else:
-                    actions.ask_to_add_plan_and_charge_it_in_the_bag(bag, request.user, lang)
+                        amount = bag.amount_per_month or bag.amount_per_quarter or bag.amount_per_half or bag.amount_per_year
+                        plans = bag.plans.all()
+                        if not amount and plans.filter(financing_options__id__gte=1):
+                            amount = 1
 
-                amount = bag.amount_per_month or bag.amount_per_quarter or bag.amount_per_half or bag.amount_per_year
-                plans = bag.plans.all()
-                if not amount and plans.filter(financing_options__id__gte=1):
-                    amount = 1
+                        if amount == 0 and PlanFinancing.objects.filter(plans__in=plans).count():
+                            raise ValidationException(translation(lang,
+                                                                  en='Your free trial was already took',
+                                                                  es='Tu prueba gratuita ya fue tomada',
+                                                                  slug='your-free-trial-was-already-took'),
+                                                      code=400)
 
-                if amount == 0 and PlanFinancing.objects.filter(plans__in=plans).count():
-                    raise ValidationException(translation(lang,
-                                                          en='Your free trial was already took',
-                                                          es='Tu prueba gratuita ya fue tomada',
-                                                          slug='your-free-trial-was-already-took'),
-                                              code=400)
+                        bag.save()
+                        transaction.savepoint_commit(sid)
 
-                bag.save()
-                transaction.savepoint_commit(sid)
+                        serializer = GetBagSerializer(bag, many=False)
+                        return Response(serializer.data,
+                                        status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
-                serializer = GetBagSerializer(bag, many=False)
-                return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+                    except Exception as e:
+                        transaction.savepoint_rollback(sid)
+                        raise e
 
-            except Exception as e:
-                transaction.savepoint_rollback(sid)
-                raise e
+        except LockError:
+            raise ValidationException(translation(lang,
+                                                  en='Timeout reached, operation timed out.',
+                                                  es='Tiempo de espera alcanzado, operación agotada.',
+                                                  slug='timeout'),
+                                      code=408)
 
 
 class ConsumableCheckoutView(APIView):
