@@ -1,11 +1,14 @@
 import binascii
-import os
 import json
-from django.db import models
+import os
+from datetime import timedelta
 from urllib.parse import urlparse
+
+from django.db import models
+from django.utils import timezone
+
 from breathecode.admissions.models import Academy
 from breathecode.notify.models import SlackChannel
-from datetime import timedelta
 
 __all__ = ['Application', 'Endpoint', 'MonitorScript']
 
@@ -283,3 +286,41 @@ class RepositoryWebhook(models.Model):
 
     def get_payload(self):
         return json.loads(self.payload)
+
+
+class Supervisor(models.Model):
+    task_module = models.CharField(max_length=200)
+    task_name = models.CharField(max_length=200)
+    delta = models.DurationField(default=timedelta(minutes=30),
+                                 help_text='How long to wait for the next execution, defaults to 30 minutes')
+
+    ran_at = models.DateTimeField(default=None, null=True, blank=True)
+
+    def __str__(self):
+        return f'{self.task_module}.{self.task_name}'
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+
+        return super().save(*args, **kwargs)
+
+
+class SupervisorIssue(models.Model):
+    """It represents all issues opened by the supervisor."""
+
+    supervisor = models.ForeignKey(Supervisor, on_delete=models.CASCADE)
+    occurrences = models.PositiveIntegerField(default=1, blank=True)
+    error = models.TextField(blank=False, max_length=255)
+    ran_at = models.DateTimeField(default=None, null=True, blank=True)
+
+    def __str__(self):
+        return self.error
+
+    def clean(self) -> None:
+        if not self.ran_at:
+            self.ran_at = timezone.now()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+
+        return super().save(*args, **kwargs)

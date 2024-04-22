@@ -163,15 +163,19 @@ class Service(AbstractAsset):
                                     blank=True,
                                     help_text='Groups that can access the customer that bought this service')
 
+    session_duration = models.DurationField(default=None,
+                                            null=True,
+                                            blank=True,
+                                            help_text='Session duration, used in consumption sessions')
     type = models.CharField(max_length=22, choices=Type, default=Type.COHORT_SET, help_text='Service type')
 
     def __str__(self):
         return self.slug
 
-    def save(self):
+    def save(self, *args, **kwargs):
         self.full_clean()
 
-        super().save()
+        super().save(*args, **kwargs)
 
 
 class ServiceTranslation(models.Model):
@@ -237,7 +241,7 @@ class ServiceItem(AbstractServiceItem):
     def save(self, *args, **kwargs):
         self.full_clean()
 
-        super().save()
+        super().save(*args, **kwargs)
 
     def delete(self):
         raise forms.ValidationError('You cannot delete a service item')
@@ -641,10 +645,10 @@ class PlanTranslation(models.Model):
     title = models.CharField(max_length=60, help_text='Title of the plan')
     description = models.CharField(max_length=255, help_text='Description of the plan')
 
-    def save(self):
+    def save(self, *args, **kwargs):
         self.full_clean()
 
-        super().save()
+        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f'{self.lang} {self.title}: ({self.plan.slug})'
@@ -1312,7 +1316,7 @@ class Consumable(AbstractServiceItem):
 
         return super().clean()
 
-    def save(self):
+    def save(self, *args, **kwargs):
         self.full_clean()
 
         created = not self.id
@@ -1320,7 +1324,7 @@ class Consumable(AbstractServiceItem):
         if created and self.how_many != 0:
             signals.grant_service_permissions.send(instance=self, sender=self.__class__)
 
-        super().save()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f'{self.user.email}: {self.service_item.service.slug} ({self.how_many})'
@@ -1337,6 +1341,8 @@ CONSUMPTION_SESSION_STATUS = [
 
 
 class ConsumptionSession(models.Model):
+    operation_code = models.SlugField(default='default',
+                                      help_text='Code that identifies the operation, it could be repeated')
     consumable = models.ForeignKey(Consumable, on_delete=models.CASCADE, help_text='Consumable')
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE, help_text='Customer')
     eta = models.DateTimeField(help_text='Estimated time of arrival')
@@ -1363,24 +1369,41 @@ class ConsumptionSession(models.Model):
         help_text='Related slug, it\'s human-readable identifier, it must be unique and it can only contain '
         'letters, numbers and hyphens')
 
+    def clean(self):
+        self.request = self.sort_dict(self.request or {})
+
     def save(self, *args, **kwargs):
         self.full_clean()
 
         super().save(*args, **kwargs)
 
     @classmethod
+    def sort_dict(cls, d):
+        if isinstance(d, dict):
+            return {k: cls.sort_dict(v) for k, v in sorted(d.items())}
+
+        elif isinstance(d, list):
+            return [cls.sort_dict(x) for x in d]
+
+        return d
+
+    @classmethod
     def build_session(cls,
                       request: WSGIRequest,
                       consumable: Consumable,
                       delta: timedelta,
-                      user: Optional[User] = None) -> 'ConsumptionSession':
+                      user: Optional[User] = None,
+                      operation_code: Optional[str] = None) -> 'ConsumptionSession':
         assert request, 'You must provide a request'
         assert consumable, 'You must provide a consumable'
         assert delta, 'You must provide a delta'
 
+        if operation_code is None:
+            operation_code = 'default'
+
         utc_now = timezone.now()
 
-        resource = consumable.mentorship_service_set or consumable.event_type_set or consumable.cohort_set
+        resource = consumable.mentorship_service_set or consumable.event_type_set or consumable.cohort_set or consumable.service_set
         id = resource.id if resource else 0
         slug = resource.slug if resource else ''
 
@@ -1406,29 +1429,27 @@ class ConsumptionSession(models.Model):
         # assert path, 'You must provide a path'
         assert delta, 'You must provide a delta'
 
-        session = cls.objects.filter(
-            eta__gte=utc_now,
-            request=data,
-            path=path,
-            duration=delta,
-            related_id=id,
-            related_slug=slug,
-            #   related_info=info,
-            user=user).exclude(eta__lte=utc_now).first()
+        session = cls.objects.filter(eta__gte=utc_now,
+                                     request=data,
+                                     path=path,
+                                     duration=delta,
+                                     related_id=id,
+                                     related_slug=slug,
+                                     operation_code=operation_code,
+                                     user=user).exclude(eta__lte=utc_now).first()
 
         if session:
             return session
 
-        return cls.objects.create(
-            request=data,
-            consumable=consumable,
-            eta=utc_now + delta,
-            path=path,
-            duration=delta,
-            related_id=id,
-            related_slug=slug,
-            #   related_info=info,
-            user=user)
+        return cls.objects.create(request=data,
+                                  consumable=consumable,
+                                  eta=utc_now + delta,
+                                  path=path,
+                                  duration=delta,
+                                  related_id=id,
+                                  related_slug=slug,
+                                  operation_code=operation_code,
+                                  user=user)
 
     @classmethod
     def get_session(cls, request: WSGIRequest) -> 'ConsumptionSession':
@@ -1444,13 +1465,15 @@ class ConsumptionSession(models.Model):
             kwargs = request.resolver_match.kwargs
 
         data = {
-            'args': args,
+            'args': list(args),
             'kwargs': kwargs,
             'headers': {
                 'academy': request.META.get('HTTP_ACADEMY')
             },
             'user': request.user.id,
         }
+
+        data = cls.sort_dict(data)
         return cls.objects.filter(eta__gte=utc_now, request=data, user=request.user).first()
 
     def will_consume(self, how_many: float = 1.0) -> None:
