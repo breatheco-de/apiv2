@@ -14,10 +14,11 @@ from breathecode.utils.api_view_extensions.api_view_extension_handlers import AP
 from ...mixins import RegistryTestCase
 
 
-def get_serializer(asset_technology, assets=[], asset_technologies=[]):
+def get_serializer(asset_technology, assets=[], asset_technologies=[], data={}):
     return {
         'alias': asset_technologies,
         'assets': assets,
+        'lang': None,
         'description': asset_technology.description,
         'icon_url': asset_technology.icon_url,
         'is_deprecated': asset_technology.is_deprecated,
@@ -33,6 +34,7 @@ def get_serializer(asset_technology, assets=[], asset_technologies=[]):
         'title': asset_technology.title,
         'visibility': asset_technology.visibility,
         'sort_priority': asset_technology.sort_priority,
+        **data,
     }
 
 
@@ -232,7 +234,10 @@ class RegistryTestSuite(RegistryTestCase):
             url = reverse_lazy('registry:academy_technology') + f'?language={query}'
             response = self.client.get(url)
             json = response.json()
-            expected = [get_serializer(x) for x in sorted(model.asset_technology, key=lambda x: x.slug, reverse=True)]
+            expected = [
+                get_serializer(x, data={'lang': value})
+                for x in sorted(model.asset_technology, key=lambda x: x.slug, reverse=True)
+            ]
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
