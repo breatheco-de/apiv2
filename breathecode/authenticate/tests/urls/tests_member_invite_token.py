@@ -40,7 +40,7 @@ def render_page_without_invites():
 
     return loader.render_to_string(
         'message.html', {
-            'MESSAGE': 'Invitation not found with this token or it was already accepted',
+            'MESSAGE': 'Invitation not found or it was already accepted',
             'BUTTON': None,
             'BUTTON_TARGET': '_blank',
             'LINK': None,
@@ -205,7 +205,7 @@ class AuthenticateTestSuite(AuthTestCase):
             with open('expected.html', 'w') as f:
                 f.write(expected)
 
-        self.assertEqual(content, expected)
+        assert content == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
 

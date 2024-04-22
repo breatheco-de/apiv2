@@ -13,6 +13,7 @@ def get_serializer(asset_technology, assets=[], asset_technologies=[]):
     return {
         'description': asset_technology.description,
         'icon_url': asset_technology.icon_url,
+        'lang': None,
         'is_deprecated': asset_technology.is_deprecated,
         'parent': None,
         'slug': asset_technology.slug,
