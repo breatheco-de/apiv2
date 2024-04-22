@@ -40,6 +40,7 @@ ENV = os.getenv('ENV', '')
 redis_client = None
 
 
+# Actually this code didn't work because set up the right lock key is the key for the lock works, but appearly it's impossible
 class LockManager(models.Manager):
 
     def get_or_create(self, lock=False, **kwargs):
