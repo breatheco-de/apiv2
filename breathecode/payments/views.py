@@ -1,8 +1,11 @@
 from datetime import timedelta
 
+from django.core.cache import cache
 from django.db import transaction
 from django.db.models import CharField, Q, Value
 from django.utils import timezone
+from django_redis import get_redis_connection
+from redis.exceptions import LockError
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
@@ -70,10 +73,13 @@ from breathecode.utils import APIViewExtensions, getLogger
 from breathecode.utils.decorators.capable_of import capable_of
 from breathecode.utils.i18n import translation
 from breathecode.utils.payment_exception import PaymentException
+from breathecode.utils.redis import Lock
 from breathecode.utils.shorteners import C
 from breathecode.utils.validation_exception import ValidationException
 
 logger = getLogger(__name__)
+
+IS_DJANGO_REDIS = hasattr(cache, 'delete_pattern')
 
 
 class PlanView(APIView):
@@ -1169,7 +1175,21 @@ class BagView(APIView):
                                       code=400)
 
         # do no show the bags of type preview they are build
-        bag, _ = Bag.objects.get_or_create(lock=True, user=request.user, status='CHECKING', type='BAG')
+        client = None
+        if IS_DJANGO_REDIS:
+            client = get_redis_connection('default')
+
+        try:
+            with Lock(client, f'lock:bag:user-{request.user.email}', timeout=30, blocking_timeout=30):
+                bag, _ = Bag.objects.get_or_create(user=request.user, status='CHECKING', type='BAG')
+
+        except LockError:
+            raise ValidationException(translation(lang,
+                                                  en='Timeout reached, operation timed out.',
+                                                  es='Tiempo de espera alcanzado, operación agotada.',
+                                                  slug='timeout'),
+                                      code=408)
+
         add_items_to_bag(request, bag, lang)
 
         plan = bag.plans.first()
@@ -1270,13 +1290,24 @@ class CheckingView(APIView):
                                                               slug='too-many-coupons'),
                                                   code=400)
 
-                    # Locked operation to avoid creating twice if 2 web instances are requesting in parallel
-                    bag, created = Bag.objects.get_or_create(lock=True,
-                                                             user=request.user,
-                                                             status='CHECKING',
-                                                             type=bag_type,
-                                                             academy=academy,
-                                                             currency=academy.main_currency)
+                    client = None
+                    if IS_DJANGO_REDIS:
+                        client = get_redis_connection('default')
+
+                    try:
+                        with Lock(client, f'lock:bag:user-{request.user.email}', timeout=30, blocking_timeout=30):
+                            bag, created = Bag.objects.get_or_create(user=request.user,
+                                                                     status='CHECKING',
+                                                                     type=bag_type,
+                                                                     academy=academy,
+                                                                     currency=academy.main_currency)
+
+                    except LockError:
+                        raise ValidationException(translation(lang,
+                                                              en='Timeout reached, operation timed out.',
+                                                              es='Tiempo de espera alcanzado, operación agotada.',
+                                                              slug='timeout'),
+                                                  code=408)
 
                     add_items_to_bag(request, bag, lang)
 
