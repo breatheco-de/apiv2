@@ -949,7 +949,7 @@ def add_syllabus_translations(_json: dict):
             for ass in day[asset_type]:
                 index += 1
                 slug = ass['slug'] if 'slug' in ass else ass
-                _asset = Asset.objects.filter(slug=slug).first()
+                _asset = Asset.get_by_slug(slug)
                 if _asset is not None:
                     if 'slug' not in ass:
                         _json['days'][day_count][asset_type][index] = {
