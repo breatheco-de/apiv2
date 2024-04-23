@@ -22,7 +22,6 @@ from breathecode.events.models import EventType
 from breathecode.mentorship.models import MentorshipService
 from breathecode.payments import signals
 from breathecode.utils.i18n import translation
-from breathecode.utils.locking import LockManager
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils.validators.language import validate_language_code
 
@@ -862,8 +861,6 @@ CHOSEN_PERIOD = [
 
 class Bag(AbstractAmountByTime):
     """Represents a credit that can be used by a user to use a service."""
-
-    objects = LockManager()
 
     status = models.CharField(max_length=8, choices=BAG_STATUS, default=CHECKING, help_text='Bag status', db_index=True)
     type = models.CharField(max_length=7, choices=BAG_TYPE, default=BAG, help_text='Bag type')
