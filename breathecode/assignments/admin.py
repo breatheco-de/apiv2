@@ -163,6 +163,4 @@ class LearnPackWebhookAdmin(admin.ModelAdmin):
                 return colors[s]
             return ''
 
-        return format_html(
-            f"<div><span class='badge'>{obj.status}</span></div><small>{obj.status_text}</small>"
-        )
+        return format_html(f"<div><span class='badge'>{obj.status}</span></div><small>{obj.status_text}</small>")

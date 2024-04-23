@@ -118,23 +118,24 @@ jobs:
         id: calculate-md5-1
         run: echo "MD5_1=$(python -m scripts.md5 ./Pipfile.lock)" >> $GITHUB_ENV
 
-      # Cache Pipenv packages
-      - name: Cache Pipenv packages
-        uses: actions/cache@v2
-        id: cache
-        with:
-          path: |
-            ~/.local/share/virtualenvs
-            ~/.cache/pip
-          key: ${{ runner.os }}-pipenv-3-11-8-${{ hashFiles('**/Pipfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pipenv-3-11-8-
+      # # Cache Pipenv packages
+      # - name: Cache Pipenv packages
+      #   uses: actions/cache@v2
+      #   id: cache
+      #   with:
+      #     path: |
+      #       ~/.local/share/virtualenvs
+      #       ~/.cache/pip
+      #     key: ${{ runner.os }}-pipenv-3-11-8-${{ hashFiles('**/Pipfile.lock') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-pipenv-3-11-8-
 
       # Install Pipenv
       - name: Install dependencies
-        if: steps.cache.outputs.cache-hit == 'true'
+        # if: steps.cache.outputs.cache-hit == 'true'
         run: |
           pip install pipenv
+          pipenv install --dev
 
       - name: Calculate updated MD5 for Pipfile.lock
         id: calculate-md5-2

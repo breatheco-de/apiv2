@@ -34,6 +34,7 @@ from breathecode.payments.models import (
     Bag,
     CohortSet,
     Consumable,
+    ConsumptionSession,
     Currency,
     EventTypeSet,
     FinancialReputation,
@@ -69,6 +70,7 @@ from breathecode.payments.serializers import (
     ServiceSerializer,
 )
 from breathecode.payments.services.stripe import Stripe
+from breathecode.payments.signals import reimburse_service_units
 from breathecode.utils import APIViewExtensions, getLogger
 from breathecode.utils.decorators.capable_of import capable_of
 from breathecode.utils.i18n import translation
@@ -1035,6 +1037,53 @@ class CardView(APIView):
             raise ValidationException(str(e), code=400)
 
         return Response({'status': 'ok'})
+
+
+class ConsumeView(APIView):
+
+    def put(self, request, service_slug, hash=None):
+        lang = get_user_language(request)
+
+        session = ConsumptionSession.get_session(request)
+        if session:
+            return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+
+        consumable = Consumable.get(user=request.user, lang=lang, service=service_slug)
+        if consumable is None:
+            raise PaymentException(
+                translation(lang, en='Insuficient credits', es='Créditos insuficientes', slug='insufficient-credits'))
+
+        session_duration = consumable.service_item.service.session_duration or timedelta(minutes=1)
+        session = ConsumptionSession.build_session(request,
+                                                   consumable,
+                                                   session_duration,
+                                                   operation_code='unsafe-consume-service-set')
+
+        session.will_consume(1)
+
+        return Response({'status': 'ok'}, status=status.HTTP_201_CREATED)
+
+
+class CancelConsumptionView(APIView):
+
+    def put(self, request, service_slug, hash=None):
+        lang = get_user_language(request)
+
+        session = ConsumptionSession.objects.filter(
+            consumable__user=request.user,
+            consumable__service_set__services__slug=service_slug).exclude(status='CANCELLED').first()
+        if session is None:
+            raise ValidationException(translation(lang,
+                                                  en='Session not found',
+                                                  es='Sesión no encontrada',
+                                                  slug='session-not-found'),
+                                      code=status.HTTP_404_NOT_FOUND)
+
+        how_many = session.how_many
+        consumable = session.consumable
+        reimburse_service_units.send(instance=consumable, sender=consumable.__class__, how_many=how_many)
+
+        return Response({'status': 'reversed'}, status=status.HTTP_200_OK)
 
 
 class PlanOfferView(APIView):

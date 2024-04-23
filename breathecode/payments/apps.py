@@ -7,3 +7,4 @@ class PaymentsConfig(AppConfig):
 
     def ready(self):
         from . import receivers  # noqa: F401
+        from . import supervisors  # noqa: F401

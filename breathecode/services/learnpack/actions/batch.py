@@ -1,10 +1,10 @@
 import logging
 
 logger = logging.getLogger(__name__)
-from breathecode.assignments.models import AssignmentTelemetry
+from breathecode.assignments.models import AssignmentTelemetry, LearnPackWebhook
 
 
-def batch(self, webhook):
+def batch(self, webhook: LearnPackWebhook):
     # lazyload to fix circular import
     from breathecode.assignments.models import Task
 
