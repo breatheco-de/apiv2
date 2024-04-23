@@ -290,6 +290,7 @@ class RepositoryWebhookAdmin(admin.ModelAdmin):
 class SupervisorAdmin(admin.ModelAdmin):
     list_display = ('task_module', 'task_name', 'delta', 'ran_at')
     list_filter = []
+    search_fields = ['task_module', 'task_name']
     actions = []
 
 
@@ -297,4 +298,5 @@ class SupervisorAdmin(admin.ModelAdmin):
 class SupervisorIssueAdmin(admin.ModelAdmin):
     list_display = ('supervisor', 'occurrences', 'error', 'ran_at')
     list_filter = ['supervisor']
+    search_fields = ['supervisor__task_module', 'supervisor__task_name']
     actions = []
