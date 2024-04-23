@@ -1,6 +1,6 @@
 import ast
-import os
 import json
+import os
 
 from django import forms
 from django.contrib import admin, messages
@@ -18,6 +18,8 @@ from .models import (
     MonitorScript,
     RepositorySubscription,
     RepositoryWebhook,
+    Supervisor,
+    SupervisorIssue,
 )
 from .signals import github_webhook
 from .tasks import async_unsubscribe_repo
@@ -282,3 +284,17 @@ class RepositoryWebhookAdmin(admin.ModelAdmin):
 
                 return format_html(f"<a target='_blank' href='{_payload['compare']}'>{label}</a>")
         return label
+
+
+@admin.register(Supervisor)
+class SupervisorAdmin(admin.ModelAdmin):
+    list_display = ('task_module', 'task_name', 'delta', 'ran_at')
+    list_filter = []
+    actions = []
+
+
+@admin.register(SupervisorIssue)
+class SupervisorIssueAdmin(admin.ModelAdmin):
+    list_display = ('supervisor', 'occurrences', 'error', 'ran_at')
+    list_filter = ['supervisor']
+    actions = []

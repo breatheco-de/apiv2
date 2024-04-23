@@ -297,7 +297,7 @@ class Supervisor(models.Model):
     ran_at = models.DateTimeField(default=None, null=True, blank=True)
 
     def __str__(self):
-        return f'{self.task_module}.{self.task_name}'
+        return f'{self.task_module}.{self.task_name} ({self.delta})'
 
     def save(self, *args, **kwargs):
         self.full_clean()

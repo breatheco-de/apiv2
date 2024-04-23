@@ -49,6 +49,6 @@ def supervise_all_consumption_sessions():
         cancelled_amount = cancelled_sessions.count()
 
         # this client should be a cheater
-        if cancelled_amount and (rate :=
-                                 cancelled_amount / done_amount) > 0.1 and done_amount >= MIN_CANCELLED_SESSIONS:
+        if cancelled_amount and done_amount and (rate := cancelled_amount /
+                                                 done_amount) > 0.1 and done_amount >= MIN_CANCELLED_SESSIONS:
             yield f'There has {round(rate * 100, 2)}% cancelled consumption sessions, due to a bug or a cheater, user {user.email}'
