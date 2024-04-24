@@ -25,7 +25,7 @@ def create_from_asset(asset):
                                       academy=asset.academy,
                                       author=asset.author)
         
-    if a is not None and a.asset_set.count() > 1:
+    if a is not None and a.asset_set is not None and a.asset_set.count() > 1:
         associated_assets = ','.join(a.asset_set.all())
         raise ValidationException('Assessment has more then one asset associated, please choose only one: ' +
                                   associated_assets)
