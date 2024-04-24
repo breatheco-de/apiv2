@@ -30,7 +30,7 @@ def create_from_asset(asset):
                                       academy=asset.academy,
                                       author=asset.author)
 
-    if a.question_set.count() > 0:
+    if a is not None and a.question_set is not None and a.question_set.count() > 0:
         raise ValidationException(
             'Assessment already has questions, only empty assessments can by created from an asset')
 
