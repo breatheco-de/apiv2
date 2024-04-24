@@ -12,7 +12,7 @@ import breathecode.activity.tasks as tasks_activity
 from breathecode.mentorship.exceptions import ExtendSessionException
 from breathecode.services.daily.client import DailyClient
 from breathecode.utils.datetime_integer import duration_to_str
-from breathecode.utils.validation_exception import ValidationException
+from capyc.rest_framework.exceptions import ValidationException
 
 from .models import MentorProfile, MentorshipBill, MentorshipSession
 

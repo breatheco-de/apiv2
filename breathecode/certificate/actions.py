@@ -13,7 +13,7 @@ from django.utils import timezone
 
 from breathecode.admissions.models import FULLY_PAID, UP_TO_DATE, CohortUser, SyllabusVersion
 from breathecode.assignments.models import Task
-from breathecode.utils import ValidationException
+from capyc.rest_framework.exceptions import ValidationException
 
 from ..services.google_cloud import Storage
 from .models import ERROR, PERSISTED, LayoutDesign, Specialty, UserSpecialty

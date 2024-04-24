@@ -2,15 +2,14 @@
 Test /academy/survey
 """
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+from django.utils import timezone
+
+from breathecode.feedback.tasks import generate_user_cohort_survey_answers
+from capyc.rest_framework.exceptions import ValidationException
 
 from ..mixins import FeedbackTestCase
-from breathecode.feedback.tasks import generate_user_cohort_survey_answers
-
-from django.utils import timezone
-
-from breathecode.utils import ValidationException
-from django.utils import timezone
 
 UTC_NOW = timezone.now()
 

@@ -8,8 +8,7 @@ from breathecode.authenticate.actions import get_user_language
 from breathecode.registry.models import Asset
 from breathecode.utils.decorators import PermissionContextType
 from breathecode.utils.i18n import translation
-from breathecode.utils.payment_exception import PaymentException
-from breathecode.utils.validation_exception import ValidationException
+from capyc.rest_framework.exceptions import PaymentException, ValidationException
 
 logger = logging.getLogger(__name__)
 

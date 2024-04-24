@@ -8,7 +8,7 @@ from django.utils import timezone
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import Token
 from breathecode.notify.actions import send_email_message, send_slack
-from breathecode.utils import ValidationException
+from capyc.rest_framework.exceptions import ValidationException
 
 from . import tasks
 from .models import Answer, Review, ReviewPlatform, Survey

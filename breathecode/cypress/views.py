@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from breathecode.cypress.actions import clean, clean_model, generate_models, load_roles
-from breathecode.utils import ValidationException
+from capyc.rest_framework.exceptions import ValidationException
 
 logger = logging.getLogger(__name__)
 

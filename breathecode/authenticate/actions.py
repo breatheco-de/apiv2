@@ -17,8 +17,8 @@ from django.utils import timezone
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.services.github import Github
-from breathecode.utils import ValidationException
 from breathecode.utils.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 
 from .models import (
     AcademyAuthSettings,

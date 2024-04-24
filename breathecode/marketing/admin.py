@@ -10,7 +10,7 @@ from django.utils.html import format_html
 from breathecode.services.activecampaign import ActiveCampaign
 from breathecode.utils import AdminExportCsvMixin
 from breathecode.utils.admin import change_field
-from breathecode.utils.validation_exception import ValidationException
+from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import (
     bind_formentry_with_webhook,

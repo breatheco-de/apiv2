@@ -29,12 +29,13 @@ from breathecode.provisioning.serializers import (
     ProvisioningBillSerializer,
     ProvisioningUserConsumptionHTMLResumeSerializer,
 )
-from breathecode.utils import ValidationException, capable_of, cut_csv
+from breathecode.utils import capable_of, cut_csv
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.i18n import translation
 from breathecode.utils.io.file import count_csv_rows
 from breathecode.utils.views import private_view, render_message
+from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import get_provisioning_vendor
 from .models import BILL_STATUS, ProvisioningBill, ProvisioningUserConsumption

@@ -22,8 +22,8 @@ from breathecode.events.models import EventType
 from breathecode.mentorship.models import MentorshipService
 from breathecode.payments import signals
 from breathecode.utils.i18n import translation
-from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils.validators.language import validate_language_code
+from capyc.rest_framework.exceptions import ValidationException
 
 # https://devdocs.prestashop-project.org/1.7/webservice/resources/warehouses/
 

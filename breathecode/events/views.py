@@ -20,18 +20,17 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_user_language, server_id
 from breathecode.events import actions
 from breathecode.events.caches import EventCache, LiveClassCache
 from breathecode.renderers import PlainTextRenderer
-import breathecode.activity.tasks as tasks_activity
 from breathecode.services.eventbrite import Eventbrite
 from breathecode.utils import (
     DatetimeInteger,
     GenerateLookupsMixin,
     HeaderLimitOffsetPagination,
-    ValidationException,
     capable_of,
     response_207,
 )
@@ -40,6 +39,7 @@ from breathecode.utils.decorators import has_permission
 from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils.views import private_view, render_message
+from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import fix_datetime_weekday, get_my_event_types, update_timeslots_out_of_range
 from .models import (

@@ -1,20 +1,22 @@
 import json
-import pytest
-import serpy
 import urllib.parse
 from unittest.mock import MagicMock, call, patch
-from rest_framework.views import APIView
-from rest_framework.response import Response
+
+import brotli
+import serpy
+from django.core.cache import cache
+from rest_framework import status
+from rest_framework.permissions import AllowAny
 from rest_framework.test import APIRequestFactory, force_authenticate
+from rest_framework.views import APIView
+
 from breathecode.admissions.caches import CohortCache
 from breathecode.admissions.models import Cohort
-from breathecode.utils import APIViewExtensions, ValidationException
-from rest_framework.permissions import AllowAny
-from rest_framework import status
-from django.core.cache import cache
-from ..mixins import UtilsTestCase
+from breathecode.utils import APIViewExtensions
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
-import brotli
+from capyc.rest_framework.exceptions import ValidationException
+
+from ..mixins import UtilsTestCase
 
 cohort_cache = CohortCache()
 

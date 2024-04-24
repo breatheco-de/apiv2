@@ -1,9 +1,11 @@
 from django.conf import settings
-from .models import Hook
-from breathecode.admissions.models import Academy
-from breathecode.utils.validation_exception import ValidationException
 from rest_framework import serializers
+
+from breathecode.admissions.models import Academy
 from breathecode.utils import serpy
+from capyc.rest_framework.exceptions import ValidationException
+
+from .models import Hook
 
 
 class UserSerializer(serpy.Serializer):

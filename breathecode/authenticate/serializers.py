@@ -16,8 +16,9 @@ from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_app_url, get_user_settings
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
-from breathecode.utils import ValidationException, serpy
+from breathecode.utils import serpy
 from breathecode.utils.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 
 from .models import (
     AcademyAuthSettings,

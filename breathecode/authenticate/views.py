@@ -41,13 +41,14 @@ from breathecode.mentorship.models import MentorProfile
 from breathecode.mentorship.serializers import GETMentorSmallSerializer
 from breathecode.notify.models import SlackTeam
 from breathecode.services.google_cloud import FunctionV1, FunctionV2
-from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, ValidationException, capable_of
+from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.i18n import translation
 from breathecode.utils.shorteners import C
 from breathecode.utils.views import private_view, render_message, set_query_parameter
+from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import (
     accept_invite,

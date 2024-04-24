@@ -1,10 +1,9 @@
 from django.core.exceptions import ValidationError
-from rest_framework.views import exception_handler
+from rest_framework.views import exception_handler as drf_exception_handler
 
-from breathecode.utils.payment_exception import PaymentException
-from breathecode.utils.validation_exception import ValidationException
+from capyc.rest_framework.exceptions import PaymentException, ValidationException
 
-__all__ = ['breathecode_exception_handler']
+__all__ = ['exception_handler']
 
 
 def get_item_attrs(item):
@@ -21,7 +20,7 @@ def get_item_attrs(item):
     return data
 
 
-def breathecode_exception_handler(exc, context):
+def exception_handler(exc, context):
     # This is to be used with the Django REST Framework (DRF) as its
     # global exception handler.  It replaces the POST data of the Django
     # request with the parsed data from the DRF. This is necessary
@@ -32,7 +31,7 @@ def breathecode_exception_handler(exc, context):
     # Call REST framework's default exception handler first,
     # to get the standard error response.
     context['request']._request.POST = context['request'].data
-    response = exception_handler(exc, context)
+    response = drf_exception_handler(exc, context)
 
     # Now add the HTTP status code to the response.
     if response is not None:

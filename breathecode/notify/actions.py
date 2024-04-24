@@ -12,7 +12,7 @@ from twilio.rest import Client
 
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.services.slack import client
-from breathecode.utils import ValidationException
+from capyc.rest_framework.exceptions import ValidationException
 
 from .models import Device, SlackChannel, SlackTeam, SlackUser, SlackUserTeam
 

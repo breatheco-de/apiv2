@@ -9,7 +9,8 @@ from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.authenticate.models import Token
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.notify import actions as notify_actions
-from breathecode.utils import TaskPriority, ValidationException, getLogger
+from breathecode.utils import TaskPriority, getLogger
+from capyc.rest_framework.exceptions import ValidationException
 
 from . import actions
 from .models import Answer, Survey

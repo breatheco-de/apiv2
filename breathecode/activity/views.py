@@ -1,23 +1,30 @@
 import json
+
 from django.contrib.auth.models import User
-from django.db.models import Q, Sum, Avg, Count
+from django.db.models import Avg, Count, Q, Sum
+from google.cloud import bigquery
 from google.cloud.ndb.query import OR
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from google.cloud import bigquery
 
 from breathecode.activity.models import StudentActivity
 from breathecode.activity.serializers import ActivitySerializer
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.services.google_cloud.big_query import BigQuery
-from breathecode.utils import (HeaderLimitOffsetPagination, ValidationException, capable_of, getLogger)
+from breathecode.utils import HeaderLimitOffsetPagination, capable_of, getLogger
 from breathecode.utils.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 
-from .utils import (generate_created_at, validate_activity_fields, validate_activity_have_correct_data_field,
-                    validate_if_activity_need_field_cohort, validate_if_activity_need_field_data,
-                    validate_require_activity_fields)
+from .utils import (
+    generate_created_at,
+    validate_activity_fields,
+    validate_activity_have_correct_data_field,
+    validate_if_activity_need_field_cohort,
+    validate_if_activity_need_field_data,
+    validate_require_activity_fields,
+)
 
 # Create your views here.
 

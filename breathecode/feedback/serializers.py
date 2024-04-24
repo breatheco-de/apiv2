@@ -1,12 +1,14 @@
-from breathecode.admissions.models import CohortUser
-from breathecode.utils import ValidationException, serpy
-from .models import Answer, Survey, Review
-from .actions import send_survey_group
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from django.utils import timezone
 import breathecode.feedback.actions as actions
+from breathecode.admissions.models import CohortUser
+from breathecode.utils import serpy
+from capyc.rest_framework.exceptions import ValidationException
+
+from .actions import send_survey_group
+from .models import Answer, Review, Survey
 
 
 class GetAcademySerializer(serpy.Serializer):

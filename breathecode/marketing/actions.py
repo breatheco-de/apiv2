@@ -16,7 +16,7 @@ from breathecode.notify.actions import send_email_message
 from breathecode.services.activecampaign import ACOldClient, ActiveCampaign, ActiveCampaignClient, acp_ids, map_ids
 from breathecode.utils import getLogger
 from breathecode.utils.i18n import translation
-from breathecode.utils.validation_exception import ValidationException
+from capyc.rest_framework.exceptions import ValidationException
 
 from .models import AcademyAlias, ActiveCampaignAcademy, Automation, FormEntry, Tag
 

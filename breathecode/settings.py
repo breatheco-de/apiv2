@@ -93,7 +93,7 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.openapi.AutoSchema',
     'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.NamespaceVersioning',
     'DEFAULT_PAGINATION_CLASS': 'breathecode.utils.HeaderLimitOffsetPagination',
-    'EXCEPTION_HANDLER': 'breathecode.utils.breathecode_exception_handler',
+    'EXCEPTION_HANDLER': 'capyc.rest_framework.exception_handler.exception_handler',
     'PAGE_SIZE': 100,
     'DEFAULT_VERSION': 'v1',
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -117,6 +117,7 @@ if os.getenv('ENABLE_DEFAULT_PAGINATION', 'y') in ['t', 'true', 'True', 'TRUE', 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'breathecode.middlewares.static_redirect_middleware',
+    'breathecode.middlewares.form_middleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
 

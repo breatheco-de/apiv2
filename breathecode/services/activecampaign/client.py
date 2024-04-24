@@ -5,10 +5,10 @@ import os
 import requests
 from activecampaign.client import Client
 from django.utils import timezone
+from rest_framework.exceptions import APIException
 from slugify import slugify
 
 import breathecode.services.activecampaign.actions as actions
-from breathecode.utils import APIException
 
 logger = logging.getLogger(__name__)
 

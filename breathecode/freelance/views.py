@@ -11,8 +11,8 @@ from rest_framework.views import APIView
 from breathecode.notify.actions import get_template_content
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import capable_of
-from breathecode.utils.validation_exception import ValidationException
 from breathecode.utils.views import private_view
+from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import generate_freelancer_bill, generate_project_invoice
 from .models import (

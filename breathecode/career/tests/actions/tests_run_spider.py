@@ -1,11 +1,9 @@
-from unittest.mock import patch, call, MagicMock
+from unittest.mock import MagicMock, call, patch
+
+from breathecode.tests.mocks import REQUESTS_PATH, apply_requests_post_mock
+
 from ...actions import run_spider
-from breathecode.utils import APIException
 from ..mixins import CareerTestCase
-from breathecode.tests.mocks import (
-    REQUESTS_PATH,
-    apply_requests_post_mock,
-)
 
 RESULT = {
     'spider': ['Invalid pk "indeed5" - object does not exist.'],
@@ -34,9 +32,11 @@ class ActionRunSpiderTestCase(CareerTestCase):
     @patch(REQUESTS_PATH['post'], apply_requests_post_mock([(400, 'https://app.scrapinghub.com/api/run.json', RESULT)]))
     @patch('logging.Logger.error', MagicMock())
     def test_run_spider__with_status_code_error(self):
-        from breathecode.career.actions import run_spider
         from logging import Logger
+
         import requests
+
+        from breathecode.career.actions import run_spider
 
         model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
         try:
@@ -72,8 +72,9 @@ class ActionRunSpiderTestCase(CareerTestCase):
                'data': []
            })]))
     def test_run_spider__with_one_spider(self):
-        from breathecode.career.actions import run_spider
         import requests
+
+        from breathecode.career.actions import run_spider
         model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
 
         result = run_spider(model.spider)
@@ -96,8 +97,9 @@ class ActionRunSpiderTestCase(CareerTestCase):
                'data': []
            })]))
     def test_run_spider__with_two_spiders(self):
-        from breathecode.career.actions import run_spider
         import requests
+
+        from breathecode.career.actions import run_spider
 
         model_1 = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
         model_2 = self.bc.database.create(spider=spider1, zyte_project=zyte_project1, platform=platform1)

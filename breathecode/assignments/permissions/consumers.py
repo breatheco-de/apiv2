@@ -2,10 +2,9 @@ import logging
 
 from breathecode.admissions.actions import is_no_saas_student_up_to_date_in_any_cohort
 from breathecode.authenticate.actions import get_user_language
-from breathecode.payments.models import Consumable
 from breathecode.utils.decorators import PermissionContextType
 from breathecode.utils.i18n import translation
-from breathecode.utils.payment_exception import PaymentException
+from capyc.rest_framework.exceptions import PaymentException
 
 logger = logging.getLogger(__name__)
 

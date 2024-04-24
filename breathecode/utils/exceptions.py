@@ -1,6 +1,6 @@
 __all__ = ['ProgrammingError', 'MalformedLanguageCode']
 
-from breathecode.utils.validation_exception import ValidationException
+from capyc.rest_framework.exceptions import ValidationException
 
 
 class ProgrammingError(Exception):

@@ -72,10 +72,9 @@ from breathecode.payments.services.stripe import Stripe
 from breathecode.utils import APIViewExtensions, getLogger
 from breathecode.utils.decorators.capable_of import capable_of
 from breathecode.utils.i18n import translation
-from breathecode.utils.payment_exception import PaymentException
 from breathecode.utils.redis import Lock
 from breathecode.utils.shorteners import C
-from breathecode.utils.validation_exception import ValidationException
+from capyc.rest_framework.exceptions import PaymentException, ValidationException
 
 logger = getLogger(__name__)
 

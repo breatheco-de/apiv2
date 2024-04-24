@@ -17,6 +17,7 @@ from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, renderer_classes
+from rest_framework.exceptions import APIException
 from rest_framework.parsers import FileUploadParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -30,18 +31,12 @@ from breathecode.marketing.caches import CourseCache
 from breathecode.monitoring.models import CSVUpload
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.activecampaign import ActiveCampaign
-from breathecode.utils import (
-    APIException,
-    GenerateLookupsMixin,
-    HeaderLimitOffsetPagination,
-    ValidationException,
-    capable_of,
-    localize_query,
-)
+from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of, localize_query
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import validate_captcha
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import convert_data_frame, sync_automations, sync_tags, validate_email
 from .models import (

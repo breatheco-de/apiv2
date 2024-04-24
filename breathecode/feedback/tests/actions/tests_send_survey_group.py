@@ -2,13 +2,15 @@
 Test /answer
 """
 from datetime import timedelta
-from unittest.mock import patch, MagicMock, call
-from ..mixins import FeedbackTestCase
-from ...actions import send_survey_group
-from breathecode.utils import ValidationException
+from unittest.mock import MagicMock, call, patch
+
 from django.utils import timezone
 
 import breathecode.feedback.tasks as tasks
+from capyc.rest_framework.exceptions import ValidationException
+
+from ...actions import send_survey_group
+from ..mixins import FeedbackTestCase
 
 UTC_NOW = timezone.now()
 

@@ -27,19 +27,14 @@ from breathecode.mentorship.exceptions import ExtendSessionException
 from breathecode.notify.actions import get_template_content
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.calendly import Calendly
-from breathecode.utils import (
-    GenerateLookupsMixin,
-    HeaderLimitOffsetPagination,
-    ValidationException,
-    capable_of,
-    response_207,
-)
+from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of, response_207
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils.views import private_view, render_message, set_query_parameter
+from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import close_mentoring_session, generate_mentor_bills, render_session
 from .forms import CloseMentoringSessionForm

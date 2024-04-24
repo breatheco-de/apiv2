@@ -12,7 +12,7 @@ import breathecode.feedback.tasks as tasks
 import breathecode.notify.actions as actions
 from breathecode.feedback.models import Answer
 from breathecode.feedback.tasks import generate_user_cohort_survey_answers, send_cohort_survey
-from breathecode.utils import ValidationException
+from capyc.rest_framework.exceptions import ValidationException
 
 from ..mixins import FeedbackTestCase
 

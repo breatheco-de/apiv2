@@ -1,16 +1,20 @@
 import logging
-from rest_framework.permissions import AllowAny
+
+from django.db.models import Q
 from django.http import HttpResponse
-from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from breathecode.utils import (GenerateLookupsMixin, ValidationException, APIViewExtensions)
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from breathecode.utils import APIViewExtensions, GenerateLookupsMixin
+from capyc.rest_framework.exceptions import ValidationException
+
 from .actions import get_template_content
 from .models import Hook
-from .tasks import async_slack_action, async_slack_command
 from .serializers import HookSerializer
-from django.db.models import Q
+from .tasks import async_slack_action, async_slack_command
 
 logger = logging.getLogger(__name__)
 
