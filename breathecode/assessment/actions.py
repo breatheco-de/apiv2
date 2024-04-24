@@ -14,11 +14,6 @@ def create_from_asset(asset):
 
     a = asset.assessment
 
-    if asset.assessment is not None and asset.assessment.asset_set.count() > 1:
-        associated_assets = ','.join(asset.assessment.asset_set.all())
-        raise ValidationException('Assessment has more then one asset associated, please choose only one: ' +
-                                  associated_assets)
-
     if asset.assessment is None:
         a = Assessment.objects.filter(slug=asset.slug).first()
         if a is not None:
@@ -29,6 +24,12 @@ def create_from_asset(asset):
                                       slug=asset.slug,
                                       academy=asset.academy,
                                       author=asset.author)
+        
+    if a is not None and a.asset_set.count() > 1:
+        associated_assets = ','.join(a.asset_set.all())
+        raise ValidationException('Assessment has more then one asset associated, please choose only one: ' +
+                                  associated_assets)
+
 
     if a is not None and a.question_set is not None and a.question_set.count() > 0:
         raise ValidationException(
