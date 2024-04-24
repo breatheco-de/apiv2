@@ -14,7 +14,7 @@ from .models import EventbriteWebhook, LiveClass, Organization
 logger = logging.getLogger(__name__)
 
 
-@shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
+@shared_task(bind=True, priority=TaskPriority.STUDENT.value)
 def mark_live_class_as_started(self, live_class_id: int):
     logger.info(f'Starting mark live class {live_class_id} as started')
 
