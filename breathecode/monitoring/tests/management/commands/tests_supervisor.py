@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, call
 import pytest
 from asgiref.sync import sync_to_async
 
-import bc.core.pytest.fixtures as cfx
-import bc.django.pytest.fixtures as dfx
+import capyc.core.pytest.fixtures as cfx
+import capyc.django.pytest.fixtures as dfx
 from breathecode.monitoring.models import Supervisor as SupervisorModel
 from breathecode.monitoring.models import SupervisorIssue
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode

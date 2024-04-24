@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, call
 import pytest
 from asgiref.sync import sync_to_async
 
-import bc.django.pytest.fixtures as dfx
+import capyc.django.pytest.fixtures as dfx
 from breathecode.monitoring.models import Supervisor as SupervisorModel
 from breathecode.monitoring.models import SupervisorIssue
 from breathecode.monitoring.tasks import run_supervisor
