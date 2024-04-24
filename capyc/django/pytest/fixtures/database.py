@@ -434,8 +434,7 @@ class Database:
                 dep_path = field_attrs['path']
                 to_reevaluate = []
 
-                # dep not found, maybe it is a m2m, that was temporally disabled
-                print(exec_order)
+                # dep not found, maybe it's a m2m, that was temporally disabled
                 try:
                     dep_index = exec_order.index(dep_path)
                 except ValueError:
@@ -485,26 +484,27 @@ class Database:
         for model_path in exec_order:
             model_descriptor, value = cache[model_path]
 
-            how_many, arguments = argument_parser(value)[0]
+            result = []
 
-            for _related_field, field_type, field_attrs in model_descriptor['related_fields']:
-                if field_attrs['path'] in generated:
+            for how_many, arguments in argument_parser(value):
+                for _related_field, field_type, field_attrs in model_descriptor['related_fields']:
+                    if field_attrs['path'] in generated:
 
-                    # no implemented yet
-                    if field_type is ManyToManyDescriptor:
-                        continue
-                        # arguments[field_attrs["name"]] = [generated[field_attrs["path"]]]
+                        # no implemented yet
+                        if field_type is ManyToManyDescriptor:
+                            continue
+                            # arguments[field_attrs["name"]] = [generated[field_attrs["path"]]]
 
-                    # else:
+                        # else:
 
-                    arguments[field_attrs['name']] = generated[field_attrs['path']]
+                        arguments[field_attrs['name']] = generated[field_attrs['path']]
 
-            result = [
-                model_descriptor['cls'].objects.create(**{
-                    **model_descriptor['get_values'](),
-                    **arguments
-                }) for _ in range(how_many)
-            ]
+                result = result + [
+                    model_descriptor['cls'].objects.create(**{
+                        **model_descriptor['get_values'](),
+                        **arguments
+                    }) for _ in range(how_many)
+                ]
 
             if len(result) == 1:
                 result = result[0]

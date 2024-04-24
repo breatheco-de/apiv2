@@ -70,8 +70,8 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
                                                                                         academy=event.academy) is False:
         raise PaymentException(
             translation(lang,
-                        en=f'You can\'t access this asset because your finantial status is not up to date',
-                        es=f'No puedes acceder a este recurso porque tu estado financiero no está al dia',
+                        en='You can\'t access this asset because your finantial status is not up to date',
+                        es='No puedes acceder a este recurso porque tu estado financiero no está al dia',
                         slug='cohort-user-status-later'))
 
     context['consumables'] = context['consumables'].filter(event_type_set__event_types=event_type)
@@ -139,8 +139,8 @@ def live_class_by_url_param(context: PermissionContextType, args: tuple, kwargs:
             context['request'].user, cohort=live_class.cohort_time_slot.cohort) is False:
         raise PaymentException(
             translation(lang,
-                        en=f'You can\'t access this asset because your finantial status is not up to date',
-                        es=f'No puedes acceder a este recurso porque tu estado financiero no está al dia',
+                        en='You can\'t access this asset because your finantial status is not up to date',
+                        es='No puedes acceder a este recurso porque tu estado financiero no está al dia',
                         slug='cohort-user-status-later'))
 
     context['consumables'] = context['consumables'].filter(

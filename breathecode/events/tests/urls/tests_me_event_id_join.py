@@ -27,6 +27,7 @@ def consumption_session(event, event_type_set, user, consumable, data={}):
     return {
         'consumable_id': consumable.id,
         'duration': timedelta(),
+        'operation_code': 'default',
         'eta': ...,
         'how_many': 1.0,
         'id': 0,

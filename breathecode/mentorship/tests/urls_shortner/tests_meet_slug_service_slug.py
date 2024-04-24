@@ -62,6 +62,7 @@ def format_consumption_session(mentorship_service, mentor_profile, mentorship_se
         'eta': ...,
         'how_many': 1.0,
         'id': 0,
+        'operation_code': 'default',
         'path': 'payments.MentorshipServiceSet',
         'related_id': mentorship_service_set.id,
         'related_slug': mentorship_service_set.slug,
