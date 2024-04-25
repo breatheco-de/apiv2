@@ -146,7 +146,7 @@ jobs:
       - name: Calculate updated MD5 for Pipfile.lock
         id: calculate-md5-2
         # run: echo "MD5_2=$(python -m scripts.md5 ./Pipfile.lock)" >> $GITHUB_ENV
-        run: pipenv run pip freeze -r requirements.txt > requirements2.txt
+        run: pipenv run pip freeze -r requirements2.txt > requirements2.txt
 
 
       - name: Check Pipfile.lock is up-to-date
