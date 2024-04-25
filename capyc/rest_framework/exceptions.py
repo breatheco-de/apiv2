@@ -1,20 +1,10 @@
 import os
 from typing import Optional
 
-# from django import forms
 from django.db.models import QuerySet
-
-# from django.utils.encoding import force_str
-from django.utils.translation import gettext_lazy as _
-
-# from rest_framework.exceptions import APIException, ErrorDetail, _get_codes, _get_error_details, _get_full_details
 from rest_framework.exceptions import APIException
 
 from capyc.core.shorteners import C
-
-# from rest_framework import status
-
-# from rest_framework.utils.serializer_helpers import ReturnDict, ReturnList
 
 __all__ = ['ValidationException', 'PaymentException']
 
@@ -23,68 +13,6 @@ def is_test_env():
     return 'ENV' in os.environ and os.environ['ENV'] == 'test'
 
 
-# from rest_framework.exceptions import _get_error_details
-
-# def _get_error_details(data, default_code=None):
-#     """
-#     Descend into a nested data structure, forcing any
-#     lazy translation strings or strings into `ErrorDetail`.
-#     """
-#     if isinstance(data, (list, tuple)):
-#         ret = [_get_error_details(item, default_code) for item in data]
-#         if isinstance(data, ReturnList):
-#             return ReturnList(ret, serializer=data.serializer)
-#         return ret
-#     elif isinstance(data, dict):
-#         ret = {key: _get_error_details(value, default_code) for key, value in data.items()}
-#         if isinstance(data, ReturnDict):
-#             return ReturnDict(ret, serializer=data.serializer)
-#         return ret
-
-#     text = force_str(data)
-#     code = getattr(data, 'code', default_code)
-#     return ErrorDetail(text, code)
-
-# from rest_framework.exceptions import APIException
-# class APIException(forms.ValidationError, APIException):
-#     """
-#     Base class for REST framework exceptions.
-#     Subclasses should provide `.status_code` and `.default_detail` properties.
-#     """
-#     status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-#     default_detail = _('A server error occurred.')
-#     default_code = 'error'
-
-#     def __init__(self, detail=None, code=None, params=None):
-#         super().__init__(self.detail, code, params)
-#         if detail is None:
-#             detail = self.default_detail
-#         if code is None:
-#             code = self.default_code
-
-#         self.detail = _get_error_details(detail, code)
-
-#     def __str__(self):
-#         return str(self.detail)
-
-#     def get_codes(self):
-#         """
-#         Return only the code part of the error details.
-
-#         Eg. {"name": ["required"]}
-#         """
-#         return _get_codes(self.detail)
-
-#     def get_full_details(self):
-#         """
-#         Return both the message & code parts of the error details.
-
-#         Eg. {"name": [{"message": "This field is required.", "code": "required"}]}
-#         """
-#         return _get_full_details(self.detail)
-
-
-# class ValidationException(APIException):
 class ValidationException(APIException):
     """Django REST Framework and Django Forms Exception."""
 
@@ -93,9 +21,6 @@ class ValidationException(APIException):
     queryset: Optional[QuerySet]
     data: dict
     silent: bool
-
-    # default_detail = _('A server error occurred.')
-    # default_code = 'error'
 
     def __init__(self,
                  details: str,
@@ -147,25 +72,6 @@ class ValidationException(APIException):
             return message
 
         return [self.detail]
-
-    # def __str__(self):
-    #     return str(self.detail)
-
-    # def get_codes(self):
-    #     """
-    #     Return only the code part of the error details.
-
-    #     Eg. {"name": ["required"]}
-    #     """
-    #     return _get_codes(self.detail)
-
-    # def get_full_details(self):
-    #     """
-    #     Return both the message & code parts of the error details.
-
-    #     Eg. {"name": [{"message": "This field is required.", "code": "required"}]}
-    #     """
-    #     return _get_full_details(self.detail)
 
 
 class PaymentException(APIException):
