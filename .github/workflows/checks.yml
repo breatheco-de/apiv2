@@ -55,7 +55,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           pip install pipenv
-          pipenv install --dev
+          pipenv install --dev --bare
 
       # Install Pipenv
       - name: Install dependencies
@@ -114,39 +114,50 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Calculate initial MD5 for Pipfile.lock
-        id: calculate-md5-1
-        run: echo "MD5_1=$(python -m scripts.md5 ./Pipfile.lock)" >> $GITHUB_ENV
+      # Cache Pipenv packages
+      - name: Cache Pipenv packages
+        uses: actions/cache@v2
+        id: cache
+        with:
+          path: |
+            ~/.local/share/virtualenvs
+            ~/.cache/pip
+          key: ${{ runner.os }}-pipenv-3-11-8-${{ hashFiles('**/Pipfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pipenv-3-11-8-
 
-      # # Cache Pipenv packages
-      # - name: Cache Pipenv packages
-      #   uses: actions/cache@v2
-      #   id: cache
-      #   with:
-      #     path: |
-      #       ~/.local/share/virtualenvs
-      #       ~/.cache/pip
-      #     key: ${{ runner.os }}-pipenv-3-11-8-${{ hashFiles('**/Pipfile.lock') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-pipenv-3-11-8-
-
-      # Install Pipenv
       - name: Install dependencies
         # if: steps.cache.outputs.cache-hit == 'true'
         run: |
           pip install pipenv
-          pipenv install --dev
+          pipenv install --dev --bare
+
+      - name: Calculate initial MD5 for Pipfile.lock
+        id: calculate-md5-1
+        run: |
+          pipenv run pip freeze -r requirements.txt > requirements.txt
+          # echo "MD5_1=$(python -m scripts.md5 ./requirements.txt)" >> $GITHUB_ENV
+
+      - name: Update dependencies
+        # if: steps.cache.outputs.cache-hit == 'true'
+        run: |
+          pipenv update --dev --bare
 
       - name: Calculate updated MD5 for Pipfile.lock
         id: calculate-md5-2
-        run: echo "MD5_2=$(python -m scripts.md5 ./Pipfile.lock)" >> $GITHUB_ENV
+        # run: echo "MD5_2=$(python -m scripts.md5 ./Pipfile.lock)" >> $GITHUB_ENV
+        run: pipenv run pip freeze -r requirements.txt > requirements2.txt
+
 
       - name: Check Pipfile.lock is up-to-date
-        run: |
-          if [ "$MD5_1" != "$MD5_2" ]; then
-            echo "Pipfile.lock is out of date. Please run 'pipenv lock --dev' and commit the updated Pipfile.lock.";
-            exit 1;
-          fi
+        run: diff requirements.txt requirements2.txt
+
+      # - name: Check Pipfile.lock is up-to-date
+      #   run: |
+      #     if [ "$MD5_1" != "$MD5_2" ]; then
+      #       echo "Pipfile.lock is out of date. Please run 'pipenv lock --dev' and commit the updated Pipfile.lock.";
+      #       exit 1;
+      #     fi
 
   undefined-and-unused-variables:
     needs: cache
