@@ -55,7 +55,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           pip install pipenv
-          pipenv install --dev --bare
+          pipenv install --dev
 
       # Install Pipenv
       - name: Install dependencies
@@ -130,7 +130,7 @@ jobs:
         # if: steps.cache.outputs.cache-hit == 'true'
         run: |
           pip install pipenv
-          pipenv install --dev --bare
+          pipenv install --dev
 
       - name: Calculate initial MD5 for Pipfile.lock
         id: calculate-md5-1
