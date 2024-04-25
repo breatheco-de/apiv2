@@ -7,14 +7,9 @@ import zlib
 import brotli
 import zstandard
 from asgiref.sync import iscoroutinefunction
-from django import forms
-
-# from django.http import HttpResponsePermanentRedirect
 from django.http import HttpResponseRedirect
 from django.utils.decorators import sync_and_async_middleware
 from django.utils.deprecation import MiddlewareMixin
-
-from capyc.rest_framework.exceptions import ValidationException
 
 ENV = os.getenv('ENV', '')
 IS_TEST = ENV not in ['production', 'staging', 'development']
@@ -123,48 +118,6 @@ def static_redirect_middleware(get_response):
                 return redirect(request)
 
             response = get_response(request)
-            return response
-
-    return middleware
-
-
-@sync_and_async_middleware
-def form_middleware(get_response):
-    path = '/static'
-
-    def redirect(request):
-        bucket = os.getenv('STATIC_BUCKET')
-        gcs_base_url = f'https://storage.googleapis.com/{bucket}'
-        full_url = f"{gcs_base_url}{request.path.replace(path, '')}"
-
-        return HttpResponseRedirect(full_url)
-
-    if iscoroutinefunction(get_response):
-
-        async def middleware(request):
-            if request.path.startswith(f'{path}/'):
-                return redirect(request)
-
-            try:
-                response = await get_response(request)
-
-            except forms.ValidationError as e:
-                raise ValidationException(str(e))
-
-            return response
-
-    else:
-
-        def middleware(request):
-            if request.path.startswith(f'{path}/'):
-                return redirect(request)
-
-            try:
-                response = get_response(request)
-
-            except forms.ValidationError as e:
-                raise ValidationException(str(e))
-
             return response
 
     return middleware

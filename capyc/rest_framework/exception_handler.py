@@ -1,3 +1,4 @@
+from django import forms
 from django.core.exceptions import ValidationError
 from rest_framework.views import exception_handler as drf_exception_handler
 
@@ -21,15 +22,26 @@ def get_item_attrs(item):
 
 
 def exception_handler(exc, context):
-    # This is to be used with the Django REST Framework (DRF) as its
-    # global exception handler.  It replaces the POST data of the Django
-    # request with the parsed data from the DRF. This is necessary
-    # because we cannot read the request data/stream more than once.
-    # This will allow us to see the parsed POST params in the rollbar
-    # exception log.
+    """Exception handler for Django REST Framework."""
 
-    # Call REST framework's default exception handler first,
-    # to get the standard error response.
+    if isinstance(exc, (forms.ValidationError, ValidationError)):
+
+        for k in exc.error_dict:
+            for x in exc.error_dict[k]:
+                err = ''
+                if k != '__all__':
+                    err += f'{k}: '
+
+                err += f'{x.message}, '
+
+            if err.endswith(', '):
+                err = err[:-2] + '. '
+
+        if err.endswith('. '):
+            err = err[:-1]
+
+        exc = ValidationException(err)
+
     context['request']._request.POST = context['request'].data
     response = drf_exception_handler(exc, context)
 
