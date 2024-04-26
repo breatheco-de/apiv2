@@ -5,6 +5,7 @@ import hashlib
 import json
 import logging
 import os
+from typing import Optional
 from urllib.parse import urlencode
 
 import requests
@@ -56,7 +57,9 @@ def syllabus_weeks_to_days(json):
     return json
 
 
-def get_assets_from_syllabus(syllabus_version: SyllabusVersion | int, only_mandatory=False):
+def get_assets_from_syllabus(syllabus_version: SyllabusVersion | int,
+                             task_types: Optional[list[str]] = None,
+                             only_mandatory=False):
     if not isinstance(syllabus_version, SyllabusVersion):
         syllabus = SyllabusVersion.objects.filter(id=syllabus_version).first()
 
@@ -70,6 +73,9 @@ def get_assets_from_syllabus(syllabus_version: SyllabusVersion | int, only_manda
         'PROJECT': 'assignments',
     }
 
+    if task_types is None:
+        task_types = key_map.keys()
+
     findings = []
 
     if isinstance(syllabus.json, str):
@@ -80,6 +86,9 @@ def get_assets_from_syllabus(syllabus_version: SyllabusVersion | int, only_manda
     for day in syllabus.json['days']:
         for atype in key_map:
             if key_map[atype] not in day:
+                continue
+
+            if atype not in task_types:
                 continue
 
             for asset in day[key_map[atype]]:
@@ -106,9 +115,17 @@ def how_many_pending_tasks(syllabus_version: SyllabusVersion | int, user: User |
     else:
         extra['user'] = user
 
-    slugs = get_assets_from_syllabus(syllabus_version, only_mandatory=only_mandatory)
+    slugs = get_assets_from_syllabus(syllabus_version, task_types=task_types, only_mandatory=only_mandatory)
+    how_many_approved_tasks = Task.objects.filter(associated_slug__in=slugs,
+                                                  revision_status__in=['APPROVED', 'IGNORED'],
+                                                  **extra).count()
+
     how_many_pending_tasks = Task.objects.filter(associated_slug__in=slugs,
                                                  **extra).exclude(revision_status__in=['APPROVED', 'IGNORED']).count()
+
+    how_many_tasks = how_many_approved_tasks + how_many_pending_tasks
+    if (how_many_slugs := len(slugs)) != how_many_tasks:
+        how_many_pending_tasks = how_many_slugs - how_many_approved_tasks
 
     return how_many_pending_tasks
 
