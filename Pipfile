@@ -136,4 +136,4 @@ aiodns = "*"
 eventlet = "*"
 linked-services = {extras = ["django", "aiohttp", "requests"], version = "*"}
 celery-task-manager = {extras = ["django"], version = "*"}
-django-sql-explorer = {extras = ["xls"], version = "==4.0.2"}
+django-sql-explorer = {extras = ["xls"], version = "*"}
