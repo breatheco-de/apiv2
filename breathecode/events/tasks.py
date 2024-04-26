@@ -14,6 +14,22 @@ from .models import EventbriteWebhook, LiveClass, Organization
 logger = logging.getLogger(__name__)
 
 
+@shared_task(bind=True, priority=TaskPriority.STUDENT.value)
+def mark_live_class_as_started(self, live_class_id: int):
+    logger.info(f'Starting mark live class {live_class_id} as started')
+
+    now = timezone.now()
+
+    live_class = LiveClass.objects.filter(id=live_class_id).first()
+    if not live_class:
+        logger.error(f'Live Class {live_class_id} not fount')
+        return
+
+    live_class.started_at = now
+    live_class.save()
+    return
+
+
 @shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
 def persist_organization_events(self, args):
     from .actions import sync_org_events

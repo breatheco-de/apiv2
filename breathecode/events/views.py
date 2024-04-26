@@ -81,7 +81,7 @@ from .serializers import (
     PUTEventCheckinSerializer,
     VenueSerializer,
 )
-from .tasks import async_eventbrite_webhook
+from .tasks import async_eventbrite_webhook, mark_live_class_as_started
 
 logger = logging.getLogger(__name__)
 MONDAY = 0
@@ -328,6 +328,13 @@ def join_live_class(request, token, live_class, lang):
             'event': LiveClassJoinSerializer(live_class).data,
             **obj,
         })
+
+    is_teacher = CohortUser.objects.filter(cohort=live_class.cohort_time_slot.cohort,
+                                           role__in=['TEACHER', 'ASSISTANT'],
+                                           user=request.user).exists()
+
+    if is_teacher and live_class.started_at is None:
+        mark_live_class_as_started.delay(live_class.id)
 
     return redirect(live_class.cohort_time_slot.cohort.online_meeting_url)
 
