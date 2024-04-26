@@ -137,3 +137,4 @@ eventlet = "*"
 linked-services = {extras = ["django", "aiohttp", "requests"], version = "*"}
 celery-task-manager = {extras = ["django"], version = "*"}
 django-sql-explorer = {extras = ["xls"], version = "*"}
+sql-metadata = "*"
