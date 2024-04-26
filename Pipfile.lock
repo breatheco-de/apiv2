@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "f5bf7882b19e008915a1563196229d610ab0087712daa80647e5cf651e92d269"
+            "sha256": "3da24b9ace9e5d0801f092a7aed5ac508cbbf011ef4ef26fccbe593f70ae2884"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -779,11 +779,11 @@
                 "xls"
             ],
             "hashes": [
-                "sha256:1b1e56c5ec38bf7e7cb08f557bff83983afca0920a7149b997b33b1bb790b78a",
-                "sha256:b0cfb22502db4849d5d74de774eed2a559138c7f82267f199b7e6b97bd55457d"
+                "sha256:1c0fd62879f7f600523eda0b1ab3c15c199988dd2532b4b7ef15e0d8d04ac751",
+                "sha256:4b6c392adb97205ecf8e9f3505437c07da8aab1b84491387acb38ee63a5b36bb"
             ],
             "markers": "python_version >= '3.8'",
-            "version": "==4.1"
+            "version": "==4.0.2"
         },
         "django-storages": {
             "extras": [
@@ -1286,7 +1286,7 @@
                 "sha256:fd096eb7ffef17c456cfa587523c5f92321ae02427ff955bebe9e3c63bc9f0da",
                 "sha256:fe754d231288e1e64323cfad462fcee8f0288654c10bdf4f603a39ed923bef33"
             ],
-            "markers": "python_version >= '3' and platform_machine == 'aarch64' or (platform_machine == 'ppc64le' or (platform_machine == 'x86_64' or (platform_machine == 'amd64' or (platform_machine == 'AMD64' or (platform_machine == 'win32' or platform_machine == 'WIN32')))))",
+            "markers": "python_version >= '3.11' and platform_python_implementation == 'CPython'",
             "version": "==3.0.3"
         },
         "grpcio": {
@@ -3243,15 +3243,6 @@
             "markers": "python_version >= '3.8'",
             "version": "==2.5"
         },
-        "sql-metadata": {
-            "hashes": [
-                "sha256:2ce9d4519565a972edf786712d3f6fbebf8ddd8e0d7bdb4bf51d64f5ec2e5c88",
-                "sha256:f23b708ce558221f2ca3760eb4ab856b4f80540b5cf51733ad97913bc546862b"
-            ],
-            "index": "pypi",
-            "markers": "python_version >= '3.8' and python_version < '4.0'",
-            "version": "==2.11.0"
-        },
         "sqlalchemy": {
             "hashes": [
                 "sha256:1296f2cdd6db09b98ceb3c93025f0da4835303b8ac46c15c2136e27ee4d18d94",
@@ -4163,7 +4154,7 @@
                 "sha256:fd096eb7ffef17c456cfa587523c5f92321ae02427ff955bebe9e3c63bc9f0da",
                 "sha256:fe754d231288e1e64323cfad462fcee8f0288654c10bdf4f603a39ed923bef33"
             ],
-            "markers": "python_version >= '3' and platform_machine == 'aarch64' or (platform_machine == 'ppc64le' or (platform_machine == 'x86_64' or (platform_machine == 'amd64' or (platform_machine == 'AMD64' or (platform_machine == 'win32' or platform_machine == 'WIN32')))))",
+            "markers": "python_version >= '3.11' and platform_python_implementation == 'CPython'",
             "version": "==3.0.3"
         },
         "griffe": {
