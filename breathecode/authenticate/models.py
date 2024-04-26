@@ -144,7 +144,7 @@ class UserInvite(models.Model):
     _email: str
 
     def __init__(self, *args, **kwargs):
-        super(UserInvite, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._old_status = self.status
         self._email = self.email
 
@@ -215,9 +215,12 @@ class UserInvite(models.Model):
         return f'Invite for {self.email}'
 
     def save(self, *args, **kwargs):
+        import breathecode.authenticate.tasks as tasks_authenticate
+
+        created = self.pk is None
 
         status_updated = False
-        if self.pk is None or self._old_status != self.status:
+        if created or self._old_status != self.status:
             status_updated = True
 
         if self.pk and self._email and self.email != self._email:
@@ -225,11 +228,15 @@ class UserInvite(models.Model):
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
-        self._email = self.email
+        # this does not work without the created condition due to a bug
+        if created and (self.email_quality is None or self.email_status is None):
+            tasks_authenticate.async_validate_email_invite.delay(self.id)
 
         if status_updated:
             signals.invite_status_updated.send(instance=self, sender=UserInvite)
-            self._old_status = self.status
+
+        self._email = self.email
+        self._old_status = self.status
 
 
 INVITED = 'INVITED'

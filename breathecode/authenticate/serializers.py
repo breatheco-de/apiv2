@@ -10,7 +10,6 @@ from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-import breathecode.authenticate.tasks as tasks_authenticate
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_app_url, get_user_settings
@@ -1440,7 +1439,6 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         #                                       related_type='auth.UserInvite',
         #                                       related_id=instance.id)
 
-        tasks_authenticate.async_validate_email_invite.delay(instance.id)
         return instance
 
     def update(self, *args, **kwargs):

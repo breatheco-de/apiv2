@@ -16,6 +16,7 @@ os.environ['ENV'] = 'test'
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 
 pytest_plugins = (
+    'capyc.core.pytest',
     'capyc.newrelic.pytest',
     'capyc.django.pytest',
     'capyc.rest_framework.pytest',
