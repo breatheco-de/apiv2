@@ -778,6 +778,7 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
     base64_readme = str(readme_file.content)
     asset.readme_raw = base64_readme
 
+    config = None
     if learn_file is not None and (asset.last_synch_at is None or override_meta):
         config = json.loads(learn_file.decoded_content.decode('utf-8'))
         asset.config = config
