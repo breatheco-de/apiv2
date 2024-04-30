@@ -45,6 +45,7 @@ def post_serializer(self, cohort, user, profile_academy=None, data={}):
             'first_name': user.first_name,
             'id': user.id,
             'last_name': user.last_name,
+            'last_login': user.last_login,
         },
         'watching': False,
         **data,
