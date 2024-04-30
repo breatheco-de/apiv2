@@ -55,7 +55,35 @@ class Assessment(models.Model):
         return f'{self.slug} ({self.lang})'
 
     def save(self, *args, **kwargs):
+
         super().save(*args, **kwargs)
+
+    def to_json(self, *args, **kwargs):
+
+        _json = {
+            'info': {
+                'id': self.id,
+                'slug': self.slug,
+                'title': self.title,
+                'is_instant_feedback': self.is_instant_feedback,
+            },
+            'questions': []
+        }
+        _questions = self.question_set.all()
+        for q in _questions:
+            _q = {'id': q.id, 'title': q.title, 'options': []}
+
+            _options = q.option_set.all()
+            for o in _options:
+                _q['options'].append({
+                    'id': o.id,
+                    'title': o.title,
+                    'score': o.score,
+                })
+
+            _json['questions'].append(_q)
+
+        return _json
 
 
 class AssessmentThreshold(models.Model):

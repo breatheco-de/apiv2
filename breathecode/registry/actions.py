@@ -142,8 +142,9 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
 
         return asset
     except Exception as e:
+        logger.exception(e)
         message = ''
-        if hasattr(e, 'data'):
+        if hasattr(e, 'data') and e.data:
             message = e.data['message']
         else:
             message = str(e).replace('"', '\'')
@@ -204,7 +205,7 @@ def push_to_github(asset_slug, author=None):
 
         return asset
     except Exception as e:
-        # raise e
+        logger.exception(e)
         message = ''
         if hasattr(e, 'data'):
             message = e.data['message']
@@ -291,10 +292,19 @@ def push_github_asset(github, asset: Asset):
     branch, file_path = result.groups()
     logger.debug(f'Fetching readme: {file_path}')
 
-    # we commit the raw readme, we don't want images to be replaced in the original github
-    decoded_readme = base64.b64decode(asset.readme_raw.encode('utf-8')).decode('utf-8')
+    decoded_readme = None
+    if asset.asset_type in ['LESSON', 'ARTICLE']:
+        # we commit the raw readme, we don't want images to be replaced in the original github
+        decoded_readme = base64.b64decode(asset.readme_raw.encode('utf-8')).decode('utf-8')
+
+    elif asset.asset_type == 'QUIZ':
+        decoded_readme = json.dumps(asset.config, indent=4)
+
+    else:
+        raise Exception(f'Assets with type {asset.asset_type} cannot be commited to Github')
+
     if decoded_readme is None or decoded_readme == 'None' or decoded_readme == '':
-        raise Exception('The markdown content you are trying to push to Github is empty')
+        raise Exception('The content you are trying to push to Github is empty')
 
     result = set_blob_content(repo, file_path, decoded_readme, file_name, branch=branch)
     if 'commit' in result:
@@ -807,7 +817,32 @@ def pull_quiz_asset(github, asset: Asset):
 
     encoded_config = get_blob_content(repo, file_path, branch=branch_name).content
     decoded_config = Asset.decode(encoded_config)
-    asset.config = json.loads(decoded_config)
+
+    _config = json.loads(decoded_config)
+    asset.config = _config
+
+    # "slug":    "introduction-networking-es",
+    # "name":    "Introducción a redes",
+    # "status":    "draft",
+    # "main":    "Bienvenido al mundo de las redes. Este primer paso te llevara a grandes cosas en el futuro...",
+    # "results": "¡Felicidades! Ahora el mundo estará un poco más seguro gracias a tí...",
+    # "technologies": ["redes"],
+    # "badges": [
+    #     { "slug": "cybersecurity_guru", "points": 5 }
+    # ]
+    if 'info' in _config:
+        _config = _config['info']
+        if 'name' in _config and _config['name'] != '': asset.title = _config['name']
+
+        if 'main' in _config and _config['main']: asset.description = _config['main']
+        elif 'description' in _config and _config['description']: asset.description = _config['description']
+
+        if 'technologies' in _config and _config['technologies'] != '':
+            asset.technologies.clear()
+            for tech_slug in _config['technologies']:
+                technology = AssetTechnology.get_or_create(tech_slug)
+                asset.technologies.add(technology)
+
     asset.save()
 
     if asset.assessment is None:

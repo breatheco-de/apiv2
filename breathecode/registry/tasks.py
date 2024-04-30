@@ -14,6 +14,7 @@ from django.utils import timezone
 from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
 
+from breathecode.assessment.models import Assessment
 from breathecode.admissions.models import SyllabusVersion
 from breathecode.media.models import Media, MediaResolution
 from breathecode.media.views import media_gallery_bucket
@@ -489,3 +490,18 @@ def async_add_syllabus_translations(syllabus_slug, version):
 
     syllabus_version.json = add_syllabus_translations(syllabus_version.json)
     syllabus_version.save()
+
+
+@shared_task(priority=TaskPriority.BACKGROUND.value)
+def async_generate_quiz_config(assessment_id):
+
+    assessment = Assessment.objects.filter(id=assessment_id).first()
+    if assessment is None:
+        raise Exception(f'Assessment {assessment_id} not found')
+
+    assets = assessment.asset_set.all()
+    for a in assets:
+        a.config = a.generate_quiz_json()
+        a.save()
+
+    return True
