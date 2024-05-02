@@ -4,6 +4,8 @@ from datetime import timedelta
 from celery import shared_task
 from django.contrib.auth.models import User
 from django.utils import timezone
+from task_manager.core.exceptions import AbortTask, RetryTask
+from task_manager.django.decorators import task
 
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.authenticate.models import Token
@@ -130,41 +132,39 @@ def api_url():
     return os.getenv('API_URL', '')
 
 
-@shared_task(bind=True, priority=TaskPriority.NOTIFICATION.value)
-def send_cohort_survey(self, user_id, survey_id):
+@task(bind=False, priority=TaskPriority.NOTIFICATION.value)
+def send_cohort_survey(user_id, survey_id, **_):
     logger.info('Starting send_cohort_survey')
     survey = Survey.objects.filter(id=survey_id).first()
     if survey is None:
-        logger.error('Survey not found')
-        return False
+        raise RetryTask('Survey not found')
 
     user = User.objects.filter(id=user_id).first()
     if user is None:
-        logger.error('User not found')
-        return False
+        raise AbortTask('User not found')
 
     utc_now = timezone.now()
 
     if utc_now > survey.created_at + survey.duration:
-        logger.error('This survey has already expired')
-        return False
+        raise AbortTask('This survey has already expired')
 
     cu = CohortUser.objects.filter(cohort=survey.cohort,
                                    role='STUDENT',
                                    user=user,
                                    educational_status__in=['ACTIVE', 'GRADUATED']).first()
     if cu is None:
-        logger.error('This student does not belong to this cohort')
-        return False
+        raise AbortTask('This student does not belong to this cohort')
 
-    #TODO:test function below
-    generate_user_cohort_survey_answers(user, survey, status='SENT')
+    try:
+        generate_user_cohort_survey_answers(user, survey, status='SENT')
+
+    except Exception as e:
+        raise AbortTask(str(e))
 
     has_slackuser = hasattr(user, 'slackuser')
     if not user.email and not has_slackuser:
         message = f'Author not have email and slack, this survey cannot be send by {str(user.id)}'
-        logger.info(message)
-        raise Exception(message)
+        raise AbortTask(message)
 
     token, created = Token.get_or_create(user, token_type='temporal', hours_length=48)
     data = {
@@ -186,40 +186,39 @@ def send_cohort_survey(self, user_id, survey_id):
                                   academy=survey.cohort.academy)
 
 
-@shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
-def process_student_graduation(self, cohort_id, user_id):
+# test it
+@task(bind=False, priority=TaskPriority.ACADEMY.value)
+def process_student_graduation(cohort_id, user_id, **_):
     from .actions import create_user_graduation_reviews
 
     logger.debug('Starting process_student_graduation')
 
     cohort = Cohort.objects.filter(id=cohort_id).first()
     if cohort is None:
-        raise ValidationException(f'Invalid cohort id: {cohort_id}')
+        raise AbortTask(f'Invalid cohort id: {cohort_id}')
+
     user = User.objects.filter(id=user_id).first()
     if user is None:
-        raise ValidationException(f'Invalid user id: {user_id}')
+        raise AbortTask(f'Invalid user id: {user_id}')
 
     create_user_graduation_reviews(user, cohort)
 
-    return True
 
-
-@shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
-def recalculate_survey_scores(self, survey_id):
+@task(bind=False, priority=TaskPriority.ACADEMY.value)
+def recalculate_survey_scores(survey_id, **_):
     logger.info('Starting recalculate_survey_score')
 
     survey = Survey.objects.filter(id=survey_id).first()
     if survey is None:
-        logger.error('Survey not found')
-        return
+        raise RetryTask('Survey not found')
 
     survey.response_rate = actions.calculate_survey_response_rate(survey.id)
     survey.scores = actions.calculate_survey_scores(survey.id)
     survey.save()
 
 
-@shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
-def process_answer_received(self, answer_id):
+@task(bind=False, priority=TaskPriority.ACADEMY.value)
+def process_answer_received(answer_id, **_):
     """
     This task will be called every time a single NPS answer is received
     the task will review the score, if we got less than 7 it will notify
@@ -229,12 +228,10 @@ def process_answer_received(self, answer_id):
     logger.debug('Starting notify_bad_nps_score')
     answer = Answer.objects.filter(id=answer_id).first()
     if answer is None:
-        logger.error('Answer not found')
-        return
+        raise RetryTask('Answer not found')
 
     if answer.survey is None:
-        logger.error('No survey connected to answer.')
-        return
+        raise AbortTask('No survey connected to answer.')
 
     answer.survey.response_rate = actions.calculate_survey_response_rate(answer.survey.id)
     answer.survey.scores = actions.calculate_survey_scores(answer.survey.id)
@@ -247,14 +244,12 @@ def process_answer_received(self, answer_id):
 
         if system_email is not None:
             list_of_emails.append(system_email)
-        else:
-            logger.error('No system email found.', slug='system-email-not-found')
 
         if answer.academy.feedback_email is not None:
             list_of_emails.append(answer.academy.feedback_email)
 
-        else:
-            logger.error('No academy feedback email found.', slug='academy-feedback-email-not-found')
+        if len(list_of_emails) == 0:
+            raise AbortTask('No email found.')
 
         # TODO: instead of sending, use notifications system to be built on the breathecode.admin app.
         if list_of_emails:
@@ -275,31 +270,24 @@ def process_answer_received(self, answer_id):
     return True
 
 
-@shared_task(bind=True, priority=TaskPriority.NOTIFICATION.value)
-def send_mentorship_session_survey(self, session_id):
+@task(bind=False, priority=TaskPriority.NOTIFICATION.value)
+def send_mentorship_session_survey(session_id, **_):
     logger.info('Starting send_mentorship_session_survey')
     session = MentorshipSession.objects.filter(id=session_id).first()
     if session is None:
-        logger.error('Mentoring session not found', slug='without-mentorship-session')
-        return False
+        raise RetryTask('Mentoring session doesn\'t found')
 
     if session.mentee is None:
-        logger.error('The current session not have a mentee', slug='mentorship-session-without-mentee')
-        return False
+        raise AbortTask('This session doesn\'t have a mentee')
 
     if not session.started_at or not session.ended_at:
-        logger.error('Mentorship session not finished', slug='mentorship-session-without-started-at-or-ended-at')
-        return False
+        raise AbortTask('This session hasn\'t finished')
 
     if session.ended_at - session.started_at <= timedelta(minutes=5):
-        logger.error('Mentorship session duration less or equal than five minutes',
-                     slug='mentorship-session-duration-less-or-equal-than-five-minutes')
-        return False
+        raise AbortTask('Mentorship session duration is less or equal than five minutes')
 
     if not session.service:
-        logger.error('Mentorship session not have a service associated with it',
-                     slug='mentorship-session-not-have-a-service-associated-with-it')
-        return False
+        raise AbortTask('Mentorship session doesn\'t have a service associated with it')
 
     answer = Answer.objects.filter(mentorship_session__id=session.id).first()
     if answer is None:
@@ -311,15 +299,13 @@ def send_mentorship_session_survey(self, session_id):
         answer.user = session.mentee
         answer.status = 'SENT'
         answer.save()
+
     elif answer.status == 'ANSWERED':
-        logger.info(f'This survey about MentorshipSession {session.id} was answered',
-                    slug='answer-with-status-answered')
-        return False
+        raise AbortTask(f'This survey about MentorshipSession {session.id} was answered')
 
     if not session.mentee.email:
         message = f'Author not have email, this survey cannot be send by {session.mentee.id}'
-        logger.info(message, slug='mentee-without-email')
-        return False
+        raise AbortTask(message)
 
     token, _ = Token.get_or_create(session.mentee, token_type='temporal', hours_length=48)
 

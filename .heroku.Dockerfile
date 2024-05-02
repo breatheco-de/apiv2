@@ -15,12 +15,12 @@ RUN apt update -y \
     && apt update -y -qq \
     && apt upgrade -y -qq \
     && apt install -y -qq --no-install-recommends software-properties-common curl libcap2-bin \
-        python3.11 python3.11-dev pip libpq-dev libboost-all-dev kmod sudo \
+        python3.12 python3.12-dev pip libpq-dev libboost-all-dev kmod sudo \
     && apt clean -y -qq \
     && rm -rf /var/cache/apt/* /var/lib/apt/lists/* /tmp/*
 
-RUN python3.11 -m pip install pipenv && \
-    python3.11 -m pip cache purge && \
+RUN python3.12 -m pip install pipenv && \
+    python3.12 -m pip cache purge && \
     rm -rf $HOME/.cache/pipenv /tmp/*
 
 RUN useradd -ms /bin/bash 4geeks
@@ -53,7 +53,7 @@ RUN echo $NEW_RELIC_LICENSE_KEY
 RUN echo ${NEW_RELIC_LICENSE_KEY}
 
 RUN pipenv install --system --deploy --ignore-pipfile && \
-    python3.11 -m pip cache purge && \
+    python3.12 -m pip cache purge && \
     rm -rf $HOME/.cache/pipenv /tmp/*
 
 # RUN newrelic-infra

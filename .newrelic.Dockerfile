@@ -36,7 +36,7 @@ COPY . /app
 WORKDIR /app
 
 RUN python3 --version
-RUN python3.11 --version
+RUN python3.12 --version
 
 RUN pipenv install --system --deploy --ignore-pipfile && \
     pip3 cache purge && \

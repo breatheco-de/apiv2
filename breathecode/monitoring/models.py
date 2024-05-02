@@ -310,6 +310,10 @@ class SupervisorIssue(models.Model):
 
     supervisor = models.ForeignKey(Supervisor, on_delete=models.CASCADE)
     occurrences = models.PositiveIntegerField(default=1, blank=True)
+    attempts = models.PositiveIntegerField(default=0, blank=True)
+    code = models.SlugField(default=None, null=True, blank=True)
+    params = models.JSONField(default=None, null=True, blank=True)
+    fixed = models.BooleanField(default=None, null=True, blank=True)
     error = models.TextField(blank=False, max_length=255)
     ran_at = models.DateTimeField(default=None, null=True, blank=True)
 

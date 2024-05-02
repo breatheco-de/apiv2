@@ -1,11 +1,12 @@
 import logging
 import random
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import MagicMock, call, patch
 
-from breathecode.tests.mixins.breathecode_mixin.breathecode import fake
 from breathecode.feedback.tasks import recalculate_survey_scores
-from ..mixins import FeedbackTestCase
+from breathecode.tests.mixins.breathecode_mixin.breathecode import fake
+
 from ... import actions
+from ..mixins import FeedbackTestCase
 
 RESPONSE_RATE = random.random() * 100
 TOTAL = random.random() * 10
@@ -49,8 +50,13 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
     def test_with_zero_surveys(self):
         recalculate_survey_scores.delay(1)
 
-        self.assertEqual(logging.Logger.info.call_args_list, [call('Starting recalculate_survey_score')])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('Survey not found')])
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting recalculate_survey_score'),
+            call('Starting recalculate_survey_score'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Survey not found', exc_info=True),
+        ])
         self.assertEqual(actions.calculate_survey_scores.call_args_list, [])
         self.assertEqual(actions.calculate_survey_response_rate.call_args_list, [])
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), [])

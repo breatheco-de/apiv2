@@ -495,9 +495,11 @@ class Database:
                             continue
                             # arguments[field_attrs["name"]] = [generated[field_attrs["path"]]]
 
-                        # else:
-
                         arguments[field_attrs['name']] = generated[field_attrs['path']]
+
+                        if field_attrs['cls'] in [ForwardOneToOneDescriptor, ForwardManyToOneDescriptor] and isinstance(
+                                arguments[field_attrs['name']], list):
+                            arguments[field_attrs['name']] = arguments[field_attrs['name']][0]
 
                 result = result + [
                     model_descriptor['cls'].objects.create(**{

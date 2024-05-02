@@ -1,4 +1,5 @@
 import logging
+from typing import Type
 
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
@@ -28,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 @receiver(mentorship_session_status, sender=MentorshipSession)
-def post_mentoring_session_status(sender, instance, **kwargs):
+def post_mentoring_session_status(sender: Type[MentorshipSession], instance: MentorshipSession, **kwargs):
     if instance.status == 'STARTED':
         logger.debug('Mentorship has started, notifying the mentor')
         send_mentorship_starting_notification.delay(instance.id)

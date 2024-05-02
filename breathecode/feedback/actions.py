@@ -180,7 +180,7 @@ def get_student_answer_avg(user_id, cohort_id=None, academy_id=None):
     return query['average']
 
 
-def create_user_graduation_reviews(user, cohort):
+def create_user_graduation_reviews(user, cohort) -> bool:
 
     # If the user gave us a rating >=8 we should create reviews for each review platform with status "pending"
     average = get_student_answer_avg(user.id, cohort.id)
