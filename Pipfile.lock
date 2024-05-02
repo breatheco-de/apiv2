@@ -1286,7 +1286,7 @@
                 "sha256:fd096eb7ffef17c456cfa587523c5f92321ae02427ff955bebe9e3c63bc9f0da",
                 "sha256:fe754d231288e1e64323cfad462fcee8f0288654c10bdf4f603a39ed923bef33"
             ],
-            "markers": "python_version >= '3.7'",
+            "markers": "python_version >= '3.11' and platform_python_implementation == 'CPython'",
             "version": "==3.0.3"
         },
         "grpcio": {
@@ -3308,12 +3308,12 @@
         },
         "stripe": {
             "hashes": [
-                "sha256:0fde1cbbf45ee0d77bd7fbd8561886dfb6dac0f36e5a9e53fdca4a7386e23ecc",
-                "sha256:d4e8fbae89504b8e51a03619c1aaa2a77e2ee9b1db8d129e18dfe0e2537a0ddd"
+                "sha256:ace24a3ed07cff3b8efe0e23a72e02372f26124b034d1d3b78f58afdcd5bd390",
+                "sha256:cd38369641ae6140e1ce9edcd5400aecdb1a10ba704e653a2f2a7550cb8f277e"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.6'",
-            "version": "==9.4.0"
+            "version": "==9.5.0"
         },
         "text-unidecode": {
             "hashes": [
@@ -3356,11 +3356,11 @@
         },
         "tqdm": {
             "hashes": [
-                "sha256:1ee4f8a893eb9bef51c6e35730cebf234d5d0b6bd112b0271e10ed7c24a02bd9",
-                "sha256:6cd52cdf0fef0e0f543299cfc96fec90d7b8a7e88745f411ec33eb44d5ed3531"
+                "sha256:23097a41eba115ba99ecae40d06444c15d1c0c698d527a01c6c8bd1c5d0647e5",
+                "sha256:4f41d54107ff9a223dca80b53efe4fb654c67efaba7f47bada3ee9d50e05bd53"
             ],
             "markers": "python_version >= '3.7'",
-            "version": "==4.66.2"
+            "version": "==4.66.3"
         },
         "traitlets": {
             "hashes": [
@@ -3404,7 +3404,7 @@
                 "sha256:83f085bd5ca59c80295fc2a82ab5dac679cbe02b9f33f7d83af68e241bea51b0",
                 "sha256:c1f94d72897edaf4ce775bb7558d5b79d8126906a14ea5ed1635921406c0387a"
             ],
-            "markers": "python_version >= '3.7'",
+            "markers": "python_version >= '3.8'",
             "version": "==4.11.0"
         },
         "tzdata": {
@@ -4147,7 +4147,7 @@
                 "sha256:fd096eb7ffef17c456cfa587523c5f92321ae02427ff955bebe9e3c63bc9f0da",
                 "sha256:fe754d231288e1e64323cfad462fcee8f0288654c10bdf4f603a39ed923bef33"
             ],
-            "markers": "python_version >= '3.7'",
+            "markers": "python_version >= '3.11' and platform_python_implementation == 'CPython'",
             "version": "==3.0.3"
         },
         "griffe": {
