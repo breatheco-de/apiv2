@@ -1,7 +1,6 @@
 import asyncio
 import functools
 import inspect
-import os
 from datetime import timedelta
 from typing import Optional
 

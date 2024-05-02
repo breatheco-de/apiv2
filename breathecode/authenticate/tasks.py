@@ -42,7 +42,7 @@ def async_validate_email_invite(invite_id, **_):
         user_invite.process_status = 'ERROR'
         user_invite.process_message = str(e)
 
-    except Exception as e:
+    except Exception:
         raise RetryTask(f'Retrying email validation for invite {invite_id}')
 
     user_invite.save()

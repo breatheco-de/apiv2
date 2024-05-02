@@ -1,19 +1,22 @@
 import asyncio
 import inspect
 from datetime import timedelta
+from typing import Optional
 
 from django.db.models import Q
-from django.utils import timezone
 
-from breathecode.monitoring.models import Supervisor, SupervisorIssue
+from breathecode.monitoring.models import SupervisorIssue
 
 __all__ = ['issue', 'paths']
 
 paths = {}
 
 
-def issue(supervisor: callable, delta=timedelta(minutes=10), attempts=3):
+def issue(supervisor: callable, delta: Optional[timedelta] = None, attempts: int = 3):
     """Add a handler that is triggered by a supervisor issue."""
+
+    if delta is None:
+        delta = timedelta(minutes=10)
 
     def create_handler(fn: callable):
         code = fn.__name__.replace('_', '-')
