@@ -103,8 +103,6 @@ def tests_so_much_pending_sessions(database: dfx.Database, supervisor: Superviso
 
     supervise_all_consumption_sessions()
 
-    # run_supervisor.delay(1)
-
     assert supervisor.list() == [
         {
             'task_module': 'breathecode.payments.supervisors',
@@ -131,8 +129,6 @@ def tests_so_much_cancelled_sessions__no_unsafe_sessions(database: dfx.Database,
 
     supervise_all_consumption_sessions()
 
-    # run_supervisor.delay(1)
-
     assert supervisor.list() == [
         {
             'task_module': 'breathecode.payments.supervisors',
@@ -145,7 +141,7 @@ def tests_so_much_cancelled_sessions__no_unsafe_sessions(database: dfx.Database,
 def tests_so_much_cancelled_sessions__unsafe_sessions(database: dfx.Database, supervisor: Supervisor, utc_now: datetime,
                                                       random: cfx.Random):
     eta = utc_now - timedelta(seconds=(3600 * random.int(1, 24)) - 1)
-    x = {'eta': eta, 'operation_code': 'unsafe-consume-service-set'}
+    x = {'eta': eta, 'operation_code': 'unsafe-consume-service-set', 'user_id': 1}
     consumption_sessions = [{
         'status': 'CANCELLED',
         **x
@@ -153,11 +149,9 @@ def tests_so_much_cancelled_sessions__unsafe_sessions(database: dfx.Database, su
         'status': 'DONE',
         **x
     } for _ in range(6)]
-    model = database.create(consumption_session=consumption_sessions, service_set=1)
+    model = database.create(consumption_session=consumption_sessions, service_set=1, user=1)
 
     supervise_all_consumption_sessions()
-
-    # run_supervisor.delay(1)
 
     assert supervisor.list() == [
         {
