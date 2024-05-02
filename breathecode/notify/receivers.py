@@ -8,7 +8,7 @@ from breathecode.mentorship.serializers import SessionHookSerializer
 from breathecode.marketing.signals import form_entry_won_or_lost, new_form_entry_deal
 from breathecode.marketing.models import FormEntry
 from breathecode.marketing.serializers import FormEntryHookSerializer
-from breathecode.admissions.signals import student_edu_status_updated
+from breathecode.admissions.signals import student_edu_status_updated, cohort_user_created
 from breathecode.registry.models import Asset
 from breathecode.registry.signals import asset_status_updated
 from breathecode.registry.serializers import AssetHookSerializer
@@ -154,5 +154,18 @@ def edu_status_updated(sender, instance, **kwargs):
     HookManager.process_model_event(instance,
                                     model_label,
                                     'edu_status_updated',
+                                    payload_override=serializer.data,
+                                    academy_override=academy)
+
+
+@receiver(cohort_user_created, sender=CohortUser)
+def cohort_user_created(sender, instance, **kwargs):
+    logger.debug('Sending student to hook with cohort user created')
+    academy = instance.cohort.academy if instance.cohort is not None else None
+    model_label = get_model_label(instance)
+    serializer = CohortUserHookSerializer(instance)
+    HookManager.process_model_event(instance,
+                                    model_label,
+                                    'cohort_user_created',
                                     payload_override=serializer.data,
                                     academy_override=academy)

@@ -1,6 +1,11 @@
 from django.db import models
+import os
+import binascii
+import hashlib
+from datetime import timedelta
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy
+from django.core.validators import RegexValidator
 
 __all__ = ['UserProxy', 'Assessment', 'Question', 'Option', 'UserAssessment', 'Answer']
 
@@ -21,6 +26,9 @@ class Assessment(models.Model):
     title = models.CharField(max_length=255, blank=True)
     lang = models.CharField(max_length=3, blank=True, default='en')
 
+    max_session_duration = models.DurationField(default=timedelta(minutes=30),
+                                                help_text='No more answers will be accepted after X amount of minutes')
+
     academy = models.ForeignKey(Academy,
                                 on_delete=models.CASCADE,
                                 default=None,
@@ -30,13 +38,15 @@ class Assessment(models.Model):
     author = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, blank=True, null=True)
 
     private = models.BooleanField(default=False)
+    is_archived = models.BooleanField(
+        default=False, help_text='If assessments have answers, they cannot be deleted but will be archived instead')
 
     next = models.URLField(default=None, blank=True, null=True)
 
     is_instant_feedback = models.BooleanField(
         default=True, help_text='If true, users will know immediately if their answer was correct')
 
-    # the original translation (will only be set if the quiz is a translation of anotherone)
+    # the original translation (will only be set if the quiz is a translation of another one)
     original = models.ForeignKey(
         'Assessment',
         on_delete=models.CASCADE,
@@ -57,6 +67,15 @@ class Assessment(models.Model):
     def save(self, *args, **kwargs):
 
         super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        # Only delete assessments without answers
+        if self.userassessment_set.count() == 0:
+            super().delete(*args, **kwargs)
+
+        # if assessment has answers we dont delete
+        self.is_archived = True
+        self.save()
 
     def to_json(self, *args, **kwargs):
 
@@ -84,6 +103,23 @@ class Assessment(models.Model):
             _json['questions'].append(_q)
 
         return _json
+
+
+class AssessmentLayout(models.Model):
+
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    slug = models.SlugField(max_length=200, unique=True)
+    additional_styles = models.TextField(blank=True,
+                                         null=True,
+                                         default=None,
+                                         help_text='This stylesheet will be included in the assessment if specified')
+    variables = models.JSONField(default=None,
+                                 blank=True,
+                                 null=True,
+                                 help_text='Additional params to be passed into the assessment content')
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
 
 
 class AssessmentThreshold(models.Model):
@@ -176,10 +212,12 @@ class Option(models.Model):
 DRAFT = 'DRAFT'
 SENT = 'SENT'
 ANSWERED = 'ANSWERED'
+ERROR = 'ERROR'
 EXPIRED = 'EXPIRED'
 SURVEY_STATUS = (
-    (DRAFT, 'DRAFT'),
+    (DRAFT, 'Draft'),
     (SENT, 'Sent'),
+    (ERROR, 'Error'),
     (EXPIRED, 'Expired'),
 )
 
@@ -190,12 +228,36 @@ class UserAssessment(models.Model):
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, default=None, blank=True, null=True)
     assessment = models.ForeignKey(Assessment, on_delete=models.CASCADE, default=None, blank=True, null=True)
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, default=None, blank=True, null=True)
+
+    owner = models.ForeignKey(User,
+                              on_delete=models.CASCADE,
+                              default=None,
+                              blank=True,
+                              null=True,
+                              help_text='How is answering the assessment')
+    owner_email = models.CharField(max_length=150,
+                                   default=None,
+                                   blank=True,
+                                   null=True,
+                                   help_text='If there is not registered owner we can use the email as reference')
+    has_marketing_consent = models.BooleanField(default=False)
+    conversion_info = models.JSONField(default=None,
+                                       blank=True,
+                                       null=True,
+                                       help_text='UTMs and other conversion information.')
+    phone_regex = RegexValidator(
+        regex=r'^\+?1?\d{9,15}$',
+        message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
+    owner_phone = models.CharField(validators=[phone_regex], max_length=17, blank=True,
+                                   default='')  # validators should be a list
 
     total_score = models.FloatField(help_text='Total sum of all chosen options in the assesment')
 
     opened = models.BooleanField(default=False)
     status = models.CharField(max_length=15, choices=SURVEY_STATUS, default=DRAFT)
+    status_text = models.TextField(default=None, blank=True, null=True)
+
+    token = models.CharField(max_length=255, unique=True, help_text='Auto-generated when a user assignment is created')
 
     comment = models.CharField(max_length=255, default=None, blank=True, null=True)
 
@@ -205,16 +267,27 @@ class UserAssessment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.token = binascii.hexlify(os.urandom(20)).decode()
+
+        return super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.title
+
 
 class Answer(models.Model):
 
-    user_assesment = models.ForeignKey(UserAssessment, on_delete=models.CASCADE, default=None, blank=True, null=True)
+    user_assessment = models.ForeignKey(UserAssessment, on_delete=models.CASCADE, default=None, blank=True, null=True)
+
+    # Do not implement many-to-many, its better to have many answers, one for each selected option
     option = models.ForeignKey(Option,
                                on_delete=models.CASCADE,
                                default=None,
                                blank=True,
                                null=True,
-                               help_text='Will be null if open question, no options to pick')
+                               help_text='Will be null if open question, no options to pick.')
     question = models.ForeignKey(Question, on_delete=models.CASCADE, default=None, blank=True, null=True)
     value = models.TextField()
 

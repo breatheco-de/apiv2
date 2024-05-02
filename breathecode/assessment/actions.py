@@ -21,7 +21,7 @@ def validate_quiz_json(quiz, allow_override=False):
     _result['assessment'] = Assessment.objects.filter(slug=quiz['info']['slug']).first()
     if not allow_override and _result['assessment']:
         raise ValidationException(
-            f"There is already an assessment with slug {quiz['info']['slug']}, rename your quiz info.slug or delete the previous assessment"
+            f"There is already an assessment (maybe it's archived) with slug {quiz['info']['slug']}, rename your quiz info.slug or delete the previous assessment"
         )
 
     if 'id' in quiz: _result['id'] = quiz['id']
@@ -90,7 +90,6 @@ def create_from_asset(asset, allow_override=False):
     if asset.academy is None:
         raise ValidationException(f'Asset {asset.slug} has not academy associated')
 
-    a = asset.assessment
     if asset.assessment is not None and asset.assessment.asset_set.count() > 1:
         associated_assets = ','.join(asset.assessment.asset_set.all())
         raise ValidationException('Assessment has more then one asset associated, please choose only one: ' +
@@ -98,7 +97,6 @@ def create_from_asset(asset, allow_override=False):
 
     quiz = validate_quiz_json(asset.config, allow_override)
     if asset.assessment is None:
-
         a = quiz['assessment']
         if not a:
             a = Assessment.objects.create(title=quiz['info']['title'],
@@ -107,7 +105,7 @@ def create_from_asset(asset, allow_override=False):
                                           academy=asset.academy,
                                           author=asset.author)
 
-    if a.question_set.count() > 0:
+    if a is not None and a.question_set is not None and a.question_set.count() > 0:
         raise ValidationException(
             'Assessment already has questions, only empty assessments can by created from an asset')
 

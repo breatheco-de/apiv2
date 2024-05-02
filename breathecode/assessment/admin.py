@@ -1,7 +1,8 @@
 import logging
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
-from .models import (Assessment, UserAssessment, UserProxy, Question, Option, AssessmentThreshold, Answer)
+from .models import (Assessment, UserAssessment, UserProxy, Question, Option, AssessmentThreshold, Answer,
+                     AssessmentLayout)
 from .actions import send_assestment
 
 logger = logging.getLogger(__name__)
@@ -47,7 +48,7 @@ class QuestionAdmin(admin.ModelAdmin):
 @admin.register(Option)
 class OptionAdmin(admin.ModelAdmin):
     search_fields = ['title', 'question__assessment__title']
-    list_display = ['title', 'is_deleted', 'position', 'lang', 'score', 'question']
+    list_display = ['id', 'title', 'is_deleted', 'position', 'lang', 'score', 'question']
     list_filter = ['lang', 'is_deleted']
 
 
@@ -55,8 +56,9 @@ class OptionAdmin(admin.ModelAdmin):
 @admin.register(UserAssessment)
 class UserAssessmentAdmin(admin.ModelAdmin):
     search_fields = ['title', 'question__assessment__title']
-    list_display = ['title', 'status', 'lang', 'owner', 'total_score', 'assessment']
-    list_filter = ['lang']
+    readonly_fields = ('token', )
+    list_display = ['id', 'title', 'status', 'lang', 'owner', 'total_score', 'assessment']
+    list_filter = ['lang', 'status', 'academy']
 
 
 @admin.register(AssessmentThreshold)
@@ -68,6 +70,13 @@ class UserAssessmentThresholdAdmin(admin.ModelAdmin):
 
 @admin.register(Answer)
 class AnswerAdmin(admin.ModelAdmin):
-    search_fields = ['user_assesment__owner', 'user_assesment__title']
-    list_display = ['id', 'question', 'option', 'value']
-    list_filter = ['user_assesment__assessment__slug']
+    search_fields = ['user_assessment__owner', 'user_assessment__title']
+    list_display = ['id', 'user_assessment', 'question', 'option', 'value']
+    list_filter = ['user_assessment__assessment__slug']
+
+
+@admin.register(AssessmentLayout)
+class AssessmentLayoutAdmin(admin.ModelAdmin):
+    search_fields = ['slug']
+    list_display = ['id', 'slug', 'academy']
+    list_filter = ['academy']

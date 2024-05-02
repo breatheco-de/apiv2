@@ -6,12 +6,16 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from breathecode.utils import (
+    APIViewExtensions,
+    GenerateLookupsMixin,
+)
 
 from breathecode.authenticate.actions import get_user_language
 from breathecode.utils import ValidationException, capable_of
 from breathecode.utils.i18n import translation
 
-from .models import Assessment, AssessmentThreshold, Option, Question, UserAssessment
+from .models import Assessment, AssessmentThreshold, Option, Question, UserAssessment, Answer
 from .serializers import (
     AssessmentPUTSerializer,
     GetAssessmentBigSerializer,
@@ -19,23 +23,43 @@ from .serializers import (
     GetAssessmentThresholdSerializer,
     OptionSerializer,
     QuestionSerializer,
+    GetAssessmentLayoutSerializer,
+    SmallUserAssessmentSerializer,
+    GetUserAssessmentSerializer,
+    PostUserAssessmentSerializer,
+    PUTUserAssessmentSerializer,
+    AnswerSerializer,
+    AnswerSmallSerializer,
 )
 
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def track_assesment_open(request, user_assessment_id=None):
+class TrackAssessmentView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
 
-    ass = UserAssessment.objects.filter(id=user_assessment_id, status='SENT').first()
-    if ass is not None:
-        ass.status = 'OPENED'
-        ass.opened_at = timezone.now()
-        ass.save()
+    def put(self, request, token):
 
-    image = Image.new('RGB', (1, 1))
-    response = HttpResponse(content_type='image/png')
-    image.save(response, 'PNG')
-    return response
+        ass = UserAssessment.objects.filter(token=token).first()
+        if not ass:
+            raise ValidationException('User Assessment not found', 404)
+
+        serializer = PUTUserAssessmentSerializer(ass, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            serializer = GetUserAssessmentSerializer(serializer.instance)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def post(self, request):
+
+        payload = request.data.copy()
+        serializer = PostUserAssessmentSerializer(data=payload, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            serializer = GetUserAssessmentSerializer(serializer.instance)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class GetAssessmentView(APIView):
@@ -51,9 +75,9 @@ class GetAssessmentView(APIView):
             if 'lang' in self.request.GET:
                 lang = self.request.GET.get('lang')
 
-            item = Assessment.objects.filter(slug=assessment_slug).first()
+            item = Assessment.objects.filter(slug=assessment_slug, is_archived=False).first()
             if item is None:
-                raise ValidationException('Assessment not found', 404)
+                raise ValidationException('Assessment not found or its archived', 404)
 
             if lang is not None and item.lang != lang:
                 item = item.translations.filter(lang=lang).first()
@@ -75,6 +99,10 @@ class GetAssessmentView(APIView):
             param = self.request.GET.get('lang')
             lookup['lang'] = param
 
+        # user can specify include_archived on querystring to include archived assessments
+        if not 'include_archived' in self.request.GET or self.request.GET.get('include_archived') != 'true':
+            lookup['is_archived'] = False
+
         if 'no_asset' in self.request.GET and self.request.GET.get('no_asset').lower() == 'true':
             lookup['asset__isnull'] = True
 
@@ -92,13 +120,14 @@ class GetAssessmentView(APIView):
 
         lang = get_user_language(request)
 
-        _assessment = Assessment.objects.filter(slug=assessment_slug, academy__id=academy_id).first()
+        _assessment = Assessment.objects.filter(slug=assessment_slug, academy__id=academy_id, is_archived=False).first()
         if _assessment is None:
             raise ValidationException(
-                translation(lang,
-                            en=f'Assessment {assessment_slug} not found for academy {academy_id}',
-                            es=f'La evaluación {assessment_slug} no se encontró para la academia {academy_id}',
-                            slug='not-found'))
+                translation(
+                    lang,
+                    en=f'Assessment {assessment_slug} not found or its archived for academy {academy_id}',
+                    es=f'La evaluación {assessment_slug} no se encontró o esta archivada para la academia {academy_id}',
+                    slug='not-found'))
 
         all_serializers = []
         assessment_serializer = AssessmentPUTSerializer(_assessment,
@@ -200,6 +229,72 @@ class GetAssessmentView(APIView):
         return Response(assessment_serializer.data, status=status.HTTP_200_OK)
 
 
+class AssessmentLayoutView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, layout_slug=None):
+
+        if layout_slug:
+            item = AssessmentLayout.objects.filter(slug=layout_slug).first()
+            if item is None:
+                raise ValidationException('Assessment layout not found', 404)
+            serializer = GetAssessmentLayoutSerializer(items)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AcademyAssessmentLayoutView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+    permission_classes = [AllowAny]
+
+    @capable_of('read_assessment')
+    def get(self, request, academy_id, layout_slug=None):
+
+        if layout_slug:
+            item = AssessmentLayout.objects.filter(slug=layout_slug, academy__id=academy_id).first()
+            if item is None:
+                raise ValidationException('Assessment layout not found for this academy', 404)
+            serializer = GetAssessmentLayoutSerializer(items)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # get original all assessments (assessments that have no parent)
+        items = AssessmentLayout.objects.filter(academy__id=academy_id)
+        lookup = {}
+
+        # if 'academy' in self.request.GET:
+        #     param = self.request.GET.get('academy')
+        #     lookup['academy__isnull'] = True
+
+        items = items.filter(**lookup).order_by('-created_at')
+
+        serializer = GetAssessmentLayoutSerializer(items, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_public_assessment(request):
+    data = request.data.copy()
+
+    # remove spaces from phone
+    if 'phone' in data:
+        data['phone'] = data['phone'].replace(' ', '')
+
+    serializer = PostFormEntrySerializer(data=data)
+    if serializer.is_valid():
+        serializer.save()
+
+        persist_single_lead.delay(serializer.data)
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class AssessmentOptionView(APIView):
 
     @capable_of('crud_assessment')
@@ -292,3 +387,246 @@ class GetThresholdView(APIView):
 
         serializer = GetAssessmentThresholdSerializer(items, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AcademyUserAssessmentView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
+    @capable_of('read_user_assessment')
+    def get(self, request, academy_id=None, ua_id=None):
+        handler = self.extensions(request)
+
+        if ua_id is not None:
+            single = UserAssessment.objects.filter(id=ua_id, academy__id=academy_id).first()
+            if single is None:
+                raise ValidationException(f'UserAssessment {ua_id} not found', 404, slug='user-assessment-not-found')
+
+            serializer = GetUserAssessmentSerializer(single, many=False)
+            return handler.response(serializer.data)
+
+        items = UserAssessment.objects.filter(academy__id=academy_id)
+        lookup = {}
+
+        start = request.GET.get('started_at', None)
+        if start is not None:
+            start_date = datetime.datetime.strptime(start, '%Y-%m-%d').date()
+            lookup['started_at__gte'] = start_date
+
+        end = request.GET.get('finished_at', None)
+        if end is not None:
+            end_date = datetime.datetime.strptime(end, '%Y-%m-%d').date()
+            lookup['finished_at__lte'] = end_date
+
+        if 'status' in self.request.GET:
+            param = self.request.GET.get('status')
+            lookup['status'] = param
+
+        if 'opened' in self.request.GET:
+            param = self.request.GET.get('opened')
+            lookup['opened'] = param == 'true'
+
+        if 'course' in self.request.GET:
+            param = self.request.GET.get('course')
+            lookup['course__in'] = [x.strip() for x in param.split(',')]
+
+        if 'owner' in self.request.GET:
+            param = self.request.GET.get('owner')
+            lookup['owner__id'] = param
+        elif 'owner_email' in self.request.GET:
+            param = self.request.GET.get('owner_email')
+            lookup['owner_email'] = param
+
+        if 'lang' in self.request.GET:
+            param = self.request.GET.get('lang')
+            lookup['lang'] = param
+
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+
+        serializer = SmallUserAssessmentSerializer(items, many=True)
+        return handler.response(serializer.data)
+
+    @capable_of('crud_user_assessment')
+    def post(self, request, academy_id=None):
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
+            raise ValidationException(f'Academy {academy_id} not found', slug='academy-not-found')
+
+        # ignore the incoming location information and override with the session academy
+        data = {**request.data, 'location': academy.active_campaign_slug}
+
+        serializer = PostFormEntrySerializer(data=data, context={'request': request, 'academy': academy_id})
+        if serializer.is_valid():
+            serializer.save()
+            big_serializer = FormEntryBigSerializer(serializer.instance)
+            return Response(big_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AcademyAnswerView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
+    @capable_of('read_user_assessment')
+    def get(self, request, academy_id, ua_id=None, answer_id=None):
+        handler = self.extensions(request)
+
+        if answer_id is not None:
+            single = Answer.objects.filter(id=answer_id,
+                                           user_assessment__id=ua_id,
+                                           user_assessment__academy__id=academy_id).first()
+            if single is None:
+                raise ValidationException(f'Answer {answer_id} not found on user assessment {ua_id}',
+                                          404,
+                                          slug='answer-not-found')
+
+            serializer = AnswerSmallSerializer(single, many=False)
+            return handler.response(serializer.data)
+
+        items = Answer.objects.filter(assess, user_assessment__academy__id=academy_id)
+        lookup = {}
+
+        start = request.GET.get('starting_at', None)
+        if start is not None:
+            start_date = datetime.datetime.strptime(start, '%Y-%m-%d').date()
+            lookup['created_at__gte'] = start_date
+
+        end = request.GET.get('ending_at', None)
+        if end is not None:
+            end_date = datetime.datetime.strptime(end, '%Y-%m-%d').date()
+            lookup['created_at__lte'] = end_date
+
+        if 'user_assessments' in self.request.GET:
+            param = self.request.GET.get('user_assessments')
+            lookup['user_assessment__id__in'] = [x.strip() for x in param.split(',')]
+
+        if 'assessments' in self.request.GET:
+            param = self.request.GET.get('assessments')
+            lookup['question__assessment__id__in'] = [x.strip() for x in param.split(',')]
+
+        if 'questions' in self.request.GET:
+            param = self.request.GET.get('questions')
+            lookup['question__id__in'] = [x.strip() for x in param.split(',')]
+
+        if 'options' in self.request.GET:
+            param = self.request.GET.get('options')
+            lookup['option__id__in'] = [x.strip() for x in param.split(',')]
+
+        if 'owner' in self.request.GET:
+            param = self.request.GET.get('owner')
+            lookup['user_assessments__owner__id__in'] = [x.strip() for x in param.split(',')]
+
+        elif 'owner_email' in self.request.GET:
+            param = self.request.GET.get('owner_email')
+            lookup['owner_email'] = param
+
+        if 'lang' in self.request.GET:
+            param = self.request.GET.get('lang')
+            lookup['user_assessments__lang'] = param
+
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+
+        serializer = AnswerSmallSerializer(items, many=True)
+        return handler.response(serializer.data)
+
+
+class AnswerView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
+    def get(self, request, token, answer_id=None):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        if answer_id is not None:
+            single = Answer.objects.filter(id=answer_id, user_assessment__token=token).first()
+            if single is None:
+                raise ValidationException(f'Answer {answer_id} not found on user assessment',
+                                          404,
+                                          slug='answer-not-found')
+
+            serializer = AnswerSmallSerializer(single, many=False)
+            return handler.response(serializer.data)
+
+        items = Answer.objects.filter(user_assessment__token=token)
+        lookup = {}
+
+        if 'questions' in self.request.GET:
+            param = self.request.GET.get('questions')
+            lookup['question__id__in'] = [x.strip() for x in param.split(',')]
+
+        if 'options' in self.request.GET:
+            param = self.request.GET.get('options')
+            lookup['option__id__in'] = [x.strip() for x in param.split(',')]
+
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+
+        serializer = AnswerSmallSerializer(items, many=True)
+        return handler.response(serializer.data)
+
+    def post(self, request, token):
+
+        lang = get_user_language(request)
+
+        data = {
+            **request.data,
+            'token': token,
+        }
+        serializer = AnswerSerializer(data=data, context={'request': request, 'lang': lang})
+        if serializer.is_valid():
+            serializer.save()
+            big_serializer = AnswerSmallSerializer(serializer.instance)
+            return Response(big_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, token, answer_id=None):
+
+        lang = get_user_language(request)
+        lookups = self.generate_lookups(request, many_fields=['id'])
+
+        if lookups and answer_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en='answer_id must not be provided by url if deleting in bulk',
+                    es='El answer_id no debe ser enviado como parte del path si se quiere una eliminacion masiva',
+                    slug='bulk-querystring'))
+
+        uass = UserAssessment.objects.filter(token=token).first()
+        if not uass:
+            raise ValidationException(
+                translation(lang,
+                            en=f'user assessment not found for this token',
+                            es=f'No se han encontrado un user assessment con ese token',
+                            slug='not-found'))
+
+        if lookups:
+            items = Answer.objects.filter(**lookups, user_assessment=uass)
+
+            for item in items:
+                item.delete()
+
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+        if answer_id is None:
+            raise ValidationException('Missing answer_id', code=400)
+
+        ans = Answer.objects.filter(id=answer_id, user_assessment=uass).first()
+        if ans is None:
+            raise ValidationException('Specified answer and token could not be found')
+
+        ans.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)

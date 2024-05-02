@@ -495,9 +495,9 @@ def async_add_syllabus_translations(syllabus_slug, version):
 @shared_task(priority=TaskPriority.BACKGROUND.value)
 def async_generate_quiz_config(assessment_id):
 
-    assessment = Assessment.objects.filter(id=assessment_id).first()
+    assessment = Assessment.objects.filter(id=assessment_id, is_archived=False).first()
     if assessment is None:
-        raise Exception(f'Assessment {assessment_id} not found')
+        raise Exception(f'Assessment {assessment_id} not found or its archived')
 
     assets = assessment.asset_set.all()
     for a in assets:
