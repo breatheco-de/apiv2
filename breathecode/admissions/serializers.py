@@ -119,6 +119,7 @@ class UserSerializer(serpy.Serializer):
     first_name = serpy.Field()
     last_name = serpy.Field()
     email = serpy.Field()
+    last_login = serpy.Field()
     profile = ProfileSerializer(required=False)
 
 

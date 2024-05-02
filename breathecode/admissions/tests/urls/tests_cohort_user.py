@@ -46,6 +46,7 @@ def put_serializer(self, cohort_user, cohort, user, profile_academy=None, data={
             'first_name': user.first_name,
             'id': user.id,
             'last_name': user.last_name,
+            'last_login': user.last_login,
         },
         'watching': cohort_user.watching,
         **data,
@@ -177,6 +178,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'first_name': model['cohort_user'].user.first_name,
                 'last_name': model['cohort_user'].user.last_name,
                 'email': model['cohort_user'].user.email,
+                'last_login': model['cohort_user'].user.last_login,
             },
             'profile_academy': None,
             'watching': False,
@@ -208,6 +210,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'first_name': model['cohort_user'].user.first_name,
                 'last_name': model['cohort_user'].user.last_name,
                 'email': model['cohort_user'].user.email,
+                'last_login': model['cohort_user'].user.last_login,
             },
             'profile_academy': None,
             'cohort': {
@@ -285,6 +288,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'first_name': model['cohort_user'].user.first_name,
                 'last_name': model['cohort_user'].user.last_name,
                 'email': model['cohort_user'].user.email,
+                'last_login': model['cohort_user'].user.last_login,
             },
             'profile_academy': None,
             'watching': False,
@@ -321,6 +325,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'first_name': model['cohort_user'].user.first_name,
                 'last_name': model['cohort_user'].user.last_name,
                 'email': model['cohort_user'].user.email,
+                'last_login': model['cohort_user'].user.last_login,
             },
             'profile_academy': None,
             'cohort': {
@@ -386,6 +391,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'first_name': model['cohort_user'].user.first_name,
                 'last_name': model['cohort_user'].user.last_name,
                 'email': model['cohort_user'].user.email,
+                'last_login': model['cohort_user'].user.last_login,
             },
             'profile_academy': None,
             'cohort': {
@@ -433,6 +439,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'first_name': model['cohort_user'].user.first_name,
                 'last_name': model['cohort_user'].user.last_name,
                 'email': model['cohort_user'].user.email,
+                'last_login': model['cohort_user'].user.last_login,
             },
             'profile_academy': None,
             'cohort': {
@@ -498,6 +505,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'first_name': model['cohort_user'].user.first_name,
                 'last_name': model['cohort_user'].user.last_name,
                 'email': model['cohort_user'].user.email,
+                'last_login': model['cohort_user'].user.last_login,
             },
             'profile_academy': None,
             'cohort': {
@@ -549,6 +557,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'first_name': model['cohort_user'].user.first_name,
                 'last_name': model['cohort_user'].user.last_name,
                 'email': model['cohort_user'].user.email,
+                'last_login': model['cohort_user'].user.last_login,
             },
             'profile_academy': {
                 'id': model['profile_academy'].id,
@@ -601,6 +610,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'first_name': model['cohort_user'].user.first_name,
                 'last_name': model['cohort_user'].user.last_name,
                 'email': model['cohort_user'].user.email,
+                'last_login': model['cohort_user'].user.last_login,
             },
             'profile_academy': None,
             'cohort': {
@@ -666,6 +676,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'first_name': model['cohort_user'].user.first_name,
                 'last_name': model['cohort_user'].user.last_name,
                 'email': model['cohort_user'].user.email,
+                'last_login': model['cohort_user'].user.last_login,
             },
             'profile_academy': None,
             'cohort': {
