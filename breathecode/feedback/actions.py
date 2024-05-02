@@ -190,18 +190,18 @@ def create_user_graduation_reviews(user, cohort) -> bool:
             author=user,
         ).count()
         if total_reviews > 0:
-            logger.debug('No new reviews will be requested, student already has pending requests for this cohort')
+            logger.info('No new reviews will be requested, student already has pending requests for this cohort')
             return False
 
         platforms = ReviewPlatform.objects.all()
-        logger.debug(f'{platforms.count()} will be requested for student {user.id}, avg NPS score of {average}')
+        logger.info(f'{platforms.count()} will be requested for student {user.id}, avg NPS score of {average}')
         for plat in platforms:
             review = Review(cohort=cohort, author=user, platform=plat, nps_previous_rating=average)
             review.save()
 
         return True
 
-    logger.debug(f'No reviews requested for student {user.id} because average NPS score is {average}')
+    logger.info(f'No reviews requested for student {user.id} because average NPS score is {average}')
     return False
 
 
