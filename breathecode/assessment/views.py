@@ -37,14 +37,15 @@ class TrackAssessmentView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
+    permission_classes = [AllowAny]
 
-    def put(self, request, token):
-
-        ass = UserAssessment.objects.filter(token=token).first()
+    def put(self, request, ua_token):
+        lang = get_user_language(request)
+        ass = UserAssessment.objects.filter(token=ua_token).first()
         if not ass:
             raise ValidationException('User Assessment not found', 404)
 
-        serializer = PUTUserAssessmentSerializer(ass, data=request.data)
+        serializer = PUTUserAssessmentSerializer(ass, data=request.data, context={'request': request, 'lang': lang})
         if serializer.is_valid():
             serializer.save()
             serializer = GetUserAssessmentSerializer(serializer.instance)
@@ -53,8 +54,9 @@ class TrackAssessmentView(APIView, GenerateLookupsMixin):
 
     def post(self, request):
 
+        lang = get_user_language(request)
         payload = request.data.copy()
-        serializer = PostUserAssessmentSerializer(data=payload, context={'request': request})
+        serializer = PostUserAssessmentSerializer(data=payload, context={'request': request, 'lang': lang})
         if serializer.is_valid():
             serializer.save()
             serializer = GetUserAssessmentSerializer(serializer.instance)
@@ -543,6 +545,7 @@ class AnswerView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
+    permission_classes = [AllowAny]
 
     extensions = APIViewExtensions(sort='-created_at', paginate=True)
 

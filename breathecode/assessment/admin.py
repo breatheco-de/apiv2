@@ -1,6 +1,9 @@
 import logging
+import re
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
+from breathecode.utils.admin import change_field
+from django.utils.html import format_html
 from .models import (Assessment, UserAssessment, UserProxy, Question, Option, AssessmentThreshold, Answer,
                      AssessmentLayout)
 from .actions import send_assestment
@@ -23,7 +26,6 @@ def send_bulk_assesment(modeladmin, request, queryset):
 @admin.register(UserProxy)
 class UserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name')
-    actions = [send_bulk_assesment]
 
 
 # Register your models here.
@@ -52,13 +54,43 @@ class OptionAdmin(admin.ModelAdmin):
     list_filter = ['lang', 'is_deleted']
 
 
-# Register your models here.
+def change_status_ANSWERED(modeladmin, request, queryset):
+    items = queryset.all()
+    for i in items:
+        i.status = 'ANSWERED'
+        i.save()
+
+
 @admin.register(UserAssessment)
 class UserAssessmentAdmin(admin.ModelAdmin):
     search_fields = ['title', 'question__assessment__title']
     readonly_fields = ('token', )
-    list_display = ['id', 'title', 'status', 'lang', 'owner', 'total_score', 'assessment']
+    list_display = ['id', 'title', 'current_status', 'lang', 'owner', 'total_score', 'assessment', 'academy']
     list_filter = ['lang', 'status', 'academy']
+    actions = [change_status_ANSWERED] + change_field(['DRAFT', 'SENT', 'ERROR', 'EXPIRED'], name='status')
+
+    def current_status(self, obj):
+        colors = {
+            'DRAFT': 'bg-secondary',
+            'SENT': 'bg-warning',
+            'ANSWERED': 'bg-success',
+            'ERROR': 'bg-error',
+            'EXPIRED': 'bg-warning',
+            None: 'bg-error',
+        }
+
+        def from_status(s):
+            if s in colors:
+                return colors[s]
+            return ''
+
+        status = 'No status'
+        if obj.status_text is not None:
+            status = re.sub(r'[^\w\._\-]', ' ', obj.status_text)
+        return format_html(f"""<table style='max-width: 200px;'>
+        <td><span class='badge {from_status(obj.status)}'>{obj.status}</span></td>
+        <tr><td>{status}</td></tr>
+        </table>""")
 
 
 @admin.register(AssessmentThreshold)
@@ -66,6 +98,7 @@ class UserAssessmentThresholdAdmin(admin.ModelAdmin):
     search_fields = ['assessment__slug', 'assessment__title']
     list_display = ['id', 'score_threshold', 'assessment']
     list_filter = ['assessment__slug']
+    actions = []
 
 
 @admin.register(Answer)

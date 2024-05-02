@@ -5,6 +5,7 @@ import hashlib
 from datetime import timedelta
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy
+from . import signals
 from django.core.validators import RegexValidator
 
 __all__ = ['UserProxy', 'Assessment', 'Question', 'Option', 'UserAssessment', 'Answer']
@@ -65,7 +66,6 @@ class Assessment(models.Model):
         return f'{self.slug} ({self.lang})'
 
     def save(self, *args, **kwargs):
-
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
@@ -217,12 +217,15 @@ EXPIRED = 'EXPIRED'
 SURVEY_STATUS = (
     (DRAFT, 'Draft'),
     (SENT, 'Sent'),
+    (ANSWERED, 'Answered'),  # If marked as 'ANSWERED' the total_score will be auto-calculated
     (ERROR, 'Error'),
     (EXPIRED, 'Expired'),
 )
 
 
 class UserAssessment(models.Model):
+    _old_status = None
+
     title = models.CharField(max_length=200, blank=True)
     lang = models.CharField(max_length=3, blank=True, default='en')
 
@@ -267,11 +270,38 @@ class UserAssessment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._old_status = self.status
+
     def save(self, *args, **kwargs):
         if not self.pk:
             self.token = binascii.hexlify(os.urandom(20)).decode()
 
+        # Answer is being closed
+        if self.status != self._old_status:
+            signals.userassessment_status_updated.send(instance=self, sender=self.__class__)
+
         return super().save(*args, **kwargs)
+
+    def get_score(self):
+
+        total_score = 0
+        answers = self.answer_set.all().order_by('-created_at')
+        last_one = None
+        for a in answers:
+            last_one = a
+
+            # Ignore open text questions
+            if a.question.question_type == 'TEXT':
+                continue
+
+            if a.option: a.value = str(a.option.score)
+
+            if a.value.is_numeric():
+                total_score += float(a.value)
+
+        return total_score, last_one
 
     def __str__(self):
         return self.title
@@ -282,12 +312,13 @@ class Answer(models.Model):
     user_assessment = models.ForeignKey(UserAssessment, on_delete=models.CASCADE, default=None, blank=True, null=True)
 
     # Do not implement many-to-many, its better to have many answers, one for each selected option
-    option = models.ForeignKey(Option,
-                               on_delete=models.CASCADE,
-                               default=None,
-                               blank=True,
-                               null=True,
-                               help_text='Will be null if open question, no options to pick.')
+    option = models.ForeignKey(
+        Option,
+        on_delete=models.SET_NULL,
+        default=None,
+        blank=True,
+        null=True,
+        help_text='Will be null if open question, no options to pick. Or if option was deleted historically')
     question = models.ForeignKey(Question, on_delete=models.CASCADE, default=None, blank=True, null=True)
     value = models.TextField()
 

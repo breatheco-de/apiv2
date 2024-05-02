@@ -5,3 +5,4 @@ declare a new variable here like this:
 from django import dispatch
 
 assessment_updated = dispatch.Signal()
+userassessment_status_updated = dispatch.Signal()

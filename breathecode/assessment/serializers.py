@@ -1,5 +1,6 @@
 from breathecode.utils import serpy
 from breathecode.utils.i18n import translation
+from django.contrib.auth.models import AnonymousUser
 from breathecode.admissions.models import Academy
 from .models import Assessment, Question, Option, UserAssessment, Answer
 from breathecode.marketing.models import AcademyAlias
@@ -228,23 +229,51 @@ class AssessmentPUTSerializer(serializers.ModelSerializer):
 
 
 class PostUserAssessmentSerializer(serializers.ModelSerializer):
+    owner_email = serializers.EmailField(required=False)
 
     class Meta:
         model = UserAssessment
-        exclude = ('total_score', 'created_at', 'updated_at', 'token')
+        exclude = ('total_score', 'created_at', 'updated_at', 'token', 'owner')
         read_only_fields = ['id']
 
     def validate(self, data):
 
-        academy = None
-        if 'academy' in data:
-            academy = data['academy']
-        else:
-            if 'assessment' not in data:
-                raise ValidationException(
-                    'No academy or assessment property found to determine academy ownership of this userassessment')
+        lang = self.context['lang']
+        request = self.context['request']
 
+        if 'status' in data and data['status'] not in ['DRAFT', 'SENT']:
+            raise ValidationException(
+                translation(lang,
+                            en=f'User assessment cannot be created with status {data["status"]}',
+                            es=f'El user assessment no se puede crear con status {data["status"]}',
+                            slug='invalid-status'))
+
+        academy = None
+        if 'Academy' in request.headers:
+            academy_id = request.headers['Academy']
+            academy = Academy.objects.filter(id=academy_id).first()
+
+        if not academy and 'academy' in data:
+            academy = data['academy']
+
+        if not academy and 'assessment' in data:
             academy = data['assessment'].academy
+
+        if not academy:
+            raise ValidationException(
+                translation(lang,
+                            en=f'Could not determine academy ownership of this user assessment',
+                            es=f'No se ha podido determinar a que academia pertenece este user assessment',
+                            slug='not-academy-detected'))
+
+        if not isinstance(request.user, AnonymousUser):
+            data['owner'] = request.user
+        elif 'owner_email' not in data or not data['owner_email']:
+            raise ValidationException(
+                translation(lang,
+                            en=f'User assessment cannot be tracked because its missing owner information',
+                            es=f'Este user assessment no puede registrarse porque no tiene informacion del owner',
+                            slug='no-owner-detected'))
 
         return super().validate({**data, 'academy': academy})
 
@@ -261,7 +290,7 @@ class PostUserAssessmentSerializer(serializers.ModelSerializer):
         if 'lang' in data and data['lang'] == 'us':
             data['lang'] = 'en'
 
-        if 'started_at' not in data:
+        if 'started_at' not in data or data['started_at'] is None:
             data['started_at'] = timezone.now()
 
         result = super().create({**data, 'total_score': 0, 'academy': validated_data['academy']})
@@ -273,24 +302,41 @@ class PUTUserAssessmentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserAssessment
-        exclude = ('academy', 'assessment', 'lang', 'total_score', 'token')
+        exclude = ('academy', 'assessment', 'lang', 'total_score', 'token', 'started_at', 'owner')
         read_only_fields = [
             'id',
             'academy',
         ]
 
+    def validate(self, data):
+
+        lang = self.context['lang']
+
+        if self.instance.status not in ['DRAFT', 'SENT', 'ERROR']:
+            raise ValidationException(
+                translation(lang,
+                            en=f'User assessment cannot be updated because is {self.instance.status}',
+                            es=f'El user assessment status no se puede editar mas porque esta {elf.instance.status}',
+                            slug='invalid-status'))
+
+        return super().validate({**data})
+
     def update(self, instance, validated_data):
 
+        # NOTE: User Assignments that are closed will be automatically scored with assessment.task.async_close_userassignment
         now = timezone.now()
-        session_duration = instance.created_at
-        max_duration = instance.created_at + instance.assessment.max_session_duration
-        if now > max_duration:
-            raise ValidationException(
-                f'Session started {from_now(session_duration)} ago and it expires after {duration_to_str(instance.assessment.max_session_duration)}, no more updates can be made'
-            )
+        data = validated_data.copy()
+
+        # If not being closed
+        if validated_data['status'] != 'ANSWERED' or instance.status == validated_data['status']:
+            if now > (instance.created_at + instance.assessment.max_session_duration):
+                raise ValidationException(
+                    f'Session started {from_now(instance.created_at)} ago and it expires after {duration_to_str(instance.assessment.max_session_duration)}, no more updates can be made'
+                )
 
         # copy the validated data just to do small last minute corrections
         data = validated_data.copy()
+        if 'status_text' in data: del data['status_text']
 
         # "us" language will become "en" language, its the right lang code
         if 'lang' in data and data['lang'] == 'us':
