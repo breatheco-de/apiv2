@@ -185,7 +185,6 @@ def send_cohort_survey(user_id, survey_id, **_):
                                   academy=survey.cohort.academy)
 
 
-# test it
 @task(bind=False, priority=TaskPriority.ACADEMY.value)
 def process_student_graduation(cohort_id, user_id, **_):
     from .actions import create_user_graduation_reviews
