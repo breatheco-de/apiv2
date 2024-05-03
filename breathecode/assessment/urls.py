@@ -7,7 +7,7 @@ app_name = 'assessment'
 urlpatterns = [
     # user assessments
     path('user/assessment', TrackAssessmentView.as_view()),
-    path('user/assessment/<str:token>', TrackAssessmentView.as_view()),
+    path('user/assessment/<str:ua_token>', TrackAssessmentView.as_view()),
     path('user/assessment/<str:token>/answer', AnswerView.as_view()),
     path('user/assessment/<str:token>/answer/<int:answer_id>', AnswerView.as_view()),
     path('academy/user/assessment/<int:user_assessment_id>/answer/<int:answer_id>', AcademyAnswerView.as_view()),
