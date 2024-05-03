@@ -253,14 +253,13 @@ class AssessmentLayoutView(APIView):
     """
     permission_classes = [AllowAny]
 
-    def get(self, request, layout_slug=None):
+    def get(self, request, layout_slug):
 
-        if layout_slug:
-            item = AssessmentLayout.objects.filter(slug=layout_slug).first()
-            if item is None:
-                raise ValidationException('Assessment layout not found', 404)
-            serializer = GetAssessmentLayoutSerializer(items)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        item = AssessmentLayout.objects.filter(slug=layout_slug).first()
+        if item is None:
+            raise ValidationException('Assessment layout not found', 404)
+        serializer = GetAssessmentLayoutSerializer(items)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class AcademyAssessmentLayoutView(APIView):
