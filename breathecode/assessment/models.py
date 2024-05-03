@@ -295,11 +295,12 @@ class UserAssessment(models.Model):
             # Ignore open text questions
             if a.question.question_type == 'TEXT':
                 continue
-
             if a.option: a.value = str(a.option.score)
 
-            if a.value.isnumeric():
+            try:
                 total_score += float(a.value)
+            except ValueError:
+                pass
 
         return total_score, last_one
 

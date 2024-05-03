@@ -152,7 +152,6 @@ class PublicUserAssessmentSerializer(serpy.Serializer):
 
     academy = AcademySmallSerializer(required=False)
     assessment = AssessmentSmallSerializer()
-    last_answer = serpy.MethodField()
 
     owner = UserSerializer(required=False)
     owner_email = serpy.Field()
@@ -162,7 +161,6 @@ class PublicUserAssessmentSerializer(serpy.Serializer):
     status_text = serpy.Field()
 
     conversion_info = serpy.Field()
-    total_score = serpy.Field()
     comment = serpy.Field()
 
     started_at = serpy.Field()
@@ -170,12 +168,15 @@ class PublicUserAssessmentSerializer(serpy.Serializer):
 
     created_at = serpy.Field()
 
-    def get_last_answer(self, obj):
-        last_answer = obj.answer_set.all().order_by('-created_at').first()
-        if last_answer is None:
-            return None
+    summary = serpy.MethodField()
 
-        return AnswerSmallSerializer(last_answer).data
+    def get_summary(self, obj):
+        total_score, last_one = obj.get_score()
+
+        last_answer = None
+        if last_one is not None: AnswerSmallSerializer(last_one).data
+
+        return {'last_answer': last_answer, 'live_score': total_score}
 
 
 class GetAssessmentBigSerializer(GetAssessmentSerializer):
