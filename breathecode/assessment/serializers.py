@@ -171,7 +171,7 @@ class PublicUserAssessmentSerializer(serpy.Serializer):
     created_at = serpy.Field()
 
     def get_last_answer(self, obj):
-        last_answer = obj.answer_set.all().order_by('created_at').first()
+        last_answer = obj.answer_set.all().order_by('-created_at').first()
         if last_answer is None:
             return None
 
