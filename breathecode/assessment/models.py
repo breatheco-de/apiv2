@@ -287,7 +287,7 @@ class UserAssessment(models.Model):
     def get_score(self):
 
         total_score = 0
-        answers = self.answer_set.all().order_by('-created_at')
+        answers = self.answer_set.all().order_by('created_at')
         last_one = None
         for a in answers:
             last_one = a
