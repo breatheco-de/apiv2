@@ -174,7 +174,8 @@ class PublicUserAssessmentSerializer(serpy.Serializer):
         total_score, last_one = obj.get_score()
 
         last_answer = None
-        if last_one is not None: AnswerSmallSerializer(last_one).data
+        if last_one is not None:
+            last_answer = AnswerSmallSerializer(last_one).data
 
         return {'last_answer': last_answer, 'live_score': total_score}
 
