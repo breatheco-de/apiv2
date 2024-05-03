@@ -258,7 +258,7 @@ class AssessmentLayoutView(APIView):
         item = AssessmentLayout.objects.filter(slug=layout_slug).first()
         if item is None:
             raise ValidationException('Assessment layout not found', 404)
-        serializer = GetAssessmentLayoutSerializer(items)
+        serializer = GetAssessmentLayoutSerializer(item, many=False)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
