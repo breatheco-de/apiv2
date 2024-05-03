@@ -15,7 +15,7 @@ from breathecode.authenticate.actions import get_user_language
 from breathecode.utils import ValidationException, capable_of
 from breathecode.utils.i18n import translation
 
-from .models import Assessment, AssessmentThreshold, Option, Question, UserAssessment, Answer
+from .models import Assessment, AssessmentThreshold, Option, Question, UserAssessment, Answer, AssessmentLayout
 from .serializers import (
     AssessmentPUTSerializer,
     GetAssessmentBigSerializer,
