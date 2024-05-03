@@ -298,7 +298,7 @@ class UserAssessment(models.Model):
 
             if a.option: a.value = str(a.option.score)
 
-            if a.value.is_numeric():
+            if a.value.isnumeric():
                 total_score += float(a.value)
 
         return total_score, last_one
