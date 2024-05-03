@@ -40,11 +40,11 @@ class TrackAssessmentView(APIView, GenerateLookupsMixin):
     """
     permission_classes = [AllowAny]
 
-    def get(self, request, token):
+    def get(self, request, ua_token):
         lang = get_user_language(request)
         now = timezone.now()
 
-        single = UserAssessment.objects.filter(token=token).first()
+        single = UserAssessment.objects.filter(token=ua_token).first()
         if single is None or now > single.created_at + single.assessment.max_session_duration:
             raise ValidationException(translation(lang,
                                                   en=f'User assessment session does not exist or has already expired',
