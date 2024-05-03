@@ -144,6 +144,40 @@ class GetUserAssessmentSerializer(serpy.Serializer):
     created_at = serpy.Field()
 
 
+class PublicUserAssessmentSerializer(serpy.Serializer):
+    id = serpy.Field()
+    token = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
+
+    academy = AcademySmallSerializer(required=False)
+    assessment = AssessmentSmallSerializer()
+    last_answer = serpy.MethodField()
+
+    owner = UserSerializer(required=False)
+    owner_email = serpy.Field()
+    owner_phone = serpy.Field()
+
+    status = serpy.Field()
+    status_text = serpy.Field()
+
+    conversion_info = serpy.Field()
+    total_score = serpy.Field()
+    comment = serpy.Field()
+
+    started_at = serpy.Field()
+    finished_at = serpy.Field()
+
+    created_at = serpy.Field()
+
+    def get_last_answer(self, obj):
+        last_answer = obj.answer_set.all().order_by('created_at').first()
+        if last_answer is None:
+            return None
+
+        return AnswerSmallSerializer(last_answer).data
+
+
 class GetAssessmentBigSerializer(GetAssessmentSerializer):
     questions = serpy.MethodField()
     is_instant_feedback = serpy.Field()
@@ -295,9 +329,9 @@ class PostUserAssessmentSerializer(serializers.ModelSerializer):
 
         if 'title' not in data or not data['title']:
             if 'owner_email' in data and data['owner_email']:
-                 data['title'] = f"{data['assessment'].title} from {data['owner_email']}"
+                data['title'] = f"{data['assessment'].title} from {data['owner_email']}"
             if 'owner' in data and data['owner']:
-                 data['title'] = f"{data['assessment'].title} from {data['owner'].email}"
+                data['title'] = f"{data['assessment'].title} from {data['owner'].email}"
 
         result = super().create({**data, 'total_score': 0, 'academy': validated_data['academy']})
         return result

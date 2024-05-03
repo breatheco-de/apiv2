@@ -30,6 +30,7 @@ from .serializers import (
     PUTUserAssessmentSerializer,
     AnswerSerializer,
     AnswerSmallSerializer,
+    PublicUserAssessmentSerializer,
 )
 
 
@@ -38,6 +39,21 @@ class TrackAssessmentView(APIView, GenerateLookupsMixin):
     List all snippets, or create a new snippet.
     """
     permission_classes = [AllowAny]
+
+    def get(self, request, token):
+        lang = get_user_language(request)
+        now = timezone.now()
+
+        single = UserAssessment.objects.filter(token=token).first()
+        if single is None or now > single.created_at + single.assessment.max_session_duration:
+            raise ValidationException(translation(lang,
+                                                  en=f'User assessment session does not exist or has already expired',
+                                                  es=f'Esta sessión de evaluación no existe o ya ha expirado',
+                                                  slug='not-found'),
+                                      code=404)
+
+        serializer = PublicUserAssessmentSerializer(single, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request, ua_token):
         lang = get_user_language(request)
