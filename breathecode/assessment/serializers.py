@@ -293,6 +293,12 @@ class PostUserAssessmentSerializer(serializers.ModelSerializer):
         if 'started_at' not in data or data['started_at'] is None:
             data['started_at'] = timezone.now()
 
+        if 'title' not in data or not data['title']:
+            if 'owner_email' in data and data['owner_email']:
+                 data['title'] = f"{data['assessment'].title} from {data['owner_email']}"
+            if 'owner' in data and data['owner']:
+                 data['title'] = f"{data['assessment'].title} from {data['owner'].email}"
+
         result = super().create({**data, 'total_score': 0, 'academy': validated_data['academy']})
         return result
 
