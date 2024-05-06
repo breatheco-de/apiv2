@@ -17,6 +17,7 @@ fake = Faker()
 def course_translation_serializer(course_translation):
     return {
         'course_modules': course_translation.course_modules,
+        'landing_variables': course_translation.landing_variables,
         'description': course_translation.description,
         'short_description': course_translation.short_description,
         'lang': course_translation.lang,
