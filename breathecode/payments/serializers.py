@@ -397,6 +397,7 @@ class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
 
 
 class GetBagSerializer(serpy.Serializer):
+    id = serpy.Field()
     service_items = serpy.MethodField()
     plans = serpy.MethodField()
     coupons = serpy.MethodField()
