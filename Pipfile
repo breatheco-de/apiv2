@@ -53,6 +53,9 @@ pep8-naming = "*"
 flake8-bugbear = "*"
 pytest-gevent = "*"
 pytest-asyncio = "*"
+google-apps-meet = "*"
+google-auth-httplib2 = "*"
+google-auth-oauthlib = "*"
 
 [packages]
 django = "*"
