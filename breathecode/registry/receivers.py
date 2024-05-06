@@ -136,11 +136,17 @@ def model_b_saved(sender, instance, created, **kwargs):
 
 @receiver(post_delete, sender=Question)
 def model_a_deleted(sender, instance, **kwargs):
-    if instance.assessment and not instance.assessment.is_archived:
-        async_generate_quiz_config(instance.assessment.id)
+    try:
+        if instance.assessment and not instance.assessment.is_archived:
+            async_generate_quiz_config(instance.assessment.id)
+    except:
+        pass
 
 
 @receiver(post_delete, sender=Option)
 def model_b_deleted(sender, instance, **kwargs):
-    if instance.assessment and not instance.assessment.is_archived:
-        async_generate_quiz_config(instance.question.assessment.id)
+    try:
+        if instance.assessment and not instance.assessment.is_archived:
+            async_generate_quiz_config(instance.question.assessment.id)
+    except:
+        pass
