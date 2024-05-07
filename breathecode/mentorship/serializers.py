@@ -1,15 +1,18 @@
-from breathecode.payments.models import Consumable
-from breathecode.utils import ValidationException, serpy
-from .models import MentorshipSession, MentorshipService, MentorProfile, MentorshipBill, CalendlyOrganization
-import breathecode.mentorship.actions as actions
-from .actions import generate_mentor_bill
-from breathecode.admissions.models import Academy
 from rest_framework import serializers
-from breathecode.services.calendly import Calendly
-from breathecode.utils.datetime_integer import duration_to_str
-from breathecode.authenticate.models import ProfileAcademy
-from breathecode.utils.i18n import translation
+
 import breathecode.activity.tasks as tasks_activity
+import breathecode.mentorship.actions as actions
+from breathecode.admissions.models import Academy
+from breathecode.authenticate.models import ProfileAcademy
+from breathecode.payments.models import Consumable
+from breathecode.services.calendly import Calendly
+from breathecode.utils import serpy
+from breathecode.utils.datetime_integer import duration_to_str
+from breathecode.utils.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
+
+from .actions import generate_mentor_bill
+from .models import CalendlyOrganization, MentorProfile, MentorshipBill, MentorshipService, MentorshipSession
 
 
 class GetAcademySmallSerializer(serpy.Serializer):

@@ -15,10 +15,9 @@ from rest_framework.views import APIView
 
 from breathecode.authenticate.models import Permission, User
 from breathecode.payments.signals import consume_service
+from capyc.rest_framework.exceptions import PaymentException, ValidationException
 
 from ..exceptions import ProgrammingError
-from ..payment_exception import PaymentException
-from ..validation_exception import ValidationException
 
 __all__ = ['has_permission', 'validate_permission', 'HasPermissionCallback', 'PermissionContextType']
 

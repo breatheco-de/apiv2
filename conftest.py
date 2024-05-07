@@ -6,20 +6,21 @@ import pytest
 from django.core.cache import cache
 from django.utils import timezone
 
-from bc.core.pytest.fixtures import Random
-from bc.django.pytest.fixtures.signals import Signals
 from breathecode.notify.utils.hook_manager import HookManagerClass
 from breathecode.utils.exceptions import TestError
+from capyc.core.pytest.fixtures import Random
+from capyc.django.pytest.fixtures.signals import Signals
 
 # set ENV as test before run django
 os.environ['ENV'] = 'test'
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 
 pytest_plugins = (
-    'bc.newrelic.pytest',
-    'bc.django.pytest',
-    'bc.rest_framework.pytest',
-    'bc.circuitbreaker.pytest',
+    'capyc.core.pytest',
+    'capyc.newrelic.pytest',
+    'capyc.django.pytest',
+    'capyc.rest_framework.pytest',
+    'capyc.circuitbreaker.pytest',
 )
 
 from breathecode.tests.mixins.breathecode_mixin import Breathecode

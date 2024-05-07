@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, call
 import pytest
 from asgiref.sync import sync_to_async
 
-import bc.core.pytest.fixtures as cfx
-import bc.django.pytest.fixtures as dfx
+import capyc.core.pytest.fixtures as cfx
+import capyc.django.pytest.fixtures as dfx
 from breathecode.monitoring.models import Supervisor as SupervisorModel
 from breathecode.monitoring.models import SupervisorIssue
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
@@ -47,6 +47,14 @@ class Supervisor(Command):
     def alog(self, module, name):
         return self.log(module, name)
 
+    def id(self, module, name):
+        s = SupervisorModel.objects.filter(task_module=module, task_name=name).first()
+        return s.id
+
+    @sync_to_async
+    def aid(self, module, name):
+        return self.id(module, name)
+
 
 @pytest.fixture
 def supervisor(db, bc: Breathecode):
@@ -56,14 +64,16 @@ def supervisor(db, bc: Breathecode):
 @pytest.fixture(autouse=True)
 def patch(monkeypatch: pytest.MonkeyPatch):
     m1 = MagicMock()
+    m2 = MagicMock()
     monkeypatch.setattr('breathecode.monitoring.tasks.run_supervisor.delay', m1)
+    monkeypatch.setattr('breathecode.monitoring.tasks.fix_issue.delay', m2)
 
     keys = paths.copy()
     for x in keys:
         if '.tests.' in x[0]:
             paths.remove(x)
 
-    yield m1
+    yield m1, m2
 
 
 @pytest.fixture(autouse=True, scope='module')
@@ -86,7 +96,7 @@ def db(data={}):
     }
 
 
-class TestIssueCleaner:
+class TestIssue:
 
     @pytest.mark.parametrize('with_supervisor, with_issues', [
         (False, False),
@@ -109,29 +119,29 @@ class TestIssueCleaner:
 
         model = database.create(**extra)
 
-        run_supervisor_mock = patch
+        run_supervisor_mock, fix_issue_mock = patch
+        run_supervisor_mock.call_args_list = []
+        fix_issue_mock.call_args_list = []
         command = Command()
 
         assert command.handle() == None
-        assert supervisor.list() == [
-            {
-                'task_module': 'breathecode.payments.supervisors',
-                'task_name': 'supervise_all_consumption_sessions',
-            },
-        ]
+        assert {
+            'task_module': 'breathecode.payments.supervisors',
+            'task_name': 'supervise_all_consumption_sessions',
+        } in supervisor.list()
         assert supervisor.log('breathecode.payments.supervisors', 'supervise_all_consumption_sessions') == []
-        assert database.list_of('monitoring.Supervisor') == [
-            db({
-                'id': 1,
-                'task_module': 'breathecode.payments.supervisors',
-                'task_name': 'supervise_all_consumption_sessions',
-            }),
-        ]
+        assert db({
+            'id': 1,
+            'task_module': 'breathecode.payments.supervisors',
+            'task_name': 'supervise_all_consumption_sessions',
+        }) in database.list_of('monitoring.Supervisor')
         assert database.list_of('monitoring.SupervisorIssue') == []
-        assert run_supervisor_mock.call_args_list == [call(1)]
+        assert call(supervisor.id('breathecode.payments.supervisors',
+                                  'supervise_all_consumption_sessions')) in run_supervisor_mock.call_args_list
+        assert fix_issue_mock.call_args_list == []
 
-    def tests_recent_issues_keeps(self, bc: Breathecode, database: dfx.Database, supervisor: Supervisor, patch, utc_now,
-                                  random: cfx.Random):
+    def tests_recent_issues_keeps__available_attempts(self, bc: Breathecode, database: dfx.Database,
+                                                      supervisor: Supervisor, patch, utc_now, random: cfx.Random):
         model = database.create(supervisor={
             'delta': timedelta(seconds=3600),
             'ran_at': None,
@@ -139,30 +149,66 @@ class TestIssueCleaner:
             'task_name': 'supervise_all_consumption_sessions',
         },
                                 supervisor_issue=(2, {
-                                    'ran_at': utc_now - timedelta(days=random.int(0, 6))
+                                    'ran_at': utc_now - timedelta(days=random.int(0, 6)),
+                                    'attempts': 0,
                                 }))
 
-        run_supervisor_mock = patch
+        run_supervisor_mock, fix_issue_mock = patch
+        run_supervisor_mock.call_args_list = []
+        fix_issue_mock.call_args_list = []
         command = Command()
 
         assert command.handle() == None
-        assert supervisor.list() == [
-            {
-                'task_module': 'breathecode.payments.supervisors',
-                'task_name': 'supervise_all_consumption_sessions',
-            },
-        ]
+        assert {
+            'task_module': 'breathecode.payments.supervisors',
+            'task_name': 'supervise_all_consumption_sessions',
+        } in supervisor.list()
         assert supervisor.log('breathecode.payments.supervisors',
                               'supervise_all_consumption_sessions') == [x.error for x in model.supervisor_issue]
-        assert database.list_of('monitoring.Supervisor') == [
-            db({
-                'id': 1,
-                'task_module': 'breathecode.payments.supervisors',
-                'task_name': 'supervise_all_consumption_sessions',
-            }),
-        ]
+        assert db({
+            'id': 1,
+            'task_module': 'breathecode.payments.supervisors',
+            'task_name': 'supervise_all_consumption_sessions',
+        }) in database.list_of('monitoring.Supervisor')
         assert database.list_of('monitoring.SupervisorIssue') == bc.format.to_dict(model.supervisor_issue)
-        assert run_supervisor_mock.call_args_list == [call(1)]
+        assert call(supervisor.id('breathecode.payments.supervisors',
+                                  'supervise_all_consumption_sessions')) in run_supervisor_mock.call_args_list
+        assert fix_issue_mock.call_args_list == [call(1), call(2)]
+
+    def tests_recent_issues_keeps__no_available_attempts(self, bc: Breathecode, database: dfx.Database,
+                                                         supervisor: Supervisor, patch, utc_now, random: cfx.Random):
+        model = database.create(supervisor={
+            'delta': timedelta(seconds=3600),
+            'ran_at': None,
+            'task_module': 'breathecode.payments.supervisors',
+            'task_name': 'supervise_all_consumption_sessions',
+        },
+                                supervisor_issue=(2, {
+                                    'ran_at': utc_now - timedelta(days=random.int(0, 6)),
+                                    'attempts': 3,
+                                }))
+
+        run_supervisor_mock, fix_issue_mock = patch
+        run_supervisor_mock.call_args_list = []
+        fix_issue_mock.call_args_list = []
+        command = Command()
+
+        assert command.handle() == None
+        assert {
+            'task_module': 'breathecode.payments.supervisors',
+            'task_name': 'supervise_all_consumption_sessions',
+        } in supervisor.list()
+        assert supervisor.log('breathecode.payments.supervisors',
+                              'supervise_all_consumption_sessions') == [x.error for x in model.supervisor_issue]
+        assert db({
+            'id': 1,
+            'task_module': 'breathecode.payments.supervisors',
+            'task_name': 'supervise_all_consumption_sessions',
+        }) in database.list_of('monitoring.Supervisor')
+        assert database.list_of('monitoring.SupervisorIssue') == bc.format.to_dict(model.supervisor_issue)
+        assert call(supervisor.id('breathecode.payments.supervisors',
+                                  'supervise_all_consumption_sessions')) in run_supervisor_mock.call_args_list
+        assert fix_issue_mock.call_args_list == []
 
 
 class TestSupervision:
@@ -187,28 +233,28 @@ class TestSupervision:
 
         model = database.create(supervisor=s, supervisor_issue=supervisor_issues)
 
-        run_supervisor_mock = patch
+        run_supervisor_mock, fix_issue_mock = patch
+        run_supervisor_mock.call_args_list = []
+        fix_issue_mock.call_args_list = []
         command = Command()
 
         assert command.handle() == None
-        assert supervisor.list() == [
-            {
-                'task_module': 'breathecode.payments.supervisors',
-                'task_name': 'supervise_all_consumption_sessions',
-            },
-        ]
+        assert {
+            'task_module': 'breathecode.payments.supervisors',
+            'task_name': 'supervise_all_consumption_sessions',
+        } in supervisor.list()
         assert supervisor.log('breathecode.payments.supervisors', 'supervise_all_consumption_sessions') == []
-        assert database.list_of('monitoring.Supervisor') == [
-            db({
-                'id': 1,
-                'delta': delta,
-                'ran_at': ran_at,
-                'task_module': 'breathecode.payments.supervisors',
-                'task_name': 'supervise_all_consumption_sessions',
-            }),
-        ]
+        assert db({
+            'id': 1,
+            'delta': delta,
+            'ran_at': ran_at,
+            'task_module': 'breathecode.payments.supervisors',
+            'task_name': 'supervise_all_consumption_sessions',
+        }) in database.list_of('monitoring.Supervisor')
         assert database.list_of('monitoring.SupervisorIssue') == []
-        assert run_supervisor_mock.call_args_list == [call(1)]
+        assert call(supervisor.id('breathecode.payments.supervisors',
+                                  'supervise_all_consumption_sessions')) in run_supervisor_mock.call_args_list
+        assert fix_issue_mock.call_args_list == []
 
     def tests_in_cooldown(self, database: dfx.Database, supervisor: Supervisor, patch, utc_now):
 
@@ -225,25 +271,25 @@ class TestSupervision:
 
         model = database.create(supervisor=s, supervisor_issue=supervisor_issues)
 
-        run_supervisor_mock = patch
+        run_supervisor_mock, fix_issue_mock = patch
+        run_supervisor_mock.call_args_list = []
+        fix_issue_mock.call_args_list = []
         command = Command()
 
         assert command.handle() == None
-        assert supervisor.list() == [
-            {
-                'task_module': 'breathecode.payments.supervisors',
-                'task_name': 'supervise_all_consumption_sessions',
-            },
-        ]
+        assert {
+            'task_module': 'breathecode.payments.supervisors',
+            'task_name': 'supervise_all_consumption_sessions',
+        } in supervisor.list()
         assert supervisor.log('breathecode.payments.supervisors', 'supervise_all_consumption_sessions') == []
-        assert database.list_of('monitoring.Supervisor') == [
-            db({
-                'id': 1,
-                'delta': delta,
-                'ran_at': ran_at,
-                'task_module': 'breathecode.payments.supervisors',
-                'task_name': 'supervise_all_consumption_sessions',
-            }),
-        ]
+        assert db({
+            'id': 1,
+            'delta': delta,
+            'ran_at': ran_at,
+            'task_module': 'breathecode.payments.supervisors',
+            'task_name': 'supervise_all_consumption_sessions',
+        }) in database.list_of('monitoring.Supervisor')
         assert database.list_of('monitoring.SupervisorIssue') == []
-        assert run_supervisor_mock.call_args_list == []
+        assert call(supervisor.id('breathecode.payments.supervisors',
+                                  'supervise_all_consumption_sessions')) not in run_supervisor_mock.call_args_list
+        assert fix_issue_mock.call_args_list == []

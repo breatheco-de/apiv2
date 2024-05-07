@@ -1,13 +1,13 @@
 """
 Test mentorhips
 """
-import json
-from breathecode.authenticate.models import Token
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
+
+from capyc.rest_framework.exceptions import ValidationException
+
+from ...actions import add_to_organization, remove_from_organization, sync_organization_members
 from ...models import GithubAcademyUser
 from ..mixins.new_auth_test_case import AuthTestCase
-from ...actions import add_to_organization, remove_from_organization, sync_organization_members
-from breathecode.utils.validation_exception import ValidationException
 
 
 def get_org_members():

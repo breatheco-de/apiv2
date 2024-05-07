@@ -1,6 +1,10 @@
+import logging
+
 from google.cloud import recaptchaenterprise_v1
 from google.cloud.recaptchaenterprise_v1 import Assessment
-import logging
+
+from capyc.rest_framework.exceptions import ValidationException
+
 from .credentials import resolve_credentials
 
 logger = logging.getLogger(__name__)
@@ -44,7 +48,6 @@ class Recaptcha:
 
         # Check if the token is valid.
         if not response.token_properties.valid:
-            from breathecode.utils.validation_exception import ValidationException
             logger.error('The CreateAssessment call failed because the token was ' +
                          'invalid for for the following reasons: ' + str(response.token_properties.invalid_reason))
             raise ValidationException(
@@ -52,7 +55,6 @@ class Recaptcha:
 
         # Check if the expected action was executed.
         if response.token_properties.action != recaptcha_action:
-            from breathecode.utils.validation_exception import ValidationException
             logger.error('The action attribute in your reCAPTCHA tag does' +
                          'not match the action you are expecting to score')
             raise ValidationException(

@@ -17,8 +17,8 @@ RUN sudo apt-get update \
 # RUN curl https://pyenv.run | bash
 
 
-# RUN pyenv update && pyenv install 3.11.8 && pyenv global 3.11.8
-RUN pyenv install 3.11.8 && pyenv global 3.11.8
+# RUN pyenv update && pyenv install 3.12.3 && pyenv global 3.12.3
+RUN pyenv install 3.12.3 && pyenv global 3.12.3
 RUN pip install pipenv yapf
 
 # remove PIP_USER environment

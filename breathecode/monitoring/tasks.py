@@ -11,7 +11,7 @@ from breathecode.notify.actions import send_email_message, send_slack_raw
 from breathecode.utils import TaskPriority
 
 from .actions import download_csv, run_endpoint_diagnostic, run_script, subscribe_repository, unsubscribe_repository
-from .models import Endpoint, MonitorScript, Supervisor
+from .models import Endpoint, MonitorScript, Supervisor, SupervisorIssue
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
@@ -158,3 +158,37 @@ def run_supervisor(supervisor_id: int, **_: Any):
     supervisor.ran_at = timezone.now()
     func()
     supervisor.save()
+
+
+@task(priority=TaskPriority.MARKETING.value)
+def fix_issue(issue_id: int, **_: Any):
+    logger.debug(f'Fix issue {issue_id}')
+    issue = SupervisorIssue.objects.filter(id=issue_id).first()
+    if not issue:
+        raise RetryTask(f'Issue {issue_id} not found')
+
+    if not issue.code:
+        raise AbortTask(f'Issue {issue_id} has no code')
+
+    supervisor = issue.supervisor
+
+    try:
+        module = importlib.import_module(supervisor.task_module)
+    except ModuleNotFoundError:
+        raise AbortTask(f'Module {supervisor.task_module} not found')
+
+    fn_name = issue.code.replace('-', '_')
+    try:
+        func = getattr(module, fn_name)
+    except AttributeError:
+        raise AbortTask(f'Supervisor {supervisor.task_module}.{fn_name} not found')
+
+    if issue.attempts >= func.attempts:
+        raise AbortTask(f'Supervisor {supervisor.task_module}.{fn_name} has reached max attempts')
+
+    issue.ran_at = timezone.now()
+    issue.attempts += 1
+    res = func(issue.id)
+
+    issue.fixed = res
+    issue.save()

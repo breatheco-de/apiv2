@@ -14,6 +14,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from breathecode.authenticate.models import Token
+from breathecode.authenticate.tasks import async_validate_email_invite
 from breathecode.notify import actions as notify_actions
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
@@ -162,6 +163,7 @@ b = os.urandom(16)
 def setup(monkeypatch: pytest.MonkeyPatch, db):
     monkeypatch.setattr('os.urandom', lambda _: b)
     monkeypatch.setattr('breathecode.authenticate.tasks.create_user_from_invite.delay', MagicMock())
+    monkeypatch.setattr('breathecode.authenticate.tasks.async_validate_email_invite.delay', MagicMock())
 
     yield
 
@@ -256,14 +258,13 @@ def test_task__post__without_user_invite(bc: Breathecode, client: APIClient, val
                 'country': None,
                 'latitude': None,
                 'longitude': None,
-                'email_quality': None,
-                'email_status': None,
                 **data,
             }),
     ]
 
     assert bc.database.list_of('marketing.Course') == []
     assert bc.database.list_of('payments.Plan') == []
+    assert async_validate_email_invite.delay.call_args_list == [call(1)]
 
 
 # """
@@ -308,14 +309,13 @@ def test_task__post__without_user_invite_with_asset_slug(bc: Breathecode, client
                 'country': None,
                 'latitude': None,
                 'longitude': None,
-                'email_quality': None,
-                'email_status': None,
                 **data,
             }),
     ]
 
     assert bc.database.list_of('marketing.Course') == []
     assert bc.database.list_of('payments.Plan') == []
+    assert async_validate_email_invite.delay.call_args_list == [call(1)]
 
 
 # """
@@ -360,14 +360,13 @@ def test_task__post__without_user_invite_with_event_slug(bc: Breathecode, client
                 'country': None,
                 'latitude': None,
                 'longitude': None,
-                'email_quality': None,
-                'email_status': None,
                 **data,
             }),
     ]
 
     assert bc.database.list_of('marketing.Course') == []
     assert bc.database.list_of('payments.Plan') == []
+    assert async_validate_email_invite.delay.call_args_list == [call(1)]
 
 
 # """
@@ -608,8 +607,6 @@ def test_task__post__with_user_invite(bc: Breathecode, client: APIClient, valida
                 'country': None,
                 'latitude': None,
                 'longitude': None,
-                'email_quality': None,
-                'email_status': None,
                 **data,
             }),
     ]
@@ -634,6 +631,7 @@ def test_task__post__with_user_invite(bc: Breathecode, client: APIClient, valida
 
     assert bc.database.list_of('marketing.Course') == []
     assert bc.database.list_of('payments.Plan') == []
+    assert async_validate_email_invite.delay.call_args_list == [call(1), call(2)]
 
     assert notify_actions.send_email_message.call_args_list == [
         call('verify_email',
@@ -703,20 +701,8 @@ def test_task__post__does_not_get_in_waiting_list_using_a_plan(bc: Breathecode, 
                 'country': None,
                 'latitude': None,
                 'longitude': None,
-                'email_quality': validation_res['quality_score'],
-                'email_status': {
-                    'catch_all': validation_res['is_catchall_email']['value'],
-                    'disposable': validation_res['is_disposable_email']['value'],
-                    'domain': 'potato.io',
-                    'email': 'pokemon@potato.io',
-                    'format_valid': validation_res['is_valid_format']['value'],
-                    'free': validation_res['is_free_email']['value'],
-                    'mx_found': validation_res['is_mx_found']['value'],
-                    'role': validation_res['is_role_email']['value'],
-                    'smtp_check': validation_res['is_smtp_valid']['value'],
-                    'score': validation_res['quality_score'],
-                    'user': 'pokemon'
-                },
+                'email_quality': None,
+                'email_status': None,
                 **data,
             }),
     ]
@@ -786,8 +772,6 @@ def test_task__post__get_in_waiting_list_using_a_plan(bc: Breathecode, client: A
                 'country': None,
                 'latitude': None,
                 'longitude': None,
-                'email_quality': None,
-                'email_status': None,
                 **data,
             }),
     ]
@@ -797,6 +781,7 @@ def test_task__post__get_in_waiting_list_using_a_plan(bc: Breathecode, client: A
     bc.check.queryset_with_pks(model.plan.invites.all(), [2])
 
     token = hashlib.sha512('pokemon@potato.io'.encode('UTF-8') + b).hexdigest()
+    assert async_validate_email_invite.delay.call_args_list == [call(1), call(2)]
 
     assert notify_actions.send_email_message.call_args_list == [
         call('verify_email',
@@ -924,8 +909,6 @@ def test__post__course_without_syllabus(bc: Breathecode, client: APIClient, vali
                 'country': None,
                 'latitude': None,
                 'longitude': None,
-                'email_quality': None,
-                'email_status': None,
                 **data,
             }),
     ]
@@ -948,6 +931,7 @@ def test__post__course_without_syllabus(bc: Breathecode, client: APIClient, vali
     assert bc.database.list_of('payments.Plan') == []
 
     token = hashlib.sha512('pokemon@potato.io'.encode('UTF-8') + b).hexdigest()
+    assert async_validate_email_invite.delay.call_args_list == [call(1)]
 
     assert notify_actions.send_email_message.call_args_list == [
         call('verify_email',
@@ -1013,8 +997,6 @@ def test__post__course_and_syllabus(bc: Breathecode, client: APIClient, validati
             'status': 'ACCEPTED',
             'user_id': 1,
             'token': token,
-            'email_quality': None,
-            'email_status': None,
             **data,
         })
     ]
@@ -1036,6 +1018,7 @@ def test__post__course_and_syllabus(bc: Breathecode, client: APIClient, validati
 
     bc.check.queryset_with_pks(model.course.invites.all(), [1])
     assert bc.database.list_of('payments.Plan') == []
+    assert async_validate_email_invite.delay.call_args_list == [call(1)]
 
     assert notify_actions.send_email_message.call_args_list == [
         call('verify_email',
@@ -1364,10 +1347,8 @@ def test__post__with_other_invite__cohort__waiting_list(bc: Breathecode, client:
             'user_id': 1,
             'token': token,
             'cohort_id': 1,
-            'email_quality': None,
-            'email_status': None,
             **data,
-        })
+        }),
     ]
 
     del data['phone']
@@ -1393,6 +1374,7 @@ def test__post__with_other_invite__cohort__waiting_list(bc: Breathecode, client:
         'password': '',
         'username': 'pokemon@potato.io',
     }]
+    assert async_validate_email_invite.delay.call_args_list == [call(1), call(2)]
 
     assert notify_actions.send_email_message.call_args_list == [
         call('verify_email',
@@ -1458,10 +1440,8 @@ def test__post__with_other_invite__syllabus__waiting_list(bc: Breathecode, clien
             'user_id': 1,
             'token': token,
             'syllabus_id': 1,
-            'email_quality': None,
-            'email_status': None,
             **data,
-        })
+        }),
     ]
 
     del data['phone']
@@ -1487,6 +1467,7 @@ def test__post__with_other_invite__syllabus__waiting_list(bc: Breathecode, clien
         'password': '',
         'username': 'pokemon@potato.io',
     }]
+    assert async_validate_email_invite.delay.call_args_list == [call(1), call(2)]
 
     assert notify_actions.send_email_message.call_args_list == [
         call('verify_email',
@@ -1581,8 +1562,6 @@ def test_task__put__with_user_invite__cohort_as_none(bc: Breathecode, client: AP
             'status': 'ACCEPTED',
             'user_id': 1,
             'token': token,
-            'email_quality': None,
-            'email_status': None,
             **data,
         })
     ]
@@ -1607,6 +1586,7 @@ def test_task__put__with_user_invite__cohort_as_none(bc: Breathecode, client: AP
 
     assert bc.database.list_of('marketing.Course') == []
     assert bc.database.list_of('payments.Plan') == []
+    assert async_validate_email_invite.delay.call_args_list == [call(1)]
 
     assert notify_actions.send_email_message.call_args_list == [
         call('verify_email',
@@ -1727,8 +1707,6 @@ def test_task__put__with_user_invite__cohort_found(bc: Breathecode, client: APIC
             'user_id': 1,
             'token': token,
             'cohort_id': 1,
-            'email_quality': None,
-            'email_status': None,
             **data,
         })
     ]
@@ -1753,6 +1731,7 @@ def test_task__put__with_user_invite__cohort_found(bc: Breathecode, client: APIC
         'password': '',
         'username': 'pokemon@potato.io',
     }]
+    assert async_validate_email_invite.delay.call_args_list == [call(1)]
 
     assert notify_actions.send_email_message.call_args_list == [
         call('verify_email',
@@ -1825,8 +1804,6 @@ def test_task__put__with_user_invite__cohort_found__academy_available_as_saas__u
             'user_id': 1,
             'token': token,
             'cohort_id': 1,
-            'email_quality': None,
-            'email_status': None,
             **data,
         })
     ]
@@ -1851,6 +1828,7 @@ def test_task__put__with_user_invite__cohort_found__academy_available_as_saas__u
 
     assert bc.database.list_of('marketing.Course') == []
     assert bc.database.list_of('payments.Plan') == []
+    assert async_validate_email_invite.delay.call_args_list == [call(1)]
 
     assert notify_actions.send_email_message.call_args_list == [
         call('verify_email',
@@ -1925,8 +1903,6 @@ def test_task__put__with_user_invite__cohort_found__academy_available_as_saas__u
             'token': token,
             'author_id': 1,
             'cohort_id': 1,
-            'email_quality': None,
-            'email_status': None,
             **data,
         })
     ]
@@ -1934,6 +1910,7 @@ def test_task__put__with_user_invite__cohort_found__academy_available_as_saas__u
     assert bc.database.list_of('marketing.Course') == []
     assert bc.database.list_of('payments.Plan') == []
     assert bc.database.list_of('auth.User') == [bc.format.to_dict(model.user)]
+    assert async_validate_email_invite.delay.call_args_list == [call(1)]
 
     assert notify_actions.send_email_message.call_args_list == []
     assert Token.get_or_create.call_args_list == [
@@ -2046,8 +2023,6 @@ def test_task__put__with_user_invite__syllabus_found(bc: Breathecode, client: AP
             'syllabus_id': 1,
             'user_id': 1,
             'token': token,
-            'email_quality': None,
-            'email_status': None,
             **data,
         })
     ]
@@ -2072,6 +2047,7 @@ def test_task__put__with_user_invite__syllabus_found(bc: Breathecode, client: AP
         'password': '',
         'username': 'pokemon@potato.io',
     }]
+    assert async_validate_email_invite.delay.call_args_list == [call(1)]
 
     assert notify_actions.send_email_message.call_args_list == [
         call('verify_email',
@@ -2145,8 +2121,6 @@ def test_task__put__with_user_invite__syllabus_found__academy_available_as_saas_
             'syllabus_id': 1,
             'user_id': 1,
             'token': token,
-            'email_quality': None,
-            'email_status': None,
             **data,
         })
     ]
@@ -2171,6 +2145,7 @@ def test_task__put__with_user_invite__syllabus_found__academy_available_as_saas_
 
     assert bc.database.list_of('marketing.Course') == []
     assert bc.database.list_of('payments.Plan') == []
+    assert async_validate_email_invite.delay.call_args_list == [call(1)]
 
     assert notify_actions.send_email_message.call_args_list == [
         call('verify_email',
@@ -2251,8 +2226,6 @@ def test_task__put__with_user_invite__syllabus_found__academy_available_as_saas_
             'syllabus_id': 1,
             'user_id': 1,
             'token': token,
-            'email_quality': None,
-            'email_status': None,
             **data,
         })
     ]
@@ -2260,6 +2233,7 @@ def test_task__put__with_user_invite__syllabus_found__academy_available_as_saas_
     assert bc.database.list_of('marketing.Course') == []
     assert bc.database.list_of('payments.Plan') == []
     assert bc.database.list_of('auth.User') == [bc.format.to_dict(model.user)]
+    assert async_validate_email_invite.delay.call_args_list == [call(1)]
 
     assert notify_actions.send_email_message.call_args_list == []
     assert Token.get_or_create.call_args_list == [
@@ -2492,6 +2466,7 @@ def test_task__put__plan_has_not_waiting_list(bc: Breathecode, client: APIClient
         'password': '',
         'username': 'pokemon@potato.io',
     }]
+    assert async_validate_email_invite.delay.call_args_list == [call(1)]
 
     assert notify_actions.send_email_message.call_args_list == [
         call('verify_email',
@@ -2608,8 +2583,6 @@ def test__put__course_without_syllabus(bc: Breathecode, client: APIClient, valid
                 'country': None,
                 'latitude': None,
                 'longitude': None,
-                'email_quality': None,
-                'email_status': None,
                 **data,
             }),
     ]
@@ -2630,6 +2603,7 @@ def test__put__course_without_syllabus(bc: Breathecode, client: APIClient, valid
 
     bc.check.queryset_with_pks(model.course.invites.all(), [1])
     assert bc.database.list_of('payments.Plan') == []
+    assert async_validate_email_invite.delay.call_args_list == [call(1)]
 
     assert notify_actions.send_email_message.call_args_list == [
         call('verify_email',
@@ -2708,8 +2682,6 @@ def test__put__course_and_syllabus(bc: Breathecode, client: APIClient, validatio
                 'country': None,
                 'latitude': None,
                 'longitude': None,
-                'email_quality': None,
-                'email_status': None,
                 **data,
             }),
     ]
@@ -2731,7 +2703,7 @@ def test__put__course_and_syllabus(bc: Breathecode, client: APIClient, validatio
 
     bc.check.queryset_with_pks(model.course.invites.all(), [1])
     assert bc.database.list_of('payments.Plan') == []
-
+    assert async_validate_email_invite.delay.call_args_list == [call(1)]
     assert notify_actions.send_email_message.call_args_list == [
         call('verify_email',
              'pokemon@potato.io', {

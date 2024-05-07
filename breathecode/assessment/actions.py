@@ -1,8 +1,10 @@
+import logging
+
 from breathecode.authenticate.models import Token
 from breathecode.notify.actions import send_email_message
-from breathecode.utils.validation_exception import ValidationException
-from .models import Assessment, Question, Option
-import logging
+from capyc.rest_framework.exceptions import ValidationException
+
+from .models import Assessment, Option, Question
 
 logger = logging.getLogger(__name__)
 

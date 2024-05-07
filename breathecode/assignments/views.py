@@ -24,12 +24,13 @@ from breathecode.assignments.permissions.consumers import code_revision_service
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy, Token
 from breathecode.services.learnpack import LearnPack
-from breathecode.utils import GenerateLookupsMixin, ValidationException, capable_of, num_to_roman, response_207
+from breathecode.utils import GenerateLookupsMixin, capable_of, num_to_roman, response_207
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.decorators.capable_of import acapable_of
 from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
+from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import deliver_task, sync_cohort_tasks
 from .caches import TaskCache

@@ -1,32 +1,35 @@
 import logging
+from typing import Type
+
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
-from breathecode.authenticate.signals import invite_status_updated
+
+from breathecode.admissions.models import Cohort, CohortUser
+from breathecode.admissions.serializers import CohortHookSerializer, CohortUserHookSerializer
+from breathecode.admissions.signals import cohort_stage_updated, student_edu_status_updated
 from breathecode.authenticate.models import UserInvite
-from breathecode.mentorship.models import MentorshipSession
-from breathecode.mentorship.signals import mentorship_session_status
-from breathecode.mentorship.serializers import SessionHookSerializer
-from breathecode.marketing.signals import form_entry_won_or_lost, new_form_entry_deal
+from breathecode.authenticate.signals import invite_status_updated
+from breathecode.events.models import Event, EventCheckin
+from breathecode.events.serializers import EventHookCheckinSerializer, EventJoinSmallSerializer
+from breathecode.events.signals import event_status_updated, new_event_attendee, new_event_order
 from breathecode.marketing.models import FormEntry
 from breathecode.marketing.serializers import FormEntryHookSerializer
-from breathecode.admissions.signals import student_edu_status_updated
+from breathecode.marketing.signals import form_entry_won_or_lost, new_form_entry_deal
+from breathecode.mentorship.models import MentorshipSession
+from breathecode.mentorship.serializers import SessionHookSerializer
+from breathecode.mentorship.signals import mentorship_session_status
 from breathecode.registry.models import Asset
-from breathecode.registry.signals import asset_status_updated
 from breathecode.registry.serializers import AssetHookSerializer
-from breathecode.events.models import EventCheckin, Event
-from breathecode.events.signals import new_event_attendee, new_event_order, event_status_updated
-from breathecode.events.serializers import EventJoinSmallSerializer, EventHookCheckinSerializer
-from breathecode.admissions.models import CohortUser, Cohort
-from breathecode.admissions.signals import cohort_stage_updated
-from breathecode.admissions.serializers import CohortUserHookSerializer, CohortHookSerializer
+from breathecode.registry.signals import asset_status_updated
+
 from .tasks import send_mentorship_starting_notification
 from .utils.hook_manager import HookManager
-from django.db.models.signals import post_save, post_delete
 
 logger = logging.getLogger(__name__)
 
 
 @receiver(mentorship_session_status, sender=MentorshipSession)
-def post_mentoring_session_status(sender, instance, **kwargs):
+def post_mentoring_session_status(sender: Type[MentorshipSession], instance: MentorshipSession, **kwargs):
     if instance.status == 'STARTED':
         logger.debug('Mentorship has started, notifying the mentor')
         send_mentorship_starting_notification.delay(instance.id)

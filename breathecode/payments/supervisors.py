@@ -30,7 +30,7 @@ def supervise_all_consumption_sessions():
 
     users = User.objects.filter(consumptionsession__status='CANCELLED',
                                 consumptionsession__eta__lte=utc_now,
-                                consumptionsession__eta__gte=utc_now - timedelta(days=1))
+                                consumptionsession__eta__gte=utc_now - timedelta(days=1)).distinct()
 
     for user in users:
         done_sessions = ConsumptionSession.objects.filter(user=user,

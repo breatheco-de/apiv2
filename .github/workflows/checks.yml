@@ -8,7 +8,7 @@ on:
   pull_request: {}
 
 env:
-  PYTHON_VERSION: 3.11.8
+  PYTHON_VERSION: 3.12.3
   PYTHONUNBUFFERED: 1
   APP_URL: https://4geeks.com
 
@@ -46,9 +46,9 @@ jobs:
           path: |
             ~/.local/share/virtualenvs
             ~/.cache/pip
-          key: ${{ runner.os }}-pipenv-3-11-8-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv-3-11-8-
+            ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
 
       # Install dependencies using Pipenv
       - name: Install dependencies
@@ -88,9 +88,9 @@ jobs:
           path: |
             ~/.local/share/virtualenvs
             ~/.cache/pip
-          key: ${{ runner.os }}-pipenv-3-11-8-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv-3-11-8-
+            ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
 
       # Install Pipenv
       - name: Install dependencies
@@ -114,39 +114,38 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Calculate initial MD5 for Pipfile.lock
-        id: calculate-md5-1
-        run: echo "MD5_1=$(python -m scripts.md5 ./Pipfile.lock)" >> $GITHUB_ENV
+      # Cache Pipenv packages
+      - name: Cache Pipenv packages
+        uses: actions/cache@v2
+        id: cache
+        with:
+          path: |
+            ~/.local/share/virtualenvs
+            ~/.cache/pip
+          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
 
-      # # Cache Pipenv packages
-      # - name: Cache Pipenv packages
-      #   uses: actions/cache@v2
-      #   id: cache
-      #   with:
-      #     path: |
-      #       ~/.local/share/virtualenvs
-      #       ~/.cache/pip
-      #     key: ${{ runner.os }}-pipenv-3-11-8-${{ hashFiles('**/Pipfile.lock') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-pipenv-3-11-8-
-
-      # Install Pipenv
       - name: Install dependencies
-        # if: steps.cache.outputs.cache-hit == 'true'
+        if: steps.cache.outputs.cache-hit == 'true'
         run: |
           pip install pipenv
-          pipenv install --dev
+
+      - name: Calculate initial MD5 for Pipfile.lock
+        id: calculate-md5-1
+        run: pipenv run pip freeze -r requirements.txt > requirements.txt
+
+      - name: Update dependencies
+        run: |
+          pipenv update --dev --bare
 
       - name: Calculate updated MD5 for Pipfile.lock
         id: calculate-md5-2
-        run: echo "MD5_2=$(python -m scripts.md5 ./Pipfile.lock)" >> $GITHUB_ENV
+        run: pipenv run pip freeze -r requirements2.txt > requirements2.txt
+
 
       - name: Check Pipfile.lock is up-to-date
-        run: |
-          if [ "$MD5_1" != "$MD5_2" ]; then
-            echo "Pipfile.lock is out of date. Please run 'pipenv lock --dev' and commit the updated Pipfile.lock.";
-            exit 1;
-          fi
+        run: diff requirements.txt requirements2.txt
 
   undefined-and-unused-variables:
     needs: cache
@@ -169,9 +168,9 @@ jobs:
           path: |
             ~/.local/share/virtualenvs
             ~/.cache/pip
-          key: ${{ runner.os }}-pipenv-3-11-8-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv-3-11-8-
+            ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
 
       # Install Pipenv
       - name: Install dependencies
@@ -203,9 +202,9 @@ jobs:
           path: |
             ~/.local/share/virtualenvs
             ~/.cache/pip
-          key: ${{ runner.os }}-pipenv-3-11-8-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv-3-11-8-
+            ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
 
       # Install Pipenv
       - name: Install dependencies
@@ -237,9 +236,9 @@ jobs:
           path: |
             ~/.local/share/virtualenvs
             ~/.cache/pip
-          key: ${{ runner.os }}-pipenv-3-11-8-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv-3-11-8-
+            ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
 
       # Install Pipenv
       - name: Install dependencies
@@ -271,9 +270,9 @@ jobs:
           path: |
             ~/.local/share/virtualenvs
             ~/.cache/pip
-          key: ${{ runner.os }}-pipenv-3-11-8-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv-3-11-8-
+            ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
 
       # Install Pipenv
       - name: Install dependencies
@@ -305,9 +304,9 @@ jobs:
           path: |
             ~/.local/share/virtualenvs
             ~/.cache/pip
-          key: ${{ runner.os }}-pipenv-3-11-8-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv-3-11-8-
+            ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
 
       # Install Pipenv
       - name: Install dependencies
@@ -339,9 +338,9 @@ jobs:
           path: |
             ~/.local/share/virtualenvs
             ~/.cache/pip
-          key: ${{ runner.os }}-pipenv-3-11-8-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv-3-11-8-
+            ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
 
       # Install Pipenv
       - name: Install dependencies
@@ -392,9 +391,9 @@ jobs:
           path: |
             ~/.local/share/virtualenvs
             ~/.cache/pip
-          key: ${{ runner.os }}-pipenv-3-11-8-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv-3-11-8-
+            ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
 
       # Install Pipenv
       - name: Install dependencies
@@ -430,9 +429,9 @@ jobs:
           path: |
             ~/.local/share/virtualenvs
             ~/.cache/pip
-          key: ${{ runner.os }}-pipenv-3-11-8-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pipenv-3-11-8-
+            ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
 
       # Install Pipenv
       - name: Install dependencies

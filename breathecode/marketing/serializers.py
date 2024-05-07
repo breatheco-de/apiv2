@@ -10,7 +10,7 @@ from breathecode.admissions.models import Academy, Cohort
 from breathecode.monitoring.actions import test_link
 from breathecode.utils import serpy
 from breathecode.utils.integer_to_base import to_base
-from breathecode.utils.validation_exception import ValidationException
+from capyc.rest_framework.exceptions import ValidationException
 
 from .models import AcademyAlias, ActiveCampaignAcademy, Automation, CourseTranslation, FormEntry, ShortLink, Tag
 

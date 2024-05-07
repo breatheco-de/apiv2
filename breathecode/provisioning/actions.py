@@ -1,23 +1,38 @@
-from datetime import datetime
-import pytz
-import re
 import random
+import re
+from datetime import datetime
 from typing import TypedDict
+
+import pytz
+from dateutil.relativedelta import relativedelta
+from django.db.models import Q, QuerySet
 from django.utils import timezone
-from breathecode.authenticate.models import (AcademyAuthSettings, CredentialsGithub, GithubAcademyUser,
-                                             GithubAcademyUserLog, ProfileAcademy)
+
+from breathecode.admissions.models import Academy, CohortUser
+from breathecode.authenticate.models import (
+    AcademyAuthSettings,
+    CredentialsGithub,
+    GithubAcademyUser,
+    GithubAcademyUserLog,
+    ProfileAcademy,
+)
 from breathecode.payments.models import Currency
 from breathecode.registry.models import Asset
-from breathecode.utils.validation_exception import ValidationException
-from breathecode.utils import getLogger
 from breathecode.services.github import Github
+from breathecode.utils import getLogger
 from breathecode.utils.i18n import translation
-from breathecode.admissions.models import Academy, CohortUser
-from .models import (ProvisioningContainer, ProvisioningUserConsumption, ProvisioningConsumptionEvent,
-                     ProvisioningConsumptionKind, ProvisioningPrice, ProvisioningBill, ProvisioningProfile,
-                     ProvisioningVendor)
-from django.db.models import QuerySet, Q
-from dateutil.relativedelta import relativedelta
+from capyc.rest_framework.exceptions import ValidationException
+
+from .models import (
+    ProvisioningBill,
+    ProvisioningConsumptionEvent,
+    ProvisioningConsumptionKind,
+    ProvisioningContainer,
+    ProvisioningPrice,
+    ProvisioningProfile,
+    ProvisioningUserConsumption,
+    ProvisioningVendor,
+)
 
 logger = getLogger(__name__)
 

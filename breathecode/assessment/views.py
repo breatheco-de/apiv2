@@ -8,8 +8,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from breathecode.authenticate.actions import get_user_language
-from breathecode.utils import ValidationException, capable_of
+from breathecode.utils import capable_of
 from breathecode.utils.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 
 from .models import Assessment, AssessmentThreshold, Option, Question, UserAssessment
 from .serializers import (

@@ -2,7 +2,7 @@ import json
 
 from django.utils import timezone
 
-from breathecode.utils.validation_exception import ValidationException
+from capyc.rest_framework.exceptions import ValidationException
 
 ACTIVITY_FIELDS = [
     'cohort',

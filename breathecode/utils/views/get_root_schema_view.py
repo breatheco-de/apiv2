@@ -1,12 +1,14 @@
-from breathecode.utils import ValidationException
-from rest_framework.permissions import AllowAny
-import yaml
-import requests
 import os
+
+import requests
+import yaml
 from django.urls import reverse
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from yaml.loader import FullLoader
+
+from capyc.rest_framework.exceptions import ValidationException
 
 __all__ = ['get_root_schema_view']
 cache = None

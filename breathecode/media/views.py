@@ -29,9 +29,10 @@ from breathecode.media.serializers import (
     MediaSerializer,
 )
 from breathecode.services.google_cloud import FunctionV1
-from breathecode.utils import GenerateLookupsMixin, ValidationException, capable_of, num_to_roman
+from breathecode.utils import GenerateLookupsMixin, capable_of, num_to_roman
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 
 logger = logging.getLogger(__name__)
 MIME_ALLOW = [

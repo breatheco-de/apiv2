@@ -16,7 +16,7 @@ from breathecode.services.github import Github
 from breathecode.services.slack.actions.monitoring import render_snooze_script, render_snooze_text_endpoint
 from breathecode.utils import ScriptNotification
 from breathecode.utils.script_notification import WrongScriptConfiguration
-from breathecode.utils.validation_exception import ValidationException
+from capyc.rest_framework.exceptions import ValidationException
 
 from .models import CSVDownload, Endpoint, RepositorySubscription, RepositoryWebhook, StripeEvent
 

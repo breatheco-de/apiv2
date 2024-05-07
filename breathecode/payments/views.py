@@ -35,6 +35,7 @@ from breathecode.payments.models import (
     CohortSet,
     Consumable,
     ConsumptionSession,
+    Coupon,
     Currency,
     EventTypeSet,
     FinancialReputation,
@@ -74,10 +75,9 @@ from breathecode.payments.signals import reimburse_service_units
 from breathecode.utils import APIViewExtensions, getLogger
 from breathecode.utils.decorators.capable_of import capable_of
 from breathecode.utils.i18n import translation
-from breathecode.utils.payment_exception import PaymentException
 from breathecode.utils.redis import Lock
 from breathecode.utils.shorteners import C
-from breathecode.utils.validation_exception import ValidationException
+from capyc.rest_framework.exceptions import PaymentException, ValidationException
 
 logger = getLogger(__name__)
 
@@ -1144,13 +1144,12 @@ class PlanOfferView(APIView):
         return handler.response(serializer.data)
 
 
-class CouponView(APIView):
-    permission_classes = [AllowAny]
+class CouponBaseView(APIView):
 
-    def get(self, request):
-        plan_pk: str = request.GET.get('plan')
+    def get_coupons(self) -> list[Coupon]:
+        plan_pk: str = self.request.GET.get('plan')
         if not plan_pk:
-            raise ValidationException(translation(get_user_language(request),
+            raise ValidationException(translation(get_user_language(self.request),
                                                   en='Missing plan in query string',
                                                   es='Falta el plan en la consulta',
                                                   slug='missing-plan'),
@@ -1165,22 +1164,64 @@ class CouponView(APIView):
 
         plan = Plan.objects.filter(**extra).first()
         if not plan:
-            raise ValidationException(translation(get_user_language(request),
+            raise ValidationException(translation(get_user_language(self.request),
                                                   en='Plan not found',
                                                   es='El plan no existe',
                                                   slug='plan-not-found'),
                                       code=404)
 
-        coupon_codes = request.GET.get('coupons', '')
+        coupon_codes = self.request.GET.get('coupons', '')
         if coupon_codes:
             coupon_codes = coupon_codes.split(',')
         else:
             coupon_codes = []
 
-        coupons = get_available_coupons(plan, coupons=coupon_codes)
+        return get_available_coupons(plan, coupons=coupon_codes)
+
+
+class CouponView(CouponBaseView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        coupons = self.get_coupons()
         serializer = GetCouponSerializer(coupons, many=True)
 
         return Response(serializer.data)
+
+
+class BagCouponView(CouponBaseView):
+
+    def put(self, request, bag_id):
+        lang = get_user_language(request)
+        coupons = self.get_coupons()
+
+        # do no show the bags of type preview they are build
+        client = None
+        if IS_DJANGO_REDIS:
+            client = get_redis_connection('default')
+
+        try:
+            with Lock(client, f'lock:bag:user-{request.user.email}', timeout=30, blocking_timeout=30):
+                bag = Bag.objects.filter(id=bag_id, user=request.user, status='CHECKING', type__in=['BAG',
+                                                                                                    'PREVIEW']).first()
+                if bag is None:
+                    raise ValidationException(translation(lang,
+                                                          en='Bag not found',
+                                                          es='Bolsa no encontrada',
+                                                          slug='bag-not-found'),
+                                              code=status.HTTP_404_NOT_FOUND)
+
+                bag.coupons.set(coupons)
+
+        except LockError:
+            raise ValidationException(translation(lang,
+                                                  en='Timeout reached, operation timed out.',
+                                                  es='Tiempo de espera alcanzado, operación agotada.',
+                                                  slug='timeout'),
+                                      code=408)
+
+        serializer = GetBagSerializer(bag, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class BagView(APIView):

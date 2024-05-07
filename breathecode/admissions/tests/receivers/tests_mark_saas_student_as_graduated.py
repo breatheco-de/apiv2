@@ -52,6 +52,10 @@ def arange(db, bc: Breathecode, fake):
                             },
                             {
                                 'slug': 'task-8',
+                                'mandatory': True,
+                            },
+                            {
+                                'slug': 'task-9',
                                 'mandatory': False,
                             },
                         ],
@@ -120,7 +124,7 @@ def test_available_as_saas_true__no_mandatory_tasks__pending_tasks(enable_signal
     enable_signals()
 
     task = {
-        'associated_slug': 'task-8',
+        'associated_slug': 'task-9',
         'task_status': 'PENDING',
         'revision_status': revision_status1,
         'task_type': 'PROJECT',
@@ -140,7 +144,7 @@ def test_available_as_saas_true__no_mandatory_tasks__pending_tasks(enable_signal
     assert bc.database.list_of('admissions.CohortUser') == [
         {
             **bc.format.to_dict(model.cohort_user),
-            'educational_status': 'GRADUATED',
+            'educational_status': 'ACTIVE',
             'history_log': {
                 'delivered_assignments': [{
                     'id': 1,
@@ -165,7 +169,7 @@ def test_available_as_saas_true__all_mandatory_tasks_but_one(enable_signals, bc:
         'associated_slug': f'task-{n}',
         'revision_status': 'PENDING',
         'task_type': 'PROJECT',
-    } for n in [1, 3, 5, 7]]
+    } for n in [1, 3, 5, 7, 8]]
 
     exception = random.randint(0, 3)
     model = arange(task=tasks, cohort={'available_as_saas': True})
@@ -212,12 +216,12 @@ def test_available_as_saas_true__all_mandatory_tasks(enable_signals, bc: Breathe
         'associated_slug': f'task-{n}',
         'revision_status': 'PENDING',
         'task_type': 'PROJECT',
-    } for n in [1, 3, 5, 7]]
+    } for n in [1, 3, 5, 7, 8]]
     cohort = {'available_as_saas': True}
 
     model = arange(task=tasks, cohort=cohort)
 
-    for n in range(0, 4):
+    for n in range(0, 5):
         model.task[n].task_status = 'DONE'
         model.task[n].revision_status = revision_status
         model.task[n].save()
@@ -232,7 +236,7 @@ def test_available_as_saas_true__all_mandatory_tasks(enable_signals, bc: Breathe
                 'delivered_assignments': [{
                     'id': n + 1,
                     'type': model.task[n].task_type,
-                } for n in range(0, 4)],
+                } for n in range(0, 5)],
                 'pending_assignments': [],
             },
         },
@@ -250,7 +254,7 @@ def test_available_as_saas_true__all_mandatory_tasks_pending__but_type_is_not_pr
         'associated_slug': f'task-{n}',
         'revision_status': revision_status1,
         'task_type': task_type,
-    } for n in [1, 3, 5, 7]]
+    } for n in [1, 3, 5, 7, 8]]
     cohort = {'available_as_saas': True}
 
     model = arange(task=tasks, cohort=cohort)
@@ -265,7 +269,7 @@ def test_available_as_saas_true__all_mandatory_tasks_pending__but_type_is_not_pr
     assert bc.database.list_of('admissions.CohortUser') == [
         {
             **bc.format.to_dict(model.cohort_user),
-            'educational_status': 'GRADUATED',
+            'educational_status': 'ACTIVE',
             'history_log': {
                 'delivered_assignments': [{
                     'id': n + 1,

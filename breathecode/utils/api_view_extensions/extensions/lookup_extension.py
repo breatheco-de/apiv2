@@ -6,7 +6,7 @@ from django.utils import dateparse
 
 from breathecode.utils.api_view_extensions.extension_base import ExtensionBase
 from breathecode.utils.i18n import translation
-from breathecode.utils.validation_exception import ValidationException
+from capyc.rest_framework.exceptions import ValidationException
 
 __all__ = ['LookupExtension']
 

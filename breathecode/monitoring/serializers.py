@@ -6,8 +6,9 @@ from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.monitoring.actions import subscribe_repository
 from breathecode.monitoring.models import RepositorySubscription
 from breathecode.monitoring.tasks import async_subscribe_repo, async_unsubscribe_repo
-from breathecode.utils import ValidationException, serpy
+from breathecode.utils import serpy
 from breathecode.utils.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 
 logger = logging.getLogger(__name__)
 

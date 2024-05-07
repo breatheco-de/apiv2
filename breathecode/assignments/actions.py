@@ -1,8 +1,12 @@
-import requests, os, logging
+import logging
+import os
 
-from breathecode.utils.validation_exception import ValidationException
-from .models import Task
+import requests
+
 from breathecode.admissions.models import CohortUser
+from capyc.rest_framework.exceptions import ValidationException
+
+from .models import Task
 
 logger = logging.getLogger(__name__)
 

@@ -66,8 +66,13 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
         send_mentorship_session_survey.delay(1)
 
         self.assertEqual(self.bc.database.list_of('feedback.Answer'), [])
-        self.assertEqual(Logger.info.call_args_list, [call('Starting send_mentorship_session_survey')])
-        self.assertEqual(Logger.error.call_args_list, [call('without-mentorship-session')])
+        assert Logger.info.call_args_list == [
+            call('Starting send_mentorship_session_survey'),
+            call('Starting send_mentorship_session_survey'),
+        ]
+        assert Logger.error.call_args_list == [
+            call("Mentoring session doesn't found", exc_info=True),
+        ]
         self.assertEqual(actions.send_email_message.call_args_list, [])
 
     """
@@ -90,7 +95,9 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
 
         self.assertEqual(self.bc.database.list_of('feedback.Answer'), [])
         self.assertEqual(Logger.info.call_args_list, [call('Starting send_mentorship_session_survey')])
-        self.assertEqual(Logger.error.call_args_list, [call('mentorship-session-without-mentee')])
+        self.assertEqual(Logger.error.call_args_list, [
+            call("This session doesn't have a mentee", exc_info=True),
+        ])
         self.assertEqual(actions.send_email_message.call_args_list, [])
 
     """
@@ -116,7 +123,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
 
         self.assertEqual(Logger.info.call_args_list, [call('Starting send_mentorship_session_survey')])
         self.assertEqual(Logger.error.call_args_list, [
-            call('mentorship-session-without-started-at-or-ended-at'),
+            call("This session hasn't finished", exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('feedback.Answer'), [])
@@ -147,7 +154,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
 
         self.assertEqual(Logger.info.call_args_list, [call('Starting send_mentorship_session_survey')])
         self.assertEqual(Logger.error.call_args_list, [
-            call('mentorship-session-without-started-at-or-ended-at'),
+            call("This session hasn't finished", exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('feedback.Answer'), [])
@@ -177,9 +184,9 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
         send_mentorship_session_survey.delay(1)
 
         self.assertEqual(Logger.info.call_args_list, [call('Starting send_mentorship_session_survey')])
-        self.assertEqual(Logger.error.call_args_list, [
-            call('mentorship-session-duration-less-or-equal-than-five-minutes'),
-        ])
+        assert Logger.error.call_args_list == [
+            call('Mentorship session duration is less or equal than five minutes', exc_info=True),
+        ]
 
         self.assertEqual(self.bc.database.list_of('feedback.Answer'), [])
         self.assertEqual(actions.send_email_message.call_args_list, [])
@@ -208,12 +215,9 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
         send_mentorship_session_survey.delay(1)
 
         self.assertEqual(Logger.info.call_args_list, [call('Starting send_mentorship_session_survey')])
-        self.assertEqual(Logger.error.call_args_list, [
-            call('mentorship-session-not-have-a-service-associated-with-it'),
-        ])
-
-        fullname_of_mentor = (model.mentorship_session.mentor.user.first_name + ' ' +
-                              model.mentorship_session.mentor.user.last_name)
+        assert Logger.error.call_args_list == [
+            call("Mentorship session doesn't have a service associated with it", exc_info=True),
+        ]
 
         self.assertEqual(self.bc.database.list_of('feedback.Answer'), [])
         self.assertEqual(actions.send_email_message.call_args_list, [])
@@ -358,10 +362,11 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
 
         self.assertEqual(Logger.info.call_args_list, [
             call('Starting send_mentorship_session_survey'),
-            call('answer-with-status-answered'),
         ])
 
-        self.assertEqual(Logger.error.call_args_list, [])
+        self.assertEqual(Logger.error.call_args_list, [
+            call('This survey about MentorshipSession 1 was answered', exc_info=True),
+        ])
         self.assertEqual(self.bc.database.list_of('feedback.Answer'), [self.bc.format.to_dict(model.answer)])
         self.assertEqual(actions.send_email_message.call_args_list, [])
         self.assertEqual(self.bc.database.list_of('authenticate.Token'), [])

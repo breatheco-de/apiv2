@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytz
 
-from breathecode.utils.validation_exception import ValidationException
+from capyc.rest_framework.exceptions import ValidationException
 
 from ...actions import generate_mentor_bills
 from ..mixins import MentorshipTestCase

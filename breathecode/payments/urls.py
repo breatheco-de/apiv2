@@ -7,6 +7,7 @@ from .views import (
     AcademyPlanView,
     AcademyServiceView,
     AcademySubscriptionView,
+    BagCouponView,
     BagView,
     CancelConsumptionView,
     CardView,
@@ -73,6 +74,7 @@ urlpatterns = [
          name='me_service_slug_cancel_hash'),
     path('card', CardView.as_view(), name='card'),
     path('bag', BagView.as_view()),
+    path('bag/<int:bag_id>/coupon', BagCouponView.as_view(), name='bag_id_coupon'),
     path('checking', CheckingView.as_view(), name='checking'),
     path('pay', PayView.as_view(), name='pay'),
 ]

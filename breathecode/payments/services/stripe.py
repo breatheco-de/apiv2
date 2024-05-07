@@ -7,8 +7,9 @@ from django.utils import timezone
 
 from breathecode.authenticate.models import UserSetting
 from breathecode.payments.models import Bag, Currency, FinancialReputation, Invoice, PaymentContact
-from breathecode.utils import PaymentException, ValidationException, getLogger
+from breathecode.utils import getLogger
 from breathecode.utils.i18n import translation
+from capyc.rest_framework.exceptions import PaymentException, ValidationException
 
 logger = getLogger(__name__)
 

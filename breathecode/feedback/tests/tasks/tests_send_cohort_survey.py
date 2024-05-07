@@ -10,9 +10,7 @@ from django.utils import timezone
 
 import breathecode.feedback.tasks as tasks
 import breathecode.notify.actions as actions
-from breathecode.feedback.models import Answer
-from breathecode.feedback.tasks import generate_user_cohort_survey_answers, send_cohort_survey
-from breathecode.utils import ValidationException
+from breathecode.feedback.tasks import send_cohort_survey
 
 from ..mixins import FeedbackTestCase
 
@@ -41,10 +39,15 @@ class SendCohortSurvey(FeedbackTestCase):
             model = self.generate_models(cohort=1)
             logging.Logger.info.call_args_list = []
 
-        send_cohort_survey(user_id=None, survey_id=None)
+        send_cohort_survey.delay(user_id=None, survey_id=None)
 
-        self.assertEqual(logging.Logger.info.call_args_list, [call('Starting send_cohort_survey')])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('Survey not found')])
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting send_cohort_survey'),
+            call('Starting send_cohort_survey'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('Survey not found', exc_info=True),
+        ])
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), [])
         self.assertEqual(tasks.generate_user_cohort_survey_answers.call_args_list, [])
 
@@ -59,10 +62,12 @@ class SendCohortSurvey(FeedbackTestCase):
             model = self.generate_models(cohort=1, survey=1)
             logging.Logger.info.call_args_list = []
 
-        send_cohort_survey(survey_id=1, user_id=None)
+        send_cohort_survey.delay(survey_id=1, user_id=None)
 
         self.assertEqual(logging.Logger.info.call_args_list, [call('Starting send_cohort_survey')])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('User not found')])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('User not found', exc_info=True),
+        ])
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), [self.bc.format.to_dict(model.survey)])
         self.assertEqual(tasks.generate_user_cohort_survey_answers.call_args_list, [])
 
@@ -84,10 +89,14 @@ class SendCohortSurvey(FeedbackTestCase):
 
         model.survey.save()
 
-        send_cohort_survey(survey_id=1, user_id=1)
+        send_cohort_survey.delay(survey_id=1, user_id=1)
 
-        self.assertEqual(logging.Logger.info.call_args_list, [call('Starting send_cohort_survey')])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('This survey has already expired')])
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting send_cohort_survey'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('This survey has already expired', exc_info=True),
+        ])
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), [self.bc.format.to_dict(model.survey)])
         self.assertEqual(tasks.generate_user_cohort_survey_answers.call_args_list, [])
 
@@ -103,10 +112,12 @@ class SendCohortSurvey(FeedbackTestCase):
             model = self.generate_models(cohort=1, user=1, survey=1)
             logging.Logger.info.call_args_list = []
 
-        send_cohort_survey(survey_id=1, user_id=1)
+        send_cohort_survey.delay(survey_id=1, user_id=1)
 
         self.assertEqual(logging.Logger.info.call_args_list, [call('Starting send_cohort_survey')])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('This student does not belong to this cohort')])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('This student does not belong to this cohort', exc_info=True),
+        ])
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), [self.bc.format.to_dict(model.survey)])
         self.assertEqual(tasks.generate_user_cohort_survey_answers.call_args_list, [])
         self.assertEqual(actions.send_email_message.call_args_list, [])
@@ -125,7 +136,7 @@ class SendCohortSurvey(FeedbackTestCase):
             model = self.generate_models(cohort=1, user=1, survey=1, cohort_user={'role': 'STUDENT'})
             logging.Logger.info.call_args_list = []
 
-        send_cohort_survey(survey_id=1, user_id=1)
+        send_cohort_survey.delay(survey_id=1, user_id=1)
 
         self.assertEqual(logging.Logger.info.call_args_list, [call('Starting send_cohort_survey')])
         self.assertEqual(logging.Logger.error.call_args_list, [])
@@ -166,7 +177,7 @@ class SendCohortSurvey(FeedbackTestCase):
                 model = self.generate_models(cohort=1, user=1, survey=1, cohort_user=cohort_users)
                 logging.Logger.info.call_args_list = []
 
-            send_cohort_survey(survey_id=model.survey.id, user_id=model.user.id)
+            send_cohort_survey.delay(survey_id=model.survey.id, user_id=model.user.id)
 
             self.assertEqual(logging.Logger.info.call_args_list, [call('Starting send_cohort_survey')])
             self.assertEqual(logging.Logger.error.call_args_list, [])
@@ -219,7 +230,7 @@ class SendCohortSurvey(FeedbackTestCase):
                                              cohort_user=cohort_user)
                 logging.Logger.info.call_args_list = []
 
-            send_cohort_survey(survey_id=model.survey.id, user_id=model.user.id)
+            send_cohort_survey.delay(survey_id=model.survey.id, user_id=model.user.id)
 
             self.assertEqual(logging.Logger.info.call_args_list, [call('Starting send_cohort_survey')])
             self.assertEqual(logging.Logger.error.call_args_list, [])

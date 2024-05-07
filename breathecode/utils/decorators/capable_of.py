@@ -4,8 +4,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import APIView
 
 from breathecode.utils.exceptions import ProgrammingError
-
-from ..validation_exception import ValidationException
+from capyc.rest_framework.exceptions import ValidationException
 
 __all__ = ['capable_of', 'acapable_of']
 
