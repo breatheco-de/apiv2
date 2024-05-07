@@ -496,6 +496,9 @@ class FormEntry(models.Model):
         if deal_status_modified: form_entry_won_or_lost.send(instance=self, sender=FormEntry)
         if is_new_deal: new_form_entry_deal.send(instance=self, sender=FormEntry)
 
+        self.__old_deal_status = self.deal_status
+        self.__old_deal_id = self.ac_deal_id
+
     def is_duplicate(self, incoming_lead):
         duplicate_leads_delta_avoidance = timedelta(minutes=30)
         if self.academy is not None and self.academy.activecampaignacademy is not None:
