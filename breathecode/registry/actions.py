@@ -132,7 +132,7 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
         elif asset.asset_type in ['QUIZ']:
             asset = pull_quiz_asset(g, asset)
         else:
-            asset = pull_learnpack_asset(g, asset, override_meta=override_meta)
+            asset = pull_learnpack_asset(g, asset, override_meta=True)
 
         asset.status_text = 'Successfully Synched'
         asset.sync_status = 'OK'
