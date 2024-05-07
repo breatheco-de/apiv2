@@ -368,6 +368,7 @@ class SignalTestSuite(PaymentsTestCase):
             invoice=2,
             plan=(2, plan),
             service_item=2,
+            service=1,
         )
         self.client.force_authenticate(model.user)
 
@@ -457,6 +458,7 @@ class SignalTestSuite(PaymentsTestCase):
             invoice=2,
             plan=(2, plan),
             service_item=2,
+            service=1,
         )
         self.client.force_authenticate(model.user)
 
@@ -515,6 +517,7 @@ class SignalTestSuite(PaymentsTestCase):
             invoice=2,
             plan=(2, plan),
             service_item=2,
+            service=1,
         )
         self.client.force_authenticate(model.user)
 
@@ -573,6 +576,7 @@ class SignalTestSuite(PaymentsTestCase):
             invoice=2,
             plan=(2, plan),
             service_item=2,
+            service=1,
         )
         self.client.force_authenticate(model.user)
 
@@ -646,6 +650,7 @@ class SignalTestSuite(PaymentsTestCase):
             invoice=2,
             plan=(2, plan),
             service_item=2,
+            service=1,
         )
         self.client.force_authenticate(model.user)
 
@@ -697,6 +702,7 @@ class SignalTestSuite(PaymentsTestCase):
             invoice=2,
             plan=(2, plan),
             service_item=2,
+            service=1,
         )
         self.client.force_authenticate(model.user)
 
@@ -791,6 +797,7 @@ class SignalTestSuite(PaymentsTestCase):
             invoice=2,
             plan=(2, plan),
             service_item=2,
+            service=1,
         )
         self.client.force_authenticate(model.user)
 
@@ -838,6 +845,7 @@ class SignalTestSuite(PaymentsTestCase):
             invoice=2,
             plan=(2, plan),
             service_item=2,
+            service=1,
         )
         self.client.force_authenticate(model.user)
 
@@ -931,6 +939,7 @@ class SignalTestSuite(PaymentsTestCase):
             invoice=2,
             plan=(2, plan),
             service_item=2,
+            service=1,
         )
         self.client.force_authenticate(model.user)
 
@@ -979,6 +988,7 @@ class SignalTestSuite(PaymentsTestCase):
             invoice=2,
             plan=(2, plan),
             service_item=2,
+            service=1,
         )
         self.client.force_authenticate(model.user)
 
@@ -1074,6 +1084,7 @@ class SignalTestSuite(PaymentsTestCase):
             invoice=2,
             plan=(2, plan),
             service_item=2,
+            service=1,
         )
         self.client.force_authenticate(model.user)
 
@@ -1122,6 +1133,7 @@ class SignalTestSuite(PaymentsTestCase):
             invoice=2,
             plan=(2, plan),
             service_item=2,
+            service=1,
         )
         self.client.force_authenticate(model.user)
 
@@ -1216,6 +1228,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan=(2, plan),
                                         service_item=2,
                                         cohort_set=2,
+                                        service=1,
                                         academy=academy)
         self.client.force_authenticate(model.user)
 
@@ -1271,6 +1284,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         cohort=cohort,
                                         cohort_set=2,
                                         cohort_set_cohort=cohort_set_cohorts,
+                                        service=1,
                                         academy=academy)
         self.client.force_authenticate(model.user)
 
@@ -1373,6 +1387,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan=(2, plan),
                                         service_item=2,
                                         cohort_set=2,
+                                        service=1,
                                         academy=academy)
         self.client.force_authenticate(model.user)
 
@@ -1424,6 +1439,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         invoice=2,
                                         plan=(2, plan),
                                         service_item=2,
+                                        service=1,
                                         mentorship_service_set=2)
         self.client.force_authenticate(model.user)
 
@@ -1523,6 +1539,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan=(2, plan),
                                         service_item=2,
                                         cohort_set=2,
+                                        service=1,
                                         academy=academy)
         self.client.force_authenticate(model.user)
 
@@ -1572,6 +1589,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         invoice=2,
                                         plan=(2, plan),
                                         service_item=2,
+                                        service=1,
                                         event_type_set=2)
         self.client.force_authenticate(model.user)
 

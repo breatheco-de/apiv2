@@ -99,7 +99,7 @@ def tests_so_much_pending_sessions(database: dfx.Database, supervisor: Superviso
     eta = utc_now - timedelta(seconds=(3600 * random.int(1, 24)) - 1)
     x = {'eta': eta}
     consumption_sessions = [{'status': 'PENDING', **x} for _ in range(3)] + [{'status': 'DONE', **x} for _ in range(7)]
-    database.create(consumption_session=consumption_sessions)
+    database.create(consumption_session=consumption_sessions, service=1)
 
     supervise_all_consumption_sessions()
 

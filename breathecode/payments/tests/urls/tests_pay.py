@@ -321,7 +321,7 @@ def test_with_bag__no_free_trial(bc: Breathecode, client: APIClient):
 
     plan = {'is_renewable': False}
 
-    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
+    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1, service=1)
     client.force_authenticate(user=model.user)
 
     url = reverse_lazy('payments:pay')
@@ -363,7 +363,7 @@ def test_bad_choosen_period(bc: Breathecode, client: APIClient):
 
     plan = {'is_renewable': False}
 
-    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
+    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1, service=1)
     client.force_authenticate(user=model.user)
 
     url = reverse_lazy('payments:pay')
@@ -405,7 +405,7 @@ def test_free_trial__no_plan_offer(bc: Breathecode, client: APIClient):
 
     plan = {'is_renewable': False}
 
-    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
+    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1, service=1)
     client.force_authenticate(user=model.user)
 
     url = reverse_lazy('payments:pay')
@@ -457,7 +457,14 @@ def test_free_trial__with_plan_offer(bc: Breathecode, client: APIClient):
 
     plan = {'is_renewable': False}
 
-    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1, plan_offer=1)
+    model = bc.database.create(user=1,
+                               bag=bag,
+                               academy=1,
+                               currency=1,
+                               plan=plan,
+                               service_item=1,
+                               plan_offer=1,
+                               service=1)
     client.force_authenticate(user=model.user)
 
     url = reverse_lazy('payments:pay')
@@ -542,7 +549,7 @@ def test_pay_for_subscription_has_failed(bc: Breathecode, client: APIClient, exc
 
     plan = {'is_renewable': False}
 
-    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
+    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1, service=1)
     client.force_authenticate(user=model.user)
 
     url = reverse_lazy('payments:pay')
@@ -631,6 +638,7 @@ def test_pay_for_plan_financing_has_failed(bc: Breathecode, client: APIClient, e
 
     model = bc.database.create(
         user=1,
+        service=1,
         bag=bag,
         academy=1,
         currency=1,
@@ -689,7 +697,14 @@ def test_free_plan__is_renewable(bc: Breathecode, client: APIClient):
 
     plan = {'is_renewable': True, 'trial_duration': 0}
 
-    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1, plan_offer=1)
+    model = bc.database.create(user=1,
+                               bag=bag,
+                               academy=1,
+                               currency=1,
+                               plan=plan,
+                               service_item=1,
+                               plan_offer=1,
+                               service=1)
     client.force_authenticate(user=model.user)
 
     url = reverse_lazy('payments:pay')
@@ -742,7 +757,14 @@ def test_free_plan__not_is_renewable(bc: Breathecode, client: APIClient):
 
     plan = {'is_renewable': False, 'trial_duration': 0}
 
-    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1, plan_offer=1)
+    model = bc.database.create(user=1,
+                               bag=bag,
+                               academy=1,
+                               currency=1,
+                               plan=plan,
+                               service_item=1,
+                               plan_offer=1,
+                               service=1)
     client.force_authenticate(user=model.user)
 
     url = reverse_lazy('payments:pay')
@@ -798,7 +820,7 @@ def test_with_chosen_period__amount_set(bc: Breathecode, client: APIClient):
 
     plan = {'is_renewable': False}
 
-    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
+    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1, service=1)
     client.force_authenticate(user=model.user)
 
     url = reverse_lazy('payments:pay')
@@ -861,7 +883,7 @@ def test_installments_not_found(bc: Breathecode, client: APIClient):
 
     plan = {'is_renewable': False}
 
-    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1)
+    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1, service=1)
     client.force_authenticate(user=model.user)
 
     url = reverse_lazy('payments:pay')
@@ -919,6 +941,7 @@ def test_with_installments(bc: Breathecode, client: APIClient):
 
     model = bc.database.create(
         user=1,
+        service=1,
         bag=bag,
         academy=1,
         currency=1,
@@ -1018,6 +1041,7 @@ def test_coupons__with_installments(bc: Breathecode, client: APIClient):
 
     model = bc.database.create(
         user=1,
+        service=1,
         bag=bag,
         coupon=coupons,
         academy=1,
@@ -1114,7 +1138,14 @@ def test_coupons__with_chosen_period__amount_set(bc: Breathecode, client: APICli
     ]
     random.shuffle(coupons)
 
-    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1, coupon=coupons)
+    model = bc.database.create(user=1,
+                               bag=bag,
+                               academy=1,
+                               currency=1,
+                               plan=plan,
+                               service_item=1,
+                               coupon=coupons,
+                               service=1)
     client.force_authenticate(user=model.user)
 
     url = reverse_lazy('payments:pay')

@@ -156,7 +156,6 @@ class Service(AbstractAsset):
         COHORT_SET = ('COHORT_SET', 'Cohort set')
         MENTORSHIP_SERVICE_SET = ('MENTORSHIP_SERVICE_SET', 'Mentorship service set')
         EVENT_TYPE_SET = ('EVENT_TYPE_SET', 'Event type set')
-        SERVICE_SET = ('SERVICE_SET', 'Service set')
 
     groups = models.ManyToManyField(Group,
                                     blank=True,
@@ -189,6 +188,41 @@ class ServiceTranslation(models.Model):
         return f'{self.lang}: {self.title}'
 
 
+class ServiceSet(models.Model):
+    _lang = 'en'
+
+    slug = models.SlugField(max_length=100,
+                            unique=True,
+                            db_index=True,
+                            help_text='A human-readable identifier, it must be unique and it can only contain letters, '
+                            'numbers and hyphens')
+    academy = models.ForeignKey(Academy,
+                                on_delete=models.CASCADE,
+                                help_text='Academy',
+                                null=True,
+                                blank=True,
+                                default=None)
+    services = models.ManyToManyField(to=Service, blank=True, help_text='Services')
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return self.academy.name + ' -> ' + self.slug
+
+
+class ServiceSetTranslation(models.Model):
+    service_set = models.ForeignKey(ServiceSet, on_delete=models.CASCADE, help_text='Service set')
+    lang = models.CharField(max_length=5,
+                            validators=[validate_language_code],
+                            help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US')
+    title = models.CharField(max_length=60, help_text='Title of the cohort set')
+    description = models.CharField(max_length=255, help_text='Description of the cohort set')
+    short_description = models.CharField(max_length=255, help_text='Short description of the cohort set')
+
+
 UNIT = 'UNIT'
 SERVICE_UNITS = [
     (UNIT, 'Unit'),
@@ -216,7 +250,18 @@ class AbstractServiceItem(models.Model):
 class ServiceItem(AbstractServiceItem):
     """This model is used as referenced of units of a service can be used."""
 
-    service = models.ForeignKey(Service, on_delete=models.CASCADE, help_text='Service')
+    service = models.ForeignKey(Service,
+                                on_delete=models.CASCADE,
+                                blank=True,
+                                null=True,
+                                default=None,
+                                help_text='Service')
+    service_set = models.ForeignKey(ServiceSet,
+                                    on_delete=models.CASCADE,
+                                    blank=True,
+                                    null=True,
+                                    default=None,
+                                    help_text='Service set')
     is_renewable = models.BooleanField(
         default=False,
         help_text='If it\'s marked, the consumables will be renewed according to the renew_at and renew_at_unit values.'
@@ -236,6 +281,12 @@ class ServiceItem(AbstractServiceItem):
         inside_mixer = hasattr(self, '__mixer__')
         if self.id and (not inside_mixer or (inside_mixer and not is_test_env)):
             raise forms.ValidationError('You cannot update a service item')
+
+        if self.service is None and self.service_set is None:
+            raise forms.ValidationError('It must have a service or a service set')
+
+        if self.service and self.service_set:
+            raise forms.ValidationError('Service and service set cannot be used at the same time')
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -484,41 +535,6 @@ class AcademyService(models.Model):
         return super().save(*args, **kwargs)
 
 
-class ServiceSet(models.Model):
-    _lang = 'en'
-
-    slug = models.SlugField(max_length=100,
-                            unique=True,
-                            db_index=True,
-                            help_text='A human-readable identifier, it must be unique and it can only contain letters, '
-                            'numbers and hyphens')
-    academy = models.ForeignKey(Academy,
-                                on_delete=models.CASCADE,
-                                help_text='Academy',
-                                null=True,
-                                blank=True,
-                                default=None)
-    services = models.ManyToManyField(to=Service, blank=True, help_text='Services')
-
-    def save(self, *args, **kwargs):
-        self.full_clean()
-
-        super().save(*args, **kwargs)
-
-    def __str__(self) -> str:
-        return self.academy.name + ' -> ' + self.slug
-
-
-class ServiceSetTranslation(models.Model):
-    service_set = models.ForeignKey(ServiceSet, on_delete=models.CASCADE, help_text='Service set')
-    lang = models.CharField(max_length=5,
-                            validators=[validate_language_code],
-                            help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US')
-    title = models.CharField(max_length=60, help_text='Title of the cohort set')
-    description = models.CharField(max_length=255, help_text='Description of the cohort set')
-    short_description = models.CharField(max_length=255, help_text='Short description of the cohort set')
-
-
 ACTIVE = 'ACTIVE'
 UNLISTED = 'UNLISTED'
 DELETED = 'DELETED'
@@ -590,13 +606,6 @@ class Plan(AbstractPriceByTime):
                                        null=True,
                                        default=None,
                                        help_text='Event type set to be sold in this service and plan')
-
-    service_set = models.ForeignKey(ServiceSet,
-                                    on_delete=models.SET_NULL,
-                                    blank=True,
-                                    null=True,
-                                    default=None,
-                                    help_text='Service set to be sold in this service and plan')
 
     invites = models.ManyToManyField(UserInvite, blank=True, help_text='Plan\'s invites', related_name='plans')
 
@@ -1031,12 +1040,6 @@ class AbstractIOweYou(models.Model):
                                                 blank=True,
                                                 default=None,
                                                 help_text='Event type set which the plans and services is for')
-    selected_service_set = models.ForeignKey(ServiceSet,
-                                             on_delete=models.CASCADE,
-                                             null=True,
-                                             blank=True,
-                                             default=None,
-                                             help_text='Service set which the plans and services is for')
 
     # this reminds the plans to change the stock scheduler on change
     plans = models.ManyToManyField(Plan, blank=True, help_text='Plans to be supplied')
@@ -1201,12 +1204,6 @@ class Consumable(AbstractServiceItem):
                                                blank=True,
                                                null=True,
                                                help_text='Mentorship service set which the consumable belongs to')
-    service_set = models.ForeignKey(ServiceSet,
-                                    on_delete=models.CASCADE,
-                                    default=None,
-                                    blank=True,
-                                    null=True,
-                                    help_text='Service set which the consumable belongs to')
 
     valid_until = models.DateTimeField(
         null=True,
@@ -1227,6 +1224,8 @@ class Consumable(AbstractServiceItem):
             extra = {}
 
         param = {}
+        conds = []
+
         utc_now = timezone.now()
 
         # User
@@ -1248,34 +1247,43 @@ class Consumable(AbstractServiceItem):
 
         # Service
         if service and isinstance(service, str) and not service.isdigit():
-            param['service_item__service__slug'] = service
+            conds.append(Q(service_item__service__slug=service) | Q(service_item__service_set__services__slug=service))
 
         elif service and isinstance(service, str) and service.isdigit():
-            param['service_item__service__id'] = int(service)
+            conds.append(Q(service_item__service__id=service) | Q(service_item__service_set__services__id=service))
 
         elif service and isinstance(service, int):
-            param['service_item__service__id'] = service
+            conds.append(Q(service_item__service__id=service) | Q(service_item__service_set__services__id=service))
 
         elif isinstance(service, Service):
-            param['service_item__service'] = service
+            conds.append(Q(service_item__service=service) | Q(service_item__service_set__services=service))
 
         # Permission
         if permission and isinstance(permission, str) and not permission.isdigit():
-            param['service_item__service__groups__permissions__codename'] = permission
+            conds.append(
+                Q(service_item__service__groups__permissions__codename=service)
+                | Q(service_item__service_set__services__groups__permissions__codename=service))
 
         elif permission and isinstance(permission, str) and permission.isdigit():
-            param['service_item__service__groups__permissions__id'] = int(permission)
+            conds.append(
+                Q(service_item__service__groups__permissions__id=int(permission))
+                | Q(service_item__service_set__services__groups__permissions__id=int(permission)))
 
         elif permission and isinstance(permission, int):
-            param['service_item__service__groups__permissions__id'] = permission
+            conds.append(
+                Q(service_item__service__groups__permissions__id=permission)
+                | Q(service_item__service_set__services__groups__permissions__id=permission))
 
         elif isinstance(permission, Permission):
-            param['service_item__service__groups__permissions'] = permission
+            conds.append(
+                Q(service_item__service__groups__permissions=permission)
+                | Q(service_item__service_set__services__groups__permissions=permission))
 
-        return cls.objects.filter(Q(valid_until__gte=utc_now) | Q(valid_until=None), **{
-            **param,
-            **extra
-        }).exclude(how_many=0).order_by('id')
+        return cls.objects.filter(*conds,
+                                  Q(valid_until__gte=utc_now) | Q(valid_until=None), **{
+                                      **param,
+                                      **extra
+                                  }).exclude(how_many=0).order_by('id')
 
     @classmethod
     def get(cls,
@@ -1292,24 +1300,24 @@ class Consumable(AbstractServiceItem):
         return cls.list(user=user, lang=lang, service=service, permission=permission, extra=extra).first()
 
     def clean(self) -> None:
-        resources = [self.event_type_set, self.mentorship_service_set, self.service_set, self.cohort_set]
+        resources = [self.event_type_set, self.mentorship_service_set, self.cohort_set]
 
         how_many_resources_are_set = len([r for r in resources if r])
         settings = get_user_settings(self.user.id)
-
-        if how_many_resources_are_set > 1:
-            raise forms.ValidationError(
-                translation(
-                    settings.lang,
-                    en='A consumable can only be associated with one resource',
-                    es='Un consumible solo se puede asociar con un recurso',
-                ))
 
         if self.service_item is None:
             raise forms.ValidationError(
                 translation(settings.lang,
                             en='A consumable must be associated with a service item',
                             es='Un consumible debe estar asociado con un artículo de un servicio'))
+
+        if self.service_item.service and how_many_resources_are_set > 1:
+            raise forms.ValidationError(
+                translation(
+                    settings.lang,
+                    en='A consumable related to a service can only be associated with one resource',
+                    es='Un consumible relacionado con un servicio solo puede estar asociado con un recurso',
+                ))
 
         return super().clean()
 
@@ -1390,6 +1398,7 @@ class ConsumptionSession(models.Model):
                       consumable: Consumable,
                       delta: timedelta,
                       user: Optional[User] = None,
+                      service: Optional[Service] = None,
                       operation_code: Optional[str] = None) -> 'ConsumptionSession':
         assert request, 'You must provide a request'
         assert consumable, 'You must provide a consumable'
@@ -1400,7 +1409,24 @@ class ConsumptionSession(models.Model):
 
         utc_now = timezone.now()
 
-        resource = consumable.mentorship_service_set or consumable.event_type_set or consumable.cohort_set or consumable.service_set
+        if consumable.service_item.service_set and service is None:
+            assert service, 'You must provide a service if the consumable is related to a service set'
+
+        if service is None:
+            service = consumable.service_item.service
+
+        if service.type == Service.Type.MENTORSHIP_SERVICE_SET:
+            resource = consumable.mentorship_service_set
+
+        elif service.type == Service.Type.EVENT_TYPE_SET:
+            resource = consumable.event_type_set
+
+        elif service.type == Service.Type.COHORT_SET:
+            resource = consumable.cohort_set
+
+        else:
+            assert 0, f'Invalid service type {service.type}'
+
         id = resource.id if resource else 0
         slug = resource.slug if resource else ''
 

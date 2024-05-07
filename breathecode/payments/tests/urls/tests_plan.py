@@ -3,9 +3,10 @@ from unittest.mock import MagicMock, call, patch
 
 from django.urls import reverse_lazy
 from rest_framework import status
-from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from breathecode.utils.api_view_extensions.extensions import lookup_extension
+
 from ..mixins import PaymentsTestCase
 
 
@@ -110,6 +111,7 @@ class SignalTestSuite(PaymentsTestCase):
             'plan_id': 2
         } for n in range(1, 3)]
         model = self.bc.database.create(plan=(2, plan),
+                                        service=1,
                                         service_item=2,
                                         plan_service_item=plan_service_items,
                                         financing_option=2)
@@ -151,6 +153,7 @@ class SignalTestSuite(PaymentsTestCase):
             'plan_id': 2
         } for n in range(1, 3)]
         model = self.bc.database.create(plan=(2, plan),
+                                        service=1,
                                         service_item=2,
                                         plan_service_item=plan_service_items,
                                         financing_option=2)
@@ -196,6 +199,7 @@ class SignalTestSuite(PaymentsTestCase):
             'plan_id': 2
         } for n in range(1, 3)]
         model = self.bc.database.create(plan=(2, plan),
+                                        service=1,
                                         service_item=2,
                                         plan_service_item=plan_service_items,
                                         financing_option=2)
@@ -229,6 +233,7 @@ class SignalTestSuite(PaymentsTestCase):
         } for n in range(1, 3)]
         cohort = {'available_as_saas': True}
         model = self.bc.database.create(plan=(2, plan),
+                                        service=1,
                                         service_item=2,
                                         plan_service_item=plan_service_items,
                                         financing_option=2,
@@ -298,6 +303,7 @@ class SignalTestSuite(PaymentsTestCase):
         cohort = {'available_as_saas': True}
         academy = {'available_as_saas': True}
         model = self.bc.database.create(plan=(2, plan),
+                                        service=1,
                                         service_item=2,
                                         plan_service_item=plan_service_items,
                                         financing_option=2,
@@ -352,6 +358,7 @@ class SignalTestSuite(PaymentsTestCase):
             'plan_id': 2
         } for n in range(1, 3)]
         model = self.bc.database.create(plan=(2, plan),
+                                        service=1,
                                         service_item=2,
                                         plan_service_item=plan_service_items,
                                         financing_option=2)
@@ -385,6 +392,7 @@ class SignalTestSuite(PaymentsTestCase):
         } for n in range(1, 3)]
         cohort = {'available_as_saas': True}
         model = self.bc.database.create(plan=(2, plan),
+                                        service=1,
                                         service_item=2,
                                         plan_service_item=plan_service_items,
                                         financing_option=2,
@@ -454,6 +462,7 @@ class SignalTestSuite(PaymentsTestCase):
         cohort = {'available_as_saas': True}
         academy = {'available_as_saas': True}
         model = self.bc.database.create(plan=(2, plan),
+                                        service=1,
                                         service_item=2,
                                         plan_service_item=plan_service_items,
                                         financing_option=2,
@@ -511,7 +520,7 @@ class SignalTestSuite(PaymentsTestCase):
             'service_item_id': n,
             'plan_id': 2
         } for n in range(1, 3)]
-        model = self.bc.database.create(plan=(2, plan), service_item=2, plan_service_item=plan_service_items)
+        model = self.bc.database.create(plan=(2, plan), service_item=2, plan_service_item=plan_service_items, service=1)
 
         args, kwargs = self.bc.format.call(
             'en',
@@ -572,6 +581,7 @@ class SignalTestSuite(PaymentsTestCase):
         plan = {'time_of_life': None, 'time_of_life_unit': None, 'is_renewable': True}
         plan_service_items = [{'service_item_id': n, 'plan_id': 1} for n in range(1, 3)]
         model = self.bc.database.create(plan=plan,
+                                        service=1,
                                         service_item=2,
                                         plan_service_item=plan_service_items,
                                         financing_option=2)

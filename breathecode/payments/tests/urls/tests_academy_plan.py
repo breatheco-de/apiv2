@@ -103,7 +103,6 @@ def post_serializer(currency, service=None, academy=None, service_items=[], fina
         'mentorship_service_set': None,
         'cohort_set': None,
         'event_type_set': None,
-        'service_set': None,
         'invites': [],
         **data,
     }
@@ -130,7 +129,6 @@ def row(currency, academy=None, data={}):
         'mentorship_service_set_id': None,
         'cohort_set_id': None,
         'event_type_set_id': None,
-        'service_set_id': None,
         **data,
     }
 
@@ -196,6 +194,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         skip_cohort=True,
                                         service_item=2,
                                         plan_service_item=plan_service_items,
+                                        service=1,
                                         financing_option=2)
 
         self.client.force_authenticate(model.user)
@@ -247,6 +246,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         skip_cohort=True,
                                         service_item=2,
                                         plan_service_item=plan_service_items,
+                                        service=1,
                                         financing_option=2)
 
         self.client.force_authenticate(model.user)
@@ -302,6 +302,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         skip_cohort=True,
                                         service_item=2,
                                         plan_service_item=plan_service_items,
+                                        service=1,
                                         financing_option=2)
 
         self.client.force_authenticate(model.user)
@@ -343,6 +344,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=plan_service_items,
                                         financing_option=2,
                                         cohort=1,
+                                        service=1,
                                         syllabus_version=1)
 
         self.client.force_authenticate(model.user)
@@ -429,6 +431,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         cohort_set=1,
                                         cohort_set_cohort=1,
                                         syllabus_version=1,
+                                        service=1,
                                         academy=academy)
 
         self.client.force_authenticate(model.user)
@@ -486,6 +489,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         skip_cohort=True,
                                         service_item=2,
                                         plan_service_item=plan_service_items,
+                                        service=1,
                                         financing_option=2)
 
         self.client.force_authenticate(model.user)
@@ -527,6 +531,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=plan_service_items,
                                         financing_option=2,
                                         cohort=1,
+                                        service=1,
                                         syllabus_version=1)
 
         self.client.force_authenticate(model.user)
@@ -613,6 +618,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         cohort_set=1,
                                         cohort_set_cohort=1,
                                         syllabus_version=1,
+                                        service=1,
                                         academy=academy)
 
         self.client.force_authenticate(model.user)
@@ -672,6 +678,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         role=1,
                                         profile_academy=1,
                                         service_item=2,
+                                        service=1,
                                         plan_service_item=plan_service_items)
 
         self.client.force_authenticate(model.user)
@@ -749,6 +756,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         plan_service_item=plan_service_items,
                                         financing_option=2,
                                         cohort=1,
+                                        service=1,
                                         syllabus_version=1)
 
         self.client.force_authenticate(model.user)
@@ -779,6 +787,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         skip_cohort=True,
                                         service_item=2,
                                         plan_service_item=plan_service_items,
+                                        service=1,
                                         financing_option=2)
 
         self.client.force_authenticate(model.user)
@@ -831,6 +840,7 @@ class SignalTestSuite(PaymentsTestCase):
                                         profile_academy=1,
                                         skip_cohort=True,
                                         service_item=2,
+                                        service=1,
                                         financing_option=2)
 
         self.client.force_authenticate(model.user)

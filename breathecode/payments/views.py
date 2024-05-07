@@ -573,14 +573,10 @@ class MeConsumableView(APIView):
         event_types = EventTypeSet.objects.none()
         event_types = filter_consumables(request, items, event_types, 'event_type_set')
 
-        service_sets = ServiceSet.objects.none()
-        service_sets = filter_consumables(request, items, service_sets, 'service_set')
-
         balance = {
             'mentorship_service_sets': get_balance_by_resource(mentorship_services, 'mentorship_service_set'),
             'cohort_sets': get_balance_by_resource(cohorts, 'cohort_set'),
             'event_type_sets': get_balance_by_resource(event_types, 'event_type_set'),
-            'service_sets': get_balance_by_resource(service_sets, 'service_set'),
         }
 
         return Response(balance)
@@ -1053,10 +1049,16 @@ class ConsumeView(APIView):
             raise PaymentException(
                 translation(lang, en='Insuficient credits', es='Créditos insuficientes', slug='insufficient-credits'))
 
+        if consumable.service_item.service:
+            service = consumable.service_item.service
+        else:
+            service = Service.objects.filter(slug=service_slug).first()
+
         session_duration = consumable.service_item.service.session_duration or timedelta(minutes=1)
         session = ConsumptionSession.build_session(request,
                                                    consumable,
                                                    session_duration,
+                                                   service=service,
                                                    operation_code='unsafe-consume-service-set')
 
         session.will_consume(1)

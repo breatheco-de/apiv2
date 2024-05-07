@@ -140,7 +140,6 @@ class TestSignal(LegacyAPITestCase):
             'mentorship_service_sets': [],
             'cohort_sets': [],
             'event_type_sets': [],
-            'service_sets': [],
         }
 
         assert json == expected
@@ -153,7 +152,7 @@ class TestSignal(LegacyAPITestCase):
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__one_consumable__how_many_is_zero(self):
-        model = self.bc.database.create_v2(user=1, consumable=1)
+        model = self.bc.database.create(user=1, consumable=1, service=1)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable')
@@ -165,7 +164,6 @@ class TestSignal(LegacyAPITestCase):
             'mentorship_service_sets': [],
             'cohort_sets': [],
             'event_type_sets': [],
-            'service_sets': [],
         }
 
         assert json == expected
@@ -191,7 +189,7 @@ class TestSignal(LegacyAPITestCase):
 
         academy = {'available_as_saas': True}
 
-        model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3, academy=academy)
+        model = self.bc.database.create(user=1, service=1, consumable=consumables, cohort_set=3, academy=academy)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable')
@@ -228,15 +226,11 @@ class TestSignal(LegacyAPITestCase):
                 },
             ],
             'event_type_sets': [],
-            'service_sets': [],
         }
 
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.bc.database.list_of('payments.Consumable'),
-            self.bc.format.to_dict(model.consumable),
-        )
+        assert self.bc.database.list_of('payments.Consumable') == self.bc.format.to_dict(model.consumable)
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__nine_consumables__random_how_many__related_to_three_cohorts__with_wrong_cohorts_in_querystring(self):
@@ -244,7 +238,7 @@ class TestSignal(LegacyAPITestCase):
 
         academy = {'available_as_saas': True}
 
-        model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3, academy=academy)
+        model = self.bc.database.create(user=1, service=1, consumable=consumables, cohort_set=3, academy=academy)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable') + '?cohort_set=4,5,6'
@@ -256,15 +250,11 @@ class TestSignal(LegacyAPITestCase):
             'mentorship_service_sets': [],
             'cohort_sets': [],
             'event_type_sets': [],
-            'service_sets': [],
         }
 
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.bc.database.list_of('payments.Consumable'),
-            self.bc.format.to_dict(model.consumable),
-        )
+        assert self.bc.database.list_of('payments.Consumable') == self.bc.format.to_dict(model.consumable)
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__nine_consumables__random_how_many__related_to_three_cohorts__with_cohorts_in_querystring(self):
@@ -279,7 +269,7 @@ class TestSignal(LegacyAPITestCase):
 
         academy = {'available_as_saas': True}
 
-        model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3, academy=academy)
+        model = self.bc.database.create(user=1, service=1, consumable=consumables, cohort_set=3, academy=academy)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable') + '?cohort_set=1,2,3'
@@ -316,15 +306,11 @@ class TestSignal(LegacyAPITestCase):
                 },
             ],
             'event_type_sets': [],
-            'service_sets': [],
         }
 
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.bc.database.list_of('payments.Consumable'),
-            self.bc.format.to_dict(model.consumable),
-        )
+        assert self.bc.database.list_of('payments.Consumable') == self.bc.format.to_dict(model.consumable)
 
     """
     🔽🔽🔽 Get with nine Consumable and three MentorshipService, random how_many
@@ -345,7 +331,7 @@ class TestSignal(LegacyAPITestCase):
         how_many_belong_to2 = sum([x['how_many'] for x in belong_to2])
         how_many_belong_to3 = sum([x['how_many'] for x in belong_to3])
 
-        model = self.bc.database.create(user=1, consumable=consumables, mentorship_service_set=3)
+        model = self.bc.database.create(user=1, service=1, consumable=consumables, mentorship_service_set=3)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable')
@@ -382,15 +368,11 @@ class TestSignal(LegacyAPITestCase):
             ],
             'cohort_sets': [],
             'event_type_sets': [],
-            'service_sets': [],
         }
 
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.bc.database.list_of('payments.Consumable'),
-            self.bc.format.to_dict(model.consumable),
-        )
+        assert self.bc.database.list_of('payments.Consumable') == self.bc.format.to_dict(model.consumable)
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__nine_consumables__related_to_three_mentorship_services__with_wrong_cohorts_in_querystring(self):
@@ -399,7 +381,7 @@ class TestSignal(LegacyAPITestCase):
             'mentorship_service_set_id': math.floor(n / 3) + 1
         } for n in range(9)]
 
-        model = self.bc.database.create(user=1, consumable=consumables, mentorship_service_set=3)
+        model = self.bc.database.create(user=1, service=1, consumable=consumables, mentorship_service_set=3)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable') + '?mentorship_service_set=4,5,6'
@@ -411,15 +393,11 @@ class TestSignal(LegacyAPITestCase):
             'cohort_sets': [],
             'mentorship_service_sets': [],
             'event_type_sets': [],
-            'service_sets': [],
         }
 
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.bc.database.list_of('payments.Consumable'),
-            self.bc.format.to_dict(model.consumable),
-        )
+        assert self.bc.database.list_of('payments.Consumable') == self.bc.format.to_dict(model.consumable)
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__nine_consumables__related_to_three_mentorship_services__with_cohorts_in_querystring(self):
@@ -435,7 +413,7 @@ class TestSignal(LegacyAPITestCase):
         how_many_belong_to2 = sum([x['how_many'] for x in belong_to2])
         how_many_belong_to3 = sum([x['how_many'] for x in belong_to3])
 
-        model = self.bc.database.create(user=1, consumable=consumables, mentorship_service_set=3)
+        model = self.bc.database.create(user=1, service=1, consumable=consumables, mentorship_service_set=3)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable') + '?mentorship_service_set=1,2,3'
@@ -472,15 +450,11 @@ class TestSignal(LegacyAPITestCase):
                 },
             ],
             'event_type_sets': [],
-            'service_sets': [],
         }
 
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.bc.database.list_of('payments.Consumable'),
-            self.bc.format.to_dict(model.consumable),
-        )
+        assert self.bc.database.list_of('payments.Consumable') == self.bc.format.to_dict(model.consumable)
 
     """
     🔽🔽🔽 Get with nine Consumable and three EventType, random how_many
@@ -503,6 +477,7 @@ class TestSignal(LegacyAPITestCase):
         event_type_sets = [{'event_type_id': x} for x in range(1, 4)]
 
         model = self.bc.database.create(user=1,
+                                        service=1,
                                         consumable=consumables,
                                         event_type_set=event_type_sets,
                                         event_type=[{
@@ -548,15 +523,11 @@ class TestSignal(LegacyAPITestCase):
                     'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
             ],
-            'service_sets': [],
         }
 
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.bc.database.list_of('payments.Consumable'),
-            self.bc.format.to_dict(model.consumable),
-        )
+        assert self.bc.database.list_of('payments.Consumable') == self.bc.format.to_dict(model.consumable)
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__nine_consumables__related_to_three_event_types__with_wrong_cohorts_in_querystring(self):
@@ -567,6 +538,7 @@ class TestSignal(LegacyAPITestCase):
 
         event_type_sets = [{'event_type_id': x} for x in range(1, 4)]
         model = self.bc.database.create(user=1,
+                                        service=1,
                                         consumable=consumables,
                                         event_type_set=event_type_sets,
                                         event_type=[{
@@ -587,15 +559,11 @@ class TestSignal(LegacyAPITestCase):
             'cohort_sets': [],
             'event_type_sets': [],
             'mentorship_service_sets': [],
-            'service_sets': [],
         }
 
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.bc.database.list_of('payments.Consumable'),
-            self.bc.format.to_dict(model.consumable),
-        )
+        assert self.bc.database.list_of('payments.Consumable') == self.bc.format.to_dict(model.consumable)
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__nine_consumables__related_to_three_event_types__with_cohorts_in_querystring(self):
@@ -613,6 +581,7 @@ class TestSignal(LegacyAPITestCase):
 
         event_type_sets = [{'event_type_id': x} for x in range(1, 4)]
         model = self.bc.database.create(user=1,
+                                        service=1,
                                         consumable=consumables,
                                         event_type_set=event_type_sets,
                                         event_type=[{
@@ -658,15 +627,11 @@ class TestSignal(LegacyAPITestCase):
                 },
             ],
             'mentorship_service_sets': [],
-            'service_sets': [],
         }
 
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.bc.database.list_of('payments.Consumable'),
-            self.bc.format.to_dict(model.consumable),
-        )
+        assert self.bc.database.list_of('payments.Consumable') == self.bc.format.to_dict(model.consumable)
 
     """
     🔽🔽🔽 Get with nine Consumable and three ServiceSet, random how_many
@@ -727,10 +692,7 @@ class TestSignal(LegacyAPITestCase):
 
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.bc.database.list_of('payments.Consumable'),
-            self.bc.format.to_dict(model.consumable),
-        )
+        assert self.bc.database.list_of('payments.Consumable') == self.bc.format.to_dict(model.consumable)
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__nine_consumables__random_how_many__related_to_three_cohorts__with_wrong_cohort_slugs_in_querystring(self):
@@ -750,15 +712,11 @@ class TestSignal(LegacyAPITestCase):
             'mentorship_service_sets': [],
             'cohort_sets': [],
             'event_type_sets': [],
-            'service_sets': [],
         }
 
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.bc.database.list_of('payments.Consumable'),
-            self.bc.format.to_dict(model.consumable),
-        )
+        assert self.bc.database.list_of('payments.Consumable') == self.bc.format.to_dict(model.consumable)
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__nine_consumables__random_how_many__related_to_three_cohorts__with_cohort_slugs_in_querystring(self):
@@ -816,10 +774,7 @@ class TestSignal(LegacyAPITestCase):
 
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.bc.database.list_of('payments.Consumable'),
-            self.bc.format.to_dict(model.consumable),
-        )
+        assert self.bc.database.list_of('payments.Consumable') == self.bc.format.to_dict(model.consumable)
         """
     🔽🔽🔽 Get with nine Consumable and three Cohort, random how_many
     """
@@ -837,7 +792,7 @@ class TestSignal(LegacyAPITestCase):
 
         academy = {'available_as_saas': True}
 
-        model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3, academy=academy)
+        model = self.bc.database.create(user=1, service=1, consumable=consumables, cohort_set=3, academy=academy)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable')
@@ -874,15 +829,11 @@ class TestSignal(LegacyAPITestCase):
                 },
             ],
             'event_type_sets': [],
-            'service_sets': [],
         }
 
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.bc.database.list_of('payments.Consumable'),
-            self.bc.format.to_dict(model.consumable),
-        )
+        assert self.bc.database.list_of('payments.Consumable') == self.bc.format.to_dict(model.consumable)
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__nine_consumables__random_how_many__related_to_three_cohorts__with_wrong_cohort_slugs_in_querystring(self):
@@ -890,7 +841,7 @@ class TestSignal(LegacyAPITestCase):
 
         academy = {'available_as_saas': True}
 
-        model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3, academy=academy)
+        model = self.bc.database.create(user=1, service=1, consumable=consumables, cohort_set=3, academy=academy)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable') + f'?cohort_set_slug=blabla1,blabla2,blabla3'
@@ -902,15 +853,11 @@ class TestSignal(LegacyAPITestCase):
             'mentorship_service_sets': [],
             'cohort_sets': [],
             'event_type_sets': [],
-            'service_sets': [],
         }
 
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.bc.database.list_of('payments.Consumable'),
-            self.bc.format.to_dict(model.consumable),
-        )
+        assert self.bc.database.list_of('payments.Consumable') == self.bc.format.to_dict(model.consumable)
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__nine_consumables__random_how_many__related_to_three_cohorts__with_cohort_slugs_in_querystring(self):
@@ -925,7 +872,7 @@ class TestSignal(LegacyAPITestCase):
 
         academy = {'available_as_saas': True}
 
-        model = self.bc.database.create(user=1, consumable=consumables, cohort_set=3, academy=academy)
+        model = self.bc.database.create(user=1, service=1, consumable=consumables, cohort_set=3, academy=academy)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy(
@@ -963,15 +910,11 @@ class TestSignal(LegacyAPITestCase):
                 },
             ],
             'event_type_sets': [],
-            'service_sets': [],
         }
 
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.bc.database.list_of('payments.Consumable'),
-            self.bc.format.to_dict(model.consumable),
-        )
+        assert self.bc.database.list_of('payments.Consumable') == self.bc.format.to_dict(model.consumable)
 
     """
     🔽🔽🔽 Get with nine Consumable and three MentorshipService, random how_many
@@ -991,7 +934,7 @@ class TestSignal(LegacyAPITestCase):
         how_many_belong_to2 = sum([x['how_many'] for x in belong_to2])
         how_many_belong_to3 = sum([x['how_many'] for x in belong_to3])
 
-        model = self.bc.database.create(user=1, consumable=consumables, mentorship_service_set=3)
+        model = self.bc.database.create(user=1, service=1, consumable=consumables, mentorship_service_set=3)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable')
@@ -1028,15 +971,11 @@ class TestSignal(LegacyAPITestCase):
             ],
             'cohort_sets': [],
             'event_type_sets': [],
-            'service_sets': [],
         }
 
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.bc.database.list_of('payments.Consumable'),
-            self.bc.format.to_dict(model.consumable),
-        )
+        assert self.bc.database.list_of('payments.Consumable') == self.bc.format.to_dict(model.consumable)
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__nine_consumables__related_to_three_mentorship_services__with_wrong_cohort_slugs_in_querystring(self):
@@ -1045,7 +984,7 @@ class TestSignal(LegacyAPITestCase):
             'mentorship_service_set_id': math.floor(n / 3) + 1
         } for n in range(9)]
 
-        model = self.bc.database.create(user=1, consumable=consumables, mentorship_service_set=3)
+        model = self.bc.database.create(user=1, service=1, consumable=consumables, mentorship_service_set=3)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy('payments:me_service_consumable') + f'?mentorship_service_set_slug=blabla1,blabla2,blabla3'
@@ -1057,15 +996,11 @@ class TestSignal(LegacyAPITestCase):
             'cohort_sets': [],
             'mentorship_service_sets': [],
             'event_type_sets': [],
-            'service_sets': [],
         }
 
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.bc.database.list_of('payments.Consumable'),
-            self.bc.format.to_dict(model.consumable),
-        )
+        assert self.bc.database.list_of('payments.Consumable') == self.bc.format.to_dict(model.consumable)
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__nine_consumables__related_to_three_mentorship_services__with_cohort_slugs_in_querystring(self):
@@ -1081,7 +1016,7 @@ class TestSignal(LegacyAPITestCase):
         how_many_belong_to2 = sum([x['how_many'] for x in belong_to2])
         how_many_belong_to3 = sum([x['how_many'] for x in belong_to3])
 
-        model = self.bc.database.create(user=1, consumable=consumables, mentorship_service_set=3)
+        model = self.bc.database.create(user=1, service=1, consumable=consumables, mentorship_service_set=3)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy(
@@ -1120,15 +1055,11 @@ class TestSignal(LegacyAPITestCase):
                 },
             ],
             'event_type_sets': [],
-            'service_sets': [],
         }
 
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.bc.database.list_of('payments.Consumable'),
-            self.bc.format.to_dict(model.consumable),
-        )
+        assert self.bc.database.list_of('payments.Consumable') == self.bc.format.to_dict(model.consumable)
 
     """
     🔽🔽🔽 Get with nine Consumable and three EventType, random how_many
@@ -1150,6 +1081,7 @@ class TestSignal(LegacyAPITestCase):
 
         event_type_sets = [{'event_type_id': x} for x in range(1, 4)]
         model = self.bc.database.create(user=1,
+                                        service=1,
                                         consumable=consumables,
                                         event_type_set=event_type_sets,
                                         event_type=[{
@@ -1195,15 +1127,11 @@ class TestSignal(LegacyAPITestCase):
                     'items': [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
             ],
-            'service_sets': [],
         }
 
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.bc.database.list_of('payments.Consumable'),
-            self.bc.format.to_dict(model.consumable),
-        )
+        assert self.bc.database.list_of('payments.Consumable') == self.bc.format.to_dict(model.consumable)
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__nine_consumables__related_to_three_event_types__with_wrong_cohort_slugs_in_querystring(self):
@@ -1214,6 +1142,7 @@ class TestSignal(LegacyAPITestCase):
 
         event_type_sets = [{'event_type_id': x} for x in range(1, 4)]
         model = self.bc.database.create(user=1,
+                                        service=1,
                                         consumable=consumables,
                                         event_type_set=event_type_sets,
                                         event_type=[{
@@ -1234,15 +1163,11 @@ class TestSignal(LegacyAPITestCase):
             'cohort_sets': [],
             'event_type_sets': [],
             'mentorship_service_sets': [],
-            'service_sets': [],
         }
 
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.bc.database.list_of('payments.Consumable'),
-            self.bc.format.to_dict(model.consumable),
-        )
+        assert self.bc.database.list_of('payments.Consumable') == self.bc.format.to_dict(model.consumable)
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__nine_consumables__related_to_three_event_types__with_cohort_slugs_in_querystring(self):
@@ -1260,6 +1185,7 @@ class TestSignal(LegacyAPITestCase):
 
         event_type_sets = [{'event_type_id': x} for x in range(1, 4)]
         model = self.bc.database.create(user=1,
+                                        service=1,
                                         consumable=consumables,
                                         event_type_set=event_type_sets,
                                         event_type=[{
@@ -1306,15 +1232,11 @@ class TestSignal(LegacyAPITestCase):
                 },
             ],
             'mentorship_service_sets': [],
-            'service_sets': [],
         }
 
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.bc.database.list_of('payments.Consumable'),
-            self.bc.format.to_dict(model.consumable),
-        )
+        assert self.bc.database.list_of('payments.Consumable') == self.bc.format.to_dict(model.consumable)
 
     """
     🔽🔽🔽 Get with six Consumable, one EventType, one MentorshipService and Cohort, with one -1
@@ -1339,33 +1261,22 @@ class TestSignal(LegacyAPITestCase):
             'event_type_set_id': 1,
             'cohort_set_id': None,
             'mentorship_service_set_id': None,
-            'service_set_id': None,
         } for n in r1] + [{
             'how_many': n,
             'event_type_set_id': None,
             'cohort_set_id': 1,
             'mentorship_service_set_id': None,
-            'service_set_id': None,
         } for n in r2] + [{
             'how_many': n,
             'event_type_set_id': None,
             'cohort_set_id': None,
             'mentorship_service_set_id': 1,
-            'service_set_id': None,
         } for n in r3] + [{
             'how_many': n,
             'event_type_set_id': None,
             'cohort_set_id': None,
             'mentorship_service_set_id': None,
-            'service_set_id': 1,
         } for n in r4]
-        belong_to1 = consumables[:3]
-        belong_to2 = consumables[3:6]
-        belong_to3 = consumables[6:]
-
-        how_many_belong_to1 = sum([x['how_many'] for x in belong_to1])
-        how_many_belong_to2 = sum([x['how_many'] for x in belong_to2])
-        how_many_belong_to3 = sum([x['how_many'] for x in belong_to3])
 
         academy = {'available_as_saas': True}
 
@@ -1430,24 +1341,8 @@ class TestSignal(LegacyAPITestCase):
                     ],
                 },
             ],
-            'service_sets': [
-                {
-                    'balance': {
-                        'unit': -1,
-                    },
-                    'id': model.service_set.id,
-                    'slug': model.service_set.slug,
-                    'items': [
-                        serialize_consumable(model.consumable[6]),
-                        serialize_consumable(model.consumable[7]),
-                    ],
-                },
-            ],
         }
 
         assert json == expected
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.bc.database.list_of('payments.Consumable'),
-            self.bc.format.to_dict(model.consumable),
-        )
+        assert self.bc.database.list_of('payments.Consumable') == self.bc.format.to_dict(model.consumable)

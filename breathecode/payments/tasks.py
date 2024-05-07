@@ -26,7 +26,7 @@ from .models import (
     PlanFinancing,
     PlanServiceItem,
     PlanServiceItemHandler,
-    Service,
+    ServiceItem,
     ServiceStockScheduler,
     Subscription,
     SubscriptionServiceItem,
@@ -39,8 +39,20 @@ logger = logging.getLogger(__name__)
 def renew_consumables(self, scheduler_id: int, **_: Any):
     """Renew consumables."""
 
-    def get_resource_lookup(i_owe_you: AbstractIOweYou, service: Service):
+    def get_resource_lookups(i_owe_you: AbstractIOweYou, service_item: ServiceItem):
         lookups = {}
+
+        if service_item.service_set:
+            resources = ['mentorship_service_set', 'cohort_set', 'event_type_set']
+
+            for resource in resources:
+                value = getattr(i_owe_you, f'selected_{resource}', None)
+                if value:
+                    lookups[resource] = value
+
+            return lookups
+
+        service = service_item.service
 
         key = service.type.lower()
         value = getattr(i_owe_you, f'selected_{key}', None)
@@ -112,21 +124,21 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
         service_item = scheduler.plan_handler.handler.service_item
         resource_valid_until = scheduler.plan_handler.subscription.valid_until
 
-        selected_lookup = get_resource_lookup(scheduler.plan_handler.subscription, service_item.service)
+        selected_lookup = get_resource_lookups(scheduler.plan_handler.subscription, service_item)
 
     elif scheduler.plan_handler and scheduler.plan_handler.plan_financing:
         user = scheduler.plan_handler.plan_financing.user
         service_item = scheduler.plan_handler.handler.service_item
         resource_valid_until = scheduler.plan_handler.plan_financing.valid_until
 
-        selected_lookup = get_resource_lookup(scheduler.plan_handler.plan_financing, service_item.service)
+        selected_lookup = get_resource_lookups(scheduler.plan_handler.plan_financing, service_item)
 
     elif scheduler.subscription_handler and scheduler.subscription_handler.subscription:
         user = scheduler.subscription_handler.subscription.user
         service_item = scheduler.subscription_handler.service_item
         resource_valid_until = scheduler.subscription_handler.subscription.valid_until
 
-        selected_lookup = get_resource_lookup(scheduler.subscription_handler.subscription, service_item.service)
+        selected_lookup = get_resource_lookups(scheduler.subscription_handler.subscription, service_item)
 
     unit = service_item.renew_at
     unit_type = service_item.renew_at_unit
@@ -156,11 +168,19 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
 
     scheduler.consumables.add(consumable)
 
-    key = list(selected_lookup.keys())[0]
-    id = selected_lookup[key].id
-    name = key.replace('selected_', '').replace('_', ' ')
+    message = f'The consumable {consumable.id} for '
 
-    logger.info(f'The consumable {consumable.id} for {name} {id} was built')
+    for key in selected_lookup.keys():
+        id = selected_lookup[key].id
+        name = key.replace('selected_', '').replace('_', ' ')
+        message += f'{name} {id}, '
+
+    if message.endswith(', '):
+        message = message[:-2]
+
+    message += ' was built'
+
+    logger.info(message)
     logger.info(f'The scheduler {scheduler.id} was renewed')
 
 

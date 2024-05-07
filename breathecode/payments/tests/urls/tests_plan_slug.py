@@ -3,9 +3,10 @@ from unittest.mock import MagicMock, call, patch
 
 from django.urls import reverse_lazy
 from rest_framework import status
-from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from breathecode.utils.api_view_extensions.extensions import lookup_extension
+
 from ..mixins import PaymentsTestCase
 
 
@@ -106,6 +107,7 @@ class SignalTestSuite(PaymentsTestCase):
         model = self.bc.database.create(plan=plan,
                                         service_item=2,
                                         plan_service_item=plan_service_items,
+                                        service=1,
                                         financing_option=2)
 
         url = reverse_lazy('payments:plan_slug', kwargs={'plan_slug': model.plan.slug})
@@ -135,6 +137,7 @@ class SignalTestSuite(PaymentsTestCase):
         model = self.bc.database.create(plan=plan,
                                         service_item=2,
                                         plan_service_item=plan_service_items,
+                                        service=1,
                                         financing_option=2)
 
         url = reverse_lazy('payments:plan_slug', kwargs={'plan_slug': model.plan.slug})

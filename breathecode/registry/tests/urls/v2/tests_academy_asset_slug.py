@@ -135,7 +135,8 @@ def test_no_asset(bc: Breathecode, client: APIClient):
                                capability='read_asset',
                                permission={'codename': 'read-lesson'},
                                group=1,
-                               consumable=1)
+                               consumable=1,
+                               service=1)
     client.force_authenticate(user=model.user)
     url = reverse_lazy('v2:registry:academy_asset_slug', kwargs={'asset_slug': 'model_slug'})
 
@@ -160,6 +161,7 @@ def test_with_asset(bc: Breathecode, client: APIClient):
                                permission={'codename': 'read-lesson'},
                                group=1,
                                consumable=1,
+                               service=1,
                                asset=1,
                                asset_category=1,
                                academy=1)
@@ -224,6 +226,7 @@ def test_with_asset__no_saas__finantial_status_no_late(bc: Breathecode, client: 
                                permission={'codename': 'read-lesson'},
                                group=1,
                                consumable=1,
+                               service=1,
                                asset=1,
                                asset_category=1,
                                academy=academy,
@@ -273,6 +276,7 @@ def test_with_asset__no_saas__finantial_status_late(bc: Breathecode, client: API
                                permission={'codename': 'read-lesson'},
                                group=1,
                                consumable=1,
+                               service=1,
                                asset={'slug': slug},
                                syllabus_version={
                                    'json': {

@@ -668,6 +668,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
         cohort = {'available_as_saas': True}
         academy = {'available_as_saas': True}
         model = self.generate_models(authenticate=True,
+                                     service=1,
                                      cohort=cohort,
                                      cohort_set=1,
                                      cohort_set_cohort=1,
@@ -721,6 +722,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
         plan = {'time_of_life': None, 'time_of_life_unit': None}
         cohort = {'available_as_saas': True}
         model = self.generate_models(authenticate=True,
+                                     service=1,
                                      cohort=cohort,
                                      profile_academy=1,
                                      syllabus_version=1,
@@ -768,6 +770,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
         academy = {'available_as_saas': True}
 
         model = self.generate_models(authenticate=True,
+                                     service=1,
                                      cohort=cohort,
                                      cohort_set=1,
                                      cohort_set_cohort=1,

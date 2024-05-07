@@ -1024,7 +1024,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -1053,7 +1057,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -1080,7 +1088,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': random.randint(1, 100)}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -1109,7 +1121,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2, 'name': 'secret'}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -1234,7 +1250,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -1263,7 +1283,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -1290,7 +1314,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': random.randint(1, 100)}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -1319,7 +1347,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2, 'name': 'secret'}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -1444,7 +1476,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.post('/they-killed-kenny')
@@ -1473,7 +1509,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.post('/they-killed-kenny')
@@ -1500,7 +1540,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': random.randint(1, 100)}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.post('/they-killed-kenny')
@@ -1529,7 +1573,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2, 'name': 'secret'}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.post('/they-killed-kenny')
@@ -1654,7 +1702,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.put('/they-killed-kenny')
@@ -1683,7 +1735,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.put('/they-killed-kenny')
@@ -1710,7 +1766,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': random.randint(1, 100)}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.put('/they-killed-kenny')
@@ -1739,7 +1799,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2, 'name': 'secret'}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.put('/they-killed-kenny')
@@ -1864,7 +1928,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.delete('/they-killed-kenny')
@@ -1893,7 +1961,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.delete('/they-killed-kenny')
@@ -1920,7 +1992,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': random.randint(1, 100)}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.delete('/they-killed-kenny')
@@ -1949,7 +2025,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2, 'name': 'secret'}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.delete('/they-killed-kenny')
@@ -2100,7 +2180,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -2148,7 +2232,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -2194,7 +2282,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': random.randint(1, 100)}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -2242,7 +2334,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2, 'name': 'secret'}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -2291,7 +2387,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
@@ -2346,6 +2446,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=1)
 
         request = APIRequestFactory()
@@ -2417,6 +2518,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=consumption_session)
 
         request = APIRequestFactory()
@@ -2467,6 +2569,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=consumption_session)
 
         request = APIRequestFactory()
@@ -2612,7 +2715,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -2660,7 +2767,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -2706,7 +2817,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': random.randint(1, 100)}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -2754,7 +2869,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2, 'name': 'secret'}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.get('/they-killed-kenny')
@@ -2803,7 +2922,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
@@ -2858,6 +2981,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=1)
 
         request = APIRequestFactory()
@@ -2931,6 +3055,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=consumption_session)
 
         request = APIRequestFactory()
@@ -2983,6 +3108,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=consumption_session)
 
         request = APIRequestFactory()
@@ -3128,7 +3254,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.post('/they-killed-kenny')
@@ -3176,7 +3306,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.post('/they-killed-kenny')
@@ -3222,7 +3356,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': random.randint(1, 100)}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.post('/they-killed-kenny')
@@ -3270,7 +3408,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2, 'name': 'secret'}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.post('/they-killed-kenny')
@@ -3319,7 +3461,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.post('/they-killed-kenny')
@@ -3374,6 +3520,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=1)
 
         request = APIRequestFactory()
@@ -3445,6 +3592,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=consumption_session)
 
         request = APIRequestFactory()
@@ -3495,6 +3643,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=consumption_session)
 
         request = APIRequestFactory()
@@ -3640,7 +3789,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.put('/they-killed-kenny')
@@ -3688,7 +3841,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.put('/they-killed-kenny')
@@ -3734,7 +3891,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': random.randint(1, 100)}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.put('/they-killed-kenny')
@@ -3782,7 +3943,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2, 'name': 'secret'}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.put('/they-killed-kenny')
@@ -3831,7 +3996,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.put('/they-killed-kenny')
@@ -3886,6 +4055,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=1)
 
         request = APIRequestFactory()
@@ -3959,6 +4129,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=consumption_session)
 
         request = APIRequestFactory()
@@ -4011,6 +4182,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=consumption_session)
 
         request = APIRequestFactory()
@@ -4156,7 +4328,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.delete('/they-killed-kenny')
@@ -4204,7 +4380,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.delete('/they-killed-kenny')
@@ -4250,7 +4430,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': random.randint(1, 100)}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.delete('/they-killed-kenny')
@@ -4298,7 +4482,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2, 'name': 'secret'}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         factory = APIRequestFactory()
         request = factory.delete('/they-killed-kenny')
@@ -4347,7 +4535,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.delete('/they-killed-kenny')
@@ -4402,6 +4594,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=1)
 
         request = APIRequestFactory()
@@ -4475,6 +4668,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=consumption_session)
 
         request = APIRequestFactory()
@@ -4527,6 +4721,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=consumption_session)
 
         request = APIRequestFactory()
@@ -5267,7 +5462,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
@@ -5296,7 +5495,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
@@ -5323,7 +5526,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
@@ -5448,7 +5655,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
@@ -5477,7 +5688,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
@@ -5504,7 +5719,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
@@ -5629,7 +5848,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.post('/they-killed-kenny')
@@ -5658,7 +5881,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.post('/they-killed-kenny')
@@ -5685,7 +5912,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.post('/they-killed-kenny')
@@ -5810,7 +6041,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.put('/they-killed-kenny')
@@ -5839,7 +6074,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.put('/they-killed-kenny')
@@ -5866,7 +6105,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.put('/they-killed-kenny')
@@ -5991,7 +6234,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.delete('/they-killed-kenny')
@@ -6020,7 +6267,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.delete('/they-killed-kenny')
@@ -6047,7 +6298,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.delete('/they-killed-kenny')
@@ -6207,7 +6462,11 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
@@ -6257,7 +6516,11 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
@@ -6305,7 +6568,11 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
@@ -6357,7 +6624,11 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
@@ -6413,6 +6684,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=1)
 
         request = APIRequestFactory()
@@ -6485,6 +6757,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=consumption_session)
 
         request = APIRequestFactory()
@@ -6535,6 +6808,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=consumption_session)
 
         request = APIRequestFactory()
@@ -6689,7 +6963,11 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
@@ -6739,7 +7017,11 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
@@ -6787,7 +7069,11 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
@@ -6839,7 +7125,11 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.get('/they-killed-kenny')
@@ -6895,6 +7185,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=1)
 
         request = APIRequestFactory()
@@ -6969,6 +7260,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=consumption_session)
 
         request = APIRequestFactory()
@@ -7021,6 +7313,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=consumption_session)
 
         request = APIRequestFactory()
@@ -7175,7 +7468,11 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.post('/they-killed-kenny')
@@ -7225,7 +7522,11 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.post('/they-killed-kenny')
@@ -7273,7 +7574,11 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.post('/they-killed-kenny')
@@ -7325,7 +7630,11 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.post('/they-killed-kenny')
@@ -7381,6 +7690,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=1)
 
         request = APIRequestFactory()
@@ -7453,6 +7763,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=consumption_session)
 
         request = APIRequestFactory()
@@ -7503,6 +7814,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=consumption_session)
 
         request = APIRequestFactory()
@@ -7657,7 +7969,11 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.put('/they-killed-kenny')
@@ -7707,7 +8023,11 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.put('/they-killed-kenny')
@@ -7755,7 +8075,11 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.put('/they-killed-kenny')
@@ -7807,7 +8131,11 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.put('/they-killed-kenny')
@@ -7863,6 +8191,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=1)
 
         request = APIRequestFactory()
@@ -7937,6 +8266,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=consumption_session)
 
         request = APIRequestFactory()
@@ -7991,6 +8321,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=consumption_session)
 
         request = APIRequestFactory()
@@ -8145,7 +8476,11 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.delete('/they-killed-kenny')
@@ -8195,7 +8530,11 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.delete('/they-killed-kenny')
@@ -8243,7 +8582,11 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.delete('/they-killed-kenny')
@@ -8295,7 +8638,11 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         permissions = [{}, {'codename': PERMISSION}]
         group = {'permission_id': 2}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user, permission=permissions, group=group, consumable=consumable)
+        model = self.bc.database.create(user=user,
+                                        permission=permissions,
+                                        group=group,
+                                        consumable=consumable,
+                                        service=1)
 
         request = APIRequestFactory()
         request = request.delete('/they-killed-kenny')
@@ -8351,6 +8698,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=1)
 
         request = APIRequestFactory()
@@ -8425,6 +8773,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=consumption_session)
 
         request = APIRequestFactory()
@@ -8477,6 +8826,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
                                         permission=permissions,
                                         group=group,
                                         consumable=consumable,
+                                        service=1,
                                         consumption_session=consumption_session)
 
         request = APIRequestFactory()

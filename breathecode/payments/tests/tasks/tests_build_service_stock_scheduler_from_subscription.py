@@ -5,14 +5,14 @@ import logging
 import random
 from unittest.mock import MagicMock, call, patch
 
+from dateutil.relativedelta import relativedelta
 from django.utils import timezone
+
 from breathecode.payments import tasks
 from breathecode.payments.actions import calculate_relative_delta
 
 from ...tasks import build_service_stock_scheduler_from_subscription
-
 from ..mixins import PaymentsTestCase
-from dateutil.relativedelta import relativedelta
 
 UTC_NOW = timezone.now()
 
@@ -142,7 +142,7 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         plan = {'is_renewable': False}
 
-        model = self.bc.database.create(subscription=subscription, plan=plan, plan_service_item=1)
+        model = self.bc.database.create(subscription=subscription, plan=plan, plan_service_item=1, service=1)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []

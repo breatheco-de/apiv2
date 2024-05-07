@@ -519,7 +519,7 @@ class SignalTestSuite(PaymentsTestCase):
         academy = {'main_currency': None}
         plan = {'is_renewable': False}
 
-        model = self.bc.database.create(user=1, bag=bag, service_item=1, plan=plan, academy=academy)
+        model = self.bc.database.create(user=1, bag=bag, service_item=1, plan=plan, academy=academy, service=1)
         self.client.force_authenticate(model.user)
 
         self.bc.check.queryset_with_pks(model.bag.service_items.all(), [])

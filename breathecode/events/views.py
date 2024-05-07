@@ -35,7 +35,7 @@ from breathecode.utils import (
     response_207,
 )
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from breathecode.utils.decorators import has_permission
+from breathecode.utils.decorators import consume
 from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils.views import private_view, render_message
@@ -307,7 +307,7 @@ class MeLiveClassView(APIView):
 
 
 @private_view()
-@has_permission('live_class_join', consumer=live_class_by_url_param, format='html')
+@consume('live_class_join', consumer=live_class_by_url_param, format='html')
 def join_live_class(request, token, live_class, lang):
     now = timezone.now()
 
@@ -848,7 +848,7 @@ class EventTypeVisibilitySettingView(APIView):
 
 
 @private_view()
-@has_permission('event_join', consumer=event_by_url_param, format='html')
+@consume('event_join', consumer=event_by_url_param, format='html')
 def join_event(request, token, event):
     now = timezone.now()
 

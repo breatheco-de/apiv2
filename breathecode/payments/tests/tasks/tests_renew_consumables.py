@@ -29,7 +29,6 @@ def consumable_item(data={}):
         'user_id': 0,
         'valid_until': UTC_NOW,
         'sort_priority': 1,
-        'service_set_id': None,
         **data,
     }
 
@@ -75,6 +74,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         plan = {'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        service=1,
                                         plan=plan,
                                         plan_financing=plan_financing,
                                         plan_service_item_handler=1)
@@ -109,6 +109,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         plan = {'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        service=1,
                                         plan=plan,
                                         plan_financing=plan_financing,
                                         plan_service_item_handler=1)
@@ -144,6 +145,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         plan = {'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        service=1,
                                         plan=plan,
                                         plan_financing=plan_financing,
                                         plan_service_item_handler=1)
@@ -184,6 +186,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         academy = {'available_as_saas': True}
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        service=1,
                                         plan=plan,
                                         service_item=service_item,
                                         plan_financing=plan_financing,
@@ -215,6 +218,59 @@ class PaymentsTestSuite(PaymentsTestCase):
             }),
         ])
 
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_plan_financing_with_service_set__all_resources_setted(self):
+        plan_financing = {
+            'monthly_price': random.random() * 99.99 + 0.01,
+            'plan_expires_at': UTC_NOW - relativedelta(seconds=4),
+            'valid_until': UTC_NOW + relativedelta(minutes=5),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=3),
+        }
+        plan = {'is_renewable': False}
+        service_item = {'how_many': -1, 'service_id': None}
+        if random.randint(0, 1) == 1:
+            service_item['how_many'] = random.randint(1, 100)
+        academy = {'available_as_saas': True}
+
+        model = self.bc.database.create(service_stock_scheduler=1,
+                                        service_set=1,
+                                        plan=plan,
+                                        service_item=service_item,
+                                        plan_financing=plan_financing,
+                                        plan_service_item_handler=1,
+                                        cohort=2,
+                                        cohort_set=2,
+                                        mentorship_service_set=2,
+                                        event_type_set=2,
+                                        academy=academy)
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        renew_consumables.delay(1)
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting renew_consumables for service stock scheduler 1'),
+            call('The consumable 1 for mentorship service set 1, cohort set 1, event type set 1 was built'),
+            call('The scheduler 1 was renewed'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
+            consumable_item({
+                'cohort_set_id': 1,
+                'event_type_set_id': 1,
+                'mentorship_service_set_id': 1,
+                'id': 1,
+                'service_item_id': 1,
+                'user_id': 1,
+                'how_many': model.service_item.how_many,
+                'valid_until': UTC_NOW + relativedelta(minutes=5),
+            }),
+        ])
+
     """
     🔽🔽🔽 ServiceStockScheduler with PlanFinancing with Plan which is over
     """
@@ -233,6 +289,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         plan = {'time_of_life': 1, 'time_of_life_unit': 'DAY', 'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        service=1,
                                         plan_financing=plan_financing,
                                         plan_service_item_handler=1,
                                         cohort=2,
@@ -326,6 +383,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         plan = {'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=service_stock_scheduler,
+                                        service=1,
                                         plan=plan,
                                         plan_financing=plan_financing,
                                         plan_service_item_handler=1,
@@ -361,6 +419,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         plan = {'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        service=1,
                                         plan=plan,
                                         subscription=subscription,
                                         plan_service_item_handler=1)
@@ -395,6 +454,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         plan = {'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        service=1,
                                         plan=plan,
                                         subscription=subscription,
                                         plan_service_item_handler=1)
@@ -430,6 +490,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         plan = {'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        service=1,
                                         plan=plan,
                                         subscription=subscription,
                                         plan_service_item_handler=1)
@@ -470,6 +531,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         academy = {'available_as_saas': True}
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        service=1,
                                         plan=plan,
                                         service_item=service_item,
                                         subscription=subscription,
@@ -493,6 +555,59 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
             consumable_item({
                 'cohort_set_id': 1,
+                'id': 1,
+                'service_item_id': 1,
+                'user_id': 1,
+                'how_many': model.service_item.how_many,
+                'valid_until': UTC_NOW + relativedelta(minutes=5),
+            }),
+        ])
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_subscription__plan_with_service_set__all_resources_setted(self):
+        subscription = {
+            'monthly_price': random.random() * 99.99 + 0.01,
+            'plan_expires_at': UTC_NOW - relativedelta(seconds=4),
+            'valid_until': UTC_NOW + relativedelta(minutes=5),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=3),
+        }
+        plan = {'is_renewable': False}
+        service_item = {'how_many': -1, 'service_id': None}
+        if random.randint(0, 1) == 1:
+            service_item['how_many'] = random.randint(1, 100)
+        academy = {'available_as_saas': True}
+
+        model = self.bc.database.create(service_stock_scheduler=1,
+                                        service_set=1,
+                                        plan=plan,
+                                        service_item=service_item,
+                                        subscription=subscription,
+                                        plan_service_item_handler=1,
+                                        cohort=2,
+                                        cohort_set=2,
+                                        mentorship_service_set=2,
+                                        event_type_set=2,
+                                        academy=academy)
+
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        renew_consumables.delay(1)
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting renew_consumables for service stock scheduler 1'),
+            call('The consumable 1 for mentorship service set 1, cohort set 1, event type set 1 was built'),
+            call('The scheduler 1 was renewed'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
+            consumable_item({
+                'cohort_set_id': 1,
+                'event_type_set_id': 1,
+                'mentorship_service_set_id': 1,
                 'id': 1,
                 'service_item_id': 1,
                 'user_id': 1,
@@ -575,6 +690,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         plan = {'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=service_stock_scheduler,
+                                        service=1,
                                         plan=plan,
                                         subscription=subscription,
                                         plan_service_item_handler=1,
@@ -610,6 +726,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         plan = {'is_renewable': False}
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        service=1,
                                         plan=plan,
                                         subscription=subscription,
                                         subscription_service_item=1)
@@ -643,6 +760,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         }
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        service=1,
                                         subscription=subscription,
                                         subscription_service_item=1)
 
@@ -676,6 +794,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         }
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        service=1,
                                         subscription=subscription,
                                         subscription_service_item=1)
 
@@ -715,6 +834,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         academy = {'available_as_saas': True}
 
         model = self.bc.database.create(service_stock_scheduler=1,
+                                        service=1,
                                         service_item=service_item,
                                         subscription=subscription,
                                         subscription_service_item=1,
@@ -816,6 +936,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         }
 
         model = self.bc.database.create(service_stock_scheduler=service_stock_scheduler,
+                                        service=1,
                                         subscription=subscription,
                                         subscription_service_item=1,
                                         mentorship_service=2,
