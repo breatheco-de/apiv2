@@ -17,3 +17,7 @@ revoke_service_permissions = Signal()
 
 # proxy to m2m_changed in Event.service_items
 update_plan_m2m_service_items = Signal()
+
+# Plan aquired
+planfinancing_created = Signal()
+subscription_created = Signal()
