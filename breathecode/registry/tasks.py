@@ -332,6 +332,27 @@ def async_remove_img_from_cloud(id, **_):
 
 
 @task(priority=TaskPriority.ACADEMY.value)
+def async_remove_asset_preview_from_cloud(hash, **_):
+
+    logger.info('async_remove_asset_preview_from_cloud')
+
+    media = Media.objects.filter(hash=hash).first()
+    if media is None:
+        raise Exception(f'Media with hash {hash} not found')
+
+    media_name = media.name
+
+    storage = Storage()
+    extension = media.mime.split('/')[-1]
+    cloud_file = storage.file(screenshots_bucket(), media.hash + extension)
+    cloud_file.delete()
+    media.delete()
+
+    logger.info(f'Media name ({media_name}) was deleted from the cloud')
+    return True
+
+
+@task(priority=TaskPriority.ACADEMY.value)
 def async_upload_image_to_bucket(id, **_):
 
     img = AssetImage.objects.filter(id=id).first()
