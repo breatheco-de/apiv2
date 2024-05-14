@@ -361,6 +361,9 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
 
         if 'title' in fm and fm['title'] != '':
             asset.title = fm['title']
+          
+        if 'video' in fm and fm['video'] != '':
+            asset.intro_video_url = fm['video']
 
         if 'authors' in fm and fm['authors'] != '':
             asset.authors_username = ','.join(fm['authors'])
