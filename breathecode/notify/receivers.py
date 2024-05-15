@@ -159,3 +159,16 @@ def edu_status_updated(sender, instance, **kwargs):
                                     'edu_status_updated',
                                     payload_override=serializer.data,
                                     academy_override=academy)
+
+
+@receiver(cohort_user_created, sender=CohortUser)
+def cohort_user_created(sender, instance, **kwargs):
+    logger.debug('Sending student to hook with cohort user created')
+    academy = instance.cohort.academy if instance.cohort is not None else None
+    model_label = get_model_label(instance)
+    serializer = CohortUserHookSerializer(instance)
+    HookManager.process_model_event(instance,
+                                    model_label,
+                                    'cohort_user_created',
+                                    payload_override=serializer.data,
+                                    academy_override=academy)

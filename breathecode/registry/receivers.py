@@ -1,9 +1,10 @@
 import logging
 import os
 
-from django.db.models.signals import post_delete
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
+from breathecode.assessment.models import Question, Option
 from breathecode.admissions.models import SyllabusVersion
 from breathecode.admissions.signals import syllabus_version_json_updated
 from breathecode.assignments.models import Task
@@ -21,6 +22,7 @@ from .tasks import (
     async_remove_img_from_cloud,
     async_synchonize_repository_content,
     async_update_frontend_asset_cache,
+    async_generate_quiz_config,
 )
 
 logger = logging.getLogger(__name__)
@@ -115,3 +117,36 @@ def post_webhook_received(sender, instance, **kwargs):
 def syllabus_json_updated(sender, instance, **kwargs):
     logger.debug(f'Syllabus Version json for {instance.syllabus.slug} was updated')
     async_add_syllabus_translations.delay(instance.syllabus.slug, instance.version)
+
+
+## Keep assessment question and asset.config in synch
+
+
+@receiver(post_save, sender=Question)
+def model_a_saved(sender, instance, created, **kwargs):
+    if not instance.assessment.is_archived:
+        async_generate_quiz_config(instance.assessment.id)
+
+
+@receiver(post_save, sender=Option)
+def model_b_saved(sender, instance, created, **kwargs):
+    if not instance.question.assessment.is_archived:
+        async_generate_quiz_config(instance.question.assessment.id)
+
+
+@receiver(post_delete, sender=Question)
+def model_a_deleted(sender, instance, **kwargs):
+    try:
+        if instance.assessment and not instance.assessment.is_archived:
+            async_generate_quiz_config(instance.assessment.id)
+    except:
+        pass
+
+
+@receiver(post_delete, sender=Option)
+def model_b_deleted(sender, instance, **kwargs):
+    try:
+        if instance.assessment and not instance.assessment.is_archived:
+            async_generate_quiz_config(instance.question.assessment.id)
+    except:
+        pass

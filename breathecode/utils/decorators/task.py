@@ -20,6 +20,7 @@ class TaskPriority(Enum):
     MONITORING = 2  # monitoring tasks
     ACTIVITY = 2  # user activity
     BILL = 2  # postpaid billing
+    ASSESSMENT = 2  # user assessment
     CACHE = 3  # cache
     MARKETING = 4  # marketing purposes
     OAUTH_CREDENTIALS = 5  # oauth tasks

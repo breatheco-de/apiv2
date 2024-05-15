@@ -1074,7 +1074,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
                 'pk', flat=True).order_by('sort_priority')
             delta = len(data['technologies']) - len(technology_ids)
             if delta != 0:
-                raise ValidationException(f'{delta} of the assigned technologies for this lesson are not found')
+                raise ValidationException(f'{delta} of the assigned technologies for this asset are not found')
 
             data['technologies'] = technology_ids
 

@@ -631,6 +631,18 @@ class Asset(models.Model):
         error.save()
         return error
 
+    def generate_quiz_json(self):
+
+        if not self.assessment:
+            return None
+
+        config = self.assessment.to_json()
+        config['info']['description'] = self.description
+        config['lang'] = self.lang
+        config['technologies'] = [t.slug for t in self.technologies.all()]
+
+        return config
+
     def get_tasks(self):
 
         if self.readme is None:
