@@ -7,7 +7,8 @@ from rest_framework import serializers
 import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import ProfileAcademy, Token
-from breathecode.utils import ValidationException, serpy
+from breathecode.utils import serpy
+from capyc.rest_framework.exceptions import ValidationException
 
 from .models import AssignmentTelemetry, FinalProject, Task, UserAttachment
 

@@ -1,24 +1,36 @@
 from datetime import datetime
-from django.utils import timezone
+
 from django.http import HttpResponse
-from breathecode.admissions.models import CohortUser, Academy
-from .caches import AnswerCache
-from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from .models import Answer, Survey, ReviewPlatform, Review
-from .tasks import generate_user_cohort_survey_answers
+from django.utils import timezone
+from PIL import Image
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import AllowAny
-from .serializers import (AnswerPUTSerializer, AnswerSerializer, SurveySerializer, SurveyPUTSerializer,
-                          BigAnswerSerializer, SurveySmallSerializer, ReviewPlatformSerializer, ReviewSmallSerializer,
-                          ReviewPUTSerializer)
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
-from rest_framework import status
-from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
-from PIL import Image
-from breathecode.utils.find_by_full_name import query_like_by_full_name
+
 import breathecode.activity.tasks as tasks_activity
+from breathecode.admissions.models import Academy, CohortUser
+from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of
+from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from breathecode.utils.find_by_full_name import query_like_by_full_name
+from capyc.rest_framework.exceptions import ValidationException
+
+from .caches import AnswerCache
+from .models import Answer, Review, ReviewPlatform, Survey
+from .serializers import (
+    AnswerPUTSerializer,
+    AnswerSerializer,
+    BigAnswerSerializer,
+    ReviewPlatformSerializer,
+    ReviewPUTSerializer,
+    ReviewSmallSerializer,
+    SurveyPUTSerializer,
+    SurveySerializer,
+    SurveySmallSerializer,
+)
+from .tasks import generate_user_cohort_survey_answers
 
 
 @api_view(['GET'])

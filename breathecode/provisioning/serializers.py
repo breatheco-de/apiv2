@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from breathecode.utils import serpy
 from breathecode.utils.i18n import translation
-from breathecode.utils.validation_exception import ValidationException
+from capyc.rest_framework.exceptions import ValidationException
 
 from .models import ProvisioningBill, ProvisioningContainer
 

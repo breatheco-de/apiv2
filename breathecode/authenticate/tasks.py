@@ -10,7 +10,7 @@ from breathecode.authenticate.models import UserInvite
 from breathecode.marketing.actions import validate_email
 from breathecode.notify import actions as notify_actions
 from breathecode.utils.decorators import TaskPriority
-from breathecode.utils.validation_exception import ValidationException
+from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import add_to_organization, remove_from_organization, set_gitpod_user_expiration
 

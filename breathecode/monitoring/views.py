@@ -14,9 +14,10 @@ from rest_framework.views import APIView
 from breathecode.admissions.models import Academy
 from breathecode.authenticate.actions import get_user_language
 from breathecode.monitoring import signals
-from breathecode.utils import GenerateLookupsMixin, ValidationException, capable_of
+from breathecode.utils import GenerateLookupsMixin, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import add_github_webhook, add_stripe_webhook
 from .models import CSVDownload, CSVUpload, RepositorySubscription, RepositoryWebhook

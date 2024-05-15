@@ -6,7 +6,7 @@ import sys
 from scripts.utils.get_pip_path import get_pip_path
 
 # fedora silverblue, some package are not compatible with python 3.12 yet
-# sudo dnf install boost-devel python3.11-devel
+# sudo dnf install boost-devel python3.12-devel
 
 pip_path = get_pip_path()
 commands = ';\n'.join([

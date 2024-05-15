@@ -22,11 +22,12 @@ from breathecode.authenticate.models import ProfileAcademy
 from breathecode.notify.actions import send_email_message
 from breathecode.registry.permissions.consumers import asset_by_slug
 from breathecode.services.seo import SEOAnalyzer
-from breathecode.utils import GenerateLookupsMixin, ValidationException, capable_of
+from breathecode.utils import GenerateLookupsMixin, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators.has_permission import has_permission
 from breathecode.utils.i18n import translation
 from breathecode.utils.views import render_message
+from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import (
     AssetThumbnailGenerator,

@@ -1,11 +1,10 @@
 """
 Test /answer
 """
-from unittest.mock import MagicMock, call, patch
 
 from django.utils import timezone
+
 from breathecode.payments.admin import grant_service_permissions
-from breathecode.utils.validation_exception import ValidationException
 
 from ..mixins import PaymentsTestCase
 

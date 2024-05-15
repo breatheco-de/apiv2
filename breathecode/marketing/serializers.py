@@ -10,7 +10,7 @@ from breathecode.admissions.models import Academy, Cohort
 from breathecode.monitoring.actions import test_link
 from breathecode.utils import serpy
 from breathecode.utils.integer_to_base import to_base
-from breathecode.utils.validation_exception import ValidationException
+from capyc.rest_framework.exceptions import ValidationException
 
 from .models import AcademyAlias, ActiveCampaignAcademy, Automation, CourseTranslation, FormEntry, ShortLink, Tag
 
@@ -358,6 +358,7 @@ class GetCourseTranslationSerializer(serpy.Serializer):
     short_description = serpy.Field()
     lang = serpy.Field()
     course_modules = serpy.Field()
+    landing_variables = serpy.Field()
     landing_url = serpy.Field()
     video_url = serpy.Field()
 

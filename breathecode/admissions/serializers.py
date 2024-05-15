@@ -1,15 +1,28 @@
-from collections import OrderedDict
 import logging
-from breathecode.admissions.actions import ImportCohortTimeSlots
-from django.db.models import Q
-from breathecode.utils import ValidationException, localize_query, serializers, serpy
+from collections import OrderedDict
+
 from django.contrib.auth.models import User
-from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
-from breathecode.assignments.serializers import TaskGETSmallSerializer
+from django.db.models import Q
+
+from breathecode.admissions.actions import ImportCohortTimeSlots
 from breathecode.assignments.models import Task
-from .actions import test_syllabus, haversine
-from .models import (Academy, SyllabusScheduleTimeSlot, Cohort, SyllabusSchedule, CohortTimeSlot, CohortUser, Syllabus,
-                     SyllabusVersion, COHORT_STAGE)
+from breathecode.assignments.serializers import TaskGETSmallSerializer
+from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
+from breathecode.utils import localize_query, serializers, serpy
+from capyc.rest_framework.exceptions import ValidationException
+
+from .actions import haversine, test_syllabus
+from .models import (
+    COHORT_STAGE,
+    Academy,
+    Cohort,
+    CohortTimeSlot,
+    CohortUser,
+    Syllabus,
+    SyllabusSchedule,
+    SyllabusScheduleTimeSlot,
+    SyllabusVersion,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +119,7 @@ class UserSerializer(serpy.Serializer):
     first_name = serpy.Field()
     last_name = serpy.Field()
     email = serpy.Field()
+    last_login = serpy.Field()
     profile = ProfileSerializer(required=False)
 
 

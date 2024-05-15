@@ -8,7 +8,7 @@ from django.utils import timezone
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import Token
 from breathecode.notify.actions import send_email_message, send_slack
-from breathecode.utils import ValidationException
+from capyc.rest_framework.exceptions import ValidationException
 
 from . import tasks
 from .models import Answer, Review, ReviewPlatform, Survey
@@ -180,7 +180,7 @@ def get_student_answer_avg(user_id, cohort_id=None, academy_id=None):
     return query['average']
 
 
-def create_user_graduation_reviews(user, cohort):
+def create_user_graduation_reviews(user, cohort) -> bool:
 
     # If the user gave us a rating >=8 we should create reviews for each review platform with status "pending"
     average = get_student_answer_avg(user.id, cohort.id)
@@ -190,18 +190,18 @@ def create_user_graduation_reviews(user, cohort):
             author=user,
         ).count()
         if total_reviews > 0:
-            logger.debug('No new reviews will be requested, student already has pending requests for this cohort')
+            logger.info('No new reviews will be requested, student already has pending requests for this cohort')
             return False
 
         platforms = ReviewPlatform.objects.all()
-        logger.debug(f'{platforms.count()} will be requested for student {user.id}, avg NPS score of {average}')
+        logger.info(f'{platforms.count()} will be requested for student {user.id}, avg NPS score of {average}')
         for plat in platforms:
             review = Review(cohort=cohort, author=user, platform=plat, nps_previous_rating=average)
             review.save()
 
         return True
 
-    logger.debug(f'No reviews requested for student {user.id} because average NPS score is {average}')
+    logger.info(f'No reviews requested for student {user.id} because average NPS score is {average}')
     return False
 
 

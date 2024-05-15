@@ -2,6 +2,7 @@
 Test /answer
 """
 import random
+from datetime import datetime
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -13,10 +14,33 @@ import breathecode.activity.tasks as activity_tasks
 from breathecode.assignments import tasks
 from breathecode.assignments.caches import TaskCache
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
+from capyc.rest_framework import pytest as capy
 
 from ..mixins import AssignmentsTestCase
 
 UTC_NOW = timezone.now()
+
+
+def db_item(data={}):
+    return {
+        'associated_slug': 'live-ball-onto-go',
+        'cohort_id': 1,
+        'delivered_at': None,
+        'description': '',
+        'github_url': None,
+        'id': 1,
+        'live_url': None,
+        'opened_at': None,
+        'revision_status': 'PENDING',
+        'rigobot_repository_id': None,
+        'subtasks': None,
+        'task_status': 'PENDING',
+        'task_type': 'EXERCISE',
+        'telemetry_id': None,
+        'title': 'Richard Stephens',
+        'user_id': 1,
+        **data
+    }
 
 
 def put_serializer(self, task, data={}):
@@ -63,6 +87,30 @@ def get_serializer(self, task, user):
     }
 
 
+def post_serializer(data={}):
+    return {
+        'associated_slug': 'growth-purpose',
+        'attachments': [],
+        'cohort': 1,
+        'created_at': '2024-04-25T01:09:44.447234Z',
+        'delivered_at': None,
+        'description': '',
+        'github_url': None,
+        'id': 1,
+        'live_url': None,
+        'opened_at': None,
+        'revision_status': 'PENDING',
+        'rigobot_repository_id': None,
+        'subtasks': None,
+        'task_status': 'PENDING',
+        'task_type': 'EXERCISE',
+        'telemetry': None,
+        'title': 'Isabella Duffy',
+        'updated_at': '2024-04-25T01:09:44.447254Z',
+        **data,
+    }
+
+
 def put_serializer(self, task, data={}):
     return {
         'associated_slug': task.associated_slug,
@@ -87,7 +135,7 @@ def put_serializer(self, task, data={}):
 
 
 @pytest.fixture(autouse=True)
-def setup(monkeypatch):
+def setup(db, monkeypatch):
     monkeypatch.setattr(activity_tasks.add_activity, 'delay', MagicMock())
     yield
 
@@ -669,3 +717,93 @@ class MediaTestSuite(AssignmentsTestCase):
             call(cache=TaskCache, cache_per_user=True, paginate=True),
         ])
         self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
+
+
+def test_post__no_required_fields(client: capy.Client, database: capy.Database):
+    url = reverse_lazy('assignments:user_me_task')
+
+    model = database.create(user=1)
+    client.force_authenticate(model.user)
+
+    response = client.post(url)
+
+    json = response.json()
+    expected = [{
+        'associated_slug': ['This field is required.'],
+        'title': ['This field is required.'],
+        'task_type': ['This field is required.'],
+    }]
+
+    assert json == expected
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert database.list_of('assignments.Task') == []
+
+
+@pytest.mark.parametrize('task_type', [
+    'PROJECT',
+    'QUIZ',
+    'LESSON',
+    'EXERCISE',
+])
+def test_post__no_cohort(client: capy.Client, database: capy.Database, fake: capy.Fake, task_type: str):
+    url = reverse_lazy('assignments:user_me_task')
+
+    model = database.create(user=1)
+    client.force_authenticate(model.user)
+
+    data = {
+        'associated_slug': fake.slug(),
+        'title': fake.name(),
+        'task_type': task_type,
+    }
+    response = client.post(url, data, format='json')
+
+    json = response.json()
+    expected = {
+        'detail': 'Cohort is required.',
+        'status_code': 400,
+    }
+
+    assert json == expected
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert database.list_of('assignments.Task') == []
+
+
+@pytest.mark.parametrize('task_type', [
+    'PROJECT',
+    'QUIZ',
+    'LESSON',
+    'EXERCISE',
+])
+def test_post__created(client: capy.Client, database: capy.Database, fake: capy.Fake, task_type: str,
+                       utc_now: datetime):
+    url = reverse_lazy('assignments:user_me_task')
+
+    model = database.create(user=1, cohort=1, city=1, country=1)
+    client.force_authenticate(model.user)
+
+    data = {
+        'associated_slug': fake.slug(),
+        'title': fake.name(),
+        'task_type': task_type,
+        'cohort': 1,
+    }
+    response = client.post(url, data, format='json')
+
+    json = response.json()
+    del data['cohort']
+
+    expected = [
+        post_serializer(
+            data={
+                'created_at': utc_now.isoformat().replace('+00:00', 'Z'),
+                'updated_at': utc_now.isoformat().replace('+00:00', 'Z'),
+                **data,
+            }),
+    ]
+
+    assert json == expected
+    assert response.status_code == status.HTTP_201_CREATED
+    assert database.list_of('assignments.Task') == [
+        db_item(data),
+    ]

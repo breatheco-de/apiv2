@@ -53,6 +53,9 @@ pep8-naming = "*"
 flake8-bugbear = "*"
 pytest-gevent = "*"
 pytest-asyncio = "*"
+google-apps-meet = "*"
+google-auth-httplib2 = "*"
+google-auth-oauthlib = "*"
 
 [packages]
 django = "*"
@@ -84,7 +87,6 @@ djangorestframework-csv = "*"
 python-slugify = "*"
 pyyaml = "*"
 uritemplate = "*"
-django-sql-explorer = {extras = ["xls"] }
 google-cloud-ndb = "*"
 whitenoise = {extras = ["brotli"] }
 channels = "*"
@@ -137,3 +139,4 @@ aiodns = "*"
 eventlet = "*"
 linked-services = {extras = ["django", "aiohttp", "requests"], version = "*"}
 celery-task-manager = {extras = ["django"], version = "*"}
+django-sql-explorer = {extras = ["xls"], version = "==4.0.2"}

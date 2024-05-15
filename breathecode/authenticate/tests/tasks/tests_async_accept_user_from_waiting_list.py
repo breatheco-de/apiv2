@@ -16,6 +16,9 @@ from ..mixins.new_auth_test_case import AuthTestCase
 @pytest.fixture(autouse=True)
 def setup(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr('breathecode.authenticate.tasks.create_user_from_invite.apply_async', MagicMock())
+    monkeypatch.setattr('breathecode.authenticate.tasks.create_user_from_invite.delay', MagicMock())
+    monkeypatch.setattr('breathecode.authenticate.tasks.async_validate_email_invite.delay', MagicMock())
+
     yield
 
 

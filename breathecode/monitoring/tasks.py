@@ -1,13 +1,17 @@
+import importlib
 import logging
+from typing import Any
 
 from celery import shared_task
 from django.utils import timezone
+from task_manager.core.exceptions import AbortTask, RetryTask
+from task_manager.django.decorators import task
 
 from breathecode.notify.actions import send_email_message, send_slack_raw
 from breathecode.utils import TaskPriority
 
-from .actions import download_csv, run_endpoint_diagnostic, run_script, unsubscribe_repository, subscribe_repository
-from .models import Endpoint, MonitorScript
+from .actions import download_csv, run_endpoint_diagnostic, run_script, subscribe_repository, unsubscribe_repository
+from .models import Endpoint, MonitorScript, Supervisor, SupervisorIssue
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
@@ -132,3 +136,59 @@ def async_unsubscribe_repo(self, subs_id, force_delete):
 def async_subscribe_repo(self, subs_id):
     logger.debug('Async subscribe to repo')
     return subscribe_repository(subs_id) != False
+
+
+@task(priority=TaskPriority.MARKETING.value)
+def run_supervisor(supervisor_id: int, **_: Any):
+    logger.debug(f'Run supervisor {supervisor_id}')
+    supervisor = Supervisor.objects.filter(id=supervisor_id).first()
+    if not supervisor:
+        raise RetryTask(f'Supervisor {supervisor_id} not found')
+
+    try:
+        module = importlib.import_module(supervisor.task_module)
+    except ModuleNotFoundError:
+        raise AbortTask(f'Module {supervisor.task_module} not found')
+
+    try:
+        func = getattr(module, supervisor.task_name)
+    except AttributeError:
+        raise AbortTask(f'Supervisor {supervisor.task_module}.{supervisor.task_name} not found')
+
+    supervisor.ran_at = timezone.now()
+    func()
+    supervisor.save()
+
+
+@task(priority=TaskPriority.MARKETING.value)
+def fix_issue(issue_id: int, **_: Any):
+    logger.debug(f'Fix issue {issue_id}')
+    issue = SupervisorIssue.objects.filter(id=issue_id).first()
+    if not issue:
+        raise RetryTask(f'Issue {issue_id} not found')
+
+    if not issue.code:
+        raise AbortTask(f'Issue {issue_id} has no code')
+
+    supervisor = issue.supervisor
+
+    try:
+        module = importlib.import_module(supervisor.task_module)
+    except ModuleNotFoundError:
+        raise AbortTask(f'Module {supervisor.task_module} not found')
+
+    fn_name = issue.code.replace('-', '_')
+    try:
+        func = getattr(module, fn_name)
+    except AttributeError:
+        raise AbortTask(f'Supervisor {supervisor.task_module}.{fn_name} not found')
+
+    if issue.attempts >= func.attempts:
+        raise AbortTask(f'Supervisor {supervisor.task_module}.{fn_name} has reached max attempts')
+
+    issue.ran_at = timezone.now()
+    issue.attempts += 1
+    res = func(issue.id)
+
+    issue.fixed = res
+    issue.save()

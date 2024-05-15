@@ -8,11 +8,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
-from breathecode.utils.breathecode_exception_handler import breathecode_exception_handler
-from breathecode.utils.payment_exception import PaymentException
-from breathecode.utils.validation_exception import ValidationException
-
-from ..shorteners import C
+from capyc.core.shorteners import C
+from capyc.rest_framework.exception_handler import exception_handler
+from capyc.rest_framework.exceptions import PaymentException, ValidationException
 
 
 def get_status_code():
@@ -88,7 +86,7 @@ def test_payment_exception__no_slug(fake, context, set_env, env, extra):
 
     exc = PaymentException(message, **extra)
 
-    res = breathecode_exception_handler(exc, context)
+    res = exception_handler(exc, context)
 
     expected = {
         'detail': message,
@@ -122,7 +120,7 @@ def test_payment_exception__test_env__use_the_slug(fake, context, set_env, extra
         extra['queryset'] = queryset
 
     exc = PaymentException(message, slug=slug, **extra)
-    res = breathecode_exception_handler(exc, context)
+    res = exception_handler(exc, context)
 
     expected = {
         'detail': slug,
@@ -155,7 +153,7 @@ def test_payment_exception__anything_but_test_env__does_not_use_the_slug(fake, c
     message = fake.sentence()
 
     exc = PaymentException(message, slug=slug, **extra)
-    res = breathecode_exception_handler(exc, context)
+    res = exception_handler(exc, context)
 
     expected = {
         'detail': message,
@@ -177,7 +175,7 @@ def test_payment_exception__anything_but_test_env__silent_code(fake, context, se
     message = fake.sentence()
 
     exc = PaymentException(message, slug=slug, silent=True)
-    res = breathecode_exception_handler(exc, context)
+    res = exception_handler(exc, context)
 
     assert isinstance(res, Response)
     assert res.data == {
@@ -198,7 +196,7 @@ def test_payment_exception__test_env__silent_code(fake, context, set_env):
     message = fake.sentence()
 
     exc = PaymentException(message, slug=slug, silent=True)
-    res = breathecode_exception_handler(exc, context)
+    res = exception_handler(exc, context)
 
     assert isinstance(res, Response)
     assert res.data == {
@@ -229,7 +227,7 @@ def test_payment_exception__test_env__multiple_errors(fake, context, set_env, ge
     ]
 
     exc = PaymentException(errors)
-    res = breathecode_exception_handler(exc, context)
+    res = exception_handler(exc, context)
 
     expected = [
         {
@@ -282,7 +280,7 @@ def test_validation_exception__no_slug(fake, context, set_env, env, extra):
 
     exc = ValidationException(message, code=status_code, **extra)
 
-    res = breathecode_exception_handler(exc, context)
+    res = exception_handler(exc, context)
 
     expected = {
         'detail': message,
@@ -317,7 +315,7 @@ def test_validation_exception__test_env__use_the_slug(fake, context, set_env, ex
         extra['queryset'] = queryset
 
     exc = ValidationException(message, slug=slug, code=status_code, **extra)
-    res = breathecode_exception_handler(exc, context)
+    res = exception_handler(exc, context)
 
     expected = {
         'detail': slug,
@@ -351,7 +349,7 @@ def test_validation_exception__anything_but_test_env__does_not_use_the_slug(fake
     status_code = get_status_code()
 
     exc = ValidationException(message, slug=slug, code=status_code, **extra)
-    res = breathecode_exception_handler(exc, context)
+    res = exception_handler(exc, context)
 
     expected = {
         'detail': message,
@@ -374,7 +372,7 @@ def test_validation_exception__anything_but_test_env__silent_code(fake, context,
     status_code = get_status_code()
 
     exc = ValidationException(message, slug=slug, code=status_code, silent=True)
-    res = breathecode_exception_handler(exc, context)
+    res = exception_handler(exc, context)
 
     assert isinstance(res, Response)
     assert res.data == {
@@ -396,7 +394,7 @@ def test_validation_exception__test_env__silent_code(fake, context, set_env):
     status_code = get_status_code()
 
     exc = ValidationException(message, slug=slug, code=status_code, silent=True)
-    res = breathecode_exception_handler(exc, context)
+    res = exception_handler(exc, context)
 
     assert isinstance(res, Response)
     assert res.data == {
@@ -431,7 +429,7 @@ def test_validation_exception__test_env__any_status_code__multiple_errors(fake, 
     ]
 
     exc = ValidationException(errors, code=status_code)
-    res = breathecode_exception_handler(exc, context)
+    res = exception_handler(exc, context)
 
     expected = [
         {
@@ -491,7 +489,7 @@ def test_validation_exception__test_env__207__multiple_errors(fake, context, set
     ]
 
     exc = ValidationException(errors, code=207)
-    res = breathecode_exception_handler(exc, context)
+    res = exception_handler(exc, context)
 
     expected = [
         {

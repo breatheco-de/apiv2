@@ -7,8 +7,7 @@ from breathecode.mentorship.models import MentorProfile, MentorshipService
 from breathecode.payments.models import Consumable, ConsumptionSession
 from breathecode.utils.decorators import PermissionContextType
 from breathecode.utils.i18n import translation
-from breathecode.utils.payment_exception import PaymentException
-from breathecode.utils.validation_exception import ValidationException
+from capyc.rest_framework.exceptions import PaymentException, ValidationException
 
 logger = logging.getLogger(__name__)
 
@@ -60,8 +59,8 @@ def mentorship_service_by_url_param(context: PermissionContextType, args: tuple,
             context['request'].user, academy=mentor_profile.academy) is False:
         raise PaymentException(
             translation(lang,
-                        en=f'You can\'t access this asset because your finantial status is not up to date',
-                        es=f'No puedes acceder a este recurso porque tu estado financiero no está al dia',
+                        en='You can\'t access this asset because your finantial status is not up to date',
+                        es='No puedes acceder a este recurso porque tu estado financiero no está al dia',
                         slug='cohort-user-status-later'))
 
     context['consumables'] = context['consumables'].filter(

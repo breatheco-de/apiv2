@@ -13,13 +13,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from breathecode.admissions import tasks
-from breathecode.admissions.caches import (
-    CohortCache,
-    CohortUserCache,
-    SyllabusVersionCache,
-    TeacherCache,
-    UserCache,
-)
+from breathecode.admissions.caches import CohortCache, CohortUserCache, SyllabusVersionCache, TeacherCache, UserCache
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.utils import (
@@ -27,12 +21,12 @@ from breathecode.utils import (
     DatetimeInteger,
     GenerateLookupsMixin,
     HeaderLimitOffsetPagination,
-    ValidationException,
     capable_of,
     localize_query,
 )
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import find_asset_on_json, test_syllabus, update_asset_on_json
 from .models import (

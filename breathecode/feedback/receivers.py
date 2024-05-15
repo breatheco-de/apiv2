@@ -1,13 +1,17 @@
 import logging
-from django.dispatch import receiver
 from datetime import timedelta
-from .signals import survey_answered
-from breathecode.admissions.signals import student_edu_status_updated
-from breathecode.mentorship.signals import mentorship_session_status
+from typing import Type
+
+from django.dispatch import receiver
+
 from breathecode.admissions.models import CohortUser
+from breathecode.admissions.signals import student_edu_status_updated
 from breathecode.mentorship.models import MentorshipSession
+from breathecode.mentorship.signals import mentorship_session_status
+
 from .models import Answer
-from .tasks import process_student_graduation, process_answer_received, send_mentorship_session_survey
+from .signals import survey_answered
+from .tasks import process_answer_received, process_student_graduation, send_mentorship_session_survey
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +34,7 @@ def post_save_cohort_user(sender, instance, **kwargs):
 
 
 @receiver(mentorship_session_status, sender=MentorshipSession)
-def post_mentorin_session_ended(sender, instance, **kwargs):
+def post_mentorin_session_ended(sender: Type[MentorshipSession], instance: MentorshipSession, **kwargs):
     if instance.status == 'COMPLETED':
         duration = timedelta(seconds=0)
         if instance.started_at is not None and instance.ended_at is not None:

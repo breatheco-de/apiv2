@@ -1,10 +1,8 @@
 import random
 from unittest.mock import MagicMock, call, patch
 
-import pytest
 from breathecode.tests.mixins.legacy import LegacyAPITestCase
-
-from breathecode.utils.validation_exception import ValidationException
+from capyc.rest_framework.exceptions import ValidationException
 
 
 class TestLead(LegacyAPITestCase):
@@ -17,8 +15,9 @@ class TestLead(LegacyAPITestCase):
     def test_cohort_saved__create__without_educational_status_active(self, enable_signals):
         enable_signals('breathecode.admissions.signals.student_edu_status_updated')
 
-        from breathecode.marketing.tasks import add_cohort_task_to_student
         import logging
+
+        from breathecode.marketing.tasks import add_cohort_task_to_student
 
         educational_status = random.choice(['POSTPONED', 'SUSPENDED', 'GRADUATED', 'DROPPED'])
         cohort_user = {
@@ -52,8 +51,9 @@ class TestLead(LegacyAPITestCase):
     def test_cohort_saved__create__with_educational_status_active(self, enable_signals):
         enable_signals('breathecode.admissions.signals.student_edu_status_updated')
 
-        from breathecode.marketing.tasks import add_cohort_task_to_student
         import logging
+
+        from breathecode.marketing.tasks import add_cohort_task_to_student
 
         cohort_user_kwargs = {'educational_status': 'ACTIVE'}
         model = self.generate_models(cohort_user=True, cohort_user_kwargs=cohort_user_kwargs)

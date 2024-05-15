@@ -2,8 +2,8 @@ import pytest
 from django.urls import reverse_lazy
 from rest_framework import status
 
-from bc.rest_framework.pytest import fixtures as rfx
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
+from capyc.rest_framework.pytest import fixtures as rfx
 
 
 @pytest.fixture(autouse=True)

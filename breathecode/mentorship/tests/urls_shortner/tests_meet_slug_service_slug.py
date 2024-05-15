@@ -15,12 +15,12 @@ from django.urls.base import reverse_lazy
 from django.utils import timezone
 from rest_framework import status
 
-from bc.rest_framework.pytest import fixtures as fx
 from breathecode.mentorship.exceptions import ExtendSessionException
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.payments import tasks
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 from breathecode.tests.mocks.requests import apply_requests_request_mock
+from capyc.rest_framework.pytest import fixtures as fx
 
 from ..mixins import MentorshipTestCase
 
@@ -62,6 +62,7 @@ def format_consumption_session(mentorship_service, mentor_profile, mentorship_se
         'eta': ...,
         'how_many': 1.0,
         'id': 0,
+        'operation_code': 'default',
         'path': 'payments.MentorshipServiceSet',
         'related_id': mentorship_service_set.id,
         'related_slug': mentorship_service_set.slug,

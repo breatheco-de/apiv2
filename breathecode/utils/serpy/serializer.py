@@ -1,11 +1,12 @@
 import serpy
-
-from breathecode.utils.validation_exception import ValidationException
-from .field import Field
-from .method_field import MethodField
-from .datetime_integer_field import DatetimeIntegerField
-from .many_to_many_field import ManyToManyField
 from django.db.models import QuerySet
+
+from capyc.rest_framework.exceptions import ValidationException
+
+from .datetime_integer_field import DatetimeIntegerField
+from .field import Field
+from .many_to_many_field import ManyToManyField
+from .method_field import MethodField
 
 __all__ = ['Serializer']
 

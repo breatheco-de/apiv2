@@ -1,24 +1,22 @@
 """
 Tasks tests
 """
-import re
-from unittest.mock import MagicMock, call, patch
 import hashlib
+from unittest.mock import MagicMock, call, patch
 
 import pytest
-from breathecode.tests.mixins.legacy import LegacyAPITestCase
-from breathecode.utils import APIException
 from django.utils import timezone
 
-from breathecode.utils.validation_exception import ValidationException
-from ...actions import generate_certificate, strings
 import breathecode.certificate.signals as signals
-from ..mixins import CertificateTestCase
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
+from capyc.rest_framework.exceptions import ValidationException
+
+from ...actions import generate_certificate, strings
 from ..mocks import (
     GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
+    apply_google_cloud_bucket_mock,
+    apply_google_cloud_client_mock,
 )
 
 

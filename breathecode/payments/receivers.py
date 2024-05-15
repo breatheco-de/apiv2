@@ -80,7 +80,7 @@ def grant_service_permissions_receiver(sender: Type[Consumable], instance: Consu
 
 
 @receiver(mentorship_session_status, sender=MentorshipSession)
-def post_mentoring_session_ended(sender, instance, **kwargs):
+def post_mentoring_session_ended(sender: Type[MentorshipSession], instance: MentorshipSession, **kwargs):
     if instance.mentee and instance.service and instance.status in ['FAILED', 'IGNORED']:
         tasks.refund_mentoring_session.delay(instance.id)
 

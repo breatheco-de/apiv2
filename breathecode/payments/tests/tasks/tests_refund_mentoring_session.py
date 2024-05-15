@@ -8,8 +8,8 @@ from unittest.mock import MagicMock, call
 import pytest
 from django.utils import timezone
 
-from bc.django.pytest.fixtures import QuerySet
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
+from capyc.django.pytest.fixtures import QuerySet
 
 from ...tasks import refund_mentoring_session
 

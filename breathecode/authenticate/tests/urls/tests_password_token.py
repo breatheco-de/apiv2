@@ -1,18 +1,21 @@
 """
 Test cases for /academy/:id/member/:id
 """
+import os
 import random
 import string
 from random import randint
 from unittest.mock import MagicMock, patch
+
+from django.core.handlers.wsgi import WSGIRequest
+from django.http import QueryDict
 from django.template import loader
+from django.test.client import FakePayload
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from django.http import QueryDict
-from django.core.handlers.wsgi import WSGIRequest
-from django.test.client import FakePayload
 
 from breathecode.authenticate.forms import PickPasswordForm
+
 from ..mixins.new_auth_test_case import AuthTestCase
 
 
@@ -31,15 +34,15 @@ class Message(str):
         return super().__new__(cls, *args, **kwargs)
 
 
-def render(message):
+def render(message, button=None, button_target='_blank', link=None):
     request = None
     return loader.render_to_string(
         'message.html',
         {
             'MESSAGE': message,
-            'BUTTON': None,
-            'BUTTON_TARGET': '_blank',
-            'LINK': None
+            'BUTTON': button,
+            'BUTTON_TARGET': button_target,
+            'LINK': link
         },
         request,
         using=None,
@@ -377,7 +380,10 @@ class AuthenticateTestSuite(AuthTestCase):
             response = self.client.post(url, data)
 
             content = self.bc.format.from_bytes(response.content)
-            expected = render('You password has been reset successfully, you can close this window.')
+            expected = render('You password has been successfully set.',
+                              button='Continue to sign in',
+                              button_target='_self',
+                              link=os.getenv('APP_URL', 'https://4geeks.com') + '/login')
 
             # dump error in external files
             if content != expected:
@@ -387,7 +393,7 @@ class AuthenticateTestSuite(AuthTestCase):
                 with open('expected.html', 'w') as f:
                     f.write(expected)
 
-            self.assertEqual(content, expected)
+            assert content == expected
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(self.bc.database.list_of('auth.User'), [
                 {

@@ -8,10 +8,10 @@ from django.template import loader
 from django.urls.base import reverse_lazy
 from django.utils import timezone
 
-from bc.rest_framework.pytest import fixtures as fx
 from breathecode.events.caches import EventCache
 from breathecode.payments import tasks
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
+from capyc.rest_framework.pytest import fixtures as fx
 
 from ..mixins.new_events_tests_case import EventTestCase
 
@@ -27,6 +27,7 @@ def consumption_session(event, event_type_set, user, consumable, data={}):
     return {
         'consumable_id': consumable.id,
         'duration': timedelta(),
+        'operation_code': 'default',
         'eta': ...,
         'how_many': 1.0,
         'id': 0,

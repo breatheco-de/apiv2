@@ -836,6 +836,11 @@ class CourseTranslation(models.Model):
         blank=True,
         null=True,
         help_text='The course modules should be a list of objects of each of the modules taught')
+    landing_variables = models.JSONField(
+        default=None,
+        blank=True,
+        null=True,
+        help_text='Different variables that can be used for marketing purposes in the landing page.')
 
     def __str__(self) -> str:
         return f'{self.lang}: {self.title}'

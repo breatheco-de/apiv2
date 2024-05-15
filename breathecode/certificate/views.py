@@ -9,10 +9,11 @@ from rest_framework.views import APIView
 
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import ProfileAcademy
-from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, ValidationException, capable_of
+from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
+from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import generate_certificate
 from .models import Badge, LayoutDesign, Specialty, UserSpecialty

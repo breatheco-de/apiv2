@@ -1,14 +1,22 @@
+from django.utils import timezone
+from rest_framework import serializers, status
 from slugify import slugify
 
-from .models import (Asset, AssetAlias, AssetComment, AssetKeyword, AssetTechnology, KeywordCluster, AssetCategory,
-                     ContentVariable)
-from django.utils import timezone
-from breathecode.authenticate.models import ProfileAcademy
 from breathecode.admissions.models import Academy
-from rest_framework import serializers
-from rest_framework import status
-from breathecode.utils.validation_exception import ValidationException
+from breathecode.authenticate.models import ProfileAcademy
 from breathecode.utils import serpy
+from capyc.rest_framework.exceptions import ValidationException
+
+from .models import (
+    Asset,
+    AssetAlias,
+    AssetCategory,
+    AssetComment,
+    AssetKeyword,
+    AssetTechnology,
+    ContentVariable,
+    KeywordCluster,
+)
 
 
 class ProfileSerializer(serpy.Serializer):

@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from breathecode.events.caches import EventCache
 from breathecode.payments import tasks
+from breathecode.events import tasks as tasks_events
 
 from ..mixins.new_events_tests_case import EventTestCase
 
@@ -24,6 +25,7 @@ def consumption_session(live_class, cohort_set, user, consumable, data={}):
     return {
         'consumable_id': consumable.id,
         'duration': timedelta(),
+        'operation_code': 'default',
         'eta': ...,
         'how_many': 1.0,
         'id': 0,
@@ -611,4 +613,130 @@ class AcademyEventTestSuite(EventTestCase):
 
         self.bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [
             call(args=(1, 1), eta=UTC_NOW + delta),
+        ])
+
+    # Given: with Consumable, LiveClass, User have Group and Permission
+    # When: Feature flag set to True and class start and end in the future
+    # Then: return 200 and create a ConsumptionSession
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes', MagicMock(return_value=True))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
+    @patch('breathecode.events.tasks.mark_live_class_as_started.delay', MagicMock(return_value=None))
+    def test_with_consumable__it_try_to_consume__with_live_class__on_starting_time(self):
+
+        permission = {'codename': 'live_class_join'}
+        online_meeting_url = self.bc.fake.url()
+        cohort = {'online_meeting_url': online_meeting_url, 'available_as_saas': True}
+        delta = timedelta(seconds=random.randint(1, 1000))
+        delta = timedelta(minutes=30)
+        live_class = {'starting_at': UTC_NOW - delta, 'ending_at': UTC_NOW + delta}
+        academy = {'available_as_saas': True}
+        model = self.bc.database.create(user=1,
+                                        group=1,
+                                        permission=permission,
+                                        live_class=live_class,
+                                        cohort_user=1,
+                                        cohort=cohort,
+                                        cohort_set=1,
+                                        cohort_set_cohort=1,
+                                        consumable=1,
+                                        token=1,
+                                        academy=academy)
+        querystring = self.bc.format.to_querystring({'token': model.token.key})
+
+        url = reverse_lazy('events:me_event_liveclass_join_hash', kwargs={'hash': model.live_class.hash
+                                                                          }) + f'?{querystring}'
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 302)
+
+        self.assertEqual(self.bc.database.list_of('events.LiveClass'), [
+            self.bc.format.to_dict(model.live_class),
+        ])
+        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
+            self.bc.format.to_dict(model.consumable),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
+            consumption_session(model.live_class,
+                                model.cohort_set,
+                                model.user,
+                                model.consumable,
+                                data={
+                                    'id': 1,
+                                    'duration': delta,
+                                    'eta': UTC_NOW + delta,
+                                }),
+        ])
+
+        self.bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [
+            call(args=(1, 1), eta=UTC_NOW + delta),
+        ])
+        self.bc.check.calls(tasks_events.mark_live_class_as_started.delay.call_args_list, [])
+
+    # Given: with Consumable, LiveClass, User have Group and Permission
+    # When: Feature flag set to True and class start and end in the future
+    # Then: return a redirection status 302
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes', MagicMock(return_value=True))
+    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
+    @patch('breathecode.events.tasks.mark_live_class_as_started.delay', MagicMock(return_value=None))
+    def test_with_consumable__it_try_to_consume__with_live_class__on_starting_time_is_teacher(self):
+
+        permission = {'codename': 'live_class_join'}
+        online_meeting_url = self.bc.fake.url()
+        cohort = {'online_meeting_url': online_meeting_url, 'available_as_saas': True}
+        delta = timedelta(seconds=random.randint(1, 1000))
+        delta = timedelta(minutes=30)
+        live_class = {'starting_at': UTC_NOW - delta, 'ending_at': UTC_NOW + delta}
+        academy = {'available_as_saas': True}
+        model = self.bc.database.create(user=1,
+                                        group=1,
+                                        permission=permission,
+                                        live_class=live_class,
+                                        cohort_user={'role': 'TEACHER'},
+                                        cohort=cohort,
+                                        cohort_set=1,
+                                        cohort_set_cohort=1,
+                                        consumable=1,
+                                        token=1,
+                                        academy=academy)
+        querystring = self.bc.format.to_querystring({'token': model.token.key})
+
+        url = reverse_lazy('events:me_event_liveclass_join_hash', kwargs={'hash': model.live_class.hash
+                                                                          }) + f'?{querystring}'
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 302)
+
+        self.assertEqual(self.bc.database.list_of('events.LiveClass'), [
+            self.bc.format.to_dict(model.live_class),
+        ])
+        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [
+            self.bc.format.to_dict(model.consumable),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
+            consumption_session(model.live_class,
+                                model.cohort_set,
+                                model.user,
+                                model.consumable,
+                                data={
+                                    'id': 1,
+                                    'duration': delta,
+                                    'eta': UTC_NOW + delta,
+                                }),
+        ])
+
+        self.bc.check.calls(tasks.end_the_consumption_session.apply_async.call_args_list, [
+            call(args=(1, 1), eta=UTC_NOW + delta),
+        ])
+        self.bc.check.calls(tasks_events.mark_live_class_as_started.delay.call_args_list, [
+            call(model.live_class.id),
         ])

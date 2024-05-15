@@ -3,13 +3,12 @@ import logging
 from django.db.models import Q
 
 from breathecode.admissions.actions import is_no_saas_student_up_to_date_in_any_cohort
-from breathecode.admissions.models import Academy, Cohort, CohortUser
+from breathecode.admissions.models import Academy, CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.registry.models import Asset
 from breathecode.utils.decorators import PermissionContextType
 from breathecode.utils.i18n import translation
-from breathecode.utils.payment_exception import PaymentException
-from breathecode.utils.validation_exception import ValidationException
+from capyc.rest_framework.exceptions import PaymentException, ValidationException
 
 logger = logging.getLogger(__name__)
 
@@ -57,8 +56,8 @@ def asset_by_slug(context: PermissionContextType, args: tuple, kwargs: dict) -> 
                                                                                         academy=academy) is False:
         raise PaymentException(
             translation(lang,
-                        en=f'You can\'t access this asset because your finantial status is not up to date',
-                        es=f'No puedes acceder a este recurso porque tu estado financiero no está al dia',
+                        en='You can\'t access this asset because your finantial status is not up to date',
+                        es='No puedes acceder a este recurso porque tu estado financiero no está al dia',
                         slug='cohort-user-status-later'))
 
     return (context, args, kwargs)

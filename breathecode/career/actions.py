@@ -1,9 +1,12 @@
-import requests
 import logging
-from .models import Job, Employer, Position, PositionAlias, ZyteProject
-from breathecode.utils import ValidationException
+
+import requests
 from django.utils import timezone
+
 from breathecode.career.services import scraper_factory
+from capyc.rest_framework.exceptions import ValidationException
+
+from .models import Employer, Job, Position, PositionAlias, ZyteProject
 
 logger = logging.getLogger(__name__)
 

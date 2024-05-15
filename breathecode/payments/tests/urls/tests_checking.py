@@ -140,6 +140,8 @@ def get_serializer(bag,
                    coupons=[],
                    data={}):
     return {
+        'id':
+        bag.id,
         'amount_per_month':
         bag.amount_per_month,
         'amount_per_quarter':

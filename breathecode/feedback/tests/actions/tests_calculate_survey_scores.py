@@ -2,16 +2,13 @@
 Test /academy/survey
 """
 import random
-from unittest.mock import patch, MagicMock, call
-from django.urls.base import reverse_lazy
-from rest_framework import status
-from breathecode.feedback.actions import calculate_survey_scores
+from unittest.mock import MagicMock, patch
 
-from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
-from breathecode.utils.validation_exception import ValidationException
-from ..mixins import FeedbackTestCase
+from breathecode.feedback.actions import calculate_survey_scores
+from capyc.rest_framework.exceptions import ValidationException
+
 from ...utils import strings
-from ...caches import AnswerCache
+from ..mixins import FeedbackTestCase
 
 calculate_survey_scores
 
