@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet"
+        crossorigin="anonymous">
+    <style>
+        p {
+            margin: 6px 0 16px 0;
+        }
+
+        .buttons {
+            margin-top: 16px;
+        }
+
+        .question {
+            display: inline;
+            font-size: 16px;
+        }
+
+        .answer {
+            display: inline;
+            /* font-size: 16px; */
+            white-space: pre-line;
+        }
+
+        .question-title {
+            margin-top: 10px;
+            font-size: 24px;
+        }
+
+        .title {
+            font-size: 20px;
+        }
+
+        .main-title {
+            font-size: 34px;
+        }
+
+        .disable-shadow:focus {
+            box-shadow: inset 0 calc(-1 * var(--bs-accordion-border-width)) 0 var(--bs-accordion-border-color);
+        }
+
+        .disable-shadow.collapsed:focus {
+            box-shadow: inset 0 0 0 var(--bs-accordion-border-color);
+        }
+
+        .container-sm {
+            max-width: 540px;
+            padding-top: 50px;
+        }
+
+        .accordion-button:focus {
+            outline: none;
+        }
+
+        .accordion-button:not(.collapsed) {
+            color: var(--bs-accordion-btn-color);
+            background-color: var(--bs-accordion-btn-bg);
+
+        }
+
+        .text-justify {
+            text-align: justify;
+        }
+
+        .limit {
+            max-width: 516px;
+            text-overflow: ellipsis;
+            white-space: normal;
+        }
+    </style>
+
+</html>
+
+<body>
+    <div class="container-sm">
+        <div class="text-center">
+            <h1 class="badge bg-secondary limit main-title">
+                {{ title }}
+            </h1>
+        </div>
+
+        <p>{{ description }}</p>
+
+        <h2 class="title">{{ translations.organizers }}</h2>
+
+        <ul>
+            {% for organizer in organizers %}
+            <li>
+                {{ organizer.name }}
+                {% if 'email' in organizer %}
+                - <a href="mailto:{{ organizer.email }}">{{ organizer.email }}</a>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+
+        <h2 class="title">{{ translations.invitees }}</h2>
+
+        <ul>
+            {% for invitee in invitees %}
+            <li>
+                {{ invitee.name }}
+                {% if 'email' in invitee %}
+                - <a href="mailto:{{ invitee.email }}">{{ invitee.email }}</a>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+
+        <h2 class="title">{{ translations.details }}</h2>
+
+        <ul>
+            {% if 'preformatted_date' in meet %}
+            <li id="date">{{ translations.date }}: {{ meet.preformatted_date }}</li>
+            {% elif 'date' in meet %}
+            <li id="date">{{ translations.date }}: {{ meet.date }}</li>
+            {% endif %}
+            {% if 'duration' in meet %}
+            <li>{{ translations.duration }}: {{ meet.duration }}</li>
+            {% endif %}
+            {% if 'url' in meet %}
+            <li>{{ translations.location }}: <a href="{{ meet.url }}">{{ meet.url }}</a></li>
+            {% endif %}
+        </ul>
+
+        {% if 'cancellation_url' in meet or 'url' in meet %}
+        <div class="gap-2 d-md-flex buttons">
+            {% if 'cancellation_url' in meet and 'url' in meet %}
+            <a type="button" href="{{ meet.url }}" class="btn btn-primary offset-2 col-4">{{ translations.enter }}</a>
+            <a type="button" href="{{ meet.cancellation_url }}" class="btn btn-danger col-4">
+                {{ translations.cancel }}</a>
+            {% elif 'url' in meet %}
+            <a type="button" href="{{ meet.url }}" class="btn btn-primary offset-4 col-4">{{ translations.enter }}</a>
+            {% elif 'cancellation_url' in meet %}
+            <a type="button" href="{{ meet.cancellation_url }}" class="btn btn-danger offset-4 col-4">
+                {{ translations.cancel }}</a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <hr />
+
+        {% if answers %}
+        <h2 class="text-center question-title">{{ translations.qaa }}</h2>
+
+        <ul>
+            {% for form in answers %}
+            <li>
+                <strong>{{ form.question }}</strong>:
+                <pre class="answer">{{ form.answer }}</pre>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+
+    <script>
+        function localizeIsoString(isoString) {
+            const localized = new Date(isoString).toLocaleString()
+            return localized.replace('a. m.', 'AM').replace('p. m.', 'PM')
+        }
+
+        let timeElapsed = 0
+        let minInterval = 20
+        let interval = setInterval(() => {
+            timeElapsed += minInterval
+            el = document.getElementById('date')
+            if (el) {
+                clearInterval(interval)
+                el.innerText = '{{ translations.date }}: ' + localizeIsoString('{{ meet.date }}')
+            } else if (timeElapsed >= 5000) {
+                clearInterval(interval)
+            }
+        }, 1000)
+    </script>
+</body>

@@ -12,73 +12,127 @@ from breathecode.admissions.models import Academy, Syllabus
 from breathecode.notify.models import SlackChannel
 from breathecode.utils.validators.language import validate_language_code
 
-# settings customizable for each academy
-# class AcademySettings(models.Model):
-#     is_video_streaming_active = models.BooleanField(default=False)
-#     academy = models.OneToOneField(Academy, on_delete=models.CASCADE)
-#     @staticmethod
-#     def get(pk):
-#       settings = AcademySettings.objects.filter(academy__id=pk).first()
-#       # lets create the settings if they dont exist for this academy
-#       if settings is None:
-#           settings = AcademySettings.objects.create(academy=pk)
-#       return settings
-#     def warnings(self):
-#       # return a dictionary with a list of the fields and warning messages related to them
-#       # for example: { "is_video_streaming_active": "Please settup a video streaming" }
-#       return {}
-#     def errors(self):
-#       # return a dictionary with a list of the fields and errors messages related to them
-#       return {}
 
-DRAFT = 'DRAFT'
-ACTIVE = 'ACTIVE'
-UNLISTED = 'UNLISTED'
-INNACTIVE = 'INNACTIVE'
-MENTORSHIP_STATUS = (
-    (DRAFT, 'Draft'),
-    (ACTIVE, 'Active'),
-    (UNLISTED, 'Unlisted'),
-    (INNACTIVE, 'Innactive'),
-)
+class VideoProvider(models.TextChoices):
+    DAILY = ('DAILY', 'Daily')
+    GOOGLE_MEET = ('GOOGLE_MEET', 'Google Meet')
 
 
-class MentorshipService(models.Model):
-    slug = models.SlugField(max_length=150, unique=True)
-    name = models.CharField(max_length=150)
-    logo_url = models.CharField(max_length=150, default=None, blank=True, null=True)
-    description = models.TextField(max_length=500, default=None, blank=True, null=True)
+MENTORSHIP_SETTINGS = {
+    'duration': timedelta(hours=1),
+    'max_duration': timedelta(hours=2),
+    'missed_meeting_duration': timedelta(minutes=10),
+    'language': 'en',
+    'allow_mentee_to_extend': True,
+    'allow_mentors_to_extend': True,
+}
 
-    duration = models.DurationField(default=timedelta(hours=1),
+
+class AcademyMentorshipSettings(models.Model):
+    VideoProvider = VideoProvider
+
+    academy = models.OneToOneField(Academy, on_delete=models.CASCADE)
+    duration = models.DurationField(default=MENTORSHIP_SETTINGS['duration'],
                                     help_text='Default duration for mentorship sessions of this service')
 
     max_duration = models.DurationField(
-        default=timedelta(hours=2),
+        default=MENTORSHIP_SETTINGS['max_duration'],
         help_text='Maximum allowed duration or extra time, make it 0 for unlimited meetings')
 
     missed_meeting_duration = models.DurationField(
-        default=timedelta(minutes=10),
+        default=MENTORSHIP_SETTINGS['missed_meeting_duration'],
         help_text='Duration that will be paid when the mentee doesn\'t come to the session')
 
-    status = models.CharField(max_length=15, choices=MENTORSHIP_STATUS, default=DRAFT)
-
     language = models.CharField(max_length=5,
-                                default='en',
+                                default=MENTORSHIP_SETTINGS['language'],
                                 validators=[validate_language_code],
                                 help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US')
 
-    allow_mentee_to_extend = models.BooleanField(default=True,
+    allow_mentee_to_extend = models.BooleanField(default=MENTORSHIP_SETTINGS['allow_mentee_to_extend'],
                                                  help_text='If true, mentees will be able to extend mentorship session')
     allow_mentors_to_extend = models.BooleanField(
-        default=True, help_text='If true, mentors will be able to extend mentorship session')
+        default=MENTORSHIP_SETTINGS['allow_mentors_to_extend'],
+        help_text='If true, mentors will be able to extend mentorship session')
 
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    video_provider = models.CharField(max_length=15, choices=VideoProvider, default=VideoProvider.GOOGLE_MEET)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.name} ({self.id})'
+        return self.academy.name
+
+    def clean(self) -> None:
+        return super().clean()
+
+    def save(self, **kwargs) -> None:
+        return super().save(**kwargs)
+
+
+class MentorshipService(models.Model):
+    VideoProvider = VideoProvider
+
+    class Status(models.TextChoices):
+        DRAFT = ('DRAFT', 'Draft')
+        ACTIVE = ('ACTIVE', 'Active')
+        UNLISTED = ('UNLISTED', 'Unlisted')
+        INNACTIVE = ('INNACTIVE', 'Innactive')
+
+    slug = models.SlugField(max_length=150, unique=True)
+    name = models.CharField(max_length=150)
+    logo_url = models.CharField(max_length=150, default=None, blank=True, null=True)
+    description = models.TextField(max_length=500, default=None, blank=True, null=True)
+
+    duration = models.DurationField(blank=True, help_text='Default duration for mentorship sessions of this service')
+
+    max_duration = models.DurationField(
+        blank=True, help_text='Maximum allowed duration or extra time, make it 0 for unlimited meetings')
+
+    missed_meeting_duration = models.DurationField(
+        blank=True, help_text='Duration that will be paid when the mentee doesn\'t come to the session')
+
+    status = models.CharField(max_length=15, choices=Status, default=Status.DRAFT)
+
+    language = models.CharField(max_length=5,
+                                blank=True,
+                                validators=[validate_language_code],
+                                help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US')
+
+    allow_mentee_to_extend = models.BooleanField(blank=True,
+                                                 help_text='If true, mentees will be able to extend mentorship session')
+    allow_mentors_to_extend = models.BooleanField(
+        blank=True, help_text='If true, mentors will be able to extend mentorship session')
+
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    video_provider = models.CharField(max_length=15, choices=VideoProvider, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.name} ({self.slug})'
+
+    def clean(self) -> None:
+        fetched = False
+        academy_settings = None
+        for field, value in MENTORSHIP_SETTINGS.items():
+            current = getattr(self, field)
+            if current is None:
+                if fetched is False:
+                    fetched = True
+                    academy_settings = AcademyMentorshipSettings.objects.filter(academy=self.academy).first()
+
+                if academy_settings:
+                    academy_value = getattr(academy_settings, field)
+                    setattr(self, field, academy_value)
+
+                else:
+                    setattr(self, field, value)
+
+        return super().clean()
+
+    def save(self, **kwargs) -> None:
+        return super().save(**kwargs)
 
 
 class SupportChannel(models.Model):
@@ -91,13 +145,11 @@ class SupportChannel(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
 
-INVITED = 'INVITED'
-MENTOR_STATUS = (
-    (INVITED, 'Invited'),
-    (ACTIVE, 'Active'),
-    (UNLISTED, 'Unlisted'),
-    (INNACTIVE, 'Innactive'),
-)
+class MentorStatus(models.TextChoices):
+    INVITED = ('INVITED', 'Invited')
+    ACTIVE = ('ACTIVE', 'Active')
+    UNLISTED = ('UNLISTED', 'Unlisted')
+    INNACTIVE = ('INNACTIVE', 'Innactive')
 
 
 class SupportAgent(models.Model):
@@ -109,9 +161,9 @@ class SupportAgent(models.Model):
                              unique=True,
                              help_text='Used for inviting the user to become a support agent')
     status = models.CharField(max_length=15,
-                              choices=MENTOR_STATUS,
-                              default=INVITED,
-                              help_text=f'Options are: {", ".join([key for key,label in MENTOR_STATUS])}')
+                              choices=MentorStatus,
+                              default=MentorStatus.INVITED,
+                              help_text=f'Options are: {", ".join([key for key,label in MentorStatus.choices])}')
 
     email = models.CharField(blank=True,
                              max_length=150,
@@ -176,9 +228,9 @@ class MentorProfile(models.Model):
                                       help_text='What syllabis is this mentor going to be menting to?')
 
     status = models.CharField(max_length=15,
-                              choices=MENTOR_STATUS,
-                              default=INVITED,
-                              help_text=f'Options are: {", ".join([key for key,label in MENTOR_STATUS])}')
+                              choices=MentorStatus,
+                              default=MentorStatus.INVITED,
+                              help_text=f'Options are: {", ".join([key for key,label in MentorStatus.choices])}')
 
     email = models.CharField(blank=True,
                              max_length=150,

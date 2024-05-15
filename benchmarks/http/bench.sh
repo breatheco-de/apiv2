@@ -5,12 +5,12 @@ echo "Async..."
 
 echo "Async" > $file
 echo "" >> $file
-python async.py >> $file
+PYTHON_GIL=0 python async.py -Xgil=0 >> $file
 echo "" >> $file
 
 echo "Sync..."
 
 echo "Sync" >> $file
-python sync.py >> $file
+PYTHON_GIL=0 python sync.py -Xgil=0 >> $file
 
 echo "Done"

@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import random
 import re
+from copy import copy
 from typing import Any, Generator, final
 
 import pytest
@@ -351,6 +352,12 @@ class Database:
         app_map, model_map, name_map, model_alias_map = cls._build_descriptors()
 
         pending = {}
+
+        keys = [*models.keys()]
+
+        for key in keys:
+            if models[key] is None or models[key] == 0:
+                del models[key]
 
         # get descriptors
         for model_alias, _value in models.items():

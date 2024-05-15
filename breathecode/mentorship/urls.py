@@ -1,7 +1,21 @@
 from django.urls import path
-from .views import (ServiceView, MentorView, SessionView, render_html_bill, BillView, ServiceSessionView,
-                    MentorSessionView, UserMeSessionView, UserMeBillView, PublicMentorView, AgentView,
-                    SupportChannelView, calendly_webhook, AcademyCalendlyOrgView)
+
+from .views import (
+    AcademyCalendlyOrgView,
+    AgentView,
+    BillView,
+    MentorSessionView,
+    MentorView,
+    PublicMentorView,
+    ServiceSessionView,
+    ServiceView,
+    SessionView,
+    SupportChannelView,
+    UserMeBillView,
+    UserMeSessionView,
+    calendly_webhook,
+    render_html_bill,
+)
 
 app_name = 'mentorship'
 urlpatterns = [
@@ -26,6 +40,6 @@ urlpatterns = [
     path('public/mentor', PublicMentorView.as_view(), name='public_mentor'),
 
     # hash belongs to the calendly organization
-    path('calendly/webhook/<str:org_hash>', calendly_webhook, name='calendly_webhook_id'),
+    path('calendly/webhook/<str:org_hash>', calendly_webhook, name='calendly_webhook_hash'),
     path('academy/calendly/organization', AcademyCalendlyOrgView.as_view(), name='academy_calendly_organization'),
 ]

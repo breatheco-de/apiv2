@@ -1,6 +1,8 @@
 import logging
 from urllib.parse import urlparse
 
+from breathecode.mentorship.models import MentorshipService
+
 logger = logging.getLogger(__name__)
 
 
@@ -14,6 +16,10 @@ def invitee_canceled(self, webhook, payload: dict):
     session = MentorshipSession.objects.filter(calendly_uuid=event_uuid).first()
     if session is None:
         raise Exception(f'Mentoring session with calendly_uuid {event_uuid} not found while trying to cancel it')
-    session.Summary = f'Session was canceled by {cancellation_email} and it was notified by calendly'
+
+    session.summary = f'Session was canceled by {cancellation_email} and it was notified by calendly'
     session.status = 'CANCELED'
     session.save()
+
+    if session.service and session.service.video_provider == MentorshipService.VideoProvider.GOOGLE_MEET:
+        cancellate_conference_on_google_meet.delay(session.id)

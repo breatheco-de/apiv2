@@ -589,9 +589,21 @@ class ForwardMeetUrl:
 
 @private_view()
 @has_permission('join_mentorship', consumer=mentorship_service_by_url_param, format='html')
-def forward_meet_url(request, mentor_profile, mentorship_service, token):
+def daily_forward_meet_url(request, mentor_profile, mentorship_service, token):
     handler = ForwardMeetUrl(request, mentor_profile, mentorship_service, token)
     return handler()
+
+
+@private_view()
+@has_permission('join_mentorship', consumer=mentorship_service_by_url_param, format='html')
+def meet_forward_meet_url(request, mentor_profile, mentorship_service, token):
+    handler = ForwardMeetUrl(request, mentor_profile, mentorship_service, token)
+    return handler()
+
+
+@private_view()
+def cancel_mentoring_session(request, session_id, token):
+    ...
 
 
 #FIXME: create a endpoint to consume the service, split the function in two
