@@ -485,7 +485,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 'currency_id': 1,
                 'id': n + 1,
                 'multiplier': csv['Multiplier'][n],
-                'price_per_unit': csv['Price Per Unit ($)'][n],
+                'price_per_unit': csv['Price Per Unit ($)'][n] * 1.3,
                 'unit_type': csv['Unit Type'][n],
             }) for n in range(10)
         ])
@@ -610,7 +610,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 'currency_id': 1,
                 'id': n + 1,
                 'multiplier': csv['Multiplier'][n],
-                'price_per_unit': csv['Price Per Unit ($)'][n],
+                'price_per_unit': csv['Price Per Unit ($)'][n] * 1.3,
                 'unit_type': csv['Unit Type'][n],
             }) for n in range(10)
         ])
@@ -760,7 +760,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 'currency_id': 1,
                 'id': n + 1,
                 'multiplier': csv['Multiplier'][n],
-                'price_per_unit': csv['Price Per Unit ($)'][n],
+                'price_per_unit': csv['Price Per Unit ($)'][n] * 1.3,
                 'unit_type': csv['Unit Type'][n],
             }) for n in range(10)
         ])
@@ -902,7 +902,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 'currency_id': 1,
                 'id': n + 1,
                 'multiplier': csv['Multiplier'][n],
-                'price_per_unit': csv['Price Per Unit ($)'][n],
+                'price_per_unit': csv['Price Per Unit ($)'][n] * 1.3,
                 'unit_type': csv['Unit Type'][n],
             }) for n in range(10)
         ])
@@ -1014,7 +1014,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 'currency_id': 1,
                 'id': n + 1,
                 'multiplier': csv['Multiplier'][n],
-                'price_per_unit': csv['Price Per Unit ($)'][n],
+                'price_per_unit': csv['Price Per Unit ($)'][n] * 1.3,
                 'unit_type': csv['Unit Type'][n],
             }) for n in range(10)
         ])
@@ -1131,7 +1131,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 'currency_id': 1,
                 'id': n + 1,
                 'multiplier': csv['Multiplier'][n],
-                'price_per_unit': csv['Price Per Unit ($)'][n],
+                'price_per_unit': csv['Price Per Unit ($)'][n] * 1.3,
                 'unit_type': csv['Unit Type'][n],
             }) for n in range(10)
         ])
@@ -1240,7 +1240,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 'currency_id': 1,
                 'id': n + 1,
                 'multiplier': csv['Multiplier'][n],
-                'price_per_unit': csv['Price Per Unit ($)'][n],
+                'price_per_unit': csv['Price Per Unit ($)'][n] * 1.3,
                 'unit_type': csv['Unit Type'][n],
             }) for n in range(10)
         ])
@@ -1334,7 +1334,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                 'currency_id': 1,
                 'id': 1,
                 'multiplier': 1.0,
-                'price_per_unit': 0.036,
+                'price_per_unit': 0.036 * 1.3,
                 'unit_type': 'Credits',
             })
         ])
@@ -1441,7 +1441,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                 'currency_id': 1,
                 'id': 1,
                 'multiplier': 1.0,
-                'price_per_unit': 0.036,
+                'price_per_unit': 0.036 * 1.3,
                 'unit_type': 'Credits',
             })
         ])
@@ -1543,7 +1543,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                 'currency_id': 1,
                 'id': 1,
                 'multiplier': 1.0,
-                'price_per_unit': 0.036,
+                'price_per_unit': 0.036 * 1.3,
                 'unit_type': 'Credits',
             })
         ])
@@ -1653,7 +1653,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                 'currency_id': 1,
                 'id': 1,
                 'multiplier': 1.0,
-                'price_per_unit': 0.036,
+                'price_per_unit': 0.036 * 1.3,
                 'unit_type': 'Credits',
             })
         ])
@@ -1781,7 +1781,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                 'currency_id': 1,
                 'id': 1,
                 'multiplier': 1.0,
-                'price_per_unit': 0.036,
+                'price_per_unit': 0.036 * 1.3,
                 'unit_type': 'Credits',
             })
         ])
@@ -1919,7 +1919,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                 'currency_id': 1,
                 'id': 1,
                 'multiplier': 1.0,
-                'price_per_unit': 0.036,
+                'price_per_unit': 0.036 * 1.3,
                 'unit_type': 'Credits',
             })
         ])
@@ -2069,7 +2069,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                 'currency_id': 1,
                 'id': 1,
                 'multiplier': 1.0,
-                'price_per_unit': 0.036,
+                'price_per_unit': 0.036 * 1.3,
                 'unit_type': 'Credits',
             })
         ])

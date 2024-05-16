@@ -14,11 +14,7 @@ from task_manager.django.decorators import task
 
 from breathecode.payments.services.stripe import Stripe
 from breathecode.provisioning import actions
-from breathecode.provisioning.models import (
-    ProvisioningBill,
-    ProvisioningConsumptionEvent,
-    ProvisioningUserConsumption,
-)
+from breathecode.provisioning.models import ProvisioningBill, ProvisioningConsumptionEvent, ProvisioningUserConsumption
 from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils.decorators import TaskPriority
 from breathecode.utils.io.file import cut_csv
@@ -158,6 +154,7 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
         'github_academy_user_logs': {},
         'provisioning_activity_prices': {},
         'provisioning_activity_kinds': {},
+        'provisioning_multiplier': actions.get_multiplier(),
         'currencies': {},
         'profile_academies': {},
         'hash': hash,

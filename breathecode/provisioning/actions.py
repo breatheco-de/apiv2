@@ -1,3 +1,4 @@
+import os
 import random
 import re
 from datetime import datetime
@@ -242,6 +243,16 @@ def handle_pending_github_user(organization: str, username: str) -> list[Academy
     return [org.academy for org in orgs]
 
 
+def get_multiplier() -> float:
+    try:
+        x = os.getenv('PROVISIONING_MULTIPLIER', '1.3').replace(',', '.')
+        x = float(x)
+    except Exception:
+        x = 1.3
+
+    return x
+
+
 def add_codespaces_activity(context: ActivityContext, field: dict, position: int) -> None:
     if isinstance(field['Username'], float):
         field['Username'] = ''
@@ -357,7 +368,7 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
         price, _ = ProvisioningPrice.objects.get_or_create(
             currency=currency,
             unit_type=field['Unit Type'],
-            price_per_unit=field['Price Per Unit ($)'],
+            price_per_unit=field['Price Per Unit ($)'] * context['provisioning_multiplier'],
             multiplier=field['Multiplier'],
         )
 
@@ -495,7 +506,7 @@ def add_gitpod_activity(context: ActivityContext, field: dict, position: int):
         price, _ = ProvisioningPrice.objects.get_or_create(
             currency=currency,
             unit_type='Credits',
-            price_per_unit=0.036,
+            price_per_unit=0.036 * context['provisioning_multiplier'],
             multiplier=1,
         )
 

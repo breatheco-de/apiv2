@@ -182,3 +182,4 @@ dump.rdb
 *:Zone.Identifier
 
 node_modules/
+.env*
