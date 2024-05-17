@@ -106,22 +106,13 @@ class Recaptcha:
             raise ValidationException(
                 f'Invalid token for the following reasons: {str(response.token_properties.invalid_reason)}', code=400)
 
-        # Check if the expected action was executed.
-        if response.token_properties.action != recaptcha_action:
-            from breathecode.utils.validation_exception import ValidationException
-            logger.error('The action attribute in your reCAPTCHA tag does' +
-                         'not match the action you are expecting to score')
-            raise ValidationException(
-                'The action attribute in your reCAPTCHA tag does not match the action you are expecting to score',
-                code=400)
-        else:
-            # Get the risk score and the reason(s)
-            # For more information on interpreting the assessment,
-            # see: https://cloud.google.com/recaptcha-enterprise/docs/interpret-assessment
-            for reason in response.risk_analysis.reasons:
-                logger.info(reason)
-            logger.info('The reCAPTCHA score for this token is: ' + str(response.risk_analysis.score))
-            # Get the assessment name (id). Use this to annotate the assessment.
-            assessment_name = client.parse_assessment_path(response.name).get('assessment')
-            logger.info(f'Assessment name: {assessment_name}')
-            return response
+        # Get the risk score and the reason(s)
+        # For more information on interpreting the assessment,
+        # see: https://cloud.google.com/recaptcha-enterprise/docs/interpret-assessment
+        for reason in response.risk_analysis.reasons:
+            logger.info(reason)
+        logger.info('The reCAPTCHA score for this token is: ' + str(response.risk_analysis.score))
+        # Get the assessment name (id). Use this to annotate the assessment.
+        assessment_name = client.parse_assessment_path(response.name).get('assessment')
+        logger.info(f'Assessment name: {assessment_name}')
+        return response

@@ -158,7 +158,7 @@ def create_lead(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-@validate_captcha_challenge
+@validate_captcha
 def create_lead_captcha(request):
     data = request.data.copy()
 
