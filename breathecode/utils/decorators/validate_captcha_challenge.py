@@ -42,14 +42,11 @@ def validate_captcha_challenge(function):
             site_key = os.getenv('GOOGLE_CAPTCHA_KEY', '')
 
             token = data['token'] if 'token' in data else None
-
-            recaptcha_action = data['action'] if 'action' in data else None
+            if token is None:
+                raise ValidationException('Missing ReCaptcha Token', code=400)
 
             recaptcha = Recaptcha()
-            response = recaptcha.create_assessment_v2(project_id=project_id,
-                                                      recaptcha_site_key=site_key,
-                                                      token=token,
-                                                      recaptcha_action=recaptcha_action)
+            response = recaptcha.create_assessment_v2(project_id=project_id, recaptcha_site_key=site_key, token=token)
 
             # TEMPORALILY DISABLING SCORE ANALYSIS
             # Google Recaptcha needs to work some time to learn about the site's traffic
