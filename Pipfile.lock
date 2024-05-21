@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "a60a902b22af50adb3b38a8edc92ac6c17f76389a0f83b2da557e9411e13f709"
+            "sha256": "66365e8a3a48d8089abc905c1d2d55c1eb29099bc909196dac809734b156084b"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -596,6 +596,15 @@
             ],
             "markers": "python_version >= '3.8'",
             "version": "==23.10.4"
+        },
+        "contextlib2": {
+            "hashes": [
+                "sha256:3fbdb64466afd23abaf6c977627b75b6139a5a3e8ce38405c5b413aed7a0471f",
+                "sha256:ab1e2bfe1d01d968e1b7e8d9023bc51ef3509bba217bb730cee3827e1ee82869"
+            ],
+            "index": "pypi",
+            "markers": "python_version >= '3.6'",
+            "version": "==21.6.0"
         },
         "coralogix-logger": {
             "hashes": [
@@ -1278,7 +1287,7 @@
                 "sha256:fd096eb7ffef17c456cfa587523c5f92321ae02427ff955bebe9e3c63bc9f0da",
                 "sha256:fe754d231288e1e64323cfad462fcee8f0288654c10bdf4f603a39ed923bef33"
             ],
-            "markers": "python_version >= '3.11' and platform_python_implementation == 'CPython'",
+            "markers": "python_version >= '3.7'",
             "version": "==3.0.3"
         },
         "grpcio": {
@@ -1532,6 +1541,7 @@
                 "sha256:028ff3aadf0609c1fd278d8ea3089299412a7a8b9bd005dd08b9f8285bcb5cfc",
                 "sha256:82fee1fc78add43492d3a1898bfa6d8a904cc97d8427f683ed8e798d07761aa0"
             ],
+            "markers": "python_version >= '3.5'",
             "version": "==3.7"
         },
         "incremental": {
@@ -3381,7 +3391,7 @@
                 "sha256:83f085bd5ca59c80295fc2a82ab5dac679cbe02b9f33f7d83af68e241bea51b0",
                 "sha256:c1f94d72897edaf4ce775bb7558d5b79d8126906a14ea5ed1635921406c0387a"
             ],
-            "markers": "python_version >= '3.8'",
+            "markers": "python_version >= '3.7'",
             "version": "==4.11.0"
         },
         "tzdata": {
@@ -4177,7 +4187,7 @@
                 "sha256:fd096eb7ffef17c456cfa587523c5f92321ae02427ff955bebe9e3c63bc9f0da",
                 "sha256:fe754d231288e1e64323cfad462fcee8f0288654c10bdf4f603a39ed923bef33"
             ],
-            "markers": "python_version >= '3.11' and platform_python_implementation == 'CPython'",
+            "markers": "python_version >= '3.7'",
             "version": "==3.0.3"
         },
         "griffe": {
@@ -4267,6 +4277,7 @@
                 "sha256:028ff3aadf0609c1fd278d8ea3089299412a7a8b9bd005dd08b9f8285bcb5cfc",
                 "sha256:82fee1fc78add43492d3a1898bfa6d8a904cc97d8427f683ed8e798d07761aa0"
             ],
+            "markers": "python_version >= '3.5'",
             "version": "==3.7"
         },
         "importlib-metadata": {
