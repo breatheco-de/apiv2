@@ -318,7 +318,7 @@ jobs:
         run: pipenv run flake8 --select=B
 
   tests:
-    needs: [migrations, dependencies]
+    needs: [migrations]
     runs-on: ubuntu-latest
 
     steps:
