@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 from breathecode.services.google_cloud import Recaptcha
 from breathecode.utils.exceptions import ProgrammingError
 
-from ..validation_exception import ValidationException
+from capyc.rest_framework.exceptions import ValidationException
 
 logger = logging.getLogger(__name__)
 __all__ = ['validate_captcha_challenge']
