@@ -203,6 +203,16 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
         handler = actions.add_codespaces_activity
 
     if not handler:
+        fields = [
+            'organization', 'consumption_period_id', 'consumption_period_start', 'consumption_period_end',
+            'billing_status', 'total_spent_period', 'consumption_item_id', 'user_id', 'email', 'consumption_type',
+            'pricing_type', 'total_spent', 'total_tokens', 'model', 'purpose_id', 'purpose_slug', 'purpose',
+            'created_at'
+        ]
+    if not handler and len(df.keys().intersection(fields)) == len(fields):
+        handler = actions.add_rigobot_activity
+
+    if not handler:
         raise AbortTask(f'File {hash} has an unsupported origin or the provider had changed the file format')
 
     prev_bill = ProvisioningBill.objects.filter(hash=hash).first()
