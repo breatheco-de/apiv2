@@ -227,7 +227,7 @@ class PUTTaskSerializer(serializers.ModelSerializer):
         return data
 
     def update(self, instance, validated_data):
-        if 'opened_at' in validated_data and (instance.opened_at is None
+        if 'opened_at' in validated_data and validated_data['opened_at'] is not None and (instance.opened_at is None
                                               or validated_data['opened_at'] > instance.opened_at):
             tasks_activity.add_activity.delay(self.context['request'].user.id,
                                               'read_assignment',
