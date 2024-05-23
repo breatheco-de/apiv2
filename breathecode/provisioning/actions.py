@@ -3,7 +3,7 @@ import random
 import re
 from datetime import datetime
 from decimal import Decimal, localcontext
-from typing import TypedDict
+from typing import Optional, TypedDict
 
 import pytz
 from dateutil.relativedelta import relativedelta
@@ -209,16 +209,22 @@ class ActivityContext(TypedDict):
     profile_academies: dict[str, QuerySet[ProfileAcademy]]
 
 
-def handle_pending_github_user(organization: str, username: str) -> list[Academy]:
+def handle_pending_github_user(organization: str, username: str, starts: Optional[datetime] = None) -> list[Academy]:
     orgs = AcademyAuthSettings.objects.filter(github_username__iexact=organization)
     orgs = [
         x for x in orgs
         if GithubAcademyUser.objects.filter(academy=x.academy, storage_action='ADD', storage_status='SYNCHED').count()
     ]
 
-    if not orgs:
+    if not orgs and organization:
         logger.error(f'Organization {organization} not found')
         return []
+
+    if not orgs and organization is None:
+        logger.error(f'Organization not provided, in this case, all organizations will be used')
+
+    if not orgs:
+        orgs = AcademyAuthSettings.objects.filter()
 
     user = None
 
@@ -229,6 +235,22 @@ def handle_pending_github_user(organization: str, username: str) -> list[Academy
     if credentials:
         user = credentials.user
 
+    if starts and organization is None:
+        new_orgs = []
+        for org in orgs:
+
+            has_any_cohort_user = CohortUser.objects.filter(
+                Q(cohort__ending_date__lte=starts) | Q(cohort__never_ends=True),
+                cohort__kickoff_date__gte=starts,
+                cohort__academy__id=org.academy.id,
+                user__credentialsgithub__username=username).order_by('-created_at').exists()
+
+            if has_any_cohort_user:
+                new_orgs.append(org)
+
+        if new_orgs:
+            org = new_orgs
+
     for org in orgs:
         pending, created = GithubAcademyUser.objects.get_or_create(username=username,
                                                                    academy=org.academy,
@@ -238,7 +260,7 @@ def handle_pending_github_user(organization: str, username: str) -> list[Academy
                                                                        'storage_action': 'IGNORE',
                                                                    })
 
-        if not created:
+        if not created and pending.storage_action not in ['ADD', 'DELETE']:
             pending.storage_status = 'PAYMENT_CONFLICT'
             pending.storage_action = 'IGNORE'
             pending.save()
@@ -556,18 +578,18 @@ def add_rigobot_activity(context: ActivityContext, field: dict, position: int) -
         return
 
     user = get_user(app='rigobot', sub=field['user_id'])
-    if user is None:
-        user = User.objects.filter(email=field['email']).first()
 
     if user is None:
+        logger.error(f'User {field["user_id"]} not found')
         return
 
     if field['billing_status'] != 'OPEN':
         return
 
     github_academy_user_log = context['github_academy_user_logs'].get(user.id, None)
+    date = datetime.fromisoformat(field['consumption_period_start'])
     academies = []
-    found_at_github_log = False
+    not_found = False
 
     if github_academy_user_log is None:
         # make a function that calculate the user activity in the academies by percentage
@@ -576,46 +598,27 @@ def add_rigobot_activity(context: ActivityContext, field: dict, position: int) -
             | Q(valid_until__gte=context['limit'] - relativedelta(months=1, weeks=1)),
             created_at__lte=context['limit'],
             academy_user__user=user,
+            academy_user__username=field['github_username'],
             storage_status='SYNCHED',
             storage_action='ADD').order_by('-created_at')
 
         context['github_academy_user_logs'][user.id] = github_academy_user_log
 
     if github_academy_user_log:
-        found_at_github_log = True
         academies = [x.academy_user.academy for x in github_academy_user_log]
 
-    # not implemented yet
-    # not_found = bool(academies)
-    date = datetime.fromisoformat(field['consumption_period_start'])
-    end = datetime.fromisoformat(field['consumption_period_end'])
+    if not academies:
+        not_found = True
+        github_academy_users = GithubAcademyUser.objects.filter(username=field['github_username'],
+                                                                storage_status='PAYMENT_CONFLICT',
+                                                                storage_action='IGNORE')
+
+        academies = [x.academy for x in github_academy_users]
 
     if not academies:
-        profile_academies = context['profile_academies'].get(field['github_username'], None)
-        if profile_academies is None:
-            profile_academies = ProfileAcademy.objects.filter(
-                user__credentialsgithub__username=field['github_username'], status='ACTIVE')
+        academies = handle_pending_github_user(None, field['github_username'], date)
 
-            context['profile_academies'][field['github_username']] = profile_academies
-
-        if profile_academies:
-            academies = sorted(list({profile.academy for profile in profile_academies}), key=lambda x: x.id)
-
-    if not found_at_github_log and len(academies) > 1:
-        cohort_users = CohortUser.objects.filter(
-            Q(cohort__ending_date__lte=end) | Q(cohort__never_ends=True),
-            cohort__kickoff_date__gte=date,
-            user__credentialsgithub__username=field['github_username']).order_by('-created_at')
-
-        if cohort_users:
-            academies = sorted(list({cohort_user.cohort.academy for cohort_user in cohort_users}), key=lambda x: x.id)
-
-    if not academies:
-        if 'academies' not in context:
-            context['academies'] = Academy.objects.filter()
-        academies = list(context['academies'])
-
-    if not found_at_github_log and academies:
+    if not_found is False and academies:
         academies = random.choices(academies, k=1)
 
     logs = {}
@@ -662,22 +665,23 @@ def add_rigobot_activity(context: ActivityContext, field: dict, position: int) -
                 ignores.append(
                     f'User {field["github_username"]} was deleted from the academy during this event at {date}')
 
-    if not provisioning_bills:
-        for academy_id in logs.keys():
-            cohort_user = CohortUser.objects.filter(
-                Q(cohort__ending_date__lte=date) | Q(cohort__never_ends=True),
-                cohort__kickoff_date__gte=date,
-                cohort__academy__id=academy_id,
-                user__credentialsgithub__username=field['github_username']).order_by('-created_at').first()
+    # disabled because rigobot doesn't have the organization configured yet.
+    # if not provisioning_bills:
+    #     for academy_id in logs.keys():
+    #         cohort_user = CohortUser.objects.filter(
+    #             Q(cohort__ending_date__lte=date) | Q(cohort__never_ends=True),
+    #             cohort__kickoff_date__gte=date,
+    #             cohort__academy__id=academy_id,
+    #             user__credentialsgithub__username=field['github_username']).order_by('-created_at').first()
 
-            if cohort_user:
-                errors.append('We found activity from this user while he was studying at one of your cohort '
-                              f'{cohort_user.cohort.slug}')
+    #         if cohort_user:
+    #             errors.append('We found activity from this user while he was studying at one of your cohort '
+    #                           f'{cohort_user.cohort.slug}')
 
     # not implemented yet
-    # if not_found:
-    #     errors.append(f'We could not find enough information about {field["github_username"]}, mark this user user as '
-    #                   'deleted if you don\'t recognize it')
+    if not_found:
+        errors.append(f'We could not find enough information about {field["github_username"]}, mark this user user as '
+                      'deleted if you don\'t recognize it')
 
     s_slug = f'{field["purpose_slug"] or "no-provided"}--{field["pricing_type"].lower()}--{field["model"].lower()}'
     s_name = f'{field["purpose"]} (type: {field["pricing_type"]}, model: {field["model"]})'

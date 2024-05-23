@@ -2259,35 +2259,34 @@ class RigobotTestSuite(ProvisioningTestCase):
                 n,
             }) for n in range(10)
         ])
-        self.assertEqual(
-            self.bc.database.list_of('provisioning.ProvisioningUserConsumption'),
-            [
-                provisioning_activity_data({
-                    'id':
-                    n + 1,
-                    'kind_id':
-                    n + 1,
-                    'hash':
-                    slug,
-                    'username':
-                    csv['github_username'][n],
-                    'processed_at':
-                    UTC_NOW,
-                    'status':
-                    'ERROR',
-                    'status_text':
-                    ', '.join([
-                        'Provisioning vendor Rigobot not found',
-                        # not implemented yet,
-                        # f"We could not find enough information about {csv['github_username'][n]}, mark this user user "
-                        # "as deleted if you don't recognize it",
-                    ]),
-                }) for n in range(10)
-            ])
+        self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
+            provisioning_activity_data({
+                'id':
+                n + 1,
+                'kind_id':
+                n + 1,
+                'hash':
+                slug,
+                'username':
+                csv['github_username'][n],
+                'processed_at':
+                UTC_NOW,
+                'status':
+                'ERROR',
+                'status_text':
+                ', '.join([
+                    'Provisioning vendor Rigobot not found',
+                    f"We could not find enough information about {csv['github_username'][n]}, mark this user user "
+                    "as deleted if you don't recognize it",
+                ]),
+            }) for n in range(10)
+        ])
         self.assertEqual(self.bc.database.list_of('authenticate.GithubAcademyUser'), [])
 
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f'Starting upload for hash {slug}')])
-        self.bc.check.calls(logging.Logger.error.call_args_list, [])
+        self.bc.check.calls(
+            logging.Logger.error.call_args_list,
+            [call('Organization not provided, in this case, all organizations will be used') for _ in range(10)])
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
         self.bc.check.calls(tasks.calculate_bill_amounts.delay.call_args_list, [])
@@ -2464,11 +2463,12 @@ class RigobotTestSuite(ProvisioningTestCase):
             }),
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionKind'), [
-            provisioning_activity_kind_data({
-                'id': n + 1,
-                'product_name': csv['kind'][n],
-                'sku': str(csv['kind'][n]),
-            }) for n in range(10)
+            provisioning_activity_kind_data(
+                {
+                    'id': n + 1,
+                    'product_name': f'{csv["purpose"][n]} (type: {csv["pricing_type"][n]}, model: {csv["model"][n]})',
+                    'sku': f'{csv["purpose_slug"][n]}--{csv["pricing_type"][n].lower()}--{csv["model"][n].lower()}',
+                }) for n in range(10)
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningPrice'), [
             provisioning_activity_price_data({
@@ -2510,7 +2510,7 @@ class RigobotTestSuite(ProvisioningTestCase):
                 'id': n + 1,
                 'kind_id': n + 1,
                 'hash': slug,
-                'username': csv['userName'][n],
+                'username': csv['github_username'][n],
                 'processed_at': UTC_NOW,
                 'status': 'PERSISTED',
             }) for n in range(10)
@@ -2698,6 +2698,9 @@ class RigobotTestSuite(ProvisioningTestCase):
         provisioning_vendor = {'name': 'Rigobot'}
 
         model = self.bc.database.create(user=10,
+                                        academy_auth_settings=[{
+                                            'academy_id': n + 1
+                                        } for n in range(3)],
                                         academy=3,
                                         app={'slug': 'rigobot'},
                                         first_party_credentials={'app': {
@@ -2720,18 +2723,6 @@ class RigobotTestSuite(ProvisioningTestCase):
             provisioning_bill_data({
                 'id': 1,
                 'academy_id': 1,
-                'vendor_id': 1,
-                'hash': slug,
-            }),
-            provisioning_bill_data({
-                'id': 2,
-                'academy_id': 2,
-                'vendor_id': 1,
-                'hash': slug,
-            }),
-            provisioning_bill_data({
-                'id': 3,
-                'academy_id': 3,
                 'vendor_id': 1,
                 'hash': slug,
             }),
@@ -2784,7 +2775,7 @@ class RigobotTestSuite(ProvisioningTestCase):
                 'id': n + 1,
                 'kind_id': n + 1,
                 'hash': slug,
-                'username': csv['userName'][n],
+                'username': csv['github_username'][n],
                 'processed_at': UTC_NOW,
                 'status': 'PERSISTED',
             }) for n in range(10)
@@ -2851,6 +2842,9 @@ class RigobotTestSuite(ProvisioningTestCase):
         } for n in range(10)]
 
         model = self.bc.database.create(user=10,
+                                        academy_auth_settings=[{
+                                            'academy_id': n + 1
+                                        } for n in range(3)],
                                         credentials_github=credentials_github,
                                         app={'slug': 'rigobot'},
                                         first_party_credentials={'app': {
@@ -2876,18 +2870,6 @@ class RigobotTestSuite(ProvisioningTestCase):
             provisioning_bill_data({
                 'id': 1,
                 'academy_id': 1,
-                'hash': slug,
-                'vendor_id': 1,
-            }),
-            provisioning_bill_data({
-                'id': 2,
-                'academy_id': 2,
-                'hash': slug,
-                'vendor_id': 1,
-            }),
-            provisioning_bill_data({
-                'id': 3,
-                'academy_id': 3,
                 'hash': slug,
                 'vendor_id': 1,
             }),
@@ -2940,7 +2922,7 @@ class RigobotTestSuite(ProvisioningTestCase):
                 'id': n + 1,
                 'kind_id': n + 1,
                 'hash': slug,
-                'username': csv['userName'][n],
+                'username': csv['github_username'][n],
                 'processed_at': UTC_NOW,
                 'status': 'PERSISTED',
             }) for n in range(10)
@@ -3018,6 +3000,9 @@ class RigobotTestSuite(ProvisioningTestCase):
         }
 
         model = self.bc.database.create(user=10,
+                                        academy_auth_settings=[{
+                                            'academy_id': n + 1
+                                        } for n in range(3)],
                                         app={'slug': 'rigobot'},
                                         first_party_credentials={'app': {
                                             'rigobot': 10
@@ -3055,7 +3040,19 @@ class RigobotTestSuite(ProvisioningTestCase):
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
             provisioning_bill_data({
                 'id': 1,
-                'academy_id': 1,
+                'academy_id': RANDOM_ACADEMIES[0] + 1,
+                'hash': slug,
+                'vendor_id': 1,
+            }),
+            provisioning_bill_data({
+                'id': 2,
+                'academy_id': RANDOM_ACADEMIES[1] + 1,
+                'hash': slug,
+                'vendor_id': 1,
+            }),
+            provisioning_bill_data({
+                'id': 3,
+                'academy_id': RANDOM_ACADEMIES[2] + 1,
                 'hash': slug,
                 'vendor_id': 1,
             }),
@@ -3105,21 +3102,13 @@ class RigobotTestSuite(ProvisioningTestCase):
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningUserConsumption'), [
             provisioning_activity_data({
-                'id':
-                n + 1,
-                'kind_id':
-                n + 1,
-                'hash':
-                slug,
-                'username':
-                csv['github_username'][n],
-                'processed_at':
-                UTC_NOW,
-                'status':
-                'ERROR',
-                'status_text':
-                'We found activity from this user while he was studying at '
-                f'one of your cohort {model.cohort.slug}',
+                'id': n + 1,
+                'kind_id': n + 1,
+                'hash': slug,
+                'username': csv['github_username'][n],
+                'processed_at': UTC_NOW,
+                'status': 'PERSISTED',
+                'status_text': '',
             }) for n in range(10)
         ])
 
