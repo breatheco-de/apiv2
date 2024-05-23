@@ -13,13 +13,12 @@ env:
   APP_URL: https://4geeks.com
 
 # cache ------------------------------------
-# |                                        |> migrations --------
-# |                                        |> migrations --------
-# |> undefined-and-unused-variables        |> dependencies ------
-# |> bad-docstrings                                             |
-# |> code-complexity                                            |> tests -------|> dockerhub
-# |> naming-conventions                                         |> linter
-# |> unexpected-behaviors                                       |> pages
+# |                                        |> dependencies
+# |> undefined-and-unused-variables        |> migrations
+# |> bad-docstrings                           |
+# |> code-complexity                          |> tests -------|> dockerhub
+# |> naming-conventions                       |> linter
+# |> unexpected-behaviors                     |> pages
 
 
 jobs:
@@ -318,7 +317,7 @@ jobs:
         run: pipenv run flake8 --select=B
 
   tests:
-    needs: [migrations, dependencies]
+    needs: [migrations]
     runs-on: ubuntu-latest
 
     steps:
@@ -370,7 +369,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
 
   linter:
-    needs: [migrations, dependencies]
+    needs: [migrations]
     runs-on: ubuntu-latest
     continue-on-error: true
 
@@ -406,7 +405,7 @@ jobs:
           pipenv run format
 
   pages:
-    needs: [migrations, dependencies]
+    needs: [migrations]
     if: >-
       github.repository == 'breatheco-de/apiv2' &&
       github.event_name == 'push' &&
