@@ -14,6 +14,7 @@ from django.utils import timezone
 from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
 
+from breathecode.assessment.models import Assessment
 from breathecode.admissions.models import SyllabusVersion
 from breathecode.media.models import Media, MediaResolution
 from breathecode.media.views import media_gallery_bucket
@@ -332,6 +333,27 @@ def async_remove_img_from_cloud(id, **_):
 
 
 @task(priority=TaskPriority.ACADEMY.value)
+def async_remove_asset_preview_from_cloud(hash, **_):
+
+    logger.info('async_remove_asset_preview_from_cloud')
+
+    media = Media.objects.filter(hash=hash).first()
+    if media is None:
+        raise Exception(f'Media with hash {hash} not found')
+
+    media_name = media.name
+
+    storage = Storage()
+    extension = media.mime.split('/')[-1]
+    cloud_file = storage.file(screenshots_bucket(), media.hash + extension)
+    cloud_file.delete()
+    media.delete()
+
+    logger.info(f'Media name ({media_name}) was deleted from the cloud')
+    return True
+
+
+@task(priority=TaskPriority.ACADEMY.value)
 def async_upload_image_to_bucket(id, **_):
 
     img = AssetImage.objects.filter(id=id).first()
@@ -489,3 +511,18 @@ def async_add_syllabus_translations(syllabus_slug, version):
 
     syllabus_version.json = add_syllabus_translations(syllabus_version.json)
     syllabus_version.save()
+
+
+@shared_task(priority=TaskPriority.BACKGROUND.value)
+def async_generate_quiz_config(assessment_id):
+
+    assessment = Assessment.objects.filter(id=assessment_id, is_archived=False).first()
+    if assessment is None:
+        raise Exception(f'Assessment {assessment_id} not found or its archived')
+
+    assets = assessment.asset_set.all()
+    for a in assets:
+        a.config = a.generate_quiz_json()
+        a.save()
+
+    return True
