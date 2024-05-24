@@ -21,6 +21,9 @@ from breathecode.mentorship.signals import mentorship_session_status
 from breathecode.registry.models import Asset
 from breathecode.registry.serializers import AssetHookSerializer
 from breathecode.registry.signals import asset_status_updated
+from breathecode.payments.signals import subscription_created, planfinancing_created
+from breathecode.payments.models import PlanFinancing, Subscription
+from breathecode.payments.serializers import GetPlanFinancingSerializer, GetSubscriptionSerializer
 
 from .tasks import send_mentorship_starting_notification
 from .utils.hook_manager import HookManager
@@ -159,3 +162,27 @@ def edu_status_updated(sender, instance, **kwargs):
                                     'edu_status_updated',
                                     payload_override=serializer.data,
                                     academy_override=academy)
+
+
+@receiver(planfinancing_created, sender=PlanFinancing)
+def new_planfinancing_created(sender, instance, **kwargs):
+    logger.debug('Sending new PlanFinancing to hook')
+    model_label = get_model_label(instance)
+    serializer = GetPlanFinancingSerializer(instance)
+    HookManager.process_model_event(instance,
+                                    model_label,
+                                    'planfinancing_created',
+                                    payload_override=serializer.data,
+                                    academy_override=instance.academy)
+
+
+@receiver(subscription_created, sender=Subscription)
+def new_subscription_created(sender, instance, **kwargs):
+    logger.debug('Sending new Subscription to hook')
+    model_label = get_model_label(instance)
+    serializer = GetSubscriptionSerializer(instance)
+    HookManager.process_model_event(instance,
+                                    model_label,
+                                    'subscription_created',
+                                    payload_override=serializer.data,
+                                    academy_override=instance.academy)
