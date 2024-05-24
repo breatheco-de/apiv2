@@ -22,6 +22,7 @@ from breathecode.registry.models import Asset
 from breathecode.registry.serializers import AssetHookSerializer
 from breathecode.registry.signals import asset_status_updated
 from breathecode.payments.signals import subscription_created, planfinancing_created
+from breathecode.payments.models import PlanFinancing, Subscription
 from breathecode.payments.serializers import GetPlanFinancingSerializer, GetSubscriptionSerializer
 
 from .tasks import send_mentorship_starting_notification
