@@ -23,7 +23,7 @@ class UserMediumSerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
-    profile = ProfileSmallSerializer()
+    profile = ProfileSmallSerializer(required=False)
 
 
 class UserSmallSerializer(serpy.Serializer):
