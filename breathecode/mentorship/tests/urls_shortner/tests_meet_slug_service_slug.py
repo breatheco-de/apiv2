@@ -40,7 +40,6 @@ def setup(db, fake):
 
 def format_consumable(data={}):
     return {
-        'service_set_id': None,
         'cohort_set_id': None,
         'event_type_set_id': None,
         'how_many': 0,

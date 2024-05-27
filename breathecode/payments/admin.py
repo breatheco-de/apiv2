@@ -33,8 +33,6 @@ from breathecode.payments.models import (
     Service,
     ServiceItem,
     ServiceItemFeature,
-    ServiceSet,
-    ServiceSetTranslation,
     ServiceStockScheduler,
     ServiceTranslation,
     Subscription,
@@ -208,13 +206,6 @@ class MentorshipServiceSetAdmin(admin.ModelAdmin):
     search_fields = ['slug', 'academy__slug', 'academy__name']
 
 
-@admin.register(ServiceSet)
-class ServiceSetAdmin(admin.ModelAdmin):
-    list_display = ('id', 'slug', 'academy')
-    list_filter = ['academy__slug']
-    search_fields = ['slug', 'academy__slug', 'academy__name']
-
-
 @admin.register(CohortSetCohort)
 class CohortSetCohortAdmin(admin.ModelAdmin):
     list_display = ('id', 'cohort_set', 'cohort')
@@ -226,13 +217,6 @@ class CohortSetCohortAdmin(admin.ModelAdmin):
 @admin.register(MentorshipServiceSetTranslation)
 class MentorshipServiceSetTranslationAdmin(admin.ModelAdmin):
     list_display = ('id', 'mentorship_service_set', 'lang', 'title', 'description', 'short_description')
-    list_filter = ['lang']
-    search_fields = ['slug', 'academy__slug', 'academy__name']
-
-
-@admin.register(ServiceSetTranslation)
-class ServiceSetTranslationAdmin(admin.ModelAdmin):
-    list_display = ('id', 'service_set', 'lang', 'title', 'description', 'short_description')
     list_filter = ['lang']
     search_fields = ['slug', 'academy__slug', 'academy__name']
 

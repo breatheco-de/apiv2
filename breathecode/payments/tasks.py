@@ -594,13 +594,11 @@ def build_subscription(self, bag_id: int, invoice_id: int, start_date: Optional[
         cohort_set = plan.cohort_set
         event_type_set = plan.event_type_set
         mentorship_service_set = plan.mentorship_service_set
-        service_set = plan.service_set
 
     else:
         cohort_set = None
         event_type_set = None
         mentorship_service_set = None
-        service_set = None
 
     subscription_start_at = start_date or invoice.paid_at
     subscription = Subscription.objects.create(user=bag.user,
@@ -609,7 +607,6 @@ def build_subscription(self, bag_id: int, invoice_id: int, start_date: Optional[
                                                selected_cohort_set=cohort_set,
                                                selected_event_type_set=event_type_set,
                                                selected_mentorship_service_set=mentorship_service_set,
-                                               selected_service_set=service_set,
                                                valid_until=None,
                                                next_payment_at=subscription_start_at + relativedelta(months=months),
                                                status='ACTIVE')
@@ -663,13 +660,11 @@ def build_plan_financing(self, bag_id: int, invoice_id: int, is_free: bool = Fal
         cohort_set = plan.cohort_set
         event_type_set = plan.event_type_set
         mentorship_service_set = plan.mentorship_service_set
-        service_set = plan.service_set
 
     else:
         cohort_set = None
         event_type_set = None
         mentorship_service_set = None
-        service_set = None
 
     financing = PlanFinancing.objects.create(user=bag.user,
                                              next_payment_at=invoice.paid_at + relativedelta(months=1),
@@ -677,7 +672,6 @@ def build_plan_financing(self, bag_id: int, invoice_id: int, is_free: bool = Fal
                                              selected_cohort_set=cohort_set,
                                              selected_event_type_set=event_type_set,
                                              selected_mentorship_service_set=mentorship_service_set,
-                                             selected_service_set=service_set,
                                              valid_until=invoice.paid_at + relativedelta(months=months),
                                              plan_expires_at=invoice.paid_at + delta,
                                              monthly_price=invoice.amount,
@@ -732,13 +726,11 @@ def build_free_subscription(self, bag_id: int, invoice_id: int, **_: Any):
             cohort_set = plan.cohort_set
             event_type_set = plan.event_type_set
             mentorship_service_set = plan.mentorship_service_set
-            service_set = plan.service_set
 
         else:
             cohort_set = None
             event_type_set = None
             mentorship_service_set = None
-            service_set = None
 
         if is_free_trial:
             extra = {
@@ -764,7 +756,6 @@ def build_free_subscription(self, bag_id: int, invoice_id: int, **_: Any):
                                                    selected_cohort_set=cohort_set,
                                                    selected_event_type_set=event_type_set,
                                                    selected_mentorship_service_set=mentorship_service_set,
-                                                   selected_service_set=service_set,
                                                    next_payment_at=until,
                                                    **extra)
 

@@ -2,6 +2,7 @@ import logging
 
 from breathecode.admissions.actions import is_no_saas_student_up_to_date_in_any_cohort
 from breathecode.authenticate.actions import get_user_language
+from breathecode.payments.models import Service
 from breathecode.utils.decorators import PermissionContextType
 from breathecode.utils.i18n import translation
 from capyc.rest_framework.exceptions import PaymentException
@@ -20,5 +21,5 @@ def code_revision_service(context: PermissionContextType, args: tuple, kwargs: d
                         es='No puedes acceder a este recurso porque tu estado financiero no está al dia',
                         slug='cohort-user-status-later'))
 
-    context['consumables'] = context['consumables'].filter(service_set__slug='code_revision')
+    context['consumables'] = context['consumables'].filter(service_item__service__type=Service.Type.VOID)
     return (context, args, kwargs)

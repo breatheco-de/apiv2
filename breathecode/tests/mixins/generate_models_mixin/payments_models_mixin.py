@@ -415,29 +415,6 @@ class PaymentsModelsMixin(ModelsMixin):
             models['subscription_service_item'] = create_models(subscription_service_item,
                                                                 'payments.SubscriptionServiceItem', **kargs)
 
-        if not 'service_set' in models and (is_valid(service_set) or is_valid(service_set_translation)):
-            kargs = {}
-
-            if 'service' in models:
-                kargs['services'] = get_list(models['service'])
-
-            if 'academy' in models:
-                kargs['academy'] = just_one(models['academy'])
-
-            models['service_set'] = create_models(service_set, 'payments.ServiceSet', **kargs)
-
-        if not 'service_set_translation' in models and is_valid(service_set_translation):
-            kargs = {}
-
-            if 'service_set' in models:
-                kargs['service_set'] = get_list(models['service_set'])
-
-            if 'academy' in models:
-                kargs['academy'] = just_one(models['academy'])
-
-            models['service_set_translation'] = create_models(service_set_translation, 'payments.ServiceSetTranslation',
-                                                              **kargs)
-
         if not 'consumable' in models and (is_valid(consumable) or is_valid(consumption_session)):
             kargs = {}
 
@@ -455,9 +432,6 @@ class PaymentsModelsMixin(ModelsMixin):
 
             if 'event_type_set' in models:
                 kargs['event_type_set'] = just_one(models['event_type_set'])
-
-            if 'service_set' in models:
-                kargs['service_set'] = just_one(models['service_set'])
 
             models['consumable'] = create_models(consumable, 'payments.Consumable', **kargs)
 

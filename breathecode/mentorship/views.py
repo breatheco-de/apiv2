@@ -29,7 +29,7 @@ from breathecode.renderers import PlainTextRenderer
 from breathecode.services.calendly import Calendly
 from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of, response_207
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from breathecode.utils.decorators import has_permission
+from breathecode.utils.decorators import consume, has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
@@ -588,7 +588,7 @@ class ForwardMeetUrl:
 
 
 @private_view()
-@has_permission('join_mentorship', consumer=mentorship_service_by_url_param, format='html')
+@consume('join_mentorship', consumer=mentorship_service_by_url_param, format='html')
 def forward_meet_url(request, mentor_profile, mentorship_service, token):
     handler = ForwardMeetUrl(request, mentor_profile, mentorship_service, token)
     return handler()

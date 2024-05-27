@@ -3,7 +3,7 @@ Test /answer
 """
 import json
 import random
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 import requests
@@ -204,7 +204,6 @@ def test__post__no_consumables(bc: Breathecode, client: APIClient):
     mock.reason = 'OK'
 
     permission = {'codename': 'add_code_review'}
-    service_set = {'slug': 'code_revision'}
     model = bc.database.create(profile_academy=1,
                                permission=permission,
                                group=1,
@@ -212,8 +211,7 @@ def test__post__no_consumables(bc: Breathecode, client: APIClient):
                                    'slug': 'rigobot',
                                    'app_url': bc.fake.url()
                                },
-                               service=1,
-                               service_set=service_set)
+                               service={'type': 'VOID'})
     client.force_authenticate(model.user)
 
     url = reverse_lazy('assignments:me_task_id_coderevision', kwargs={'task_id': 1
@@ -246,7 +244,6 @@ def test__post__no_tasks(bc: Breathecode, client: APIClient):
     mock.reason = 'OK'
 
     permission = {'codename': 'add_code_review'}
-    service_set = {'slug': 'code_revision'}
     model = bc.database.create(profile_academy=1,
                                permission=permission,
                                group=1,
@@ -255,8 +252,7 @@ def test__post__no_tasks(bc: Breathecode, client: APIClient):
                                    'slug': 'rigobot',
                                    'app_url': bc.fake.url()
                                },
-                               service=1,
-                               service_set=service_set)
+                               service={'type': 'VOID'})
     client.force_authenticate(model.user)
 
     url = reverse_lazy('assignments:me_task_id_coderevision', kwargs={'task_id': 1
@@ -290,7 +286,6 @@ def test__post__no_github_accounts(bc: Breathecode, client: APIClient):
 
     task = {'github_url': bc.fake.url()}
     permission = {'codename': 'add_code_review'}
-    service_set = {'slug': 'code_revision'}
     model = bc.database.create(profile_academy=1,
                                task=task,
                                permission=permission,
@@ -300,8 +295,7 @@ def test__post__no_github_accounts(bc: Breathecode, client: APIClient):
                                    'slug': 'rigobot',
                                    'app_url': bc.fake.url()
                                },
-                               service=1,
-                               service_set=service_set)
+                               service={'type': 'VOID'})
     client.force_authenticate(model.user)
 
     url = reverse_lazy('assignments:me_task_id_coderevision', kwargs={'task_id': 1
@@ -336,7 +330,6 @@ def test__post__auth(bc: Breathecode, client: APIClient):
     task = {'github_url': bc.fake.url()}
     credentials_github = {'username': bc.fake.slug()}
     permission = {'codename': 'add_code_review'}
-    service_set = {'slug': 'code_revision'}
     model = bc.database.create(profile_academy=1,
                                task=task,
                                credentials_github=credentials_github,
@@ -347,8 +340,7 @@ def test__post__auth(bc: Breathecode, client: APIClient):
                                    'app_url': bc.fake.url()
                                },
                                consumable=1,
-                               service=1,
-                               service_set=service_set)
+                               service={'type': 'VOID'})
     client.force_authenticate(model.user)
 
     url = reverse_lazy('assignments:me_task_id_coderevision', kwargs={'task_id': 1
@@ -358,6 +350,7 @@ def test__post__auth(bc: Breathecode, client: APIClient):
     with patch('linked_services.django.actions.get_jwt', MagicMock(return_value=token)):
         with patch.multiple('requests', post=MagicMock(return_value=mock)):
             response = client.post(url, query, format='json')
+            print(response.getvalue().decode('utf-8'))
             assert requests.post.call_args_list == [
                 call(
                     model.app.app_url + '/v1/finetuning/coderevision/',
@@ -436,7 +429,6 @@ def test__post__auth__no_saas__finantial_status_no_late(bc: Breathecode, client:
     task = {'github_url': bc.fake.url()}
     credentials_github = {'username': bc.fake.slug()}
     permission = {'codename': 'add_code_review'}
-    service_set = {'slug': 'code_revision'}
     model = bc.database.create(profile_academy=1,
                                task=task,
                                credentials_github=credentials_github,
@@ -447,8 +439,7 @@ def test__post__auth__no_saas__finantial_status_no_late(bc: Breathecode, client:
                                    'app_url': bc.fake.url()
                                },
                                consumable=1,
-                               service=1,
-                               service_set=service_set,
+                               service={'type': 'VOID'},
                                academy=academy,
                                cohort=cohort,
                                cohort_user=cohort_user)
@@ -459,8 +450,9 @@ def test__post__auth__no_saas__finantial_status_no_late(bc: Breathecode, client:
 
     token = bc.random.string(lower=True, upper=True, symbol=True, number=True, size=20)
     with patch('linked_services.django.actions.get_jwt', MagicMock(return_value=token)):
-        with patch.multiple('requests', post=MagicMock(return_value=mock)):
+        with patch.multiple('requests', post=AsyncMock(return_value=mock)):
             response = client.post(url, query, format='json')
+            print(response.getvalue().decode('utf-8'))
             assert requests.post.call_args_list == [
                 call(
                     model.app.app_url + '/v1/finetuning/coderevision/',
@@ -520,7 +512,6 @@ def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: AP
     task = {'github_url': bc.fake.url()}
     credentials_github = {'username': bc.fake.slug()}
     permission = {'codename': 'add_code_review'}
-    service_set = {'slug': 'code_revision'}
     cohort_user = {'finantial_status': 'LATE', 'educational_status': 'ACTIVE'}
     model = bc.database.create(profile_academy=1,
                                task=task,
@@ -532,8 +523,7 @@ def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: AP
                                    'app_url': bc.fake.url()
                                },
                                consumable=1,
-                               service=1,
-                               service_set=service_set,
+                               service={'type': 'VOID'},
                                cohort_user=cohort_user,
                                cohort=cohort,
                                academy=academy)
@@ -546,6 +536,7 @@ def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: AP
     with patch('linked_services.django.actions.get_jwt', MagicMock(return_value=token)):
         with patch.multiple('requests', post=MagicMock(return_value=mock)):
             response = client.post(url, query, format='json')
+            print(response.getvalue().decode('utf-8'))
             assert requests.post.call_args_list == []
 
     x = response.json()

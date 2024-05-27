@@ -87,7 +87,6 @@ def test_no_sessions(bc: Breathecode, client: rfx.Client, with_session, fake, ut
                 'session_duration': duration,
                 'slug': slug,
             },
-            'service_set': 1,
             'consumption_session': {
                 'how_many': 1,
                 'eta': utc_now + duration,
@@ -136,8 +135,8 @@ def test_cancelled(bc: Breathecode, client: rfx.Client, utc_now, fake):
                                service={
                                    'session_duration': duration,
                                    'slug': slug,
+                                   'type': 'VOID',
                                },
-                               service_set=1,
                                consumption_session={
                                    'how_many': 1,
                                    'eta': utc_now + duration,

@@ -46,7 +46,6 @@ from breathecode.payments.models import (
     PlanOffer,
     Service,
     ServiceItem,
-    ServiceSet,
     Subscription,
 )
 from breathecode.payments.serializers import (
@@ -573,14 +572,10 @@ class MeConsumableView(APIView):
         event_types = EventTypeSet.objects.none()
         event_types = filter_consumables(request, items, event_types, 'event_type_set')
 
-        service_sets = ServiceSet.objects.none()
-        service_sets = filter_consumables(request, items, service_sets, 'service_set')
-
         balance = {
             'mentorship_service_sets': get_balance_by_resource(mentorship_services, 'mentorship_service_set'),
             'cohort_sets': get_balance_by_resource(cohorts, 'cohort_set'),
             'event_type_sets': get_balance_by_resource(event_types, 'event_type_set'),
-            'service_sets': get_balance_by_resource(service_sets, 'service_set'),
         }
 
         return Response(balance)
@@ -1071,7 +1066,7 @@ class CancelConsumptionView(APIView):
 
         session = ConsumptionSession.objects.filter(
             consumable__user=request.user,
-            consumable__service_set__services__slug=service_slug).exclude(status='CANCELLED').first()
+            consumable__service_item__service__type=Service.Type.VOID).exclude(status='CANCELLED').first()
         if session is None:
             raise ValidationException(translation(lang,
                                                   en='Session not found',
