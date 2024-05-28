@@ -52,6 +52,9 @@ def members_serializer(member, data={}):
         'id': member.id,
         'first_name': member.first_name,
         'last_name': member.last_name,
+        'profile': {
+            'avatar_url': member.profile.avatar_url
+        } if member.profile is not None else None
     }
 
 
