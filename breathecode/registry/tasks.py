@@ -431,7 +431,7 @@ def async_resize_asset_thumbnail(media_id: int, width: Optional[int] = 0, height
     resolution.save()
 
 
-@task(bind=True, base=WebhookTask, priority=TaskPriority.CONTENT.value)
+@shared_task(bind=True, base=WebhookTask, priority=TaskPriority.CONTENT.value)
 def async_synchonize_repository_content(self, webhook):
 
     logger.debug('async_synchonize_repository_content')
