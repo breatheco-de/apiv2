@@ -431,18 +431,16 @@ def async_resize_asset_thumbnail(media_id: int, width: Optional[int] = 0, height
     resolution.save()
 
 
-@shared_task(bind=True, base=WebhookTask, priority=TaskPriority.ACADEMY.value)
+@task(bind=True, base=WebhookTask, priority=TaskPriority.CONTENT.value)
 def async_synchonize_repository_content(self, webhook):
 
     logger.debug('async_synchonize_repository_content')
     payload = webhook.get_payload()
     if 'commits' not in payload:
-        logger.debug('No commits found on the push object')
-        return False
+        raise AbortTask('No commits found on the push object')
 
     if 'repository' not in payload:
-        logger.debug('Missing repository information')
-        return False
+        raise AbortTask('Missing repository information')
 
     base_repo_url = payload['repository']['url']
     default_branch = payload['repository']['default_branch']
