@@ -445,6 +445,8 @@ def async_synchonize_repository_content(self, webhook):
 
     if 'repository' not in payload:
         raise AbortTask('Missing repository information')
+    elif 'url' not in payload['repository']:
+        raise AbortTask('Repository payload is invalid, expecting an object with "url" key')
 
     base_repo_url = payload['repository']['url']
     default_branch = payload['repository']['default_branch']
