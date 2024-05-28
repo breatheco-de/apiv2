@@ -1,6 +1,6 @@
 import random as r
 import string
-from typing import Any, Dict, Generator, Tuple, final
+from typing import Any, Dict, Generator, Optional, Tuple, final
 
 import pytest
 from faker import Faker
@@ -14,8 +14,9 @@ class Random:
     Random utils.
     """
 
-    def __init__(self, fake: Faker) -> None:
+    def __init__(self, fake: Faker, seed: Optional[int]) -> None:
         self._fake = fake
+        r.seed(seed)
 
     def seed(self, a=None, version=2) -> None:
         """Initialize internal state from a seed.
@@ -104,10 +105,10 @@ class Random:
         return ''.join(r.choices(chars, k=size))
 
 
-@pytest.fixture()
-def random(fake) -> Generator[Random, None, None]:
+@pytest.fixture(autouse=True)
+def random(fake: Faker, seed: Optional[int]) -> Generator[Random, None, None]:
     """Image fixtures."""
 
-    x = Random(fake)
+    x = Random(fake, seed)
 
     yield x
