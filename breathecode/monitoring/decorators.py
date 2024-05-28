@@ -36,6 +36,8 @@ class WebhookTask(Task):
                 raise Exception('Error while running async webhook task: type != ' + str(type(_webhook)))
         except Exception as ex:
             webhook.status = 'ERROR'
+            print('Error ejejeje')
+            print(ex)
             webhook.status_text = str(ex)[:255]
             logger.debug(ex)
 
