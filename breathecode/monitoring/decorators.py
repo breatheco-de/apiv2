@@ -1,4 +1,5 @@
 import logging
+import traceback
 from celery import Task
 from .models import RepositoryWebhook
 from django.utils import timezone
@@ -37,9 +38,9 @@ class WebhookTask(Task):
         except Exception as ex:
             webhook.status = 'ERROR'
             print('Error ejejeje')
-            print(str(ex))
+            traceback.print_exc()
             webhook.status_text = str(ex)[:255]
-            logger.debug(ex)
+            logger.exception(ex)
 
         webhook.run_at = timezone.now()
         if webhook.status_text == self.pending_status:
