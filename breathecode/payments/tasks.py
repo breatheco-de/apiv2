@@ -250,6 +250,9 @@ def charge_subscription(self, subscription_id: int, **_: Any):
     if subscription.valid_until and subscription.valid_until < utc_now:
         raise AbortTask(f'The subscription {subscription.id} is over')
 
+    if subscription.next_payment_at > utc_now:
+        raise AbortTask(f'The subscription with id {subscription_id} was paid this month')
+
     settings = get_user_settings(subscription.user.id)
 
     try:
@@ -362,6 +365,9 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
     if plan_financing.valid_until < utc_now:
         raise AbortTask(f'PlanFinancing with id {plan_financing_id} is over')
+
+    if plan_financing.next_payment_at > utc_now:
+        raise AbortTask(f'PlanFinancing with id {plan_financing_id} was paid this month')
 
     settings = get_user_settings(plan_financing.user.id)
 

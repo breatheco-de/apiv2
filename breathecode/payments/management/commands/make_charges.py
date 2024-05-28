@@ -1,10 +1,12 @@
 from datetime import timedelta
+
 from django.core.management.base import BaseCommand
-from breathecode.payments import tasks
 from django.db.models.query_utils import Q
+from django.utils import timezone
+
+from breathecode.payments import tasks
 
 from ...models import PlanFinancing, Subscription
-from django.utils import timezone
 
 
 # renew the subscriptions every 1 hours
@@ -18,8 +20,13 @@ class Command(BaseCommand):
         avoid_expire_these_statuses = Q(status='EXPIRED') | Q(status='ERROR') | Q(status='PAYMENT_ISSUE') | Q(
             status='FULLY_PAID') | Q(status='FREE_TRIAL') | Q(status='CANCELLED') | Q(status='DEPRECATED')
 
-        subscriptions = Subscription.objects.filter(valid_until__lte=utc_now + timedelta(days=1))
-        plan_financings = PlanFinancing.objects.filter(valid_until__lte=utc_now + timedelta(days=1))
+        args = (Q(valid_until__isnull=True) | Q(valid_until__gt=utc_now), )
+        params = {
+            'next_payment_at__lte': utc_now + timedelta(days=1),
+        }
+
+        subscriptions = Subscription.objects.filter(*args, **params)
+        plan_financings = PlanFinancing.objects.filter(*args, **params)
 
         Subscription.objects.filter(valid_until__lte=utc_now).exclude(avoid_expire_these_statuses).update(
             status='EXPIRED')

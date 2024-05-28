@@ -372,6 +372,59 @@ class PaymentsTestSuite(PaymentsTestCase):
         ])
 
     """
+    🔽🔽🔽 PlanFinancing was paid
+    """
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
+    @patch('breathecode.payments.tasks.renew_plan_financing_consumables.delay', MagicMock())
+    @patch('mixer.main.LOGGER.info', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_plan_financing_was_paid(self):
+        plan_financing = {
+            'valid_until': UTC_NOW + relativedelta(minutes=1),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
+            'monthly_price': (random.random() * 99) + 1,
+            'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
+        }
+        plan = {'is_renewable': False}
+        model = self.bc.database.create(plan_financing=plan_financing, invoice=1, plan=plan)
+
+        with patch('breathecode.payments.services.stripe.Stripe.pay', MagicMock(side_effect=Exception('fake error'))):
+            # remove prints from mixer
+            logging.Logger.info.call_args_list = []
+            logging.Logger.error.call_args_list = []
+
+            charge_plan_financing.delay(1)
+
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting charge_plan_financing for id 1'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('PlanFinancing with id 1 was paid this month', exc_info=True),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+            self.bc.format.to_dict(model.bag),
+        ])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [
+            self.bc.format.to_dict(model.invoice),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), [
+            {
+                **self.bc.format.to_dict(model.plan_financing),
+            },
+        ])
+        self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
+
+    """
     🔽🔽🔽 PlanFinancing try to charge, but a undexpected exception is raised, the database is rollbacked
     and the error is register in PlanFinancing
     """
