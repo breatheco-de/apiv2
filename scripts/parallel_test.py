@@ -2,40 +2,24 @@
 
 from __future__ import absolute_import
 
-import argparse
 import os
-import random
 import subprocess
 import sys
 
-
-def parse_arguments():
-    parser = argparse.ArgumentParser(description='Run pytest with optional seed.')
-    parser.add_argument('--seed', type=int, help='Seed for randomness')
-    parser.add_argument('pytest_args', nargs='*', help='Arguments to pass to pytest')
-    return parser.parse_args()
-
-
 if __name__ == '__main__':
-    args = parse_arguments()
+    args = ''
 
-    if args.seed is None:
-        seed = random.randint(0, 4294967295)
-    else:
-        seed = args.seed
+    if len(sys.argv) > 1:
+        sys.argv.pop(0)
+        args = ' '.join(sys.argv)
 
-    pytest_args = ' '.join(args.pytest_args)
-    command = f'pytest {pytest_args} --disable-pytest-warnings -n auto --nomigrations --durations=1'
+    command = f'pytest {args} --disable-pytest-warnings -n auto --nomigrations --durations=1'
     # command = f'pytest {pytest_args} -n auto --nomigrations --durations=1'
 
     env = os.environ.copy()
     env['ENV'] = 'test'
-    env['RANDOM_SEED'] = str(seed)
 
     exit_code = subprocess.run(command, env=env, shell=True).returncode
-
-    print()
-    print(f'Seed {seed} used, you can provide it locally to reproduce random errors')
 
     # python doesn't return 256
     if exit_code:

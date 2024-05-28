@@ -47,7 +47,7 @@ def get_kwargs(random: Random) -> Generator[callable, None, None]:
 
 
 @pytest.fixture
-def bc():
+def bc(seed):
     return Breathecode(None)
 
 
