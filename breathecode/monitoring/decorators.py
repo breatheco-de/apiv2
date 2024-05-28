@@ -37,7 +37,7 @@ class WebhookTask(Task):
         except Exception as ex:
             webhook.status = 'ERROR'
             print('Error ejejeje')
-            print(ex)
+            print(str(ex))
             webhook.status_text = str(ex)[:255]
             logger.debug(ex)
 
