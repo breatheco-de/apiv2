@@ -436,6 +436,10 @@ def async_synchonize_repository_content(self, webhook):
 
     logger.debug('async_synchonize_repository_content')
     payload = webhook.get_payload()
+
+    # some times the json contains a nested payload property
+    if 'payload' in payload: payload = payload['payload']
+
     if 'commits' not in payload:
         raise AbortTask('No commits found on the push object')
 
