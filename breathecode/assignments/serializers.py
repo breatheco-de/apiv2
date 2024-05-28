@@ -15,6 +15,17 @@ from .models import AssignmentTelemetry, FinalProject, Task, UserAttachment
 logger = logging.getLogger(__name__)
 
 
+class ProfileSmallSerializer(serpy.Serializer):
+    avatar_url = serpy.Field()
+
+
+class UserMediumSerializer(serpy.Serializer):
+    id = serpy.Field()
+    first_name = serpy.Field()
+    last_name = serpy.Field()
+    profile = ProfileSmallSerializer(required=False)
+
+
 class UserSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
@@ -277,7 +288,7 @@ class FinalProjectGETSerializer(serpy.Serializer):
     members = serpy.MethodField()
 
     def get_members(self, obj):
-        return [UserSmallSerializer(m).data for m in obj.members.all()]
+        return [UserMediumSerializer(m).data for m in obj.members.all()]
 
 
 class PostFinalProjectSerializer(serializers.ModelSerializer):

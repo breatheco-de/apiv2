@@ -88,12 +88,15 @@ def setup():
 def db(data={}):
     return {
         'delta': timedelta(seconds=3600),
-        'id': 0,
         'ran_at': None,
         'task_module': '',
         'task_name': '',
         **data,
     }
+
+
+def remove_ids(dbs):
+    return [x for x in dbs if x.pop('id')]
 
 
 class TestIssue:
@@ -131,10 +134,9 @@ class TestIssue:
         } in supervisor.list()
         assert supervisor.log('breathecode.payments.supervisors', 'supervise_all_consumption_sessions') == []
         assert db({
-            'id': 1,
             'task_module': 'breathecode.payments.supervisors',
             'task_name': 'supervise_all_consumption_sessions',
-        }) in database.list_of('monitoring.Supervisor')
+        }) in remove_ids(database.list_of('monitoring.Supervisor'))
         assert database.list_of('monitoring.SupervisorIssue') == []
         assert call(supervisor.id('breathecode.payments.supervisors',
                                   'supervise_all_consumption_sessions')) in run_supervisor_mock.call_args_list
@@ -166,10 +168,9 @@ class TestIssue:
         assert supervisor.log('breathecode.payments.supervisors',
                               'supervise_all_consumption_sessions') == [x.error for x in model.supervisor_issue]
         assert db({
-            'id': 1,
             'task_module': 'breathecode.payments.supervisors',
             'task_name': 'supervise_all_consumption_sessions',
-        }) in database.list_of('monitoring.Supervisor')
+        }) in remove_ids(database.list_of('monitoring.Supervisor'))
         assert database.list_of('monitoring.SupervisorIssue') == bc.format.to_dict(model.supervisor_issue)
         assert call(supervisor.id('breathecode.payments.supervisors',
                                   'supervise_all_consumption_sessions')) in run_supervisor_mock.call_args_list
@@ -201,10 +202,9 @@ class TestIssue:
         assert supervisor.log('breathecode.payments.supervisors',
                               'supervise_all_consumption_sessions') == [x.error for x in model.supervisor_issue]
         assert db({
-            'id': 1,
             'task_module': 'breathecode.payments.supervisors',
             'task_name': 'supervise_all_consumption_sessions',
-        }) in database.list_of('monitoring.Supervisor')
+        }) in remove_ids(database.list_of('monitoring.Supervisor'))
         assert database.list_of('monitoring.SupervisorIssue') == bc.format.to_dict(model.supervisor_issue)
         assert call(supervisor.id('breathecode.payments.supervisors',
                                   'supervise_all_consumption_sessions')) in run_supervisor_mock.call_args_list
@@ -245,12 +245,11 @@ class TestSupervision:
         } in supervisor.list()
         assert supervisor.log('breathecode.payments.supervisors', 'supervise_all_consumption_sessions') == []
         assert db({
-            'id': 1,
             'delta': delta,
             'ran_at': ran_at,
             'task_module': 'breathecode.payments.supervisors',
             'task_name': 'supervise_all_consumption_sessions',
-        }) in database.list_of('monitoring.Supervisor')
+        }) in remove_ids(database.list_of('monitoring.Supervisor'))
         assert database.list_of('monitoring.SupervisorIssue') == []
         assert call(supervisor.id('breathecode.payments.supervisors',
                                   'supervise_all_consumption_sessions')) in run_supervisor_mock.call_args_list
@@ -283,12 +282,11 @@ class TestSupervision:
         } in supervisor.list()
         assert supervisor.log('breathecode.payments.supervisors', 'supervise_all_consumption_sessions') == []
         assert db({
-            'id': 1,
             'delta': delta,
             'ran_at': ran_at,
             'task_module': 'breathecode.payments.supervisors',
             'task_name': 'supervise_all_consumption_sessions',
-        }) in database.list_of('monitoring.Supervisor')
+        }) in remove_ids(database.list_of('monitoring.Supervisor'))
         assert database.list_of('monitoring.SupervisorIssue') == []
         assert call(supervisor.id('breathecode.payments.supervisors',
                                   'supervise_all_consumption_sessions')) not in run_supervisor_mock.call_args_list

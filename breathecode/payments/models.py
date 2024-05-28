@@ -1041,7 +1041,12 @@ class PlanFinancing(AbstractIOweYou):
 
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
-        return super().save(*args, **kwargs)
+        on_create = self.pk is None
+
+        super().save(*args, **kwargs)
+
+        if on_create:
+            signals.planfinancing_created.send(instance=self, sender=self.__class__)
 
 
 class Subscription(AbstractIOweYou):
@@ -1094,7 +1099,12 @@ class Subscription(AbstractIOweYou):
 
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
-        return super().save(*args, **kwargs)
+        on_create = self.pk is None
+
+        super().save(*args, **kwargs)
+
+        if on_create:
+            signals.subscription_created.send(instance=self, sender=self.__class__)
 
 
 class SubscriptionServiceItem(models.Model):

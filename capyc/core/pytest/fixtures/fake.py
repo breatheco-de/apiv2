@@ -1,13 +1,14 @@
-from typing import Generator
+from typing import Generator, Optional
 
 import pytest
 from faker import Faker as Fake
 
 __all__ = ['fake', 'Fake']
 
-FAKE = Fake()
 
+@pytest.fixture(autouse=True)
+def fake(seed: Optional[int]) -> Generator[Fake, None, None]:
+    f = Fake()
+    f.seed_instance(seed)
 
-@pytest.fixture(scope='module')
-def fake() -> Generator[Fake, None, None]:
-    return FAKE
+    yield f
