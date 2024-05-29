@@ -4,7 +4,7 @@
   <br>
 </h1>
 
-<h4 align="center">4Geeks's mission is to <b>accelerate the way junior developers learn and evolve</b> using technology.</h4>
+<h4 align="center">4Geeks's mission is to <b>accelerate the way junior junior developers learn and evolve</b> using technology.</h4>
 
 <p align="center">
   <a href="https://coveralls.io/github/breatheco-de/apiv2">
