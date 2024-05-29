@@ -88,94 +88,6 @@ def handle_exc(format: str,
     return http_cls({'detail': message, 'status_code': status}, status)
 
 
-@contextmanager
-def manage_exception(request: HttpRequest, format: str):
-    # Code to acquire resource, e.g.:
-    try:
-        yield
-
-    except PaymentException as e:
-        if format == 'websocket':
-            raise e
-
-        if format == 'html':
-            return render_message(request,
-                                  str(e),
-                                  status=402,
-                                  go_back='Go back to Dashboard',
-                                  url_back='https://4geeks.com/choose-program')
-
-        return Response({'detail': str(e), 'status_code': 402}, 402)
-
-    # handle html views errors
-    except ValidationException as e:
-        if format == 'websocket':
-            raise e
-
-        status = e.status_code if hasattr(e, 'status_code') else 400
-
-        if format == 'html':
-            return render_message(request, str(e), status=status)
-
-        return Response({'detail': str(e), 'status_code': status}, status)
-
-    # handle html views errors
-    except Exception as e:
-        # show stacktrace for unexpected exceptions
-        traceback.print_exc()
-
-        if format == 'html':
-            return render_message(request, 'unexpected error, contact admin if you are affected', status=500)
-
-        response = JsonResponse({'detail': str(e), 'status_code': 500})
-        response.status_code = 500
-        return response
-
-
-@asynccontextmanager
-async def async_manage_exception(request: AsyncRequest, format: str):
-    # Code to acquire resource, e.g.:
-    try:
-        yield  # handle html views errors
-
-    except PaymentException as e:
-        if format == 'websocket':
-            raise e
-
-        if format == 'html':
-            return render_message(request,
-                                  str(e),
-                                  status=402,
-                                  go_back='Go back to Dashboard',
-                                  url_back='https://4geeks.com/choose-program')
-
-        return Response({'detail': str(e), 'status_code': 402}, 402)
-
-    # handle html views errors
-    except ValidationException as e:
-        if format == 'websocket':
-            raise e
-
-        status = e.status_code if hasattr(e, 'status_code') else 400
-
-        if format == 'html':
-            return render_message(request, str(e), status=status)
-
-        return Response({'detail': str(e), 'status_code': status}, status)
-
-    # handle html views errors
-    except Exception as e:
-        # show stacktrace for unexpected exceptions
-        traceback.print_exc()
-
-        if format == 'html':
-            return render_message(request, 'unexpected error, contact admin if you are affected', status=500)
-
-        response = JsonResponse({'detail': str(e), 'status_code': 500})
-        response.status_code = 500
-        return response
-
-
 def has_permission(permission: str, format='json') -> callable:
     """Check if the current user can access to the resource through of permissions."""
 
@@ -203,7 +115,7 @@ def has_permission(permission: str, format='json') -> callable:
         def wrapper(*args, **kwargs):
             request = validate_and_get_request(permission, args)
 
-            with manage_exception(request, format):
+            try:
                 if validate_permission(request.user, permission):
                     return function(*args, **kwargs)
 
@@ -218,14 +130,51 @@ def has_permission(permission: str, format='json') -> callable:
                                               code=403,
                                               slug='without-permission')
 
+            except PaymentException as e:
+                if format == 'websocket':
+                    raise e
+
+                if format == 'html':
+                    return render_message(request,
+                                          str(e),
+                                          status=402,
+                                          go_back='Go back to Dashboard',
+                                          url_back='https://4geeks.com/choose-program')
+
+                return Response({'detail': str(e), 'status_code': 402}, 402)
+
+            # handle html views errors
+            except ValidationException as e:
+                if format == 'websocket':
+                    raise e
+
+                status = e.status_code if hasattr(e, 'status_code') else 400
+
+                if format == 'html':
+                    return render_message(request, str(e), status=status)
+
+                return Response({'detail': str(e), 'status_code': status}, status)
+
+            # handle html views errors
+            except Exception as e:
+                # show stacktrace for unexpected exceptions
+                traceback.print_exc()
+
+                if format == 'html':
+                    return render_message(request, 'unexpected error, contact admin if you are affected', status=500)
+
+                response = JsonResponse({'detail': str(e), 'status_code': 500})
+                response.status_code = 500
+                return response
+
         @sync_to_async
-        async def async_get_user(request: AsyncRequest) -> User:
+        def async_get_user(request: AsyncRequest) -> User:
             return request.user
 
         async def async_wrapper(*args, **kwargs):
             request = validate_and_get_request(permission, args)
 
-            with async_manage_exception(request, format):
+            try:
                 user = await async_get_user(request)
                 if validate_permission(user, permission):
                     return await function(*args, **kwargs)
@@ -240,6 +189,43 @@ def has_permission(permission: str, format='json') -> callable:
                                                f'{permission}'),
                                               code=403,
                                               slug='without-permission')
+
+            except PaymentException as e:
+                if format == 'websocket':
+                    raise e
+
+                if format == 'html':
+                    return render_message(request,
+                                          str(e),
+                                          status=402,
+                                          go_back='Go back to Dashboard',
+                                          url_back='https://4geeks.com/choose-program')
+
+                return Response({'detail': str(e), 'status_code': 402}, 402)
+
+            # handle html views errors
+            except ValidationException as e:
+                if format == 'websocket':
+                    raise e
+
+                status = e.status_code if hasattr(e, 'status_code') else 400
+
+                if format == 'html':
+                    return render_message(request, str(e), status=status)
+
+                return Response({'detail': str(e), 'status_code': status}, status)
+
+            # handle html views errors
+            except Exception as e:
+                # show stacktrace for unexpected exceptions
+                traceback.print_exc()
+
+                if format == 'html':
+                    return render_message(request, 'unexpected error, contact admin if you are affected', status=500)
+
+                response = JsonResponse({'detail': str(e), 'status_code': 500})
+                response.status_code = 500
+                return response
 
         if asyncio.iscoroutinefunction(function):
             return async_wrapper

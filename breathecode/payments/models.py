@@ -1234,8 +1234,8 @@ class Consumable(AbstractServiceItem):
             **extra
         }).exclude(how_many=0).order_by('id')
 
-    @sync_to_async
     @classmethod
+    @sync_to_async
     def alist(cls,
               *,
               user: User | str | int,
@@ -1260,8 +1260,8 @@ class Consumable(AbstractServiceItem):
 
         return cls.list(user=user, lang=lang, service=service, permission=permission, extra=extra).first()
 
-    @sync_to_async
     @classmethod
+    @sync_to_async
     def aget(cls,
              *,
              user: User | str | int,
@@ -1428,8 +1428,8 @@ class ConsumptionSession(models.Model):
                                   operation_code=operation_code,
                                   user=user)
 
-    @sync_to_async
     @classmethod
+    @sync_to_async
     def abuild_session(cls,
                        request: WSGIRequest,
                        consumable: Consumable,
@@ -1463,8 +1463,8 @@ class ConsumptionSession(models.Model):
         data = cls.sort_dict(data)
         return cls.objects.filter(eta__gte=utc_now, request=data, user=request.user).first()
 
-    @sync_to_async
     @classmethod
+    @sync_to_async
     def aget_session(cls, request: WSGIRequest) -> 'ConsumptionSession':
         return cls.get_session(request)
 

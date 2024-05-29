@@ -5,15 +5,14 @@ from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import User
 from breathecode.mentorship.models import MentorProfile, MentorshipService
 from breathecode.payments.models import Consumable, ConsumptionSession
-from breathecode.utils.decorators import PermissionContextType
+from breathecode.utils.decorators import ServiceContext
 from breathecode.utils.i18n import translation
 from capyc.rest_framework.exceptions import PaymentException, ValidationException
 
 logger = logging.getLogger(__name__)
 
 
-def mentorship_service_by_url_param(context: PermissionContextType, args: tuple,
-                                    kwargs: dict) -> tuple[dict, tuple, dict]:
+def mentorship_service_by_url_param(context: ServiceContext, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
 
     context['will_consume'] = False
     request = context['request']

@@ -17,7 +17,7 @@ from rest_framework.views import APIView
 import breathecode.utils.decorators as decorators
 from breathecode.payments import models
 from breathecode.payments import signals as payments_signals
-from breathecode.utils.decorators import PermissionContextType
+from breathecode.utils.decorators import ServiceContext
 
 from ..mixins import UtilsTestCase
 
@@ -30,7 +30,7 @@ DELETE_ID_RESPONSE = {'a': 5}
 UTC_NOW = timezone.now()
 
 
-def consumer(context: PermissionContextType, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
+def consumer(context: ServiceContext, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
     # remember the objects are passed by reference, so you need to clone them to avoid modify the object
     # receive by the mock causing side effects
     args = (*args, PERMISSION)
@@ -51,7 +51,7 @@ CONSUMER_MOCK = MagicMock(wraps=consumer)
 time_of_life = timedelta(days=random.randint(1, 100))
 
 
-def consumer_with_time_of_life(context: PermissionContextType, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
+def consumer_with_time_of_life(context: ServiceContext, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
     # remember the objects are passed by reference, so you need to clone them to avoid modify the object
     # receive by the mock causing side effects
     args = (*args, PERMISSION)

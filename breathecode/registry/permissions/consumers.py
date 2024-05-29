@@ -6,14 +6,14 @@ from breathecode.admissions.actions import is_no_saas_student_up_to_date_in_any_
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.registry.models import Asset
-from breathecode.utils.decorators import PermissionContextType
+from breathecode.utils.decorators import ServiceContext
 from breathecode.utils.i18n import translation
 from capyc.rest_framework.exceptions import PaymentException, ValidationException
 
 logger = logging.getLogger(__name__)
 
 
-def asset_by_slug(context: PermissionContextType, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
+def asset_by_slug(context: ServiceContext, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
 
     def count_cohorts(available_as_saas: bool) -> int:
 

@@ -8,14 +8,14 @@ from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.events.actions import get_my_event_types
 from breathecode.events.models import Event, LiveClass
-from breathecode.utils.decorators import PermissionContextType
+from breathecode.utils.decorators import ServiceContext
 from breathecode.utils.i18n import translation
 from capyc.rest_framework.exceptions import PaymentException, ValidationException
 
 logger = logging.getLogger(__name__)
 
 
-def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
+def event_by_url_param(context: ServiceContext, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
     context['will_consume'] = False
 
     request = context['request']
@@ -91,7 +91,7 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
     return (context, args, kwargs)
 
 
-def live_class_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
+def live_class_by_url_param(context: ServiceContext, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
 
     context['will_consume'] = False
 

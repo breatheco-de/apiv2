@@ -19,12 +19,12 @@ from capyc.rest_framework.exceptions import PaymentException, ValidationExceptio
 
 from ..exceptions import ProgrammingError
 
-__all__ = ['has_permission', 'validate_permission', 'HasPermissionCallback', 'PermissionContextType']
+__all__ = ['has_permission', 'validate_permission', 'HasPermissionCallback', 'ServiceContext']
 
 logger = logging.getLogger(__name__)
 
 
-class PermissionContextType(TypedDict):
+class ServiceContext(TypedDict):
     utc_now: datetime
     consumer: bool
     permission: str
@@ -35,8 +35,7 @@ class PermissionContextType(TypedDict):
     is_consumption_session: bool
 
 
-HasPermissionCallback = Callable[[PermissionContextType, tuple, dict], tuple[PermissionContextType, tuple, dict,
-                                                                             Optional[timedelta]]]
+HasPermissionCallback = Callable[[ServiceContext, tuple, dict], tuple[ServiceContext, tuple, dict, Optional[timedelta]]]
 
 
 def validate_permission(user: User, permission: str, consumer: bool | HasPermissionCallback = False) -> bool:

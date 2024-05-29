@@ -165,86 +165,6 @@ def render_html_error(request, kwargs):
                           **renovate_consumables)
 
 
-@contextmanager
-def manage_exception(request: HttpRequest, format:str, kwargs: dict[Any, Any]):
-    # Code to acquire resource, e.g.:
-    try:
-        yield
-
-    # handle html views errors
-    except PaymentException as e:
-        if format == 'websocket':
-            raise e
-
-        if format == 'html':
-            return render_html_error(request, kwargs)
-
-        return Response({'detail': str(e), 'status_code': 402}, 402)
-
-    # handle html views errors
-    except ValidationException as e:
-        if format == 'websocket':
-            raise e
-
-        status = e.status_code if hasattr(e, 'status_code') else 400
-
-        if format == 'html':
-            return render_message(request, str(e), status=status)
-
-        return Response({'detail': str(e), 'status_code': status}, status)
-
-    # handle html views errors
-    except Exception as e:
-        # show stacktrace for unexpected exceptions
-        traceback.print_exc()
-
-        if format == 'html':
-            return render_message(request, 'unexpected error, contact admin if you are affected', status=500)
-
-        response = JsonResponse({'detail': str(e), 'status_code': 500})
-        response.status_code = 500
-        return response
-
-
-@asynccontextmanager
-async def async_manage_exception(request: AsyncRequest, format:str, kwargs: dict[Any, Any]):
-    # Code to acquire resource, e.g.:
-    try:
-        yield  # handle html views errors
-
-    # handle html views errors
-    except PaymentException as e:
-        if format == 'websocket':
-            raise e
-
-        if format == 'html':
-            return render_html_error(request, kwargs)
-
-        return Response({'detail': str(e), 'status_code': 402}, 402)
-
-    # handle html views errors
-    except ValidationException as e:
-        if format == 'websocket':
-            raise e
-
-        status = e.status_code if hasattr(e, 'status_code') else 400
-
-        if format == 'html':
-            return render_message(request, str(e), status=status)
-
-        return Response({'detail': str(e), 'status_code': status}, status)
-
-    # handle html views errors
-    except Exception as e:
-        # show stacktrace for unexpected exceptions
-        traceback.print_exc()
-
-        if format == 'html':
-            return render_message(request, 'unexpected error, contact admin if you are affected', status=500)
-
-        response = JsonResponse({'detail': str(e), 'status_code': 500})
-        response.status_code = 500
-        return response
 
 def consume(service: str, consumer: Optional[Consumer] = None, format:str='json') -> callable:
     """Check if the current user can access to the resource through of permissions."""
@@ -294,7 +214,7 @@ def consume(service: str, consumer: Optional[Consumer] = None, format:str='json'
                     f'Anonymous user do not have enough credits to access to this service: {service}',
                     slug='anonymous-user-not-enough-consumables')
 
-            with manage_exception(request,format, kwargs):
+            try:
                 utc_now = timezone.now()
                 session = ConsumptionSession.get_session(request)
                 context = build_context(request, utc_now)
@@ -343,10 +263,44 @@ def consume(service: str, consumer: Optional[Consumer] = None, format:str='json'
 
                 return response
 
+            # handle html views errors
+            except PaymentException as e:
+                if format == 'websocket':
+                    raise e
+
+                if format == 'html':
+                    return render_html_error(request, kwargs)
+
+                return Response({'detail': str(e), 'status_code': 402}, 402)
+
+            # handle html views errors
+            except ValidationException as e:
+                if format == 'websocket':
+                    raise e
+
+                status = e.status_code if hasattr(e, 'status_code') else 400
+
+                if format == 'html':
+                    return render_message(request, str(e), status=status)
+
+                return Response({'detail': str(e), 'status_code': status}, status)
+
+            # handle html views errors
+            except Exception as e:
+                # show stacktrace for unexpected exceptions
+                traceback.print_exc()
+
+                if format == 'html':
+                    return render_message(request, 'unexpected error, contact admin if you are affected', status=500)
+
+                response = JsonResponse({'detail': str(e), 'status_code': 500})
+                response.status_code = 500
+                return response
+
 
 
         @sync_to_async
-        async def async_get_user(request: AsyncRequest) -> User:
+        def async_get_user(request: AsyncRequest) -> User:
             return request.user
 
         # TODO: reduce the difference between sync and async handlers
@@ -358,7 +312,7 @@ def consume(service: str, consumer: Optional[Consumer] = None, format:str='json'
                     f'Anonymous user do not have enough credits to access to this service: {service}',
                     slug='anonymous-user-not-enough-consumables')
 
-            async with async_manage_exception(request,format, kwargs):
+            try:
                 utc_now = timezone.now()
                 session = ConsumptionSession.get_session(request)
                 context = build_context(request, utc_now)
@@ -408,6 +362,40 @@ def consume(service: str, consumer: Optional[Consumer] = None, format:str='json'
                     item = await context['consumables'].afirst()
                     consume_service.send(instance=item, sender=item.__class__, how_many=context['price'])
 
+                return response
+
+            # handle html views errors
+            except PaymentException as e:
+                if format == 'websocket':
+                    raise e
+
+                if format == 'html':
+                    return render_html_error(request, kwargs)
+
+                return Response({'detail': str(e), 'status_code': 402}, 402)
+
+            # handle html views errors
+            except ValidationException as e:
+                if format == 'websocket':
+                    raise e
+
+                status = e.status_code if hasattr(e, 'status_code') else 400
+
+                if format == 'html':
+                    return render_message(request, str(e), status=status)
+
+                return Response({'detail': str(e), 'status_code': status}, status)
+
+            # handle html views errors
+            except Exception as e:
+                # show stacktrace for unexpected exceptions
+                traceback.print_exc()
+
+                if format == 'html':
+                    return render_message(request, 'unexpected error, contact admin if you are affected', status=500)
+
+                response = JsonResponse({'detail': str(e), 'status_code': 500})
+                response.status_code = 500
                 return response
 
         if asyncio.iscoroutinefunction(function):

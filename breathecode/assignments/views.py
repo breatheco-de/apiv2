@@ -953,14 +953,14 @@ class MeCodeRevisionView(APIView):
     def get_github_credentials(self):
         return self.request.user.credentialsgithub
 
-    def get(self, request, task_id=None):
-        lang = get_user_language(request)
+    async def get(self, request, task_id=None):
+        lang = await aget_user_language(request)
         params = {}
         for key in request.GET.keys():
             params[key] = request.GET.get(key)
 
-        if task_id and not (task := Task.objects.filter(id=task_id,
-                                                        user__id=request.user.id).exclude(github_url=None).first()):
+        if task_id and not (task := await Task.objects.filter(
+                id=task_id, user__id=request.user.id).exclude(github_url=None).afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
         elif not hasattr(request.user, 'credentialsgithub'):
@@ -973,22 +973,23 @@ class MeCodeRevisionView(APIView):
         if task_id and task and task.github_url:
             params['repo'] = task.github_url
 
-        params['github_username'] = request.user.credentialsgithub.username
+        user = await self.get_user()
+        github_credentials = await self.get_github_credentials()
 
-        with Service('rigobot', request.user.id, proxy=True) as s:
-            return s.get('/v1/finetuning/me/coderevision', params=params, stream=True)
+        params['github_username'] = github_credentials.username
+
+        async with Service('rigobot', user.id, proxy=True) as s:
+            return await s.get('/v1/finetuning/me/coderevision', params=params, stream=True)
 
     @consume('add_code_review', consumer=code_revision_service)
     async def post(self, request, task_id):
         lang = await aget_user_language(request)
-        print(1)
         params = {}
         for key in request.GET.keys():
             params[key] = request.GET.get(key)
 
         user = self.get_user()
 
-        print(2)
         item = await Task.objects.filter(id=task_id, user__id=user.id).afirst()
         if item is None:
             raise ValidationException('Task not found', code=404, slug='task-not-found')
@@ -1000,14 +1001,11 @@ class MeCodeRevisionView(APIView):
                                                   slug='github-account-not-connected'),
                                       code=400)
 
-        print(3)
         github_credentials = await self.get_github_credentials()
         params['github_username'] = github_credentials.username
         params['repo'] = item.github_url
 
-        print(4)
         async with Service('rigobot', request.user.id, proxy=True) as s:
-            print(5, await s.post('/v1/finetuning/coderevision/', data=request.data, stream=True, params=params))
             return await s.post('/v1/finetuning/coderevision/', data=request.data, stream=True, params=params)
 
 
