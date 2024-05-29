@@ -363,6 +363,8 @@ class AssetBigAndTechnologySerializer(AssetBigSerializer):
 # the admin.4geeks.com will use another one
 class AssetBigAndTechnologyPublishedSerializer(AssetBigSerializer):
 
+    assessment = AssessmentSmallSerializer(required=False)
+    
     technologies = serpy.MethodField()
     translations = serpy.MethodField()
 
