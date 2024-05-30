@@ -320,8 +320,6 @@ class UploadView(APIView):
         if format_error and len(df.keys().intersection(fields)) == len(fields):
             format_error = False
 
-            csv_last_line = cut_csv(file, last=1)
-
             try:
                 first = datetime.fromisoformat(df['consumption_period_start'].min())
                 last = datetime.fromisoformat(df['consumption_period_end'].max())
