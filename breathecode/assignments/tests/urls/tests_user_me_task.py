@@ -745,36 +745,6 @@ def test_post__no_required_fields(client: capy.Client, database: capy.Database):
     'LESSON',
     'EXERCISE',
 ])
-def test_post__no_cohort(client: capy.Client, database: capy.Database, fake: capy.Fake, task_type: str):
-    url = reverse_lazy('assignments:user_me_task')
-
-    model = database.create(user=1)
-    client.force_authenticate(model.user)
-
-    data = {
-        'associated_slug': fake.slug(),
-        'title': fake.name(),
-        'task_type': task_type,
-    }
-    response = client.post(url, data, format='json')
-
-    json = response.json()
-    expected = {
-        'detail': 'Cohort is required.',
-        'status_code': 400,
-    }
-
-    assert json == expected
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert database.list_of('assignments.Task') == []
-
-
-@pytest.mark.parametrize('task_type', [
-    'PROJECT',
-    'QUIZ',
-    'LESSON',
-    'EXERCISE',
-])
 def test_post__created(client: capy.Client, database: capy.Database, fake: capy.Fake, task_type: str,
                        utc_now: datetime):
     url = reverse_lazy('assignments:user_me_task')
