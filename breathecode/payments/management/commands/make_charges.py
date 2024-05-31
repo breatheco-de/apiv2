@@ -20,19 +20,20 @@ class Command(BaseCommand):
         avoid_expire_these_statuses = Q(status='EXPIRED') | Q(status='ERROR') | Q(status='PAYMENT_ISSUE') | Q(
             status='FULLY_PAID') | Q(status='FREE_TRIAL') | Q(status='CANCELLED') | Q(status='DEPRECATED')
 
-        args = (Q(valid_until__isnull=True) | Q(valid_until__gt=utc_now), )
+        subscription_args = (Q(valid_until__isnull=True) | Q(valid_until__gt=utc_now), )
+        financing_args = (Q(plan_expires_at__isnull=True) | Q(plan_expires_at__gt=utc_now), )
         params = {
             'next_payment_at__lte': utc_now + timedelta(days=1),
         }
 
-        subscriptions = Subscription.objects.filter(*args, **params)
-        plan_financings = PlanFinancing.objects.filter(*args, **params)
-
         Subscription.objects.filter(valid_until__lte=utc_now).exclude(avoid_expire_these_statuses).update(
             status='EXPIRED')
 
-        PlanFinancing.objects.filter(valid_until__lte=utc_now).exclude(avoid_expire_these_statuses).update(
+        PlanFinancing.objects.filter(plan_expires_at__lte=utc_now).exclude(avoid_expire_these_statuses).update(
             status='EXPIRED')
+
+        subscriptions = Subscription.objects.filter(*subscription_args, **params)
+        plan_financings = PlanFinancing.objects.filter(*financing_args, **params)
 
         for status in statuses:
             subscriptions = subscriptions.exclude(status=status)

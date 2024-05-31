@@ -4,6 +4,7 @@ Test /answer
 import logging
 import os
 import random
+from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -188,6 +189,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         subscription = {
             'pay_every': unit,
             'pay_every_unit': unit_type,
+            'next_payment_at': UTC_NOW - relativedelta(days=25, months=unit * 2),
         }
         model = self.bc.database.create(subscription=subscription, invoice=1)
 
@@ -226,13 +228,17 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'paid_at': UTC_NOW,
             }),
         ])
+        next_payment_at = model.subscription.next_payment_at
+        delta = calculate_relative_delta(unit, unit_type)
+        for _ in range(3):
+            next_payment_at += delta
 
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), [
             {
                 **self.bc.format.to_dict(model.subscription),
                 'status': 'ACTIVE',
                 'paid_at': UTC_NOW,
-                'next_payment_at': UTC_NOW + calculate_relative_delta(unit, unit_type),
+                'next_payment_at': next_payment_at,
             },
         ])
 

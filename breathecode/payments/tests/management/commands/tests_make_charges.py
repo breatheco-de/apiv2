@@ -120,10 +120,10 @@ def test_with_two_plan_financings__wrong_cases(bc: Breathecode, delta, status, u
     valid_until = utc_now + delta
     plan_financing = {
         'next_payment_at': valid_until,
-        'valid_until': UTC_NOW + relativedelta(months=random.randint(12, 24)),
+        'valid_until': UTC_NOW + relativedelta(months=random.randint(1, 12)),
         'status': status,
         'monthly_price': (random.random() * 99) + 1,
-        'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
+        'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(12, 24)),
     }
 
     model = bc.database.create(plan_financing=(2, plan_financing))
@@ -145,10 +145,10 @@ def test_with_two_plan_financings__expired(bc: Breathecode, delta, status, statu
     valid_until = utc_now + delta
     plan_financing = {
         'next_payment_at': valid_until,
-        'valid_until': valid_until,
+        'valid_until': UTC_NOW + relativedelta(months=random.randint(1, 12)),
         'status': status,
         'monthly_price': (random.random() * 99) + 1,
-        'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
+        'plan_expires_at': valid_until,
     }
 
     model = bc.database.create(plan_financing=(2, plan_financing))
@@ -177,10 +177,10 @@ def test_with_two_plan_financings__valid_cases(bc: Breathecode, delta, status, u
     next_payment_at = utc_now - delta
     plan_financing = {
         'next_payment_at': next_payment_at,
-        'valid_until': valid_until,
+        'valid_until': UTC_NOW + relativedelta(months=random.randint(1, 12)),
         'status': status,
         'monthly_price': (random.random() * 99) + 1,
-        'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
+        'plan_expires_at': valid_until,
     }
 
     model = bc.database.create(plan_financing=(2, plan_financing))

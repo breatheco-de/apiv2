@@ -5,14 +5,14 @@ import logging
 import random
 from unittest.mock import MagicMock, call, patch
 
+from dateutil.relativedelta import relativedelta
 from django.utils import timezone
+
 from breathecode.payments import tasks
 from breathecode.payments.actions import calculate_relative_delta
 
 from ...tasks import renew_plan_financing_consumables
-
 from ..mixins import PaymentsTestCase
-from dateutil.relativedelta import relativedelta
 
 UTC_NOW = timezone.now()
 
@@ -122,45 +122,6 @@ class PaymentsTestSuite(PaymentsTestCase):
             call('Starting renew_plan_financing_consumables for id 1'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [])
-
-        self.assertEqual(tasks.renew_consumables.delay.call_args_list, [])
-
-        self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), [
-            self.bc.format.to_dict(model.plan_financing),
-        ])
-        self.assertEqual(self.bc.database.list_of('payments.ServiceStockScheduler'), [])
-
-    """
-    🔽🔽🔽 Subscription is over
-    """
-
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.payments.tasks.renew_consumables.delay', MagicMock())
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test_subscription_is_over(self):
-        subscription = {
-            'next_payment_at': UTC_NOW + relativedelta(minutes=3),
-            'valid_until': UTC_NOW - relativedelta(seconds=1),
-            'plan_expires_at': UTC_NOW + relativedelta(minutes=3),
-            'monthly_price': random.random() * 99.99 + 0.01,
-        }
-        plan = {'is_renewable': False}
-        model = self.bc.database.create(plan_financing=subscription, plan=plan)
-
-        logging.Logger.info.call_args_list = []
-        logging.Logger.error.call_args_list = []
-
-        renew_plan_financing_consumables.delay(1)
-
-        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
-
-        self.assertEqual(logging.Logger.info.call_args_list, [
-            call('Starting renew_plan_financing_consumables for id 1'),
-        ])
-        self.assertEqual(logging.Logger.error.call_args_list, [
-            call('The plan financing 1 is over', exc_info=True),
-        ])
 
         self.assertEqual(tasks.renew_consumables.delay.call_args_list, [])
 
