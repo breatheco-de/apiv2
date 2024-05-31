@@ -29,9 +29,9 @@ def validate_captcha_challenge(function):
             else:
                 raise IndexError()
 
-            apply_captcha = os.getenv('APPLY_CAPTCHA', False)
+            apply_captcha = os.getenv('APPLY_CAPTCHA', 'FALSE')
 
-            if not apply_captcha:
+            if not apply_captcha or apply_captcha == 'FALSE':
                 return function(*args, **kwargs)
 
             logger.info('VERIFYING THE CAPTCHA')
