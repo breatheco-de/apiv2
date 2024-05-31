@@ -34,9 +34,6 @@ def validate_captcha_challenge(function):
             if not apply_captcha or apply_captcha == 'FALSE':
                 return function(*args, **kwargs)
 
-            logger.info('VERIFYING THE CAPTCHA')
-            print('VERIFYING THE CAPTCHA')
-
             project_id = os.getenv('GOOGLE_PROJECT_ID', '')
 
             site_key = os.getenv('GOOGLE_CAPTCHA_KEY', '')
