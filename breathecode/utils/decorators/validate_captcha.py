@@ -30,19 +30,10 @@ def validate_captcha(function):
 
             apply_captcha = os.getenv('APPLY_CAPTCHA', 'FALSE')
 
-            logger.info('CAPTCHA DECORATOR')
-            print('CAPTCHA DECORATOR')
-            logger.info('apply_captcha')
-            print(apply_captcha)
-
             if not apply_captcha or apply_captcha == 'FALSE':
                 return function(*args, **kwargs)
 
-            logger.info('VERIFYING THE CAPTCHA')
-            print('VERIFYING THE CAPTCHA')
-
             project_id = os.getenv('GOOGLE_PROJECT_ID', '')
-
             site_key = os.getenv('GOOGLE_CAPTCHA_KEY', '')
 
             token = data['token'] if 'token' in data else None
@@ -54,11 +45,6 @@ def validate_captcha(function):
                                                    recaptcha_site_key=site_key,
                                                    token=token,
                                                    recaptcha_action=recaptcha_action)
-
-            logger.info('response risk_analysis score')
-            logger.info(response.risk_analysis.score)
-            print('response risk_analysis score')
-            print(response.risk_analysis.score)
 
             if (response.risk_analysis.score < 0.8):
                 raise ValidationException('The action was denied because it was considered suspicious', code=429)
