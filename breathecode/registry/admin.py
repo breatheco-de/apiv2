@@ -350,7 +350,7 @@ class AssetAdmin(admin.ModelAdmin):
         'asset_type', 'status', 'sync_status', 'test_status', 'lang', 'external', AssessmentFilter, WithKeywordFilter,
         WithDescription, IsMarkdown
     ]
-    raw_id_fields = ['author', 'owner']
+    raw_id_fields = ['author', 'owner', 'superseded_by']
     actions = [
         test_asset_integrity,
         add_gitpod,

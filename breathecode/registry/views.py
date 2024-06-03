@@ -83,6 +83,7 @@ from .serializers import (
     SEOReportSerializer,
     TechnologyPUTSerializer,
     VariableSmallSerializer,
+    AssetTinySerializer,
 )
 from .tasks import async_pull_from_github
 
@@ -832,6 +833,37 @@ class AcademyAssetOriginalityView(APIView, GenerateLookupsMixin):
         scans = handler.queryset(scans)
         serializer = OriginalityScanSerializer(scans, many=True)
         return handler.response(serializer.data)
+
+
+class AssetSupersedesView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    @capable_of('read_asset')
+    def get(self, request, asset_slug=None, academy_id=None):
+
+        asset = Asset.get_by_slug(asset_slug, request)
+
+        supersedes = []
+        _aux = asset
+        while _aux.superseded_by is not None:
+            supersedes.append(_aux.superseded_by)
+            _aux = _aux.superseded_by
+
+        previous = []
+        _aux = asset
+        try:
+            while _aux.previous_version is not None:
+                previous.append(_aux.previous_version)
+                _aux = _aux.previous_version
+        except:
+            pass
+
+        return Response({
+            'supersedes': AssetTinySerializer(supersedes, many=True).data,
+            'previous': AssetTinySerializer(previous, many=True).data
+        })
 
 
 class AcademyAssetView(APIView, GenerateLookupsMixin):

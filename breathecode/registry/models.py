@@ -359,6 +359,17 @@ class Asset(models.Model):
         db_index=True)
     asset_type = models.CharField(max_length=20, choices=TYPE, db_index=True)
 
+    superseded_by = models.OneToOneField(
+        'Asset',
+        related_name='previous_version',
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        blank=True,
+        help_text=
+        'The newer version of the article (null if it is the latest version). This is used for technology deprecation, for example, a new article to explain the new version of react router'
+    )
+
     status = models.CharField(max_length=20,
                               choices=ASSET_STATUS,
                               default=NOT_STARTED,
