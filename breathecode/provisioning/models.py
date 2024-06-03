@@ -1,10 +1,11 @@
 import logging
-from django.db import models
+
 from django.contrib.auth.models import User
-from breathecode.admissions.models import Academy, Cohort
-from breathecode.authenticate.models import ProfileAcademy
+from django.db import models
 from django.utils import timezone
 
+from breathecode.admissions.models import Academy, Cohort
+from breathecode.authenticate.models import ProfileAcademy
 from breathecode.payments.models import Currency
 
 logger = logging.getLogger(__name__)
@@ -180,9 +181,12 @@ class ProvisioningConsumptionEvent(models.Model):
     quantity = models.FloatField()
     price = models.ForeignKey(ProvisioningPrice, on_delete=models.CASCADE)
 
-    repository_url = models.URLField()
+    repository_url = models.URLField(null=True, blank=False)
     task_associated_slug = models.SlugField(
-        max_length=100, help_text='What assignment was the the student trying to complete with this')
+        max_length=100,
+        null=True,
+        blank=False,
+        help_text='What assignment was the the student trying to complete with this')
 
     def __str__(self):
         return str(self.quantity) + ' - ' + self.task_associated_slug

@@ -385,6 +385,8 @@ class AssetBigAndTechnologySerializer(AssetBigSerializer):
 # the admin.4geeks.com will use another one
 class AssetBigAndTechnologyPublishedSerializer(AssetBigSerializer):
 
+    assessment = AssessmentSmallSerializer(required=False)
+    
     technologies = serpy.MethodField()
     translations = serpy.MethodField()
 
@@ -849,5 +851,13 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                 data['published_at'] = now
             elif validated_data['status'] != 'PUBLISHED':
                 data['published_at'] = None
+
+        # Check if preview img is being deleted
+        if 'preview' in validated_data:
+            if validated_data['preview'] == None and instance.preview != None:
+                hash = instance.preview.split('/')[-1]
+                if hash is not None:
+                    from .tasks import async_remove_asset_preview_from_cloud
+                    async_remove_asset_preview_from_cloud.delay(hash)
 
         return super().update(instance, {**validated_data, **data})

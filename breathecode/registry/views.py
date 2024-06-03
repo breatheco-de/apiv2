@@ -937,8 +937,10 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
             else:
                 lookup['slug'] = param
 
-        if 'language' in self.request.GET:
+        if 'language' in self.request.GET or 'lang' in self.request.GET:
             param = self.request.GET.get('language')
+            if not param: param = self.request.GET.get('lang')
+                
             if param == 'en':
                 param = 'us'
             lookup['lang'] = param
