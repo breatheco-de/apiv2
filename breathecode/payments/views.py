@@ -1639,6 +1639,32 @@ class PayView(APIView):
         utc_now = timezone.now()
         lang = get_user_language(request)
 
+        conversion_info = request.data['conversion_info'] if 'conversion_info' in request.data else None
+        if conversion_info is not None:
+            if not isinstance(conversion_info, dict):
+                raise ValidationException(translation(
+                    lang,
+                    en='Payment was not processed because conversion_info was not a JSON object',
+                    es='El pago no fue procesado porque conversion_info no fue un objeto de JSON',
+                    slug='conversion-info-json-type'),
+                                          code=400)
+
+            expected_keys = [
+                'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'utm_campaign',
+                'conversion_url', 'landing_url', 'user_agent', 'plan', 'location', 'translations'
+            ]
+
+            for key in conversion_info.keys():
+                if key not in expected_keys:
+                    raise ValidationException(translation(
+                        lang,
+                        en=f'Payment was not processed because invalid key {key} was provided in the conversion_info',
+                        es=f'El pago no fue procesado porque se agrego una clave inválida {key} en el conversion_info',
+                        slug='conversion-info-invalid-key'),
+                                              code=400)
+
+        conversion_info = str(conversion_info)
+
         with transaction.atomic():
             sid = transaction.savepoint()
             try:
@@ -1820,10 +1846,10 @@ class PayView(APIView):
                     tasks.build_free_subscription.delay(bag.id, invoice.id)
 
                 elif bag.how_many_installments > 0:
-                    tasks.build_plan_financing.delay(bag.id, invoice.id)
+                    tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info)
 
                 else:
-                    tasks.build_subscription.delay(bag.id, invoice.id)
+                    tasks.build_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
 
                 if plans := bag.plans.all():
                     for plan in plans:

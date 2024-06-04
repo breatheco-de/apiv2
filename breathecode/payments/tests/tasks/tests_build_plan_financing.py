@@ -216,6 +216,8 @@ class PaymentsTestSuite(PaymentsTestCase):
             ])
         self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), [
             plan_financing_item({
+                'conversion_info':
+                None,
                 'monthly_price':
                 model.invoice.amount,
                 'valid_until':
@@ -287,6 +289,8 @@ class PaymentsTestSuite(PaymentsTestCase):
             ])
         self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), [
             plan_financing_item({
+                'conversion_info':
+                None,
                 'monthly_price':
                 model.invoice.amount,
                 'selected_cohort_set_id':
@@ -359,6 +363,8 @@ class PaymentsTestSuite(PaymentsTestCase):
             ])
         self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), [
             plan_financing_item({
+                'conversion_info':
+                None,
                 'monthly_price':
                 model.invoice.amount,
                 'selected_event_type_set_id':
@@ -431,6 +437,8 @@ class PaymentsTestSuite(PaymentsTestCase):
             ])
         self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), [
             plan_financing_item({
+                'conversion_info':
+                None,
                 'monthly_price':
                 model.invoice.amount,
                 'selected_mentorship_service_set_id':

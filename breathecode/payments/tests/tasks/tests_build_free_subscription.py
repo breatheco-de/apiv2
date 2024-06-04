@@ -212,6 +212,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             unit_type = plan.trial_duration_unit
             db.append(
                 subscription_item({
+                    'conversion_info': None,
                     'id': plan.id,
                     'status': 'FREE_TRIAL',
                     'paid_at': model.invoice.paid_at,
@@ -342,6 +343,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             unit_type = plan.trial_duration_unit
             db.append(
                 subscription_item({
+                    'conversion_info': None,
                     'id': plan.id,
                     'selected_cohort_set_id': 1,
                     'status': 'FREE_TRIAL',
@@ -414,6 +416,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             unit_type = plan.trial_duration_unit
             db.append(
                 subscription_item({
+                    'conversion_info': None,
                     'id': plan.id,
                     'selected_event_type_set_id': 1,
                     'status': 'FREE_TRIAL',
@@ -486,6 +489,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             unit_type = plan.trial_duration_unit
             db.append(
                 subscription_item({
+                    'conversion_info': None,
                     'id': plan.id,
                     'selected_mentorship_service_set_id': 1,
                     'status': 'FREE_TRIAL',
@@ -560,6 +564,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             unit_type = plan.time_of_life_unit
             db.append(
                 subscription_item({
+                    'conversion_info': None,
                     'id': plan.id,
                     'status': 'ACTIVE',
                     'paid_at': model.invoice.paid_at,
@@ -633,6 +638,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             unit_type = plan.time_of_life_unit
             db.append(
                 subscription_item({
+                    'conversion_info': None,
                     'id': plan.id,
                     'status': 'ACTIVE',
                     'paid_at': model.invoice.paid_at,

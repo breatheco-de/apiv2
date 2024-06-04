@@ -1,4 +1,5 @@
 import logging
+import ast
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
@@ -568,7 +569,12 @@ def build_service_stock_scheduler_from_plan_financing(self,
 
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
-def build_subscription(self, bag_id: int, invoice_id: int, start_date: Optional[datetime] = None, **_: Any):
+def build_subscription(self,
+                       bag_id: int,
+                       invoice_id: int,
+                       start_date: Optional[datetime] = None,
+                       conversion_info: Optional[str] = '',
+                       **_: Any):
     logger.info(f'Starting build_subscription for bag {bag_id}')
 
     if not (bag := Bag.objects.filter(id=bag_id, status='PAID', was_delivered=False).first()):
@@ -603,6 +609,8 @@ def build_subscription(self, bag_id: int, invoice_id: int, start_date: Optional[
         service_set = None
 
     subscription_start_at = start_date or invoice.paid_at
+
+    parsed_conversion_info = ast.literal_eval(conversion_info) if conversion_info != '' else None
     subscription = Subscription.objects.create(user=bag.user,
                                                paid_at=invoice.paid_at,
                                                academy=bag.academy,
@@ -612,7 +620,8 @@ def build_subscription(self, bag_id: int, invoice_id: int, start_date: Optional[
                                                selected_service_set=service_set,
                                                valid_until=None,
                                                next_payment_at=subscription_start_at + relativedelta(months=months),
-                                               status='ACTIVE')
+                                               status='ACTIVE',
+                                               conversion_info=parsed_conversion_info)
 
     subscription.plans.set(bag.plans.all())
     subscription.service_items.set(bag.service_items.all())
@@ -629,7 +638,12 @@ def build_subscription(self, bag_id: int, invoice_id: int, start_date: Optional[
 
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
-def build_plan_financing(self, bag_id: int, invoice_id: int, is_free: bool = False, **_: Any):
+def build_plan_financing(self,
+                         bag_id: int,
+                         invoice_id: int,
+                         is_free: bool = False,
+                         conversion_info: Optional[str] = '',
+                         **_: Any):
     logger.info(f'Starting build_plan_financing for bag {bag_id}')
 
     if not (bag := Bag.objects.filter(id=bag_id, status='PAID', was_delivered=False).first()):
@@ -671,6 +685,9 @@ def build_plan_financing(self, bag_id: int, invoice_id: int, is_free: bool = Fal
         mentorship_service_set = None
         service_set = None
 
+    print('conversion_info')
+    print(conversion_info)
+    parsed_conversion_info = ast.literal_eval(conversion_info) if conversion_info != '' else None
     financing = PlanFinancing.objects.create(user=bag.user,
                                              next_payment_at=invoice.paid_at + relativedelta(months=1),
                                              academy=bag.academy,
@@ -681,7 +698,8 @@ def build_plan_financing(self, bag_id: int, invoice_id: int, is_free: bool = Fal
                                              valid_until=invoice.paid_at + relativedelta(months=months),
                                              plan_expires_at=invoice.paid_at + delta,
                                              monthly_price=invoice.amount,
-                                             status='ACTIVE')
+                                             status='ACTIVE',
+                                             conversion_info=parsed_conversion_info)
 
     financing.plans.set(plans)
 
