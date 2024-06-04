@@ -207,7 +207,7 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
             'organization', 'consumption_period_id', 'consumption_period_start', 'consumption_period_end',
             'billing_status', 'total_spent_period', 'consumption_item_id', 'user_id', 'email', 'consumption_type',
             'pricing_type', 'total_spent', 'total_tokens', 'model', 'purpose_id', 'purpose_slug', 'purpose',
-            'created_at'
+            'created_at', 'github_username'
         ]
     if not handler and len(df.keys().intersection(fields)) == len(fields):
         handler = actions.add_rigobot_activity
