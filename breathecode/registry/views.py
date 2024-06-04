@@ -940,7 +940,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         if 'language' in self.request.GET or 'lang' in self.request.GET:
             param = self.request.GET.get('language')
             if not param: param = self.request.GET.get('lang')
-                
+
             if param == 'en':
                 param = 'us'
             lookup['lang'] = param
@@ -991,6 +991,16 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
                 lookup['external'] = True
             elif param == 'both':
                 lookup.pop('external', None)
+
+        if 'superseded_by' in self.request.GET:
+            param = self.request.GET.get('superseded_by')
+            if param.lower() in ['none', 'null']:
+                lookup['superseded_by__isnull'] = True
+            else:
+                if param.isnumeric():
+                    lookup['superseded_by__id'] = param
+                else:
+                    lookup['superseded_by__slug'] = param
 
         published_before = request.GET.get('published_before', '')
         if published_before != '':
