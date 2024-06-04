@@ -1002,6 +1002,16 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
                 else:
                     lookup['superseded_by__slug'] = param
 
+        if 'previous_version' in self.request.GET:
+            param = self.request.GET.get('previous_version')
+            if param.lower() in ['none', 'null']:
+                lookup['previous_version__isnull'] = True
+            else:
+                if param.isnumeric():
+                    lookup['previous_version__id'] = param
+                else:
+                    lookup['previous_version__slug'] = param
+
         published_before = request.GET.get('published_before', '')
         if published_before != '':
             items = items.filter(published_at__lte=published_before)
