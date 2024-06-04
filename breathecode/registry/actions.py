@@ -661,7 +661,7 @@ def process_asset_config(asset, config):
     # only replace title and description of English language
     if 'title' in config:
         if isinstance(config['title'], str):
-            if (lang == '' or asset.title == '' or asset.title is None):
+            if (asset.lang in ['us', 'en'] or asset.title == '' or asset.title is None):
                 asset.title = config['title']
         elif isinstance(config['title'], dict) and asset.lang in config['title']:
             asset.title = config['title'][asset.lang]
