@@ -190,14 +190,86 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('breathecode.payments.tasks.renew_plan_financing_consumables.delay', MagicMock())
     @patch('mixer.main.LOGGER.info', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test_plan_financing_process_to_charge(self):
+    def test_plan_financing_was_paid_this_month(self):
+        delta = relativedelta(months=random.randint(1, 12))
         plan_financing = {
-            'valid_until': UTC_NOW + relativedelta(minutes=1),
+            'valid_until': UTC_NOW + delta,
+            'next_payment_at': UTC_NOW + delta,
             'monthly_price': (random.random() * 99) + 1,
             'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
         }
         plan = {'is_renewable': False}
-        model = self.bc.database.create(academy=1, plan_financing=plan_financing, invoice=1, plan=plan)
+        invoice = {'paid_at': UTC_NOW - relativedelta(hours=24, seconds=1)}
+        bag = {'how_many_installments': 3}
+        with patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW - relativedelta(months=2))):
+            model = self.bc.database.create(academy=1,
+                                            plan_financing=plan_financing,
+                                            invoice=invoice,
+                                            plan=plan,
+                                            bag=bag)
+
+        with patch('breathecode.payments.services.stripe.Stripe.pay',
+                   MagicMock(side_effect=fake_stripe_pay(paid_at=UTC_NOW, academy=model.academy))):
+            # remove prints from mixer
+            logging.Logger.info.call_args_list = []
+            logging.Logger.error.call_args_list = []
+
+            charge_plan_financing.delay(1)
+
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting charge_plan_financing for id 1'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('PlanFinancing with id 1 was paid this month', exc_info=True),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+            self.bc.format.to_dict(model.bag),
+        ])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [
+            self.bc.format.to_dict(model.invoice),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), [
+            {
+                **self.bc.format.to_dict(model.plan_financing),
+                'status': 'ACTIVE',
+            },
+        ])
+        self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
+
+    """
+    🔽🔽🔽 PlanFinancing process to charge
+    """
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
+    @patch('breathecode.payments.tasks.renew_plan_financing_consumables.delay', MagicMock())
+    @patch('mixer.main.LOGGER.info', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_plan_financing_process_to_charge(self):
+        delta = relativedelta(months=random.randint(1, 12))
+        plan_financing = {
+            'valid_until': UTC_NOW + delta,
+            'next_payment_at': UTC_NOW - delta,
+            'monthly_price': (random.random() * 99) + 1,
+            'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
+        }
+        plan = {'is_renewable': False}
+        invoice = {'paid_at': UTC_NOW - relativedelta(hours=24, seconds=1)}
+        bag = {'how_many_installments': 3}
+        with patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW - relativedelta(months=2))):
+            model = self.bc.database.create(academy=1,
+                                            plan_financing=plan_financing,
+                                            invoice=invoice,
+                                            plan=plan,
+                                            bag=bag)
 
         with patch('breathecode.payments.services.stripe.Stripe.pay',
                    MagicMock(side_effect=fake_stripe_pay(paid_at=UTC_NOW, academy=model.academy))):
@@ -239,7 +311,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             {
                 **self.bc.format.to_dict(model.plan_financing),
                 'status': 'ACTIVE',
-                'next_payment_at': UTC_NOW + relativedelta(months=1),
+                'next_payment_at': model.plan_financing.next_payment_at + (delta + relativedelta(months=1)),
             },
         ])
         self.assertEqual(notify_actions.send_email_message.call_args_list, [
@@ -274,7 +346,9 @@ class PaymentsTestSuite(PaymentsTestCase):
             'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
         }
         plan = {'is_renewable': False}
-        model = self.bc.database.create(plan_financing=plan_financing, invoice=1, plan=plan)
+        bag = {'how_many_installments': 3}
+        with patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW - relativedelta(months=2))):
+            model = self.bc.database.create(plan_financing=plan_financing, invoice=1, plan=plan, bag=bag)
 
         with patch('breathecode.payments.services.stripe.Stripe.pay', MagicMock(side_effect=Exception('fake error'))):
             # remove prints from mixer
@@ -331,9 +405,9 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test_plan_financing_is_over(self):
         plan_financing = {
-            'valid_until': UTC_NOW - relativedelta(minutes=1),
+            'valid_until': UTC_NOW + relativedelta(months=random.randint(1, 12)),
             'monthly_price': (random.random() * 99) + 1,
-            'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
+            'plan_expires_at': UTC_NOW - relativedelta(minutes=1),
         }
         plan = {'is_renewable': False}
         model = self.bc.database.create(plan_financing=plan_financing, invoice=1, plan=plan)
@@ -372,6 +446,59 @@ class PaymentsTestSuite(PaymentsTestCase):
         ])
 
     """
+    🔽🔽🔽 PlanFinancing was paid
+    """
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
+    @patch('breathecode.payments.tasks.renew_plan_financing_consumables.delay', MagicMock())
+    @patch('mixer.main.LOGGER.info', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_plan_financing_was_paid(self):
+        plan_financing = {
+            'valid_until': UTC_NOW + relativedelta(minutes=1),
+            'next_payment_at': UTC_NOW + relativedelta(minutes=1),
+            'monthly_price': (random.random() * 99) + 1,
+            'plan_expires_at': UTC_NOW + relativedelta(months=random.randint(1, 12)),
+        }
+        plan = {'is_renewable': False}
+        model = self.bc.database.create(plan_financing=plan_financing, invoice=1, plan=plan)
+
+        with patch('breathecode.payments.services.stripe.Stripe.pay', MagicMock(side_effect=Exception('fake error'))):
+            # remove prints from mixer
+            logging.Logger.info.call_args_list = []
+            logging.Logger.error.call_args_list = []
+
+            charge_plan_financing.delay(1)
+
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting charge_plan_financing for id 1'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('PlanFinancing with id 1 was paid this month', exc_info=True),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+            self.bc.format.to_dict(model.bag),
+        ])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [
+            self.bc.format.to_dict(model.invoice),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), [
+            {
+                **self.bc.format.to_dict(model.plan_financing),
+            },
+        ])
+        self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
+
+    """
     🔽🔽🔽 PlanFinancing try to charge, but a undexpected exception is raised, the database is rollbacked
     and the error is register in PlanFinancing
     """
@@ -390,7 +517,13 @@ class PaymentsTestSuite(PaymentsTestCase):
         }
         invoice = {'paid_at': UTC_NOW - relativedelta(hours=24, seconds=1)}
         plan = {'is_renewable': False}
-        model = self.bc.database.create(academy=1, plan_financing=plan_financing, invoice=invoice, plan=plan)
+        bag = {'how_many_installments': 3}
+        with patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW - relativedelta(months=2))):
+            model = self.bc.database.create(academy=1,
+                                            plan_financing=plan_financing,
+                                            invoice=invoice,
+                                            plan=plan,
+                                            bag=bag)
 
         error = self.bc.fake.text()
 
@@ -448,7 +581,13 @@ class PaymentsTestSuite(PaymentsTestCase):
         }
         invoice = {'paid_at': UTC_NOW - relativedelta(hours=random.randint(1, 23))}
         plan = {'is_renewable': False}
-        model = self.bc.database.create(academy=1, plan_financing=plan_financing, invoice=invoice, plan=plan)
+        bag = {'how_many_installments': 3}
+        with patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW - relativedelta(months=2))):
+            model = self.bc.database.create(academy=1,
+                                            plan_financing=plan_financing,
+                                            invoice=invoice,
+                                            plan=plan,
+                                            bag=bag)
 
         error = self.bc.fake.text()
 

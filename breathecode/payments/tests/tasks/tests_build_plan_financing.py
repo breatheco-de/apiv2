@@ -219,7 +219,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'monthly_price':
                 model.invoice.amount,
                 'valid_until':
-                model.invoice.paid_at + relativedelta(months=months),
+                model.invoice.paid_at + relativedelta(months=months - 1),
                 'next_payment_at':
                 model.invoice.paid_at + relativedelta(months=1),
                 'plan_expires_at':
@@ -292,7 +292,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'selected_cohort_set_id':
                 1,
                 'valid_until':
-                model.invoice.paid_at + relativedelta(months=months),
+                model.invoice.paid_at + relativedelta(months=months - 1),
                 'next_payment_at':
                 model.invoice.paid_at + relativedelta(months=1),
                 'plan_expires_at':
@@ -364,7 +364,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'selected_event_type_set_id':
                 1,
                 'valid_until':
-                model.invoice.paid_at + relativedelta(months=months),
+                model.invoice.paid_at + relativedelta(months=months - 1),
                 'next_payment_at':
                 model.invoice.paid_at + relativedelta(months=1),
                 'plan_expires_at':
@@ -436,7 +436,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'selected_mentorship_service_set_id':
                 1,
                 'valid_until':
-                model.invoice.paid_at + relativedelta(months=months),
+                model.invoice.paid_at + relativedelta(months=months - 1),
                 'next_payment_at':
                 model.invoice.paid_at + relativedelta(months=1),
                 'plan_expires_at':
