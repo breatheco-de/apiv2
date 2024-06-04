@@ -654,6 +654,10 @@ def process_asset_config(asset, config):
 
     if not config:
         raise Exception('No configuration json found')
+
+    if asset.asset_type in ['QUIZ']:
+        raise Exception('Can only process exercise and project config objects')
+
     # only replace title and description of English language
     if 'title' in config:
         if isinstance(config['title'], str):
