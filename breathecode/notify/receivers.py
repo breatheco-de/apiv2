@@ -19,7 +19,7 @@ from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.serializers import SessionHookSerializer
 from breathecode.mentorship.signals import mentorship_session_status
 from breathecode.payments.models import PlanFinancing, Subscription
-from breathecode.payments.serializers import GetPlanFinancingSerializer, GetSubscriptionSerializer
+from breathecode.payments.serializers import GetPlanFinancingSerializer, GetSubscriptionHookSerializer
 from breathecode.payments.signals import planfinancing_created, subscription_created
 from breathecode.registry.models import Asset
 from breathecode.registry.serializers import AssetHookSerializer
@@ -180,7 +180,7 @@ def new_planfinancing_created(sender, instance, **kwargs):
 def new_subscription_created(sender, instance, **kwargs):
     logger.debug('Sending new Subscription to hook')
     model_label = get_model_label(instance)
-    serializer = GetSubscriptionSerializer(instance)
+    serializer = GetSubscriptionHookSerializer(instance)
     HookManager.process_model_event(instance,
                                     model_label,
                                     'subscription_created',

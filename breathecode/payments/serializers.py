@@ -383,6 +383,13 @@ class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
     monthly_price = serpy.Field()
 
 
+class GetSubscriptionHookSerializer(GetAbstractIOweYouSerializer):
+    paid_at = serpy.Field()
+    is_refundable = serpy.Field()
+
+    pay_every = serpy.Field()
+    pay_every_unit = serpy.Field()
+
 class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
     paid_at = serpy.Field()
     is_refundable = serpy.Field()
@@ -394,7 +401,6 @@ class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
 
     def get_service_items(self, obj):
         return GetServiceItemSerializer(obj.service_items.filter(), many=True).data
-
 
 class GetBagSerializer(serpy.Serializer):
     id = serpy.Field()
