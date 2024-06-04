@@ -74,7 +74,7 @@ def render_message(r,
     return render(r, 'message.html', {**_data, **data}, status=status)
 
 
-def render_html_error(request, kwargs):
+def render_html_error(request, kwargs, service, e):
     from breathecode.events.models import Event
     from breathecode.payments.models import PlanFinancing, PlanOffer, Subscription
 
@@ -82,23 +82,22 @@ def render_html_error(request, kwargs):
     if 'token' in kwargs and kwargs['token'] is not None:
         token = kwargs['token'].key
 
-    service = None
 
     if 'service_slug' in kwargs:
-        service = kwargs['service_slug']
+        slug = kwargs['service_slug']
 
     if 'event_id' in kwargs:
         event_id = kwargs['event_id']
         event = Event.objects.filter(id=event_id).first()
         if event is not None:
-            service = event.event_type.slug
+            slug = event.event_type.slug
 
     if 'event' in kwargs:
         event = kwargs['event']
-        service = event.event_type.slug
+        slug = event.event_type.slug
 
     if 'mentorship_service' in kwargs:
-        service = kwargs['mentorship_service'].slug
+        slug = kwargs['mentorship_service'].slug
 
     renovate_consumables = {}
     subscription = None
@@ -110,13 +109,13 @@ def render_html_error(request, kwargs):
 
     if service == 'join_mentorship':
         subscription = Subscription.objects.filter(
-            user=request.user, selected_mentorship_service_set__mentorship_services__slug=service).first()
+            user=request.user, selected_mentorship_service_set__mentorship_services__slug=slug).first()
         if subscription is not None:
             mentorship_service_set = subscription.selected_mentorship_service_set.slug
             user_plan = subscription.plans.first()
     elif service == 'event_join':
         subscription = Subscription.objects.filter(user=request.user,
-                                                   selected_event_type_set__event_types__slug=service).first()
+                                                   selected_event_type_set__event_types__slug=slug).first()
         if subscription is not None:
             event_type_set = subscription.selected_event_type_set.slug
             user_plan = subscription.plans.first()
@@ -124,13 +123,13 @@ def render_html_error(request, kwargs):
     if subscription is None:
         if service == 'join_mentorship':
             plan_financing = PlanFinancing.objects.filter(
-                user=request.user, selected_mentorship_service_set__mentorship_services__slug=service).first()
+                user=request.user, selected_mentorship_service_set__mentorship_services__slug=slug).first()
             if plan_financing is not None:
                 mentorship_service_set = plan_financing.selected_mentorship_service_set.slug
                 user_plan = plan_financing.plans.first()
         elif service == 'event_join':
             plan_financing = PlanFinancing.objects.filter(user=request.user,
-                                                          selected_event_type_set__event_types__slug=service).first()
+                                                          selected_event_type_set__event_types__slug=slug).first()
             if plan_financing is not None:
                 event_type_set = plan_financing.selected_event_type_set.slug
                 user_plan = plan_financing.plans.first()
@@ -200,7 +199,7 @@ def consume(service: str, consumer: Optional[Consumer] = None, format:str='json'
                 'service': service,
                 'request': request,
                 'consumables': Consumable.objects.none(),
-                'lifetime ': None,
+                'lifetime': None,
                 'price': 1,
                 'is_consumption_session': False,
                 **opts,
@@ -242,6 +241,7 @@ def consume(service: str, consumer: Optional[Consumer] = None, format:str='json'
                         if item.how_many - sum['how_many__sum'] == 0:
                             context['consumables'] = context['consumables'].exclude(id=item.id)
 
+
                 if context['price'] and context['consumables'].count() == 0:
                     raise PaymentException(f'You do not have enough credits to access this service: {service}',
                                            slug='with-consumer-not-enough-consumables')
@@ -269,7 +269,7 @@ def consume(service: str, consumer: Optional[Consumer] = None, format:str='json'
                     raise e
 
                 if format == 'html':
-                    return render_html_error(request, kwargs)
+                    return render_html_error(request, kwargs,service, e)
 
                 return Response({'detail': str(e), 'status_code': 402}, 402)
 
@@ -305,6 +305,8 @@ def consume(service: str, consumer: Optional[Consumer] = None, format:str='json'
 
         # TODO: reduce the difference between sync and async handlers
         async def async_wrapper(*args, **kwargs):
+            nonlocal consumer
+
             request = validate_and_get_request(service, args)
 
             if isinstance(request.user, AnonymousUser):
@@ -314,12 +316,14 @@ def consume(service: str, consumer: Optional[Consumer] = None, format:str='json'
 
             try:
                 utc_now = timezone.now()
-                session = ConsumptionSession.get_session(request)
+                session = await ConsumptionSession.aget_session(request)
                 context = build_context(request, utc_now)
 
+
                 if session and callable(consumer):
+                    consumer = sync_to_async(consumer)
                     context['is_consumption_session'] = True
-                    context, args, kwargs = consumer(context, args, kwargs)
+                    context, args, kwargs = await consumer(context, args, kwargs)
 
                 if session:
                     return function(*args, **kwargs)
@@ -330,7 +334,10 @@ def consume(service: str, consumer: Optional[Consumer] = None, format:str='json'
                 context['consumables'] = items
 
                 if callable(consumer):
-                    context, args, kwargs = consumer(context, args, kwargs)
+                    if asyncio.iscoroutinefunction(consumer) is False:
+                        consumer = sync_to_async(consumer)
+
+                    context, args, kwargs = await consumer(context, args, kwargs)
 
                 # exclude consumables that is being used in a session.
                 if consumer and context['lifetime']:
@@ -352,7 +359,7 @@ def consume(service: str, consumer: Optional[Consumer] = None, format:str='json'
 
 
                 # sync view method
-                response: Response = function(*args, **kwargs)
+                response: Response = await function(*args, **kwargs)
 
                 it_will_consume = context['price'] and response.status_code < 400
                 if it_will_consume and session:
@@ -370,7 +377,7 @@ def consume(service: str, consumer: Optional[Consumer] = None, format:str='json'
                     raise e
 
                 if format == 'html':
-                    return render_html_error(request, kwargs)
+                    return render_html_error(request, kwargs,service, e)
 
                 return Response({'detail': str(e), 'status_code': 402}, 402)
 
