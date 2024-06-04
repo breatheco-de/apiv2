@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 def mentorship_service_by_url_param(context: ServiceContext, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
 
-    context['will_consume'] = False
+    context['price'] = 0
     request = context['request']
     consumable = None
 
@@ -52,10 +52,10 @@ def mentorship_service_by_url_param(context: ServiceContext, args: tuple, kwargs
 
     # avoid call LaunchDarkly if mentorship_service is empty
     if mentor_profile.user.id != request.user.id and is_saas:
-        context['will_consume'] = True
+        context['price'] = 1
 
-    if context['will_consume'] is False and is_no_saas_student_up_to_date_in_any_cohort(
-            context['request'].user, academy=mentor_profile.academy) is False:
+    if context['price'] == 0 and is_no_saas_student_up_to_date_in_any_cohort(context['request'].user,
+                                                                             academy=mentor_profile.academy) is False:
         raise PaymentException(
             translation(lang,
                         en='You can\'t access this asset because your finantial status is not up to date',
@@ -65,8 +65,8 @@ def mentorship_service_by_url_param(context: ServiceContext, args: tuple, kwargs
     context['consumables'] = context['consumables'].filter(
         mentorship_service_set__mentorship_services=mentorship_service)
 
-    if context['will_consume']:
-        context['time_of_life'] = mentorship_service.max_duration
+    if context['price']:
+        context['lifetime'] = mentorship_service.max_duration
 
     if (mentor_profile.user.id == request.user.id and is_saas and (mentee := request.GET.get('mentee'))
             and not mentee.isdigit()):
@@ -83,15 +83,15 @@ def mentorship_service_by_url_param(context: ServiceContext, args: tuple, kwargs
     if (mentor_profile.user.id == request.user.id and is_saas and mentee and not (consumable := Consumable.get(
             lang=lang,
             user=mentee,
-            permission=context['permission'],
+            service=context['service'],
             extra={'mentorship_service_set__mentorship_services': mentorship_service},
     ))):
 
         raise ValidationException(translation(
             lang,
-            en=f'Mentee do not have enough credits to access this service: {context["permission"]}',
+            en=f'Mentee do not have enough credits to access this service: {context["service"]}',
             es='El mentee no tiene suficientes créditos para acceder a este servicio: '
-            f'{context["permission"]}'),
+            f'{context["service"]}'),
                                   slug='mentee-not-enough-consumables',
                                   code=402)
 

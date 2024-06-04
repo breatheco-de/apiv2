@@ -1,6 +1,7 @@
 """
 Collections of mixins used to login in authorize microservice
 """
+from breathecode.admissions.models import Academy
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 
 from .utils import create_models, get_list, is_valid, just_one
@@ -70,9 +71,14 @@ class PaymentsModelsMixin(ModelsMixin):
                     academy_argument = academies_arguments[index] or {}
                     academy_instance = academies_intances[index]
 
-                    if isinstance(
-                            academy_argument, int
-                    ) or 'main_currency' not in academy_argument or academy_argument['main_currency'] is not None:
+                    if isinstance(academy_argument, Academy) and academy_argument.main_currency is None:
+                        academy_argument.main_currency = just_one(models['currency'])
+                        academy_argument.save()
+
+                    elif isinstance(academy_argument,
+                                    Academy) is False and (isinstance(academy_argument, int)
+                                                           or 'main_currency' not in academy_argument
+                                                           or academy_argument['main_currency'] is not None):
                         academy_instance.main_currency = just_one(models['currency'])
                         academy_instance.save()
 

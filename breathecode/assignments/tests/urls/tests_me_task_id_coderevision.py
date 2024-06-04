@@ -203,15 +203,15 @@ def test__post__no_consumables(bc: Breathecode, client: APIClient):
     mock.status_code = code
     mock.reason = 'OK'
 
-    permission = {'codename': 'add_code_review'}
     model = bc.database.create(profile_academy=1,
-                               permission=permission,
-                               group=1,
                                app={
                                    'slug': 'rigobot',
-                                   'app_url': bc.fake.url()
+                                   'app_url': bc.fake.url(),
                                },
-                               service={'type': 'VOID'})
+                               service={
+                                   'type': 'VOID',
+                                   'slug': 'add_code_review',
+                               })
     client.force_authenticate(model.user)
 
     url = reverse_lazy('assignments:me_task_id_coderevision', kwargs={'task_id': 1
@@ -243,16 +243,16 @@ def test__post__no_tasks(bc: Breathecode, client: APIClient):
     mock.status_code = code
     mock.reason = 'OK'
 
-    permission = {'codename': 'add_code_review'}
     model = bc.database.create(profile_academy=1,
-                               permission=permission,
-                               group=1,
                                consumable=1,
                                app={
                                    'slug': 'rigobot',
                                    'app_url': bc.fake.url()
                                },
-                               service={'type': 'VOID'})
+                               service={
+                                   'type': 'VOID',
+                                   'slug': 'add_code_review',
+                               })
     client.force_authenticate(model.user)
 
     url = reverse_lazy('assignments:me_task_id_coderevision', kwargs={'task_id': 1
@@ -285,17 +285,17 @@ def test__post__no_github_accounts(bc: Breathecode, client: APIClient):
     mock.reason = 'OK'
 
     task = {'github_url': bc.fake.url()}
-    permission = {'codename': 'add_code_review'}
     model = bc.database.create(profile_academy=1,
                                task=task,
-                               permission=permission,
-                               group=1,
                                consumable=1,
                                app={
                                    'slug': 'rigobot',
-                                   'app_url': bc.fake.url()
+                                   'app_url': bc.fake.url(),
                                },
-                               service={'type': 'VOID'})
+                               service={
+                                   'type': 'VOID',
+                                   'slug': 'add_code_review',
+                               })
     client.force_authenticate(model.user)
 
     url = reverse_lazy('assignments:me_task_id_coderevision', kwargs={'task_id': 1
@@ -329,18 +329,18 @@ def test__post__auth(bc: Breathecode, client: APIClient):
 
     task = {'github_url': bc.fake.url()}
     credentials_github = {'username': bc.fake.slug()}
-    permission = {'codename': 'add_code_review'}
     model = bc.database.create(profile_academy=1,
                                task=task,
                                credentials_github=credentials_github,
-                               permission=permission,
-                               group=1,
                                app={
                                    'slug': 'rigobot',
-                                   'app_url': bc.fake.url()
+                                   'app_url': bc.fake.url(),
                                },
                                consumable=1,
-                               service={'type': 'VOID'})
+                               service={
+                                   'type': 'VOID',
+                                   'slug': 'add_code_review',
+                               })
     client.force_authenticate(model.user)
 
     url = reverse_lazy('assignments:me_task_id_coderevision', kwargs={'task_id': 1
@@ -350,7 +350,6 @@ def test__post__auth(bc: Breathecode, client: APIClient):
     with patch('linked_services.django.actions.get_jwt', MagicMock(return_value=token)):
         with patch.multiple('requests', post=MagicMock(return_value=mock)):
             response = client.post(url, query, format='json')
-            print(response.getvalue().decode('utf-8'))
             assert requests.post.call_args_list == [
                 call(
                     model.app.app_url + '/v1/finetuning/coderevision/',
@@ -428,18 +427,18 @@ def test__post__auth__no_saas__finantial_status_no_late(bc: Breathecode, client:
 
     task = {'github_url': bc.fake.url()}
     credentials_github = {'username': bc.fake.slug()}
-    permission = {'codename': 'add_code_review'}
     model = bc.database.create(profile_academy=1,
                                task=task,
                                credentials_github=credentials_github,
-                               permission=permission,
-                               group=1,
                                app={
                                    'slug': 'rigobot',
-                                   'app_url': bc.fake.url()
+                                   'app_url': bc.fake.url(),
                                },
                                consumable=1,
-                               service={'type': 'VOID'},
+                               service={
+                                   'type': 'VOID',
+                                   'slug': 'add_code_review',
+                               },
                                academy=academy,
                                cohort=cohort,
                                cohort_user=cohort_user)
@@ -452,7 +451,6 @@ def test__post__auth__no_saas__finantial_status_no_late(bc: Breathecode, client:
     with patch('linked_services.django.actions.get_jwt', MagicMock(return_value=token)):
         with patch.multiple('requests', post=AsyncMock(return_value=mock)):
             response = client.post(url, query, format='json')
-            print(response.getvalue().decode('utf-8'))
             assert requests.post.call_args_list == [
                 call(
                     model.app.app_url + '/v1/finetuning/coderevision/',
@@ -511,19 +509,19 @@ def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: AP
 
     task = {'github_url': bc.fake.url()}
     credentials_github = {'username': bc.fake.slug()}
-    permission = {'codename': 'add_code_review'}
     cohort_user = {'finantial_status': 'LATE', 'educational_status': 'ACTIVE'}
     model = bc.database.create(profile_academy=1,
                                task=task,
                                credentials_github=credentials_github,
-                               permission=permission,
-                               group=1,
                                app={
                                    'slug': 'rigobot',
                                    'app_url': bc.fake.url()
                                },
                                consumable=1,
-                               service={'type': 'VOID'},
+                               service={
+                                   'type': 'VOID',
+                                   'slug': 'add_code_review',
+                               },
                                cohort_user=cohort_user,
                                cohort=cohort,
                                academy=academy)
@@ -536,7 +534,6 @@ def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: AP
     with patch('linked_services.django.actions.get_jwt', MagicMock(return_value=token)):
         with patch.multiple('requests', post=MagicMock(return_value=mock)):
             response = client.post(url, query, format='json')
-            print(response.getvalue().decode('utf-8'))
             assert requests.post.call_args_list == []
 
     x = response.json()

@@ -13,6 +13,8 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+import os
+
 from django.urls import path
 from linked_services.rest_framework.views import app_webhook, authorize_view
 
@@ -66,6 +68,12 @@ from .views import (
     save_slack_token,
     sync_gitpod_users_view,
 )
+
+IS_TEST_EMV = os.getenv('EMV', 'test') == 'test'
+
+app_url = os.getenv('APP_URL')
+if app_url is None and IS_TEST_EMV:
+    app_url = 'http://localhost:3000'
 
 app_name = 'authenticate'
 urlpatterns = [
@@ -142,7 +150,7 @@ urlpatterns = [
 
     # authorize
     path('authorize/<str:app_slug>',
-         authorize_view(login_url='/v1/auth/view/login', get_language=get_user_language),
+         authorize_view(login_url='/v1/auth/view/login', app_url=app_url, get_language=get_user_language),
          name='authorize_slug'),
 
     # apps

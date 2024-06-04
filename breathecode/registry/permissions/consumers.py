@@ -42,18 +42,18 @@ def asset_by_slug(context: ServiceContext, args: tuple, kwargs: dict) -> tuple[d
                         slug='asset-not-found'), 404)
 
     if count_cohorts(available_as_saas=False):
-        context['will_consume'] = False
+        context['price'] = 0
 
     else:
-        context['will_consume'] = True
+        context['price'] = 1
 
     kwargs['asset'] = asset
     kwargs['academy'] = academy
     del kwargs['asset_slug']
     del kwargs['academy_id']
 
-    if context['will_consume'] is False and is_no_saas_student_up_to_date_in_any_cohort(context['request'].user,
-                                                                                        academy=academy) is False:
+    if context['price'] == 0 and is_no_saas_student_up_to_date_in_any_cohort(context['request'].user,
+                                                                             academy=academy) is False:
         raise PaymentException(
             translation(lang,
                         en='You can\'t access this asset because your finantial status is not up to date',

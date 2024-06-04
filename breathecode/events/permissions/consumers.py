@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def event_by_url_param(context: ServiceContext, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
-    context['will_consume'] = False
+    context['price'] = 0
 
     request = context['request']
     lang = get_user_language(request)
@@ -64,10 +64,10 @@ def event_by_url_param(context: ServiceContext, args: tuple, kwargs: dict) -> tu
         user=request.user).exists()
 
     if not is_host and not is_free_for_all and (not is_free_for_bootcamps or not user_with_available_as_saas_false):
-        context['will_consume'] = True
+        context['price'] = 1
 
-    if context['will_consume'] is False and is_no_saas_student_up_to_date_in_any_cohort(context['request'].user,
-                                                                                        academy=event.academy) is False:
+    if context['price'] == 0 and is_no_saas_student_up_to_date_in_any_cohort(context['request'].user,
+                                                                             academy=event.academy) is False:
         raise PaymentException(
             translation(lang,
                         en='You can\'t access this asset because your finantial status is not up to date',
@@ -84,16 +84,16 @@ def event_by_url_param(context: ServiceContext, args: tuple, kwargs: dict) -> tu
                                               slug='event-has-ended'),
                                   code=400)
 
-    if context['will_consume']:
+    if context['price']:
         delta = event.ending_at - utc_now
-        context['time_of_life'] = delta
+        context['lifetime'] = delta
 
     return (context, args, kwargs)
 
 
 def live_class_by_url_param(context: ServiceContext, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
 
-    context['will_consume'] = False
+    context['price'] = 0
 
     request = context['request']
     lang = get_user_language(request)
@@ -132,10 +132,10 @@ def live_class_by_url_param(context: ServiceContext, args: tuple, kwargs: dict) 
                                  and live_class.cohort_time_slot.cohort.academy.available_as_saas)
 
     if cohort_available_as_saas or academy_available_as_saas:
-        context['will_consume'] = True
+        context['price'] = 1
 
     # CohortSet requires that Academy be available as saas, this line should be uncovered
-    if context['will_consume'] is False and is_no_saas_student_up_to_date_in_any_cohort(
+    if context['price'] == 0 and is_no_saas_student_up_to_date_in_any_cohort(
             context['request'].user, cohort=live_class.cohort_time_slot.cohort) is False:
         raise PaymentException(
             translation(lang,
@@ -154,8 +154,8 @@ def live_class_by_url_param(context: ServiceContext, args: tuple, kwargs: dict) 
                                               slug='class-has-ended'),
                                   code=400)
 
-    if context['will_consume']:
+    if context['price']:
         delta = live_class.ending_at - utc_now
-        context['time_of_life'] = delta
+        context['lifetime'] = delta
 
     return (context, args, kwargs)
