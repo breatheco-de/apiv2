@@ -232,6 +232,9 @@ class RepositorySubscriptionAdmin(admin.ModelAdmin):
         # Return False to remove the "Delete" button from the update form.
         # You can add additional logic here if you want to conditionally
         # enable the delete button for certain cases.
+        if obj.status == 'DISABLED':
+            return True
+            
         return False
 
     def repo(self, obj):
