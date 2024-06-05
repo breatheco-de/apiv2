@@ -42,6 +42,7 @@ class RepoSubscriptionSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     hook_id = serpy.Field()
     repository = serpy.Field()
+    token = serpy.Field()
     updated_at = serpy.Field()
     status = serpy.Field()
     status_message = serpy.Field()
