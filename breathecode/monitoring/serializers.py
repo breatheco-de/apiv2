@@ -5,6 +5,7 @@ from rest_framework import serializers
 from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.monitoring.actions import subscribe_repository
 from breathecode.monitoring.models import RepositorySubscription
+from django.core.validators import URLValidator
 from breathecode.monitoring.tasks import async_subscribe_repo, async_unsubscribe_repo
 from breathecode.utils import serpy
 from breathecode.utils.i18n import translation
@@ -72,6 +73,18 @@ class RepositorySubscriptionSerializer(serializers.ModelSerializer):
                                 en='You must specify a repository url',
                                 es='Debes especificar el URL del repositorio a subscribir',
                                 slug='missing-repo'))
+        
+            url_validator = URLValidator()
+            try:
+                url_validator(data['repository'])
+                if "github.com" not in data['repository']:
+                    raise ValidationError("Only GitHub repositories can be subscribed to")
+            except ValidationError as e:
+                raise ValidationException(
+                    translation(lang,
+                                en=str(e),
+                                es='La URL del repositorio debe ser valida y apuntar a github.com",
+                                slug='invalid-repo-url'))
 
             subs = RepositorySubscription.objects.filter(owner__id=academy_id, repository=data['repository']).first()
             # Sabe repo and academy subscription cannot be CREATED twice
