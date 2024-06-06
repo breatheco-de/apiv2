@@ -73,17 +73,17 @@ class RepositorySubscriptionSerializer(serializers.ModelSerializer):
                                 en='You must specify a repository url',
                                 es='Debes especificar el URL del repositorio a subscribir',
                                 slug='missing-repo'))
-        
+
             url_validator = URLValidator()
             try:
                 url_validator(data['repository'])
-                if "github.com" not in data['repository']:
-                    raise ValidationError("Only GitHub repositories can be subscribed to")
+                if 'github.com' not in data['repository']:
+                    raise ValidationError('Only GitHub repositories can be subscribed to')
             except ValidationError as e:
                 raise ValidationException(
                     translation(lang,
                                 en=str(e),
-                                es='La URL del repositorio debe ser valida y apuntar a github.com",
+                                es='La URL del repositorio debe ser valida y apuntar a github.com',
                                 slug='invalid-repo-url'))
 
             subs = RepositorySubscription.objects.filter(owner__id=academy_id, repository=data['repository']).first()
@@ -138,14 +138,17 @@ class RepositorySubscriptionSerializer(serializers.ModelSerializer):
         })
 
         try:
-            subscribe_repository(instance.id, settings)
+            subscription = subscribe_repository(instance.id, settings)
+            if subscription.status != 'OPERATIONAL':
+                raise Exception(subscription.status_message)
         except Exception as e:
             logger.error(str(e))
             raise ValidationException(
-                translation(lang,
-                            en='Error when connecting with Github to register repo subscription',
-                            es='Error al intentar subscribirse al repositorio durante la conexión con Github',
-                            slug='github-error'))
+                translation(
+                    lang,
+                    en=str(e),
+                    es='Error al intentar subscribirse al repositorio, revisa la subscripción para mas detalles',
+                    slug='github-error'))
 
     def update(self, instance, validated_data):
         if instance.status == 'DISABLED' and validated_data['status'] == 'OPERATIONAL':

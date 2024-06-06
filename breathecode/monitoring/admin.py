@@ -208,7 +208,9 @@ def activate_subscription(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
     for subs in queryset.all():
         try:
-            subscribe_repository(subs.id)
+            subscription = subscribe_repository(subs.id)
+            if subscription.status != 'OPERATIONAL':
+                raise Exception(subscription.status_message)
         except Exception as e:
             messages.error(request, str(e))
             return False
@@ -234,7 +236,7 @@ class RepositorySubscriptionAdmin(admin.ModelAdmin):
         # enable the delete button for certain cases.
         if obj and obj.status == 'DISABLED':
             return True
-            
+
         return False
 
     def repo(self, obj):
