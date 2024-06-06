@@ -47,6 +47,7 @@ class RepoSubscriptionSmallSerializer(serpy.Serializer):
     updated_at = serpy.Field()
     status = serpy.Field()
     status_message = serpy.Field()
+    last_call = serpy.Field()
     owner = AcademySmallSerializer()
 
 
@@ -55,6 +56,7 @@ class RepositorySubscriptionSerializer(serializers.ModelSerializer):
     repository = serializers.CharField(required=False)
     owner = serializers.IntegerField(read_only=True)
     hook_id = serializers.IntegerField(read_only=True)
+    last_call = serializers.DateTimeField(read_only=True)
     status_message = serializers.CharField(read_only=True)
 
     class Meta:
