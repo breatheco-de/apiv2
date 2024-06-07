@@ -951,7 +951,12 @@ class MeCodeRevisionView(APIView):
 
     @sync_to_async
     def get_github_credentials(self):
-        return self.request.user.credentialsgithub
+        res = None
+
+        if hasattr(self.request.user, 'credentialsgithub'):
+            res = self.request.user.credentialsgithub
+
+        return res
 
     @sync_to_async
     def has_github_credentials(self, user):
@@ -981,7 +986,8 @@ class MeCodeRevisionView(APIView):
 
         github_credentials = await self.get_github_credentials()
 
-        params['github_username'] = github_credentials.username
+        if github_credentials:
+            params['github_username'] = github_credentials.username
 
         async with Service('rigobot', user.id, proxy=True) as s:
             return await s.get('/v1/finetuning/me/coderevision', params=params)
