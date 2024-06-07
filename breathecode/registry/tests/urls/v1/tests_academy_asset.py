@@ -70,6 +70,8 @@ def database_item(academy, category, data={}):
         'with_solutions': False,
         'with_video': False,
         'is_auto_subscribed': True,
+        'superseded_by_id': None,
+        'enable_table_of_content': True,
         **data,
     }
 
@@ -124,6 +126,8 @@ def post_serializer(academy, category, data={}):
         'with_solutions': False,
         'assets_related': [],
         'with_video': False,
+        'superseded_by': None,
+        'enable_table_of_content': True,
         **data,
     }
 
@@ -144,6 +148,7 @@ def put_serializer(academy, category, asset, data={}):
         'cleaning_status_details': None,
         'clusters': [],
         'assets_related': [],
+        'previous_versions': [],
         'description': None,
         'difficulty': None,
         'readme_updated_at': None,

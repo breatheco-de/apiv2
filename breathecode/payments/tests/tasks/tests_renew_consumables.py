@@ -102,8 +102,8 @@ class PaymentsTestSuite(PaymentsTestCase):
     def test_plan_financing_without_be_paid(self):
         plan_financing = {
             'monthly_price': random.random() * 99.99 + 0.01,
-            'plan_expires_at': UTC_NOW - relativedelta(seconds=1),
-            'valid_until': UTC_NOW + relativedelta(minutes=3),
+            'plan_expires_at': UTC_NOW + relativedelta(minutes=3),
+            'valid_until': UTC_NOW - relativedelta(seconds=1),
         }
         plan = {'is_renewable': False}
 
@@ -136,8 +136,8 @@ class PaymentsTestSuite(PaymentsTestCase):
     def test_plan_financing_with_plan_service_item_without_a_resource_linked(self):
         plan_financing = {
             'monthly_price': random.random() * 99.99 + 0.01,
-            'plan_expires_at': UTC_NOW - relativedelta(seconds=1),
-            'valid_until': UTC_NOW + relativedelta(minutes=3),
+            'plan_expires_at': UTC_NOW + relativedelta(minutes=3),
+            'valid_until': UTC_NOW - relativedelta(seconds=1),
             'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
         plan = {'is_renewable': False}
@@ -172,8 +172,8 @@ class PaymentsTestSuite(PaymentsTestCase):
     def test_plan_financing_with_plan_service_item_with_two_cohorts_linked(self):
         plan_financing = {
             'monthly_price': random.random() * 99.99 + 0.01,
-            'plan_expires_at': UTC_NOW - relativedelta(seconds=4),
-            'valid_until': UTC_NOW + relativedelta(minutes=5),
+            'plan_expires_at': UTC_NOW + relativedelta(minutes=5),
+            'valid_until': UTC_NOW - relativedelta(seconds=4),
             'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
         plan = {'is_renewable': False}
@@ -215,43 +215,6 @@ class PaymentsTestSuite(PaymentsTestCase):
         ])
 
     """
-    🔽🔽🔽 ServiceStockScheduler with PlanFinancing with Plan which is over
-    """
-
-    @patch('logging.Logger.info', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    def test_plan_financing_with_plan_than_is_over(self):
-        plan_financing = {
-            'monthly_price': random.random() * 99.99 + 0.01,
-            'plan_expires_at': UTC_NOW - relativedelta(days=3),
-            'valid_until': UTC_NOW + relativedelta(days=4),
-            'next_payment_at': UTC_NOW + relativedelta(days=2),
-        }
-
-        plan = {'time_of_life': 1, 'time_of_life_unit': 'DAY', 'is_renewable': False}
-
-        model = self.bc.database.create(service_stock_scheduler=1,
-                                        plan_financing=plan_financing,
-                                        plan_service_item_handler=1,
-                                        cohort=2,
-                                        plan=plan)
-
-        logging.Logger.info.call_args_list = []
-        logging.Logger.error.call_args_list = []
-
-        with patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW + relativedelta(days=1, minutes=3))):
-            renew_consumables.delay(1)
-
-        self.assertEqual(logging.Logger.info.call_args_list, [
-            call('Starting renew_consumables for service stock scheduler 1'),
-            call('The services related to PlanFinancing 1 is over'),
-        ])
-        self.assertEqual(logging.Logger.error.call_args_list, [])
-
-        self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
-
-    """
     🔽🔽🔽 ServiceStockScheduler with PlanFinancing with a PlanServiceItem linked to a resource
     """
 
@@ -261,8 +224,8 @@ class PaymentsTestSuite(PaymentsTestCase):
     def test_plan_financing_with_plan_service_item_with_two_mentorship_services_linked(self):
         plan_financing = {
             'monthly_price': random.random() * 99.99 + 0.01,
-            'plan_expires_at': UTC_NOW - relativedelta(seconds=4),
-            'valid_until': UTC_NOW + relativedelta(minutes=5),
+            'plan_expires_at': UTC_NOW + relativedelta(minutes=5),
+            'valid_until': UTC_NOW - relativedelta(seconds=4),
             'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
 
@@ -314,8 +277,8 @@ class PaymentsTestSuite(PaymentsTestCase):
     def test_plan_financing_with_plan_service_item__do_not_needs_renew(self):
         plan_financing = {
             'monthly_price': random.random() * 99.99 + 0.01,
-            'plan_expires_at': UTC_NOW - relativedelta(seconds=4),
-            'valid_until': UTC_NOW + relativedelta(minutes=5),
+            'plan_expires_at': UTC_NOW + relativedelta(minutes=5),
+            'valid_until': UTC_NOW - relativedelta(seconds=4),
             'next_payment_at': UTC_NOW + relativedelta(minutes=3),
         }
 

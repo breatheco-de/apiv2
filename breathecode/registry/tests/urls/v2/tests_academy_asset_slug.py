@@ -30,6 +30,7 @@ def get_serializer(bc: Breathecode, asset, asset_category=None, data={}):
         'cleaning_status_details': None,
         'clusters': [],
         'assets_related': [],
+        'previous_versions': [],
         'description': None,
         'difficulty': None,
         'readme_updated_at': None,
