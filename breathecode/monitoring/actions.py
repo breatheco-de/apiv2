@@ -96,13 +96,11 @@ def subscribe_repository(subs_id, settings=None):
         subscription.status_message = 'OK'
         subscription.hook_id = result['id']
         subscription.save()
-
-        return subscription
     except Exception as e:
         subscription.status = 'CRITICAL'
         subscription.status_message = 'Error subscribing to repo: ' + str(e)
         subscription.save()
-        raise e
+    return subscription
 
 
 def get_website_text(endp):
