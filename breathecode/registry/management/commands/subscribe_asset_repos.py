@@ -37,7 +37,9 @@ class Command(BaseCommand):
                 try:
                     if settings[academy_id] is not None:
                         subs = subscribe_repository(subs.id, settings[academy_id])
-                        logger.debug(f'Successfully subscribed asset {a.slug}, repo {repo_url}')
+                        logger.debug(
+                            f'Successfully created asset subscription with status {subs.status} for {a.slug}, repo {repo_url}'
+                        )
                     else:
                         raise Exception(f'No subscription found for academy {academy_id}')
                 except Exception as e:

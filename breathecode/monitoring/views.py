@@ -2,6 +2,7 @@ import logging
 import os
 
 import stripe
+from django.utils import timezone
 from circuitbreaker import CircuitBreakerError
 from django.db.models import Q
 from django.http import StreamingHttpResponse
@@ -147,6 +148,8 @@ def process_github_webhook(request, subscription_token):
         subscription.save()
         return Response('Ready', status=status.HTTP_200_OK)
 
+    subscription.last_call = timezone.now()
+    subscription.save()
     for academy_slug in academy_slugs:
         webhook = add_github_webhook(payload, academy_slug)
         if webhook:

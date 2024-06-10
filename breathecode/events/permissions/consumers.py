@@ -62,7 +62,6 @@ def event_by_url_param(context: ServiceContext, args: tuple, kwargs: dict) -> tu
         Q(cohort__available_as_saas=False)
         | Q(cohort__available_as_saas=None, cohort__academy__available_as_saas=False),
         user=request.user).exists()
-
     if not is_host and not is_free_for_all and (not is_free_for_bootcamps or not user_with_available_as_saas_false):
         context['price'] = 1
 
