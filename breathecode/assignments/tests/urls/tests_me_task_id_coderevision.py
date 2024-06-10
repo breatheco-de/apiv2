@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 import requests
+from aiohttp import ClientSession
 from django.urls.base import reverse_lazy
 from linked_services.django.actions import reset_app_cache
 from rest_framework import status
@@ -19,6 +20,57 @@ from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 def setup(db):
     reset_app_cache()
     yield
+
+
+class StreamReaderMock:
+
+    def __init__(self, data):
+        self.data = data
+
+    async def read(self):
+        return self.data
+
+
+class ResponseMock:
+
+    def __init__(self, data, status=200, headers={}):
+        self.content = data
+        self.status = status
+        self.headers = headers
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        pass
+
+
+@pytest.fixture(autouse=True)
+def patch_get(monkeypatch):
+
+    def handler(expected, code, headers):
+
+        reader = StreamReaderMock(json.dumps(expected).encode())
+        monkeypatch.setattr('aiohttp.ClientSession.get', MagicMock(return_value=ResponseMock(reader, code, headers)))
+
+    yield handler
+
+
+@pytest.fixture(autouse=True)
+def patch_post(monkeypatch):
+
+    def handler(expected, code, headers):
+
+        reader = StreamReaderMock(json.dumps(expected).encode())
+        monkeypatch.setattr('aiohttp.ClientSession.post', MagicMock(return_value=ResponseMock(reader, code, headers)))
+
+    yield handler
 
 
 # When: no auth
@@ -37,7 +89,7 @@ def test_no_auth(bc: Breathecode, client: APIClient):
 
 # When: no tasks
 # Then: response 404
-def test__get__no_tasks(bc: Breathecode, client: APIClient):
+def test__get__no_tasks(bc: Breathecode, client: APIClient, patch_get):
     expected = {'data': {'getTask': {'id': random.randint(1, 100)}}}
     query = {
         bc.fake.slug(): bc.fake.slug(),
@@ -45,12 +97,10 @@ def test__get__no_tasks(bc: Breathecode, client: APIClient):
         bc.fake.slug(): bc.fake.slug(),
     }
 
-    mock = MagicMock()
-    mock.raw = iter([json.dumps(expected).encode()])
-    mock.headers = {'Content-Type': 'application/json'}
     code = random.randint(200, 299)
-    mock.status_code = code
-    mock.reason = 'OK'
+    headers = {'Content-Type': 'application/json'}
+
+    patch_get(expected, code, headers)
 
     model = bc.database.create(profile_academy=1, app={'slug': 'rigobot', 'app_url': bc.fake.url()})
     client.force_authenticate(model.user)
@@ -58,9 +108,8 @@ def test__get__no_tasks(bc: Breathecode, client: APIClient):
     url = reverse_lazy('assignments:me_task_id_coderevision', kwargs={'task_id': 1
                                                                       }) + '?' + bc.format.querystring(query)
 
-    with patch.multiple('requests', get=MagicMock(return_value=mock)):
-        response = client.get(url)
-        bc.check.calls(requests.get.call_args_list, [])
+    response = client.get(url)
+    assert ClientSession.get.call_args_list == []
 
     assert response.getvalue().decode('utf-8') == '{"detail":"task-not-found","status_code":404}'
     assert response.status_code == 404
@@ -69,7 +118,7 @@ def test__get__no_tasks(bc: Breathecode, client: APIClient):
 
 # When: no github accounts
 # Then: response 200
-def test__get__no_github_accounts(bc: Breathecode, client: APIClient):
+def test__get__no_github_accounts(bc: Breathecode, client: APIClient, patch_get):
     expected = {'data': {'getTask': {'id': random.randint(1, 100)}}}
     query = {
         bc.fake.slug(): bc.fake.slug(),
@@ -77,12 +126,10 @@ def test__get__no_github_accounts(bc: Breathecode, client: APIClient):
         bc.fake.slug(): bc.fake.slug(),
     }
 
-    mock = MagicMock()
-    mock.raw = iter([json.dumps(expected).encode()])
-    mock.headers = {'Content-Type': 'application/json'}
     code = random.randint(200, 299)
-    mock.status_code = code
-    mock.reason = 'OK'
+    headers = {'Content-Type': 'application/json'}
+
+    patch_get(expected, code, headers)
 
     task = {'github_url': bc.fake.url()}
     model = bc.database.create(profile_academy=1, task=task, app={'slug': 'rigobot', 'app_url': bc.fake.url()})
@@ -91,9 +138,8 @@ def test__get__no_github_accounts(bc: Breathecode, client: APIClient):
     url = reverse_lazy('assignments:me_task_id_coderevision', kwargs={'task_id': 1
                                                                       }) + '?' + bc.format.querystring(query)
 
-    with patch.multiple('requests', get=MagicMock(return_value=mock)):
-        response = client.get(url)
-        bc.check.calls(requests.get.call_args_list, [])
+    response = client.get(url)
+    assert ClientSession.get.call_args_list == []
 
     assert response.getvalue().decode('utf-8') == '{"detail":"github-account-not-connected","status_code":400}'
     assert response.status_code == 400
@@ -102,7 +148,7 @@ def test__get__no_github_accounts(bc: Breathecode, client: APIClient):
 
 # When: auth
 # Then: response 200
-def test__get__auth(bc: Breathecode, client: APIClient):
+def test__get__auth(bc: Breathecode, client: APIClient, patch_get):
     expected = {'data': {'getTask': {'id': random.randint(1, 100)}}}
     query = {
         bc.fake.slug(): bc.fake.slug(),
@@ -110,12 +156,10 @@ def test__get__auth(bc: Breathecode, client: APIClient):
         bc.fake.slug(): bc.fake.slug(),
     }
 
-    mock = MagicMock()
-    mock.raw = iter([json.dumps(expected).encode()])
-    mock.headers = {'Content-Type': 'application/json'}
     code = random.randint(200, 299)
-    mock.status_code = code
-    mock.reason = 'OK'
+    headers = {'Content-Type': 'application/json'}
+
+    patch_get(expected, code, headers)
 
     task = {'github_url': bc.fake.url()}
     credentials_github = {'username': bc.fake.slug()}
@@ -133,20 +177,18 @@ def test__get__auth(bc: Breathecode, client: APIClient):
 
     token = bc.random.string(lower=True, upper=True, symbol=True, number=True, size=20)
     with patch('linked_services.django.actions.get_jwt', MagicMock(return_value=token)):
-        with patch.multiple('requests', get=MagicMock(return_value=mock)):
-            response = client.get(url)
-            assert requests.get.call_args_list == [
-                call(
-                    model.app.app_url + '/v1/finetuning/me/coderevision',
-                    params={
-                        **query,
-                        'repo': model.task.github_url,
-                        'github_username': model.credentials_github.username,
-                    },
-                    stream=True,
-                    headers={'Authorization': f'Link App=breathecode,Token={token}'},
-                ),
-            ]
+        response = client.get(url)
+        assert ClientSession.get.call_args_list == [
+            call(
+                model.app.app_url + '/v1/finetuning/me/coderevision',
+                params={
+                    **query,
+                    'repo': model.task.github_url,
+                    'github_username': model.credentials_github.username,
+                },
+                headers={'Authorization': f'Link App=breathecode,Token={token}'},
+            ),
+        ]
 
     assert response.getvalue().decode('utf-8') == json.dumps(expected)
     assert response.status_code == code
@@ -156,7 +198,7 @@ def test__get__auth(bc: Breathecode, client: APIClient):
 # When: no tasks
 # Then: response 404
 @pytest.mark.skip('Temporarily disabled')
-def test__post__no_consumables(bc: Breathecode, client: APIClient):
+def test__post__no_consumables(bc: Breathecode, client: APIClient, patch_post):
     expected = {'data': {'getTask': {'id': random.randint(1, 100)}}}
     query = {
         bc.fake.slug(): bc.fake.slug(),
@@ -164,12 +206,10 @@ def test__post__no_consumables(bc: Breathecode, client: APIClient):
         bc.fake.slug(): bc.fake.slug(),
     }
 
-    mock = MagicMock()
-    mock.raw = iter([json.dumps(expected).encode()])
-    mock.headers = {'Content-Type': 'application/json'}
     code = random.randint(200, 299)
-    mock.status_code = code
-    mock.reason = 'OK'
+    headers = {'Content-Type': 'application/json'}
+
+    patch_post(expected, code, headers)
 
     model = bc.database.create(profile_academy=1, app={'slug': 'rigobot', 'app_url': bc.fake.url()})
     client.force_authenticate(model.user)
@@ -177,9 +217,8 @@ def test__post__no_consumables(bc: Breathecode, client: APIClient):
     url = reverse_lazy('assignments:me_task_id_coderevision', kwargs={'task_id': 1
                                                                       }) + '?' + bc.format.querystring(query)
 
-    with patch.multiple('requests', post=MagicMock(return_value=mock)):
-        response = client.post(url)
-        bc.check.calls(requests.post.call_args_list, [])
+    response = client.post(url)
+    assert ClientSession.post.call_args_list == []
 
     assert response.getvalue().decode('utf-8') == '{"detail":"not-enough-consumables","status_code":402}'
     assert response.status_code == 402
@@ -188,7 +227,7 @@ def test__post__no_consumables(bc: Breathecode, client: APIClient):
 
 # When: no tasks
 # Then: response 404
-def test__post__no_consumables(bc: Breathecode, client: APIClient):
+def test__post__no_consumables(bc: Breathecode, client: APIClient, patch_post):
     expected = {'data': {'getTask': {'id': random.randint(1, 100)}}}
     query = {
         bc.fake.slug(): bc.fake.slug(),
@@ -196,12 +235,10 @@ def test__post__no_consumables(bc: Breathecode, client: APIClient):
         bc.fake.slug(): bc.fake.slug(),
     }
 
-    mock = MagicMock()
-    mock.raw = iter([json.dumps(expected).encode()])
-    mock.headers = {'Content-Type': 'application/json'}
     code = random.randint(200, 299)
-    mock.status_code = code
-    mock.reason = 'OK'
+    headers = {'Content-Type': 'application/json'}
+
+    patch_post(expected, code, headers)
 
     model = bc.database.create(profile_academy=1,
                                app={
@@ -217,9 +254,8 @@ def test__post__no_consumables(bc: Breathecode, client: APIClient):
     url = reverse_lazy('assignments:me_task_id_coderevision', kwargs={'task_id': 1
                                                                       }) + '?' + bc.format.querystring(query)
 
-    with patch.multiple('requests', post=MagicMock(return_value=mock)):
-        response = client.post(url)
-        bc.check.calls(requests.post.call_args_list, [])
+    response = client.post(url)
+    assert ClientSession.post.call_args_list == []
 
     assert response.getvalue().decode('utf-8') == '{"detail":"with-consumer-not-enough-consumables","status_code":402}'
     assert response.status_code == 402
@@ -228,7 +264,7 @@ def test__post__no_consumables(bc: Breathecode, client: APIClient):
 
 # When: no tasks
 # Then: response 404
-def test__post__no_tasks(bc: Breathecode, client: APIClient):
+def test__post__no_tasks(bc: Breathecode, client: APIClient, patch_post):
     expected = {'data': {'getTask': {'id': random.randint(1, 100)}}}
     query = {
         bc.fake.slug(): bc.fake.slug(),
@@ -236,12 +272,10 @@ def test__post__no_tasks(bc: Breathecode, client: APIClient):
         bc.fake.slug(): bc.fake.slug(),
     }
 
-    mock = MagicMock()
-    mock.raw = iter([json.dumps(expected).encode()])
-    mock.headers = {'Content-Type': 'application/json'}
     code = random.randint(200, 299)
-    mock.status_code = code
-    mock.reason = 'OK'
+    headers = {'Content-Type': 'application/json'}
+
+    patch_post(expected, code, headers)
 
     model = bc.database.create(profile_academy=1,
                                consumable=1,
@@ -258,9 +292,8 @@ def test__post__no_tasks(bc: Breathecode, client: APIClient):
     url = reverse_lazy('assignments:me_task_id_coderevision', kwargs={'task_id': 1
                                                                       }) + '?' + bc.format.querystring(query)
 
-    with patch.multiple('requests', post=MagicMock(return_value=mock)):
-        response = client.post(url)
-        bc.check.calls(requests.post.call_args_list, [])
+    response = client.post(url)
+    assert ClientSession.post.call_args_list == []
 
     assert response.getvalue().decode('utf-8') == '{"detail":"task-not-found","status_code":404}'
     assert response.status_code == 404
@@ -269,7 +302,7 @@ def test__post__no_tasks(bc: Breathecode, client: APIClient):
 
 # When: no github accounts
 # Then: response 200
-def test__post__no_github_accounts(bc: Breathecode, client: APIClient):
+def test__post__no_github_accounts(bc: Breathecode, client: APIClient, patch_post):
     expected = {'data': {'getTask': {'id': random.randint(1, 100)}}}
     query = {
         bc.fake.slug(): bc.fake.slug(),
@@ -277,12 +310,10 @@ def test__post__no_github_accounts(bc: Breathecode, client: APIClient):
         bc.fake.slug(): bc.fake.slug(),
     }
 
-    mock = MagicMock()
-    mock.raw = iter([json.dumps(expected).encode()])
-    mock.headers = {'Content-Type': 'application/json'}
     code = random.randint(200, 299)
-    mock.status_code = code
-    mock.reason = 'OK'
+    headers = {'Content-Type': 'application/json'}
+
+    patch_post(expected, code, headers)
 
     task = {'github_url': bc.fake.url()}
     model = bc.database.create(profile_academy=1,
@@ -301,9 +332,8 @@ def test__post__no_github_accounts(bc: Breathecode, client: APIClient):
     url = reverse_lazy('assignments:me_task_id_coderevision', kwargs={'task_id': 1
                                                                       }) + '?' + bc.format.querystring(query)
 
-    with patch.multiple('requests', post=MagicMock(return_value=mock)):
-        response = client.post(url)
-        bc.check.calls(requests.post.call_args_list, [])
+    response = client.post(url)
+    assert ClientSession.post.call_args_list == []
 
     assert response.getvalue().decode('utf-8') == '{"detail":"github-account-not-connected","status_code":400}'
     assert response.status_code == 400
@@ -312,7 +342,7 @@ def test__post__no_github_accounts(bc: Breathecode, client: APIClient):
 
 # When: auth
 # Then: response 200
-def test__post__auth(bc: Breathecode, client: APIClient):
+def test__post__auth(bc: Breathecode, client: APIClient, patch_post):
     expected = {'data': {'getTask': {'id': random.randint(1, 100)}}}
     query = {
         bc.fake.slug(): bc.fake.slug(),
@@ -320,12 +350,10 @@ def test__post__auth(bc: Breathecode, client: APIClient):
         bc.fake.slug(): bc.fake.slug(),
     }
 
-    mock = MagicMock()
-    mock.raw = iter([json.dumps(expected).encode()])
-    mock.headers = {'Content-Type': 'application/json'}
     code = random.randint(200, 299)
-    mock.status_code = code
-    mock.reason = 'OK'
+    headers = {'Content-Type': 'application/json'}
+
+    patch_post(expected, code, headers)
 
     task = {'github_url': bc.fake.url()}
     credentials_github = {'username': bc.fake.slug()}
@@ -348,22 +376,20 @@ def test__post__auth(bc: Breathecode, client: APIClient):
 
     token = bc.random.string(lower=True, upper=True, symbol=True, number=True, size=20)
     with patch('linked_services.django.actions.get_jwt', MagicMock(return_value=token)):
-        with patch.multiple('requests', post=MagicMock(return_value=mock)):
-            response = client.post(url, query, format='json')
-            assert requests.post.call_args_list == [
-                call(
-                    model.app.app_url + '/v1/finetuning/coderevision/',
-                    data=query,
-                    json=None,
-                    params={
-                        **query,
-                        'repo': model.task.github_url,
-                        'github_username': model.credentials_github.username,
-                    },
-                    stream=True,
-                    headers={'Authorization': f'Link App=breathecode,Token={token}'},
-                ),
-            ]
+        response = client.post(url, query, format='json')
+        assert ClientSession.post.call_args_list == [
+            call(
+                model.app.app_url + '/v1/finetuning/coderevision/',
+                data=query,
+                json=None,
+                params={
+                    **query,
+                    'repo': model.task.github_url,
+                    'github_username': model.credentials_github.username,
+                },
+                headers={'Authorization': f'Link App=breathecode,Token={token}'},
+            ),
+        ]
 
     assert response.getvalue().decode('utf-8') == json.dumps(expected)
     assert response.status_code == code
@@ -410,7 +436,7 @@ def test__post__auth(bc: Breathecode, client: APIClient):
     ),
 ])
 def test__post__auth__no_saas__finantial_status_no_late(bc: Breathecode, client: APIClient, academy, cohort,
-                                                        cohort_user):
+                                                        cohort_user, patch_post):
     expected = {'data': {'getTask': {'id': random.randint(1, 100)}}}
     query = {
         bc.fake.slug(): bc.fake.slug(),
@@ -418,12 +444,10 @@ def test__post__auth__no_saas__finantial_status_no_late(bc: Breathecode, client:
         bc.fake.slug(): bc.fake.slug(),
     }
 
-    mock = MagicMock()
-    mock.raw = iter([json.dumps(expected).encode()])
-    mock.headers = {'Content-Type': 'application/json'}
     code = random.randint(200, 299)
-    mock.status_code = code
-    mock.reason = 'OK'
+    headers = {'Content-Type': 'application/json'}
+
+    patch_post(expected, code, headers)
 
     task = {'github_url': bc.fake.url()}
     credentials_github = {'username': bc.fake.slug()}
@@ -449,22 +473,20 @@ def test__post__auth__no_saas__finantial_status_no_late(bc: Breathecode, client:
 
     token = bc.random.string(lower=True, upper=True, symbol=True, number=True, size=20)
     with patch('linked_services.django.actions.get_jwt', MagicMock(return_value=token)):
-        with patch.multiple('requests', post=AsyncMock(return_value=mock)):
-            response = client.post(url, query, format='json')
-            assert requests.post.call_args_list == [
-                call(
-                    model.app.app_url + '/v1/finetuning/coderevision/',
-                    data=query,
-                    json=None,
-                    params={
-                        **query,
-                        'repo': model.task.github_url,
-                        'github_username': model.credentials_github.username,
-                    },
-                    stream=True,
-                    headers={'Authorization': f'Link App=breathecode,Token={token}'},
-                ),
-            ]
+        response = client.post(url, query, format='json')
+        assert ClientSession.post.call_args_list == [
+            call(
+                model.app.app_url + '/v1/finetuning/coderevision/',
+                data=query,
+                json=None,
+                params={
+                    **query,
+                    'repo': model.task.github_url,
+                    'github_username': model.credentials_github.username,
+                },
+                headers={'Authorization': f'Link App=breathecode,Token={token}'},
+            ),
+        ]
 
     assert response.getvalue().decode('utf-8') == json.dumps(expected)
     assert response.status_code == code
@@ -492,7 +514,7 @@ def test__post__auth__no_saas__finantial_status_no_late(bc: Breathecode, client:
         },
     ),
 ])
-def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: APIClient, academy, cohort):
+def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: APIClient, academy, cohort, patch_post):
     expected = {'data': {'getTask': {'id': random.randint(1, 100)}}}
     query = {
         bc.fake.slug(): bc.fake.slug(),
@@ -500,12 +522,10 @@ def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: AP
         bc.fake.slug(): bc.fake.slug(),
     }
 
-    mock = MagicMock()
-    mock.raw = iter([json.dumps(expected).encode()])
-    mock.headers = {'Content-Type': 'application/json'}
     code = random.randint(200, 299)
-    mock.status_code = code
-    mock.reason = 'OK'
+    headers = {'Content-Type': 'application/json'}
+
+    patch_post(expected, code, headers)
 
     task = {'github_url': bc.fake.url()}
     credentials_github = {'username': bc.fake.slug()}
@@ -532,9 +552,8 @@ def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: AP
 
     token = bc.random.string(lower=True, upper=True, symbol=True, number=True, size=20)
     with patch('linked_services.django.actions.get_jwt', MagicMock(return_value=token)):
-        with patch.multiple('requests', post=MagicMock(return_value=mock)):
-            response = client.post(url, query, format='json')
-            assert requests.post.call_args_list == []
+        response = client.post(url, query, format='json')
+        assert ClientSession.post.call_args_list == []
 
     x = response.json()
     expected = {'detail': 'cohort-user-status-later', 'status_code': 402}

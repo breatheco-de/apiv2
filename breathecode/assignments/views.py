@@ -974,7 +974,8 @@ class MeCodeRevisionView(APIView):
                                                                                                     ).afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
-        elif self.has_github_credentials(user) is False:
+        github_credentials = await self.get_github_credentials()
+        if github_credentials is None:
             raise ValidationException(translation(lang,
                                                   en='You need to connect your Github account first',
                                                   es='Necesitas conectar tu cuenta de Github primero',
@@ -984,10 +985,7 @@ class MeCodeRevisionView(APIView):
         if task_id and task and task.github_url:
             params['repo'] = task.github_url
 
-        github_credentials = await self.get_github_credentials()
-
-        if github_credentials:
-            params['github_username'] = github_credentials.username
+        params['github_username'] = github_credentials.username
 
         async with Service('rigobot', user.id, proxy=True) as s:
             return await s.get('/v1/finetuning/me/coderevision', params=params)
@@ -1005,14 +1003,14 @@ class MeCodeRevisionView(APIView):
         if item is None:
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
-        elif self.has_github_credentials(user) is False:
+        github_credentials = await self.get_github_credentials()
+        if github_credentials is None:
             raise ValidationException(translation(lang,
                                                   en='You need to connect your Github account first',
                                                   es='Necesitas conectar tu cuenta de Github primero',
                                                   slug='github-account-not-connected'),
                                       code=400)
 
-        github_credentials = await self.get_github_credentials()
         params['github_username'] = github_credentials.username
         params['repo'] = item.github_url
 
