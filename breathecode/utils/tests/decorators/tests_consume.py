@@ -1,8 +1,7 @@
 import json
 import random
 from datetime import timedelta
-from functools import wraps
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, call
 
 import pytest
 from adrf.decorators import APIView, api_view
@@ -247,14 +246,8 @@ def make_view(request, fake, decorator_params={}):
 
         return await wrapper(user=user, decorator_params=decorator_params,
                              url_params=url_params), res, class_based, url_params
-        # sync_to_async(wrapper), res, class_based, decorator_params
 
     return unpack
-
-    # if is_async:
-    #     return sync_to_async(wrapper), res, class_based, decorator_params
-
-    # return sync_to_async(wrapper), res, class_based, decorator_params
 
 
 @pytest.fixture(params=[param for param, _ in build_params()], ids=[id for _, id in build_params()])
@@ -486,581 +479,581 @@ class TestNoConsumer:
         await check_consume_service()
 
 
-@pytest.mark.asyncio
-@pytest.mark.django_db(reset_sequences=True)
-async def test__function__get__anonymous_user(bc: Breathecode, make_view_consumer_cases):
-    view, _, _, _ = await make_view_consumer_cases(user=None, decorator_params={}, url_params={})
-
-    response, _ = await view()
-    expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
-
-    assert json.loads(response.content.decode('utf-8')) == expected
-    assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
-    # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-    assert await bc.database.alist_of('payments.ConsumptionSession') == []
-    assert models.ConsumptionSession.build_session.call_args_list == []
-
-    @sync_to_async
-    def check_consume_service():
-        assert payments_signals.consume_service.send.call_args_list == []
-
-    await check_consume_service()
-
-
-@pytest.mark.asyncio
-@pytest.mark.django_db(reset_sequences=True)
-async def test__function__get__with_user(bc: Breathecode, make_view_consumer_cases):
-    model = await bc.database.acreate(user=1)
-    view, _, _, _ = await make_view_consumer_cases(user=model.user, decorator_params={}, url_params={})
-
-    response, _ = await view()
-    expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-    assert json.loads(response.content.decode('utf-8')) == expected
-    assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
-    # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-    assert await bc.database.alist_of('payments.ConsumptionSession') == []
-    assert models.ConsumptionSession.build_session.call_args_list == []
-
-    @sync_to_async
-    def check_consume_service():
-        assert payments_signals.consume_service.send.call_args_list == []
-
-    await check_consume_service()
-
-
-@pytest.mark.asyncio
-@pytest.mark.django_db(reset_sequences=True)
-async def test__function__get__with_user__with_permission__dont_match(bc: Breathecode, make_view_consumer_cases):
-    model = await bc.database.acreate(user=1, permission=1)
-    view, _, _, _ = await make_view_consumer_cases(user=model.user, decorator_params={}, url_params={})
-
-    response, _ = await view()
-    expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-    assert json.loads(response.content.decode('utf-8')) == expected
-    assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
-    # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-    assert await bc.database.alist_of('payments.ConsumptionSession') == []
-    assert models.ConsumptionSession.build_session.call_args_list == []
-
-    @sync_to_async
-    def check_consume_service():
-        assert payments_signals.consume_service.send.call_args_list == []
-
-    await check_consume_service()
-
-
-@pytest.mark.asyncio
-@pytest.mark.django_db(reset_sequences=True)
-async def test__function__get__with_user__with_group_related_to_permission__without_consumable(
-        bc: Breathecode, make_view_consumer_cases, partial_equality):
-    user = {'user_permissions': []}
-    services = [{}, {'slug': PERMISSION}]
-
-    model = await bc.database.acreate(user=user, service=services, service_item={'service_id': 2})
-    view, _, based_class, _ = await make_view_consumer_cases(user=model.user, decorator_params={}, url_params={})
-
-    response, params = await view()
-    expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-    assert json.loads(response.content.decode('utf-8')) == expected
-    assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
-
-    Consumable = bc.database.get_model('payments.Consumable')
-    consumables = Consumable.objects.filter()
-    assert len(CONSUMER_MOCK.call_args_list) == 1
-
-    args, kwargs = CONSUMER_MOCK.call_args_list[0]
-    context, args, kwargs = args
-
-    assert isinstance(context['request'], Request)
-    partial_equality(context, {
-        'utc_now': UTC_NOW,
-        'consumer': CONSUMER_MOCK,
-        'permission': PERMISSION,
-        'consumables': consumables,
-    })
-
-    if based_class:
-        assert len(args) == 2
-        assert isinstance(args[1], Request)
-
-    else:
-        assert len(args) == 1
-        assert isinstance(args[0], Request)
-
-    assert kwargs == params
-
-    assert await bc.database.alist_of('payments.ConsumptionSession') == []
-    assert models.ConsumptionSession.build_session.call_args_list == []
-
-    @sync_to_async
-    def check_consume_service():
-        assert payments_signals.consume_service.send.call_args_list == []
-
-    await check_consume_service()
-
-
-@pytest.mark.asyncio
-@pytest.mark.django_db(reset_sequences=True)
-async def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_minus_1(
-        bc: Breathecode, make_view_consumer_cases, partial_equality):
-    user = {'user_permissions': []}
-    services = [{}, {'slug': PERMISSION}]
-
-    consumable = {'how_many': -1}
-    model = await bc.database.acreate(user=user,
-                                      service=services,
-                                      service_item={'service_id': 2},
-                                      consumable=consumable)
-
-    view, expected, based_class, params = await make_view_consumer_cases(user=model.user,
-                                                                         decorator_params={},
-                                                                         url_params={})
-
-    response, _ = await view()
-
-    assert json.loads(response.content.decode('utf-8')) == expected
-    assert response.status_code == status.HTTP_200_OK
-
-    Consumable = bc.database.get_model('payments.Consumable')
-    consumables = Consumable.objects.filter()
-    assert len(CONSUMER_MOCK.call_args_list) == 1
-
-    args, kwargs = CONSUMER_MOCK.call_args_list[0]
-    context, args, kwargs = args
-
-    assert isinstance(context['request'], Request)
-    partial_equality(context, {
-        'utc_now': UTC_NOW,
-        'consumer': CONSUMER_MOCK,
-        'permission': PERMISSION,
-        'consumables': consumables,
-    })
-
-    if based_class:
-        assert len(args) == 2
-        assert isinstance(args[1], Request)
-
-    else:
-        assert len(args) == 1
-        assert isinstance(args[0], Request)
-
-    assert kwargs == params
-
-    assert await bc.database.alist_of('payments.ConsumptionSession') == []
-    assert models.ConsumptionSession.build_session.call_args_list == []
-
-    @sync_to_async
-    def check_consume_service():
-        assert payments_signals.consume_service.send.call_args_list == [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ]
-
-    await check_consume_service()
-
-
-@pytest.mark.asyncio
-@pytest.mark.django_db(reset_sequences=True)
-async def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_0(
-        bc: Breathecode, make_view_consumer_cases, partial_equality):
-    user = {'user_permissions': []}
-    services = [{}, {'slug': PERMISSION}]
-
-    consumable = {'how_many': 0}
-    model = await bc.database.acreate(user=user,
-                                      service=services,
-                                      service_item={'service_id': 2},
-                                      consumable=consumable)
-
-    view, _, based_class, params = await make_view_consumer_cases(user=model.user, decorator_params={}, url_params={})
-
-    response, _ = await view()
-    expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-    assert json.loads(response.content.decode('utf-8')) == expected
-    assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
-
-    Consumable = bc.database.get_model('payments.Consumable')
-    consumables = Consumable.objects.filter()
-    assert len(CONSUMER_MOCK.call_args_list) == 1
-
-    args, kwargs = CONSUMER_MOCK.call_args_list[0]
-    context, args, kwargs = args
-
-    assert isinstance(context['request'], Request)
-    partial_equality(context, {
-        'utc_now': UTC_NOW,
-        'consumer': CONSUMER_MOCK,
-        'permission': PERMISSION,
-        'consumables': consumables,
-    })
-
-    if based_class:
-        assert len(args) == 2
-        assert isinstance(args[1], Request)
-
-    else:
-        assert len(args) == 1
-        assert isinstance(args[0], Request)
-
-    assert kwargs == params
-
-    assert await bc.database.alist_of('payments.ConsumptionSession') == []
-    assert models.ConsumptionSession.build_session.call_args_list == []
-
-    @sync_to_async
-    def check_consume_service():
-        assert payments_signals.consume_service.send.call_args_list == []
-
-    await check_consume_service()
-
-
-@pytest.mark.asyncio
-@pytest.mark.django_db(reset_sequences=True)
-async def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_gte_1(
-        bc: Breathecode, make_view_consumer_cases, partial_equality):
-    user = {'user_permissions': []}
-    services = [{}, {'slug': PERMISSION}]
-
-    consumable = {'how_many': random.randint(1, 100)}
-    model = await bc.database.acreate(user=user,
-                                      service=services,
-                                      service_item={'service_id': 2},
-                                      consumable=consumable)
-
-    view, expected, based_class, params = await make_view_consumer_cases(user=model.user,
-                                                                         decorator_params={},
-                                                                         url_params={})
-
-    response, _ = await view()
-
-    assert json.loads(response.content.decode('utf-8')) == expected
-    assert response.status_code == status.HTTP_200_OK
-
-    Consumable = bc.database.get_model('payments.Consumable')
-    consumables = Consumable.objects.filter()
-    assert len(CONSUMER_MOCK.call_args_list) == 1
-
-    args, kwargs = CONSUMER_MOCK.call_args_list[0]
-    context, args, kwargs = args
-
-    assert isinstance(context['request'], Request)
-    partial_equality(context, {
-        'utc_now': UTC_NOW,
-        'consumer': CONSUMER_MOCK,
-        'permission': PERMISSION,
-        'consumables': consumables,
-    })
-
-    if based_class:
-        assert len(args) == 2
-        assert isinstance(args[1], Request)
-
-    else:
-        assert len(args) == 1
-        assert isinstance(args[0], Request)
-
-    assert kwargs == params
-
-    assert await bc.database.alist_of('payments.ConsumptionSession') == []
-    assert models.ConsumptionSession.build_session.call_args_list == []
-
-    @sync_to_async
-    def check_consume_service():
-        assert payments_signals.consume_service.send.call_args_list == [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ]
-
-    await check_consume_service()
-
-
-@pytest.mark.asyncio
-@pytest.mark.django_db(reset_sequences=True)
-async def test__function__get__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(
-        bc: Breathecode, make_view_consumer_cases, partial_equality):
-    user = {'user_permissions': []}
-    services = [{}, {'slug': PERMISSION}]
-    group = {'permission_id': 2, 'name': 'secret'}
-    consumable = {'how_many': 1}
-    model = await bc.database.acreate(user=user,
-                                      service=services,
-                                      group=group,
-                                      service_item={'service_id': 2},
-                                      consumable=consumable)
-
-    view, _, based_class, params = await make_view_consumer_cases(user=model.user, decorator_params={}, url_params={})
-
-    response, _ = await view()
-    expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-    assert json.loads(response.content.decode('utf-8')) == expected
-    assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
-
-    Consumable = bc.database.get_model('payments.Consumable')
-    consumables = Consumable.objects.filter()
-    assert len(CONSUMER_MOCK.call_args_list) == 1
-
-    args, kwargs = CONSUMER_MOCK.call_args_list[0]
-    context, args, kwargs = args
-
-    assert isinstance(context['request'], Request)
-    partial_equality(context, {
-        'utc_now': UTC_NOW,
-        'consumer': CONSUMER_MOCK,
-        'permission': PERMISSION,
-        'consumables': consumables,
-    })
-
-    if based_class:
-        assert len(args) == 2
-        assert isinstance(args[1], Request)
-
-    else:
-        assert len(args) == 1
-        assert isinstance(args[0], Request)
-
-    assert kwargs == params
-
-    assert await bc.database.alist_of('payments.ConsumptionSession') == []
-    assert models.ConsumptionSession.build_session.call_args_list == []
-
-    @sync_to_async
-    def check_consume_service():
-        assert payments_signals.consume_service.send.call_args_list == []
-
-    await check_consume_service()
-
-
-@pytest.mark.asyncio
-@pytest.mark.django_db(reset_sequences=True)
-async def test__function__get__with_user__without_consumption_session(bc: Breathecode, make_view_lifetime_cases,
-                                                                      partial_equality):
-
-    user = {'user_permissions': []}
-    services = [{}, {'slug': PERMISSION}]
-
-    consumable = {'how_many': 1}
-    model = await bc.database.acreate(user=user,
-                                      service=services,
-                                      service_item={'service_id': 2},
-                                      consumable=consumable)
-
-    view, expected, based_class, _ = await make_view_lifetime_cases(user=model.user, decorator_params={}, url_params={})
-
-    response, params = await view()
-
-    assert json.loads(response.content.decode('utf-8')) == expected
-    assert response.status_code == status.HTTP_200_OK
-
-    Consumable = bc.database.get_model('payments.Consumable')
-    consumables = Consumable.objects.filter()
-    assert len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list) == 1
-
-    args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
-    context, args, kwargs = args
-
-    assert isinstance(context['request'], Request)
-    partial_equality(
-        context, {
+class TestConsumer:
+
+    @pytest.mark.asyncio
+    @pytest.mark.django_db(reset_sequences=True)
+    async def test__function__get__anonymous_user(self, bc: Breathecode, make_view_consumer_cases):
+        view, _, _, _ = await make_view_consumer_cases(user=None, decorator_params={}, url_params={})
+
+        response, _ = await view()
+        expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
+
+        assert json.loads(response.content.decode('utf-8')) == expected
+        assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
+        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        assert await bc.database.alist_of('payments.ConsumptionSession') == []
+        assert models.ConsumptionSession.build_session.call_args_list == []
+
+        @sync_to_async
+        def check_consume_service():
+            assert payments_signals.consume_service.send.call_args_list == []
+
+        await check_consume_service()
+
+    @pytest.mark.asyncio
+    @pytest.mark.django_db(reset_sequences=True)
+    async def test__function__get__with_user(self, bc: Breathecode, make_view_consumer_cases):
+        model = await bc.database.acreate(user=1)
+        view, _, _, _ = await make_view_consumer_cases(user=model.user, decorator_params={}, url_params={})
+
+        response, _ = await view()
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
+
+        assert json.loads(response.content.decode('utf-8')) == expected
+        assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
+        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        assert await bc.database.alist_of('payments.ConsumptionSession') == []
+        assert models.ConsumptionSession.build_session.call_args_list == []
+
+        @sync_to_async
+        def check_consume_service():
+            assert payments_signals.consume_service.send.call_args_list == []
+
+        await check_consume_service()
+
+    @pytest.mark.asyncio
+    @pytest.mark.django_db(reset_sequences=True)
+    async def test__function__get__with_user__with_permission__dont_match(self, bc: Breathecode,
+                                                                          make_view_consumer_cases):
+        model = await bc.database.acreate(user=1, permission=1)
+        view, _, _, _ = await make_view_consumer_cases(user=model.user, decorator_params={}, url_params={})
+
+        response, _ = await view()
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
+
+        assert json.loads(response.content.decode('utf-8')) == expected
+        assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
+        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        assert await bc.database.alist_of('payments.ConsumptionSession') == []
+        assert models.ConsumptionSession.build_session.call_args_list == []
+
+        @sync_to_async
+        def check_consume_service():
+            assert payments_signals.consume_service.send.call_args_list == []
+
+        await check_consume_service()
+
+    @pytest.mark.asyncio
+    @pytest.mark.django_db(reset_sequences=True)
+    async def test__function__get__with_user__with_group_related_to_permission__without_consumable(
+            self, bc: Breathecode, make_view_consumer_cases, partial_equality):
+        user = {'user_permissions': []}
+        services = [{}, {'slug': PERMISSION}]
+
+        model = await bc.database.acreate(user=user, service=services, service_item={'service_id': 2})
+        view, _, based_class, _ = await make_view_consumer_cases(user=model.user, decorator_params={}, url_params={})
+
+        response, params = await view()
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
+
+        assert json.loads(response.content.decode('utf-8')) == expected
+        assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
+
+        Consumable = bc.database.get_model('payments.Consumable')
+        consumables = Consumable.objects.filter()
+        assert len(CONSUMER_MOCK.call_args_list) == 1
+
+        args, kwargs = CONSUMER_MOCK.call_args_list[0]
+        context, args, kwargs = args
+
+        assert isinstance(context['request'], Request)
+        partial_equality(context, {
             'utc_now': UTC_NOW,
-            'consumer': CONSUMER_WITH_TIME_OF_LIFE_MOCK,
+            'consumer': CONSUMER_MOCK,
             'permission': PERMISSION,
             'consumables': consumables,
         })
 
-    if based_class:
-        assert len(args) == 2
-        assert isinstance(args[1], Request)
+        if based_class:
+            assert len(args) == 2
+            assert isinstance(args[1], Request)
 
-    else:
-        assert len(args) == 1
-        assert isinstance(args[0], Request)
+        else:
+            assert len(args) == 1
+            assert isinstance(args[0], Request)
 
-    assert kwargs == params
+        assert kwargs == params
 
-    assert await bc.database.alist_of('payments.ConsumptionSession') == []
-    assert models.ConsumptionSession.build_session.call_args_list == []
+        assert await bc.database.alist_of('payments.ConsumptionSession') == []
+        assert models.ConsumptionSession.build_session.call_args_list == []
 
-    @sync_to_async
-    def check_consume_service():
-        assert payments_signals.consume_service.send.call_args_list == [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ]
+        @sync_to_async
+        def check_consume_service():
+            assert payments_signals.consume_service.send.call_args_list == []
 
-    await check_consume_service()
+        await check_consume_service()
 
+    @pytest.mark.asyncio
+    @pytest.mark.django_db(reset_sequences=True)
+    async def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_minus_1(
+            self, bc: Breathecode, make_view_consumer_cases, partial_equality):
+        user = {'user_permissions': []}
+        services = [{}, {'slug': PERMISSION}]
 
-@pytest.mark.asyncio
-@pytest.mark.django_db(reset_sequences=True)
-async def test__view__get__with_user__consumption_session__does_not_match(bc: Breathecode, make_view_lifetime_cases,
-                                                                          partial_equality):
+        consumable = {'how_many': -1}
+        model = await bc.database.acreate(user=user,
+                                          service=services,
+                                          service_item={'service_id': 2},
+                                          consumable=consumable)
 
-    user = {'user_permissions': []}
-    services = [{}, {'slug': PERMISSION}]
+        view, expected, based_class, params = await make_view_consumer_cases(user=model.user,
+                                                                             decorator_params={},
+                                                                             url_params={})
 
-    consumable = {'how_many': 1}
-    model = await bc.database.acreate(user=user,
-                                      service=services,
-                                      service_item={'service_id': 2},
-                                      consumable=consumable,
-                                      consumption_session=1)
+        response, _ = await view()
 
-    view, expected, based_class, params = await make_view_lifetime_cases(user=model.user,
-                                                                         decorator_params={},
-                                                                         url_params={})
+        assert json.loads(response.content.decode('utf-8')) == expected
+        assert response.status_code == status.HTTP_200_OK
 
-    response, _ = await view()
+        Consumable = bc.database.get_model('payments.Consumable')
+        consumables = Consumable.objects.filter()
+        assert len(CONSUMER_MOCK.call_args_list) == 1
 
-    assert json.loads(response.content.decode('utf-8')) == expected
-    assert response.status_code == status.HTTP_200_OK
+        args, kwargs = CONSUMER_MOCK.call_args_list[0]
+        context, args, kwargs = args
 
-    Consumable = bc.database.get_model('payments.Consumable')
-    consumables = Consumable.objects.filter()
-    assert len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list) == 1
-
-    args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
-    context, args, kwargs = args
-
-    assert isinstance(context['request'], Request)
-    partial_equality(
-        context, {
+        assert isinstance(context['request'], Request)
+        partial_equality(context, {
             'utc_now': UTC_NOW,
-            'consumer': CONSUMER_WITH_TIME_OF_LIFE_MOCK,
+            'consumer': CONSUMER_MOCK,
             'permission': PERMISSION,
             'consumables': consumables,
         })
 
-    if based_class:
-        assert len(args) == 2
-        assert isinstance(args[1], Request)
+        if based_class:
+            assert len(args) == 2
+            assert isinstance(args[1], Request)
 
-    else:
-        assert len(args) == 1
-        assert isinstance(args[0], Request)
+        else:
+            assert len(args) == 1
+            assert isinstance(args[0], Request)
 
-    assert kwargs == params
-    assert await bc.database.alist_of('payments.ConsumptionSession') == [
-        bc.format.to_dict(model.consumption_session),
-    ]
+        assert kwargs == params
 
-    assert models.ConsumptionSession.build_session.call_args_list == []
+        assert await bc.database.alist_of('payments.ConsumptionSession') == []
+        assert models.ConsumptionSession.build_session.call_args_list == []
 
-    @sync_to_async
-    def check_consume_service():
-        assert payments_signals.consume_service.send.call_args_list == [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+        @sync_to_async
+        def check_consume_service():
+            assert payments_signals.consume_service.send.call_args_list == [
+                call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+            ]
+
+        await check_consume_service()
+
+    @pytest.mark.asyncio
+    @pytest.mark.django_db(reset_sequences=True)
+    async def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_0(
+            self, bc: Breathecode, make_view_consumer_cases, partial_equality):
+        user = {'user_permissions': []}
+        services = [{}, {'slug': PERMISSION}]
+
+        consumable = {'how_many': 0}
+        model = await bc.database.acreate(user=user,
+                                          service=services,
+                                          service_item={'service_id': 2},
+                                          consumable=consumable)
+
+        view, _, based_class, params = await make_view_consumer_cases(user=model.user,
+                                                                      decorator_params={},
+                                                                      url_params={})
+
+        response, _ = await view()
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
+
+        assert json.loads(response.content.decode('utf-8')) == expected
+        assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
+
+        Consumable = bc.database.get_model('payments.Consumable')
+        consumables = Consumable.objects.filter()
+        assert len(CONSUMER_MOCK.call_args_list) == 1
+
+        args, kwargs = CONSUMER_MOCK.call_args_list[0]
+        context, args, kwargs = args
+
+        assert isinstance(context['request'], Request)
+        partial_equality(context, {
+            'utc_now': UTC_NOW,
+            'consumer': CONSUMER_MOCK,
+            'permission': PERMISSION,
+            'consumables': consumables,
+        })
+
+        if based_class:
+            assert len(args) == 2
+            assert isinstance(args[1], Request)
+
+        else:
+            assert len(args) == 1
+            assert isinstance(args[0], Request)
+
+        assert kwargs == params
+
+        assert await bc.database.alist_of('payments.ConsumptionSession') == []
+        assert models.ConsumptionSession.build_session.call_args_list == []
+
+        @sync_to_async
+        def check_consume_service():
+            assert payments_signals.consume_service.send.call_args_list == []
+
+        await check_consume_service()
+
+    @pytest.mark.asyncio
+    @pytest.mark.django_db(reset_sequences=True)
+    async def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_gte_1(
+            self, bc: Breathecode, make_view_consumer_cases, partial_equality):
+        user = {'user_permissions': []}
+        services = [{}, {'slug': PERMISSION}]
+
+        consumable = {'how_many': random.randint(1, 100)}
+        model = await bc.database.acreate(user=user,
+                                          service=services,
+                                          service_item={'service_id': 2},
+                                          consumable=consumable)
+
+        view, expected, based_class, params = await make_view_consumer_cases(user=model.user,
+                                                                             decorator_params={},
+                                                                             url_params={})
+
+        response, _ = await view()
+
+        assert json.loads(response.content.decode('utf-8')) == expected
+        assert response.status_code == status.HTTP_200_OK
+
+        Consumable = bc.database.get_model('payments.Consumable')
+        consumables = Consumable.objects.filter()
+        assert len(CONSUMER_MOCK.call_args_list) == 1
+
+        args, kwargs = CONSUMER_MOCK.call_args_list[0]
+        context, args, kwargs = args
+
+        assert isinstance(context['request'], Request)
+        partial_equality(context, {
+            'utc_now': UTC_NOW,
+            'consumer': CONSUMER_MOCK,
+            'permission': PERMISSION,
+            'consumables': consumables,
+        })
+
+        if based_class:
+            assert len(args) == 2
+            assert isinstance(args[1], Request)
+
+        else:
+            assert len(args) == 1
+            assert isinstance(args[0], Request)
+
+        assert kwargs == params
+
+        assert await bc.database.alist_of('payments.ConsumptionSession') == []
+        assert models.ConsumptionSession.build_session.call_args_list == []
+
+        @sync_to_async
+        def check_consume_service():
+            assert payments_signals.consume_service.send.call_args_list == [
+                call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+            ]
+
+        await check_consume_service()
+
+    @pytest.mark.asyncio
+    @pytest.mark.django_db(reset_sequences=True)
+    async def test__function__get__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(
+            self, bc: Breathecode, make_view_consumer_cases, partial_equality):
+        user = {'user_permissions': []}
+        services = [{}, {'slug': PERMISSION}]
+        group = {'permission_id': 2, 'name': 'secret'}
+        consumable = {'how_many': 1}
+        model = await bc.database.acreate(user=user,
+                                          service=services,
+                                          group=group,
+                                          service_item={'service_id': 2},
+                                          consumable=consumable)
+
+        view, _, based_class, params = await make_view_consumer_cases(user=model.user,
+                                                                      decorator_params={},
+                                                                      url_params={})
+
+        response, _ = await view()
+        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
+
+        assert json.loads(response.content.decode('utf-8')) == expected
+        assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
+
+        Consumable = bc.database.get_model('payments.Consumable')
+        consumables = Consumable.objects.filter()
+        assert len(CONSUMER_MOCK.call_args_list) == 1
+
+        args, kwargs = CONSUMER_MOCK.call_args_list[0]
+        context, args, kwargs = args
+
+        assert isinstance(context['request'], Request)
+        partial_equality(context, {
+            'utc_now': UTC_NOW,
+            'consumer': CONSUMER_MOCK,
+            'permission': PERMISSION,
+            'consumables': consumables,
+        })
+
+        if based_class:
+            assert len(args) == 2
+            assert isinstance(args[1], Request)
+
+        else:
+            assert len(args) == 1
+            assert isinstance(args[0], Request)
+
+        assert kwargs == params
+
+        assert await bc.database.alist_of('payments.ConsumptionSession') == []
+        assert models.ConsumptionSession.build_session.call_args_list == []
+
+        @sync_to_async
+        def check_consume_service():
+            assert payments_signals.consume_service.send.call_args_list == []
+
+        await check_consume_service()
+
+    @pytest.mark.asyncio
+    @pytest.mark.django_db(reset_sequences=True)
+    async def test__function__get__with_user__without_consumption_session(self, bc: Breathecode,
+                                                                          make_view_lifetime_cases, partial_equality):
+
+        user = {'user_permissions': []}
+        services = [{}, {'slug': PERMISSION}]
+
+        consumable = {'how_many': 1}
+        model = await bc.database.acreate(user=user,
+                                          service=services,
+                                          service_item={'service_id': 2},
+                                          consumable=consumable)
+
+        view, expected, based_class, _ = await make_view_lifetime_cases(user=model.user,
+                                                                        decorator_params={},
+                                                                        url_params={})
+
+        response, params = await view()
+
+        assert json.loads(response.content.decode('utf-8')) == expected
+        assert response.status_code == status.HTTP_200_OK
+
+        Consumable = bc.database.get_model('payments.Consumable')
+        consumables = Consumable.objects.filter()
+        assert len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list) == 1
+
+        args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
+        context, args, kwargs = args
+
+        assert isinstance(context['request'], Request)
+        partial_equality(
+            context, {
+                'utc_now': UTC_NOW,
+                'consumer': CONSUMER_WITH_TIME_OF_LIFE_MOCK,
+                'permission': PERMISSION,
+                'consumables': consumables,
+            })
+
+        if based_class:
+            assert len(args) == 2
+            assert isinstance(args[1], Request)
+
+        else:
+            assert len(args) == 1
+            assert isinstance(args[0], Request)
+
+        assert kwargs == params
+
+        assert await bc.database.alist_of('payments.ConsumptionSession') == []
+        assert models.ConsumptionSession.build_session.call_args_list == []
+
+        @sync_to_async
+        def check_consume_service():
+            assert payments_signals.consume_service.send.call_args_list == [
+                call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+            ]
+
+        await check_consume_service()
+
+
+class TestConsumptionSession:
+
+    @pytest.mark.asyncio
+    @pytest.mark.django_db(reset_sequences=True)
+    async def test__with_user__consumption_session__does_not_match(self, bc: Breathecode, make_view_lifetime_cases,
+                                                                   partial_equality):
+
+        user = {'user_permissions': []}
+        services = [{}, {'slug': PERMISSION}]
+
+        consumable = {'how_many': 1}
+        model = await bc.database.acreate(user=user,
+                                          service=services,
+                                          service_item={'service_id': 2},
+                                          consumable=consumable,
+                                          consumption_session=1)
+
+        view, expected, based_class, params = await make_view_lifetime_cases(user=model.user,
+                                                                             decorator_params={},
+                                                                             url_params={})
+
+        response, _ = await view()
+
+        assert json.loads(response.content.decode('utf-8')) == expected
+        assert response.status_code == status.HTTP_200_OK
+
+        Consumable = bc.database.get_model('payments.Consumable')
+        consumables = Consumable.objects.filter()
+        assert len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list) == 1
+
+        args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
+        context, args, kwargs = args
+
+        assert isinstance(context['request'], Request)
+        partial_equality(
+            context, {
+                'utc_now': UTC_NOW,
+                'consumer': CONSUMER_WITH_TIME_OF_LIFE_MOCK,
+                'permission': PERMISSION,
+                'consumables': consumables,
+            })
+
+        if based_class:
+            assert len(args) == 2
+            assert isinstance(args[1], Request)
+
+        else:
+            assert len(args) == 1
+            assert isinstance(args[0], Request)
+
+        assert kwargs == params
+        assert await bc.database.alist_of('payments.ConsumptionSession') == [
+            bc.format.to_dict(model.consumption_session),
         ]
 
-    await check_consume_service()
+        assert models.ConsumptionSession.build_session.call_args_list == []
 
+        @sync_to_async
+        def check_consume_service():
+            assert payments_signals.consume_service.send.call_args_list == [
+                call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+            ]
 
-@pytest.mark.asyncio
-@pytest.mark.django_db(reset_sequences=True)
-async def test__view__get__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(
-        bc: Breathecode, make_view_lifetime_cases, partial_equality):
+        await check_consume_service()
 
-    user = {'user_permissions': []}
-    services = [{}, {'slug': PERMISSION}]
+    @pytest.mark.asyncio
+    @pytest.mark.django_db(reset_sequences=True)
+    async def test__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(
+            self, bc: Breathecode, make_view_lifetime_cases):
 
-    n = random.randint(1, 4)
-    consumable = {'how_many': n}
-    consumption_session = {
-        'eta': UTC_NOW + time_of_life,
-        'how_many': n,
-        'request': {
-            'args': [],
-            'kwargs': {},
-            'headers': {
-                'academy': None
-            },
-            'user': 1
+        user = {'user_permissions': []}
+        services = [{}, {'slug': PERMISSION}]
+
+        n = random.randint(1, 4)
+        consumable = {'how_many': n}
+        consumption_session = {
+            'eta': UTC_NOW + time_of_life,
+            'how_many': n,
+            'request': {
+                'args': [],
+                'kwargs': {},
+                'headers': {
+                    'academy': None
+                },
+                'user': 1
+            }
         }
-    }
-    model = await bc.database.acreate(user=user,
-                                      service=services,
-                                      service_item={'service_id': 2},
-                                      consumable=consumable,
-                                      consumption_session=consumption_session)
+        model = await bc.database.acreate(user=user,
+                                          service=services,
+                                          service_item={'service_id': 2},
+                                          consumable=consumable,
+                                          consumption_session=consumption_session)
 
-    view, expected, based_class, params = await make_view_lifetime_cases(user=model.user,
-                                                                         decorator_params={},
-                                                                         url_params={})
+        view, expected, based_class, params = await make_view_lifetime_cases(user=model.user,
+                                                                             decorator_params={},
+                                                                             url_params={})
 
-    model.consumption_session.request['kwargs'] = params
-    await model.consumption_session.asave()
+        model.consumption_session.request['kwargs'] = params
+        await model.consumption_session.asave()
 
-    response, _ = await view()
+        response, _ = await view()
 
-    assert json.loads(response.content.decode('utf-8')) == expected
-    assert response.status_code == status.HTTP_200_OK
+        assert json.loads(response.content.decode('utf-8')) == expected
+        assert response.status_code == status.HTTP_200_OK
 
-    assert len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list) == 1
+        assert len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list) == 1
 
-    assert await bc.database.alist_of('payments.ConsumptionSession') == [
-        bc.format.to_dict(model.consumption_session),
-    ]
+        assert await bc.database.alist_of('payments.ConsumptionSession') == [
+            bc.format.to_dict(model.consumption_session),
+        ]
 
-    assert models.ConsumptionSession.build_session.call_args_list == []
+        assert models.ConsumptionSession.build_session.call_args_list == []
 
-    @sync_to_async
-    def check_consume_service():
-        assert payments_signals.consume_service.send.call_args_list == []
+        @sync_to_async
+        def check_consume_service():
+            assert payments_signals.consume_service.send.call_args_list == []
 
-    await check_consume_service()
+        await check_consume_service()
 
+    @pytest.mark.asyncio
+    @pytest.mark.django_db(reset_sequences=True)
+    async def test__with_user__consumption_session__match(self, bc: Breathecode, make_view_lifetime_cases):
+        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
 
-@pytest.mark.asyncio
-@pytest.mark.django_db(reset_sequences=True)
-async def test__view__get__with_user__consumption_session__match(bc: Breathecode, make_view_lifetime_cases,
-                                                                 partial_equality):
-    CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
+        user = {'user_permissions': []}
+        services = [{}, {'slug': PERMISSION}]
 
-    user = {'user_permissions': []}
-    services = [{}, {'slug': PERMISSION}]
-
-    consumable = {'how_many': 1}
-    consumption_session = {
-        'eta': UTC_NOW + time_of_life,
-        'request': {
-            'args': [],
-            'kwargs': {},
-            'headers': {
-                'academy': None
-            },
-            'user': 1
+        consumable = {'how_many': 1}
+        consumption_session = {
+            'eta': UTC_NOW + time_of_life,
+            'request': {
+                'args': [],
+                'kwargs': {},
+                'headers': {
+                    'academy': None
+                },
+                'user': 1
+            }
         }
-    }
-    model = await bc.database.acreate(user=user,
-                                      service=services,
-                                      service_item={'service_id': 2},
-                                      consumable=consumable,
-                                      consumption_session=consumption_session)
+        model = await bc.database.acreate(user=user,
+                                          service=services,
+                                          service_item={'service_id': 2},
+                                          consumable=consumable,
+                                          consumption_session=consumption_session)
 
-    view, expected, based_class, params = await make_view_lifetime_cases(user=model.user,
-                                                                         decorator_params={},
-                                                                         url_params={})
+        view, expected, based_class, params = await make_view_lifetime_cases(user=model.user,
+                                                                             decorator_params={},
+                                                                             url_params={})
 
-    model.consumption_session.request['kwargs'] = params
+        model.consumption_session.request['kwargs'] = params
 
-    await model.consumption_session.asave()
+        await model.consumption_session.asave()
 
-    response, _ = await view()
+        response, _ = await view()
 
-    assert json.loads(response.content.decode('utf-8')) == expected
-    assert response.status_code == status.HTTP_200_OK
+        assert json.loads(response.content.decode('utf-8')) == expected
+        assert response.status_code == status.HTTP_200_OK
 
-    assert len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list) == 1
+        assert len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list) == 1
 
-    assert await bc.database.alist_of('payments.ConsumptionSession') == [
-        bc.format.to_dict(model.consumption_session),
-    ]
+        assert await bc.database.alist_of('payments.ConsumptionSession') == [
+            bc.format.to_dict(model.consumption_session),
+        ]
 
-    assert models.ConsumptionSession.build_session.call_args_list == []
+        assert models.ConsumptionSession.build_session.call_args_list == []
 
-    @sync_to_async
-    def check_consume_service():
-        assert payments_signals.consume_service.send.call_args_list == []
+        @sync_to_async
+        def check_consume_service():
+            assert payments_signals.consume_service.send.call_args_list == []
 
-    await check_consume_service()
+        await check_consume_service()
