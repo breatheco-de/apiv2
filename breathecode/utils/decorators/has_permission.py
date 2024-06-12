@@ -30,6 +30,11 @@ def validate_permission(user: User, permission: str) -> bool:
     return found.user_set.filter(id=user.id).exists() or found.group_set.filter(user__id=user.id).exists()
 
 
+@sync_to_async
+def avalidate_permission(user: User, permission: str) -> bool:
+    return validate_permission(user, permission)
+
+
 # that must be remove from here
 def render_message(r,
                    msg,
@@ -176,7 +181,7 @@ def has_permission(permission: str, format='json') -> callable:
 
             try:
                 user = await async_get_user(request)
-                if validate_permission(user, permission):
+                if await avalidate_permission(user, permission):
                     return await function(*args, **kwargs)
 
                 elif isinstance(user, AnonymousUser):

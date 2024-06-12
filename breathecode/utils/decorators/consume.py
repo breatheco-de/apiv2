@@ -307,6 +307,7 @@ def consume(service: str, consumer: Optional[Consumer] = None, format:str='json'
         async def async_wrapper(*args, **kwargs):
             nonlocal consumer
 
+
             request = validate_and_get_request(service, args)
 
             if isinstance(request.user, AnonymousUser):
@@ -321,12 +322,14 @@ def consume(service: str, consumer: Optional[Consumer] = None, format:str='json'
 
 
                 if session and callable(consumer):
-                    consumer = sync_to_async(consumer)
+                    if asyncio.iscoroutinefunction(consumer) is False:
+                        consumer = sync_to_async(consumer)
+
                     context['is_consumption_session'] = True
                     context, args, kwargs = await consumer(context, args, kwargs)
 
                 if session:
-                    return function(*args, **kwargs)
+                    return  await function(*args, **kwargs)
 
                 user = await async_get_user(request)
 

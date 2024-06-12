@@ -5,29 +5,38 @@ from functools import wraps
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+from adrf.decorators import APIView, api_view
+from asgiref.sync import sync_to_async
+from django.http.response import JsonResponse
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.test import APIRequestFactory, force_authenticate
-from rest_framework.views import APIView
 
 import breathecode.utils.decorators as decorators
 from breathecode.payments import models
 from breathecode.payments import signals as payments_signals
+from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 from breathecode.utils.decorators import ServiceContext
+from capyc.rest_framework import pytest as capy
 
-from ..mixins import UtilsTestCase
-
+SERVICE = 'can_kill_kenny'
 PERMISSION = 'can_kill_kenny'
-GET_RESPONSE = {'a': 1}
-GET_ID_RESPONSE = {'a': 2}
-POST_RESPONSE = {'a': 3}
-PUT_ID_RESPONSE = {'a': 4}
-DELETE_ID_RESPONSE = {'a': 5}
 UTC_NOW = timezone.now()
+
+
+@pytest.fixture(autouse=True)
+def setup(db, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    monkeypatch.setattr('breathecode.payments.signals.consume_service.send', MagicMock(return_value=None))
+    monkeypatch.setattr('breathecode.payments.models.ConsumptionSession.build_session',
+                        MagicMock(wraps=models.ConsumptionSession.build_session))
+
+    CONSUMER_MOCK.call_args_list = []
+    CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
 
 
 def consumer(context: ServiceContext, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
@@ -71,7526 +80,987 @@ def consumer_with_time_of_life(context: ServiceContext, args: tuple, kwargs: dic
 CONSUMER_WITH_TIME_OF_LIFE_MOCK = MagicMock(wraps=consumer)
 
 
-def build_view_function(methods,
-                        data,
-                        decorator,
-                        decorator_args=(),
-                        decorator_kwargs={},
-                        with_permission=False,
-                        with_id=False):
+def build_view_function(method, data, decorator_args=(), decorator_kwargs={}, with_id=False, is_async=False):
 
-    @api_view(methods)
+    if is_async:
+
+        @api_view([method])
+        @permission_classes([AllowAny])
+        @decorators.consume(*decorator_args, **decorator_kwargs)
+        async def view_function(request, *args, **kwargs):
+            if with_id:
+                assert kwargs['id'] == 1
+
+            else:
+                assert 'id' not in kwargs
+
+            return Response(data)
+
+        return view_function
+
+    @api_view([method])
     @permission_classes([AllowAny])
-    @decorator(*decorator_args, **decorator_kwargs)
+    @decorators.consume(*decorator_args, **decorator_kwargs)
     def view_function(request, *args, **kwargs):
-        if with_permission:
-            assert kwargs['permission'] == PERMISSION
-            assert args[0] == PERMISSION
-
         if with_id:
             assert kwargs['id'] == 1
+
+        else:
+            assert 'id' not in kwargs
 
         return Response(data)
 
     return view_function
 
 
-get_consumer = build_view_function(['GET'],
-                                   GET_RESPONSE,
-                                   decorators.consume,
-                                   decorator_args=(PERMISSION, ),
-                                   decorator_kwargs={'consumer': True})
+def build_view_class(method, data, decorator_args=(), decorator_kwargs={}, with_id=False, is_async=False):
 
-get_consumer_callback = build_view_function(['GET'],
-                                            GET_RESPONSE,
-                                            decorators.consume,
-                                            decorator_args=(PERMISSION, ),
-                                            decorator_kwargs={'consumer': CONSUMER_MOCK},
-                                            with_permission=True)
-
-get_consumer_callback_with_time_of_life = build_view_function(
-    ['GET'],
-    GET_RESPONSE,
-    decorators.consume,
-    decorator_args=(PERMISSION, ),
-    decorator_kwargs={'consumer': CONSUMER_WITH_TIME_OF_LIFE_MOCK},
-    with_permission=False)
-
-get_id_consumer = build_view_function(['GET'],
-                                      GET_ID_RESPONSE,
-                                      decorators.consume,
-                                      decorator_args=(PERMISSION, ),
-                                      decorator_kwargs={'consumer': True},
-                                      with_id=True)
-
-get_id_consumer_callback = build_view_function(['GET'],
-                                               GET_ID_RESPONSE,
-                                               decorators.consume,
-                                               decorator_args=(PERMISSION, ),
-                                               decorator_kwargs={'consumer': CONSUMER_MOCK},
-                                               with_id=True,
-                                               with_permission=True)
-
-get_id_consumer_callback_with_time_of_life = build_view_function(
-    ['GET'],
-    GET_ID_RESPONSE,
-    decorators.consume,
-    decorator_args=(PERMISSION, ),
-    decorator_kwargs={'consumer': CONSUMER_WITH_TIME_OF_LIFE_MOCK},
-    with_id=True,
-    with_permission=False)
-
-post_consumer = build_view_function(['POST'],
-                                    POST_RESPONSE,
-                                    decorators.consume,
-                                    decorator_args=(PERMISSION, ),
-                                    decorator_kwargs={'consumer': True})
-
-post_consumer_callback = build_view_function(['POST'],
-                                             POST_RESPONSE,
-                                             decorators.consume,
-                                             decorator_args=(PERMISSION, ),
-                                             decorator_kwargs={'consumer': CONSUMER_MOCK},
-                                             with_permission=True)
-
-post_consumer_callback_with_time_of_life = build_view_function(
-    ['POST'],
-    POST_RESPONSE,
-    decorators.consume,
-    decorator_args=(PERMISSION, ),
-    decorator_kwargs={'consumer': CONSUMER_WITH_TIME_OF_LIFE_MOCK},
-    with_permission=False)
-
-put_id_consumer = build_view_function(['PUT'],
-                                      PUT_ID_RESPONSE,
-                                      decorators.consume,
-                                      decorator_args=(PERMISSION, ),
-                                      decorator_kwargs={'consumer': True},
-                                      with_id=True)
-
-put_id_consumer_callback = build_view_function(['PUT'],
-                                               PUT_ID_RESPONSE,
-                                               decorators.consume,
-                                               decorator_args=(PERMISSION, ),
-                                               decorator_kwargs={'consumer': CONSUMER_MOCK},
-                                               with_id=True,
-                                               with_permission=True)
-
-put_id_consumer_callback_with_time_of_life = build_view_function(
-    ['PUT'],
-    PUT_ID_RESPONSE,
-    decorators.consume,
-    decorator_args=(PERMISSION, ),
-    decorator_kwargs={'consumer': CONSUMER_WITH_TIME_OF_LIFE_MOCK},
-    with_id=True,
-    with_permission=False)
-
-delete_id_consumer = build_view_function(['DELETE'],
-                                         DELETE_ID_RESPONSE,
-                                         decorators.consume,
-                                         decorator_args=(PERMISSION, ),
-                                         decorator_kwargs={'consumer': True},
-                                         with_id=True)
-
-delete_id_consumer_callback = build_view_function(['DELETE'],
-                                                  DELETE_ID_RESPONSE,
-                                                  decorators.consume,
-                                                  decorator_args=(PERMISSION, ),
-                                                  decorator_kwargs={'consumer': CONSUMER_MOCK},
-                                                  with_id=True,
-                                                  with_permission=True)
-
-delete_id_consumer_callback_with_time_of_life = build_view_function(
-    ['DELETE'],
-    DELETE_ID_RESPONSE,
-    decorators.consume,
-    decorator_args=(PERMISSION, ),
-    decorator_kwargs={'consumer': CONSUMER_WITH_TIME_OF_LIFE_MOCK},
-    with_id=True,
-    with_permission=False)
-
-
-def build_view_class(decorator, decorator_args=(), decorator_kwargs={}, with_permission=False):
-
-    class CustomView(APIView):
+    class BaseView(APIView):
         """
         List all snippets, or create a new snippet.
         """
         permission_classes = [AllowAny]
 
-        @staticmethod
-        def decorate(func):
+    BaseView.__test__ = False
 
-            def wrapper(request, *args, **kwargs):
-                if with_permission:
-                    assert kwargs.get('permission') == PERMISSION
-                    assert args[0] == PERMISSION
-
-                return func(request, *args, **kwargs)
-
-            return decorator(*decorator_args, **decorator_kwargs)(wrapper)
-
-        def get(self, request, *args, **kwargs):
-            if 'id' in kwargs:
-                assert kwargs['id'] == 1
-                return Response(GET_ID_RESPONSE)
-            return Response(GET_RESPONSE)
-
-        get = decorate(get)
-
-        def post(self, request, *args, **kwargs):
-            return Response(POST_RESPONSE)
-
-        post = decorate(post)
-
-        def put(self, request, *args, **kwargs):
-            if 'id' not in kwargs:
-                assert 0
+    @decorators.consume(*decorator_args, **decorator_kwargs)
+    def sync_method(self, request, *args, **kwargs):
+        if with_id:
             assert kwargs['id'] == 1
-            return Response(PUT_ID_RESPONSE)
 
-        put = decorate(put)
+        else:
+            assert 'id' not in kwargs
 
-        def delete(self, request, *args, **kwargs):
-            if 'id' not in kwargs:
-                assert 0
+        return Response(data)
+
+    @decorators.consume(*decorator_args, **decorator_kwargs)
+    async def async_method(self, request, *args, **kwargs):
+        if with_id:
             assert kwargs['id'] == 1
-            return Response(DELETE_ID_RESPONSE)
 
-        delete = decorate(delete)
+        else:
+            assert 'id' not in kwargs
 
-    CustomView.__test__ = False
+        return Response(data)
 
-    return CustomView
+    setattr(BaseView, method.lower(), async_method if is_async else sync_method)
 
-
-TestViewConsumer = build_view_class(decorators.consume,
-                                    decorator_args=(PERMISSION, ),
-                                    decorator_kwargs={'consumer': True})
-
-TestViewConsumerCallback = build_view_class(decorators.consume,
-                                            decorator_args=(PERMISSION, ),
-                                            decorator_kwargs={'consumer': CONSUMER_MOCK})
-
-TestViewConsumerCallbackWithTimeOfLife = build_view_class(
-    decorators.consume, decorator_args=(PERMISSION, ), decorator_kwargs={'consumer': CONSUMER_WITH_TIME_OF_LIFE_MOCK})
+    return BaseView
 
 
-class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
+def build_params():
+    methods = ['get', 'post', 'put', 'delete']
+    class_baseds = [True, False]
+    with_ids = [True, False]
+    is_asyncs = [True, False]
 
-    def setUp(self):
-        super().setUp()
-        CONSUMER_MOCK.call_args_list = []
+    for method in methods:
+        for class_based in class_baseds:
+            for with_id in with_ids:
+                if method not in ['get', 'post'] and with_id is False:
+                    continue
 
-    """
-    🔽🔽🔽 Function get
-    """
+                if method == 'post' and with_id is True:
+                    continue
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get__anonymous_user(self):
+                for is_async in is_asyncs:
+                    args = (method, class_based, with_id, is_async)
+                    yield args, 'method_{}__class_based_{}__with_id_{}__is_async_{}'.format(*args)
+
+
+def make_view(request, fake, decorator_params={}):
+    method, class_based, with_id, is_async = request.param
+    res = {
+        fake.slug(): fake.slug(),
+        fake.slug(): fake.slug(),
+        fake.slug(): fake.slug(),
+    }
+
+    decorator_params_in_fixture = decorator_params
+    extra = {}
+    if with_id:
+        extra['id'] = 1
+
+    @sync_to_async
+    def wrapper(user=None, decorator_params={}, url_params={}):
+        nonlocal method, decorator_params_in_fixture
+
+        if decorator_params_in_fixture:
+            decorator_params = decorator_params_in_fixture
+
+        if with_id:
+            url_params = {**url_params, **extra}
+
+        if class_based:
+            view = build_view_class(method.upper(),
+                                    res,
+                                    decorator_args=(SERVICE, ),
+                                    decorator_kwargs=decorator_params,
+                                    with_id=with_id,
+                                    is_async=is_async)
+            view = view.as_view()
+
+        else:
+            view = build_view_function(method.upper(),
+                                       res,
+                                       decorator_args=(SERVICE, ),
+                                       decorator_kwargs=decorator_params,
+                                       with_id=with_id,
+                                       is_async=is_async)
+
         factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
+        url = '/they-killed-kenny'
+        if with_id:
+            url += f'/{url_params["id"]}'
 
-        view = get_consumer
+        handler = getattr(factory, method.lower())
 
-        response = view(request).render()
+        request = handler(url)
+
+        if user:
+            force_authenticate(request, user=user)
+
+        def sync_get_response():
+            x = view(request, **url_params)
+            if isinstance(x, JsonResponse):
+                return x, url_params
+
+            return x.render(), url_params
+
+        async def async_get_response():
+            x = await view(request, **url_params)
+
+            if isinstance(x, JsonResponse):
+                return x, url_params
+
+            return x.render(), url_params
+
+        if is_async:
+            return async_get_response
+
+        return sync_to_async(sync_get_response)
+
+    async def unpack(user=None, decorator_params={}, url_params={}):
+
+        if with_id:
+            url_params = {**url_params, **extra}
+
+        return await wrapper(user=user, decorator_params=decorator_params,
+                             url_params=url_params), res, class_based, url_params
+        # sync_to_async(wrapper), res, class_based, decorator_params
+
+    return unpack
+
+    # if is_async:
+    #     return sync_to_async(wrapper), res, class_based, decorator_params
+
+    # return sync_to_async(wrapper), res, class_based, decorator_params
+
+
+@pytest.fixture(params=[param for param, _ in build_params()], ids=[id for _, id in build_params()])
+def make_view_all_cases(request, fake):
+    return make_view(request, fake)
+
+
+@pytest.fixture(params=[param for param, _ in build_params()], ids=[id for _, id in build_params()])
+def make_view_consumer_cases(request, fake):
+    return make_view(request, fake, decorator_params={'consumer': CONSUMER_MOCK})
+
+
+@pytest.fixture(params=[param for param, _ in build_params()], ids=[id for _, id in build_params()])
+def make_view_lifetime_cases(request, fake):
+    return make_view(request, fake, decorator_params={'consumer': CONSUMER_WITH_TIME_OF_LIFE_MOCK})
+
+
+class TestNoConsumer:
+
+    @pytest.mark.asyncio
+    @pytest.mark.django_db(reset_sequences=True)
+    async def test_anonymous_user(self, database: capy.Database, make_view_all_cases):
+        view, _, _, _ = await make_view_all_cases(user=None, decorator_params={}, url_params={})
+
+        response, _ = await view()
         expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
 
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
+        assert json.loads(response.content.decode('utf-8')) == expected
+        assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
         # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
+        assert await database.alist_of('payments.ConsumptionSession') == []
+        assert models.ConsumptionSession.build_session.call_args_list == []
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        @sync_to_async
+        def check_consume_service():
+            assert payments_signals.consume_service.send.call_args_list == []
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get__with_user(self):
-        model = self.bc.database.create(user=1)
+        await check_consume_service()
 
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
+    @pytest.mark.asyncio
+    @pytest.mark.django_db(reset_sequences=True)
+    async def test_with_user(self, database: capy.Database, make_view_all_cases):
+        model = await database.acreate(user=1)
+        view, _, _, _ = await make_view_all_cases(user=model.user, decorator_params={}, url_params={})
 
-        view = get_consumer
-
-        response = view(request).render()
+        response, _ = await view()
         expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
+        assert json.loads(response.content.decode('utf-8')) == expected
+        assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
         # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
+        assert await database.alist_of('payments.ConsumptionSession') == []
+        assert models.ConsumptionSession.build_session.call_args_list == []
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        @sync_to_async
+        def check_consume_service():
+            assert payments_signals.consume_service.send.call_args_list == []
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get__with_user__with_permission__dont_match(self):
-        model = self.bc.database.create(user=1, permission=1)
+        await check_consume_service()
 
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
+    @pytest.mark.asyncio
+    @pytest.mark.django_db(reset_sequences=True)
+    async def test_with_user__with_permission__dont_match(self, database: capy.Database, make_view_all_cases):
+        model = await database.acreate(user=1, permission=1)
+        view, _, _, _ = await make_view_all_cases(user=model.user, decorator_params={}, url_params={})
 
-        view = get_consumer
-
-        response = view(request).render()
+        response, _ = await view()
         expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
+        assert json.loads(response.content.decode('utf-8')) == expected
+        assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
         # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
+        assert await database.alist_of('payments.ConsumptionSession') == []
+        assert models.ConsumptionSession.build_session.call_args_list == []
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        @sync_to_async
+        def check_consume_service():
+            assert payments_signals.consume_service.send.call_args_list == []
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get__with_user__with_group_related_to_permission__without_consumable(self):
+        await check_consume_service()
+
+    @pytest.mark.asyncio
+    @pytest.mark.django_db(reset_sequences=True)
+    async def test_with_user__with_group_related_to_permission__without_consumable(self, bc: Breathecode,
+                                                                                   make_view_all_cases):
         user = {'user_permissions': []}
         services = [{}, {'slug': PERMISSION}]
 
-        model = self.bc.database.create(
-            user=user,
-            service=services,
-            service_item={'service_id': 2},
-        )
+        model = await bc.database.acreate(user=user, service=services, service_item={'service_id': 2})
+        view, _, _, _ = await make_view_all_cases(user=model.user, decorator_params={}, url_params={})
 
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = get_consumer
-
-        response = view(request).render()
+        response, _ = await view()
         expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
+        assert json.loads(response.content.decode('utf-8')) == expected
+        assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
         # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
+        assert await bc.database.alist_of('payments.ConsumptionSession') == []
+        assert models.ConsumptionSession.build_session.call_args_list == []
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        @sync_to_async
+        def check_consume_service():
+            assert payments_signals.consume_service.send.call_args_list == []
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
+        await check_consume_service()
+
+    @pytest.mark.asyncio
+    @pytest.mark.django_db(reset_sequences=True)
+    async def test_with_user__with_group_related_to_permission__consumable__how_many_minus_1(
+            self, bc: Breathecode, make_view_all_cases):
         user = {'user_permissions': []}
         services = [{}, {'slug': PERMISSION}]
 
         consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
+        model = await bc.database.acreate(user=user,
+                                          service=services,
+                                          service_item={'service_id': 2},
+                                          consumable=consumable)
 
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
+        view, expected, _, _ = await make_view_all_cases(user=model.user, decorator_params={}, url_params={})
 
-        view = get_consumer
+        response, _ = await view()
 
-        response = view(request).render()
-        expected = GET_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert json.loads(response.content.decode('utf-8')) == expected
+        assert response.status_code == status.HTTP_200_OK
         # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
+        assert await bc.database.alist_of('payments.ConsumptionSession') == []
+        assert models.ConsumptionSession.build_session.call_args_list == []
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
+        @sync_to_async
+        def check_consume_service():
+            assert payments_signals.consume_service.send.call_args_list == [
+                call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+            ]
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_0(self):
+        await check_consume_service()
+
+    @pytest.mark.asyncio
+    @pytest.mark.django_db(reset_sequences=True)
+    async def test_with_user__with_group_related_to_permission__consumable__how_many_0(
+            self, bc: Breathecode, make_view_all_cases):
         user = {'user_permissions': []}
         services = [{}, {'slug': PERMISSION}]
 
         consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
+        model = await bc.database.acreate(user=user,
+                                          service=services,
+                                          service_item={'service_id': 2},
+                                          consumable=consumable)
 
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
+        view, _, _, _ = await make_view_all_cases(user=model.user, decorator_params={}, url_params={})
 
-        view = get_consumer
-
-        response = view(request).render()
+        response, _ = await view()
         expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
+        assert json.loads(response.content.decode('utf-8')) == expected
+        assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
         # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
+        assert await bc.database.alist_of('payments.ConsumptionSession') == []
+        assert models.ConsumptionSession.build_session.call_args_list == []
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        @sync_to_async
+        def check_consume_service():
+            assert payments_signals.consume_service.send.call_args_list == []
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
+        await check_consume_service()
+
+    @pytest.mark.asyncio
+    @pytest.mark.django_db(reset_sequences=True)
+    async def test_with_user__with_group_related_to_permission__consumable__how_many_gte_1(
+            self, bc: Breathecode, make_view_all_cases):
         user = {'user_permissions': []}
         services = [{}, {'slug': PERMISSION}]
 
         consumable = {'how_many': random.randint(1, 100)}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
+        model = await bc.database.acreate(user=user,
+                                          service=services,
+                                          service_item={'service_id': 2},
+                                          consumable=consumable)
 
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
+        view, expected, _, _ = await make_view_all_cases(user=model.user, decorator_params={}, url_params={})
 
-        view = get_consumer
+        response, _ = await view()
 
-        response = view(request).render()
-        expected = GET_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert json.loads(response.content.decode('utf-8')) == expected
+        assert response.status_code == status.HTTP_200_OK
         # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
+        assert await bc.database.alist_of('payments.ConsumptionSession') == []
+        assert models.ConsumptionSession.build_session.call_args_list == []
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
+        @sync_to_async
+        def check_consume_service():
+            assert payments_signals.consume_service.send.call_args_list == [
+                call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+            ]
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
+        await check_consume_service()
+
+    @pytest.mark.asyncio
+    @pytest.mark.django_db(reset_sequences=True)
+    async def test_with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(
+            self, bc: Breathecode, make_view_all_cases):
         user = {'user_permissions': []}
         services = [{}, {'slug': PERMISSION}]
         group = {'permission_id': 2, 'name': 'secret'}
         consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        group=group,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
+        model = await bc.database.acreate(user=user,
+                                          service=services,
+                                          group=group,
+                                          service_item={'service_id': 2},
+                                          consumable=consumable)
 
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
+        view, expected, _, _ = await make_view_all_cases(user=model.user, decorator_params={}, url_params={})
 
-        view = get_consumer
+        response, _ = await view()
 
-        response = view(request).render()
-        expected = GET_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert json.loads(response.content.decode('utf-8')) == expected
+        assert response.status_code == status.HTTP_200_OK
         # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
+        assert await bc.database.alist_of('payments.ConsumptionSession') == []
+        assert models.ConsumptionSession.build_session.call_args_list == []
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        @sync_to_async
+        def check_consume_service():
+            assert payments_signals.consume_service.send.call_args_list == [
+                call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
+            ]
+
+        await check_consume_service()
+
+
+@pytest.mark.asyncio
+@pytest.mark.django_db(reset_sequences=True)
+async def test__function__get__anonymous_user(bc: Breathecode, make_view_consumer_cases):
+    view, _, _, _ = await make_view_consumer_cases(user=None, decorator_params={}, url_params={})
+
+    response, _ = await view()
+    expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
+
+    assert json.loads(response.content.decode('utf-8')) == expected
+    assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
+    # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+    assert await bc.database.alist_of('payments.ConsumptionSession') == []
+    assert models.ConsumptionSession.build_session.call_args_list == []
+
+    @sync_to_async
+    def check_consume_service():
+        assert payments_signals.consume_service.send.call_args_list == []
+
+    await check_consume_service()
+
+
+@pytest.mark.asyncio
+@pytest.mark.django_db(reset_sequences=True)
+async def test__function__get__with_user(bc: Breathecode, make_view_consumer_cases):
+    model = await bc.database.acreate(user=1)
+    view, _, _, _ = await make_view_consumer_cases(user=model.user, decorator_params={}, url_params={})
+
+    response, _ = await view()
+    expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
+
+    assert json.loads(response.content.decode('utf-8')) == expected
+    assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
+    # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+    assert await bc.database.alist_of('payments.ConsumptionSession') == []
+    assert models.ConsumptionSession.build_session.call_args_list == []
+
+    @sync_to_async
+    def check_consume_service():
+        assert payments_signals.consume_service.send.call_args_list == []
+
+    await check_consume_service()
+
+
+@pytest.mark.asyncio
+@pytest.mark.django_db(reset_sequences=True)
+async def test__function__get__with_user__with_permission__dont_match(bc: Breathecode, make_view_consumer_cases):
+    model = await bc.database.acreate(user=1, permission=1)
+    view, _, _, _ = await make_view_consumer_cases(user=model.user, decorator_params={}, url_params={})
+
+    response, _ = await view()
+    expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
+
+    assert json.loads(response.content.decode('utf-8')) == expected
+    assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
+    # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+    assert await bc.database.alist_of('payments.ConsumptionSession') == []
+    assert models.ConsumptionSession.build_session.call_args_list == []
+
+    @sync_to_async
+    def check_consume_service():
+        assert payments_signals.consume_service.send.call_args_list == []
+
+    await check_consume_service()
+
+
+@pytest.mark.asyncio
+@pytest.mark.django_db(reset_sequences=True)
+async def test__function__get__with_user__with_group_related_to_permission__without_consumable(
+        bc: Breathecode, make_view_consumer_cases, partial_equality):
+    user = {'user_permissions': []}
+    services = [{}, {'slug': PERMISSION}]
+
+    model = await bc.database.acreate(user=user, service=services, service_item={'service_id': 2})
+    view, _, based_class, _ = await make_view_consumer_cases(user=model.user, decorator_params={}, url_params={})
+
+    response, params = await view()
+    expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
+
+    assert json.loads(response.content.decode('utf-8')) == expected
+    assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
+
+    Consumable = bc.database.get_model('payments.Consumable')
+    consumables = Consumable.objects.filter()
+    assert len(CONSUMER_MOCK.call_args_list) == 1
+
+    args, kwargs = CONSUMER_MOCK.call_args_list[0]
+    context, args, kwargs = args
+
+    assert isinstance(context['request'], Request)
+    partial_equality(context, {
+        'utc_now': UTC_NOW,
+        'consumer': CONSUMER_MOCK,
+        'permission': PERMISSION,
+        'consumables': consumables,
+    })
+
+    if based_class:
+        assert len(args) == 2
+        assert isinstance(args[1], Request)
+
+    else:
+        assert len(args) == 1
+        assert isinstance(args[0], Request)
+
+    assert kwargs == params
+
+    assert await bc.database.alist_of('payments.ConsumptionSession') == []
+    assert models.ConsumptionSession.build_session.call_args_list == []
+
+    @sync_to_async
+    def check_consume_service():
+        assert payments_signals.consume_service.send.call_args_list == []
+
+    await check_consume_service()
+
+
+@pytest.mark.asyncio
+@pytest.mark.django_db(reset_sequences=True)
+async def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_minus_1(
+        bc: Breathecode, make_view_consumer_cases, partial_equality):
+    user = {'user_permissions': []}
+    services = [{}, {'slug': PERMISSION}]
+
+    consumable = {'how_many': -1}
+    model = await bc.database.acreate(user=user,
+                                      service=services,
+                                      service_item={'service_id': 2},
+                                      consumable=consumable)
+
+    view, expected, based_class, params = await make_view_consumer_cases(user=model.user,
+                                                                         decorator_params={},
+                                                                         url_params={})
+
+    response, _ = await view()
+
+    assert json.loads(response.content.decode('utf-8')) == expected
+    assert response.status_code == status.HTTP_200_OK
+
+    Consumable = bc.database.get_model('payments.Consumable')
+    consumables = Consumable.objects.filter()
+    assert len(CONSUMER_MOCK.call_args_list) == 1
+
+    args, kwargs = CONSUMER_MOCK.call_args_list[0]
+    context, args, kwargs = args
+
+    assert isinstance(context['request'], Request)
+    partial_equality(context, {
+        'utc_now': UTC_NOW,
+        'consumer': CONSUMER_MOCK,
+        'permission': PERMISSION,
+        'consumables': consumables,
+    })
+
+    if based_class:
+        assert len(args) == 2
+        assert isinstance(args[1], Request)
+
+    else:
+        assert len(args) == 1
+        assert isinstance(args[0], Request)
+
+    assert kwargs == params
+
+    assert await bc.database.alist_of('payments.ConsumptionSession') == []
+    assert models.ConsumptionSession.build_session.call_args_list == []
+
+    @sync_to_async
+    def check_consume_service():
+        assert payments_signals.consume_service.send.call_args_list == [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
+        ]
 
-    """
-    🔽🔽🔽 Function get id
-    """
+    await check_consume_service()
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get_id__anonymous_user(self):
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
 
-        view = get_id_consumer
+@pytest.mark.asyncio
+@pytest.mark.django_db(reset_sequences=True)
+async def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_0(
+        bc: Breathecode, make_view_consumer_cases, partial_equality):
+    user = {'user_permissions': []}
+    services = [{}, {'slug': PERMISSION}]
 
-        response = view(request, id=1).render()
-        expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
+    consumable = {'how_many': 0}
+    model = await bc.database.acreate(user=user,
+                                      service=services,
+                                      service_item={'service_id': 2},
+                                      consumable=consumable)
 
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
+    view, _, based_class, params = await make_view_consumer_cases(user=model.user, decorator_params={}, url_params={})
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+    response, _ = await view()
+    expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get_id__with_user(self):
-        model = self.bc.database.create(user=1)
+    assert json.loads(response.content.decode('utf-8')) == expected
+    assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
 
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
+    Consumable = bc.database.get_model('payments.Consumable')
+    consumables = Consumable.objects.filter()
+    assert len(CONSUMER_MOCK.call_args_list) == 1
 
-        view = get_id_consumer
+    args, kwargs = CONSUMER_MOCK.call_args_list[0]
+    context, args, kwargs = args
 
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
+    assert isinstance(context['request'], Request)
+    partial_equality(context, {
+        'utc_now': UTC_NOW,
+        'consumer': CONSUMER_MOCK,
+        'permission': PERMISSION,
+        'consumables': consumables,
+    })
 
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
+    if based_class:
+        assert len(args) == 2
+        assert isinstance(args[1], Request)
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+    else:
+        assert len(args) == 1
+        assert isinstance(args[0], Request)
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get_id__with_user__with_permission__dont_match(self):
-        model = self.bc.database.create(user=1, permission=1)
+    assert kwargs == params
 
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
+    assert await bc.database.alist_of('payments.ConsumptionSession') == []
+    assert models.ConsumptionSession.build_session.call_args_list == []
 
-        view = get_id_consumer
+    @sync_to_async
+    def check_consume_service():
+        assert payments_signals.consume_service.send.call_args_list == []
 
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
+    await check_consume_service()
 
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+@pytest.mark.asyncio
+@pytest.mark.django_db(reset_sequences=True)
+async def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_gte_1(
+        bc: Breathecode, make_view_consumer_cases, partial_equality):
+    user = {'user_permissions': []}
+    services = [{}, {'slug': PERMISSION}]
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get_id__with_user__with_group_related_to_permission__without_consumable(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
+    consumable = {'how_many': random.randint(1, 100)}
+    model = await bc.database.acreate(user=user,
+                                      service=services,
+                                      service_item={'service_id': 2},
+                                      consumable=consumable)
 
-        model = self.bc.database.create(
-            user=user,
-            service=services,
-            service_item={'service_id': 2},
-        )
+    view, expected, based_class, params = await make_view_consumer_cases(user=model.user,
+                                                                         decorator_params={},
+                                                                         url_params={})
 
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
+    response, _ = await view()
 
-        view = get_id_consumer
+    assert json.loads(response.content.decode('utf-8')) == expected
+    assert response.status_code == status.HTTP_200_OK
 
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
+    Consumable = bc.database.get_model('payments.Consumable')
+    consumables = Consumable.objects.filter()
+    assert len(CONSUMER_MOCK.call_args_list) == 1
 
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
+    args, kwargs = CONSUMER_MOCK.call_args_list[0]
+    context, args, kwargs = args
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+    assert isinstance(context['request'], Request)
+    partial_equality(context, {
+        'utc_now': UTC_NOW,
+        'consumer': CONSUMER_MOCK,
+        'permission': PERMISSION,
+        'consumables': consumables,
+    })
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
+    if based_class:
+        assert len(args) == 2
+        assert isinstance(args[1], Request)
 
-        consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
+    else:
+        assert len(args) == 1
+        assert isinstance(args[0], Request)
 
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
+    assert kwargs == params
 
-        view = get_id_consumer
+    assert await bc.database.alist_of('payments.ConsumptionSession') == []
+    assert models.ConsumptionSession.build_session.call_args_list == []
 
-        response = view(request, id=1).render()
-        expected = GET_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+    @sync_to_async
+    def check_consume_service():
+        assert payments_signals.consume_service.send.call_args_list == [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
+        ]
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_0(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
+    await check_consume_service()
 
-        consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
 
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
+@pytest.mark.asyncio
+@pytest.mark.django_db(reset_sequences=True)
+async def test__function__get__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(
+        bc: Breathecode, make_view_consumer_cases, partial_equality):
+    user = {'user_permissions': []}
+    services = [{}, {'slug': PERMISSION}]
+    group = {'permission_id': 2, 'name': 'secret'}
+    consumable = {'how_many': 1}
+    model = await bc.database.acreate(user=user,
+                                      service=services,
+                                      group=group,
+                                      service_item={'service_id': 2},
+                                      consumable=consumable)
 
-        view = get_id_consumer
+    view, _, based_class, params = await make_view_consumer_cases(user=model.user, decorator_params={}, url_params={})
 
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
+    response, _ = await view()
+    expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
 
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
+    assert json.loads(response.content.decode('utf-8')) == expected
+    assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+    Consumable = bc.database.get_model('payments.Consumable')
+    consumables = Consumable.objects.filter()
+    assert len(CONSUMER_MOCK.call_args_list) == 1
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
+    args, kwargs = CONSUMER_MOCK.call_args_list[0]
+    context, args, kwargs = args
 
-        consumable = {'how_many': random.randint(1, 100)}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
+    assert isinstance(context['request'], Request)
+    partial_equality(context, {
+        'utc_now': UTC_NOW,
+        'consumer': CONSUMER_MOCK,
+        'permission': PERMISSION,
+        'consumables': consumables,
+    })
 
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
+    if based_class:
+        assert len(args) == 2
+        assert isinstance(args[1], Request)
 
-        view = get_id_consumer
+    else:
+        assert len(args) == 1
+        assert isinstance(args[0], Request)
 
-        response = view(request, id=1).render()
-        expected = GET_ID_RESPONSE
+    assert kwargs == params
 
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
+    assert await bc.database.alist_of('payments.ConsumptionSession') == []
+    assert models.ConsumptionSession.build_session.call_args_list == []
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
+    @sync_to_async
+    def check_consume_service():
+        assert payments_signals.consume_service.send.call_args_list == []
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-        group = {'permission_id': 2, 'name': 'secret'}
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        group=group,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
+    await check_consume_service()
 
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
 
-        view = get_id_consumer
+@pytest.mark.asyncio
+@pytest.mark.django_db(reset_sequences=True)
+async def test__function__get__with_user__without_consumption_session(bc: Breathecode, make_view_lifetime_cases,
+                                                                      partial_equality):
 
-        response = view(request, id=1).render()
-        expected = GET_ID_RESPONSE
+    user = {'user_permissions': []}
+    services = [{}, {'slug': PERMISSION}]
 
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
+    consumable = {'how_many': 1}
+    model = await bc.database.acreate(user=user,
+                                      service=services,
+                                      service_item={'service_id': 2},
+                                      consumable=consumable)
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
+    view, expected, based_class, _ = await make_view_lifetime_cases(user=model.user, decorator_params={}, url_params={})
 
-    """
-    🔽🔽🔽 Function post
-    """
+    response, params = await view()
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__post__anonymous_user(self):
-        factory = APIRequestFactory()
-        request = factory.post('/they-killed-kenny')
+    assert json.loads(response.content.decode('utf-8')) == expected
+    assert response.status_code == status.HTTP_200_OK
 
-        view = post_consumer
+    Consumable = bc.database.get_model('payments.Consumable')
+    consumables = Consumable.objects.filter()
+    assert len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list) == 1
 
-        response = view(request).render()
-        expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
+    args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
+    context, args, kwargs = args
 
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__post__with_user(self):
-        model = self.bc.database.create(user=1)
-
-        factory = APIRequestFactory()
-        request = factory.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = post_consumer
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__post__with_user__with_permission__dont_match(self):
-        model = self.bc.database.create(user=1, permission=1)
-
-        factory = APIRequestFactory()
-        request = factory.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = post_consumer
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__post__with_user__with_group_related_to_permission__without_consumable(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        model = self.bc.database.create(
-            user=user,
-            service=services,
-            service_item={'service_id': 2},
-        )
-
-        factory = APIRequestFactory()
-        request = factory.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = post_consumer
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__post__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = post_consumer
-
-        response = view(request).render()
-        expected = POST_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__post__with_user__with_group_related_to_permission__consumable__how_many_0(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = post_consumer
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__post__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': random.randint(1, 100)}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = post_consumer
-
-        response = view(request).render()
-        expected = POST_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__post__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-        group = {'permission_id': 2, 'name': 'secret'}
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        group=group,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = post_consumer
-
-        response = view(request).render()
-        expected = POST_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    """
-    🔽🔽🔽 Function put id
-    """
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__put_id__anonymous_user(self):
-        factory = APIRequestFactory()
-        request = factory.put('/they-killed-kenny')
-
-        view = put_id_consumer
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__put_id__with_user(self):
-        model = self.bc.database.create(user=1)
-
-        factory = APIRequestFactory()
-        request = factory.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = put_id_consumer
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__put_id__with_user__with_permission__dont_match(self):
-        model = self.bc.database.create(user=1, permission=1)
-
-        factory = APIRequestFactory()
-        request = factory.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = put_id_consumer
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__put_id__with_user__with_group_related_to_permission__without_consumable(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        model = self.bc.database.create(
-            user=user,
-            service=services,
-            service_item={'service_id': 2},
-        )
-
-        factory = APIRequestFactory()
-        request = factory.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = put_id_consumer
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = put_id_consumer
-
-        response = view(request, id=1).render()
-        expected = PUT_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_0(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = put_id_consumer
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': random.randint(1, 100)}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = put_id_consumer
-
-        response = view(request, id=1).render()
-        expected = PUT_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__put_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-        group = {'permission_id': 2, 'name': 'secret'}
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        group=group,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = put_id_consumer
-
-        response = view(request, id=1).render()
-        expected = PUT_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    """
-    🔽🔽🔽 Function delete id
-    """
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__anonymous_user(self):
-        factory = APIRequestFactory()
-        request = factory.delete('/they-killed-kenny')
-
-        view = delete_id_consumer
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__with_user(self):
-        model = self.bc.database.create(user=1)
-
-        factory = APIRequestFactory()
-        request = factory.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = delete_id_consumer
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__with_user__with_permission__dont_match(self):
-        model = self.bc.database.create(user=1, permission=1)
-
-        factory = APIRequestFactory()
-        request = factory.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = delete_id_consumer
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__with_user__with_group_related_to_permission__without_consumable(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        model = self.bc.database.create(
-            user=user,
-            service=services,
-            service_item={'service_id': 2},
-        )
-
-        factory = APIRequestFactory()
-        request = factory.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = delete_id_consumer
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = delete_id_consumer
-
-        response = view(request, id=1).render()
-        expected = DELETE_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_0(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = delete_id_consumer
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': random.randint(1, 100)}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = delete_id_consumer
-
-        response = view(request, id=1).render()
-        expected = DELETE_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-        group = {'permission_id': 2, 'name': 'secret'}
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        group=group,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = delete_id_consumer
-
-        response = view(request, id=1).render()
-        expected = DELETE_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-
-class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
-
-    def setUp(self):
-        super().setUp()
-        CONSUMER_MOCK.call_args_list = []
-
-    """
-    🔽🔽🔽 Function get
-    """
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get__anonymous_user(self):
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-
-        view = get_consumer_callback
-
-        response = view(request).render()
-        expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get__with_user(self):
-        model = self.bc.database.create(user=1)
-
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = get_consumer_callback
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get__with_user__with_permission__dont_match(self):
-        model = self.bc.database.create(user=1, permission=1)
-
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = get_consumer_callback
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get__with_user__with_group_related_to_permission__without_consumable(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        model = self.bc.database.create(
-            user=user,
-            service=services,
-            service_item={'service_id': 2},
-        )
-
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = get_consumer_callback
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
+    assert isinstance(context['request'], Request)
+    partial_equality(
+        context, {
             'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
+            'consumer': CONSUMER_WITH_TIME_OF_LIFE_MOCK,
             'permission': PERMISSION,
             'consumables': consumables,
         })
 
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
+    if based_class:
+        assert len(args) == 2
+        assert isinstance(args[1], Request)
 
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
+    else:
+        assert len(args) == 1
+        assert isinstance(args[0], Request)
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+    assert kwargs == params
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
+    assert await bc.database.alist_of('payments.ConsumptionSession') == []
+    assert models.ConsumptionSession.build_session.call_args_list == []
 
-        consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = get_consumer_callback
-
-        response = view(request).render()
-        expected = GET_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+    @sync_to_async
+    def check_consume_service():
+        assert payments_signals.consume_service.send.call_args_list == [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
+        ]
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_0(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
+    await check_consume_service()
 
-        consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
 
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
+@pytest.mark.asyncio
+@pytest.mark.django_db(reset_sequences=True)
+async def test__view__get__with_user__consumption_session__does_not_match(bc: Breathecode, make_view_lifetime_cases,
+                                                                          partial_equality):
 
-        view = get_consumer_callback
+    user = {'user_permissions': []}
+    services = [{}, {'slug': PERMISSION}]
 
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
+    consumable = {'how_many': 1}
+    model = await bc.database.acreate(user=user,
+                                      service=services,
+                                      service_item={'service_id': 2},
+                                      consumable=consumable,
+                                      consumption_session=1)
 
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
+    view, expected, based_class, params = await make_view_lifetime_cases(user=model.user,
+                                                                         decorator_params={},
+                                                                         url_params={})
 
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
+    response, _ = await view()
 
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
+    assert json.loads(response.content.decode('utf-8')) == expected
+    assert response.status_code == status.HTTP_200_OK
 
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
+    Consumable = bc.database.get_model('payments.Consumable')
+    consumables = Consumable.objects.filter()
+    assert len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list) == 1
+
+    args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
+    context, args, kwargs = args
+
+    assert isinstance(context['request'], Request)
+    partial_equality(
+        context, {
             'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
+            'consumer': CONSUMER_WITH_TIME_OF_LIFE_MOCK,
             'permission': PERMISSION,
             'consumables': consumables,
         })
 
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
+    if based_class:
+        assert len(args) == 2
+        assert isinstance(args[1], Request)
 
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
+    else:
+        assert len(args) == 1
+        assert isinstance(args[0], Request)
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+    assert kwargs == params
+    assert await bc.database.alist_of('payments.ConsumptionSession') == [
+        bc.format.to_dict(model.consumption_session),
+    ]
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
+    assert models.ConsumptionSession.build_session.call_args_list == []
 
-        consumable = {'how_many': random.randint(1, 100)}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = get_consumer_callback
-
-        response = view(request).render()
-        expected = GET_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+    @sync_to_async
+    def check_consume_service():
+        assert payments_signals.consume_service.send.call_args_list == [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
+        ]
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-        group = {'permission_id': 2, 'name': 'secret'}
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        group=group,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
+    await check_consume_service()
 
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
 
-        view = get_consumer_callback
+@pytest.mark.asyncio
+@pytest.mark.django_db(reset_sequences=True)
+async def test__view__get__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(
+        bc: Breathecode, make_view_lifetime_cases, partial_equality):
 
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
+    user = {'user_permissions': []}
+    services = [{}, {'slug': PERMISSION}]
 
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get__with_user__without_consumption_session(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = get_consumer_callback_with_time_of_life
-
-        response = view(request).render()
-        expected = GET_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__with_user__consumption_session__does_not_match(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=1)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = get_consumer_callback_with_time_of_life
-
-        response = view(request).render()
-        expected = GET_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        n = random.randint(1, 4)
-        consumable = {'how_many': n}
-        consumption_session = {
-            'eta': UTC_NOW + time_of_life,
-            'how_many': n,
-            'request': {
-                'args': [],
-                'kwargs': {},
-                'headers': {
-                    'academy': None
-                },
-                'user': 1
-            }
+    n = random.randint(1, 4)
+    consumable = {'how_many': n}
+    consumption_session = {
+        'eta': UTC_NOW + time_of_life,
+        'how_many': n,
+        'request': {
+            'args': [],
+            'kwargs': {},
+            'headers': {
+                'academy': None
+            },
+            'user': 1
         }
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=consumption_session)
+    }
+    model = await bc.database.acreate(user=user,
+                                      service=services,
+                                      service_item={'service_id': 2},
+                                      consumable=consumable,
+                                      consumption_session=consumption_session)
 
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
+    view, expected, based_class, params = await make_view_lifetime_cases(user=model.user,
+                                                                         decorator_params={},
+                                                                         url_params={})
 
-        view = get_consumer_callback_with_time_of_life
+    model.consumption_session.request['kwargs'] = params
+    await model.consumption_session.asave()
 
-        response = view(request).render()
-        expected = GET_RESPONSE
+    response, _ = await view()
 
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    assert json.loads(response.content.decode('utf-8')) == expected
+    assert response.status_code == status.HTTP_200_OK
 
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
+    assert len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list) == 1
 
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
+    assert await bc.database.alist_of('payments.ConsumptionSession') == [
+        bc.format.to_dict(model.consumption_session),
+    ]
 
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
+    assert models.ConsumptionSession.build_session.call_args_list == []
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+    @sync_to_async
+    def check_consume_service():
+        assert payments_signals.consume_service.send.call_args_list == []
 
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__with_user__consumption_session__match(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
+    await check_consume_service()
 
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
 
-        consumable = {'how_many': 1}
-        consumption_session = {
-            'eta': UTC_NOW + time_of_life,
-            'request': {
-                'args': [],
-                'kwargs': {},
-                'headers': {
-                    'academy': None
-                },
-                'user': 1
-            }
+@pytest.mark.asyncio
+@pytest.mark.django_db(reset_sequences=True)
+async def test__view__get__with_user__consumption_session__match(bc: Breathecode, make_view_lifetime_cases,
+                                                                 partial_equality):
+    CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
+
+    user = {'user_permissions': []}
+    services = [{}, {'slug': PERMISSION}]
+
+    consumable = {'how_many': 1}
+    consumption_session = {
+        'eta': UTC_NOW + time_of_life,
+        'request': {
+            'args': [],
+            'kwargs': {},
+            'headers': {
+                'academy': None
+            },
+            'user': 1
         }
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=consumption_session)
+    }
+    model = await bc.database.acreate(user=user,
+                                      service=services,
+                                      service_item={'service_id': 2},
+                                      consumable=consumable,
+                                      consumption_session=consumption_session)
 
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
+    view, expected, based_class, params = await make_view_lifetime_cases(user=model.user,
+                                                                         decorator_params={},
+                                                                         url_params={})
 
-        view = get_consumer_callback_with_time_of_life
+    model.consumption_session.request['kwargs'] = params
 
-        response = view(request).render()
-        expected = GET_RESPONSE
+    await model.consumption_session.asave()
 
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    response, _ = await view()
 
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
+    assert json.loads(response.content.decode('utf-8')) == expected
+    assert response.status_code == status.HTTP_200_OK
 
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+    assert len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list) == 1
 
-    """
-    🔽🔽🔽 Function get id
-    """
+    assert await bc.database.alist_of('payments.ConsumptionSession') == [
+        bc.format.to_dict(model.consumption_session),
+    ]
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get_id__anonymous_user(self):
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
+    assert models.ConsumptionSession.build_session.call_args_list == []
 
-        view = get_id_consumer_callback
+    @sync_to_async
+    def check_consume_service():
+        assert payments_signals.consume_service.send.call_args_list == []
 
-        response = view(request, id=1).render()
-        expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get_id__with_user(self):
-        model = self.bc.database.create(user=1)
-
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = get_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get_id__with_user__with_permission__dont_match(self):
-        model = self.bc.database.create(user=1, permission=1)
-
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = get_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get_id__with_user__with_group_related_to_permission__without_consumable(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        model = self.bc.database.create(
-            user=user,
-            service=services,
-            service_item={'service_id': 2},
-        )
-
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = get_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = get_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = GET_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_0(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = get_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': random.randint(1, 100)}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = get_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = GET_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-        group = {'permission_id': 2, 'name': 'secret'}
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        group=group,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = get_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__get_id__with_user__without_consumption_session(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = get_id_consumer_callback_with_time_of_life
-
-        response = view(request, id=1).render()
-        expected = GET_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__with_user__consumption_session__does_not_match(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=1)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = get_id_consumer_callback_with_time_of_life
-
-        response = view(request, id=1).render()
-        expected = GET_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        n = random.randint(1, 4)
-        consumable = {'how_many': n}
-        consumption_session = {
-            'eta': UTC_NOW + time_of_life,
-            'how_many': n,
-            'request': {
-                'args': [],
-                'kwargs': {
-                    'id': 1
-                },
-                'headers': {
-                    'academy': None
-                },
-                'user': 1
-            }
-        }
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=consumption_session)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = get_id_consumer_callback_with_time_of_life
-
-        response = view(request, id=1).render()
-        expected = GET_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__with_user__consumption_session__match(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        consumption_session = {
-            'eta': UTC_NOW + time_of_life,
-            'request': {
-                'args': [],
-                'kwargs': {
-                    'id': 1
-                },
-                'headers': {
-                    'academy': None
-                },
-                'user': 1
-            }
-        }
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=consumption_session)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = get_id_consumer_callback_with_time_of_life
-
-        response = view(request, id=1).render()
-        expected = GET_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    """
-    🔽🔽🔽 Function post
-    """
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__post__anonymous_user(self):
-        factory = APIRequestFactory()
-        request = factory.post('/they-killed-kenny')
-
-        view = post_consumer_callback
-
-        response = view(request).render()
-        expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__post__with_user(self):
-        model = self.bc.database.create(user=1)
-
-        factory = APIRequestFactory()
-        request = factory.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = post_consumer_callback
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__post__with_user__with_permission__dont_match(self):
-        model = self.bc.database.create(user=1, permission=1)
-
-        factory = APIRequestFactory()
-        request = factory.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = post_consumer_callback
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__post__with_user__with_group_related_to_permission__without_consumable(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        model = self.bc.database.create(
-            user=user,
-            service=services,
-            service_item={'service_id': 2},
-        )
-
-        factory = APIRequestFactory()
-        request = factory.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = post_consumer_callback
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__post__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = post_consumer_callback
-
-        response = view(request).render()
-        expected = POST_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__post__with_user__with_group_related_to_permission__consumable__how_many_0(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = post_consumer_callback
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__post__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': random.randint(1, 100)}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = post_consumer_callback
-
-        response = view(request).render()
-        expected = POST_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__post__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-        group = {'permission_id': 2, 'name': 'secret'}
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        group=group,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = post_consumer_callback
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__post__with_user__without_consumption_session(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = post_consumer_callback_with_time_of_life
-
-        response = view(request).render()
-        expected = POST_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__with_user__consumption_session__does_not_match(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=1)
-
-        request = APIRequestFactory()
-        request = request.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = post_consumer_callback_with_time_of_life
-
-        response = view(request).render()
-        expected = POST_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        n = random.randint(1, 4)
-        consumable = {'how_many': n}
-        consumption_session = {
-            'eta': UTC_NOW + time_of_life,
-            'how_many': n,
-            'request': {
-                'args': [],
-                'kwargs': {},
-                'headers': {
-                    'academy': None
-                },
-                'user': 1
-            }
-        }
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=consumption_session)
-
-        request = APIRequestFactory()
-        request = request.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = post_consumer_callback_with_time_of_life
-
-        response = view(request).render()
-        expected = POST_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__with_user__consumption_session__match(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        consumption_session = {
-            'eta': UTC_NOW + time_of_life,
-            'request': {
-                'args': [],
-                'kwargs': {},
-                'headers': {
-                    'academy': None
-                },
-                'user': 1
-            }
-        }
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=consumption_session)
-
-        request = APIRequestFactory()
-        request = request.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = post_consumer_callback_with_time_of_life
-
-        response = view(request).render()
-        expected = POST_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    """
-    🔽🔽🔽 Function put id
-    """
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__put_id__anonymous_user(self):
-        factory = APIRequestFactory()
-        request = factory.put('/they-killed-kenny')
-
-        view = put_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__put_id__with_user(self):
-        model = self.bc.database.create(user=1)
-
-        factory = APIRequestFactory()
-        request = factory.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = put_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__put_id__with_user__with_permission__dont_match(self):
-        model = self.bc.database.create(user=1, permission=1)
-
-        factory = APIRequestFactory()
-        request = factory.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = put_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__put_id__with_user__with_group_related_to_permission__without_consumable(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        model = self.bc.database.create(
-            user=user,
-            service=services,
-            service_item={'service_id': 2},
-        )
-
-        factory = APIRequestFactory()
-        request = factory.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = put_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = put_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = PUT_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_0(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = put_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': random.randint(1, 100)}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = put_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = PUT_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__put_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-        group = {'permission_id': 2, 'name': 'secret'}
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        group=group,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = put_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__put_id__with_user__without_consumption_session(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = put_id_consumer_callback_with_time_of_life
-
-        response = view(request, id=1).render()
-        expected = PUT_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__with_user__consumption_session__does_not_match(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=1)
-
-        request = APIRequestFactory()
-        request = request.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = put_id_consumer_callback_with_time_of_life
-
-        response = view(request, id=1).render()
-        expected = PUT_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        n = random.randint(1, 4)
-        consumable = {'how_many': n}
-        consumption_session = {
-            'eta': UTC_NOW + time_of_life,
-            'how_many': n,
-            'request': {
-                'args': [],
-                'kwargs': {
-                    'id': 1
-                },
-                'headers': {
-                    'academy': None
-                },
-                'user': 1
-            }
-        }
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=consumption_session)
-
-        request = APIRequestFactory()
-        request = request.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = put_id_consumer_callback_with_time_of_life
-
-        response = view(request, id=1).render()
-        expected = PUT_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__with_user__consumption_session__match(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        consumption_session = {
-            'eta': UTC_NOW + time_of_life,
-            'request': {
-                'args': [],
-                'kwargs': {
-                    'id': 1
-                },
-                'headers': {
-                    'academy': None
-                },
-                'user': 1
-            }
-        }
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=consumption_session)
-
-        request = APIRequestFactory()
-        request = request.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = put_id_consumer_callback_with_time_of_life
-
-        response = view(request, id=1).render()
-        expected = PUT_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    """
-    🔽🔽🔽 Function delete id
-    """
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__anonymous_user(self):
-        factory = APIRequestFactory()
-        request = factory.delete('/they-killed-kenny')
-
-        view = delete_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__with_user(self):
-        model = self.bc.database.create(user=1)
-
-        factory = APIRequestFactory()
-        request = factory.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = delete_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__with_user__with_permission__dont_match(self):
-        model = self.bc.database.create(user=1, permission=1)
-
-        factory = APIRequestFactory()
-        request = factory.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = delete_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__with_user__with_group_related_to_permission__without_consumable(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        model = self.bc.database.create(
-            user=user,
-            service=services,
-            service_item={'service_id': 2},
-        )
-
-        factory = APIRequestFactory()
-        request = factory.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = delete_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = delete_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = DELETE_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_0(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = delete_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': random.randint(1, 100)}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = delete_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = DELETE_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-        group = {'permission_id': 2, 'name': 'secret'}
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        group=group,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        factory = APIRequestFactory()
-        request = factory.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = delete_id_consumer_callback
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__function__delete_id__with_user__without_consumption_session(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = delete_id_consumer_callback_with_time_of_life
-
-        response = view(request, id=1).render()
-        expected = DELETE_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__with_user__consumption_session__does_not_match(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=1)
-
-        request = APIRequestFactory()
-        request = request.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = delete_id_consumer_callback_with_time_of_life
-
-        response = view(request, id=1).render()
-        expected = DELETE_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 1)
-        self.assertTrue(isinstance(args[0], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        n = random.randint(1, 4)
-        consumable = {'how_many': n}
-        consumption_session = {
-            'eta': UTC_NOW + time_of_life,
-            'how_many': n,
-            'request': {
-                'args': [],
-                'kwargs': {
-                    'id': 1
-                },
-                'headers': {
-                    'academy': None
-                },
-                'user': 1
-            }
-        }
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=consumption_session)
-
-        request = APIRequestFactory()
-        request = request.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = delete_id_consumer_callback_with_time_of_life
-
-        response = view(request, id=1).render()
-        expected = DELETE_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__with_user__consumption_session__match(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        consumption_session = {
-            'eta': UTC_NOW + time_of_life,
-            'request': {
-                'args': [],
-                'kwargs': {
-                    'id': 1
-                },
-                'headers': {
-                    'academy': None
-                },
-                'user': 1
-            }
-        }
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=consumption_session)
-
-        request = APIRequestFactory()
-        request = request.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = delete_id_consumer_callback_with_time_of_life
-
-        response = view(request, id=1).render()
-        expected = DELETE_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-
-class ConsumerViewTestSuite(UtilsTestCase):
-
-    def setUp(self):
-        super().setUp()
-        CONSUMER_MOCK.call_args_list = []
-
-    """
-    🔽🔽🔽 View get
-    """
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__anonymous_user(self):
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request).render()
-        expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__with_user(self):
-        model = self.bc.database.create(user=1)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__with_user__with_permission__dont_match(self):
-        model = self.bc.database.create(user=1, permission=1)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__with_user__with_group_related_to_permission__without_consumer(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        model = self.bc.database.create(
-            user=user,
-            service=services,
-            service_item={'service_id': 2},
-        )
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request).render()
-        expected = GET_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__with_user__with_group_related_to_permission__consumer__how_many_0(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__with_user__with_group_related_to_permission__consumer__how_many_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request).render()
-        expected = GET_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    """
-    🔽🔽🔽 View get id
-    """
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__anonymous_user(self):
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__with_user(self):
-        model = self.bc.database.create(user=1)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__with_user__with_permission__dont_match(self):
-        model = self.bc.database.create(user=1, permission=1)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__with_user__with_group_related_to_permission__without_consumer(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        model = self.bc.database.create(
-            user=user,
-            service=services,
-            service_item={'service_id': 2},
-        )
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request, id=1).render()
-        expected = GET_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__with_user__with_group_related_to_permission__consumer__how_many_0(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__with_user__with_group_related_to_permission__consumer__how_many_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request, id=1).render()
-        expected = GET_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    """
-    🔽🔽🔽 View post
-    """
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__anonymous_user(self):
-        request = APIRequestFactory()
-        request = request.post('/they-killed-kenny')
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request).render()
-        expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__with_user(self):
-        model = self.bc.database.create(user=1)
-
-        request = APIRequestFactory()
-        request = request.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__with_user__with_permission__dont_match(self):
-        model = self.bc.database.create(user=1, permission=1)
-
-        request = APIRequestFactory()
-        request = request.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__with_user__with_group_related_to_permission__without_consumer(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        model = self.bc.database.create(
-            user=user,
-            service=services,
-            service_item={'service_id': 2},
-        )
-
-        request = APIRequestFactory()
-        request = request.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request).render()
-        expected = POST_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__with_user__with_group_related_to_permission__consumer__how_many_0(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__with_user__with_group_related_to_permission__consumer__how_many_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request).render()
-        expected = POST_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    """
-    🔽🔽🔽 View put id
-    """
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__anonymous_user(self):
-        request = APIRequestFactory()
-        request = request.put('/they-killed-kenny')
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__with_user(self):
-        model = self.bc.database.create(user=1)
-
-        request = APIRequestFactory()
-        request = request.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__with_user__with_permission__dont_match(self):
-        model = self.bc.database.create(user=1, permission=1)
-
-        request = APIRequestFactory()
-        request = request.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__with_user__with_group_related_to_permission__without_consumer(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        model = self.bc.database.create(
-            user=user,
-            service=services,
-            service_item={'service_id': 2},
-        )
-
-        request = APIRequestFactory()
-        request = request.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request, id=1).render()
-        expected = PUT_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__with_user__with_group_related_to_permission__consumer__how_many_0(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__with_user__with_group_related_to_permission__consumer__how_many_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request, id=1).render()
-        expected = PUT_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    """
-    🔽🔽🔽 View delete id
-    """
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__anonymous_user(self):
-        request = APIRequestFactory()
-        request = request.delete('/they-killed-kenny')
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__with_user(self):
-        model = self.bc.database.create(user=1)
-
-        request = APIRequestFactory()
-        request = request.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__with_user__with_permission__dont_match(self):
-        model = self.bc.database.create(user=1, permission=1)
-
-        request = APIRequestFactory()
-        request = request.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__with_user__with_group_related_to_permission__without_consumer(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        model = self.bc.database.create(
-            user=user,
-            service=services,
-            service_item={'service_id': 2},
-        )
-
-        request = APIRequestFactory()
-        request = request.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request, id=1).render()
-        expected = DELETE_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__with_user__with_group_related_to_permission__consumer__how_many_0(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__with_user__with_group_related_to_permission__consumer__how_many_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumer.as_view()
-
-        response = view(request, id=1).render()
-        expected = DELETE_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-
-class ConsumerCallbackViewTestSuite(UtilsTestCase):
-
-    def setUp(self):
-        super().setUp()
-        CONSUMER_MOCK.call_args_list = []
-
-    """
-    🔽🔽🔽 View get
-    """
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__anonymous_user(self):
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request).render()
-        expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__with_user(self):
-        model = self.bc.database.create(user=1)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__with_user__with_permission__dont_match(self):
-        model = self.bc.database.create(user=1, permission=1)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__with_user__with_group_related_to_permission__without_consumer(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        model = self.bc.database.create(
-            user=user,
-            service=services,
-            service_item={'service_id': 2},
-        )
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallback))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request).render()
-        expected = GET_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallback))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__with_user__with_group_related_to_permission__consumer__how_many_0(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallback))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__with_user__with_group_related_to_permission__consumer__how_many_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request).render()
-        expected = GET_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallback))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__with_user__without_consumption_session(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallbackWithTimeOfLife.as_view()
-
-        response = view(request).render()
-        expected = GET_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallbackWithTimeOfLife))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__with_user__consumption_session__does_not_match(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=1)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallbackWithTimeOfLife.as_view()
-
-        response = view(request).render()
-        expected = GET_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallbackWithTimeOfLife))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        n = random.randint(1, 4)
-        consumable = {'how_many': n}
-        consumption_session = {
-            'eta': UTC_NOW + time_of_life,
-            'how_many': n,
-            'request': {
-                'args': [],
-                'kwargs': {},
-                'headers': {
-                    'academy': None
-                },
-                'user': 1
-            }
-        }
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=consumption_session)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallbackWithTimeOfLife.as_view()
-
-        response = view(request).render()
-        expected = GET_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get__with_user__consumption_session__match(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        consumption_session = {
-            'eta': UTC_NOW + time_of_life,
-            'request': {
-                'args': [],
-                'kwargs': {},
-                'headers': {
-                    'academy': None
-                },
-                'user': 1
-            }
-        }
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=consumption_session)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallbackWithTimeOfLife.as_view()
-
-        response = view(request).render()
-        expected = GET_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    """
-    🔽🔽🔽 View get id
-    """
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__anonymous_user(self):
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__with_user(self):
-        model = self.bc.database.create(user=1)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__with_user__with_permission__dont_match(self):
-        model = self.bc.database.create(user=1, permission=1)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__with_user__with_group_related_to_permission__without_consumer(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        model = self.bc.database.create(
-            user=user,
-            service=services,
-            service_item={'service_id': 2},
-        )
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallback))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request, id=1).render()
-        expected = GET_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallback))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__with_user__with_group_related_to_permission__consumer__how_many_0(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallback))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__with_user__with_group_related_to_permission__consumer__how_many_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request, id=1).render()
-        expected = GET_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallback))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__with_user__without_consumption_session(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallbackWithTimeOfLife.as_view()
-
-        response = view(request, id=1).render()
-        expected = GET_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallbackWithTimeOfLife))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__with_user__consumption_session__does_not_match(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=1)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallbackWithTimeOfLife.as_view()
-
-        response = view(request, id=1).render()
-        expected = GET_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallbackWithTimeOfLife))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        n = random.randint(1, 4)
-        consumable = {'how_many': n}
-        consumption_session = {
-            'eta': UTC_NOW + time_of_life,
-            'how_many': n,
-            'request': {
-                'args': [],
-                'kwargs': {
-                    'id': 1
-                },
-                'headers': {
-                    'academy': None
-                },
-                'user': 1
-            }
-        }
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=consumption_session)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallbackWithTimeOfLife.as_view()
-
-        response = view(request, id=1).render()
-        expected = GET_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__get_id__with_user__consumption_session__match(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        consumption_session = {
-            'eta': UTC_NOW + time_of_life,
-            'request': {
-                'args': [],
-                'kwargs': {
-                    'id': 1
-                },
-                'headers': {
-                    'academy': None
-                },
-                'user': 1
-            }
-        }
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=consumption_session)
-
-        request = APIRequestFactory()
-        request = request.get('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallbackWithTimeOfLife.as_view()
-
-        response = view(request, id=1).render()
-        expected = GET_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    """
-    🔽🔽🔽 View post
-    """
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__anonymous_user(self):
-        request = APIRequestFactory()
-        request = request.post('/they-killed-kenny')
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request).render()
-        expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__with_user(self):
-        model = self.bc.database.create(user=1)
-
-        request = APIRequestFactory()
-        request = request.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__with_user__with_permission__dont_match(self):
-        model = self.bc.database.create(user=1, permission=1)
-
-        request = APIRequestFactory()
-        request = request.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__with_user__with_group_related_to_permission__without_consumer(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        model = self.bc.database.create(
-            user=user,
-            service=services,
-            service_item={'service_id': 2},
-        )
-
-        request = APIRequestFactory()
-        request = request.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallback))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request).render()
-        expected = POST_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallback))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__with_user__with_group_related_to_permission__consumer__how_many_0(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallback))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__with_user__with_group_related_to_permission__consumer__how_many_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request).render()
-        expected = POST_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallback))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__with_user__without_consumption_session(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallbackWithTimeOfLife.as_view()
-
-        response = view(request).render()
-        expected = POST_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallbackWithTimeOfLife))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__with_user__consumption_session__does_not_match(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=1)
-
-        request = APIRequestFactory()
-        request = request.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallbackWithTimeOfLife.as_view()
-
-        response = view(request).render()
-        expected = POST_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallbackWithTimeOfLife))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        n = random.randint(1, 4)
-        consumable = {'how_many': n}
-        consumption_session = {
-            'eta': UTC_NOW + time_of_life,
-            'how_many': n,
-            'request': {
-                'args': [],
-                'kwargs': {},
-                'headers': {
-                    'academy': None
-                },
-                'user': 1
-            }
-        }
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=consumption_session)
-
-        request = APIRequestFactory()
-        request = request.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallbackWithTimeOfLife.as_view()
-
-        response = view(request).render()
-        expected = POST_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__post__with_user__consumption_session__match(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        consumption_session = {
-            'eta': UTC_NOW + time_of_life,
-            'request': {
-                'args': [],
-                'kwargs': {},
-                'headers': {
-                    'academy': None
-                },
-                'user': 1
-            }
-        }
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=consumption_session)
-
-        request = APIRequestFactory()
-        request = request.post('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallbackWithTimeOfLife.as_view()
-
-        response = view(request).render()
-        expected = POST_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    """
-    🔽🔽🔽 View put id
-    """
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__anonymous_user(self):
-        request = APIRequestFactory()
-        request = request.put('/they-killed-kenny')
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__with_user(self):
-        model = self.bc.database.create(user=1)
-
-        request = APIRequestFactory()
-        request = request.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__with_user__with_permission__dont_match(self):
-        model = self.bc.database.create(user=1, permission=1)
-
-        request = APIRequestFactory()
-        request = request.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [
-        #     call({
-        #         'utc_now': datetime(2024, 6, 7, 1, 1, 22, 122435, tzinfo=datetime.timezone.utc),
-        #         'consumer': <MagicMock id='139654214437872'>,
-        #         'service': 'can_kill_kenny',
-        #         'request': <rest_framework.request.Request: PUT '/they-killed-kenny'>,
-        #         'consumables': <QuerySet []>,
-        #         'lifetime': None,
-        #         'price': 1,
-        #         'is_consumption_session': False
-        #     }, (<breathecode.utils.tests.decorators.tests_consume.build_view_class.<locals>.CustomView object at 0x7f03c711fc20>, <rest_framework.request.Request: PUT '/they-killed-kenny'>), {'id': 1})
-        # ])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__with_user__with_group_related_to_permission__without_consumer(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        model = self.bc.database.create(
-            user=user,
-            service=services,
-            service_item={'service_id': 2},
-        )
-
-        request = APIRequestFactory()
-        request = request.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallback))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request, id=1).render()
-        expected = PUT_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallback))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__with_user__with_group_related_to_permission__consumer__how_many_0(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallback))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__with_user__with_group_related_to_permission__consumer__how_many_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request, id=1).render()
-        expected = PUT_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallback))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__with_user__without_consumption_session(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallbackWithTimeOfLife.as_view()
-
-        response = view(request, id=1).render()
-        expected = PUT_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallbackWithTimeOfLife))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__with_user__consumption_session__does_not_match(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=1)
-
-        request = APIRequestFactory()
-        request = request.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallbackWithTimeOfLife.as_view()
-
-        response = view(request, id=1).render()
-        expected = PUT_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallbackWithTimeOfLife))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        n = random.randint(1, 4)
-        consumable = {'how_many': n}
-        consumption_session = {
-            'eta': UTC_NOW + time_of_life,
-            'how_many': n,
-            'request': {
-                'args': [],
-                'kwargs': {
-                    'id': 1
-                },
-                'headers': {
-                    'academy': None
-                },
-                'user': 1
-            }
-        }
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=consumption_session)
-
-        request = APIRequestFactory()
-        request = request.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallbackWithTimeOfLife.as_view()
-
-        response = view(request, id=1).render()
-        expected = PUT_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__put_id__with_user__consumption_session__match(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        consumption_session = {
-            'eta': UTC_NOW + time_of_life,
-            'request': {
-                'args': [],
-                'kwargs': {
-                    'id': 1
-                },
-                'headers': {
-                    'academy': None
-                },
-                'user': 1
-            }
-        }
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=consumption_session)
-
-        request = APIRequestFactory()
-        request = request.put('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallbackWithTimeOfLife.as_view()
-
-        response = view(request, id=1).render()
-        expected = PUT_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    """
-    🔽🔽🔽 View delete id
-    """
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__anonymous_user(self):
-        request = APIRequestFactory()
-        request = request.delete('/they-killed-kenny')
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'anonymous-user-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__with_user(self):
-        model = self.bc.database.create(user=1)
-
-        request = APIRequestFactory()
-        request = request.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__with_user__with_permission__dont_match(self):
-        model = self.bc.database.create(user=1, permission=1)
-
-        request = APIRequestFactory()
-        request = request.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__with_user__with_group_related_to_permission__without_consumer(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        model = self.bc.database.create(
-            user=user,
-            service=services,
-            service_item={'service_id': 2},
-        )
-
-        request = APIRequestFactory()
-        request = request.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallback))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': -1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request, id=1).render()
-        expected = DELETE_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallback))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__with_user__with_group_related_to_permission__consumer__how_many_0(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 0}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request, id=1).render()
-        expected = {'detail': 'with-consumer-not-enough-consumables', 'status_code': 402}
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallback))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__with_user__with_group_related_to_permission__consumer__how_many_1(self):
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallback.as_view()
-
-        response = view(request, id=1).render()
-        expected = DELETE_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallback))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__with_user__without_consumption_session(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable)
-
-        request = APIRequestFactory()
-        request = request.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallbackWithTimeOfLife.as_view()
-
-        response = view(request, id=1).render()
-        expected = DELETE_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallbackWithTimeOfLife))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__with_user__consumption_session__does_not_match(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=1)
-
-        request = APIRequestFactory()
-        request = request.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallbackWithTimeOfLife.as_view()
-
-        response = view(request, id=1).render()
-        expected = DELETE_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        Consumable = self.bc.database.get_model('payments.Consumable')
-        consumables = Consumable.objects.filter()
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        args, kwargs = CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list[0]
-        context, args, kwargs = args
-
-        self.assertTrue(isinstance(context['request'], Request))
-        self.bc.check.partial_equality(context, {
-            'utc_now': UTC_NOW,
-            'consumer': CONSUMER_MOCK,
-            'permission': PERMISSION,
-            'consumables': consumables,
-        })
-
-        self.assertEqual(len(args), 2)
-        self.assertTrue(isinstance(args[0], TestViewConsumerCallbackWithTimeOfLife))
-        self.assertTrue(isinstance(args[1], Request))
-
-        self.assertEqual(kwargs, {'id': 1})
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
-            call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
-        ])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        n = random.randint(1, 4)
-        consumable = {'how_many': n}
-        consumption_session = {
-            'eta': UTC_NOW + time_of_life,
-            'how_many': n,
-            'request': {
-                'args': [],
-                'kwargs': {
-                    'id': 1
-                },
-                'headers': {
-                    'academy': None
-                },
-                'user': 1
-            }
-        }
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=consumption_session)
-
-        request = APIRequestFactory()
-        request = request.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallbackWithTimeOfLife.as_view()
-
-        response = view(request, id=1).render()
-        expected = DELETE_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
-
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.models.ConsumptionSession.build_session',
-           MagicMock(wraps=models.ConsumptionSession.build_session))
-    def test__view__delete_id__with_user__consumption_session__match(self):
-        CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
-
-        user = {'user_permissions': []}
-        services = [{}, {'slug': PERMISSION}]
-
-        consumable = {'how_many': 1}
-        consumption_session = {
-            'eta': UTC_NOW + time_of_life,
-            'request': {
-                'args': [],
-                'kwargs': {
-                    'id': 1
-                },
-                'headers': {
-                    'academy': None
-                },
-                'user': 1
-            }
-        }
-        model = self.bc.database.create(user=user,
-                                        service=services,
-                                        service_item={'service_id': 2},
-                                        consumable=consumable,
-                                        consumption_session=consumption_session)
-
-        request = APIRequestFactory()
-        request = request.delete('/they-killed-kenny')
-        force_authenticate(request, user=model.user)
-
-        view = TestViewConsumerCallbackWithTimeOfLife.as_view()
-
-        response = view(request, id=1).render()
-        expected = DELETE_ID_RESPONSE
-
-        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.assertEqual(len(CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list), 1)
-        self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [
-            self.bc.format.to_dict(model.consumption_session),
-        ])
-
-        self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+    await check_consume_service()

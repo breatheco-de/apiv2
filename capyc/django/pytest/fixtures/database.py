@@ -522,6 +522,11 @@ class Database:
 
         return AttrDict(**res)
 
+    @classmethod
+    @sync_to_async
+    def acreate(cls, **models):
+        return cls.create(**models)
+
 
 @pytest.fixture
 def database(db, seed) -> Generator[Database, None, None]:
