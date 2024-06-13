@@ -344,7 +344,7 @@ class WithKeywordFilter(admin.SimpleListFilter):
 class AssetAdmin(admin.ModelAdmin):
     form = AssetForm
     search_fields = ['title', 'slug', 'author__email', 'url']
-    filter_horizontal = ('technologies', 'all_translations', 'seo_keywords')
+    filter_horizontal = ('technologies', 'all_translations', 'seo_keywords', 'assets_related')
     list_display = ('main', 'current_status', 'alias', 'techs', 'url_path')
     list_filter = [
         'asset_type', 'status', 'sync_status', 'test_status', 'lang', 'external', AssessmentFilter, WithKeywordFilter,
