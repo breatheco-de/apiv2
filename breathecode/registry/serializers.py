@@ -360,7 +360,7 @@ class AssetBigSerializer(AssetMidSerializer):
     superseded_by = AssetTinySerializer(required=False)
 
     def get_assets_related(self, obj):
-        _assets_related = [AssetSmallSerializer(asset).data for asset in obj.assets_related.all()]
+        _assets_related = [AssetSmallSerializer(asset).data for asset in obj.assets_related.filter(lang=obj.lang)]
         return _assets_related
 
 
