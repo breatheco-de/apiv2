@@ -18,6 +18,7 @@ urlpatterns = [
     path('academy/layout', AcademyAssessmentLayoutView.as_view()),
     path('academy/layout/<str:layout_slug>', AcademyAssessmentLayoutView.as_view()),
     path('<str:assessment_slug>/threshold', GetThresholdView.as_view()),
+    path('<str:assessment_slug>/threshold/<int:threshold_id>', GetThresholdView.as_view()),
     path('<str:assessment_slug>/question/<int:question_id>', AssessmentQuestionView.as_view()),
     path('<str:assessment_slug>/option/<int:option_id>', AssessmentOptionView.as_view()),
     path('<str:assessment_slug>', GetAssessmentView.as_view()),
