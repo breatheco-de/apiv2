@@ -12,7 +12,7 @@ from .models import (Asset, AssetTechnology, AssetAlias, AssetErrorLog, KeywordC
 from .tasks import (async_pull_from_github, async_test_asset, async_download_readme_images, async_remove_img_from_cloud,
                     async_upload_image_to_bucket, async_update_frontend_asset_cache)
 from .actions import (get_user_from_github_username, AssetThumbnailGenerator, scan_asset_originality,
-                      add_syllabus_translations, clean_asset_readme)
+                      add_syllabus_translations, clean_asset_readme, process_asset_config, push_to_github)
 
 logger = logging.getLogger(__name__)
 lang_flags = {
@@ -46,12 +46,32 @@ def make_internal(modeladmin, request, queryset):
     queryset.update(external=False)
 
 
+def process_config_object(modeladmin, request, queryset):
+    assets = queryset.all()
+    for a in assets:
+        process_asset_config(a, a.config)
+
+
 def pull_content_from_github(modeladmin, request, queryset):
     queryset.update(sync_status='PENDING', status_text='Starting to sync...')
     assets = queryset.all()
     for a in assets:
-        async_pull_from_github.delay(a.slug, request.user.id)
-        # pull_from_github(a.slug)  # uncomment for testing purposes
+        try:
+            async_pull_from_github.delay(a.slug, request.user.id)
+            # async_pull_from_github(a.slug, request.user.id)  # uncomment for testing purposes
+        except Exception as e:
+            messages.error(request, a.slug + ': ' + str(e))
+
+
+def push_content_to_github(modeladmin, request, queryset):
+    queryset.update(sync_status='PENDING', status_text='Starting to sync...')
+    assets = queryset.all()
+    for a in assets:
+        # try:
+        push_to_github(a.slug, request.user)
+        #     # async_push_github_asset(a.slug, request.user.id)  # uncomment for testing purposes
+        # except Exception as e:
+        #     messages.error(request, a.slug + ': ' + str(e))
 
 
 def pull_content_from_github_override_meta(modeladmin, request, queryset):
@@ -330,13 +350,15 @@ class AssetAdmin(admin.ModelAdmin):
         'asset_type', 'status', 'sync_status', 'test_status', 'lang', 'external', AssessmentFilter, WithKeywordFilter,
         WithDescription, IsMarkdown
     ]
-    raw_id_fields = ['author', 'owner']
+    raw_id_fields = ['author', 'owner', 'superseded_by']
     actions = [
         test_asset_integrity,
         add_gitpod,
         remove_gitpod,
+        process_config_object,
         pull_content_from_github,
         pull_content_from_github_override_meta,
+        push_content_to_github,
         seo_optimization_off,
         seo_optimization_on,
         seo_report,

@@ -132,7 +132,7 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
         elif asset.asset_type in ['QUIZ']:
             asset = pull_quiz_asset(g, asset)
         else:
-            asset = pull_learnpack_asset(g, asset, override_meta=override_meta)
+            asset = pull_learnpack_asset(g, asset, override_meta=True)
 
         asset.status_text = 'Successfully Synched'
         asset.sync_status = 'OK'
@@ -142,8 +142,9 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
 
         return asset
     except Exception as e:
+        logger.exception(e)
         message = ''
-        if hasattr(e, 'data'):
+        if hasattr(e, 'data') and e.data:
             message = e.data['message']
         else:
             message = str(e).replace('"', '\'')
@@ -204,7 +205,7 @@ def push_to_github(asset_slug, author=None):
 
         return asset
     except Exception as e:
-        # raise e
+        logger.exception(e)
         message = ''
         if hasattr(e, 'data'):
             message = e.data['message']
@@ -291,10 +292,19 @@ def push_github_asset(github, asset: Asset):
     branch, file_path = result.groups()
     logger.debug(f'Fetching readme: {file_path}')
 
-    # we commit the raw readme, we don't want images to be replaced in the original github
-    decoded_readme = base64.b64decode(asset.readme_raw.encode('utf-8')).decode('utf-8')
+    decoded_readme = None
+    if asset.asset_type in ['LESSON', 'ARTICLE']:
+        # we commit the raw readme, we don't want images to be replaced in the original github
+        decoded_readme = base64.b64decode(asset.readme_raw.encode('utf-8')).decode('utf-8')
+
+    elif asset.asset_type == 'QUIZ':
+        decoded_readme = json.dumps(asset.config, indent=4)
+
+    else:
+        raise Exception(f'Assets with type {asset.asset_type} cannot be commited to Github')
+
     if decoded_readme is None or decoded_readme == 'None' or decoded_readme == '':
-        raise Exception('The markdown content you are trying to push to Github is empty')
+        raise Exception('The content you are trying to push to Github is empty')
 
     result = set_blob_content(repo, file_path, decoded_readme, file_name, branch=branch)
     if 'commit' in result:
@@ -351,6 +361,9 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
 
         if 'title' in fm and fm['title'] != '':
             asset.title = fm['title']
+          
+        if 'video' in fm and fm['video'] != '':
+            asset.intro_video_url = fm['video']
 
         if 'authors' in fm and fm['authors'] != '':
             asset.authors_username = ','.join(fm['authors'])
@@ -637,6 +650,111 @@ class AssetThumbnailGenerator:
         return self.asset
 
 
+def process_asset_config(asset, config):
+
+    if not config:
+        raise Exception('No configuration json found')
+
+    if asset.asset_type in ["QUIZ"]:
+        raise Exception('Can only process exercise and project config objects')
+      
+    # only replace title and description of English language
+    if 'title' in config:
+        if isinstance(config['title'], str):
+            if (asset.lang in ['','us', 'en'] or asset.title == '' or asset.title is None):
+                asset.title = config['title']
+        elif isinstance(config['title'], dict) and asset.lang in config['title']:
+            asset.title = config['title'][asset.lang]
+
+    if 'description' in config:
+        if isinstance(config['description'], str):
+            # avoid replacing descriptions for other languages
+            if (asset.lang in ['','us', 'en'] or asset.description == '' or asset.description is None):
+                asset.description = config['description']
+        # there are multiple translations, and the translation exists for this lang
+        elif isinstance(config['description'], dict) and asset.lang in config['description']:
+            asset.description = config['description'][asset.lang]
+
+    if 'preview' in config:
+        asset.preview = config['preview']
+    else:
+        raise Exception('Missing preview URL')
+
+    if 'video-id' in config:
+        asset.solution_video_url = get_video_url(str(config['video-id']))
+        asset.with_video = True
+
+    if 'video' in config and isinstance(config['video'], dict):
+        if 'intro' in config['video'] and config['video']['intro'] is not None:
+            if isinstance(config['video']['intro'], str):
+                asset.intro_video_url = get_video_url(str(config['video']['intro']))
+            else:
+                if 'en' in config['video']['intro']:
+                    config['video']['intro']['us'] = config['video']['intro']['en']
+                elif 'us' in config['video']['intro']:
+                    config['video']['intro']['en'] = config['video']['intro']['us']
+
+                if asset.lang in config['video']['intro']:
+                    print('get_video_url', get_video_url(str(config['video']['intro'][asset.lang])))
+                    asset.intro_video_url = get_video_url(str(config['video']['intro'][asset.lang]))
+
+        if 'solution' in config['video'] and config['video']['solution'] is not None:
+            if isinstance(config['video']['solution'], str):
+                asset.solution_video_url = get_video_url(str(config['video']['solution']))
+                asset.with_video = True
+            else:
+                if 'en' in config['video']['solution']:
+                    config['video']['solution']['us'] = config['video']['solution']['en']
+                elif 'us' in config['video']['solution']:
+                    config['video']['solution']['en'] = config['video']['solution']['us']
+
+                if asset.lang in config['video']['solution']:
+                    asset.solution_video_url = get_video_url(str(config['video']['solution'][asset.lang]))
+                    asset.with_video = True
+
+    if 'duration' in config:
+        asset.duration = config['duration']
+    if 'difficulty' in config:
+        asset.difficulty = config['difficulty'].upper()
+    if 'solution' in config:
+        asset.solution_url = config['solution']
+        asset.with_solutions = True
+
+    if 'projectType' in config:
+        asset.gitpod = config['projectType'] == 'tutorial'
+
+    if 'technologies' in config:
+        asset.technologies.clear()
+        for tech_slug in config['technologies']:
+            technology = AssetTechnology.get_or_create(tech_slug)
+            asset.technologies.add(technology)
+
+    if 'delivery' in config:
+        if 'instructions' in config['delivery']:
+            if isinstance(config['delivery']['instructions'], str):
+                asset.delivery_instructions = config['delivery']['instructions']
+            elif isinstance(config['delivery']['instructions'],
+                            dict) and asset.lang in config['delivery']['instructions']:
+                asset.delivery_instructions = config['delivery']['instructions'][asset.lang]
+
+        if 'formats' in config['delivery']:
+            if isinstance(config['delivery']['formats'], list):
+                asset.delivery_formats = ','.join(config['delivery']['formats'])
+            elif isinstance(config['delivery']['formats'], str):
+                asset.delivery_formats = config['delivery']['formats']
+
+        if 'url' in asset.delivery_formats:
+            if 'regex' in config['delivery'] and isinstance(config['delivery']['regex'], str):
+                asset.delivery_regex_url = config['delivery']['regex'].replace('\\\\', '\\')
+    else:
+        asset.delivery_instructions = ''
+        asset.delivery_formats = 'url'
+        asset.delivery_regex_url = ''
+
+    asset.save()
+    return asset
+
+
 def pull_learnpack_asset(github, asset: Asset, override_meta):
 
     if asset.readme_url is None:
@@ -677,90 +795,12 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
     base64_readme = str(readme_file.content)
     asset.readme_raw = base64_readme
 
+    config = None
     if learn_file is not None and (asset.last_synch_at is None or override_meta):
         config = json.loads(learn_file.decoded_content.decode('utf-8'))
         asset.config = config
 
-        # only replace title and description of English language
-        if 'title' in config:
-            if isinstance(config['title'], str):
-                if (lang == '' or asset.title == '' or asset.title is None):
-                    asset.title = config['title']
-            elif isinstance(config['title'], dict) and asset.lang in config['title']:
-                asset.title = config['title'][asset.lang]
-
-        if 'description' in config:
-            if isinstance(config['description'], str):
-                # avoid replacing descriptions for other languages
-                if (lang == '' or asset.description == '' or asset.description is None):
-                    asset.description = config['description']
-            # there are multiple translations, and the translation exists for this lang
-            elif isinstance(config['description'], dict) and asset.lang in config['description']:
-                asset.description = config['description'][asset.lang]
-
-        if 'preview' in config:
-            asset.preview = config['preview']
-        else:
-            raise Exception('Missing preview URL')
-
-        if 'video-id' in config:
-            asset.solution_video_url = get_video_url(str(config['video-id']))
-            asset.with_video = True
-
-        if 'video' in config and isinstance(config['video'], dict):
-            if 'intro' in config['video'] and config['video']['intro'] is not None:
-                if isinstance(config['video']['intro'], str):
-                    asset.intro_video_url = get_video_url(str(config['video']['intro']))
-                elif asset.lang in config['video']['intro']:
-                    asset.intro_video_url = get_video_url(str(config['video']['intro'][asset.lang]))
-
-            if 'solution' in config['video'] and config['video']['solution'] is not None:
-                if isinstance(config['video']['solution'], str):
-                    asset.solution_video_url = get_video_url(str(config['video']['solution']))
-                    asset.with_video = True
-                elif asset.lang in config['video']['solution']:
-                    asset.solution_video_url = get_video_url(str(config['video']['solution'][asset.lang]))
-                    asset.with_video = True
-
-        if 'duration' in config:
-            asset.duration = config['duration']
-        if 'difficulty' in config:
-            asset.difficulty = config['difficulty'].upper()
-        if 'solution' in config:
-            asset.solution_url = config['solution']
-            asset.with_solutions = True
-
-        if 'projectType' in config:
-            asset.gitpod = config['projectType'] == 'tutorial'
-
-        if 'technologies' in config:
-            asset.technologies.clear()
-            for tech_slug in config['technologies']:
-                technology = AssetTechnology.get_or_create(tech_slug)
-                asset.technologies.add(technology)
-
-        if 'delivery' in config:
-            if 'instructions' in config['delivery']:
-                if isinstance(config['delivery']['instructions'], str):
-                    asset.delivery_instructions = config['delivery']['instructions']
-                elif isinstance(config['delivery']['instructions'],
-                                dict) and asset.lang in config['delivery']['instructions']:
-                    asset.delivery_instructions = config['delivery']['instructions'][asset.lang]
-
-            if 'formats' in config['delivery']:
-                if isinstance(config['delivery']['formats'], list):
-                    asset.delivery_formats = ','.join(config['delivery']['formats'])
-                elif isinstance(config['delivery']['formats'], str):
-                    asset.delivery_formats = config['delivery']['formats']
-
-            if 'url' in asset.delivery_formats:
-                if 'regex' in config['delivery'] and isinstance(config['delivery']['regex'], str):
-                    asset.delivery_regex_url = config['delivery']['regex'].replace('\\\\', '\\')
-        else:
-            asset.delivery_instructions = ''
-            asset.delivery_formats = 'url'
-            asset.delivery_regex_url = ''
-
+    asset = process_asset_config(asset, config)
     return asset
 
 
@@ -785,7 +825,32 @@ def pull_quiz_asset(github, asset: Asset):
 
     encoded_config = get_blob_content(repo, file_path, branch=branch_name).content
     decoded_config = Asset.decode(encoded_config)
-    asset.config = json.loads(decoded_config)
+
+    _config = json.loads(decoded_config)
+    asset.config = _config
+
+    # "slug":    "introduction-networking-es",
+    # "name":    "Introducción a redes",
+    # "status":    "draft",
+    # "main":    "Bienvenido al mundo de las redes. Este primer paso te llevara a grandes cosas en el futuro...",
+    # "results": "¡Felicidades! Ahora el mundo estará un poco más seguro gracias a tí...",
+    # "technologies": ["redes"],
+    # "badges": [
+    #     { "slug": "cybersecurity_guru", "points": 5 }
+    # ]
+    if 'info' in _config:
+        _config = _config['info']
+        if 'name' in _config and _config['name'] != '': asset.title = _config['name']
+
+        if 'main' in _config and _config['main']: asset.description = _config['main']
+        elif 'description' in _config and _config['description']: asset.description = _config['description']
+
+        if 'technologies' in _config and _config['technologies'] != '':
+            asset.technologies.clear()
+            for tech_slug in _config['technologies']:
+                technology = AssetTechnology.get_or_create(tech_slug)
+                asset.technologies.add(technology)
+
     asset.save()
 
     if asset.assessment is None:
@@ -927,7 +992,7 @@ def add_syllabus_translations(_json: dict):
             for ass in day[asset_type]:
                 index += 1
                 slug = ass['slug'] if 'slug' in ass else ass
-                _asset = Asset.objects.filter(slug=slug).first()
+                _asset = Asset.get_by_slug(slug)
                 if _asset is not None:
                     if 'slug' not in ass:
                         _json['days'][day_count][asset_type][index] = {

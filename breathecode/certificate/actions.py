@@ -201,7 +201,7 @@ def generate_certificate(user, cohort=None, layout=None):
                                                task_types=['PROJECT'],
                                                only_mandatory=True)
 
-        if pending_tasks:
+        if pending_tasks and pending_tasks > 0:
             raise ValidationException(f'The student has {pending_tasks} pending tasks',
                                       slug=f'with-pending-tasks-{pending_tasks}')
 

@@ -43,6 +43,8 @@ def get_serializer(self,
         user.first_name,
         'last_name':
         user.last_name,
+        'date_joined':
+        self.bc.datetime.to_iso_string(user.date_joined),
         'username':
         user.username,
         'settings':

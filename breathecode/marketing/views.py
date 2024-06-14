@@ -33,7 +33,7 @@ from breathecode.renderers import PlainTextRenderer
 from breathecode.services.activecampaign import ActiveCampaign
 from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of, localize_query
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from breathecode.utils.decorators import validate_captcha
+from breathecode.utils.decorators import validate_captcha, validate_captcha_challenge
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
@@ -128,6 +128,7 @@ def get_alias(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@validate_captcha_challenge
 def create_lead(request):
     data = request.data.copy()
 
@@ -1261,7 +1262,7 @@ class CourseView(APIView):
             items = items.filter(query)
 
         items = items.annotate(lang=Value(lang, output_field=CharField()))
-
+        items = items.order_by('created_at')
         items = handler.queryset(items)
         serializer = GetCourseSerializer(items, context={'lang': lang}, many=True)
         return handler.response(serializer.data)

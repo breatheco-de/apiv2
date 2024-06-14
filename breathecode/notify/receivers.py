@@ -18,6 +18,9 @@ from breathecode.marketing.signals import form_entry_won_or_lost, new_form_entry
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.serializers import SessionHookSerializer
 from breathecode.mentorship.signals import mentorship_session_status
+from breathecode.payments.models import PlanFinancing, Subscription
+from breathecode.payments.serializers import GetPlanFinancingSerializer, GetSubscriptionHookSerializer
+from breathecode.payments.signals import planfinancing_created, subscription_created
 from breathecode.registry.models import Asset
 from breathecode.registry.serializers import AssetHookSerializer
 from breathecode.registry.signals import asset_status_updated
@@ -159,3 +162,27 @@ def edu_status_updated(sender, instance, **kwargs):
                                     'edu_status_updated',
                                     payload_override=serializer.data,
                                     academy_override=academy)
+
+
+@receiver(planfinancing_created, sender=PlanFinancing)
+def new_planfinancing_created(sender, instance, **kwargs):
+    logger.debug('Sending new PlanFinancing to hook')
+    model_label = get_model_label(instance)
+    serializer = GetPlanFinancingSerializer(instance)
+    HookManager.process_model_event(instance,
+                                    model_label,
+                                    'planfinancing_created',
+                                    payload_override=serializer.data,
+                                    academy_override=instance.academy)
+
+
+@receiver(subscription_created, sender=Subscription)
+def new_subscription_created(sender, instance, **kwargs):
+    logger.debug('Sending new Subscription to hook')
+    model_label = get_model_label(instance)
+    serializer = GetSubscriptionHookSerializer(instance)
+    HookManager.process_model_event(instance,
+                                    model_label,
+                                    'subscription_created',
+                                    payload_override=serializer.data,
+                                    academy_override=instance.academy)

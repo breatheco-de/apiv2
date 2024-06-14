@@ -531,5 +531,5 @@ class Database:
 
 
 @pytest.fixture
-def database(db) -> Generator[Database, None, None]:
+def database(db, seed) -> Generator[Database, None, None]:
     yield Database()

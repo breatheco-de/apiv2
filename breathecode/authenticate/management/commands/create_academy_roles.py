@@ -424,6 +424,10 @@ CAPABILITIES = [
         'slug': 'crud_assessment',
         'description': 'Manage student quizzes and assessments'
     },
+    {
+        'slug': 'read_user_assessment',
+        'description': 'Read user assessment submissions'
+    },
 ]
 
 ROLES = [
@@ -626,7 +630,7 @@ def extend_roles(roles: list[RoleType]) -> None:
         extend(roles, ['staff']) + [
             'read_assignment', 'crud_assignment', 'read_cohort_activity', 'read_nps_answers', 'classroom_activity',
             'read_event', 'read_event_type', 'task_delivery_details', 'crud_cohort', 'read_cohort_log',
-            'crud_cohort_log', 'start_or_end_class', 'start_or_end_event'
+            'crud_cohort_log', 'start_or_end_class', 'start_or_end_event', 'read_user_assessment'
         ]
     })
     roles.append({
@@ -711,6 +715,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             'crud_media',
             'read_activity',
             'read_lead',
+            'read_user_assessment',
             'read_won_lead',
             'crud_review',
             'crud_shortlink',

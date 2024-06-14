@@ -25,6 +25,7 @@ from ..views import (
     handle_test_asset,
     render_preview_html,
     render_readme,
+    AssetSupersedesView,
 )
 
 app_name = 'registry'
@@ -34,6 +35,7 @@ urlpatterns = [
     path('asset/thumbnail/<str:asset_slug>', AssetThumbnailView.as_view(), name='asset_thumbnail_slug'),
     path('asset/preview/<str:asset_slug>', render_preview_html),
     path('asset/gitpod/<str:asset_slug>', forward_asset_url),
+    path('asset/<str:asset_slug>/supersedes', AssetSupersedesView.as_view()),
     path('asset/<str:asset_slug>/github/config', get_config),
     path('asset/<str:asset_slug>.<str:extension>', render_readme),
     path('asset/<str:asset_slug>', AssetView.as_view()),

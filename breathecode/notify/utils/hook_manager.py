@@ -201,18 +201,21 @@ class HookManagerClass(object):
                 return such object. If callable is used it should accept 2
                 arguments: `hook` and `instance`.
         """
-        if payload_override is None:
-            payload = hook.serialize_hook(instance)
-        else:
-            payload = payload_override
-
-        if callable(payload):
-            payload = payload(hook, instance)
-
-        logger.debug(f'Calling delayed task deliver_hook for hook {hook.id}')
-        async_deliver_hook.delay(hook.target, payload, hook_id=hook.id)
-
-        return None
-
+        try:
+            if payload_override is None:
+                payload = hook.serialize_hook(instance)
+            else:
+                payload = payload_override
+    
+            if callable(payload):
+                payload = payload(hook, instance)
+    
+            logger.debug(f'Calling delayed task deliver_hook for hook {hook.id}')
+            async_deliver_hook.delay(hook.target, payload, hook_id=hook.id)
+    
+            return None
+        except Exception:
+            # TODO: FIXME
+            pass
 
 HookManager = HookManagerClass()

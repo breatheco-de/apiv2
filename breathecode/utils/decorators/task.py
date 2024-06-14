@@ -19,7 +19,9 @@ class TaskPriority(Enum):
     NOTIFICATION = 1  # non realtime notifications
     MONITORING = 2  # monitoring tasks
     ACTIVITY = 2  # user activity
+    CONTENT = 2  # related to the registry
     BILL = 2  # postpaid billing
+    ASSESSMENT = 2  # user assessment
     CACHE = 3  # cache
     MARKETING = 4  # marketing purposes
     OAUTH_CREDENTIALS = 5  # oauth tasks
