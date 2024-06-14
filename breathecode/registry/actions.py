@@ -361,6 +361,22 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
 
         if 'title' in fm and fm['title'] != '':
             asset.title = fm['title']
+
+        def parse_boolean(value):
+            true_values = {'1', 'true'}
+            false_values = {'0', 'false'}
+            if isinstance(value, bool):
+                return value
+            if isinstance(value, (int, str)):
+                value_str = str(value).lower()  # Convert value to string and lowercase
+                if value_str in true_values:
+                    return True
+                elif value_str in false_values:
+                    return False
+        
+            raise ValueError(f"Invalid value for boolean conversion: {value}")
+        if 'table_of_contents' in fm and fm['table_of_contents'] != '':
+            asset.enable_table_of_content = parse_boolean(fm['table_of_contents'])
           
         if 'video' in fm and fm['video'] != '':
             asset.intro_video_url = fm['video']
