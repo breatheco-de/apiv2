@@ -131,6 +131,12 @@ class AssessmentThreshold(models.Model):
                                    blank=True,
                                    null=True)
 
+    title = models.CharField(max_length=255,
+                             default=None,
+                             blank=True,
+                             null=True,
+                             help_text='Title is good for internal use')
+
     academy = models.ForeignKey(
         Academy,
         on_delete=models.CASCADE,
