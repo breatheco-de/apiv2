@@ -85,6 +85,7 @@ def mentorship_service_columns(mentorship_service, data={}):
         'name': mentorship_service.name,
         'slug': mentorship_service.slug,
         'status': mentorship_service.status,
+        'video_provider': mentorship_service.video_provider,
         **data,
     }
 
