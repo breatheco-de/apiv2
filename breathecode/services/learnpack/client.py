@@ -74,12 +74,12 @@ class LearnPack:
                 logger.error('Mark action with error')
 
                 webhook.status = 'ERROR'
-                webhook.status_text = ''.join(traceback.format_exception(None, e, e.__traceback__))
+                webhook.status_text = str(e)+'\n'.join(traceback.format_exception(None, e, e.__traceback__))
                 webhook.save()
 
         except Exception as e:
             webhook.status = 'ERROR'
-            webhook.status_text = str(e)
+            webhook.status_text = str(e)+'\n'.join(traceback.format_exception(None, e, e.__traceback__))
             webhook.save()
 
             raise e
