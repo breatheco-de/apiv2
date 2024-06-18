@@ -105,6 +105,7 @@ class UserAttachmentAdmin(admin.ModelAdmin):
 class FinalProjectAdmin(admin.ModelAdmin):
     list_display = ['name', 'cohort', 'project_status', 'revision_status', 'visibility_status']
     search_fields = ('name', 'cohort__slug', 'repo_url', 'members__email')
+    filter_horizontal = ['members']
     list_filter = ['project_status', 'revision_status', 'visibility_status', 'cohort__academy__slug']
     # actions = [mark_as_delivered, mark_as_approved, mark_as_rejected, mark_as_ignored]
 
