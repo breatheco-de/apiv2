@@ -930,7 +930,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_from_github_credentials__generate_anything(self):
         csv = codespaces_csv(10)
@@ -1036,7 +1036,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     @patch('breathecode.provisioning.tasks.PANDAS_ROWS_LIMIT', PropertyMock(return_value=3))
     def test_pagination(self):
@@ -1156,7 +1156,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_from_github_credentials__generate_anything__force(self):
         csv = codespaces_csv(10)
@@ -1265,7 +1265,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_from_github_credentials__generate_anything__case1(self):
         csv = codespaces_csv(10)
@@ -1474,7 +1474,7 @@ class GitpodTestSuite(ProvisioningTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_from_github_credentials__vendor_not_found(self):
         csv = gitpod_csv(10)
@@ -1571,7 +1571,7 @@ class GitpodTestSuite(ProvisioningTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_from_github_credentials__generate_anything(self):
         csv = gitpod_csv(10)
@@ -1675,7 +1675,7 @@ class GitpodTestSuite(ProvisioningTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     @patch('breathecode.provisioning.tasks.PANDAS_ROWS_LIMIT', PropertyMock(return_value=3))
     def test_pagination(self):
@@ -1793,7 +1793,7 @@ class GitpodTestSuite(ProvisioningTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_from_github_credentials__generate_anything__case1(self):
         csv = gitpod_csv(10)
@@ -1913,9 +1913,9 @@ class GitpodTestSuite(ProvisioningTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    @patch('breathecode.authenticate.signals.academy_invite_accepted.send', MagicMock())
+    @patch('breathecode.authenticate.signals.academy_invite_accepted.send_robust', MagicMock())
     def test_from_github_credentials__generate_anything__case2(self):
         csv = gitpod_csv(10)
 
@@ -2051,9 +2051,9 @@ class GitpodTestSuite(ProvisioningTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    @patch('breathecode.authenticate.signals.academy_invite_accepted.send', MagicMock())
+    @patch('breathecode.authenticate.signals.academy_invite_accepted.send_robust', MagicMock())
     def test_from_github_credentials__generate_anything__case3(self):
         csv = gitpod_csv(10)
 
@@ -2311,7 +2311,7 @@ class RigobotTestSuite(ProvisioningTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_from_github_credentials__vendor_not_found(self):
         csv = rigobot_csv(10)
@@ -2424,7 +2424,7 @@ class RigobotTestSuite(ProvisioningTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_from_github_credentials__generate_anything(self):
         csv = rigobot_csv(10)
@@ -2546,7 +2546,7 @@ class RigobotTestSuite(ProvisioningTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     @patch('breathecode.provisioning.tasks.PANDAS_ROWS_LIMIT', PropertyMock(return_value=3))
     def test_pagination(self):
@@ -2682,7 +2682,7 @@ class RigobotTestSuite(ProvisioningTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_from_github_credentials__generate_anything__case1(self):
         csv = rigobot_csv(10)
@@ -2811,9 +2811,9 @@ class RigobotTestSuite(ProvisioningTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    @patch('breathecode.authenticate.signals.academy_invite_accepted.send', MagicMock())
+    @patch('breathecode.authenticate.signals.academy_invite_accepted.send_robust', MagicMock())
     def test_from_github_credentials__generate_anything__case2(self):
         csv = rigobot_csv(10)
 
@@ -2958,9 +2958,9 @@ class RigobotTestSuite(ProvisioningTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    @patch('breathecode.authenticate.signals.academy_invite_accepted.send', MagicMock())
+    @patch('breathecode.authenticate.signals.academy_invite_accepted.send_robust', MagicMock())
     def test_from_github_credentials__generate_anything__case3(self):
         csv = rigobot_csv(10)
 

@@ -57,7 +57,7 @@ class CertificateTestSuite(CertificateTestCase):
     🔽🔽🔽 Auth
     """
 
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
     def test_without_auth(self):
         url = reverse_lazy('certificate:me')
         response = self.client.get(url)
@@ -75,7 +75,7 @@ class CertificateTestSuite(CertificateTestCase):
     🔽🔽🔽 GET without permission
     """
 
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
     def test__get__without_permission(self):
         model = self.bc.database.create(user=1)
 
@@ -93,7 +93,7 @@ class CertificateTestSuite(CertificateTestCase):
     🔽🔽🔽 GET with zero UserSpecialty
     """
 
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
     def test__get__with_zero_user_specialties(self):
         permission = {'codename': 'get_my_certificate'}
         model = self.bc.database.create(user=1, permission=permission)
@@ -112,7 +112,7 @@ class CertificateTestSuite(CertificateTestCase):
     🔽🔽🔽 GET with one UserSpecialty and status 'PENDING'
     """
 
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
     def test__get__with_one_user_specialty_status_pending(self):
         permission = {'codename': 'get_my_certificate'}
         model = self.bc.database.create(user=1, permission=permission, user_specialty=1)
@@ -132,7 +132,7 @@ class CertificateTestSuite(CertificateTestCase):
     🔽🔽🔽 GET with one UserSpecialty and status 'PERSISTED'
     """
 
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
     def test__get__with_one_user_specialty_status_persisted(self):
         permission = {'codename': 'get_my_certificate'}
         model = self.bc.database.create(user=1,
@@ -157,7 +157,7 @@ class CertificateTestSuite(CertificateTestCase):
     🔽🔽🔽 GET with two UserSpecialty
     """
 
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
     def test__get__with_two_user_specialty(self):
         permission = {'codename': 'get_my_certificate'}
         user_specialties = [{'token': 'xyz1', 'status': 'PERSISTED'}, {'token': 'xyz2'}]
@@ -181,7 +181,7 @@ class CertificateTestSuite(CertificateTestCase):
     🔽🔽🔽 GET with two UserSpecialty from another user
     """
 
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
     def test__get__with_two_user_specialty__from_another_user(self):
         permission = {'codename': 'get_my_certificate'}
         user_specialties = [{'token': 'xyz1', 'user_id': 2}, {'token': 'xyz2', 'user_id': 2}]
@@ -203,7 +203,7 @@ class CertificateTestSuite(CertificateTestCase):
 
     @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
     @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
     def test__get__spy_the_extensions(self):
         permission = {'codename': 'get_my_certificate'}
         model = self.bc.database.create(user=1, permission=permission, user_specialty=1)

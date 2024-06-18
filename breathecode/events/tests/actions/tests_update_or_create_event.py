@@ -1,11 +1,14 @@
 import logging
 import os
 import random
-from uuid import UUID
-import breathecode.events.actions as actions
 from unittest.mock import MagicMock, PropertyMock, call, patch
-from breathecode.tests.mocks.eventbrite.constants.events import EVENTBRITE_EVENTS
+from uuid import UUID
+
 from django.utils import timezone
+
+import breathecode.events.actions as actions
+from breathecode.tests.mocks.eventbrite.constants.events import EVENTBRITE_EVENTS
+
 from ..mixins import EventTestCase
 
 update_or_create_event = actions.update_or_create_event
@@ -67,6 +70,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'update_event_description_from_eventbrite', MagicMock())
     def test_update_or_create_event__data_is_none(self):
         import logging
+
         import breathecode.events.actions as actions
 
         organization_kwargs = {'eventbrite_id': '1'}
@@ -95,6 +99,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'update_event_description_from_eventbrite', MagicMock())
     def test_update_or_create_event__without_academy(self):
         import logging
+
         import breathecode.events.actions as actions
 
         organization_kwargs = {'eventbrite_id': '1'}
@@ -123,11 +128,12 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'create_or_update_venue', create_or_update_venue_mock())
     @patch.object(actions, 'create_or_update_organizer', create_or_update_organizer_mock())
     @patch.object(actions, 'update_event_description_from_eventbrite', MagicMock())
-    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send_robust', MagicMock())
     @patch('uuid.uuid4', PropertyMock(MagicMock=uuid))
     @patch('os.urandom', MagicMock(return_value=seed))
     def test_update_or_create_event__with_academy(self):
         import logging
+
         import breathecode.events.actions as actions
 
         organization_kwargs = {'eventbrite_id': '1'}
@@ -206,6 +212,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch('os.urandom', MagicMock(return_value=seed))
     def test_update_or_create_event__with_event(self):
         import logging
+
         import breathecode.events.actions as actions
 
         organization_kwargs = {'eventbrite_id': '1'}

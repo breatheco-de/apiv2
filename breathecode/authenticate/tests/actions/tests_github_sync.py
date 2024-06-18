@@ -27,7 +27,7 @@ class SyncGithubUsersTestSuite(AuthTestCase):
 
         self.assertEqual(context.exception.slug, 'invalid-cohort-user')
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     def test_add_to_organization_success(self):
         """
         When a student enters into a cohort, but he was not in the academy
@@ -43,7 +43,7 @@ class SyncGithubUsersTestSuite(AuthTestCase):
         self.assertEqual('PENDING', users[0]['storage_status'])
         self.assertEqual('ADD', users[0]['storage_action'])
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     def test_add_to_organization_already_added(self):
         """
         No need to double add student if it was already added previously
@@ -61,7 +61,7 @@ class SyncGithubUsersTestSuite(AuthTestCase):
         self.assertEqual('SYNCHED', users[0]['storage_status'])
         self.assertEqual('ADD', users[0]['storage_action'])
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     def test_add_to_organization_success_previously_errored(self):
         """
         It there was a previous error, we should still try and re-attempt
@@ -93,7 +93,7 @@ class SyncGithubUsersTestSuite(AuthTestCase):
 
         self.assertEqual(context.exception.slug, 'invalid-cohort-user')
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     def test_remove_from_organization__no_org_user(self):
         """
         If user its not part of an organization, it cannot be removed
@@ -111,7 +111,7 @@ class SyncGithubUsersTestSuite(AuthTestCase):
 
         self.assertEqual(context.exception.slug, 'user-not-found-in-org')
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     def test_remove_from_organization__still_active(self):
         """
         Trying to remove someone that its still active in any cohort
@@ -130,8 +130,8 @@ class SyncGithubUsersTestSuite(AuthTestCase):
 
         self.assertEqual(context.exception.slug, 'still-active')
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.post_save.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
+    @patch('django.db.models.signals.post_save.send_robust', MagicMock())
     def test_remove_from_organization__still_active_another_org(self):
         """
         Trying to remove someone that its still active in another

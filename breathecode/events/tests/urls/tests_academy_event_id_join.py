@@ -27,8 +27,8 @@ class AcademyVenueTestSuite(EventTestCase):
 
     # When: no auth
     # Then: return 401
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_no_auth(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_event_id_join', kwargs={'event_id': 1})
@@ -43,8 +43,8 @@ class AcademyVenueTestSuite(EventTestCase):
 
     # When: no capability
     # Then: return 403
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_with_no_capability(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_event_id_join', kwargs={'event_id': 1})
@@ -65,8 +65,8 @@ class AcademyVenueTestSuite(EventTestCase):
 
     # When: no Event
     # Then: return 404
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_no_live_classes(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_event_id_join', kwargs={'event_id': 1})
@@ -84,8 +84,8 @@ class AcademyVenueTestSuite(EventTestCase):
 
     # When: have a Event with no url
     # Then: return 400
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_no_url(self):
         self.headers(academy=1)
         model = self.bc.database.create(user=1,
@@ -118,8 +118,8 @@ class AcademyVenueTestSuite(EventTestCase):
 
     # When: have a Event with url
     # Then: redirect to the liveclass
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_a_live_class(self):
         self.headers(academy=1)
         event = {'live_stream_url': self.bc.fake.url()}

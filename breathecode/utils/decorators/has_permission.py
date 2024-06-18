@@ -168,7 +168,7 @@ def has_permission(permission: str, consumer: bool | HasPermissionCallback = Fal
 
                     elif it_will_consume:
                         item = context['consumables'].first()
-                        consume_service.send(instance=item, sender=item.__class__, how_many=1)
+                        consume_service.send_robust(instance=item, sender=item.__class__, how_many=1)
 
                     return response
 

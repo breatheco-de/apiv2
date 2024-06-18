@@ -7,9 +7,9 @@ from django.template import loader
 from django.urls.base import reverse_lazy
 from django.utils import timezone
 
+from breathecode.events import tasks as tasks_events
 from breathecode.events.caches import EventCache
 from breathecode.payments import tasks
-from breathecode.events import tasks as tasks_events
 
 from ..mixins.new_events_tests_case import EventTestCase
 
@@ -89,8 +89,8 @@ class AcademyEventTestSuite(EventTestCase):
 
     # When: no auth
     # Then: return 401
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_auth(self):
 
@@ -117,8 +117,8 @@ class AcademyEventTestSuite(EventTestCase):
 
     # When: no consumables
     # Then: return 402
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables(self):
         model = self.bc.database.create(user=1, token=1)
@@ -157,8 +157,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 404
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes', MagicMock(return_value=False))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables__bypass_with_feature_flag__live_class_not_found(self):
         permission = {'codename': 'live_class_join'}
@@ -193,8 +193,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 400
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes', MagicMock(return_value=False))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables__bypass_with_feature_flag__with_live_class__cohort_without_url(self):
         permission = {'codename': 'live_class_join'}
@@ -239,8 +239,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 302 to cohort.online_meeting_url
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes', MagicMock(return_value=False))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables__bypass_with_feature_flag__with_live_class__cohort_with_url(self):
         permission = {'codename': 'live_class_join'}
@@ -289,8 +289,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 404
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes', MagicMock(return_value=True))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables__it_try_to_consume__live_class_not_found(self):
         permission = {'codename': 'live_class_join'}
@@ -325,8 +325,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 400
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes', MagicMock(return_value=True))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables__it_try_to_consume__with_live_class__cohort_without_url(self):
         permission = {'codename': 'live_class_join'}
@@ -372,8 +372,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 402
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes', MagicMock(return_value=True))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables__it_try_to_consume__with_live_class__cohort_with_url(self):
         permission = {'codename': 'live_class_join'}
@@ -425,8 +425,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 200 and create a ConsumptionSession
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes', MagicMock(return_value=True))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_with_consumable__it_try_to_consume__with_live_class__in_the_past(self):
         permission = {'codename': 'live_class_join'}
@@ -478,8 +478,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 200 and create a ConsumptionSession
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes', MagicMock(return_value=True))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_with_consumable__it_try_to_consume__with_live_class__in_the_future(self):
         permission = {'codename': 'live_class_join'}
@@ -549,8 +549,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 200 and create a ConsumptionSession
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes', MagicMock(return_value=True))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_with_consumable__it_try_to_consume__with_live_class__in_the_future__show_countdown(self):
 
@@ -620,8 +620,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 200 and create a ConsumptionSession
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes', MagicMock(return_value=True))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     @patch('breathecode.events.tasks.mark_live_class_as_started.delay', MagicMock(return_value=None))
     def test_with_consumable__it_try_to_consume__with_live_class__on_starting_time(self):
@@ -682,8 +682,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return a redirection status 302
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_classes', MagicMock(return_value=True))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     @patch('breathecode.events.tasks.mark_live_class_as_started.delay', MagicMock(return_value=None))
     def test_with_consumable__it_try_to_consume__with_live_class__on_starting_time_is_teacher(self):

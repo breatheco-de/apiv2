@@ -4,6 +4,7 @@ QuerySet fixtures.
 # not working yet
 import importlib
 from typing import Generator, final
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -86,9 +87,7 @@ def signals_map():
 
 @final
 class Signals:
-    """
-    QuerySet utils.
-    """
+    """Signal utils."""
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch, signals_map: dict[str, Signal | ModelSignal]) -> None:
         self._monkeypatch = monkeypatch
@@ -108,12 +107,12 @@ class Signals:
         """
 
         # Mock the functions to disable signals
-        self._monkeypatch.setattr(Signal, 'send', lambda *args, **kwargs: None)
-        self._monkeypatch.setattr(Signal, 'send_robust', lambda *args, **kwargs: None)
+        self._monkeypatch.setattr(Signal, 'send', MagicMock(return_value=None))
+        self._monkeypatch.setattr(Signal, 'send_robust', MagicMock(return_value=None))
 
         # Mock the functions to disable signals
-        self._monkeypatch.setattr(ModelSignal, 'send', lambda *args, **kwargs: None)
-        self._monkeypatch.setattr(ModelSignal, 'send_robust', lambda *args, **kwargs: None)
+        self._monkeypatch.setattr(ModelSignal, 'send', MagicMock(return_value=None))
+        self._monkeypatch.setattr(ModelSignal, 'send_robust', MagicMock(return_value=None))
 
     def enable(self, *to_enable, debug=False):
         """
@@ -155,7 +154,7 @@ class Signals:
 
                             print('\n')
 
-                    self._monkeypatch.setattr(module, send_mock)
+                    self._monkeypatch.setattr(module, MagicMock(side_effect=send_mock))
 
                 apply_mock(f'{signal}.send')
                 apply_mock(f'{signal}.send_robust')
@@ -163,9 +162,7 @@ class Signals:
 
 @pytest.fixture
 def signals(monkeypatch, signals_map: dict[str, Signal | ModelSignal]) -> Generator[Signals, None, None]:
-    """
-    Signals utils.
-    """
+    """Signals utils."""
 
     s = Signals(monkeypatch, signals_map)
     s.disable()

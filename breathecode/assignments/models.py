@@ -129,14 +129,14 @@ class Task(models.Model):
         super().save(*args, **kwargs)
 
         if not creating and self.task_status != self._current_task_status:
-            signals.assignment_status_updated.send(instance=self, sender=self.__class__)
+            signals.assignment_status_updated.send_robust(instance=self, sender=self.__class__)
 
         if not creating and self.revision_status != self._current_revision_status:
-            signals.revision_status_updated.send(instance=self, sender=self.__class__)
+            signals.revision_status_updated.send_robust(instance=self, sender=self.__class__)
 
         # only validate this on creation
         if creating:
-            signals.assignment_created.send(instance=self, sender=self.__class__)
+            signals.assignment_created.send_robust(instance=self, sender=self.__class__)
 
         self._current_task_status = self.task_status
         self._current_revision_status = self.revision_status

@@ -37,7 +37,7 @@ class CohortSerializer(CohortSerializerMixin):
 
     def create(self, validated_data):
         cohort = Cohort.objects.create(**validated_data, **self.context)
-        cohort_saved.send(instance=self, sender=CohortUser)
+        cohort_saved.send_robust(instance=self, sender=CohortUser)
         return cohort
 ```
 

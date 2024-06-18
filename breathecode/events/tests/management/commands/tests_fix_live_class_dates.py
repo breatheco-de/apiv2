@@ -1,13 +1,14 @@
-from datetime import timedelta
 import random
 import sys
+from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
-from breathecode.tests.mixins.legacy import LegacyAPITestCase
-import breathecode.events.tasks as tasks
-from breathecode.events.management.commands.fix_live_class_dates import Command
 from django.utils import timezone
+
+import breathecode.events.tasks as tasks
 from breathecode.events import tasks
+from breathecode.events.management.commands.fix_live_class_dates import Command
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
 
 UTC_NOW = timezone.now()
 DELTA = timedelta(seconds=60 * random.randint(0, 61), minutes=random.randint(31, 61))
@@ -18,7 +19,7 @@ class TestSyncOrgVenues(LegacyAPITestCase):
     # Then: nothing should happen
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.tasks.fix_live_class_dates.delay', MagicMock())
-    @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.timeslot_saved.send_robust', MagicMock())
     @patch.object(sys.stdout, 'write', MagicMock())
     @patch.object(sys.stderr, 'write', MagicMock())
     def test_0_live_classes(self):
@@ -38,7 +39,7 @@ class TestSyncOrgVenues(LegacyAPITestCase):
     # Then: nothing should happen
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.tasks.fix_live_class_dates.delay', MagicMock())
-    @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.timeslot_saved.send_robust', MagicMock())
     @patch.object(sys.stdout, 'write', MagicMock())
     @patch.object(sys.stderr, 'write', MagicMock())
     def test_2_cohorts__in_the_past(self):
@@ -64,7 +65,7 @@ class TestSyncOrgVenues(LegacyAPITestCase):
     # Then: found 2 cohorts without timeslots
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.tasks.fix_live_class_dates.delay', MagicMock())
-    @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.timeslot_saved.send_robust', MagicMock())
     @patch.object(sys.stdout, 'write', MagicMock())
     @patch.object(sys.stderr, 'write', MagicMock())
     def test_2_cohorts__in_the_future(self):
@@ -90,7 +91,7 @@ class TestSyncOrgVenues(LegacyAPITestCase):
     # Then: nothing should happen
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.tasks.fix_live_class_dates.delay', MagicMock())
-    @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.timeslot_saved.send_robust', MagicMock())
     @patch.object(sys.stdout, 'write', MagicMock())
     @patch.object(sys.stderr, 'write', MagicMock())
     def test_2_live_classes(self):

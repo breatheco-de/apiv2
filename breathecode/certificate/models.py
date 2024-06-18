@@ -1,10 +1,12 @@
 import hashlib
-from django.utils import timezone
-from django.db import models
+
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from breathecode.admissions.models import Academy, Cohort, Syllabus
+from django.db import models
+from django.utils import timezone
+
 import breathecode.certificate.signals as signals
+from breathecode.admissions.models import Academy, Cohort, Syllabus
 
 __all__ = ['UserProxy', 'Specialty', 'Badge', 'LayoutDesign', 'UserSpecialty']
 
@@ -155,7 +157,10 @@ class UserSpecialty(models.Model):
         hash = self.generate_update_hash()
         self._hash_was_updated = self.update_hash != hash
         self.update_hash = hash
+        print(1, self._hash_was_updated)
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
+        print(2, signals.user_specialty_saved.send)
+        print(3, signals.user_specialty_saved.send_robust)
 
-        signals.user_specialty_saved.send(instance=self, sender=self.__class__)
+        signals.user_specialty_saved.send_robust(instance=self, sender=self.__class__)

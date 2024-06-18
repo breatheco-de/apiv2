@@ -1081,7 +1081,7 @@ class CancelConsumptionView(APIView):
 
         how_many = session.how_many
         consumable = session.consumable
-        reimburse_service_units.send(instance=consumable, sender=consumable.__class__, how_many=how_many)
+        reimburse_service_units.send_robust(instance=consumable, sender=consumable.__class__, how_many=how_many)
 
         return Response({'status': 'reversed'}, status=status.HTTP_200_OK)
 

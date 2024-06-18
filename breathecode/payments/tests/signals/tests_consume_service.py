@@ -7,7 +7,7 @@ from breathecode.tests.mixins.legacy import LegacyAPITestCase
 
 class TestSignal(LegacyAPITestCase):
 
-    @patch('breathecode.payments.signals.lose_service_permissions.send', MagicMock())
+    @patch('breathecode.payments.signals.lose_service_permissions.send_robust', MagicMock())
     def test__consumable_how_many_minus_1__consume_gte_1(self, enable_signals):
         enable_signals()
 
@@ -27,9 +27,9 @@ class TestSignal(LegacyAPITestCase):
                 'how_many': how_many,
             },
         ])
-        self.assertEqual(signals.lose_service_permissions.send.call_args_list, [])
+        self.assertEqual(signals.lose_service_permissions.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.lose_service_permissions.send', MagicMock())
+    @patch('breathecode.payments.signals.lose_service_permissions.send_robust', MagicMock())
     def test__consumable_how_many_0__consume_gte_1(self, enable_signals):
         enable_signals()
 
@@ -49,11 +49,11 @@ class TestSignal(LegacyAPITestCase):
                 'how_many': how_many,
             },
         ])
-        self.assertEqual(signals.lose_service_permissions.send.call_args_list, [
+        self.assertEqual(signals.lose_service_permissions.send_robust.call_args_list, [
             call(sender=model.consumable.__class__, instance=model.consumable),
         ])
 
-    @patch('breathecode.payments.signals.lose_service_permissions.send', MagicMock())
+    @patch('breathecode.payments.signals.lose_service_permissions.send_robust', MagicMock())
     def test__consumable_how_many_gte_1__consume_gte_1(self, enable_signals):
         enable_signals()
 
@@ -73,4 +73,4 @@ class TestSignal(LegacyAPITestCase):
                 'how_many': how_many,
             },
         ])
-        self.assertEqual(signals.lose_service_permissions.send.call_args_list, [])
+        self.assertEqual(signals.lose_service_permissions.send_robust.call_args_list, [])

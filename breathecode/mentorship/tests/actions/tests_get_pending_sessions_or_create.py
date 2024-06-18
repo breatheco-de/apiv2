@@ -56,7 +56,7 @@ def format_mentorship_session_attrs(attrs={}):
 class GetOrCreateSessionTestSuite(MentorshipTestCase):
 
     @patch(REQUESTS_PATH['request'], apply_requests_request_mock([(200, daily_url, daily_payload)]))
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=ENDS_AT))
     @patch('breathecode.mentorship.actions.close_older_sessions', MagicMock())
     def test_create_session_mentor_first_no_previous_nothing(self):
@@ -92,7 +92,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         self.assertEqual(actions.close_older_sessions.call_args_list, [call()])
 
     @patch(REQUESTS_PATH['request'], apply_requests_request_mock([(200, daily_url, daily_payload)]))
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=ENDS_AT))
     @patch('breathecode.mentorship.actions.close_older_sessions', MagicMock())
     def test_create_session_mentor_first_previous_pending_without_mentee(self):
@@ -128,7 +128,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         self.assertEqual(actions.close_older_sessions.call_args_list, [call()])
 
     @patch(REQUESTS_PATH['request'], apply_requests_request_mock([(200, daily_url, daily_payload)]))
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=ENDS_AT))
     @patch('breathecode.mentorship.actions.close_older_sessions', MagicMock())
     def test_create_session_mentor_first_previous_pending_with_mentee(self):
@@ -167,7 +167,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         self.assertEqual(actions.close_older_sessions.call_args_list, [call()])
 
     @patch(REQUESTS_PATH['request'], apply_requests_request_mock([(200, daily_url, daily_payload)]))
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=ENDS_AT))
     @patch('breathecode.mentorship.actions.close_older_sessions', MagicMock())
     #TODO: without mentee or with mentee?
@@ -206,7 +206,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         self.assertEqual(actions.close_older_sessions.call_args_list, [call()])
 
     @patch(REQUESTS_PATH['request'], apply_requests_request_mock([(200, daily_url, daily_payload)]))
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=ENDS_AT))
     @patch('breathecode.mentorship.actions.close_older_sessions', MagicMock())
     def test_create_session_mentee_first_no_previous_nothing(self):
@@ -242,7 +242,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         self.assertEqual(actions.close_older_sessions.call_args_list, [call()])
 
     @patch(REQUESTS_PATH['request'], apply_requests_request_mock([(200, daily_url, daily_payload)]))
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=ENDS_AT))
     @patch('breathecode.mentorship.actions.close_older_sessions', MagicMock())
     def test_create_session_mentee_first_with_wihout_mentee(self):
@@ -281,7 +281,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         self.assertEqual(actions.close_older_sessions.call_args_list, [call()])
 
     @patch(REQUESTS_PATH['request'], apply_requests_request_mock([(200, daily_url, daily_payload)]))
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=ENDS_AT))
     @patch('breathecode.mentorship.actions.close_older_sessions', MagicMock())
     def test_create_session_mentee_first_with_another_mentee(self):
@@ -341,7 +341,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         self.assertEqual(actions.close_older_sessions.call_args_list, [call()])
 
     @patch(REQUESTS_PATH['request'], apply_requests_request_mock([(200, daily_url, daily_payload)]))
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=ENDS_AT))
     @patch('breathecode.mentorship.actions.close_older_sessions', MagicMock())
     def test_create_session_mentee_first_with_another_same_mentee(self):

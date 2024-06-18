@@ -107,7 +107,7 @@ class PlanTranslationAdmin(admin.ModelAdmin):
 
 def grant_service_permissions(modeladmin, request, queryset):
     for item in queryset.all():
-        signals.grant_service_permissions.send(instance=item, sender=item.__class__)
+        signals.grant_service_permissions.send_robust(instance=item, sender=item.__class__)
 
 
 @admin.register(Consumable)

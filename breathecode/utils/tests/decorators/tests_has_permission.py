@@ -315,7 +315,7 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
     🔽🔽🔽 Function get
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
@@ -335,9 +335,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get__with_user(self):
@@ -358,9 +358,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get__with_user__with_permission__dont_match(self):
@@ -381,9 +381,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get__with_user__with_permission(self):
@@ -405,9 +405,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get__with_user__with_group_related_to_permission(self):
@@ -431,13 +431,13 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Function get id
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get_id__anonymous_user(self):
@@ -455,9 +455,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get_id__with_user(self):
@@ -478,9 +478,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get_id__with_user__with_permission__dont_match(self):
@@ -501,9 +501,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get_id__with_user__with_permission(self):
@@ -525,9 +525,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get_id__with_user__with_group_related_to_permission(self):
@@ -551,13 +551,13 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Function post
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__post__anonymous_user(self):
@@ -575,9 +575,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__post__with_user(self):
@@ -598,9 +598,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__post__with_user__with_permission__dont_match(self):
@@ -621,9 +621,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__post__with_user__with_permission(self):
@@ -645,9 +645,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__post__with_user__with_group_related_to_permission(self):
@@ -671,13 +671,13 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Function put id
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__put_id__anonymous_user(self):
@@ -695,9 +695,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__put_id__with_user(self):
@@ -718,9 +718,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__put_id__with_user__with_permission__dont_match(self):
@@ -741,9 +741,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__put_id__with_user__with_permission(self):
@@ -765,9 +765,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__put_id__with_user__with_group_related_to_permission(self):
@@ -791,13 +791,13 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Function delete id
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__delete_id__anonymous_user(self):
@@ -815,9 +815,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__delete_id__with_user(self):
@@ -838,9 +838,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__delete_id__with_user__with_permission__dont_match(self):
@@ -861,9 +861,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__delete_id__with_user__with_permission(self):
@@ -885,9 +885,9 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__delete_id__with_user__with_group_related_to_permission(self):
@@ -911,7 +911,7 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
 
 class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
@@ -924,7 +924,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
     🔽🔽🔽 Function get
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get__anonymous_user(self):
@@ -942,9 +942,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get__with_user(self):
@@ -965,9 +965,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get__with_user__with_permission__dont_match(self):
@@ -988,9 +988,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get__with_user__with_group_related_to_permission__without_consumable(self):
@@ -1014,9 +1014,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
@@ -1041,11 +1041,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_0(self):
@@ -1070,9 +1070,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
@@ -1097,11 +1097,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
@@ -1126,7 +1126,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
@@ -1134,7 +1134,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
     🔽🔽🔽 Function get id
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get_id__anonymous_user(self):
@@ -1152,9 +1152,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get_id__with_user(self):
@@ -1175,9 +1175,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get_id__with_user__with_permission__dont_match(self):
@@ -1198,9 +1198,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get_id__with_user__with_group_related_to_permission__without_consumable(self):
@@ -1224,9 +1224,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
@@ -1251,11 +1251,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_0(self):
@@ -1280,9 +1280,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
@@ -1307,11 +1307,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
@@ -1336,7 +1336,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
@@ -1344,7 +1344,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
     🔽🔽🔽 Function post
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__post__anonymous_user(self):
@@ -1362,9 +1362,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__post__with_user(self):
@@ -1385,9 +1385,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__post__with_user__with_permission__dont_match(self):
@@ -1408,9 +1408,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__post__with_user__with_group_related_to_permission__without_consumable(self):
@@ -1434,9 +1434,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__post__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
@@ -1461,11 +1461,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__post__with_user__with_group_related_to_permission__consumable__how_many_0(self):
@@ -1490,9 +1490,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__post__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
@@ -1517,11 +1517,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__post__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
@@ -1546,7 +1546,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
@@ -1554,7 +1554,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
     🔽🔽🔽 Function put id
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__put_id__anonymous_user(self):
@@ -1572,9 +1572,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__put_id__with_user(self):
@@ -1595,9 +1595,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__put_id__with_user__with_permission__dont_match(self):
@@ -1618,9 +1618,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__put_id__with_user__with_group_related_to_permission__without_consumable(self):
@@ -1644,9 +1644,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
@@ -1671,11 +1671,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_0(self):
@@ -1700,9 +1700,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
@@ -1727,11 +1727,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__put_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
@@ -1756,7 +1756,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
@@ -1764,7 +1764,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
     🔽🔽🔽 Function delete id
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__delete_id__anonymous_user(self):
@@ -1782,9 +1782,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__delete_id__with_user(self):
@@ -1805,9 +1805,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__delete_id__with_user__with_permission__dont_match(self):
@@ -1828,9 +1828,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__delete_id__with_user__with_group_related_to_permission__without_consumable(self):
@@ -1854,9 +1854,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
@@ -1881,11 +1881,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_0(self):
@@ -1910,9 +1910,9 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
@@ -1937,11 +1937,11 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__delete_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
@@ -1966,7 +1966,7 @@ class ConsumerFunctionBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
@@ -1981,7 +1981,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
     🔽🔽🔽 Function get
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get__anonymous_user(self):
@@ -1999,9 +1999,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get__with_user(self):
@@ -2022,9 +2022,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get__with_user__with_permission__dont_match(self):
@@ -2045,9 +2045,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get__with_user__with_group_related_to_permission__without_consumable(self):
@@ -2090,9 +2090,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
@@ -2136,11 +2136,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_0(self):
@@ -2184,9 +2184,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
@@ -2230,11 +2230,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
@@ -2278,10 +2278,10 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get__with_user__without_consumption_session(self):
@@ -2327,12 +2327,12 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user__consumption_session__does_not_match(self):
@@ -2385,12 +2385,12 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
@@ -2439,10 +2439,10 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user__consumption_session__match(self):
@@ -2487,13 +2487,13 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         ])
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Function get id
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get_id__anonymous_user(self):
@@ -2511,9 +2511,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get_id__with_user(self):
@@ -2534,9 +2534,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get_id__with_user__with_permission__dont_match(self):
@@ -2557,9 +2557,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get_id__with_user__with_group_related_to_permission__without_consumable(self):
@@ -2602,9 +2602,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
@@ -2648,11 +2648,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_0(self):
@@ -2696,9 +2696,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get_id__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
@@ -2742,11 +2742,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
@@ -2790,10 +2790,10 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__get_id__with_user__without_consumption_session(self):
@@ -2839,12 +2839,12 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user__consumption_session__does_not_match(self):
@@ -2897,12 +2897,12 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
@@ -2953,10 +2953,10 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user__consumption_session__match(self):
@@ -3003,13 +3003,13 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         ])
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Function post
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__post__anonymous_user(self):
@@ -3027,9 +3027,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__post__with_user(self):
@@ -3050,9 +3050,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__post__with_user__with_permission__dont_match(self):
@@ -3073,9 +3073,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__post__with_user__with_group_related_to_permission__without_consumable(self):
@@ -3118,9 +3118,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__post__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
@@ -3164,11 +3164,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__post__with_user__with_group_related_to_permission__consumable__how_many_0(self):
@@ -3212,9 +3212,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__post__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
@@ -3258,11 +3258,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__post__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
@@ -3306,10 +3306,10 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__post__with_user__without_consumption_session(self):
@@ -3355,12 +3355,12 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user__consumption_session__does_not_match(self):
@@ -3413,12 +3413,12 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
@@ -3467,10 +3467,10 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user__consumption_session__match(self):
@@ -3515,13 +3515,13 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         ])
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Function put id
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__put_id__anonymous_user(self):
@@ -3539,9 +3539,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__put_id__with_user(self):
@@ -3562,9 +3562,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__put_id__with_user__with_permission__dont_match(self):
@@ -3585,9 +3585,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__put_id__with_user__with_group_related_to_permission__without_consumable(self):
@@ -3630,9 +3630,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
@@ -3676,11 +3676,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_0(self):
@@ -3724,9 +3724,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__put_id__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
@@ -3770,11 +3770,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__put_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
@@ -3818,10 +3818,10 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__put_id__with_user__without_consumption_session(self):
@@ -3867,12 +3867,12 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user__consumption_session__does_not_match(self):
@@ -3925,12 +3925,12 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
@@ -3981,10 +3981,10 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user__consumption_session__match(self):
@@ -4031,13 +4031,13 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         ])
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Function delete id
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__delete_id__anonymous_user(self):
@@ -4055,9 +4055,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__delete_id__with_user(self):
@@ -4078,9 +4078,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__delete_id__with_user__with_permission__dont_match(self):
@@ -4101,9 +4101,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__delete_id__with_user__with_group_related_to_permission__without_consumable(self):
@@ -4146,9 +4146,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_minus_1(self):
@@ -4192,11 +4192,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_0(self):
@@ -4240,9 +4240,9 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__delete_id__with_user__with_group_related_to_permission__consumable__how_many_gte_1(self):
@@ -4286,11 +4286,11 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__delete_id__with_user__with_group_related_to_permission__group_was_blacklisted_by_cb(self):
@@ -4334,10 +4334,10 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__function__delete_id__with_user__without_consumption_session(self):
@@ -4383,12 +4383,12 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user__consumption_session__does_not_match(self):
@@ -4441,12 +4441,12 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
@@ -4497,10 +4497,10 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user__consumption_session__match(self):
@@ -4547,7 +4547,7 @@ class ConsumerFunctionCallbackBasedViewTestSuite(UtilsTestCase):
         ])
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
 
 class ViewTestSuite(UtilsTestCase):
@@ -4560,7 +4560,7 @@ class ViewTestSuite(UtilsTestCase):
     🔽🔽🔽 View get
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__anonymous_user(self):
@@ -4578,9 +4578,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user(self):
@@ -4601,9 +4601,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user__with_permission__dont_match(self):
@@ -4624,9 +4624,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user__with_permission(self):
@@ -4648,9 +4648,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user__with_group_related_to_permission(self):
@@ -4674,13 +4674,13 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 View get id
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__anonymous_user(self):
@@ -4698,9 +4698,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user(self):
@@ -4721,9 +4721,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user__with_permission__dont_match(self):
@@ -4744,9 +4744,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user__with_permission(self):
@@ -4768,9 +4768,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user__with_group_related_to_permission(self):
@@ -4794,13 +4794,13 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 View post
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__anonymous_user(self):
@@ -4818,9 +4818,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user(self):
@@ -4841,9 +4841,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user__with_permission__dont_match(self):
@@ -4864,9 +4864,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user__with_permission(self):
@@ -4888,9 +4888,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user__with_group_related_to_permission(self):
@@ -4914,13 +4914,13 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 View put id
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__anonymous_user(self):
@@ -4938,9 +4938,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user(self):
@@ -4961,9 +4961,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user__with_permission__dont_match(self):
@@ -4984,9 +4984,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user__with_permission(self):
@@ -5008,9 +5008,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user__with_group_related_to_permission(self):
@@ -5034,13 +5034,13 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 View delete id
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__anonymous_user(self):
@@ -5058,9 +5058,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user(self):
@@ -5081,9 +5081,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user__with_permission__dont_match(self):
@@ -5104,9 +5104,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user__with_permission(self):
@@ -5128,9 +5128,9 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user__with_group_related_to_permission(self):
@@ -5154,7 +5154,7 @@ class ViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
 
 class ConsumerViewTestSuite(UtilsTestCase):
@@ -5167,7 +5167,7 @@ class ConsumerViewTestSuite(UtilsTestCase):
     🔽🔽🔽 View get
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__anonymous_user(self):
@@ -5185,9 +5185,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user(self):
@@ -5208,9 +5208,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user__with_permission__dont_match(self):
@@ -5231,9 +5231,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user__with_group_related_to_permission__without_consumer(self):
@@ -5257,9 +5257,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
@@ -5284,11 +5284,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user__with_group_related_to_permission__consumer__how_many_0(self):
@@ -5313,9 +5313,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user__with_group_related_to_permission__consumer__how_many_1(self):
@@ -5340,7 +5340,7 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
@@ -5348,7 +5348,7 @@ class ConsumerViewTestSuite(UtilsTestCase):
     🔽🔽🔽 View get id
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__anonymous_user(self):
@@ -5366,9 +5366,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user(self):
@@ -5389,9 +5389,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user__with_permission__dont_match(self):
@@ -5412,9 +5412,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user__with_group_related_to_permission__without_consumer(self):
@@ -5438,9 +5438,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
@@ -5465,11 +5465,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user__with_group_related_to_permission__consumer__how_many_0(self):
@@ -5494,9 +5494,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user__with_group_related_to_permission__consumer__how_many_1(self):
@@ -5521,7 +5521,7 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
@@ -5529,7 +5529,7 @@ class ConsumerViewTestSuite(UtilsTestCase):
     🔽🔽🔽 View post
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__anonymous_user(self):
@@ -5547,9 +5547,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user(self):
@@ -5570,9 +5570,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user__with_permission__dont_match(self):
@@ -5593,9 +5593,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user__with_group_related_to_permission__without_consumer(self):
@@ -5619,9 +5619,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
@@ -5646,11 +5646,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user__with_group_related_to_permission__consumer__how_many_0(self):
@@ -5675,9 +5675,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user__with_group_related_to_permission__consumer__how_many_1(self):
@@ -5702,7 +5702,7 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
@@ -5710,7 +5710,7 @@ class ConsumerViewTestSuite(UtilsTestCase):
     🔽🔽🔽 View put id
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__anonymous_user(self):
@@ -5728,9 +5728,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user(self):
@@ -5751,9 +5751,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user__with_permission__dont_match(self):
@@ -5774,9 +5774,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user__with_group_related_to_permission__without_consumer(self):
@@ -5800,9 +5800,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
@@ -5827,11 +5827,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user__with_group_related_to_permission__consumer__how_many_0(self):
@@ -5856,9 +5856,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user__with_group_related_to_permission__consumer__how_many_1(self):
@@ -5883,7 +5883,7 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
@@ -5891,7 +5891,7 @@ class ConsumerViewTestSuite(UtilsTestCase):
     🔽🔽🔽 View delete id
     """
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__anonymous_user(self):
@@ -5909,9 +5909,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user(self):
@@ -5932,9 +5932,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user__with_permission__dont_match(self):
@@ -5955,9 +5955,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user__with_group_related_to_permission__without_consumer(self):
@@ -5981,9 +5981,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
@@ -6008,11 +6008,11 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user__with_group_related_to_permission__consumer__how_many_0(self):
@@ -6037,9 +6037,9 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user__with_group_related_to_permission__consumer__how_many_1(self):
@@ -6064,7 +6064,7 @@ class ConsumerViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
@@ -6080,7 +6080,7 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__anonymous_user(self):
@@ -6099,10 +6099,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user(self):
@@ -6124,10 +6124,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user__with_permission__dont_match(self):
@@ -6149,10 +6149,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user__with_group_related_to_permission__without_consumer(self):
@@ -6196,10 +6196,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
@@ -6244,12 +6244,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user__with_group_related_to_permission__consumer__how_many_0(self):
@@ -6294,10 +6294,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user__with_group_related_to_permission__consumer__how_many_1(self):
@@ -6342,12 +6342,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user__without_consumption_session(self):
@@ -6394,12 +6394,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user__consumption_session__does_not_match(self):
@@ -6453,12 +6453,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
@@ -6507,10 +6507,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get__with_user__consumption_session__match(self):
@@ -6555,14 +6555,14 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         ])
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 View get id
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__anonymous_user(self):
@@ -6581,10 +6581,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user(self):
@@ -6606,10 +6606,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user__with_permission__dont_match(self):
@@ -6631,10 +6631,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user__with_group_related_to_permission__without_consumer(self):
@@ -6678,10 +6678,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
@@ -6726,12 +6726,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user__with_group_related_to_permission__consumer__how_many_0(self):
@@ -6776,10 +6776,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user__with_group_related_to_permission__consumer__how_many_1(self):
@@ -6824,12 +6824,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user__without_consumption_session(self):
@@ -6876,12 +6876,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user__consumption_session__does_not_match(self):
@@ -6935,12 +6935,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
@@ -6991,10 +6991,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__get_id__with_user__consumption_session__match(self):
@@ -7041,14 +7041,14 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         ])
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 View post
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__anonymous_user(self):
@@ -7067,10 +7067,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user(self):
@@ -7092,10 +7092,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user__with_permission__dont_match(self):
@@ -7117,10 +7117,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user__with_group_related_to_permission__without_consumer(self):
@@ -7164,10 +7164,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
@@ -7212,12 +7212,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user__with_group_related_to_permission__consumer__how_many_0(self):
@@ -7262,10 +7262,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user__with_group_related_to_permission__consumer__how_many_1(self):
@@ -7310,12 +7310,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user__without_consumption_session(self):
@@ -7362,12 +7362,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user__consumption_session__does_not_match(self):
@@ -7421,12 +7421,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
@@ -7475,10 +7475,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__post__with_user__consumption_session__match(self):
@@ -7523,14 +7523,14 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         ])
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 View put id
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__anonymous_user(self):
@@ -7549,10 +7549,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user(self):
@@ -7574,10 +7574,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user__with_permission__dont_match(self):
@@ -7599,10 +7599,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user__with_group_related_to_permission__without_consumer(self):
@@ -7646,10 +7646,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
@@ -7694,12 +7694,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user__with_group_related_to_permission__consumer__how_many_0(self):
@@ -7744,10 +7744,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user__with_group_related_to_permission__consumer__how_many_1(self):
@@ -7792,12 +7792,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user__without_consumption_session(self):
@@ -7844,12 +7844,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user__consumption_session__does_not_match(self):
@@ -7903,12 +7903,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
@@ -7961,10 +7961,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__put_id__with_user__consumption_session__match(self):
@@ -8011,14 +8011,14 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         ])
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 View delete id
     """
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__anonymous_user(self):
@@ -8037,10 +8037,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user(self):
@@ -8062,10 +8062,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user__with_permission__dont_match(self):
@@ -8087,10 +8087,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user__with_group_related_to_permission__without_consumer(self):
@@ -8134,10 +8134,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user__with_group_related_to_permission__consumer__how_many_minus_1(self):
@@ -8182,12 +8182,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user__with_group_related_to_permission__consumer__how_many_0(self):
@@ -8232,10 +8232,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user__with_group_related_to_permission__consumer__how_many_1(self):
@@ -8280,12 +8280,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user__without_consumption_session(self):
@@ -8332,12 +8332,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user__consumption_session__does_not_match(self):
@@ -8391,12 +8391,12 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [
             call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
         ])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user__consumption_session__does_not_match__consumables_minus_sessions_et_0(self):
@@ -8447,10 +8447,10 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
 
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.payments.signals.consume_service.send', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.payments.models.ConsumptionSession.build_session',
            MagicMock(wraps=models.ConsumptionSession.build_session))
     def test__view__delete_id__with_user__consumption_session__match(self):
@@ -8497,4 +8497,4 @@ class ConsumerCallbackViewTestSuite(UtilsTestCase):
         ])
 
         self.assertEqual(models.ConsumptionSession.build_session.call_args_list, [])
-        self.assertEqual(payments_signals.consume_service.send.call_args_list, [])
+        self.assertEqual(payments_signals.consume_service.send_robust.call_args_list, [])

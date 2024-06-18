@@ -1,9 +1,10 @@
 import logging
-import breathecode.events.actions as actions
 from unittest.mock import MagicMock, call, patch
-from breathecode.events.utils import Eventbrite
 
+import breathecode.events.actions as actions
+from breathecode.events.utils import Eventbrite
 from breathecode.tests.mocks.requests import REQUESTS_PATH, apply_requests_request_mock
+
 from ..mixins import EventTestCase
 
 export_event_to_eventbrite = actions.export_event_to_eventbrite
@@ -76,7 +77,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
     @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
-    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send_robust', MagicMock())
     @patch(
         REQUESTS_PATH['request'],
         apply_requests_request_mock([
@@ -117,7 +118,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
     @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
     @patch.object(Eventbrite, 'request', MagicMock())
-    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send_robust', MagicMock())
     @patch(
         REQUESTS_PATH['request'],
         apply_requests_request_mock([
@@ -126,6 +127,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         ]))
     def test_export_event_to_eventbrite__check_the_payload__without_eventbrite_id(self):
         import logging
+
         from breathecode.events.utils import Eventbrite
 
         organization_kwargs = {'eventbrite_id': '1'}
@@ -178,7 +180,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
     @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
     @patch.object(Eventbrite, 'request', MagicMock())
-    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send_robust', MagicMock())
     @patch(
         REQUESTS_PATH['request'],
         apply_requests_request_mock([
@@ -187,6 +189,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         ]))
     def test_export_event_to_eventbrite__check_the_payload__with_eventbrite_id(self):
         import logging
+
         from breathecode.events.utils import Eventbrite
 
         organization_kwargs = {'eventbrite_id': '1'}
@@ -239,7 +242,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
     @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
     @patch.object(Eventbrite, 'request', MagicMock())
-    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send_robust', MagicMock())
     @patch(
         REQUESTS_PATH['request'],
         apply_requests_request_mock([
@@ -248,6 +251,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         ]))
     def test_export_event_to_eventbrite__check_the_payload__with_organizer_id(self):
         import logging
+
         from breathecode.events.utils import Eventbrite
 
         organization_kwargs = {'eventbrite_id': '1'}

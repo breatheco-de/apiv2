@@ -1,6 +1,9 @@
-from breathecode.events.actions import publish_event_from_eventbrite
 from unittest.mock import MagicMock, call, patch
+
 from django.utils import timezone
+
+from breathecode.events.actions import publish_event_from_eventbrite
+
 from ..mixins import EventTestCase
 
 now = timezone.now()
@@ -14,7 +17,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=now))
-    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_publish_event_from_eventbrite__empty_data(self):
         """
@@ -46,7 +49,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=now))
-    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_publish_event_from_eventbrite__bad_data(self):
         """
@@ -80,7 +83,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=now))
-    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_publish_event_from_eventbrite__event_not_found(self):
         """
@@ -109,7 +112,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=now))
-    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_publish_event_from_eventbrite__event_not_found__with_one_event(self):
         """
@@ -147,7 +150,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=now))
-    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
     def test_publish_event_from_eventbrite__event_not_found__with_one_event(self):
         """

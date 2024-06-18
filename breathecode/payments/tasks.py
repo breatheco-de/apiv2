@@ -838,7 +838,7 @@ def end_the_consumption_session(self, consumption_session_id: int, how_many: flo
         raise AbortTask(f'ConsumptionSession with id {consumption_session_id} already processed')
 
     consumable = session.consumable
-    consume_service.send(instance=consumable, sender=consumable.__class__, how_many=how_many)
+    consume_service.send_robust(instance=consumable, sender=consumable.__class__, how_many=how_many)
 
     session.was_discounted = True
     session.status = 'DONE'
@@ -914,7 +914,7 @@ def refund_mentoring_session(session_id: int, **_: Any):
 
         how_many = consumption_session.how_many
         consumable = consumption_session.consumable
-        reimburse_service_units.send(instance=consumable, sender=consumable.__class__, how_many=how_many)
+        reimburse_service_units.send_robust(instance=consumable, sender=consumable.__class__, how_many=how_many)
 
     consumption_session.status = 'CANCELLED'
     consumption_session.save()

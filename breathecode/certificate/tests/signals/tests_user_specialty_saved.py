@@ -1,9 +1,10 @@
 import hashlib
 from unittest.mock import MagicMock, call, patch
 
-from breathecode.tests.mixins.legacy import LegacyAPITestCase
-import breathecode.certificate.tasks as tasks
 from django.utils import timezone
+
+import breathecode.certificate.tasks as tasks
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
 
 
 def remove_is_clean_for_one_item(item):
@@ -38,18 +39,21 @@ class TestAcademyEvent(LegacyAPITestCase):
     @patch('breathecode.certificate.tasks.reset_screenshot.delay', MagicMock())
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
     def test_user_specialty_saved__status_error(self, enable_signals):
-        enable_signals()
+        enable_signals('breathecode.certificate.signals.user_specialty_saved')
 
-        user_specialty = {'status': 'ERROR'}
+        user_specialty = {'status': 'ERROR', 'update_hash': '⬛🌷'}
         model = self.bc.database.create(user_specialty=user_specialty)
         user_specialty_db = remove_is_clean_for_one_item(self.bc.format.to_dict(model.user_specialty))
 
         model.user_specialty.save()
 
-        self.assertEqual(tasks.reset_screenshot.delay.call_args_list, [])
-        self.assertEqual(tasks.take_screenshot.delay.call_args_list, [])
+        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
+        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
 
-        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [user_specialty_db])
+        assert tasks.reset_screenshot.delay.call_args_list == []
+        assert tasks.take_screenshot.delay.call_args_list == []
+
+        assert self.bc.database.list_of('certificate.UserSpecialty') == [user_specialty_db]
 
     """
     🔽🔽🔽 Status PENDING
@@ -58,18 +62,21 @@ class TestAcademyEvent(LegacyAPITestCase):
     @patch('breathecode.certificate.tasks.reset_screenshot.delay', MagicMock())
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
     def test_user_specialty_saved__status_pending(self, enable_signals):
-        enable_signals()
+        enable_signals('breathecode.certificate.signals.user_specialty_saved')
 
-        user_specialty = {'status': 'PENDING'}
+        user_specialty = {'status': 'PENDING', 'update_hash': '⬛🌷'}
         model = self.bc.database.create(user_specialty=user_specialty)
         user_specialty_db = remove_is_clean_for_one_item(self.bc.format.to_dict(model.user_specialty))
 
         model.user_specialty.save()
 
-        self.assertEqual(tasks.reset_screenshot.delay.call_args_list, [])
-        self.assertEqual(tasks.take_screenshot.delay.call_args_list, [])
+        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
+        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
 
-        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [user_specialty_db])
+        assert tasks.reset_screenshot.delay.call_args_list == []
+        assert tasks.take_screenshot.delay.call_args_list == []
+
+        assert self.bc.database.list_of('certificate.UserSpecialty') == [user_specialty_db]
 
     """
     🔽🔽🔽 Status PERSISTED and preview_url is empty
@@ -78,18 +85,21 @@ class TestAcademyEvent(LegacyAPITestCase):
     @patch('breathecode.certificate.tasks.reset_screenshot.delay', MagicMock())
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
     def test_user_specialty_saved__status_persisted__preview_url_is_empty(self, enable_signals):
-        enable_signals()
+        enable_signals('breathecode.certificate.signals.user_specialty_saved')
 
-        user_specialty = {'status': 'PERSISTED', 'preview_url': ''}
+        user_specialty = {'status': 'PERSISTED', 'preview_url': '', 'update_hash': '⬛🌷'}
         model = self.bc.database.create(user_specialty=user_specialty)
         user_specialty_db = remove_is_clean_for_one_item(self.bc.format.to_dict(model.user_specialty))
 
         model.user_specialty.save()
 
-        self.assertEqual(tasks.reset_screenshot.delay.call_args_list, [])
-        self.assertEqual(tasks.take_screenshot.delay.call_args_list, [call(1)])
+        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
+        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
 
-        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [user_specialty_db])
+        assert tasks.reset_screenshot.delay.call_args_list == []
+        assert tasks.take_screenshot.delay.call_args_list == [call(1)]
+
+        assert self.bc.database.list_of('certificate.UserSpecialty') == [user_specialty_db]
 
     """
     🔽🔽🔽 Status PERSISTED and preview_url is empty, changing signed_by
@@ -98,24 +108,28 @@ class TestAcademyEvent(LegacyAPITestCase):
     @patch('breathecode.certificate.tasks.reset_screenshot.delay', MagicMock())
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
     def test_user_specialty_saved__status_persisted__preview_url_is_empty__changing_signed_by(self, enable_signals):
-        enable_signals()
+        enable_signals('breathecode.certificate.signals.user_specialty_saved')
 
-        user_specialty = {'status': 'PERSISTED', 'preview_url': ''}
+        user_specialty = {'status': 'PERSISTED', 'preview_url': '', 'update_hash': '⬛🌷'}
         model = self.bc.database.create(user_specialty=user_specialty)
         user_specialty_db = remove_is_clean_for_one_item(self.bc.format.to_dict(model.user_specialty))
 
         model.user_specialty.signed_by = 'GOD 🤷‍♂️'
         model.user_specialty.save()
 
-        self.assertEqual(tasks.reset_screenshot.delay.call_args_list, [])
-        self.assertEqual(tasks.take_screenshot.delay.call_args_list, [call(1), call(1)])
+        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
+        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
 
-        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'),
-                         [{
-                             **user_specialty_db,
-                             'signed_by': 'GOD 🤷‍♂️',
-                             'update_hash': generate_update_hash(model.user_specialty),
-                         }])
+        assert tasks.reset_screenshot.delay.call_args_list == []
+        assert tasks.take_screenshot.delay.call_args_list == [call(1), call(1)]
+
+        assert self.bc.database.list_of('certificate.UserSpecialty') == [{
+            **user_specialty_db,
+            'signed_by':
+            'GOD 🤷‍♂️',
+            'update_hash':
+            generate_update_hash(model.user_specialty),
+        }]
 
     """
     🔽🔽🔽 Status PERSISTED and preview_url is empty, changing signed_by_role
@@ -125,24 +139,28 @@ class TestAcademyEvent(LegacyAPITestCase):
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
     def test_user_specialty_saved__status_persisted__preview_url_is_empty__changing_signed_by_role(
             self, enable_signals):
-        enable_signals()
+        enable_signals('breathecode.certificate.signals.user_specialty_saved')
 
-        user_specialty = {'status': 'PERSISTED', 'preview_url': ''}
+        user_specialty = {'status': 'PERSISTED', 'preview_url': '', 'update_hash': '⬛🌷'}
         model = self.bc.database.create(user_specialty=user_specialty)
         user_specialty_db = remove_is_clean_for_one_item(self.bc.format.to_dict(model.user_specialty))
 
         model.user_specialty.signed_by_role = 'GOD 🤷‍♂️'
         model.user_specialty.save()
 
-        self.assertEqual(tasks.reset_screenshot.delay.call_args_list, [])
-        self.assertEqual(tasks.take_screenshot.delay.call_args_list, [call(1), call(1)])
+        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
+        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
 
-        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'),
-                         [{
-                             **user_specialty_db,
-                             'signed_by_role': 'GOD 🤷‍♂️',
-                             'update_hash': generate_update_hash(model.user_specialty),
-                         }])
+        assert tasks.reset_screenshot.delay.call_args_list == []
+        assert tasks.take_screenshot.delay.call_args_list == [call(1), call(1)]
+
+        assert self.bc.database.list_of('certificate.UserSpecialty') == [{
+            **user_specialty_db,
+            'signed_by_role':
+            'GOD 🤷‍♂️',
+            'update_hash':
+            generate_update_hash(model.user_specialty),
+        }]
 
     """
     🔽🔽🔽 Status PERSISTED and preview_url is empty, changing layout
@@ -151,9 +169,9 @@ class TestAcademyEvent(LegacyAPITestCase):
     @patch('breathecode.certificate.tasks.reset_screenshot.delay', MagicMock())
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
     def test_user_specialty_saved__status_persisted__preview_url_is_empty__changing_layout(self, enable_signals):
-        enable_signals()
+        enable_signals('breathecode.certificate.signals.user_specialty_saved')
 
-        user_specialty = {'status': 'PERSISTED', 'preview_url': ''}
+        user_specialty = {'status': 'PERSISTED', 'preview_url': '', 'update_hash': '⬛🌷'}
         model1 = self.bc.database.create(user_specialty=user_specialty)
         model2 = self.bc.database.create(layout_design=1)
         user_specialty_db = remove_is_clean_for_one_item(self.bc.format.to_dict(model1.user_specialty))
@@ -161,15 +179,19 @@ class TestAcademyEvent(LegacyAPITestCase):
         model1.user_specialty.layout = model2.layout_design
         model1.user_specialty.save()
 
-        self.assertEqual(tasks.reset_screenshot.delay.call_args_list, [])
-        self.assertEqual(tasks.take_screenshot.delay.call_args_list, [call(1), call(1)])
+        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
+        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
 
-        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'),
-                         [{
-                             **user_specialty_db,
-                             'layout_id': 1,
-                             'update_hash': generate_update_hash(model1.user_specialty),
-                         }])
+        assert tasks.reset_screenshot.delay.call_args_list == []
+        assert tasks.take_screenshot.delay.call_args_list == [call(1), call(1)]
+
+        assert self.bc.database.list_of('certificate.UserSpecialty') == [{
+            **user_specialty_db,
+            'layout_id':
+            1,
+            'update_hash':
+            generate_update_hash(model1.user_specialty),
+        }]
 
     """
     🔽🔽🔽 Status PERSISTED and preview_url is empty, changing expires_at
@@ -178,9 +200,9 @@ class TestAcademyEvent(LegacyAPITestCase):
     @patch('breathecode.certificate.tasks.reset_screenshot.delay', MagicMock())
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
     def test_user_specialty_saved__status_persisted__preview_url_is_empty__changing_expires_at(self, enable_signals):
-        enable_signals()
+        enable_signals('breathecode.certificate.signals.user_specialty_saved')
 
-        user_specialty = {'status': 'PERSISTED', 'preview_url': ''}
+        user_specialty = {'status': 'PERSISTED', 'preview_url': '', 'update_hash': '⬛🌷'}
         model = self.bc.database.create(user_specialty=user_specialty)
         user_specialty_db = remove_is_clean_for_one_item(self.bc.format.to_dict(model.user_specialty))
 
@@ -188,15 +210,19 @@ class TestAcademyEvent(LegacyAPITestCase):
         model.user_specialty.expires_at = utc_now
         model.user_specialty.save()
 
-        self.assertEqual(tasks.reset_screenshot.delay.call_args_list, [])
-        self.assertEqual(tasks.take_screenshot.delay.call_args_list, [call(1), call(1)])
+        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
+        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
 
-        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'),
-                         [{
-                             **user_specialty_db,
-                             'expires_at': utc_now,
-                             'update_hash': generate_update_hash(model.user_specialty),
-                         }])
+        assert tasks.reset_screenshot.delay.call_args_list == []
+        assert tasks.take_screenshot.delay.call_args_list == [call(1), call(1)]
+
+        assert self.bc.database.list_of('certificate.UserSpecialty') == [{
+            **user_specialty_db,
+            'expires_at':
+            utc_now,
+            'update_hash':
+            generate_update_hash(model.user_specialty),
+        }]
 
     """
     🔽🔽🔽 Status PERSISTED and preview_url is empty, changing issued_at
@@ -205,9 +231,9 @@ class TestAcademyEvent(LegacyAPITestCase):
     @patch('breathecode.certificate.tasks.reset_screenshot.delay', MagicMock())
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
     def test_user_specialty_saved__status_persisted__preview_url_is_empty__changing_issued_at(self, enable_signals):
-        enable_signals()
+        enable_signals('breathecode.certificate.signals.user_specialty_saved')
 
-        user_specialty = {'status': 'PERSISTED', 'preview_url': ''}
+        user_specialty = {'status': 'PERSISTED', 'preview_url': '', 'update_hash': '⬛🌷'}
         model = self.bc.database.create(user_specialty=user_specialty)
         user_specialty_db = remove_is_clean_for_one_item(self.bc.format.to_dict(model.user_specialty))
 
@@ -215,15 +241,19 @@ class TestAcademyEvent(LegacyAPITestCase):
         model.user_specialty.issued_at = utc_now
         model.user_specialty.save()
 
-        self.assertEqual(tasks.reset_screenshot.delay.call_args_list, [])
-        self.assertEqual(tasks.take_screenshot.delay.call_args_list, [call(1), call(1)])
+        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
+        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
 
-        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'),
-                         [{
-                             **user_specialty_db,
-                             'issued_at': utc_now,
-                             'update_hash': generate_update_hash(model.user_specialty),
-                         }])
+        assert tasks.reset_screenshot.delay.call_args_list == []
+        assert tasks.take_screenshot.delay.call_args_list == [call(1), call(1)]
+
+        assert self.bc.database.list_of('certificate.UserSpecialty') == [{
+            **user_specialty_db,
+            'issued_at':
+            utc_now,
+            'update_hash':
+            generate_update_hash(model.user_specialty),
+        }]
 
     """
     🔽🔽🔽 Status PERSISTED and preview_url set
@@ -232,18 +262,21 @@ class TestAcademyEvent(LegacyAPITestCase):
     @patch('breathecode.certificate.tasks.reset_screenshot.delay', MagicMock())
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
     def test_user_specialty_saved__status_persisted__preview_url_set(self, enable_signals):
-        enable_signals()
+        enable_signals('breathecode.certificate.signals.user_specialty_saved')
 
-        user_specialty = {'status': 'PERSISTED', 'preview_url': 'GOD 🤷‍♂️'}
+        user_specialty = {'status': 'PERSISTED', 'preview_url': 'GOD 🤷‍♂️', 'update_hash': '⬛🌷'}
         model = self.bc.database.create(user_specialty=user_specialty)
         user_specialty_db = remove_is_clean_for_one_item(self.bc.format.to_dict(model.user_specialty))
 
         model.user_specialty.save()
 
-        self.assertEqual(tasks.reset_screenshot.delay.call_args_list, [call(1)])
-        self.assertEqual(tasks.take_screenshot.delay.call_args_list, [])
+        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
+        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
 
-        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [user_specialty_db])
+        assert tasks.reset_screenshot.delay.call_args_list == [call(1)]
+        assert tasks.take_screenshot.delay.call_args_list == []
+
+        assert self.bc.database.list_of('certificate.UserSpecialty') == [user_specialty_db]
 
     """
     🔽🔽🔽 Status PERSISTED and preview_url set, changing signed_by
@@ -252,24 +285,28 @@ class TestAcademyEvent(LegacyAPITestCase):
     @patch('breathecode.certificate.tasks.reset_screenshot.delay', MagicMock())
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
     def test_user_specialty_saved__status_persisted__preview_url_set__changing_signed_by(self, enable_signals):
-        enable_signals()
+        enable_signals('breathecode.certificate.signals.user_specialty_saved')
 
-        user_specialty = {'status': 'PERSISTED', 'preview_url': 'GOD 🤷‍♂️'}
+        user_specialty = {'status': 'PERSISTED', 'preview_url': 'GOD 🤷‍♂️', 'update_hash': '⬛🌷'}
         model = self.bc.database.create(user_specialty=user_specialty)
         user_specialty_db = remove_is_clean_for_one_item(self.bc.format.to_dict(model.user_specialty))
 
         model.user_specialty.signed_by = 'GOD 🤷‍♂️'
         model.user_specialty.save()
 
-        self.assertEqual(tasks.reset_screenshot.delay.call_args_list, [call(1), call(1)])
-        self.assertEqual(tasks.take_screenshot.delay.call_args_list, [])
+        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
+        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
 
-        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'),
-                         [{
-                             **user_specialty_db,
-                             'signed_by': 'GOD 🤷‍♂️',
-                             'update_hash': generate_update_hash(model.user_specialty),
-                         }])
+        assert tasks.reset_screenshot.delay.call_args_list == [call(1), call(1)]
+        assert tasks.take_screenshot.delay.call_args_list == []
+
+        assert self.bc.database.list_of('certificate.UserSpecialty') == [{
+            **user_specialty_db,
+            'signed_by':
+            'GOD 🤷‍♂️',
+            'update_hash':
+            generate_update_hash(model.user_specialty),
+        }]
 
     """
     🔽🔽🔽 Status PERSISTED and preview_url set, changing signed_by_role
@@ -278,24 +315,28 @@ class TestAcademyEvent(LegacyAPITestCase):
     @patch('breathecode.certificate.tasks.reset_screenshot.delay', MagicMock())
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
     def test_user_specialty_saved__status_persisted__preview_url_set__changing_signed_by_role(self, enable_signals):
-        enable_signals()
+        enable_signals('breathecode.certificate.signals.user_specialty_saved')
 
-        user_specialty = {'status': 'PERSISTED', 'preview_url': 'GOD 🤷‍♂️'}
+        user_specialty = {'status': 'PERSISTED', 'preview_url': 'GOD 🤷‍♂️', 'update_hash': '⬛🌷'}
         model = self.bc.database.create(user_specialty=user_specialty)
         user_specialty_db = remove_is_clean_for_one_item(self.bc.format.to_dict(model.user_specialty))
 
         model.user_specialty.signed_by_role = 'GOD 🤷‍♂️'
         model.user_specialty.save()
 
-        self.assertEqual(tasks.reset_screenshot.delay.call_args_list, [call(1), call(1)])
-        self.assertEqual(tasks.take_screenshot.delay.call_args_list, [])
+        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
+        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
 
-        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'),
-                         [{
-                             **user_specialty_db,
-                             'signed_by_role': 'GOD 🤷‍♂️',
-                             'update_hash': generate_update_hash(model.user_specialty),
-                         }])
+        assert tasks.reset_screenshot.delay.call_args_list == [call(1), call(1)]
+        assert tasks.take_screenshot.delay.call_args_list == []
+
+        assert self.bc.database.list_of('certificate.UserSpecialty') == [{
+            **user_specialty_db,
+            'signed_by_role':
+            'GOD 🤷‍♂️',
+            'update_hash':
+            generate_update_hash(model.user_specialty),
+        }]
 
     """
     🔽🔽🔽 Status PERSISTED and preview_url set, changing layout
@@ -304,9 +345,9 @@ class TestAcademyEvent(LegacyAPITestCase):
     @patch('breathecode.certificate.tasks.reset_screenshot.delay', MagicMock())
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
     def test_user_specialty_saved__status_persisted__preview_url_set__changing_layout(self, enable_signals):
-        enable_signals()
+        enable_signals('breathecode.certificate.signals.user_specialty_saved')
 
-        user_specialty = {'status': 'PERSISTED', 'preview_url': 'GOD 🤷‍♂️'}
+        user_specialty = {'status': 'PERSISTED', 'preview_url': 'GOD 🤷‍♂️', 'update_hash': '⬛🌷'}
         model1 = self.bc.database.create(user_specialty=user_specialty)
         model2 = self.bc.database.create(layout_design=1)
         user_specialty_db = remove_is_clean_for_one_item(self.bc.format.to_dict(model1.user_specialty))
@@ -314,15 +355,19 @@ class TestAcademyEvent(LegacyAPITestCase):
         model1.user_specialty.layout = model2.layout_design
         model1.user_specialty.save()
 
-        self.assertEqual(tasks.reset_screenshot.delay.call_args_list, [call(1), call(1)])
-        self.assertEqual(tasks.take_screenshot.delay.call_args_list, [])
+        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
+        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
 
-        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'),
-                         [{
-                             **user_specialty_db,
-                             'layout_id': 1,
-                             'update_hash': generate_update_hash(model1.user_specialty),
-                         }])
+        assert tasks.reset_screenshot.delay.call_args_list == [call(1), call(1)]
+        assert tasks.take_screenshot.delay.call_args_list == []
+
+        assert self.bc.database.list_of('certificate.UserSpecialty') == [{
+            **user_specialty_db,
+            'layout_id':
+            1,
+            'update_hash':
+            generate_update_hash(model1.user_specialty),
+        }]
 
     """
     🔽🔽🔽 Status PERSISTED and preview_url set, changing expires_at
@@ -331,9 +376,9 @@ class TestAcademyEvent(LegacyAPITestCase):
     @patch('breathecode.certificate.tasks.reset_screenshot.delay', MagicMock())
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
     def test_user_specialty_saved__status_persisted__preview_url_set__changing_expires_at(self, enable_signals):
-        enable_signals()
+        enable_signals('breathecode.certificate.signals.user_specialty_saved')
 
-        user_specialty = {'status': 'PERSISTED', 'preview_url': 'GOD 🤷‍♂️'}
+        user_specialty = {'status': 'PERSISTED', 'preview_url': 'GOD 🤷‍♂️', 'update_hash': '⬛🌷'}
         model = self.bc.database.create(user_specialty=user_specialty)
         user_specialty_db = remove_is_clean_for_one_item(self.bc.format.to_dict(model.user_specialty))
 
@@ -341,15 +386,19 @@ class TestAcademyEvent(LegacyAPITestCase):
         model.user_specialty.expires_at = utc_now
         model.user_specialty.save()
 
-        self.assertEqual(tasks.reset_screenshot.delay.call_args_list, [call(1), call(1)])
-        self.assertEqual(tasks.take_screenshot.delay.call_args_list, [])
+        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
+        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
 
-        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'),
-                         [{
-                             **user_specialty_db,
-                             'expires_at': utc_now,
-                             'update_hash': generate_update_hash(model.user_specialty),
-                         }])
+        assert tasks.reset_screenshot.delay.call_args_list == [call(1), call(1)]
+        assert tasks.take_screenshot.delay.call_args_list == []
+
+        assert self.bc.database.list_of('certificate.UserSpecialty') == [{
+            **user_specialty_db,
+            'expires_at':
+            utc_now,
+            'update_hash':
+            generate_update_hash(model.user_specialty),
+        }]
 
     """
     🔽🔽🔽 Status PERSISTED and preview_url set, changing issued_at
@@ -358,9 +407,9 @@ class TestAcademyEvent(LegacyAPITestCase):
     @patch('breathecode.certificate.tasks.reset_screenshot.delay', MagicMock())
     @patch('breathecode.certificate.tasks.take_screenshot.delay', MagicMock())
     def test_user_specialty_saved__status_persisted__preview_url_set__changing_issued_at(self, enable_signals):
-        enable_signals()
+        enable_signals('breathecode.certificate.signals.user_specialty_saved')
 
-        user_specialty = {'status': 'PERSISTED', 'preview_url': 'GOD 🤷‍♂️'}
+        user_specialty = {'status': 'PERSISTED', 'preview_url': 'GOD 🤷‍♂️', 'update_hash': '⬛🌷'}
         model = self.bc.database.create(user_specialty=user_specialty)
         user_specialty_db = remove_is_clean_for_one_item(self.bc.format.to_dict(model.user_specialty))
 
@@ -368,12 +417,16 @@ class TestAcademyEvent(LegacyAPITestCase):
         model.user_specialty.issued_at = utc_now
         model.user_specialty.save()
 
-        self.assertEqual(tasks.reset_screenshot.delay.call_args_list, [call(1), call(1)])
-        self.assertEqual(tasks.take_screenshot.delay.call_args_list, [])
+        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
+        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
 
-        self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'),
-                         [{
-                             **user_specialty_db,
-                             'issued_at': utc_now,
-                             'update_hash': generate_update_hash(model.user_specialty),
-                         }])
+        assert tasks.reset_screenshot.delay.call_args_list == [call(1), call(1)]
+        assert tasks.take_screenshot.delay.call_args_list == []
+
+        assert self.bc.database.list_of('certificate.UserSpecialty') == [{
+            **user_specialty_db,
+            'issued_at':
+            utc_now,
+            'update_hash':
+            generate_update_hash(model.user_specialty),
+        }]
