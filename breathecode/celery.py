@@ -7,7 +7,7 @@ newrelic.agent.initialize()
 
 # the rest of your Celery file contents go here
 import os
-from datetime import datetime, timedelta
+from datetime import UTC, datetime
 from typing import TypedDict
 
 from celery import Celery
@@ -123,7 +123,7 @@ def worker_process_init_handler(**kwargs):
                     if len(data[i]) >= 2:
                         data[i].sort(key=lambda x: x['created_at'])
 
-                        if datetime.utcnow() - data[i][-1]['created_at'] < delta:
+                        if datetime.now(UTC) - data[i][-1]['created_at'] < delta:
                             available[i] = False
                             data[i] = data[i][-2:]
                         else:
@@ -131,7 +131,7 @@ def worker_process_init_handler(**kwargs):
                             data[i] = data[i][-1:]
 
                     elif len(data[i]) == 1:
-                        if datetime.utcnow() - data[i][0]['created_at'] < delta:
+                        if datetime.now(UTC) - data[i][0]['created_at'] < delta:
                             available[i] = False
                         else:
                             available[i] = True
@@ -142,7 +142,7 @@ def worker_process_init_handler(**kwargs):
                 found = False
                 for i in range(workers):
                     if available[i]:
-                        data[i].append({'pid': worker_id, 'created_at': datetime.utcnow()})
+                        data[i].append({'pid': worker_id, 'created_at': datetime.now(UTC)})
                         found = True
                         break
 
@@ -153,7 +153,7 @@ def worker_process_init_handler(**kwargs):
                         if len(data[i]) < len(pointer):
                             pointer = data[i]
 
-                    pointer.append({'pid': worker_id, 'created_at': datetime.utcnow()})
+                    pointer.append({'pid': worker_id, 'created_at': datetime.now(UTC)})
 
                 cache.set('workers', data, timeout=None)
                 break

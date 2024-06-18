@@ -53,19 +53,29 @@ def format_mentorship_session_attrs(attrs={}):
     }
 
 
+class GoogleMeetMock:
+
+    def __init__(self, meeting_uri='https://meet.google.com/fake'):
+        self.meeting_uri = meeting_uri
+
+
+def get_title(pk, service, mentor) -> str:
+    return (f'{service.name} {pk} | {mentor.user.first_name} {mentor.user.last_name}')
+
+
 class GetOrCreateSessionTestSuite(MentorshipTestCase):
 
     @patch(REQUESTS_PATH['request'], apply_requests_request_mock([(200, daily_url, daily_payload)]))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=ENDS_AT))
     @patch('breathecode.mentorship.actions.close_older_sessions', MagicMock())
-    def test_create_session_mentor_first_no_previous_nothing(self):
+    def test_create_session_mentor_first_no_previous_nothing__daily(self):
         """
         When the mentor gets into the room before the mentee
         if should create a room with status 'pending'
         """
 
-        models = self.bc.database.create(mentor_profile=1, user=1, mentorship_service=1)
+        models = self.bc.database.create(mentor_profile=1, user=1, mentorship_service={'video_provider': 'DAILY'})
 
         mentor = models.mentor_profile
         mentor_token, created = Token.get_or_create(mentor.user, token_type='permanent')
@@ -91,6 +101,44 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
 
         self.assertEqual(actions.close_older_sessions.call_args_list, [call()])
 
+    @patch.multiple('breathecode.services.google_meet.google_meet.GoogleMeet',
+                    __init__=MagicMock(return_value=None),
+                    create_space=MagicMock(return_value=GoogleMeetMock(meeting_uri='https://meet.google.com/fake')))
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=ENDS_AT))
+    @patch('breathecode.mentorship.actions.close_older_sessions', MagicMock())
+    def test_create_session_mentor_first_no_previous_nothing__google_meet(self):
+        """
+        When the mentor gets into the room before the mentee
+        if should create a room with status 'pending'
+        """
+
+        models = self.bc.database.create(mentor_profile=1, user=1, mentorship_service={'video_provider': 'GOOGLE_MEET'})
+
+        mentor = models.mentor_profile
+        mentor_token, created = Token.get_or_create(mentor.user, token_type='permanent')
+
+        pending_sessions = get_pending_sessions_or_create(mentor_token, mentor, models.mentorship_service, mentee=None)
+
+        self.bc.check.queryset_of(pending_sessions, MentorshipSession)
+        self.bc.check.queryset_with_pks(pending_sessions, [1])
+
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
+            format_mentorship_session_attrs({
+                'id': 1,
+                'status': 'PENDING',
+                'mentor_id': 1,
+                'mentee_id': None,
+                'service_id': 1,
+                'is_online': True,
+                'name': get_title(1, models.mentorship_service, models.mentor_profile),
+                'online_meeting_url': 'https://meet.google.com/fake',
+                'ends_at': ENDS_AT + timedelta(seconds=3600),
+            }),
+        ])
+
+        self.assertEqual(actions.close_older_sessions.call_args_list, [call()])
+
     @patch(REQUESTS_PATH['request'], apply_requests_request_mock([(200, daily_url, daily_payload)]))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=ENDS_AT))
@@ -102,7 +150,9 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         """
 
         mentorship_session = {'mentee_id': None}
-        models = self.bc.database.create(mentor_profile=1, mentorship_session=mentorship_session, mentorship_service=1)
+        models = self.bc.database.create(mentor_profile=1,
+                                         mentorship_session=mentorship_session,
+                                         mentorship_service={'video_provider': 'DAILY'})
         mentor = models.mentor_profile
 
         mentor_token, created = Token.get_or_create(mentor.user, token_type='permanent')
@@ -141,7 +191,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         models = self.bc.database.create(mentor_profile=1,
                                          user=1,
                                          mentorship_session=mentorship_session,
-                                         mentorship_service=1)
+                                         mentorship_service={'video_provider': 'DAILY'})
 
         mentor = models.mentor_profile
         session = models.mentorship_session
@@ -181,7 +231,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         models = self.bc.database.create(mentor_profile=1,
                                          user=1,
                                          mentorship_session=mentorship_session,
-                                         mentorship_service=1)
+                                         mentorship_service={'video_provider': 'DAILY'})
         mentor = models.mentor_profile
 
         mentor_token, created = Token.get_or_create(mentor.user, token_type='permanent')
@@ -209,13 +259,13 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=ENDS_AT))
     @patch('breathecode.mentorship.actions.close_older_sessions', MagicMock())
-    def test_create_session_mentee_first_no_previous_nothing(self):
+    def test_create_session_mentee_first_no_previous_nothing__daily(self):
         """
         Mentee comes first, there is nothing previously created
         it should return a brand new sessions with started at already started
         """
 
-        models = self.bc.database.create(mentor_profile=1, user=2, mentorship_service=1)
+        models = self.bc.database.create(mentor_profile=1, user=2, mentorship_service={'video_provider': 'DAILY'})
         mentor = models.mentor_profile
         mentee = models.user[1]
 
@@ -241,6 +291,44 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
 
         self.assertEqual(actions.close_older_sessions.call_args_list, [call()])
 
+    @patch.multiple('breathecode.services.google_meet.google_meet.GoogleMeet',
+                    __init__=MagicMock(return_value=None),
+                    create_space=MagicMock(return_value=GoogleMeetMock(meeting_uri='https://meet.google.com/fake')))
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=ENDS_AT))
+    @patch('breathecode.mentorship.actions.close_older_sessions', MagicMock())
+    def test_create_session_mentee_first_no_previous_nothing__google_meet(self):
+        """
+        Mentee comes first, there is nothing previously created
+        it should return a brand new sessions with started at already started
+        """
+
+        models = self.bc.database.create(mentor_profile=1, user=2, mentorship_service={'video_provider': 'GOOGLE_MEET'})
+        mentor = models.mentor_profile
+        mentee = models.user[1]
+
+        mentee_token, created = Token.get_or_create(mentee, token_type='permanent')
+        sessions = get_pending_sessions_or_create(mentee_token, mentor, models.mentorship_service, mentee)
+
+        self.bc.check.queryset_of(sessions, MentorshipSession)
+        self.bc.check.queryset_with_pks(sessions, [1])
+
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
+            format_mentorship_session_attrs({
+                'id': 1,
+                'status': 'PENDING',
+                'mentor_id': 1,
+                'mentee_id': 2,
+                'service_id': 1,
+                'is_online': True,
+                'ends_at': ENDS_AT + timedelta(seconds=3600),
+                'name': get_title(1, models.mentorship_service, models.mentor_profile),
+                'online_meeting_url': 'https://meet.google.com/fake',
+            }),
+        ])
+
+        self.assertEqual(actions.close_older_sessions.call_args_list, [call()])
+
     @patch(REQUESTS_PATH['request'], apply_requests_request_mock([(200, daily_url, daily_payload)]))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=ENDS_AT))
@@ -255,7 +343,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         models = self.bc.database.create(mentor_profile=1,
                                          user=2,
                                          mentorship_session=mentorship_session,
-                                         mentorship_service=1)
+                                         mentorship_service={'video_provider': 'DAILY'})
         new_mentee = models.user[1]
 
         mentee_token, created = Token.get_or_create(new_mentee, token_type='permanent')
@@ -284,7 +372,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=ENDS_AT))
     @patch('breathecode.mentorship.actions.close_older_sessions', MagicMock())
-    def test_create_session_mentee_first_with_another_mentee(self):
+    def test_create_session_mentee_first_with_another_mentee__daily(self):
         """
         Mentee comes first, there is a previous pending meeting with another mentee
         it should keep and ignore old one (untouched) and create and return new one for this mentee
@@ -293,12 +381,15 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         # other random mentoring session precreated just for better testing
 
         mentorship_session = {'status': 'PENDING'}
-        self.bc.database.create(mentor_profile=1, user=1, mentorship_session=mentorship_session, mentorship_service=1)
+        self.bc.database.create(mentor_profile=1,
+                                user=1,
+                                mentorship_session=mentorship_session,
+                                mentorship_service={'video_provider': 'DAILY'})
 
         models = self.bc.database.create(mentor_profile=1,
                                          user=1,
                                          mentorship_session=mentorship_session,
-                                         mentorship_service=1)
+                                         mentorship_service={'video_provider': 'DAILY'})
         new_mentee = self.bc.database.create(user=1).user
 
         mentee_token, created = Token.get_or_create(new_mentee, token_type='permanent')
@@ -340,6 +431,71 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
 
         self.assertEqual(actions.close_older_sessions.call_args_list, [call()])
 
+    @patch.multiple('breathecode.services.google_meet.google_meet.GoogleMeet',
+                    __init__=MagicMock(return_value=None),
+                    create_space=MagicMock(return_value=GoogleMeetMock(meeting_uri='https://meet.google.com/fake')))
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=ENDS_AT))
+    @patch('breathecode.mentorship.actions.close_older_sessions', MagicMock())
+    def test_create_session_mentee_first_with_another_mentee__google_meet(self):
+        """
+        Mentee comes first, there is a previous pending meeting with another mentee
+        it should keep and ignore old one (untouched) and create and return new one for this mentee
+        """
+
+        # other random mentoring session precreated just for better testing
+
+        mentorship_session = {'status': 'PENDING'}
+        self.bc.database.create(mentor_profile=1,
+                                user=1,
+                                mentorship_session=mentorship_session,
+                                mentorship_service={'video_provider': 'DAILY'})
+
+        models = self.bc.database.create(mentor_profile=1,
+                                         user=1,
+                                         mentorship_session=mentorship_session,
+                                         mentorship_service={'video_provider': 'GOOGLE_MEET'})
+        new_mentee = self.bc.database.create(user=1).user
+
+        mentee_token, created = Token.get_or_create(new_mentee, token_type='permanent')
+        sessions_to_render = get_pending_sessions_or_create(mentee_token,
+                                                            models.mentor_profile,
+                                                            models.mentorship_service,
+                                                            mentee=new_mentee)
+
+        self.bc.check.queryset_of(sessions_to_render, MentorshipSession)
+        self.bc.check.queryset_with_pks(sessions_to_render, [3])
+
+        self.assertEqual(self.bc.database.list_of('mentorship.MentorshipSession'), [
+            format_mentorship_session_attrs({
+                'id': 1,
+                'ends_at': None,
+                'mentee_id': 1,
+                'mentor_id': 1,
+                'service_id': 1,
+            }),
+            format_mentorship_session_attrs({
+                'id': 2,
+                'ends_at': None,
+                'mentee_id': 2,
+                'mentor_id': 2,
+                'service_id': 2,
+            }),
+            format_mentorship_session_attrs({
+                'id': 3,
+                'status': 'PENDING',
+                'mentor_id': 2,
+                'mentee_id': 3,
+                'is_online': True,
+                'ends_at': ENDS_AT + timedelta(seconds=3600),
+                'name': get_title(3, models.mentorship_service, models.mentor_profile),
+                'online_meeting_url': 'https://meet.google.com/fake',
+                'service_id': 2,
+            }),
+        ])
+
+        self.assertEqual(actions.close_older_sessions.call_args_list, [call()])
+
     @patch(REQUESTS_PATH['request'], apply_requests_request_mock([(200, daily_url, daily_payload)]))
     @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=ENDS_AT))
@@ -354,13 +510,13 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         self.bc.database.create(mentor_profile=1,
                                 user=1,
                                 mentorship_session={'status': 'PENDING'},
-                                mentorship_service=1)
+                                mentorship_service={'video_provider': 'DAILY'})
 
         # old meeting with SAME mentee, should be re-used
         models = self.bc.database.create(mentor_profile=1,
                                          user=1,
                                          mentorship_session={'status': 'PENDING'},
-                                         mentorship_service=1)
+                                         mentorship_service={'video_provider': 'DAILY'})
         same_mentee = models.user
 
         mentee_token, created = Token.get_or_create(same_mentee, token_type='permanent')
