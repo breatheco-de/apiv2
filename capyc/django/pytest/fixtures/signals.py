@@ -1,76 +1,63 @@
 """
 QuerySet fixtures.
 """
-# not working yet
 import importlib
+import os
+import site
 from typing import Generator, final
 from unittest.mock import MagicMock
 
 import pytest
-
-# from django.db.models.query import QuerySet
-from django.db.models.signals import (
-    ModelSignal,
-    m2m_changed,
-    post_delete,
-    post_init,
-    post_migrate,
-    post_save,
-    pre_delete,
-    pre_init,
-    pre_migrate,
-    pre_save,
-)
+from django.db.models.signals import ModelSignal
 from django.dispatch import Signal
 
 __all__ = ['signals', 'Signals', 'signals_map']
 
 
-def check_path(dir: str, pattern: str):
-    linux_path = dir.replace('\\', '/')
-    windows_path = dir.replace('/', '\\')
-    return linux_path not in dir and windows_path not in dir
-
-
-@pytest.fixture(scope='session')
-def signals_map():
-    import os
-
-    # Get the current working directory (root directory)
-    root_directory = os.getcwd()
-
-    # Initialize a list to store the file paths
+def get_signal_files(path: str) -> list[str]:
     signal_files = []
 
     # Walk through the current directory and its subdirectories
-    for folder, _, files in os.walk(root_directory):
+    for folder, _, files in os.walk(path):
         for file in files:
             if file == 'signals.py':
                 signal_files.append(os.path.join(folder, file))
+
+    return signal_files
+
+
+def get_signals(path: str, includes_root_folder=True) -> list[Signal]:
+
+    # Get the current working directory (root directory)
+    root_directory = path
+
+    # Initialize a list to store the file paths
+    signal_files = get_signal_files(root_directory)
 
     if '/' in root_directory:
         separator = '/'
     else:
         separator = '\\'
 
-    res = {
-        # these signals cannot be mocked by monkeypatch
-        'django.db.models.signals.pre_init': pre_init,
-        'django.db.models.signals.post_init': post_init,
-        'django.db.models.signals.pre_save': pre_save,
-        'django.db.models.signals.post_save': post_save,
-        'django.db.models.signals.pre_delete': pre_delete,
-        'django.db.models.signals.post_delete': post_delete,
-        'django.db.models.signals.m2m_changed': m2m_changed,
-        'django.db.models.signals.pre_migrate': pre_migrate,
-        'django.db.models.signals.post_migrate': post_migrate,
-    }
+    res = {}
+
+    if includes_root_folder:
+        prefix = root_directory
+
+        if prefix.endswith(separator):
+            prefix = prefix[:-1]
+
+        prefix = prefix.split(separator)[-1] + '.'
+
+    else:
+        prefix = ''
 
     signal_files = [
-        '.'.join(x.replace(root_directory + separator, '').replace('.py', '').split(separator)) for x in signal_files
-        if check_path(dir=x, pattern='/bc/django/') and check_path(dir=x, pattern='.venv')
-        and check_path(dir=x, pattern='.env')
+        prefix + '.'.join(x.replace(root_directory + separator, '').replace('.py', '').split(separator))
+        for x in signal_files
     ]
+
+    signal_files = [x for x in signal_files if '-' not in x]
 
     for module_path in signal_files:
         module = importlib.import_module(module_path)
@@ -82,7 +69,43 @@ def signals_map():
         for signal_path in signals:
             res[f'{module_path}.{signal_path}'] = getattr(module, signal_path)
 
-    yield res
+    return res
+
+
+def get_dependencies() -> list[str]:
+    site_packages_dirs = site.getsitepackages()
+
+    # Collect all dependency folders
+    dependency_folders = []
+    for dir in site_packages_dirs:
+        if os.path.exists(dir):
+            for folder in os.listdir(dir):
+                folder_path = os.path.join(dir, folder)
+                if os.path.isdir(folder_path) and folder_path.endswith('.dist-info') is False:
+                    dependency_folders.append(folder_path)
+
+    return dependency_folders
+
+
+def check_path(dir: str, pattern: str):
+    linux_path = dir.replace('\\', '/')
+    windows_path = dir.replace('/', '\\')
+    return linux_path not in dir and windows_path not in dir
+
+
+@pytest.fixture(scope='session')
+def signals_map():
+    # Get the current working directory (root directory)
+    root_directory = os.getcwd()
+
+    signals = {}
+
+    for dependency_folder in get_dependencies():
+        signals.update(get_signals(dependency_folder))
+
+    signals.update(get_signals(root_directory, includes_root_folder=False))
+
+    yield signals
 
 
 @final
@@ -106,13 +129,29 @@ class Signals:
         When signals are disabled, they will not be sent and any code that depends on them will not be executed.
         """
 
-        # Mock the functions to disable signals
-        self._monkeypatch.setattr(Signal, 'send', MagicMock(return_value=None))
-        self._monkeypatch.setattr(Signal, 'send_robust', MagicMock(return_value=None))
+        self._disabled = True
 
         # Mock the functions to disable signals
-        self._monkeypatch.setattr(ModelSignal, 'send', MagicMock(return_value=None))
-        self._monkeypatch.setattr(ModelSignal, 'send_robust', MagicMock(return_value=None))
+
+        def mock(original):
+
+            def wrapper(x, *args, **kwargs):
+                if self._disabled:
+                    return
+
+                return original(x, *args, **kwargs)
+
+            return wrapper
+
+        # MagicMock(wraps=mock(original))
+        self._monkeypatch.setattr('django.dispatch.dispatcher.Signal.send', mock(self._original_signal_send))
+        self._monkeypatch.setattr('django.dispatch.dispatcher.Signal.send_robust',
+                                  mock(self._original_signal_send_robust))
+
+        # Mock the functions to disable signals
+        self._monkeypatch.setattr('django.db.models.signals.ModelSignal.send', mock(self._original_model_signal_send))
+        self._monkeypatch.setattr('django.db.models.signals.ModelSignal.send_robust',
+                                  mock(self._original_model_signal_send_robust))
 
     def enable(self, *to_enable, debug=False):
         """
@@ -126,14 +165,24 @@ class Signals:
             None
         """
 
-        self._monkeypatch.setattr(Signal, 'send', self._original_signal_send)
-        self._monkeypatch.setattr(Signal, 'send_robust', self._original_signal_send_robust)
+        self._disabled = False
 
-        self._monkeypatch.setattr(ModelSignal, 'send', self._original_model_signal_send)
-        self._monkeypatch.setattr(ModelSignal, 'send_robust', self._original_model_signal_send_robust)
+        self._monkeypatch.setattr('django.dispatch.dispatcher.Signal.send', self._original_signal_send)
+        self._monkeypatch.setattr('django.dispatch.dispatcher.Signal.send_robust', self._original_signal_send_robust)
+
+        self._monkeypatch.setattr('django.db.models.signals.ModelSignal.send', self._original_model_signal_send)
+        self._monkeypatch.setattr('django.db.models.signals.ModelSignal.send_robust',
+                                  self._original_model_signal_send_robust)
+
+        print('1send', self._original_signal_send)
+        print('1send_robust', self._original_signal_send_robust)
+        print('2send', self._original_model_signal_send)
+        print('2send_robust', self._original_model_signal_send_robust)
 
         if to_enable or debug:
+            print('to_enable', to_enable)
             to_disable = [x for x in self._signals_map if x not in to_enable]
+            # print('to_disable', to_disable)
 
             for signal in to_disable:
 
@@ -154,7 +203,7 @@ class Signals:
 
                             print('\n')
 
-                    self._monkeypatch.setattr(module, MagicMock(side_effect=send_mock))
+                    self._monkeypatch.setattr(module, send_mock)
 
                 apply_mock(f'{signal}.send')
                 apply_mock(f'{signal}.send_robust')
