@@ -7,7 +7,7 @@ newrelic.agent.initialize()
 
 # the rest of your Celery file contents go here
 import os
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import TypedDict
 
 from celery import Celery
