@@ -1894,6 +1894,7 @@ class CohortJoinView(APIView):
                                                resource_belongs_to_user).exclude(excludes).first()
 
         if not resource:
+            resource_available_now = Q(plan_expires_at__gte=timezone.now())
             resource = PlanFinancing.objects.filter(resource_available_now,
                                                     resource_belongs_to_user).exclude(excludes).first()
 

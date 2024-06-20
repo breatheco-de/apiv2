@@ -115,6 +115,12 @@ class AssetCategorySmallSerializer(serpy.Serializer):
     title = serpy.Field()
 
 
+class AssetTinySerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+
+
 class AssetSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
@@ -295,12 +301,27 @@ class AcademyAssetSerializer(AssetSerializer):
     published_at = serpy.Field()
 
     clusters = serpy.MethodField()
+    previous_versions = serpy.MethodField()
 
     def get_clusters(self, obj):
         return [k.cluster.slug for k in obj.seo_keywords.all() if k.cluster is not None]
 
     def get_seo_keywords(self, obj):
         return list(map(lambda t: AssetKeywordSerializer(t).data, obj.seo_keywords.all()))
+
+    def get_previous_versions(self, obj):
+
+        prev_versions = []
+        _aux = obj
+        try:
+            while _aux.previous_version is not None:
+                prev_versions.append(_aux.previous_version)
+                _aux = _aux.previous_version
+        except:
+            pass
+
+        serializer = AssetTinySerializer(prev_versions, many=True)
+        return serializer.data
 
 
 class AssetMidSerializer(AssetSerializer):
@@ -309,6 +330,7 @@ class AssetMidSerializer(AssetSerializer):
     interactive = serpy.Field()
     with_solutions = serpy.Field()
     with_video = serpy.Field()
+    updated_at = serpy.Field()
 
 
 class AssetBigSerializer(AssetMidSerializer):
@@ -324,6 +346,8 @@ class AssetBigSerializer(AssetMidSerializer):
     last_synch_at = serpy.Field()
     status_text = serpy.Field()
     published_at = serpy.Field()
+    
+    enable_table_of_content = serpy.Field()
 
     delivery_instructions = serpy.Field()
     delivery_formats = serpy.Field()
@@ -334,9 +358,10 @@ class AssetBigSerializer(AssetMidSerializer):
     cluster = KeywordClusterSmallSerializer(required=False)
 
     assets_related = serpy.MethodField()
+    superseded_by = AssetTinySerializer(required=False)
 
     def get_assets_related(self, obj):
-        _assets_related = [AssetSmallSerializer(asset).data for asset in obj.assets_related.all()]
+        _assets_related = [AssetSmallSerializer(asset).data for asset in obj.assets_related.filter(lang=obj.lang)]
         return _assets_related
 
 
@@ -362,6 +387,8 @@ class AssetBigAndTechnologySerializer(AssetBigSerializer):
 # the admin.4geeks.com will use another one
 class AssetBigAndTechnologyPublishedSerializer(AssetBigSerializer):
 
+    assessment = AssessmentSmallSerializer(required=False)
+    
     technologies = serpy.MethodField()
     translations = serpy.MethodField()
 
@@ -781,6 +808,26 @@ class AssetPUTSerializer(serializers.ModelSerializer):
         category = self.instance.category
         if 'category' in data:
             category = data['category']
+
+        if 'superseded_by' in data and data['superseded_by']:
+            if data['superseded_by'].id == self.instance.id:
+                raise ValidationException('One asset cannot supersed itself', code=400)
+
+            try:
+                _prev = data['superseded_by'].previous_version
+                if _prev and (not self.instance.superseded_by or _prev.id != self.instance.superseded_by.id):
+                    raise ValidationException(
+                        f'Asset {data["superseded_by"].id} is already superseding {_prev.asset_type}: {_prev.slug}',
+                        code=400)
+            except:
+                pass
+
+            try:
+                previous_version = self.instance.previous_version
+                if previous_version and data['superseded_by'].id == previous_version.id:
+                    raise ValidationException('One asset cannot have its previous version also superseding', code=400)
+            except:
+                pass
 
         if category is None:
             raise ValidationException('Asset category cannot be null', status.HTTP_400_BAD_REQUEST)

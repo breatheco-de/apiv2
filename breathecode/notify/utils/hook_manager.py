@@ -1,9 +1,12 @@
 import logging
+
+from django.apps import apps as django_apps
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
+
+from breathecode.notify.models import HookError
 
 from ..tasks import async_deliver_hook
-from django.apps import apps as django_apps
-from django.core.exceptions import ImproperlyConfigured
 
 logger = logging.getLogger(__name__)
 
@@ -201,18 +204,24 @@ class HookManagerClass(object):
                 return such object. If callable is used it should accept 2
                 arguments: `hook` and `instance`.
         """
-        if payload_override is None:
-            payload = hook.serialize_hook(instance)
-        else:
-            payload = payload_override
+        try:
+            if payload_override is None:
+                payload = hook.serialize_hook(instance)
+            else:
+                payload = payload_override
 
-        if callable(payload):
-            payload = payload(hook, instance)
+            if callable(payload):
+                payload = payload(hook, instance)
 
-        logger.debug(f'Calling delayed task deliver_hook for hook {hook.id}')
-        async_deliver_hook.delay(hook.target, payload, hook_id=hook.id)
+            logger.debug(f'Calling delayed task deliver_hook for hook {hook.id}')
+            async_deliver_hook.delay(hook.target, payload, hook_id=hook.id)
 
-        return None
+            return None
+        except Exception as e:
+            instance, _ = HookError.objects.get_or_create(message=str(e), event=hook.event)
+
+            if instance.hooks.filter(id=instance.id).exists() is False:
+                instance.hooks.add(instance)
 
 
 HookManager = HookManagerClass()

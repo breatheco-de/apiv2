@@ -29,13 +29,10 @@ def validate_captcha_challenge(function):
             else:
                 raise IndexError()
 
-            apply_captcha = os.getenv('APPLY_CAPTCHA', False)
+            apply_captcha = os.getenv('APPLY_CAPTCHA', 'FALSE').lower()
 
-            if not apply_captcha:
+            if not apply_captcha or apply_captcha == 'false':
                 return function(*args, **kwargs)
-
-            logger.info('VERIFYING THE CAPTCHA')
-            print('VERIFYING THE CAPTCHA')
 
             project_id = os.getenv('GOOGLE_PROJECT_ID', '')
 

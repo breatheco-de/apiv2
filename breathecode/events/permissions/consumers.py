@@ -62,8 +62,8 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
         Q(cohort__available_as_saas=False)
         | Q(cohort__available_as_saas=None, cohort__academy__available_as_saas=False),
         user=request.user).exists()
-
     if not is_host and not is_free_for_all and (not is_free_for_bootcamps or not user_with_available_as_saas_false):
+        print('is_free_for_all', is_free_for_all)
         context['will_consume'] = True
 
     if context['will_consume'] is False and is_no_saas_student_up_to_date_in_any_cohort(context['request'].user,
@@ -85,6 +85,7 @@ def event_by_url_param(context: PermissionContextType, args: tuple, kwargs: dict
                                   code=400)
 
     if context['will_consume']:
+        print('is_free_for_all', is_free_for_all)
         delta = event.ending_at - utc_now
         context['time_of_life'] = delta
 

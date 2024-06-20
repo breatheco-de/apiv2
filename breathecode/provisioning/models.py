@@ -138,10 +138,12 @@ class ProvisioningBill(models.Model):
 
 PENDING = 'PENDING'
 PERSISTED = 'PERSISTED'
+WARNING = 'WARNING'
 ACTIVITY_STATUS = (
     (PENDING, 'Pending'),
     (PERSISTED, 'Persisted'),
     (IGNORED, 'Ignored'),
+    (WARNING, 'Warning'),
     (ERROR, 'Error'),
 )
 

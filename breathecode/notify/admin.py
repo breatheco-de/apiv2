@@ -1,16 +1,19 @@
 import logging
+
+from django import forms
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from django import forms
-from .utils.hook_manager import HookManager
-from .models import Device, SlackTeam, SlackChannel, SlackUser, UserProxy, CohortProxy, SlackUserTeam
-from .actions import sync_slack_team_channel, send_slack
-from .tasks import async_slack_team_users
-from breathecode.admissions.admin import CohortAdmin as AdmissionsCohortAdmin
-from django.utils.html import format_html
 from django.template.defaultfilters import escape
 from django.urls import reverse
+from django.utils.html import format_html
+
+from breathecode.admissions.admin import CohortAdmin as AdmissionsCohortAdmin
 from breathecode.utils import AdminExportCsvMixin
+
+from .actions import send_slack, sync_slack_team_channel
+from .models import CohortProxy, Device, HookError, SlackChannel, SlackTeam, SlackUser, SlackUserTeam, UserProxy
+from .tasks import async_slack_team_users
+from .utils.hook_manager import HookManager
 
 logger = logging.getLogger(__name__)
 
@@ -159,3 +162,10 @@ class HookAdmin(admin.ModelAdmin):
 
 
 admin.site.register(HookModel, HookAdmin)
+
+
+@admin.register(HookError)
+class HookErrorAdmin(admin.ModelAdmin):
+    list_display = ['event', 'message', 'created_at', 'updated_at']
+    search_fields = ['message', 'event']
+    list_filter = ['event']

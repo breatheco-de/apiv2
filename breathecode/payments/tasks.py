@@ -4,7 +4,10 @@ from datetime import datetime, timedelta
 from typing import Any, Optional
 
 from dateutil.relativedelta import relativedelta
+from django.core.cache import cache
 from django.utils import timezone
+from django_redis import get_redis_connection
+from redis.exceptions import LockError
 from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
 
@@ -15,6 +18,7 @@ from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import consume_service, reimburse_service_units
 from breathecode.utils.decorators import TaskPriority
 from breathecode.utils.i18n import translation
+from breathecode.utils.redis import Lock
 
 from .models import (
     AbstractIOweYou,
@@ -34,6 +38,7 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+IS_DJANGO_REDIS = hasattr(cache, 'delete_pattern')
 
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
@@ -71,7 +76,7 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
 
     # is over
     if (scheduler.plan_handler and scheduler.plan_handler.plan_financing
-            and scheduler.plan_handler.plan_financing.valid_until < utc_now):
+            and scheduler.plan_handler.plan_financing.plan_expires_at < utc_now):
         raise AbortTask(f'The plan financing {scheduler.plan_handler.plan_financing.id} is over')
 
     # it needs to be paid
@@ -79,15 +84,6 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
             and scheduler.plan_handler.plan_financing.next_payment_at < utc_now):
         raise AbortTask(f'The plan financing {scheduler.plan_handler.plan_financing.id} needs to be paid to renew '
                         'the consumables')
-
-    if (scheduler.plan_handler and scheduler.plan_handler.plan_financing
-            and scheduler.plan_handler.handler.plan.time_of_life
-            and scheduler.plan_handler.handler.plan.time_of_life_unit
-            and scheduler.plan_handler.plan_financing.created_at + actions.calculate_relative_delta(
-                scheduler.plan_handler.handler.plan.time_of_life, scheduler.plan_handler.handler.plan.time_of_life_unit)
-            < utc_now):
-        logger.info(f'The services related to PlanFinancing {scheduler.plan_handler.plan_financing.id} is over')
-        return
 
     # is over
     if (scheduler.subscription_handler and scheduler.subscription_handler.subscription
@@ -118,7 +114,7 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     elif scheduler.plan_handler and scheduler.plan_handler.plan_financing:
         user = scheduler.plan_handler.plan_financing.user
         service_item = scheduler.plan_handler.handler.service_item
-        resource_valid_until = scheduler.plan_handler.plan_financing.valid_until
+        resource_valid_until = scheduler.plan_handler.plan_financing.plan_expires_at
 
         selected_lookup = get_resource_lookup(scheduler.plan_handler.plan_financing, service_item.service)
 
@@ -198,9 +194,6 @@ def renew_plan_financing_consumables(self, plan_financing_id: int, **_: Any):
         raise RetryTask(f'PlanFinancing with id {plan_financing_id} not found')
 
     utc_now = timezone.now()
-    if plan_financing.valid_until and plan_financing.valid_until < utc_now:
-        raise AbortTask(f'The plan financing {plan_financing.id} is over')
-
     if plan_financing.next_payment_at < utc_now:
         raise AbortTask(f'The PlanFinancing {plan_financing.id} needs to be paid to renew the consumables')
 
@@ -243,86 +236,103 @@ def charge_subscription(self, subscription_id: int, **_: Any):
 
     logger.info(f'Starting charge_subscription for subscription {subscription_id}')
 
-    if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
-        raise AbortTask(f'Subscription with id {subscription_id} not found')
-
-    utc_now = timezone.now()
-
-    if subscription.valid_until and subscription.valid_until < utc_now:
-        raise AbortTask(f'The subscription {subscription.id} is over')
-
-    settings = get_user_settings(subscription.user.id)
+    client = None
+    if IS_DJANGO_REDIS:
+        client = get_redis_connection('default')
 
     try:
-        bag = actions.get_bag_from_subscription(subscription, settings)
-    except Exception as e:
-        subscription.status = 'ERROR'
-        subscription.status_message = str(e)
-        subscription.save()
-        raise AbortTask(f'Error getting bag from subscription {subscription_id}: {e}')
+        with Lock(client, f'lock:subscription:{subscription_id}', timeout=30, blocking_timeout=30):
+            if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
+                raise AbortTask(f'Subscription with id {subscription_id} not found')
 
-    amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, settings.lang)
+            utc_now = timezone.now()
 
-    try:
-        s = Stripe()
-        s.set_language_from_settings(settings)
-        invoice = s.pay(subscription.user, bag, amount, currency=bag.currency)
+            if subscription.valid_until and subscription.valid_until < utc_now:
+                raise AbortTask(f'The subscription {subscription.id} is over')
 
-    except Exception:
-        subject = translation(settings.lang,
-                              en='Your 4Geeks subscription could not be renewed',
-                              es='Tu suscripción 4Geeks no pudo ser renovada')
+            if subscription.next_payment_at > utc_now:
+                raise AbortTask(f'The subscription with id {subscription_id} was paid this month')
 
-        message = translation(settings.lang,
-                              en='Please update your payment methods',
-                              es='Por favor actualiza tus métodos de pago')
+            settings = get_user_settings(subscription.user.id)
 
-        button = translation(settings.lang,
-                             en='Please update your payment methods',
-                             es='Por favor actualiza tus métodos de pago')
+            try:
+                bag = actions.get_bag_from_subscription(subscription, settings)
+            except Exception as e:
+                subscription.status = 'ERROR'
+                subscription.status_message = str(e)
+                subscription.save()
+                raise AbortTask(f'Error getting bag from subscription {subscription_id}: {e}')
 
-        notify_actions.send_email_message('message',
-                                          subscription.user.email, {
-                                              'SUBJECT': subject,
-                                              'MESSAGE': message,
-                                              'BUTTON': button,
-                                              'LINK': f'{get_app_url()}/subscription/{subscription.id}',
-                                          },
-                                          academy=subscription.academy)
+            amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, settings.lang)
 
-        bag.delete()
+            try:
+                s = Stripe()
+                s.set_language_from_settings(settings)
+                invoice = s.pay(subscription.user, bag, amount, currency=bag.currency)
 
-        subscription.status = 'PAYMENT_ISSUE'
-        subscription.save()
-        return
+            except Exception:
+                subject = translation(settings.lang,
+                                      en='Your 4Geeks subscription could not be renewed',
+                                      es='Tu suscripción 4Geeks no pudo ser renovada')
 
-    subscription.paid_at = utc_now
-    subscription.next_payment_at = utc_now + actions.calculate_relative_delta(subscription.pay_every,
-                                                                              subscription.pay_every_unit)
+                message = translation(settings.lang,
+                                      en='Please update your payment methods',
+                                      es='Por favor actualiza tus métodos de pago')
 
-    subscription.invoices.add(invoice)
+                button = translation(settings.lang,
+                                     en='Please update your payment methods',
+                                     es='Por favor actualiza tus métodos de pago')
 
-    subscription.save()
-    value = invoice.currency.format_price(invoice.amount)
+                notify_actions.send_email_message('message',
+                                                  subscription.user.email, {
+                                                      'SUBJECT': subject,
+                                                      'MESSAGE': message,
+                                                      'BUTTON': button,
+                                                      'LINK': f'{get_app_url()}/subscription/{subscription.id}',
+                                                  },
+                                                  academy=subscription.academy)
 
-    subject = translation(settings.lang,
-                          en='Your 4Geeks subscription was successfully renewed',
-                          es='Tu suscripción 4Geeks fue renovada exitosamente')
+                bag.delete()
 
-    message = translation(settings.lang, en=f'The amount was {value}', es=f'El monto fue {value}')
+                subscription.status = 'PAYMENT_ISSUE'
+                subscription.save()
+                return
 
-    button = translation(settings.lang, en='See the invoice', es='Ver la factura')
+            subscription.paid_at = utc_now
+            delta = actions.calculate_relative_delta(subscription.pay_every, subscription.pay_every_unit)
 
-    notify_actions.send_email_message('message',
-                                      invoice.user.email, {
-                                          'SUBJECT': subject,
-                                          'MESSAGE': message,
-                                          'BUTTON': button,
-                                          'LINK': f'{get_app_url()}/subscription/{subscription.id}',
-                                      },
-                                      academy=subscription.academy)
+            subscription.next_payment_at += delta
+            while utc_now > subscription.next_payment_at:
+                subscription.next_payment_at += delta
+                if subscription.valid_until:
+                    subscription.valid_until += delta
 
-    renew_subscription_consumables.delay(subscription.id)
+            subscription.invoices.add(invoice)
+
+            subscription.save()
+            value = invoice.currency.format_price(invoice.amount)
+
+            subject = translation(settings.lang,
+                                  en='Your 4Geeks subscription was successfully renewed',
+                                  es='Tu suscripción 4Geeks fue renovada exitosamente')
+
+            message = translation(settings.lang, en=f'The amount was {value}', es=f'El monto fue {value}')
+
+            button = translation(settings.lang, en='See the invoice', es='Ver la factura')
+
+            notify_actions.send_email_message('message',
+                                              invoice.user.email, {
+                                                  'SUBJECT': subject,
+                                                  'MESSAGE': message,
+                                                  'BUTTON': button,
+                                                  'LINK': f'{get_app_url()}/subscription/{subscription.id}',
+                                              },
+                                              academy=subscription.academy)
+
+            renew_subscription_consumables.delay(subscription.id)
+
+    except LockError:
+        raise RetryTask('Could not acquire lock for activity, operation timed out.')
 
 
 def fallback_charge_plan_financing(self, plan_financing_id: int, exception: Exception, **_: Any):
@@ -356,85 +366,120 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
     logger.info(f'Starting charge_plan_financing for id {plan_financing_id}')
 
-    if not (plan_financing := PlanFinancing.objects.filter(id=plan_financing_id).first()):
-        raise AbortTask(f'PlanFinancing with id {plan_financing_id} not found')
-
-    utc_now = timezone.now()
-
-    if plan_financing.valid_until < utc_now:
-        raise AbortTask(f'PlanFinancing with id {plan_financing_id} is over')
-
-    settings = get_user_settings(plan_financing.user.id)
+    client = None
+    if IS_DJANGO_REDIS:
+        client = get_redis_connection('default')
 
     try:
-        bag = actions.get_bag_from_plan_financing(plan_financing, settings)
-    except Exception as e:
-        plan_financing.status = 'ERROR'
-        plan_financing.status_message = str(e)
-        plan_financing.save()
+        with Lock(client, f'lock:plan_financing:{plan_financing_id}', timeout=30, blocking_timeout=30):
 
-        raise AbortTask(f'Error getting bag from plan financing {plan_financing_id}: {e}')
+            if not (plan_financing := PlanFinancing.objects.filter(id=plan_financing_id).first()):
+                raise AbortTask(f'PlanFinancing with id {plan_financing_id} not found')
 
-    amount = plan_financing.monthly_price
+            utc_now = timezone.now()
 
-    try:
-        s = Stripe()
-        s.set_language_from_settings(settings)
+            if plan_financing.plan_expires_at < utc_now:
+                raise AbortTask(f'PlanFinancing with id {plan_financing_id} is over')
 
-        invoice = s.pay(plan_financing.user, bag, amount, currency=bag.currency)
+            if plan_financing.next_payment_at > utc_now:
+                raise AbortTask(f'PlanFinancing with id {plan_financing_id} was paid this month')
 
-    except Exception:
-        subject = translation(settings.lang,
-                              en='Your 4Geeks subscription could not be renewed',
-                              es='Tu suscripción 4Geeks no pudo ser renovada')
+            settings = get_user_settings(plan_financing.user.id)
 
-        message = translation(settings.lang,
-                              en='Please update your payment methods',
-                              es='Por favor actualiza tus métodos de pago')
+            try:
+                bag = actions.get_bag_from_plan_financing(plan_financing, settings)
+            except Exception as e:
+                plan_financing.status = 'ERROR'
+                plan_financing.status_message = str(e)
+                plan_financing.save()
 
-        button = translation(settings.lang,
-                             en='Please update your payment methods',
-                             es='Por favor actualiza tus métodos de pago')
+                raise AbortTask(f'Error getting bag from plan financing {plan_financing_id}: {e}')
 
-        notify_actions.send_email_message('message',
-                                          plan_financing.user.email, {
-                                              'SUBJECT': subject,
-                                              'MESSAGE': message,
-                                              'BUTTON': button,
-                                              'LINK': f'{get_app_url()}/plan-financing/{plan_financing.id}',
-                                          },
-                                          academy=plan_financing.academy)
+            amount = plan_financing.monthly_price
 
-        bag.delete()
+            invoices = plan_financing.invoices.order_by('created_at')
+            first_invoice = invoices.first()
+            last_invoice = invoices.last()
 
-        plan_financing.status = 'PAYMENT_ISSUE'
-        plan_financing.save()
-        return
+            installments = first_invoice.bag.how_many_installments
 
-    plan_financing.next_payment_at = utc_now + relativedelta(months=1)
-    plan_financing.invoices.add(invoice)
-    plan_financing.save()
+            if utc_now - last_invoice.created_at < timedelta(days=5):
+                raise AbortTask(f'PlanFinancing with id {plan_financing_id} was paid earlier')
 
-    value = invoice.currency.format_price(invoice.amount)
+            remaining_installments = installments - invoices.count()
 
-    subject = translation(settings.lang,
-                          en='Your installment at 4Geeks was successfully charged',
-                          es='Tu cuota en 4Geeks fue cobrada exitosamente')
+            if remaining_installments > 0:
+                try:
+                    s = Stripe()
+                    s.set_language_from_settings(settings)
 
-    message = translation(settings.lang, en=f'The amount was {value}', es=f'El monto fue {value}')
+                    invoice = s.pay(plan_financing.user, bag, amount, currency=bag.currency)
 
-    button = translation(settings.lang, en='See the invoice', es='Ver la factura')
+                except Exception:
+                    subject = translation(settings.lang,
+                                          en='Your 4Geeks subscription could not be renewed',
+                                          es='Tu suscripción 4Geeks no pudo ser renovada')
 
-    notify_actions.send_email_message('message',
-                                      invoice.user.email, {
-                                          'SUBJECT': subject,
-                                          'MESSAGE': message,
-                                          'BUTTON': button,
-                                          'LINK': f'{get_app_url()}/plan-financing/{plan_financing.id}',
-                                      },
-                                      academy=plan_financing.academy)
+                    message = translation(settings.lang,
+                                          en='Please update your payment methods',
+                                          es='Por favor actualiza tus métodos de pago')
 
-    renew_plan_financing_consumables.delay(plan_financing.id)
+                    button = translation(settings.lang,
+                                         en='Please update your payment methods',
+                                         es='Por favor actualiza tus métodos de pago')
+
+                    notify_actions.send_email_message('message',
+                                                      plan_financing.user.email, {
+                                                          'SUBJECT': subject,
+                                                          'MESSAGE': message,
+                                                          'BUTTON': button,
+                                                          'LINK': f'{get_app_url()}/plan-financing/{plan_financing.id}',
+                                                      },
+                                                      academy=plan_financing.academy)
+
+                    bag.delete()
+
+                    plan_financing.status = 'PAYMENT_ISSUE'
+                    plan_financing.save()
+                    return
+
+                if utc_now > plan_financing.valid_until:
+                    remaining_installments -= 1
+                    plan_financing.valid_until = utc_now + relativedelta(months=remaining_installments)
+
+                plan_financing.invoices.add(invoice)
+
+                value = invoice.currency.format_price(invoice.amount)
+
+                subject = translation(settings.lang,
+                                      en='Your installment at 4Geeks was successfully charged',
+                                      es='Tu cuota en 4Geeks fue cobrada exitosamente')
+
+                message = translation(settings.lang, en=f'The amount was {value}', es=f'El monto fue {value}')
+
+                button = translation(settings.lang, en='See the invoice', es='Ver la factura')
+
+                notify_actions.send_email_message('message',
+                                                  invoice.user.email, {
+                                                      'SUBJECT': subject,
+                                                      'MESSAGE': message,
+                                                      'BUTTON': button,
+                                                      'LINK': f'{get_app_url()}/plan-financing/{plan_financing.id}',
+                                                  },
+                                                  academy=plan_financing.academy)
+
+            delta = relativedelta(months=1)
+
+            while utc_now >= plan_financing.next_payment_at + delta:
+                delta += relativedelta(months=1)
+
+            plan_financing.next_payment_at += delta
+            plan_financing.save()
+
+            renew_plan_financing_consumables.delay(plan_financing.id)
+
+    except LockError:
+        raise RetryTask('Could not acquire lock for activity, operation timed out.')
 
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
@@ -695,7 +740,7 @@ def build_plan_financing(self,
                                              selected_event_type_set=event_type_set,
                                              selected_mentorship_service_set=mentorship_service_set,
                                              selected_service_set=service_set,
-                                             valid_until=invoice.paid_at + relativedelta(months=months),
+                                             valid_until=invoice.paid_at + relativedelta(months=months - 1),
                                              plan_expires_at=invoice.paid_at + delta,
                                              monthly_price=invoice.amount,
                                              status='ACTIVE',

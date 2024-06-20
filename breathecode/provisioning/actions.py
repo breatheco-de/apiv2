@@ -316,7 +316,7 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
         academies = random.choices(academies, k=1)
 
     errors = []
-    ignores = []
+    warnings = []
     logs = {}
     provisioning_bills = {}
     provisioning_vendor = None
@@ -354,28 +354,10 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
             provisioning_bills[academy.id] = provisioning_bill
 
     date = datetime.strptime(field['Date'], '%Y-%m-%d')
-    for academy_id in logs.keys():
-        for log in logs[academy_id]:
-            if (log['storage_action'] == 'DELETE' and log['storage_status'] == 'SYNCHED'
-                    and log['starting_at'] <= pytz.utc.localize(date) <= log['ending_at']):
-                provisioning_bills.pop(academy_id, None)
-                ignores.append(f'User {field["Username"]} was deleted from the academy during this event at {date}')
-
-    if not provisioning_bills:
-        for academy_id in logs.keys():
-            cohort_user = CohortUser.objects.filter(
-                Q(cohort__ending_date__lte=date) | Q(cohort__never_ends=True),
-                cohort__kickoff_date__gte=date,
-                cohort__academy__id=academy_id,
-                user__credentialsgithub__username=field['Username']).order_by('-created_at').first()
-
-            if cohort_user:
-                errors.append('We found activity from this user while he was studying at one of your cohort '
-                              f'{cohort_user.cohort.slug}')
 
     if not_found:
-        errors.append(f'We could not find enough information about {field["Username"]}, mark this user user as '
-                      'deleted if you don\'t recognize it')
+        warnings.append(f'We could not find enough information about {field["Username"]}, mark this user user as '
+                        'deleted if you don\'t recognize it')
 
     if not (kind := context['provisioning_activity_kinds'].get((field['Product'], field['SKU']), None)):
         kind, _ = ProvisioningConsumptionKind.objects.get_or_create(
@@ -415,19 +397,22 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
         csv_row=position,
     )
 
-    if errors and not (len(errors) == 1 and not_found):
+    last_status_list = [x for x in pa.status_text.split(', ') if x]
+    if errors:
         pa.status = 'ERROR'
-        pa.status_text = pa.status_text + (', ' if pa.status_text else '') + ', '.join(errors + ignores)
+        pa.status_text = ', '.join(last_status_list + errors + warnings)
 
-    elif pa.status != 'ERROR' and ignores and not provisioning_bills:
-        pa.status = 'IGNORED'
-        pa.status_text = pa.status_text + (', ' if pa.status_text else '') + ', '.join(ignores)
+    elif warnings:
+        if pa.status != 'ERROR':
+            pa.status = 'WARNING'
+
+        pa.status_text = ', '.join(last_status_list + warnings)
 
     else:
         pa.status = 'PERSISTED'
-        pa.status_text = pa.status_text + (', ' if pa.status_text else '') + ', '.join(errors + ignores)
+        pa.status_text = ', '.join(last_status_list + errors + warnings)
 
-    pa.status_text = ', '.join(sorted(set(pa.status_text.split(', '))))
+    pa.status_text = ', '.join([x for x in sorted(set(pa.status_text.split(', '))) if x])
     pa.status_text = pa.status_text[:255]
     pa.save()
 
@@ -469,13 +454,14 @@ def add_gitpod_activity(context: ActivityContext, field: dict, position: int):
         academies = list(context['academies'])
 
     errors = []
+    warnings = []
     if not academies:
-        errors.append(f'We could not find enough information about {field["userName"]}, mark this user user as '
-                      'deleted if you don\'t recognize it')
+        warnings.append(f'We could not find enough information about {field["userName"]}, mark this user user as '
+                        'deleted if you don\'t recognize it')
 
     pattern = r'^https://github\.com/[^/]+/([^/]+)/?'
     if not (result := re.findall(pattern, field['contextURL'])):
-        errors.append(f'Invalid repository URL {field["contextURL"]}')
+        warnings.append(f'Invalid repository URL {field["contextURL"]}')
         slug = 'unknown'
 
     else:
@@ -556,9 +542,22 @@ def add_gitpod_activity(context: ActivityContext, field: dict, position: int):
     if pa.status == 'PENDING':
         pa.status = 'PERSISTED' if not errors else 'ERROR'
 
-    pa.status_text = pa.status_text + (', ' if pa.status_text else '') + ', '.join(errors)
+    last_status_list = [x for x in pa.status_text.split(', ') if x]
+    if errors:
+        pa.status = 'ERROR'
+        pa.status_text = ', '.join(last_status_list + errors + warnings)
 
-    pa.status_text = ', '.join(sorted(set(pa.status_text.split(', '))))
+    elif warnings:
+        if pa.status != 'ERROR':
+            pa.status = 'WARNING'
+
+        pa.status_text = ', '.join(last_status_list + warnings)
+
+    else:
+        pa.status = 'PERSISTED'
+        pa.status_text = ', '.join(last_status_list + errors + warnings)
+
+    pa.status_text = ', '.join([x for x in sorted(set(pa.status_text.split(', '))) if x])
     pa.status_text = pa.status_text[:255]
     pa.save()
 
@@ -572,7 +571,7 @@ def add_gitpod_activity(context: ActivityContext, field: dict, position: int):
 
 def add_rigobot_activity(context: ActivityContext, field: dict, position: int) -> None:
     errors = []
-    ignores = []
+    warnings = []
 
     if field['organization'] != '4Geeks':
         return
@@ -657,31 +656,11 @@ def add_rigobot_activity(context: ActivityContext, field: dict, position: int) -
             context['provisioning_bills'][academy.id] = provisioning_bill
             provisioning_bills[academy.id] = provisioning_bill
 
-    for academy_id in logs.keys():
-        for log in logs[academy_id]:
-            if (log['storage_action'] == 'DELETE' and log['storage_status'] == 'SYNCHED'
-                    and log['starting_at'] <= pytz.utc.localize(date) <= log['ending_at']):
-                provisioning_bills.pop(academy_id, None)
-                ignores.append(
-                    f'User {field["github_username"]} was deleted from the academy during this event at {date}')
-
-    # disabled because rigobot doesn't have the organization configured yet.
-    # if not provisioning_bills:
-    #     for academy_id in logs.keys():
-    #         cohort_user = CohortUser.objects.filter(
-    #             Q(cohort__ending_date__lte=date) | Q(cohort__never_ends=True),
-    #             cohort__kickoff_date__gte=date,
-    #             cohort__academy__id=academy_id,
-    #             user__credentialsgithub__username=field['github_username']).order_by('-created_at').first()
-
-    #         if cohort_user:
-    #             errors.append('We found activity from this user while he was studying at one of your cohort '
-    #                           f'{cohort_user.cohort.slug}')
-
     # not implemented yet
     if not_found:
-        errors.append(f'We could not find enough information about {field["github_username"]}, mark this user user as '
-                      'deleted if you don\'t recognize it')
+        warnings.append(
+            f'We could not find enough information about {field["github_username"]}, mark this user user as '
+            'deleted if you don\'t recognize it')
 
     s_slug = f'{field["purpose_slug"] or "no-provided"}--{field["pricing_type"].lower()}--{field["model"].lower()}'
     s_name = f'{field["purpose"]} (type: {field["pricing_type"]}, model: {field["model"]})'
@@ -723,20 +702,22 @@ def add_rigobot_activity(context: ActivityContext, field: dict, position: int) -
         csv_row=position,
     )
 
-    # if errors and not (len(errors) == 1 and not_found):
+    last_status_list = [x for x in pa.status_text.split(', ') if x]
     if errors:
         pa.status = 'ERROR'
-        pa.status_text = pa.status_text + (', ' if pa.status_text else '') + ', '.join(errors + ignores)
+        pa.status_text = ', '.join(last_status_list + errors + warnings)
 
-    elif pa.status != 'ERROR' and ignores and not provisioning_bills:
-        pa.status = 'IGNORED'
-        pa.status_text = pa.status_text + (', ' if pa.status_text else '') + ', '.join(ignores)
+    elif warnings:
+        if pa.status != 'ERROR':
+            pa.status = 'WARNING'
+
+        pa.status_text = ', '.join(last_status_list + warnings)
 
     else:
         pa.status = 'PERSISTED'
-        pa.status_text = pa.status_text + (', ' if pa.status_text else '') + ', '.join(errors + ignores)
+        pa.status_text = ', '.join(last_status_list + errors + warnings)
 
-    pa.status_text = ', '.join(sorted(set(pa.status_text.split(', '))))
+    pa.status_text = ', '.join([x for x in sorted(set(pa.status_text.split(', '))) if x])
     pa.status_text = pa.status_text[:255]
     pa.save()
 

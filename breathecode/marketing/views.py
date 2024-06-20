@@ -1262,7 +1262,7 @@ class CourseView(APIView):
             items = items.filter(query)
 
         items = items.annotate(lang=Value(lang, output_field=CharField()))
-
+        items = items.order_by('created_at')
         items = handler.queryset(items)
         serializer = GetCourseSerializer(items, context={'lang': lang}, many=True)
         return handler.response(serializer.data)

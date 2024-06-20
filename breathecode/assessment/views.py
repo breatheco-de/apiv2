@@ -381,11 +381,19 @@ class GetThresholdView(APIView):
     """
     permission_classes = [AllowAny]
 
-    def get(self, request, assessment_slug):
+    def get(self, request, assessment_slug, threshold_id=None):
 
         item = Assessment.objects.filter(slug=assessment_slug).first()
         if item is None:
             raise ValidationException('Assessment not found', 404)
+
+        if threshold_id is not None:
+            single = AssessmentThreshold.objects.filter(id=threshold_id, assessment__slug=assessment_slug).first()
+            if single is None:
+                raise ValidationException(f'Threshold {threshold_id} not found', 404, slug='threshold-not-found')
+
+            serializer = GetAssessmentThresholdSerializer(single, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
         # get original all assessments (assessments that have no parent)
         items = AssessmentThreshold.objects.filter(assessment__slug=assessment_slug)
@@ -398,6 +406,10 @@ class GetThresholdView(APIView):
                 lookup['academy__id'] = int(param)
             else:
                 lookup['academy__slug'] = param
+        if 'tag' in self.request.GET:
+            param = self.request.GET.get('tags')
+            lookup['tags__icontains'] = param
+
         else:
             lookup['academy__isnull'] = True
 

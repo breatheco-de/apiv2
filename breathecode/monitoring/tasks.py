@@ -135,7 +135,8 @@ def async_unsubscribe_repo(self, subs_id, force_delete):
 @shared_task(bind=True, priority=TaskPriority.MARKETING.value)
 def async_subscribe_repo(self, subs_id):
     logger.debug('Async subscribe to repo')
-    return subscribe_repository(subs_id) != False
+    subscription = subscribe_repository(subs_id)
+    return subscription != False and subscription.status != 'OPERATIONAL'
 
 
 @task(priority=TaskPriority.MARKETING.value)
