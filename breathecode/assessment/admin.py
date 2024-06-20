@@ -95,8 +95,8 @@ class UserAssessmentAdmin(admin.ModelAdmin):
 
 @admin.register(AssessmentThreshold)
 class UserAssessmentThresholdAdmin(admin.ModelAdmin):
-    search_fields = ['assessment__slug', 'assessment__title']
-    list_display = ['id', 'title', 'score_threshold', 'assessment']
+    search_fields = ['assessment__slug', 'assessment__title', 'tags']
+    list_display = ['id', 'title', 'score_threshold', 'assessment', 'tags']
     list_filter = ['assessment__slug']
     actions = []
 
