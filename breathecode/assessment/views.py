@@ -393,7 +393,7 @@ class GetThresholdView(APIView):
                 raise ValidationException(f'Threshold {threshold_id} not found', 404, slug='threshold-not-found')
 
             serializer = GetAssessmentThresholdSerializer(single, many=False)
-            return handler.response(serializer.data)
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
         # get original all assessments (assessments that have no parent)
         items = AssessmentThreshold.objects.filter(assessment__slug=assessment_slug)
