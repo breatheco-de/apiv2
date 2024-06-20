@@ -718,6 +718,7 @@ def process_asset_config(asset, config):
             if isinstance(config['video']['solution'], str):
                 asset.solution_video_url = get_video_url(str(config['video']['solution']))
                 asset.with_video = True
+                asset.with_solutions = True
             else:
                 if 'en' in config['video']['solution']:
                     config['video']['solution']['us'] = config['video']['solution']['en']
@@ -725,6 +726,7 @@ def process_asset_config(asset, config):
                     config['video']['solution']['en'] = config['video']['solution']['us']
 
                 if asset.lang in config['video']['solution']:
+                    asset.with_solutions = True
                     asset.solution_video_url = get_video_url(str(config['video']['solution'][asset.lang]))
                     asset.with_video = True
 
@@ -732,12 +734,20 @@ def process_asset_config(asset, config):
         asset.duration = config['duration']
     if 'difficulty' in config:
         asset.difficulty = config['difficulty'].upper()
+    if 'videoSolutions' in config:
+        asset.with_solutions = True
+        asset.with_video = True
     if 'solution' in config:
         asset.solution_url = config['solution']
         asset.with_solutions = True
 
-    if 'projectType' in config:
-        asset.gitpod = config['projectType'] == 'tutorial'
+    if 'projectType' in config and config['projectType'] == 'tutorial':
+        asset.gitpod = True
+        asset.interactive = True
+    if 'grading' in config and config['grading'] in ['isolated', 'incremental']:
+        asset.gitpod = True
+        asset.interactive = True
+      
 
     if 'technologies' in config:
         asset.technologies.clear()
