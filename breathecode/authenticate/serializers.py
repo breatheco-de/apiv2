@@ -368,6 +368,7 @@ class AppUserSerializer(serpy.Serializer):
     username = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
+    date_joined = serpy.Field()
     github = serpy.MethodField()
     profile = serpy.MethodField()
 

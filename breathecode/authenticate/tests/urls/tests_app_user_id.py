@@ -24,7 +24,7 @@ def profile_serializer(credentials_github):
     }
 
 
-def get_serializer(user, credentials_github=None, profile=None):
+def get_serializer(user, credentials_github=None, profile=None, **data):
     return {
         'email': user.email,
         'username': user.username,
@@ -32,7 +32,9 @@ def get_serializer(user, credentials_github=None, profile=None):
         'github': credentials_github_serializer(credentials_github) if credentials_github else None,
         'id': user.id,
         'last_name': user.last_name,
+        'date_joined': user.date_joined,
         'profile': profile_serializer(profile) if profile else None,
+        **data
     }
 
 
@@ -82,7 +84,10 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = get_serializer(model.user[0], model.credentials_github[0], model.profile[0])
+        expected = get_serializer(model.user[0],
+                                  model.credentials_github[0],
+                                  model.profile[0],
+                                  date_joined=self.bc.datetime.to_iso_string(model.user[0].date_joined))
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -134,7 +139,10 @@ class AuthenticateTestSuite(AuthTestCase):
             response = self.client.get(url)
 
             json = response.json()
-            expected = get_serializer(user, model.credentials_github[user.id - 1], model.profile[user.id - 1])
+            expected = get_serializer(user,
+                                      model.credentials_github[user.id - 1],
+                                      model.profile[user.id - 1],
+                                      date_joined=self.bc.datetime.to_iso_string(user.date_joined))
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -181,7 +189,10 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        expected = get_serializer(model.user, model.credentials_github, model.profile)
+        expected = get_serializer(model.user,
+                                  model.credentials_github,
+                                  model.profile,
+                                  date_joined=self.bc.datetime.to_iso_string(model.user.date_joined))
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
