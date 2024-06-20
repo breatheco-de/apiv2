@@ -137,6 +137,15 @@ class AssessmentThreshold(models.Model):
                              null=True,
                              help_text='Title is good for internal use')
 
+    tags = models.CharField(
+        max_length=255,
+        default=None,
+        blank=True,
+        null=True,
+        help_text=
+        'Ideal to group thresholds under a taxonomy, that way you can have several groups of thresholds for the same quiz'
+    )
+
     academy = models.ForeignKey(
         Academy,
         on_delete=models.CASCADE,
