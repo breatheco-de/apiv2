@@ -408,7 +408,10 @@ class GetThresholdView(APIView):
                 lookup['academy__slug'] = param
         if 'tag' in self.request.GET:
             param = self.request.GET.get('tags')
-            lookup['tags__icontains'] = param
+            if param != "all":
+                lookup['tags__icontains'] = param
+        else:
+            lookup['tags__in'] = ["", None]
 
         else:
             lookup['academy__isnull'] = True
