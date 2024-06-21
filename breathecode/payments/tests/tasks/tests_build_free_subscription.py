@@ -654,3 +654,79 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
             call(1, 'bag_created', related_type='payments.Bag', related_id=1),
         ])
+
+    """
+    🔽🔽🔽 With Bag, Invoice and Plan with is_renewable=True
+    """
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch.object(timezone, 'now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.tasks.build_service_stock_scheduler_from_subscription.delay', MagicMock())
+    def test_subscription_was_created__is_free__is_renewable_with_conversion_info(self):
+        bag = {
+            'status': 'PAID',
+            'was_delivered': False,
+            'chosen_period': 'NO_SET',
+        }
+        invoice = {'status': 'FULFILLED'}
+
+        plans = [{
+            'is_renewable': True,
+            'trial_duration': 0,
+            'trial_duration_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
+            'time_of_life': random.randint(1, 100),
+            'time_of_life_unit': random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR']),
+        } for _ in range(2)]
+
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plans)
+
+        # remove prints from mixer
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        build_free_subscription.delay(1, 1, conversion_info='{"landing_url": "/"}')
+
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting build_free_subscription for bag 1'),
+            call('Free subscription was created with id 1 for plan 1'),
+            call('Free subscription was created with id 2 for plan 2'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+            {
+                **self.bc.format.to_dict(model.bag),
+                'was_delivered': True,
+            },
+        ])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [
+            self.bc.format.to_dict(model.invoice),
+        ])
+
+        db = []
+        for plan in model.plan:
+            unit = plan.time_of_life
+            unit_type = plan.time_of_life_unit
+            db.append(
+                subscription_item({
+                    'conversion_info': {
+                        'landing_url': '/'
+                    },
+                    'id': plan.id,
+                    'status': 'ACTIVE',
+                    'paid_at': model.invoice.paid_at,
+                    'next_payment_at': model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
+                    'valid_until': None,
+                }))
+
+        self.assertEqual(self.bc.database.list_of('payments.Subscription'), db)
+        self.assertEqual(tasks.build_service_stock_scheduler_from_subscription.delay.call_args_list, [
+            call(1),
+            call(2),
+        ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])

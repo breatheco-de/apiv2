@@ -7,6 +7,7 @@
             "name": "GeekPal 1-1 Coding Mentorship",
             "logo_url": null,
             "description": "1-1 Mentoring technical session using the GeekPal service.",
+            "video_provider": "GOOGLE_MEET",
             "duration": "01:00:00",
             "max_duration": "02:00:00",
             "missed_meeting_duration": "00:10:00",

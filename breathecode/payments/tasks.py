@@ -760,7 +760,7 @@ def build_plan_financing(self,
 
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
-def build_free_subscription(self, bag_id: int, invoice_id: int, **_: Any):
+def build_free_subscription(self, bag_id: int, invoice_id: int, conversion_info: Optional[str] = '', **_: Any):
     logger.info(f'Starting build_free_subscription for bag {bag_id}')
 
     if not (bag := Bag.objects.filter(id=bag_id, status='PAID', was_delivered=False).first()):
@@ -821,6 +821,7 @@ def build_free_subscription(self, bag_id: int, invoice_id: int, **_: Any):
                 'valid_until': until,
             }
 
+        parsed_conversion_info = ast.literal_eval(conversion_info) if conversion_info != '' else None
         subscription = Subscription.objects.create(user=bag.user,
                                                    paid_at=invoice.paid_at,
                                                    academy=bag.academy,
@@ -829,6 +830,7 @@ def build_free_subscription(self, bag_id: int, invoice_id: int, **_: Any):
                                                    selected_mentorship_service_set=mentorship_service_set,
                                                    selected_service_set=service_set,
                                                    next_payment_at=until,
+                                                   conversion_info=parsed_conversion_info,
                                                    **extra)
 
         subscription.plans.add(plan)

@@ -1663,7 +1663,7 @@ class PayView(APIView):
                         slug='conversion-info-invalid-key'),
                                               code=400)
 
-        conversion_info = str(conversion_info)
+        conversion_info = str(conversion_info) if conversion_info is not None else ''
 
         with transaction.atomic():
             sid = transaction.savepoint()
@@ -1843,7 +1843,7 @@ class PayView(APIView):
                 transaction.savepoint_commit(sid)
 
                 if amount == 0:
-                    tasks.build_free_subscription.delay(bag.id, invoice.id)
+                    tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
 
                 elif bag.how_many_installments > 0:
                     tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info)

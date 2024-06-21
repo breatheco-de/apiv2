@@ -458,3 +458,78 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
             call(1, 'bag_created', related_type='payments.Bag', related_id=1),
         ])
+
+    """
+    🔽🔽🔽 With Bag with MentorshipServiceSet and Invoice with amount and conversion_info
+    """
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch.object(timezone, 'now', MagicMock(return_value=UTC_NOW))
+    @patch('breathecode.payments.tasks.build_service_stock_scheduler_from_plan_financing.delay', MagicMock())
+    def test_subscription_was_created__bag_with_mentorship_service_set_with_conversion_info(self):
+        amount = (random.random() * 99) + 1
+        bag = {
+            'status': 'PAID',
+            'was_delivered': False,
+            'chosen_period': random.choice(['MONTH', 'QUARTER', 'HALF', 'YEAR']),
+        }
+        invoice = {'status': 'FULFILLED', 'amount': amount}
+        plan = {'is_renewable': False}
+
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plan, mentorship_service_set=1)
+
+        # remove prints from mixer
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        months = model.bag.how_many_installments
+
+        build_plan_financing.delay(1, 1, conversion_info='{"landing_url": "/home"}')
+
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting build_plan_financing for bag 1'),
+            call('PlanFinancing was created with id 1'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+            {
+                **self.bc.format.to_dict(model.bag),
+                'was_delivered': True,
+            },
+        ])
+        self.assertEqual(
+            self.bc.database.list_of('payments.Invoice'),
+            [
+                {
+                    **self.bc.format.to_dict(model.invoice),
+                    # 'monthly_price': amount,
+                },
+            ])
+        self.assertEqual(self.bc.database.list_of('payments.PlanFinancing'), [
+            plan_financing_item({
+                'conversion_info': {
+                    'landing_url': '/home'
+                },
+                'monthly_price':
+                model.invoice.amount,
+                'selected_mentorship_service_set_id':
+                1,
+                'valid_until':
+                model.invoice.paid_at + relativedelta(months=months - 1),
+                'next_payment_at':
+                model.invoice.paid_at + relativedelta(months=1),
+                'plan_expires_at':
+                model.invoice.paid_at + calculate_relative_delta(model.plan.time_of_life, model.plan.time_of_life_unit),
+            }),
+        ])
+
+        self.assertEqual(tasks.build_service_stock_scheduler_from_plan_financing.delay.call_args_list, [
+            call(1),
+        ])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
