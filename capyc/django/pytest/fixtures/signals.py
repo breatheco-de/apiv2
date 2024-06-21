@@ -174,15 +174,8 @@ class Signals:
         self._monkeypatch.setattr('django.db.models.signals.ModelSignal.send_robust',
                                   self._original_model_signal_send_robust)
 
-        print('1send', self._original_signal_send)
-        print('1send_robust', self._original_signal_send_robust)
-        print('2send', self._original_model_signal_send)
-        print('2send_robust', self._original_model_signal_send_robust)
-
         if to_enable or debug:
-            print('to_enable', to_enable)
             to_disable = [x for x in self._signals_map if x not in to_enable]
-            # print('to_disable', to_disable)
 
             for signal in to_disable:
 
@@ -190,7 +183,6 @@ class Signals:
 
                     def send_mock(*args, **kwargs):
                         if debug:
-                            print(module)
                             try:
                                 print('  args\n    ', args)
                             except Exception:

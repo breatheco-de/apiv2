@@ -157,14 +157,7 @@ class UserSpecialty(models.Model):
         hash = self.generate_update_hash()
         self._hash_was_updated = self.update_hash != hash
         self.update_hash = hash
-        print(1, self._hash_was_updated)
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
-        print(21, signals.user_specialty_saved.send)
-        print(22, signals.user_specialty_saved.send.__class__)
-        print(22, signals.user_specialty_saved.send.__module__)
-        print(3, signals.user_specialty_saved.send_robust)
-        print(32, signals.user_specialty_saved.send_robust.__class__)
-        print(32, signals.user_specialty_saved.send_robust.__module__)
 
         signals.user_specialty_saved.send_robust(instance=self, sender=self.__class__)

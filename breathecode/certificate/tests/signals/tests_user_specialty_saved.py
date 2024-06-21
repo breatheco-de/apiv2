@@ -47,9 +47,6 @@ class TestAcademyEvent(LegacyAPITestCase):
 
         model.user_specialty.save()
 
-        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
-        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
-
         assert tasks.reset_screenshot.delay.call_args_list == []
         assert tasks.take_screenshot.delay.call_args_list == []
 
@@ -69,9 +66,6 @@ class TestAcademyEvent(LegacyAPITestCase):
         user_specialty_db = remove_is_clean_for_one_item(self.bc.format.to_dict(model.user_specialty))
 
         model.user_specialty.save()
-
-        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
-        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
 
         assert tasks.reset_screenshot.delay.call_args_list == []
         assert tasks.take_screenshot.delay.call_args_list == []
@@ -93,9 +87,6 @@ class TestAcademyEvent(LegacyAPITestCase):
 
         model.user_specialty.save()
 
-        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
-        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
-
         assert tasks.reset_screenshot.delay.call_args_list == []
         assert tasks.take_screenshot.delay.call_args_list == [call(1)]
 
@@ -116,9 +107,6 @@ class TestAcademyEvent(LegacyAPITestCase):
 
         model.user_specialty.signed_by = 'GOD 🤷‍♂️'
         model.user_specialty.save()
-
-        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
-        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
 
         assert tasks.reset_screenshot.delay.call_args_list == []
         assert tasks.take_screenshot.delay.call_args_list == [call(1), call(1)]
@@ -148,9 +136,6 @@ class TestAcademyEvent(LegacyAPITestCase):
         model.user_specialty.signed_by_role = 'GOD 🤷‍♂️'
         model.user_specialty.save()
 
-        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
-        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
-
         assert tasks.reset_screenshot.delay.call_args_list == []
         assert tasks.take_screenshot.delay.call_args_list == [call(1), call(1)]
 
@@ -178,9 +163,6 @@ class TestAcademyEvent(LegacyAPITestCase):
 
         model1.user_specialty.layout = model2.layout_design
         model1.user_specialty.save()
-
-        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
-        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
 
         assert tasks.reset_screenshot.delay.call_args_list == []
         assert tasks.take_screenshot.delay.call_args_list == [call(1), call(1)]
@@ -210,9 +192,6 @@ class TestAcademyEvent(LegacyAPITestCase):
         model.user_specialty.expires_at = utc_now
         model.user_specialty.save()
 
-        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
-        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
-
         assert tasks.reset_screenshot.delay.call_args_list == []
         assert tasks.take_screenshot.delay.call_args_list == [call(1), call(1)]
 
@@ -241,9 +220,6 @@ class TestAcademyEvent(LegacyAPITestCase):
         model.user_specialty.issued_at = utc_now
         model.user_specialty.save()
 
-        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
-        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
-
         assert tasks.reset_screenshot.delay.call_args_list == []
         assert tasks.take_screenshot.delay.call_args_list == [call(1), call(1)]
 
@@ -270,9 +246,6 @@ class TestAcademyEvent(LegacyAPITestCase):
 
         model.user_specialty.save()
 
-        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
-        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
-
         assert tasks.reset_screenshot.delay.call_args_list == [call(1)]
         assert tasks.take_screenshot.delay.call_args_list == []
 
@@ -293,9 +266,6 @@ class TestAcademyEvent(LegacyAPITestCase):
 
         model.user_specialty.signed_by = 'GOD 🤷‍♂️'
         model.user_specialty.save()
-
-        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
-        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
 
         assert tasks.reset_screenshot.delay.call_args_list == [call(1), call(1)]
         assert tasks.take_screenshot.delay.call_args_list == []
@@ -323,9 +293,6 @@ class TestAcademyEvent(LegacyAPITestCase):
 
         model.user_specialty.signed_by_role = 'GOD 🤷‍♂️'
         model.user_specialty.save()
-
-        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
-        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
 
         assert tasks.reset_screenshot.delay.call_args_list == [call(1), call(1)]
         assert tasks.take_screenshot.delay.call_args_list == []
@@ -355,9 +322,6 @@ class TestAcademyEvent(LegacyAPITestCase):
         model1.user_specialty.layout = model2.layout_design
         model1.user_specialty.save()
 
-        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
-        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
-
         assert tasks.reset_screenshot.delay.call_args_list == [call(1), call(1)]
         assert tasks.take_screenshot.delay.call_args_list == []
 
@@ -386,9 +350,6 @@ class TestAcademyEvent(LegacyAPITestCase):
         model.user_specialty.expires_at = utc_now
         model.user_specialty.save()
 
-        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
-        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
-
         assert tasks.reset_screenshot.delay.call_args_list == [call(1), call(1)]
         assert tasks.take_screenshot.delay.call_args_list == []
 
@@ -416,9 +377,6 @@ class TestAcademyEvent(LegacyAPITestCase):
         utc_now = timezone.now()
         model.user_specialty.issued_at = utc_now
         model.user_specialty.save()
-
-        print('tasks.reset_screenshot', tasks.reset_screenshot.delay.call_args_list)
-        print('tasks.take_screenshot', tasks.take_screenshot.delay.call_args_list)
 
         assert tasks.reset_screenshot.delay.call_args_list == [call(1), call(1)]
         assert tasks.take_screenshot.delay.call_args_list == []
