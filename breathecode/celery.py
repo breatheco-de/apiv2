@@ -123,7 +123,7 @@ def worker_process_init_handler(**kwargs):
                     if len(data[i]) >= 2:
                         data[i].sort(key=lambda x: x['created_at'])
 
-                        if datetime.now(UTC) - data[i][-1]['created_at'] < delta:
+                        if datetime.now(UTC) - data[i][-1]['created_at'].replace(tzinfo=UTC) < delta:
                             available[i] = False
                             data[i] = data[i][-2:]
                         else:
@@ -131,7 +131,7 @@ def worker_process_init_handler(**kwargs):
                             data[i] = data[i][-1:]
 
                     elif len(data[i]) == 1:
-                        if datetime.now(UTC) - data[i][0]['created_at'] < delta:
+                        if datetime.now(UTC) - data[i][0]['created_at'].replace(tzinfo=UTC) < delta:
                             available[i] = False
                         else:
                             available[i] = True
