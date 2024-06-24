@@ -1,10 +1,12 @@
-from django.db import models
 from collections import OrderedDict
-from django.core import serializers
+
 from django.conf import settings
 from django.contrib.auth.models import User
-from breathecode.admissions.models import Academy, Cohort
+from django.core import serializers
+from django.db import models
 from rest_framework.exceptions import ValidationError
+
+from breathecode.admissions.models import Academy, Cohort
 
 __all__ = ['UserProxy', 'CohortProxy', 'Device', 'SlackTeam', 'SlackUser', 'SlackUserTeam', 'SlackChannel', 'Hook']
 AUTH_USER_MODEL = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
@@ -197,3 +199,13 @@ class Hook(AbstractHook):
 
     class Meta(AbstractHook.Meta):
         swappable = 'HOOK_CUSTOM_MODEL'
+
+
+class HookError(models.Model):
+    """Hook Error."""
+
+    message = models.CharField(max_length=255)
+    event = models.CharField('Event', max_length=64, db_index=True)
+    hooks = models.ManyToManyField(Hook, related_name='errors', blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

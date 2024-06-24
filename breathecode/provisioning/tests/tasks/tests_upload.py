@@ -670,6 +670,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 'vendor_id': None,
                 'hash': slug,
                 'total_amount': 0.0,
+                'status': 'ERROR',
             }) for n in range(20)
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionKind'), [
@@ -820,6 +821,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 'vendor_id': None,
                 'hash': slug,
                 'total_amount': 0.0,
+                'status': 'ERROR',
             }) for n in range(20)
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionKind'), [
@@ -1344,7 +1346,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 'processed_at':
                 UTC_NOW,
                 'status':
-                'PERSISTED',
+                'WARNING',
                 'status_text': (f"We could not find enough information about {csv['Username'][n]}, mark this user user "
                                 "as deleted if you don't recognize it"),
             }) for n in range(10)
@@ -1501,7 +1503,10 @@ class GitpodTestSuite(ProvisioningTestCase):
 
         self.assertEqual(self.bc.database.list_of('payments.Currency'), [currency_data()])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
-            provisioning_bill_data({'hash': slug}),
+            provisioning_bill_data({
+                'hash': slug,
+                'status': 'ERROR',
+            }),
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionKind'), [
             provisioning_activity_kind_data({
@@ -2342,7 +2347,10 @@ class RigobotTestSuite(ProvisioningTestCase):
 
         self.assertEqual(self.bc.database.list_of('payments.Currency'), [currency_data()])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningBill'), [
-            provisioning_bill_data({'hash': slug}),
+            provisioning_bill_data({
+                'hash': slug,
+                'status': 'ERROR',
+            }),
         ])
         self.assertEqual(self.bc.database.list_of('provisioning.ProvisioningConsumptionKind'), [
             provisioning_activity_kind_data(

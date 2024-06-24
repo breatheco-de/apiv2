@@ -3,18 +3,21 @@ import logging
 from datetime import timedelta
 
 import pytz
+from asgiref.sync import sync_to_async
 from dateutil.relativedelta import relativedelta
 from django.db.models import Q, QuerySet
 from django.shortcuts import render
 from django.utils import timezone
+from google.apps.meet_v2.types import Space, SpaceConfig
 
 import breathecode.activity.tasks as tasks_activity
 from breathecode.mentorship.exceptions import ExtendSessionException
 from breathecode.services.daily.client import DailyClient
+from breathecode.services.google_meet.google_meet import GoogleMeet
 from breathecode.utils.datetime_integer import duration_to_str
 from capyc.rest_framework.exceptions import ValidationException
 
-from .models import MentorProfile, MentorshipBill, MentorshipSession
+from .models import MentorProfile, MentorshipBill, MentorshipService, MentorshipSession
 
 logger = logging.getLogger(__name__)
 
@@ -91,12 +94,20 @@ def get_pending_sessions_or_create(token, mentor, service, mentee=None):
                                 is_online=True,
                                 service=service,
                                 ends_at=timezone.now() + duration)
-    daily = DailyClient()
-    room = daily.create_room(exp_in_seconds=service.duration.seconds)
-    session.online_meeting_url = room['url']
-    session.name = room['name']
-    session.mentee = mentee
-    session.save()
+
+    if session.service.video_provider == MentorshipService.VideoProvider.GOOGLE_MEET:
+        create_room_on_google_meet(session)
+
+    elif session.service.video_provider == MentorshipService.VideoProvider.DAILY:
+        daily = DailyClient()
+        room = daily.create_room(exp_in_seconds=service.duration.seconds)
+        session.online_meeting_url = room['url']
+        session.name = room['name']
+        session.mentee = mentee
+        session.save()
+
+    else:
+        raise Exception('Invalid video provider')
 
     if mentee:
         tasks_activity.add_activity.delay(mentee.id,
@@ -392,3 +403,38 @@ def mentor_is_ready(mentor: MentorProfile):
         raise Exception(f'Mentor {mentor.name} online meeting URL is failing.')
 
     return True
+
+
+def create_room_on_google_meet(session: MentorshipSession) -> None:
+    """Create a room on google meet for a mentorship session."""
+
+    if isinstance(session, MentorshipSession) is False:
+        raise Exception('session argument must be a MentorshipSession')
+
+    if session.service.video_provider != session.service.VideoProvider.GOOGLE_MEET:
+        raise Exception('Video provider must be Google Meet')
+
+    if not session.service:
+        raise Exception('Mentorship session doesn\'t have a service associated with it')
+
+    mentor = session.mentor
+
+    meet = GoogleMeet()
+    if session.id is None:
+        session.save()
+
+    title = (f'{session.service.name} {session.id} | '
+             f'{mentor.user.first_name} {mentor.user.last_name}')
+    s = Space(
+        name=title,
+        config=SpaceConfig(access_type=SpaceConfig.AccessType.OPEN),
+    )
+    space = meet.create_space(space=s)
+    session.online_meeting_url = space.meeting_uri
+    session.name = title
+    session.save()
+
+
+@sync_to_async
+def acreate_room_on_google_meet(session: MentorshipSession) -> None:
+    return create_room_on_google_meet(session)

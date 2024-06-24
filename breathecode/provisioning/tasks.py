@@ -99,7 +99,7 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
 
     for bill in bills:
         amount = 0
-        for activity in ProvisioningUserConsumption.objects.filter(bills=bill, status='PERSISTED'):
+        for activity in ProvisioningUserConsumption.objects.filter(bills=bill, status__in=['PERSISTED', 'WARNING']):
             consumption_amount = 0
             consumption_quantity = 0
             for item in activity.events.all():
@@ -241,6 +241,9 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
 
     elif not ProvisioningUserConsumption.objects.filter(hash=hash, status='ERROR').exists():
         calculate_bill_amounts.delay(hash)
+
+    elif ProvisioningUserConsumption.objects.filter(hash=hash, status='ERROR').exists():
+        ProvisioningBill.objects.filter(hash=hash).update(status='ERROR')
 
 
 @task(priority=TaskPriority.BACKGROUND.value)

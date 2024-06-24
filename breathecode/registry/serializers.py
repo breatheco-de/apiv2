@@ -330,6 +330,7 @@ class AssetMidSerializer(AssetSerializer):
     interactive = serpy.Field()
     with_solutions = serpy.Field()
     with_video = serpy.Field()
+    updated_at = serpy.Field()
 
 
 class AssetBigSerializer(AssetMidSerializer):
@@ -345,6 +346,7 @@ class AssetBigSerializer(AssetMidSerializer):
     last_synch_at = serpy.Field()
     status_text = serpy.Field()
     published_at = serpy.Field()
+    
     enable_table_of_content = serpy.Field()
 
     delivery_instructions = serpy.Field()
@@ -359,7 +361,7 @@ class AssetBigSerializer(AssetMidSerializer):
     superseded_by = AssetTinySerializer(required=False)
 
     def get_assets_related(self, obj):
-        _assets_related = [AssetSmallSerializer(asset).data for asset in obj.assets_related.all()]
+        _assets_related = [AssetSmallSerializer(asset).data for asset in obj.assets_related.filter(lang=obj.lang)]
         return _assets_related
 
 
