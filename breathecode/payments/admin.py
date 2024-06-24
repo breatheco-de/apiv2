@@ -39,6 +39,7 @@ from breathecode.payments.models import (
     ServiceTranslation,
     Subscription,
     SubscriptionServiceItem,
+    PaymentMethod,
 )
 
 # Register your models here.
@@ -370,3 +371,11 @@ class CouponAdmin(admin.ModelAdmin):
         'seller__user__last_name'
     ]
     raw_id_fields = ['seller']
+
+
+@admin.register(PaymentMethod)
+class PaymentMethodAdmin(admin.ModelAdmin):
+    list_display = ('title', 'description', 'academy', 'third_party_link')
+    list_filter = ['academy__name']
+    raw_id_fields = ['academy']
+    search_fields = ['title', 'academy__name']

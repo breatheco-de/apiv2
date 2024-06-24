@@ -1648,3 +1648,16 @@ class FinancialReputation(models.Model):
 
     def __str__(self) -> str:
         return f'{self.user.email} -> {self.get_reputation()}'
+
+
+class PaymentMethod(models.Model):
+    """
+    Different payment methods of each academy have.
+    """
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text='Academy owner')
+    title = models.CharField(max_length=120, null=False, blank=False)
+    description = models.CharField(max_length=255, help_text='Description of the payment method')
+    third_party_link = models.URLField(blank=True,
+                                       null=True,
+                                       default=None,
+                                       help_text='Link of a third party payment method')
