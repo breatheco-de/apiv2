@@ -5,7 +5,6 @@ from rest_framework.views import APIView
 
 from breathecode.services.google_cloud import Recaptcha
 from breathecode.utils.exceptions import ProgrammingError
-
 from capyc.rest_framework.exceptions import ValidationException
 
 logger = logging.getLogger(__name__)
@@ -43,7 +42,7 @@ def validate_captcha_challenge(function):
                 raise ValidationException('Missing ReCaptcha Token', code=400)
 
             recaptcha = Recaptcha()
-            response = recaptcha.create_assessment_v2(project_id=project_id, recaptcha_site_key=site_key, token=token)
+            recaptcha.create_assessment_v2(project_id=project_id, recaptcha_site_key=site_key, token=token)
 
             # TEMPORALILY DISABLING SCORE ANALYSIS
             # Google Recaptcha needs to work some time to learn about the site's traffic

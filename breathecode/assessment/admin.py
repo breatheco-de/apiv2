@@ -1,12 +1,23 @@
 import logging
 import re
+
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
-from breathecode.utils.admin import change_field
 from django.utils.html import format_html
-from .models import (Assessment, UserAssessment, UserProxy, Question, Option, AssessmentThreshold, Answer,
-                     AssessmentLayout)
+
+from breathecode.utils.admin import change_field
+
 from .actions import send_assestment
+from .models import (
+    Answer,
+    Assessment,
+    AssessmentLayout,
+    AssessmentThreshold,
+    Option,
+    Question,
+    UserAssessment,
+    UserProxy,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +65,7 @@ class OptionAdmin(admin.ModelAdmin):
     list_filter = ['lang', 'is_deleted']
 
 
-def change_status_ANSWERED(modeladmin, request, queryset):
+def change_status_answered(modeladmin, request, queryset):
     items = queryset.all()
     for i in items:
         i.status = 'ANSWERED'
@@ -67,7 +78,7 @@ class UserAssessmentAdmin(admin.ModelAdmin):
     readonly_fields = ('token', )
     list_display = ['id', 'title', 'current_status', 'lang', 'owner', 'total_score', 'assessment', 'academy']
     list_filter = ['lang', 'status', 'academy']
-    actions = [change_status_ANSWERED] + change_field(['DRAFT', 'SENT', 'ERROR', 'EXPIRED'], name='status')
+    actions = [change_status_answered] + change_field(['DRAFT', 'SENT', 'ERROR', 'EXPIRED'], name='status')
 
     def current_status(self, obj):
         colors = {

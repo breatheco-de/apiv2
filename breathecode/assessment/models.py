@@ -1,5 +1,4 @@
 import binascii
-import hashlib
 import os
 from datetime import timedelta
 

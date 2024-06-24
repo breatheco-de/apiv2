@@ -5,9 +5,7 @@ from datetime import datetime
 from decimal import Decimal, localcontext
 from typing import Optional, TypedDict
 
-import pytz
 from dateutil.relativedelta import relativedelta
-from django.contrib.auth.models import User
 from django.db.models import Q, QuerySet
 from django.utils import timezone
 from linked_services.django.actions import get_user
@@ -221,7 +219,7 @@ def handle_pending_github_user(organization: str, username: str, starts: Optiona
         return []
 
     if not orgs and organization is None:
-        logger.error(f'Organization not provided, in this case, all organizations will be used')
+        logger.error('Organization not provided, in this case, all organizations will be used')
 
     if not orgs:
         orgs = AcademyAuthSettings.objects.filter()

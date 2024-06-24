@@ -1,37 +1,36 @@
-from django.http import HttpResponse
+from datetime import datetime
+
 from django.utils import timezone
-from PIL import Image
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from breathecode.utils import (
-    APIViewExtensions,
-    GenerateLookupsMixin,
-)
 
+from breathecode.admissions.models import Academy
 from breathecode.authenticate.actions import get_user_language
-from breathecode.utils import capable_of
+from breathecode.marketing.serializers import FormEntryBigSerializer, PostFormEntrySerializer
+from breathecode.marketing.tasks import persist_single_lead
+from breathecode.utils import APIViewExtensions, GenerateLookupsMixin, capable_of
 from breathecode.utils.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 
-from .models import Assessment, AssessmentThreshold, Option, Question, UserAssessment, Answer, AssessmentLayout
+from .models import Answer, Assessment, AssessmentLayout, AssessmentThreshold, Option, Question, UserAssessment
 from .serializers import (
-    AssessmentPUTSerializer,
-    GetAssessmentBigSerializer,
-    GetAssessmentSerializer,
-    GetAssessmentThresholdSerializer,
-    OptionSerializer,
-    QuestionSerializer,
-    GetAssessmentLayoutSerializer,
-    SmallUserAssessmentSerializer,
-    GetUserAssessmentSerializer,
-    PostUserAssessmentSerializer,
-    PUTUserAssessmentSerializer,
     AnswerSerializer,
     AnswerSmallSerializer,
+    AssessmentPUTSerializer,
+    GetAssessmentBigSerializer,
+    GetAssessmentLayoutSerializer,
+    GetAssessmentSerializer,
+    GetAssessmentThresholdSerializer,
+    GetUserAssessmentSerializer,
+    OptionSerializer,
+    PostUserAssessmentSerializer,
     PublicUserAssessmentSerializer,
+    PUTUserAssessmentSerializer,
+    QuestionSerializer,
+    SmallUserAssessmentSerializer,
 )
 
 
@@ -48,8 +47,8 @@ class TrackAssessmentView(APIView, GenerateLookupsMixin):
         single = UserAssessment.objects.filter(token=ua_token).first()
         if single is None or now > single.created_at + single.assessment.max_session_duration:
             raise ValidationException(translation(lang,
-                                                  en=f'User assessment session does not exist or has already expired',
-                                                  es=f'Esta sessión de evaluación no existe o ya ha expirado',
+                                                  en='User assessment session does not exist or has already expired',
+                                                  es='Esta sessión de evaluación no existe o ya ha expirado',
                                                   slug='not-found'),
                                       code=404)
 
@@ -276,7 +275,7 @@ class AcademyAssessmentLayoutView(APIView):
             item = AssessmentLayout.objects.filter(slug=layout_slug, academy__id=academy_id).first()
             if item is None:
                 raise ValidationException('Assessment layout not found for this academy', 404)
-            serializer = GetAssessmentLayoutSerializer(items)
+            serializer = GetAssessmentLayoutSerializer(item)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         # get original all assessments (assessments that have no parent)
@@ -521,17 +520,17 @@ class AcademyAnswerView(APIView, GenerateLookupsMixin):
             serializer = AnswerSmallSerializer(single, many=False)
             return handler.response(serializer.data)
 
-        items = Answer.objects.filter(assess, user_assessment__academy__id=academy_id)
+        items = Answer.objects.filter(user_assessment__id=ua_id, user_assessment__academy__id=academy_id)
         lookup = {}
 
         start = request.GET.get('starting_at', None)
         if start is not None:
-            start_date = datetime.datetime.strptime(start, '%Y-%m-%d').date()
+            start_date = datetime.strptime(start, '%Y-%m-%d').date()
             lookup['created_at__gte'] = start_date
 
         end = request.GET.get('ending_at', None)
         if end is not None:
-            end_date = datetime.datetime.strptime(end, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end, '%Y-%m-%d').date()
             lookup['created_at__lte'] = end_date
 
         if 'user_assessments' in self.request.GET:
@@ -579,7 +578,6 @@ class AnswerView(APIView, GenerateLookupsMixin):
 
     def get(self, request, token, answer_id=None):
         handler = self.extensions(request)
-        lang = get_user_language(request)
 
         if answer_id is not None:
             single = Answer.objects.filter(id=answer_id, user_assessment__token=token).first()
@@ -640,8 +638,8 @@ class AnswerView(APIView, GenerateLookupsMixin):
         if not uass:
             raise ValidationException(
                 translation(lang,
-                            en=f'user assessment not found for this token',
-                            es=f'No se han encontrado un user assessment con ese token',
+                            en='user assessment not found for this token',
+                            es='No se han encontrado un user assessment con ese token',
                             slug='not-found'))
 
         if lookups:
