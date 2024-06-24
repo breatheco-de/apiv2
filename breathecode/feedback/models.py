@@ -145,6 +145,8 @@ class Answer(models.Model):
             # signal the updated answer
             signals.survey_answered.send_robust(instance=self, sender=Answer)
 
+        self.__old_status = self.status
+
 
 class ReviewPlatform(models.Model):
     """

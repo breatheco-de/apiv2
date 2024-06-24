@@ -1,11 +1,9 @@
-"""
-QuerySet fixtures.
-"""
+"""Signal fixtures."""
+
 import importlib
 import os
 import site
 from typing import Generator, final
-from unittest.mock import MagicMock
 
 import pytest
 from django.db.models.signals import ModelSignal
@@ -143,12 +141,13 @@ class Signals:
 
             return wrapper
 
-        # MagicMock(wraps=mock(original))
+        self._monkeypatch.setattr('django.dispatch.Signal.send', mock(self._original_signal_send))
+        self._monkeypatch.setattr('django.dispatch.Signal.send_robust', mock(self._original_signal_send_robust))
+
         self._monkeypatch.setattr('django.dispatch.dispatcher.Signal.send', mock(self._original_signal_send))
         self._monkeypatch.setattr('django.dispatch.dispatcher.Signal.send_robust',
                                   mock(self._original_signal_send_robust))
 
-        # Mock the functions to disable signals
         self._monkeypatch.setattr('django.db.models.signals.ModelSignal.send', mock(self._original_model_signal_send))
         self._monkeypatch.setattr('django.db.models.signals.ModelSignal.send_robust',
                                   mock(self._original_model_signal_send_robust))
@@ -166,6 +165,9 @@ class Signals:
         """
 
         self._disabled = False
+
+        self._monkeypatch.setattr('django.dispatch.Signal.send', self._original_signal_send)
+        self._monkeypatch.setattr('django.dispatch.Signal.send_robust', self._original_signal_send_robust)
 
         self._monkeypatch.setattr('django.dispatch.dispatcher.Signal.send', self._original_signal_send)
         self._monkeypatch.setattr('django.dispatch.dispatcher.Signal.send_robust', self._original_signal_send_robust)

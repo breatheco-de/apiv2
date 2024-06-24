@@ -14,7 +14,8 @@ def setup(db, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr('breathecode.authenticate.tasks.async_validate_email_invite.delay', MagicMock())
     monkeypatch.setattr('logging.Logger.error', MagicMock())
     monkeypatch.setattr('breathecode.notify.actions.send_email_message', MagicMock())
-    monkeypatch.setattr(create_user_from_invite, 'delay', MagicMock())
+    monkeypatch.setattr('breathecode.authenticate.signals.invite_status_updated.send_robust', MagicMock())
+
     yield
 
 
