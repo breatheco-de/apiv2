@@ -121,7 +121,7 @@ GROUPS = [
     },
     {
         'name': 'Legacy',
-        'permissions': [],
+        'permissions': ['get_my_certificate'],
         'inherit': ['Classes', 'Events', 'Mentorships']
     },
 ]

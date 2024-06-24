@@ -83,6 +83,7 @@ from .serializers import (
     SEOReportSerializer,
     TechnologyPUTSerializer,
     VariableSmallSerializer,
+    AssetTinySerializer,
 )
 from .tasks import async_pull_from_github
 
@@ -707,9 +708,9 @@ class AcademyAssetActionView(APIView):
                     override_meta = request.data['override_meta']
                 pull_from_github(asset.slug, override_meta=override_meta)
             elif action_slug == 'push':
-                if asset.asset_type not in ['ARTICLE', 'LESSON']:
+                if asset.asset_type not in ['ARTICLE', 'LESSON', 'QUIZ']:
                     raise ValidationException(
-                        'Only lessons and articles and be pushed to github, please update the Github repository yourself and come back to pull the changes from here'
+                        f'Asset type {asset.asset_type} cannot be pushed to GitHub, please update the Github repository manually'
                     )
 
                 push_to_github(asset.slug, author=request.user)
@@ -834,6 +835,37 @@ class AcademyAssetOriginalityView(APIView, GenerateLookupsMixin):
         return handler.response(serializer.data)
 
 
+class AssetSupersedesView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    @capable_of('read_asset')
+    def get(self, request, asset_slug=None, academy_id=None):
+
+        asset = Asset.get_by_slug(asset_slug, request)
+
+        supersedes = []
+        _aux = asset
+        while _aux.superseded_by is not None:
+            supersedes.append(_aux.superseded_by)
+            _aux = _aux.superseded_by
+
+        previous = []
+        _aux = asset
+        try:
+            while _aux.previous_version is not None:
+                previous.append(_aux.previous_version)
+                _aux = _aux.previous_version
+        except:
+            pass
+
+        return Response({
+            'supersedes': AssetTinySerializer(supersedes, many=True).data,
+            'previous': AssetTinySerializer(previous, many=True).data
+        })
+
+
 class AcademyAssetView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
@@ -905,8 +937,10 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
             else:
                 lookup['slug'] = param
 
-        if 'language' in self.request.GET:
+        if 'language' in self.request.GET or 'lang' in self.request.GET:
             param = self.request.GET.get('language')
+            if not param: param = self.request.GET.get('lang')
+
             if param == 'en':
                 param = 'us'
             lookup['lang'] = param
@@ -957,6 +991,26 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
                 lookup['external'] = True
             elif param == 'both':
                 lookup.pop('external', None)
+
+        if 'superseded_by' in self.request.GET:
+            param = self.request.GET.get('superseded_by')
+            if param.lower() in ['none', 'null']:
+                lookup['superseded_by__isnull'] = True
+            else:
+                if param.isnumeric():
+                    lookup['superseded_by__id'] = param
+                else:
+                    lookup['superseded_by__slug'] = param
+
+        if 'previous_version' in self.request.GET:
+            param = self.request.GET.get('previous_version')
+            if param.lower() in ['none', 'null']:
+                lookup['previous_version__isnull'] = True
+            else:
+                if param.isnumeric():
+                    lookup['previous_version__id'] = param
+                else:
+                    lookup['previous_version__slug'] = param
 
         published_before = request.GET.get('published_before', '')
         if published_before != '':

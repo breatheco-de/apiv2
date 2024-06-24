@@ -1,8 +1,9 @@
 import logging
 from typing import Any
 
-from breathecode.tests.mixins.generate_models_mixin.exceptions import BadArgument
 from mixer.backend.django import mixer
+
+from breathecode.tests.mixins.generate_models_mixin.exceptions import BadArgument
 
 from .argument_parser import argument_parser
 
@@ -44,7 +45,7 @@ def debug_mixer(attr, path, **kwargs):
 
 
 def create_models(attr, path, **kwargs):
-    # does not remove this line are use very often
+    # does not remove this line is used very often
     # debug_mixer(attr, path, **kwargs)
 
     result = [

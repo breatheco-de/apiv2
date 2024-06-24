@@ -21,9 +21,6 @@ class Command(BaseCommand):
             repo_url = f'https://github.com/{username}/{repo_name}'
             subs = RepositorySubscription.objects.filter(repository=repo_url).first()
             if subs is None:
-                if not a.is_auto_subscribed:
-                    logger.debug(f'Skipping asset {a.slug}, auto_subscribe is deactivated')
-                    continue
 
                 if academy_id not in settings:
                     settings[academy_id] = AcademyAuthSettings.objects.filter(academy__id=a.academy.id).first()
@@ -40,7 +37,9 @@ class Command(BaseCommand):
                 try:
                     if settings[academy_id] is not None:
                         subs = subscribe_repository(subs.id, settings[academy_id])
-                        logger.debug(f'Successfully subscribed asset {a.slug}, repo {repo_url}')
+                        logger.debug(
+                            f'Successfully created asset subscription with status {subs.status} for {a.slug}, repo {repo_url}'
+                        )
                     else:
                         raise Exception(f'No subscription found for academy {academy_id}')
                 except Exception as e:
@@ -49,3 +48,8 @@ class Command(BaseCommand):
                     subs.save()
             else:
                 logger.debug(f'Already subscribed to asset {a.slug} thru repo {repo_url}')
+
+            if not a.is_auto_subscribed:
+                logger.debug(f'Disabling asset {a.slug}, subscription because auto_subscribe is deactivated')
+                subs.status = 'DISABLED'
+                continue

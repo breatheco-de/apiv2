@@ -189,6 +189,10 @@ class RepositorySubscription(models.Model):
 
     hook_id = models.IntegerField(default=None, null=True, blank=True, help_text='Assigned from github')
 
+    last_call = models.DateTimeField(default=None,
+                                     null=True,
+                                     blank=True,
+                                     help_text='Last time github notified updates on this repo subscription')
     # disabled means it will be ignored from now on
     status = models.CharField(max_length=20, choices=SUBSCRIPTION_STATUS, default=CRITICAL)
     status_message = models.TextField(null=True, blank=True, default='Waiting for ping')

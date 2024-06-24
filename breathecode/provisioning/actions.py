@@ -1,12 +1,16 @@
+import os
 import random
 import re
 from datetime import datetime
-from typing import TypedDict
+from decimal import Decimal, localcontext
+from typing import Optional, TypedDict
 
 import pytz
 from dateutil.relativedelta import relativedelta
+from django.contrib.auth.models import User
 from django.db.models import Q, QuerySet
 from django.utils import timezone
+from linked_services.django.actions import get_user
 
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.authenticate.models import (
@@ -205,16 +209,22 @@ class ActivityContext(TypedDict):
     profile_academies: dict[str, QuerySet[ProfileAcademy]]
 
 
-def handle_pending_github_user(organization: str, username: str) -> list[Academy]:
+def handle_pending_github_user(organization: str, username: str, starts: Optional[datetime] = None) -> list[Academy]:
     orgs = AcademyAuthSettings.objects.filter(github_username__iexact=organization)
     orgs = [
         x for x in orgs
         if GithubAcademyUser.objects.filter(academy=x.academy, storage_action='ADD', storage_status='SYNCHED').count()
     ]
 
-    if not orgs:
+    if not orgs and organization:
         logger.error(f'Organization {organization} not found')
         return []
+
+    if not orgs and organization is None:
+        logger.error(f'Organization not provided, in this case, all organizations will be used')
+
+    if not orgs:
+        orgs = AcademyAuthSettings.objects.filter()
 
     user = None
 
@@ -225,6 +235,22 @@ def handle_pending_github_user(organization: str, username: str) -> list[Academy
     if credentials:
         user = credentials.user
 
+    if starts and organization is None:
+        new_orgs = []
+        for org in orgs:
+
+            has_any_cohort_user = CohortUser.objects.filter(
+                Q(cohort__ending_date__lte=starts) | Q(cohort__never_ends=True),
+                cohort__kickoff_date__gte=starts,
+                cohort__academy__id=org.academy.id,
+                user__credentialsgithub__username=username).order_by('-created_at').exists()
+
+            if has_any_cohort_user:
+                new_orgs.append(org)
+
+        if new_orgs:
+            org = new_orgs
+
     for org in orgs:
         pending, created = GithubAcademyUser.objects.get_or_create(username=username,
                                                                    academy=org.academy,
@@ -234,12 +260,22 @@ def handle_pending_github_user(organization: str, username: str) -> list[Academy
                                                                        'storage_action': 'IGNORE',
                                                                    })
 
-        if not created:
+        if not created and pending.storage_action not in ['ADD', 'DELETE']:
             pending.storage_status = 'PAYMENT_CONFLICT'
             pending.storage_action = 'IGNORE'
             pending.save()
 
     return [org.academy for org in orgs]
+
+
+def get_multiplier() -> float:
+    try:
+        x = os.getenv('PROVISIONING_MULTIPLIER', '1.3').replace(',', '.')
+        x = float(x)
+    except Exception:
+        x = 1.3
+
+    return x
 
 
 def add_codespaces_activity(context: ActivityContext, field: dict, position: int) -> None:
@@ -276,11 +312,11 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
     if not academies and not GithubAcademyUser.objects.filter(username=field['Username']).count():
         academies = handle_pending_github_user(field['Owner'], field['Username'])
 
-    if not not_found:
+    if not not_found and academies:
         academies = random.choices(academies, k=1)
 
     errors = []
-    ignores = []
+    warnings = []
     logs = {}
     provisioning_bills = {}
     provisioning_vendor = None
@@ -318,28 +354,10 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
             provisioning_bills[academy.id] = provisioning_bill
 
     date = datetime.strptime(field['Date'], '%Y-%m-%d')
-    for academy_id in logs.keys():
-        for log in logs[academy_id]:
-            if (log['storage_action'] == 'DELETE' and log['storage_status'] == 'SYNCHED'
-                    and log['starting_at'] <= pytz.utc.localize(date) <= log['ending_at']):
-                provisioning_bills.pop(academy_id, None)
-                ignores.append(f'User {field["Username"]} was deleted from the academy during this event at {date}')
-
-    if not provisioning_bills:
-        for academy_id in logs.keys():
-            cohort_user = CohortUser.objects.filter(
-                Q(cohort__ending_date__lte=date) | Q(cohort__never_ends=True),
-                cohort__kickoff_date__gte=date,
-                cohort__academy__id=academy_id,
-                user__credentialsgithub__username=field['Username']).order_by('-created_at').first()
-
-            if cohort_user:
-                errors.append('We found activity from this user while he was studying at one of your cohort '
-                              f'{cohort_user.cohort.slug}')
 
     if not_found:
-        errors.append(f'We could not find enough information about {field["Username"]}, mark this user user as '
-                      'deleted if you don\'t recognize it')
+        warnings.append(f'We could not find enough information about {field["Username"]}, mark this user user as '
+                        'deleted if you don\'t recognize it')
 
     if not (kind := context['provisioning_activity_kinds'].get((field['Product'], field['SKU']), None)):
         kind, _ = ProvisioningConsumptionKind.objects.get_or_create(
@@ -357,7 +375,7 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
         price, _ = ProvisioningPrice.objects.get_or_create(
             currency=currency,
             unit_type=field['Unit Type'],
-            price_per_unit=field['Price Per Unit ($)'],
+            price_per_unit=field['Price Per Unit ($)'] * context['provisioning_multiplier'],
             multiplier=field['Multiplier'],
         )
 
@@ -379,19 +397,22 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
         csv_row=position,
     )
 
-    if errors and not (len(errors) == 1 and not_found):
+    last_status_list = [x for x in pa.status_text.split(', ') if x]
+    if errors:
         pa.status = 'ERROR'
-        pa.status_text = pa.status_text + (', ' if pa.status_text else '') + ', '.join(errors + ignores)
+        pa.status_text = ', '.join(last_status_list + errors + warnings)
 
-    elif pa.status != 'ERROR' and ignores and not provisioning_bills:
-        pa.status = 'IGNORED'
-        pa.status_text = pa.status_text + (', ' if pa.status_text else '') + ', '.join(ignores)
+    elif warnings:
+        if pa.status != 'ERROR':
+            pa.status = 'WARNING'
+
+        pa.status_text = ', '.join(last_status_list + warnings)
 
     else:
         pa.status = 'PERSISTED'
-        pa.status_text = pa.status_text + (', ' if pa.status_text else '') + ', '.join(errors + ignores)
+        pa.status_text = ', '.join(last_status_list + errors + warnings)
 
-    pa.status_text = ', '.join(sorted(set(pa.status_text.split(', '))))
+    pa.status_text = ', '.join([x for x in sorted(set(pa.status_text.split(', '))) if x])
     pa.status_text = pa.status_text[:255]
     pa.save()
 
@@ -433,13 +454,14 @@ def add_gitpod_activity(context: ActivityContext, field: dict, position: int):
         academies = list(context['academies'])
 
     errors = []
+    warnings = []
     if not academies:
-        errors.append(f'We could not find enough information about {field["userName"]}, mark this user user as '
-                      'deleted if you don\'t recognize it')
+        warnings.append(f'We could not find enough information about {field["userName"]}, mark this user user as '
+                        'deleted if you don\'t recognize it')
 
     pattern = r'^https://github\.com/[^/]+/([^/]+)/?'
     if not (result := re.findall(pattern, field['contextURL'])):
-        errors.append(f'Invalid repository URL {field["contextURL"]}')
+        warnings.append(f'Invalid repository URL {field["contextURL"]}')
         slug = 'unknown'
 
     else:
@@ -495,7 +517,7 @@ def add_gitpod_activity(context: ActivityContext, field: dict, position: int):
         price, _ = ProvisioningPrice.objects.get_or_create(
             currency=currency,
             unit_type='Credits',
-            price_per_unit=0.036,
+            price_per_unit=0.036 * context['provisioning_multiplier'],
             multiplier=1,
         )
 
@@ -520,14 +542,187 @@ def add_gitpod_activity(context: ActivityContext, field: dict, position: int):
     if pa.status == 'PENDING':
         pa.status = 'PERSISTED' if not errors else 'ERROR'
 
-    pa.status_text = pa.status_text + (', ' if pa.status_text else '') + ', '.join(errors)
+    last_status_list = [x for x in pa.status_text.split(', ') if x]
+    if errors:
+        pa.status = 'ERROR'
+        pa.status_text = ', '.join(last_status_list + errors + warnings)
 
-    pa.status_text = ', '.join(sorted(set(pa.status_text.split(', '))))
+    elif warnings:
+        if pa.status != 'ERROR':
+            pa.status = 'WARNING'
+
+        pa.status_text = ', '.join(last_status_list + warnings)
+
+    else:
+        pa.status = 'PERSISTED'
+        pa.status_text = ', '.join(last_status_list + errors + warnings)
+
+    pa.status_text = ', '.join([x for x in sorted(set(pa.status_text.split(', '))) if x])
     pa.status_text = pa.status_text[:255]
     pa.save()
 
     current_bills = pa.bills.all()
     for provisioning_bill in provisioning_bills:
+        if provisioning_bill not in current_bills:
+            pa.bills.add(provisioning_bill)
+
+    pa.events.add(item)
+
+
+def add_rigobot_activity(context: ActivityContext, field: dict, position: int) -> None:
+    errors = []
+    warnings = []
+
+    if field['organization'] != '4Geeks':
+        return
+
+    user = get_user(app='rigobot', sub=field['user_id'])
+
+    if user is None:
+        logger.error(f'User {field["user_id"]} not found')
+        return
+
+    if field['billing_status'] != 'OPEN':
+        return
+
+    github_academy_user_log = context['github_academy_user_logs'].get(user.id, None)
+    date = datetime.fromisoformat(field['consumption_period_start'])
+    academies = []
+    not_found = False
+
+    if github_academy_user_log is None:
+        # make a function that calculate the user activity in the academies by percentage
+        github_academy_user_log = GithubAcademyUserLog.objects.filter(
+            Q(valid_until__isnull=True)
+            | Q(valid_until__gte=context['limit'] - relativedelta(months=1, weeks=1)),
+            created_at__lte=context['limit'],
+            academy_user__user=user,
+            academy_user__username=field['github_username'],
+            storage_status='SYNCHED',
+            storage_action='ADD').order_by('-created_at')
+
+        context['github_academy_user_logs'][user.id] = github_academy_user_log
+
+    if github_academy_user_log:
+        academies = [x.academy_user.academy for x in github_academy_user_log]
+
+    if not academies:
+        not_found = True
+        github_academy_users = GithubAcademyUser.objects.filter(username=field['github_username'],
+                                                                storage_status='PAYMENT_CONFLICT',
+                                                                storage_action='IGNORE')
+
+        academies = [x.academy for x in github_academy_users]
+
+    if not academies:
+        academies = handle_pending_github_user(None, field['github_username'], date)
+
+    if not_found is False and academies:
+        academies = random.choices(academies, k=1)
+
+    logs = {}
+    provisioning_bills = {}
+    provisioning_vendor = None
+
+    provisioning_vendor = context['provisioning_vendors'].get('Rigobot', None)
+    if not provisioning_vendor:
+        provisioning_vendor = ProvisioningVendor.objects.filter(name='Rigobot').first()
+        context['provisioning_vendors']['Rigobot'] = provisioning_vendor
+
+    if not provisioning_vendor:
+        errors.append('Provisioning vendor Rigobot not found')
+
+    for academy in academies:
+        ls = context['logs'].get((field['github_username'], academy.id), None)
+        if ls is None:
+            ls = get_github_academy_user_logs(academy, field['github_username'], context['limit'])
+            context['logs'][(field['github_username'], academy.id)] = ls
+            logs[academy.id] = ls
+
+        provisioning_bill = context['provisioning_bills'].get(academy.id, None)
+        if not provisioning_bill and (provisioning_bill := ProvisioningBill.objects.filter(
+                academy=academy, status='PENDING', hash=context['hash']).first()):
+            context['provisioning_bills'][academy.id] = provisioning_bill
+            provisioning_bills[academy.id] = provisioning_bill
+
+        if not provisioning_bill:
+            provisioning_bill = ProvisioningBill()
+            provisioning_bill.academy = academy
+            provisioning_bill.vendor = provisioning_vendor
+            provisioning_bill.status = 'PENDING'
+            provisioning_bill.hash = context['hash']
+            provisioning_bill.save()
+
+            context['provisioning_bills'][academy.id] = provisioning_bill
+            provisioning_bills[academy.id] = provisioning_bill
+
+    # not implemented yet
+    if not_found:
+        warnings.append(
+            f'We could not find enough information about {field["github_username"]}, mark this user user as '
+            'deleted if you don\'t recognize it')
+
+    s_slug = f'{field["purpose_slug"] or "no-provided"}--{field["pricing_type"].lower()}--{field["model"].lower()}'
+    s_name = f'{field["purpose"]} (type: {field["pricing_type"]}, model: {field["model"]})'
+    if not (kind := context['provisioning_activity_kinds'].get((s_name, s_slug), None)):
+        kind, _ = ProvisioningConsumptionKind.objects.get_or_create(
+            product_name=s_name,
+            sku=s_slug,
+        )
+        context['provisioning_activity_kinds'][(s_name, s_slug)] = kind
+
+    if not (currency := context['currencies'].get('USD', None)):
+        currency, _ = Currency.objects.get_or_create(code='USD', name='US Dollar', decimals=2)
+        context['currencies']['USD'] = currency
+
+    if not (price := context['provisioning_activity_prices'].get((field['total_spent'], field['total_tokens']), None)):
+        with localcontext(prec=10):
+            price, _ = ProvisioningPrice.objects.get_or_create(
+                currency=currency,
+                unit_type='Tokens',
+                price_per_unit=Decimal(field['total_spent']) / Decimal(field['total_tokens']),
+                multiplier=context['provisioning_multiplier'],
+            )
+
+        context['provisioning_activity_prices'][(field['total_spent'], field['total_tokens'])] = price
+
+    pa, _ = ProvisioningUserConsumption.objects.get_or_create(username=field['github_username'],
+                                                              hash=context['hash'],
+                                                              kind=kind,
+                                                              defaults={'processed_at': timezone.now()})
+
+    item, _ = ProvisioningConsumptionEvent.objects.get_or_create(
+        vendor=provisioning_vendor,
+        price=price,
+        registered_at=date,
+        external_pk=field['consumption_item_id'],
+        quantity=field['total_tokens'],
+        repository_url=None,
+        task_associated_slug=None,
+        csv_row=position,
+    )
+
+    last_status_list = [x for x in pa.status_text.split(', ') if x]
+    if errors:
+        pa.status = 'ERROR'
+        pa.status_text = ', '.join(last_status_list + errors + warnings)
+
+    elif warnings:
+        if pa.status != 'ERROR':
+            pa.status = 'WARNING'
+
+        pa.status_text = ', '.join(last_status_list + warnings)
+
+    else:
+        pa.status = 'PERSISTED'
+        pa.status_text = ', '.join(last_status_list + errors + warnings)
+
+    pa.status_text = ', '.join([x for x in sorted(set(pa.status_text.split(', '))) if x])
+    pa.status_text = pa.status_text[:255]
+    pa.save()
+
+    current_bills = pa.bills.all()
+    for provisioning_bill in provisioning_bills.values():
         if provisioning_bill not in current_bills:
             pa.bills.add(provisioning_bill)
 

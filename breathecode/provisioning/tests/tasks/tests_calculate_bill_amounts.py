@@ -1,19 +1,21 @@
 """
 Test /answer/:id
 """
-from datetime import datetime, timedelta
+import logging
 import math
 import os
 import random
 import re
+from datetime import datetime, timedelta
+from unittest.mock import MagicMock, PropertyMock, call, patch
+
+import pandas as pd
 from django.utils import timezone
 from faker import Faker
-import pandas as pd
 from pytz import UTC
-from breathecode.provisioning.tasks import calculate_bill_amounts
-import logging
-from unittest.mock import PropertyMock, patch, MagicMock, call
+
 from breathecode.payments.services.stripe import Stripe
+from breathecode.provisioning.tasks import calculate_bill_amounts
 
 from ..mixins import ProvisioningTestCase
 
@@ -252,7 +254,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         } for n in range(2)]
 
         provisioning_user_consumptions = [{
-            'status': 'PERSISTED',
+            'status': random.choice(['PERSISTED', 'WARNING']),
         } for _ in range(2)]
 
         amount = sum([
@@ -333,7 +335,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         } for n in range(2)]
 
         provisioning_user_consumptions = [{
-            'status': 'PERSISTED',
+            'status': random.choice(['PERSISTED', 'WARNING']),
         } for _ in range(2)]
 
         amount = sum([

@@ -333,6 +333,27 @@ def async_remove_img_from_cloud(id, **_):
 
 
 @task(priority=TaskPriority.ACADEMY.value)
+def async_remove_asset_preview_from_cloud(hash, **_):
+
+    logger.info('async_remove_asset_preview_from_cloud')
+
+    media = Media.objects.filter(hash=hash).first()
+    if media is None:
+        raise Exception(f'Media with hash {hash} not found')
+
+    media_name = media.name
+
+    storage = Storage()
+    extension = media.mime.split('/')[-1]
+    cloud_file = storage.file(screenshots_bucket(), media.hash + extension)
+    cloud_file.delete()
+    media.delete()
+
+    logger.info(f'Media name ({media_name}) was deleted from the cloud')
+    return True
+
+
+@task(priority=TaskPriority.ACADEMY.value)
 def async_upload_image_to_bucket(id, **_):
 
     img = AssetImage.objects.filter(id=id).first()
@@ -431,18 +452,23 @@ def async_resize_asset_thumbnail(media_id: int, width: Optional[int] = 0, height
     resolution.save()
 
 
-@shared_task(bind=True, base=WebhookTask, priority=TaskPriority.ACADEMY.value)
+@shared_task(bind=True, base=WebhookTask, priority=TaskPriority.CONTENT.value)
 def async_synchonize_repository_content(self, webhook):
 
     logger.debug('async_synchonize_repository_content')
     payload = webhook.get_payload()
+
+    # some times the json contains a nested payload property
+    if 'payload' in payload: payload = payload['payload']
+
     if 'commits' not in payload:
-        logger.debug('No commits found on the push object')
-        return False
+        raise AbortTask('No commits found on the push object')
 
     if 'repository' not in payload:
-        logger.debug('Missing repository information')
-        return False
+        raise AbortTask('Missing repository information')
+    elif 'url' not in payload['repository']:
+        raise AbortTask(
+            'Repository payload is invalid, expecting an object with "url" key. Check the webhook content-type')
 
     base_repo_url = payload['repository']['url']
     default_branch = payload['repository']['default_branch']

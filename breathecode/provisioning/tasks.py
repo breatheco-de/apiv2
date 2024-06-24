@@ -14,11 +14,7 @@ from task_manager.django.decorators import task
 
 from breathecode.payments.services.stripe import Stripe
 from breathecode.provisioning import actions
-from breathecode.provisioning.models import (
-    ProvisioningBill,
-    ProvisioningConsumptionEvent,
-    ProvisioningUserConsumption,
-)
+from breathecode.provisioning.models import ProvisioningBill, ProvisioningConsumptionEvent, ProvisioningUserConsumption
 from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils.decorators import TaskPriority
 from breathecode.utils.io.file import cut_csv
@@ -103,7 +99,7 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
 
     for bill in bills:
         amount = 0
-        for activity in ProvisioningUserConsumption.objects.filter(bills=bill, status='PERSISTED'):
+        for activity in ProvisioningUserConsumption.objects.filter(bills=bill, status__in=['PERSISTED', 'WARNING']):
             consumption_amount = 0
             consumption_quantity = 0
             for item in activity.events.all():
@@ -158,6 +154,7 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
         'github_academy_user_logs': {},
         'provisioning_activity_prices': {},
         'provisioning_activity_kinds': {},
+        'provisioning_multiplier': actions.get_multiplier(),
         'currencies': {},
         'profile_academies': {},
         'hash': hash,
@@ -206,6 +203,16 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
         handler = actions.add_codespaces_activity
 
     if not handler:
+        fields = [
+            'organization', 'consumption_period_id', 'consumption_period_start', 'consumption_period_end',
+            'billing_status', 'total_spent_period', 'consumption_item_id', 'user_id', 'email', 'consumption_type',
+            'pricing_type', 'total_spent', 'total_tokens', 'model', 'purpose_id', 'purpose_slug', 'purpose',
+            'created_at', 'github_username'
+        ]
+    if not handler and len(df.keys().intersection(fields)) == len(fields):
+        handler = actions.add_rigobot_activity
+
+    if not handler:
         raise AbortTask(f'File {hash} has an unsupported origin or the provider had changed the file format')
 
     prev_bill = ProvisioningBill.objects.filter(hash=hash).first()
@@ -234,6 +241,9 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
 
     elif not ProvisioningUserConsumption.objects.filter(hash=hash, status='ERROR').exists():
         calculate_bill_amounts.delay(hash)
+
+    elif ProvisioningUserConsumption.objects.filter(hash=hash, status='ERROR').exists():
+        ProvisioningBill.objects.filter(hash=hash).update(status='ERROR')
 
 
 @task(priority=TaskPriority.BACKGROUND.value)

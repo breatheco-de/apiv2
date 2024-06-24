@@ -517,6 +517,8 @@ HOOK_EVENTS = {
     'form_entry.won_or_lost': 'marketing.FormEntry.won_or_lost',
     'form_entry.new_deal': 'marketing.FormEntry.new_deal',
     'session.mentorship_session_status': 'mentorship.MentorshipSession.mentorship_session_status',
+    'planfinancing.planfinancing_created': 'payments.PlanFinancing.planfinancing_created',
+    'subscription.subscription_created': 'payments.Subscription.subscription_created',
 }
 
 # Websocket

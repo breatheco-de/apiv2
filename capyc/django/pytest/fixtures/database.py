@@ -352,6 +352,12 @@ class Database:
 
         pending = {}
 
+        keys = [*models.keys()]
+
+        for key in keys:
+            if models[key] is None or models[key] == 0:
+                del models[key]
+
         # get descriptors
         for model_alias, _value in models.items():
             try:
@@ -524,5 +530,5 @@ class Database:
 
 
 @pytest.fixture
-def database(db) -> Generator[Database, None, None]:
+def database(db, seed) -> Generator[Database, None, None]:
     yield Database()

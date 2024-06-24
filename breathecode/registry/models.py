@@ -337,11 +337,15 @@ class Asset(models.Model):
         'External assets will open in a new window, they are not built using breathecode or learnpack tecnology',
         db_index=True)
 
-    interactive = models.BooleanField(default=False, db_index=True)
+    enable_table_of_content = models.BooleanField(
+        default=True, help_text='If true, it shows a tabled on contents on top of the lesson')
+    interactive = models.BooleanField(default=False, db_index=True, help_text='If true, it means is learnpack enabled')
     with_solutions = models.BooleanField(default=False, db_index=True)
     with_video = models.BooleanField(default=False, db_index=True)
     graded = models.BooleanField(default=False, db_index=True)
-    gitpod = models.BooleanField(default=False)
+    gitpod = models.BooleanField(
+        default=False,
+        help_text='If true, it means it can be opened on cloud provisioning vendors like Gitpod or Codespaces')
     duration = models.IntegerField(null=True, blank=True, default=None, help_text='In hours')
 
     difficulty = models.CharField(max_length=20, choices=DIFFICULTY, default=None, null=True, blank=True)
@@ -354,6 +358,17 @@ class Asset(models.Model):
         help_text='This is an internal property. It won\'t be shown internally to other academies unless is public',
         db_index=True)
     asset_type = models.CharField(max_length=20, choices=TYPE, db_index=True)
+
+    superseded_by = models.OneToOneField(
+        'Asset',
+        related_name='previous_version',
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        blank=True,
+        help_text=
+        'The newer version of the article (null if it is the latest version). This is used for technology deprecation, for example, a new article to explain the new version of react router'
+    )
 
     status = models.CharField(max_length=20,
                               choices=ASSET_STATUS,

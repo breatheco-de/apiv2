@@ -4,19 +4,17 @@ Test /answer
 import logging
 import os
 import random
+from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
 import pytest
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 from mixer.backend.django import mixer
-from rest_framework.test import APIClient
 
 import breathecode.activity.tasks as activity_tasks
 from breathecode.notify import actions as notify_actions
 from breathecode.payments.services import Stripe
-from breathecode.tests.mixins.breathecode_mixin import Breathecode
-from breathecode.tests.mixins.legacy import LegacyAPITestCase
 
 from ...tasks import charge_subscription
 from ..mixins import PaymentsTestCase
@@ -191,6 +189,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         subscription = {
             'pay_every': unit,
             'pay_every_unit': unit_type,
+            'next_payment_at': UTC_NOW - relativedelta(days=25, months=unit * 2),
         }
         model = self.bc.database.create(subscription=subscription, invoice=1)
 
@@ -229,13 +228,17 @@ class PaymentsTestSuite(PaymentsTestCase):
                 'paid_at': UTC_NOW,
             }),
         ])
+        next_payment_at = model.subscription.next_payment_at
+        delta = calculate_relative_delta(unit, unit_type)
+        for _ in range(3):
+            next_payment_at += delta
 
         self.assertEqual(self.bc.database.list_of('payments.Subscription'), [
             {
                 **self.bc.format.to_dict(model.subscription),
                 'status': 'ACTIVE',
                 'paid_at': UTC_NOW,
-                'next_payment_at': UTC_NOW + calculate_relative_delta(unit, unit_type),
+                'next_payment_at': next_payment_at,
             },
         ])
 
@@ -349,6 +352,60 @@ class PaymentsTestSuite(PaymentsTestCase):
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [
             call('The subscription 1 is over', exc_info=True),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('payments.Bag'), [
+            self.bc.format.to_dict(model.bag),
+        ])
+        self.assertEqual(self.bc.database.list_of('payments.Invoice'), [
+            self.bc.format.to_dict(model.invoice),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('payments.Subscription'), [
+            {
+                **self.bc.format.to_dict(model.subscription),
+            },
+        ])
+        self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+        ])
+
+    """
+    🔽🔽🔽 Subscription was paid
+    """
+
+    @patch('logging.Logger.info', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
+    @patch('breathecode.payments.tasks.renew_subscription_consumables.delay', MagicMock())
+    @patch('mixer.main.LOGGER.info', MagicMock())
+    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    def test_subscription_was_paid(self):
+        unit = random.choice([1, 3, 6, 12])
+        unit_type = 'MONTH'
+        subscription = {
+            'pay_every': unit,
+            'pay_every_unit': unit_type,
+            'valid_until': UTC_NOW + relativedelta(seconds=1),
+            'next_payment_at': UTC_NOW + relativedelta(seconds=1),
+        }
+        model = self.bc.database.create(subscription=subscription, invoice=1)
+
+        with patch('breathecode.payments.services.stripe.Stripe.pay', MagicMock(side_effect=Exception('fake error'))):
+            # remove prints from mixer
+            logging.Logger.info.call_args_list = []
+            logging.Logger.error.call_args_list = []
+
+            charge_subscription.delay(1)
+
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [])
+
+        self.assertEqual(logging.Logger.info.call_args_list, [
+            call('Starting charge_subscription for subscription 1'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [
+            call('The subscription with id 1 was paid this month', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('payments.Bag'), [

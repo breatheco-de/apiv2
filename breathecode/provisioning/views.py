@@ -1,7 +1,7 @@
 import hashlib
 import math
 import os
-from datetime import date
+from datetime import date, datetime
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 import pandas as pd
@@ -46,7 +46,8 @@ def redirect_new_container(request, token):
 
     user = token.user
     cohort_id = request.GET.get('cohort', None)
-    if cohort_id is None: return render_message(request, 'Please specificy a cohort in the URL')
+    if cohort_id is None or cohort_id in ['','undefined']:
+        return render_message(request, 'Please specificy a cohort in the URL')
 
     url = request.GET.get('repo', None)
     if url is None:
@@ -291,6 +292,38 @@ class UploadView(APIView):
 
                 first = date(int(first[0]), int(first[1]), int(first[2]))
                 last = date(int(last[0]), int(last[1]), int(last[2]))
+
+            except Exception:
+                raise ValidationException(
+                    translation(lang,
+                                en='CSV file from unknown source',
+                                es='Archivo CSV de fuente desconocida',
+                                slug='bad-date-format'))
+
+            delta = relativedelta(last, first)
+
+            if delta.years > 0 or delta.months > 1 or (delta.months > 1 and delta.days > 1):
+                raise ValidationException(
+                    translation(lang,
+                                en='Each file must have only one month of data',
+                                es='Cada archivo debe tener solo un mes de datos',
+                                slug='overflow'))
+
+        if format_error:
+            # rigobot
+            fields = [
+                'organization', 'consumption_period_id', 'consumption_period_start', 'consumption_period_end',
+                'billing_status', 'total_spent_period', 'consumption_item_id', 'user_id', 'email', 'consumption_type',
+                'pricing_type', 'total_spent', 'total_tokens', 'model', 'purpose_id', 'purpose_slug', 'purpose',
+                'created_at', 'github_username'
+            ]
+
+        if format_error and len(df.keys().intersection(fields)) == len(fields):
+            format_error = False
+
+            try:
+                first = datetime.fromisoformat(df['consumption_period_start'].min())
+                last = datetime.fromisoformat(df['consumption_period_end'].max())
 
             except Exception:
                 raise ValidationException(

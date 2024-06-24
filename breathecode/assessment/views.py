@@ -6,32 +6,28 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from breathecode.utils import (
-    APIViewExtensions,
-    GenerateLookupsMixin,
-)
 
 from breathecode.authenticate.actions import get_user_language
-from breathecode.utils import capable_of
+from breathecode.utils import APIViewExtensions, GenerateLookupsMixin, capable_of
 from breathecode.utils.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 
-from .models import Assessment, AssessmentThreshold, Option, Question, UserAssessment, Answer, AssessmentLayout
+from .models import Answer, Assessment, AssessmentLayout, AssessmentThreshold, Option, Question, UserAssessment
 from .serializers import (
-    AssessmentPUTSerializer,
-    GetAssessmentBigSerializer,
-    GetAssessmentSerializer,
-    GetAssessmentThresholdSerializer,
-    OptionSerializer,
-    QuestionSerializer,
-    GetAssessmentLayoutSerializer,
-    SmallUserAssessmentSerializer,
-    GetUserAssessmentSerializer,
-    PostUserAssessmentSerializer,
-    PUTUserAssessmentSerializer,
     AnswerSerializer,
     AnswerSmallSerializer,
+    AssessmentPUTSerializer,
+    GetAssessmentBigSerializer,
+    GetAssessmentLayoutSerializer,
+    GetAssessmentSerializer,
+    GetAssessmentThresholdSerializer,
+    GetUserAssessmentSerializer,
+    OptionSerializer,
+    PostUserAssessmentSerializer,
     PublicUserAssessmentSerializer,
+    PUTUserAssessmentSerializer,
+    QuestionSerializer,
+    SmallUserAssessmentSerializer,
 )
 
 
@@ -381,11 +377,19 @@ class GetThresholdView(APIView):
     """
     permission_classes = [AllowAny]
 
-    def get(self, request, assessment_slug):
+    def get(self, request, assessment_slug, threshold_id=None):
 
         item = Assessment.objects.filter(slug=assessment_slug).first()
         if item is None:
             raise ValidationException('Assessment not found', 404)
+
+        if threshold_id is not None:
+            single = AssessmentThreshold.objects.filter(id=threshold_id, assessment__slug=assessment_slug).first()
+            if single is None:
+                raise ValidationException(f'Threshold {threshold_id} not found', 404, slug='threshold-not-found')
+
+            serializer = GetAssessmentThresholdSerializer(single, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
         # get original all assessments (assessments that have no parent)
         items = AssessmentThreshold.objects.filter(assessment__slug=assessment_slug)
@@ -400,6 +404,13 @@ class GetThresholdView(APIView):
                 lookup['academy__slug'] = param
         else:
             lookup['academy__isnull'] = True
+
+        if 'tag' in self.request.GET:
+            param = self.request.GET.get('tags')
+            if param != 'all':
+                lookup['tags__icontains'] = param
+        else:
+            lookup['tags__in'] = ['', None]
 
         items = items.filter(**lookup).order_by('-created_at')
 

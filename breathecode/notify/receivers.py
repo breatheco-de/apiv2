@@ -1,8 +1,9 @@
 import logging
 from typing import Type
 
-from django.db.models.signals import post_delete, post_save
+from django.db.models.signals import m2m_changed, post_delete, post_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.admissions.serializers import CohortHookSerializer, CohortUserHookSerializer
@@ -18,6 +19,10 @@ from breathecode.marketing.signals import form_entry_won_or_lost, new_form_entry
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.serializers import SessionHookSerializer
 from breathecode.mentorship.signals import mentorship_session_status
+from breathecode.notify.models import HookError
+from breathecode.payments.models import PlanFinancing, Subscription
+from breathecode.payments.serializers import GetPlanFinancingSerializer, GetSubscriptionHookSerializer
+from breathecode.payments.signals import planfinancing_created, subscription_created
 from breathecode.registry.models import Asset
 from breathecode.registry.serializers import AssetHookSerializer
 from breathecode.registry.signals import asset_status_updated
@@ -159,3 +164,33 @@ def edu_status_updated(sender, instance, **kwargs):
                                     'edu_status_updated',
                                     payload_override=serializer.data,
                                     academy_override=academy)
+
+
+@receiver(planfinancing_created, sender=PlanFinancing)
+def new_planfinancing_created(sender, instance, **kwargs):
+    logger.debug('Sending new PlanFinancing to hook')
+    model_label = get_model_label(instance)
+    serializer = GetPlanFinancingSerializer(instance)
+    HookManager.process_model_event(instance,
+                                    model_label,
+                                    'planfinancing_created',
+                                    payload_override=serializer.data,
+                                    academy_override=instance.academy)
+
+
+@receiver(subscription_created, sender=Subscription)
+def new_subscription_created(sender, instance, **kwargs):
+    logger.debug('Sending new Subscription to hook')
+    model_label = get_model_label(instance)
+    serializer = GetSubscriptionHookSerializer(instance)
+    HookManager.process_model_event(instance,
+                                    model_label,
+                                    'subscription_created',
+                                    payload_override=serializer.data,
+                                    academy_override=instance.academy)
+
+
+@receiver(m2m_changed, sender=HookError.hooks.through)
+def update_updated_at(sender, instance, **kwargs):
+    instance.updated_at = timezone.now()
+    instance.save()

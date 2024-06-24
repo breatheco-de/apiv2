@@ -52,6 +52,7 @@ def post_serializer(data={}):
         'name': '',
         'slug': '',
         'status': 'DRAFT',
+        'video_provider': 'GOOGLE_MEET',
         **data,
     }
 
@@ -71,6 +72,7 @@ def mentorship_service_columns(data={}):
         'name': '',
         'slug': '',
         'status': 'DRAFT',
+        'video_provider': 'GOOGLE_MEET',
         **data,
     }
 
