@@ -1874,6 +1874,10 @@ class PaymentMethodView(APIView):
             academy_id = self.request.GET.get('academy_id')
             lookup['academy__id__iexact'] = academy_id
 
+        if 'lang' in self.request.GET:
+            lang = self.request.GET.get('lang')
+            lookup['lang__iexact'] = lang
+
         items = items.filter(**lookup)
 
         serializer = GetPaymentMethod(items, many=True)
