@@ -27,6 +27,7 @@ from .views import (
     PlanView,
     ServiceItemView,
     ServiceView,
+    PaymentMethodView,
 )
 
 app_name = 'payments'
@@ -77,4 +78,5 @@ urlpatterns = [
     path('bag/<int:bag_id>/coupon', BagCouponView.as_view(), name='bag_id_coupon'),
     path('checking', CheckingView.as_view(), name='checking'),
     path('pay', PayView.as_view(), name='pay'),
+    path('methods', PaymentMethodView.as_view(), name='methods'),
 ]
