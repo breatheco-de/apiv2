@@ -72,7 +72,7 @@ from breathecode.payments.serializers import (
 )
 from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import reimburse_service_units
-from breathecode.utils import APIViewExtensions, getLogger
+from breathecode.utils import APIViewExtensions, getLogger, validate_conversion_info
 from breathecode.utils.decorators.capable_of import capable_of
 from breathecode.utils.i18n import translation
 from breathecode.utils.redis import Lock
@@ -1640,28 +1640,7 @@ class PayView(APIView):
         lang = get_user_language(request)
 
         conversion_info = request.data['conversion_info'] if 'conversion_info' in request.data else None
-        if conversion_info is not None:
-            if not isinstance(conversion_info, dict):
-                raise ValidationException(translation(
-                    lang,
-                    en='Payment was not processed because conversion_info was not a JSON object',
-                    es='El pago no fue procesado porque conversion_info no fue un objeto de JSON',
-                    slug='conversion-info-json-type'),
-                                          code=400)
-
-            expected_keys = [
-                'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'utm_campaign',
-                'conversion_url', 'landing_url', 'user_agent', 'plan', 'location', 'translations'
-            ]
-
-            for key in conversion_info.keys():
-                if key not in expected_keys:
-                    raise ValidationException(translation(
-                        lang,
-                        en=f'Payment was not processed because invalid key {key} was provided in the conversion_info',
-                        es=f'El pago no fue procesado porque se agrego una clave inválida {key} en el conversion_info',
-                        slug='conversion-info-invalid-key'),
-                                              code=400)
+        validate_conversion_info(conversion_info, lang)
 
         conversion_info = str(conversion_info) if conversion_info is not None else ''
 
