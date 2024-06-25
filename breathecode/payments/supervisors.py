@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.contrib.auth.models import User
 from django.utils import timezone
 
-from breathecode.payments.models import ConsumptionSession
+from breathecode.payments.models import ConsumptionSession, Service
 from breathecode.utils.decorators import supervisor
 
 MIN_PENDING_SESSIONS = 30
@@ -36,14 +36,15 @@ def supervise_all_consumption_sessions():
         done_sessions = ConsumptionSession.objects.filter(user=user,
                                                           status='DONE',
                                                           operation_code='unsafe-consume-service-set',
-                                                          consumable__service_set__isnull=False,
+                                                          consumable__service_item__service__type=Service.Type.VOID,
                                                           eta__lte=utc_now - timedelta(minutes=10))
-        cancelled_sessions = ConsumptionSession.objects.filter(user=user,
-                                                               status='CANCELLED',
-                                                               operation_code='unsafe-consume-service-set',
-                                                               consumable__service_set__isnull=False,
-                                                               eta__lte=utc_now,
-                                                               eta__gte=utc_now - timedelta(days=1))
+        cancelled_sessions = ConsumptionSession.objects.filter(
+            user=user,
+            status='CANCELLED',
+            operation_code='unsafe-consume-service-set',
+            consumable__service_item__service__type=Service.Type.VOID,
+            eta__lte=utc_now,
+            eta__gte=utc_now - timedelta(days=1))
 
         done_amount = done_sessions.count()
         cancelled_amount = cancelled_sessions.count()

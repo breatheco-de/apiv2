@@ -9,6 +9,7 @@ from django.utils import timezone
 from breathecode.utils.datetime_integer import from_now, duration_to_str
 from capyc.rest_framework.exceptions import ValidationException
 
+
 class UserSerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
