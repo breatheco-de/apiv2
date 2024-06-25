@@ -496,6 +496,7 @@ class PutPlanSerializer(PlanSerializer):
 class GetPaymentMethod(serpy.Serializer):
     id = serpy.Field()
     title = serpy.Field()
+    lang = serpy.Field()
     description = serpy.Field()
     third_party_link = serpy.Field()
     academy = GetAcademySmallSerializer(required=False, many=False)

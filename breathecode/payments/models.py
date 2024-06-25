@@ -1661,3 +1661,6 @@ class PaymentMethod(models.Model):
                                        null=True,
                                        default=None,
                                        help_text='Link of a third party payment method')
+    lang = models.CharField(max_length=5,
+                            validators=[validate_language_code],
+                            help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US')
