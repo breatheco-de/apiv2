@@ -119,12 +119,12 @@ def test_no_consumables(bc: Breathecode, client: APIClient):
     response = client.get(url, HTTP_ACADEMY=1)
     json = response.json()
     expected = {
-        'detail': 'not-enough-consumables',
-        'status_code': 402,
+        'detail': 'asset-not-found',
+        'status_code': 404,
     }
 
     assert json == expected
-    assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
+    assert response.status_code == status.HTTP_404_NOT_FOUND
     assert bc.database.list_of('registry.Asset') == []
 
 
@@ -134,8 +134,7 @@ def test_no_asset(bc: Breathecode, client: APIClient):
                                profile_academy=1,
                                role=1,
                                capability='read_asset',
-                               permission={'codename': 'read-lesson'},
-                               group=1,
+                               service={'slug': 'read-lesson'},
                                consumable=1)
     client.force_authenticate(user=model.user)
     url = reverse_lazy('v2:registry:academy_asset_slug', kwargs={'asset_slug': 'model_slug'})
@@ -158,8 +157,7 @@ def test_with_asset(bc: Breathecode, client: APIClient):
                                profile_academy=1,
                                role=1,
                                capability='read_asset',
-                               permission={'codename': 'read-lesson'},
-                               group=1,
+                               service={'slug': 'read-lesson'},
                                consumable=1,
                                asset=1,
                                asset_category=1,
@@ -222,8 +220,7 @@ def test_with_asset__no_saas__finantial_status_no_late(bc: Breathecode, client: 
                                profile_academy=1,
                                role=1,
                                capability='read_asset',
-                               permission={'codename': 'read-lesson'},
-                               group=1,
+                               service={'slug': 'read-lesson'},
                                consumable=1,
                                asset=1,
                                asset_category=1,
@@ -271,8 +268,7 @@ def test_with_asset__no_saas__finantial_status_late(bc: Breathecode, client: API
                                profile_academy=1,
                                role=1,
                                capability='read_asset',
-                               permission={'codename': 'read-lesson'},
-                               group=1,
+                               service={'slug': 'read-lesson'},
                                consumable=1,
                                asset={'slug': slug},
                                syllabus_version={

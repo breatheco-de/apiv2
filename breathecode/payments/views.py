@@ -46,8 +46,8 @@ from breathecode.payments.models import (
     PlanOffer,
     Service,
     ServiceItem,
-    ServiceSet,
     Subscription,
+    PaymentMethod,
 )
 from breathecode.payments.serializers import (
     GetAcademyServiceSmallSerializer,
@@ -69,6 +69,7 @@ from breathecode.payments.serializers import (
     POSTAcademyServiceSerializer,
     PUTAcademyServiceSerializer,
     ServiceSerializer,
+    GetPaymentMethod,
 )
 from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import reimburse_service_units
@@ -573,14 +574,10 @@ class MeConsumableView(APIView):
         event_types = EventTypeSet.objects.none()
         event_types = filter_consumables(request, items, event_types, 'event_type_set')
 
-        service_sets = ServiceSet.objects.none()
-        service_sets = filter_consumables(request, items, service_sets, 'service_set')
-
         balance = {
             'mentorship_service_sets': get_balance_by_resource(mentorship_services, 'mentorship_service_set'),
             'cohort_sets': get_balance_by_resource(cohorts, 'cohort_set'),
             'event_type_sets': get_balance_by_resource(event_types, 'event_type_set'),
-            'service_sets': get_balance_by_resource(service_sets, 'service_set'),
         }
 
         return Response(balance)
@@ -1071,7 +1068,7 @@ class CancelConsumptionView(APIView):
 
         session = ConsumptionSession.objects.filter(
             consumable__user=request.user,
-            consumable__service_set__services__slug=service_slug).exclude(status='CANCELLED').first()
+            consumable__service_item__service__type=Service.Type.VOID).exclude(status='CANCELLED').first()
         if session is None:
             raise ValidationException(translation(lang,
                                                   en='Session not found',
@@ -1858,3 +1855,25 @@ class PayView(APIView):
             except Exception as e:
                 transaction.savepoint_rollback(sid)
                 raise e
+
+
+class PaymentMethodView(APIView):
+
+    def get(self, request):
+        lang = get_user_language(request)
+
+        items = PaymentMethod.objects.all()
+        lookup = {}
+
+        if 'academy_id' in self.request.GET:
+            academy_id = self.request.GET.get('academy_id')
+            lookup['academy__id__iexact'] = academy_id
+
+        if 'lang' in self.request.GET:
+            lang = self.request.GET.get('lang')
+            lookup['lang__iexact'] = lang
+
+        items = items.filter(**lookup)
+
+        serializer = GetPaymentMethod(items, many=True)
+        return Response(serializer.data, status=200)

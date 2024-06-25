@@ -185,3 +185,62 @@ def default_environment(clean_environment, fake, monkeypatch: pytest.MonkeyPatch
     monkeypatch.setenv('ENV', 'test')
 
     yield
+
+
+@pytest.fixture
+def partial_equality():
+    """
+    Fail if the two objects are partially unequal as determined by the '==' operator.
+
+    Usage:
+
+    ```py
+    obj1 = {'key1': 1, 'key2': 2}
+    obj2 = {'key2': 2, 'key3': 1}
+    obj3 = {'key2': 2}
+
+    # it's fail because the key3 is not in the obj1
+    self.bc.check.partial_equality(obj1, obj2)  # 🔴
+
+    # it's fail because the key1 is not in the obj2
+    self.bc.check.partial_equality(obj2, obj1)  # 🔴
+
+    # it's pass because the key2 exists in the obj1
+    self.bc.check.partial_equality(obj1, obj3)  # 🟢
+
+    # it's pass because the key2 exists in the obj2
+    self.bc.check.partial_equality(obj2, obj3)  # 🟢
+
+    # it's fail because the key1 is not in the obj3
+    self.bc.check.partial_equality(obj3, obj1)  # 🔴
+
+    # it's fail because the key3 is not in the obj3
+    self.bc.check.partial_equality(obj3, obj2)  # 🔴
+    ```
+    """
+
+    def _fill_partial_equality(first: dict, second: dict) -> dict:
+        original = {}
+
+        for key in second.keys():
+            original[key] = second[key]
+
+        return original
+
+    def wrapper(first: dict | list[dict], second: dict | list[dict]) -> None:
+        assert type(first) == type(second)
+
+        if isinstance(first, list):
+            assert len(first) == len(second)
+
+            original = []
+
+            for i in range(0, len(first)):
+                original.append(_fill_partial_equality(first[i], second[i]))
+
+        else:
+            original = _fill_partial_equality(first, second)
+
+        assert original == second
+
+    yield wrapper

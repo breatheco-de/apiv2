@@ -405,12 +405,15 @@ class GetThresholdView(APIView):
                 lookup['academy__id'] = int(param)
             else:
                 lookup['academy__slug'] = param
-        if 'tag' in self.request.GET:
-            param = self.request.GET.get('tags')
-            lookup['tags__icontains'] = param
-
         else:
             lookup['academy__isnull'] = True
+
+        if 'tag' in self.request.GET:
+            param = self.request.GET.get('tags')
+            if param != 'all':
+                lookup['tags__icontains'] = param
+        else:
+            lookup['tags__in'] = ['', None]
 
         items = items.filter(**lookup).order_by('-created_at')
 

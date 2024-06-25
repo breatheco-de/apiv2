@@ -327,6 +327,7 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
     if not provisioning_vendor:
         errors.append('Provisioning vendor Codespaces not found')
 
+    #TODO: if not academies: no academy has been found responsable for this activity
     for academy in academies:
         ls = context['logs'].get((field['Username'], academy.id), None)
         if ls is None:

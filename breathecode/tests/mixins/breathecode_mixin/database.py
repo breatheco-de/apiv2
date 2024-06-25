@@ -6,6 +6,7 @@ import re
 from functools import cache
 from typing import Any, Optional
 
+from asgiref.sync import sync_to_async
 from channels.db import database_sync_to_async
 from django.apps import apps
 from django.conf import settings
@@ -522,6 +523,19 @@ class Database:
 
         return self.list_of(path, dict)
 
+    @sync_to_async
+    def alist_of(self, path: str, dict: bool = True) -> list[Model | dict[str, Any]]:
+        """
+        This is a wrapper for `Model.objects.filter()`, get a list of values of models as `list[dict]` if
+        `dict=True` else get a list of `Model` instances.
+
+        Keywords arguments:
+        - path(`str`): path to a model, for example `admissions.CohortUser`.
+        - dict(`bool`): if true return dict of values of model else return model instance.
+        """
+
+        return self.list_of(path, dict)
+
     def delete(self, path: str, pk: Optional[int | str] = None) -> tuple[int, dict[str, int]]:
         """
         This is a wrapper for `Model.objects.filter(pk=pk).delete()`, delete a element if `pk` is provided else
@@ -1001,6 +1015,17 @@ class Database:
 
     @database_sync_to_async
     def async_create(self, *args, **kwargs) -> dict[str, Model | list[Model]]:
+        """
+        This is a wrapper for `Model.objects.count()`, get how many instances of this `Model` are saved.
+
+        Keywords arguments:
+        - path(`str`): path to a model, for example `admissions.CohortUser`.
+        """
+
+        return self.create(*args, **kwargs)
+
+    @sync_to_async
+    def acreate(self, *args, **kwargs) -> dict[str, Model | list[Model]]:
         """
         This is a wrapper for `Model.objects.count()`, get how many instances of this `Model` are saved.
 
