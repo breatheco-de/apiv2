@@ -48,6 +48,7 @@ from breathecode.payments.models import (
     ServiceItem,
     ServiceSet,
     Subscription,
+    PaymentMethod,
 )
 from breathecode.payments.serializers import (
     GetAcademyServiceSmallSerializer,
@@ -69,6 +70,7 @@ from breathecode.payments.serializers import (
     POSTAcademyServiceSerializer,
     PUTAcademyServiceSerializer,
     ServiceSerializer,
+    GetPaymentMethod,
 )
 from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import reimburse_service_units
@@ -1858,3 +1860,25 @@ class PayView(APIView):
             except Exception as e:
                 transaction.savepoint_rollback(sid)
                 raise e
+
+
+class PaymentMethodView(APIView):
+
+    def get(self, request):
+        lang = get_user_language(request)
+
+        items = PaymentMethod.objects.all()
+        lookup = {}
+
+        if 'academy_id' in self.request.GET:
+            academy_id = self.request.GET.get('academy_id')
+            lookup['academy__id__iexact'] = academy_id
+
+        if 'lang' in self.request.GET:
+            lang = self.request.GET.get('lang')
+            lookup['lang__iexact'] = lang
+
+        items = items.filter(**lookup)
+
+        serializer = GetPaymentMethod(items, many=True)
+        return Response(serializer.data, status=200)
