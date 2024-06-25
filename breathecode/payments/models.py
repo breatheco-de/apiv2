@@ -1046,7 +1046,7 @@ class PlanFinancing(AbstractIOweYou):
         super().save(*args, **kwargs)
 
         if on_create:
-            signals.planfinancing_created.send(instance=self, sender=self.__class__)
+            signals.planfinancing_created.send_robust(instance=self, sender=self.__class__)
 
 
 class Subscription(AbstractIOweYou):
@@ -1104,7 +1104,7 @@ class Subscription(AbstractIOweYou):
         super().save(*args, **kwargs)
 
         if on_create:
-            signals.subscription_created.send(instance=self, sender=self.__class__)
+            signals.subscription_created.send_robust(instance=self, sender=self.__class__)
 
 
 class SubscriptionServiceItem(models.Model):
@@ -1299,7 +1299,7 @@ class Consumable(AbstractServiceItem):
         created = not self.id
 
         if created and self.how_many != 0:
-            signals.grant_service_permissions.send(instance=self, sender=self.__class__)
+            signals.grant_service_permissions.send_robust(instance=self, sender=self.__class__)
 
         super().save(*args, **kwargs)
 

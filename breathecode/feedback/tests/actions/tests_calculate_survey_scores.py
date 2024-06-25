@@ -19,7 +19,7 @@ class SurveyTestSuite(FeedbackTestCase):
     🔽🔽🔽 GET without Survey
     """
 
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     def test__without_survey(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True, capability='read_survey', role=1)
@@ -34,7 +34,7 @@ class SurveyTestSuite(FeedbackTestCase):
     🔽🔽🔽 GET with one Survey
     """
 
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     def test__with_survey(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -56,7 +56,7 @@ class SurveyTestSuite(FeedbackTestCase):
     🔽🔽🔽 GET with one Survey and many Answer with bad statuses
     """
 
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     def test__with_survey__answers_with_bad_statuses(self):
         self.headers(academy=1)
 
@@ -85,7 +85,7 @@ class SurveyTestSuite(FeedbackTestCase):
     🔽🔽🔽 GET with one Survey and many Answer with right status, score not set
     """
 
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     def test__with_survey__answers_with_right_status__score_not_set(self):
         self.headers(academy=1)
 
@@ -113,7 +113,7 @@ class SurveyTestSuite(FeedbackTestCase):
     🔽🔽🔽 GET with one Survey and many Answer with right status, score set
     """
 
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     def test__with_survey__answers_with_right_status__score_set(self):
         self.headers(academy=1)
 

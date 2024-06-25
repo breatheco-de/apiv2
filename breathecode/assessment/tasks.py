@@ -1,12 +1,10 @@
 import logging
-import os
-import re
 
 from celery import shared_task
 
-import breathecode.notify.actions as actions
-from .models import UserAssessment
 from breathecode.utils import TaskPriority
+
+from .models import UserAssessment
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)

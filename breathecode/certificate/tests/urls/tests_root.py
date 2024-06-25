@@ -2,16 +2,19 @@
 Test /certificate
 """
 from unittest.mock import MagicMock, call, patch
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
+import breathecode.certificate.signals as signals
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
+    apply_google_cloud_bucket_mock,
+    apply_google_cloud_client_mock,
 )
+
 from ..mixins import CertificateTestCase
-import breathecode.certificate.signals as signals
 
 
 class CertificateTestSuite(CertificateTestCase):
@@ -23,9 +26,9 @@ class CertificateTestSuite(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_certificate_cohort_user__without_auth(self):
         """Test /root without auth"""
         self.headers(academy=1)
@@ -39,7 +42,7 @@ class CertificateTestSuite(CertificateTestCase):
         })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Post method
@@ -48,9 +51,9 @@ class CertificateTestSuite(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_certificate_re_attempts_without_capability(self):
         """Test /root with auth"""
         """ No capability for the request"""
@@ -72,14 +75,14 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(self.all_user_specialty_dict(), [])
 
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_certificate_re_attempts_without_cohort_user(self):
         """Test /root with auth"""
         """ No cohort_user for the request"""
@@ -103,14 +106,14 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(self.all_user_specialty_dict(), [])
 
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_certificate_re_attempts_without_user_specialty(self):
         """Test /root with auth"""
         """ No user_specialty for the request"""
@@ -135,15 +138,15 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(self.all_user_specialty_dict(), [])
 
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [])
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_certificate_re_attempts(self):
         """Test /root with auth"""
         """ Good Request """
@@ -295,7 +298,7 @@ class CertificateTestSuite(CertificateTestCase):
         }])
 
         self.assertEqual(
-            signals.user_specialty_saved.send.call_args_list,
+            signals.user_specialty_saved.send_robust.call_args_list,
             [
                 # Mixer
                 call(instance=model.user_specialty, sender=model.user_specialty.__class__),
@@ -305,13 +308,13 @@ class CertificateTestSuite(CertificateTestCase):
                 call(instance=model.user_specialty, sender=model.user_specialty.__class__),
             ])
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_certificate_re_attempts_two_certificates(self):
         """Test /root with auth"""
         """ Good Request """
@@ -553,7 +556,7 @@ class CertificateTestSuite(CertificateTestCase):
         ])
 
         self.assertEqual(
-            signals.user_specialty_saved.send.call_args_list,
+            signals.user_specialty_saved.send_robust.call_args_list,
             [
                 # Mixer
                 call(instance=models[0].user_specialty, sender=models[0].user_specialty.__class__),
@@ -571,8 +574,8 @@ class CertificateTestSuite(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_certificate__with_full_name_in_querystring(self):
         """Test /root """
         self.headers(academy=1)
@@ -687,8 +690,8 @@ class CertificateTestSuite(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_certificate__with_first_name_in_querystring(self):
         """Test /root """
         self.headers(academy=1)
@@ -798,8 +801,8 @@ class CertificateTestSuite(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_certificate__with_last_name_in_querystring(self):
         """Test /root """
         self.headers(academy=1)
@@ -909,8 +912,8 @@ class CertificateTestSuite(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_certificate__with_email_in_querystring(self):
         """Test /root """
         self.headers(academy=1)
@@ -1026,8 +1029,8 @@ class CertificateTestSuite(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_delete_certificate_in_bulk_with_two_ids(self):
         """Test / with two certificates"""
         self.headers(academy=1)
@@ -1064,8 +1067,8 @@ class CertificateTestSuite(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_delete_certificate_in_bulk_not_found(self):
         """Test / with two certificates"""
         self.headers(academy=1)
@@ -1101,8 +1104,8 @@ class CertificateTestSuite(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_delete_certificate_in_bulk_without_passing_ids(self):
         """Test / with two certificates"""
         self.headers(academy=1)

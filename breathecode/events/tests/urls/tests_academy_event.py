@@ -627,7 +627,7 @@ class AcademyEventTestSuite(EventTestCase):
     🔽🔽🔽 Post bad slug
     """
 
-    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send_robust', MagicMock())
     @patch('uuid.uuid4', PropertyMock(MagicMock=uuid))
     @patch('os.urandom', MagicMock(return_value=seed))
     def test_all_academy_events__post__bad_slug(self):
@@ -743,7 +743,7 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(self.bc.database.list_of('events.Event'), [])
 
-    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send_robust', MagicMock())
     # @patch('uuid.uuid4', PropertyMock(MagicMock=uuid))
     # @patch('os.urandom', MagicMock(return_value=seed))
     def test_all_academy_events__post__event_exist_with_the_same_eventbrite_id_as_null(self):
@@ -1129,7 +1129,7 @@ class AcademyEventTestSuite(EventTestCase):
     🔽🔽🔽 Post bad slug
     """
 
-    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send_robust', MagicMock())
     @patch('uuid.uuid4', PropertyMock(MagicMock=uuid))
     @patch('os.urandom', MagicMock(return_value=seed))
     def test_all_academy_events__post__bad_slug____(self):

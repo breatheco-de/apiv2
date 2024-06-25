@@ -44,7 +44,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores', MagicMock(return_value=get_scores()))
     @patch('breathecode.feedback.actions.calculate_survey_response_rate', MagicMock(return_value=RESPONSE_RATE))
     def test_with_zero_surveys(self):
@@ -67,7 +67,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores', MagicMock(return_value=get_scores()))
     @patch('breathecode.feedback.actions.calculate_survey_response_rate', MagicMock(return_value=RESPONSE_RATE))
     def test_with_one_surveys(self):

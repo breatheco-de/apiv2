@@ -1,8 +1,9 @@
 import logging
-import traceback
+
 from celery import Task
-from .models import RepositoryWebhook
 from django.utils import timezone
+
+from .models import RepositoryWebhook
 
 logger = logging.getLogger(__name__)
 

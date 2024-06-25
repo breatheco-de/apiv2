@@ -106,8 +106,8 @@ class AcademyEventTestSuite(EventTestCase):
 
     # When: no auth
     # Then: return 401
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_auth(self):
 
@@ -134,8 +134,8 @@ class AcademyEventTestSuite(EventTestCase):
 
     # When: no consumables
     # Then: return 402
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables(self):
         event_type_model = model = self.bc.database.create(event_type_set=1)
@@ -178,8 +178,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 404
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events', MagicMock(return_value=False))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables__bypass_with_feature_flag__live_event_not_found(self):
         service = {'slug': 'event_join'}
@@ -215,8 +215,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 400
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events', MagicMock(return_value=False))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables__bypass_with_feature_flag__with_live_event__cohort_without_url(self):
         service = {'slug': 'event_join'}
@@ -274,8 +274,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 302 to cohort.online_meeting_url and create a EventCheckin with status DONE
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events', MagicMock(return_value=False))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables__bypass_with_feature_flag__with_live_event__cohort_with_url(self):
         service = {'slug': 'event_join'}
@@ -342,8 +342,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 404
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events', MagicMock(return_value=True))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables__it_try_to_consume__live_event_not_found(self):
         service = {'slug': 'event_join'}
@@ -379,8 +379,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 400
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events', MagicMock(return_value=True))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables__it_try_to_consume__with_live_event__cohort_without_url(self):
         service = {'slug': 'event_join'}
@@ -438,8 +438,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 402
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events', MagicMock(return_value=True))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_no_consumables__it_try_to_consume__with_live_event__cohort_with_url(self):
         service = {'slug': 'event_join'}
@@ -523,8 +523,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 200 and create a ConsumptionSession
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events', MagicMock(return_value=True))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_with_consumable__it_try_to_consume__with_live_event__in_the_past(self):
         service = {'slug': 'event_join'}
@@ -591,8 +591,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 200 and create a ConsumptionSession and create a EventCheckin with status DONE
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events', MagicMock(return_value=True))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_with_consumable__it_try_to_consume__with_live_event__in_the_future(self):
         service = {'slug': 'event_join'}
@@ -680,8 +680,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 200 and create a ConsumptionSession and create a EventCheckin with status DONE
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events', MagicMock(return_value=True))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_with_consumable__it_try_to_consume__with_live_event__in_the_future__academy_no_saas__non_free1(self):
         service = {'slug': 'event_join'}
@@ -773,8 +773,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 200 and create a ConsumptionSession and create a EventCheckin with status DONE
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events', MagicMock(return_value=True))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_with_consumable__it_try_to_consume__with_live_event__in_the_future__academy_no_saas__non_free2(self):
         service = {'slug': 'event_join'}
@@ -868,8 +868,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 200 and create a ConsumptionSession and create a EventCheckin with status DONE
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events', MagicMock(return_value=True))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_is_free_with_cohort_users_saas__cohort(self):
         service = {'slug': 'event_join'}
@@ -963,8 +963,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 200 and create a ConsumptionSession and create a EventCheckin with status DONE
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events', MagicMock(return_value=True))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_is_free_with_cohort_users_saas__academy(self):
         service = {'slug': 'event_join'}
@@ -1057,8 +1057,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 200 and create a ConsumptionSession and create a EventCheckin with status DONE
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events', MagicMock(return_value=True))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_is_free_with_cohort_users_no_saas__cohort(self):
         service = {'slug': 'event_join'}
@@ -1141,8 +1141,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 200 and create a ConsumptionSession and create a EventCheckin with status DONE
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events', MagicMock(return_value=True))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_is_free_with_cohort_users_no_saas__academy(self):
         service = {'slug': 'event_join'}
@@ -1221,8 +1221,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 200 and create a ConsumptionSession
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events', MagicMock(return_value=True))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_with_consumable__it_try_to_consume__with_live_event__in_the_future__show_countdown(self):
         service = {'slug': 'event_join'}
@@ -1306,8 +1306,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Then: return 200 and avoid to create a ConsumptionSession
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events', MagicMock(return_value=True))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
     def test_with_consumable__it_try_to_consume__with_live_event__in_the_future__show_countdown(self):
         service = {'slug': 'event_join'}
@@ -1414,8 +1414,8 @@ class AcademyEventTestSuite(EventTestCase):
 ])
 @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
 @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events', MagicMock(return_value=True))
-@patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-@patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+@patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+@patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
 @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
 def test__post__auth__no_saas__finantial_status_no_late(bc: Breathecode, client: fx.Client, academy, cohort,
                                                         cohort_user):
@@ -1503,8 +1503,8 @@ def test__post__auth__no_saas__finantial_status_no_late(bc: Breathecode, client:
 ])
 @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
 @patch('breathecode.events.permissions.flags.Release.enable_consume_live_events', MagicMock(return_value=True))
-@patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-@patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+@patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+@patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
 @patch('breathecode.payments.tasks.end_the_consumption_session.apply_async', MagicMock(return_value=None))
 def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: fx.Client, academy, cohort):
     service = {'slug': 'event_join'}

@@ -1,11 +1,19 @@
 import random
-from unittest.mock import MagicMock, call, patch
-from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
-
-from breathecode.tests.mixins.legacy import LegacyAPITestCase
-from ...mixins import FeedbackTestCase
-from breathecode.feedback.management.commands.remove_invalid_answers import Command
 import sys
+from unittest.mock import MagicMock, call, patch
+
+import pytest
+
+from breathecode.feedback.management.commands.remove_invalid_answers import Command
+from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
+from breathecode.tests.mixins.legacy import LegacyAPITestCase
+
+from ...mixins import FeedbackTestCase
+
+
+@pytest.fixture(autouse=True)
+def setup(db, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
 
 
 @patch('sys.stdout.write', MagicMock())

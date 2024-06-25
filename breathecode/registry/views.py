@@ -68,6 +68,7 @@ from .serializers import (
     AssetPUTSerializer,
     AssetSerializer,
     AssetTechnologySerializer,
+    AssetTinySerializer,
     KeywordClusterBigSerializer,
     KeywordClusterMidSerializer,
     KeywordSmallSerializer,
@@ -83,7 +84,6 @@ from .serializers import (
     SEOReportSerializer,
     TechnologyPUTSerializer,
     VariableSmallSerializer,
-    AssetTinySerializer,
 )
 from .tasks import async_pull_from_github
 
@@ -857,7 +857,7 @@ class AssetSupersedesView(APIView, GenerateLookupsMixin):
             while _aux.previous_version is not None:
                 previous.append(_aux.previous_version)
                 _aux = _aux.previous_version
-        except:
+        except Exception:
             pass
 
         return Response({

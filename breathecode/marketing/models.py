@@ -493,8 +493,8 @@ class FormEntry(models.Model):
 
         super().save(*args, **kwargs)
 
-        if deal_status_modified: form_entry_won_or_lost.send(instance=self, sender=FormEntry)
-        if is_new_deal: new_form_entry_deal.send(instance=self, sender=FormEntry)
+        if deal_status_modified: form_entry_won_or_lost.send_robust(instance=self, sender=FormEntry)
+        if is_new_deal: new_form_entry_deal.send_robust(instance=self, sender=FormEntry)
 
         self.__old_deal_status = self.deal_status
         self.__old_deal_id = self.ac_deal_id
@@ -714,7 +714,7 @@ class Downloadable(models.Model):
         if created:
             super().save(*args, **kwargs)
 
-            downloadable_saved.send(instance=self, sender=self.__class__, created=created)
+            downloadable_saved.send_robust(instance=self, sender=self.__class__, created=created)
 
 
 SOURCE = 'SOURCE'

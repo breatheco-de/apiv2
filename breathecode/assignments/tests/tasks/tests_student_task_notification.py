@@ -31,7 +31,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(send_email_message.call_args_list, [])
         self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [call('Task not found')])
-        self.assertEqual(signals.assignment_created.send.call_args_list, [])
+        self.assertEqual(signals.assignment_created.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 With Task and Cohort revision_status PENDING
@@ -66,7 +66,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
-        self.assertEqual(signals.assignment_created.send.call_args_list,
+        self.assertEqual(signals.assignment_created.send_robust.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
@@ -98,7 +98,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
-        self.assertEqual(signals.assignment_created.send.call_args_list,
+        self.assertEqual(signals.assignment_created.send_robust.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
@@ -131,7 +131,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
-        self.assertEqual(signals.assignment_created.send.call_args_list,
+        self.assertEqual(signals.assignment_created.send_robust.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])
 
     """
@@ -167,7 +167,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
-        self.assertEqual(signals.assignment_created.send.call_args_list,
+        self.assertEqual(signals.assignment_created.send_robust.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
@@ -199,7 +199,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
-        self.assertEqual(signals.assignment_created.send.call_args_list,
+        self.assertEqual(signals.assignment_created.send_robust.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
@@ -232,7 +232,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
-        self.assertEqual(signals.assignment_created.send.call_args_list,
+        self.assertEqual(signals.assignment_created.send_robust.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])
 
     """
@@ -268,7 +268,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
-        self.assertEqual(signals.assignment_created.send.call_args_list,
+        self.assertEqual(signals.assignment_created.send_robust.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
@@ -300,7 +300,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(str(Logger.info.call_args_list), str([call('Starting student_task_notification')]))
         self.assertEqual(Logger.error.call_args_list, [])
-        self.assertEqual(signals.assignment_created.send.call_args_list,
+        self.assertEqual(signals.assignment_created.send_robust.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
@@ -333,5 +333,5 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(Logger.info.call_args_list, [call('Starting student_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
-        self.assertEqual(signals.assignment_created.send.call_args_list,
+        self.assertEqual(signals.assignment_created.send_robust.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])

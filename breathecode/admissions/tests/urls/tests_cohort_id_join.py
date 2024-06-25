@@ -81,8 +81,8 @@ def cohort_user_field(data={}):
 class CohortIdUserIdTestSuite(AdmissionsTestCase):
     # When: no auth
     # Then: should return 401
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test__post__no_auth(self):
         """Test /cohort/:id/user without auth"""
         url = reverse_lazy('admissions:cohort_id_join', kwargs={'cohort_id': 999})
@@ -96,8 +96,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
 
     # When: no cohort
     # Then: should return 404
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
     @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
     def test__post__no_cohort(self):
@@ -123,8 +123,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
 
     # When: no have a PlanFinancing or Subscription belonging to the user
     # Then: should return 400
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
     @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
     def test__post__not_subscribed(self):
@@ -164,8 +164,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
 
     # When: have one of PlanFinancing or Subscription belonging to the user
     # Then: should return 400
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
     @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
     def test__post__have_a_subscription_or_a_plan_financing(self):
@@ -240,8 +240,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
 
     # When: joined to cohort externally to subscription
     # Then: should return 400
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
     @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
     def test__post__joined_to_cohort(self):
@@ -317,8 +317,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
 
     # When: rejoining to cohort from a subscription
     # Then: should return 400
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
     @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
     def test__post__rejoining_from_a_subscription(self):
@@ -391,8 +391,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
 
     # When: joined to another endable cohort
     # Then: should return 400
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
     @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
     def test__post__joined_to_another_endable_cohort(self):
@@ -457,8 +457,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
 
     # When: joined to another endable cohort
     # Then: should return 400
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @patch('breathecode.admissions.tasks.build_cohort_user.delay', MagicMock())
     @patch('breathecode.admissions.tasks.build_profile_academy.delay', MagicMock())
     def test__post__joined_to_another_endable_cohort(self):

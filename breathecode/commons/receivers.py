@@ -24,13 +24,13 @@ def is_cache_enabled():
 @receiver(post_save)
 def on_save(*args: Any, **kwargs: Any):
     del kwargs['signal']
-    update_cache.send(*args, **kwargs)
+    update_cache.send_robust(*args, **kwargs)
 
 
 @receiver(post_delete)
 def on_delete(*args: Any, **kwargs: Any):
     del kwargs['signal']
-    update_cache.send(*args, **kwargs)
+    update_cache.send_robust(*args, **kwargs)
 
 
 @receiver(update_cache)

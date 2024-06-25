@@ -5,7 +5,6 @@ from asgiref.sync import async_to_sync
 from google.apps import meet_v2
 from google.apps.meet_v2.types import Space
 from google.protobuf.field_mask_pb2 import FieldMask
-from google.protobuf.timestamp_pb2 import Timestamp
 
 __all__ = ['GoogleMeet']
 

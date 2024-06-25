@@ -146,9 +146,9 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 Auth
     """
 
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.assignments.signals.assignment_status_updated.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_user_me_task__without_auth(self):
         url = reverse_lazy('assignments:user_me_task')
         response = self.client.get(url)
@@ -165,9 +165,9 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 Get without Task
     """
 
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.assignments.signals.assignment_status_updated.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_user_me_task__without_task(self):
         model = self.bc.database.create(user=1)
         self.client.force_authenticate(model.user)
@@ -187,9 +187,9 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 Get with one Task
     """
 
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.assignments.signals.assignment_status_updated.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_user_me_task__with_one_task(self):
         model = self.bc.database.create(user=1, task=1, cohort=1)
         self.client.force_authenticate(model.user)
@@ -209,9 +209,9 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 Get with two Task
     """
 
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.assignments.signals.assignment_status_updated.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_user_me_task__with_two_task(self):
         model = self.bc.database.create(user=1, task=2, cohort=1)
         self.client.force_authenticate(model.user)
@@ -231,9 +231,9 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 Get with querystring assets
     """
 
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.assignments.signals.assignment_status_updated.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_user_me_task__with_query_string_assets(self):
         model = self.bc.database.create(user=1,
                                         task=[{
@@ -259,9 +259,9 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 Get with querystring assets no results
     """
 
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.assignments.signals.assignment_status_updated.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_user_me_task__with_query_string_assets_no_results(self):
         model = self.bc.database.create(user=1,
                                         task=[{
@@ -287,9 +287,9 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 Get with one Task but the other user
     """
 
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.assignments.signals.assignment_status_updated.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_user_me_task__with_one_task__but_the_other_user(self):
         task = {'user_id': 2}
         model = self.bc.database.create(user=2, task=task, cohort=1)
@@ -310,9 +310,9 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 Get with two Task but the other user
     """
 
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.assignments.signals.assignment_status_updated.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_user_me_task__with_two_tasks__but_the_other_user(self):
         task = {'user_id': 2}
         model = self.bc.database.create(user=2, task=(2, task), cohort=1)
@@ -333,9 +333,9 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 Delete
     """
 
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.assignments.signals.assignment_status_updated.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_delete_tasks_in_bulk_found_and_deleted(self):
 
         model = self.bc.database.create(user=1, task=2, cohort=1)
@@ -349,9 +349,9 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
         self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.assignments.signals.assignment_status_updated.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_delete_tasks_in_bulk_tasks_not_found(self):
 
         model = self.bc.database.create(user=1)
@@ -385,9 +385,9 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
         self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.assignments.signals.assignment_status_updated.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_delete_task_in_bulk_associated_with_another_user(self):
 
         model = self.bc.database.create(user=2, task=2, cohort=1)
@@ -423,9 +423,9 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.assignments.signals.assignment_status_updated.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_put__without_task(self):
         model = self.bc.database.create(user=1)
         self.client.force_authenticate(model.user)
@@ -444,9 +444,9 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.assignments.signals.assignment_status_updated.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test__put__without_task__passing_list(self):
         model = self.bc.database.create(user=1)
         self.client.force_authenticate(model.user)
@@ -468,9 +468,9 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.assignments.signals.assignment_status_updated.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test__put__without_task__one_item_in_body(self):
         model = self.bc.database.create(user=1)
         self.client.force_authenticate(model.user)
@@ -493,9 +493,9 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.assignments.signals.assignment_status_updated.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test__put__without_task__one_item_in_body__with_id(self):
         model = self.bc.database.create(user=1)
         self.client.force_authenticate(model.user)
@@ -518,10 +518,10 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
+    @patch('breathecode.assignments.signals.assignment_status_updated.send_robust', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_put_passing_taks_id(self):
         model = self.bc.database.create(user=1, task=2, cohort=1)
         self.client.force_authenticate(model.user)
@@ -540,9 +540,9 @@ class MediaTestSuite(AssignmentsTestCase):
         self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
 
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.assignments.signals.assignment_status_updated.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_put_passing_random_values_to_update_task(self):
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
             model = self.bc.database.create(user=1, task=2, cohort=2)
@@ -590,9 +590,9 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.assignments.signals.assignment_status_updated.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test__put__with_task__one_item_in_body__passing_revision_status(self):
         statuses = ['APPROVED', 'REJECTED', 'IGNORED']
         for index in range(0, 3):
@@ -631,9 +631,9 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
-    @patch('breathecode.assignments.signals.assignment_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.assignments.signals.assignment_status_updated.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test__put__with_task__one_item_in_body__passing_revision_status__teacher_token(self):
         statuses = ['APPROVED', 'REJECTED', 'IGNORED']
         for index in range(0, 3):
@@ -698,8 +698,8 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
     @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_with_data(self):
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
             model = self.bc.database.create(user=1, task=2, cohort=2)

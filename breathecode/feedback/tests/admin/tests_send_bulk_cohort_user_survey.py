@@ -3,15 +3,14 @@ Test /answer
 """
 import logging
 from unittest.mock import MagicMock, call, patch
-from django.http.request import HttpRequest
+
 from django.contrib.auth.models import User
-from ..mixins import FeedbackTestCase
-from ...admin import send_bulk_cohort_user_survey
-
-from ..mixins import FeedbackTestCase
-from ... import actions
-
 from django.contrib.messages import api
+from django.http.request import HttpRequest
+
+from ... import actions
+from ...admin import send_bulk_cohort_user_survey
+from ..mixins import FeedbackTestCase
 
 
 class SendSurveyTestSuite(FeedbackTestCase):
@@ -21,8 +20,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
 
     @patch('django.contrib.messages.api.add_message', MagicMock())
     @patch('breathecode.feedback.actions.send_question', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_with_zero_cohort_users(self):
         request = HttpRequest()
 
@@ -43,8 +42,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
 
     @patch('django.contrib.messages.api.add_message', MagicMock())
     @patch('breathecode.feedback.actions.send_question', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_with_two_cohort_users(self):
         request = HttpRequest()
         CohortUser = self.bc.database.get_model('admissions.CohortUser')
@@ -74,8 +73,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
     @patch('django.contrib.messages.api.add_message', MagicMock())
     @patch('breathecode.feedback.actions.send_question', MagicMock(side_effect=Exception('qwerty')))
     @patch('logging.Logger.fatal', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_with_two_cohort_users__raises_exceptions__same_exception(self):
         request = HttpRequest()
         CohortUser = self.bc.database.get_model('admissions.CohortUser')
@@ -102,8 +101,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
     @patch('breathecode.feedback.actions.send_question',
            MagicMock(side_effect=[Exception('qwerty1'), Exception('qwerty2')]))
     @patch('logging.Logger.fatal', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_with_two_cohort_users__raises_exceptions__different_exceptions(self):
         request = HttpRequest()
         CohortUser = self.bc.database.get_model('admissions.CohortUser')

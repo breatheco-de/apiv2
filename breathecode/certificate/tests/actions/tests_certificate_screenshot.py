@@ -2,15 +2,18 @@
 Tasks tests
 """
 import os
-import requests
-import breathecode.certificate.signals as signals
-from unittest.mock import MagicMock, PropertyMock, patch, call
-from breathecode.tests.mocks import apply_requests_get_mock
+from unittest.mock import MagicMock, PropertyMock, call, patch
 from urllib.parse import urlencode
+
+import requests
+
+import breathecode.certificate.signals as signals
+from breathecode.services.google_cloud import File, Storage
+from breathecode.tests.mocks import apply_requests_get_mock
+
 from ...actions import certificate_screenshot
-from ..mixins import CertificateTestCase
 from ...models import UserSpecialty
-from breathecode.services.google_cloud import Storage, File
+from ..mixins import CertificateTestCase
 
 token = '12345a67890b12345c67890d'
 query_string = urlencode({
@@ -32,7 +35,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
            apply_requests_get_mock([
                (200, f'https://api.screenshotmachine.com?{query_string}', 'mailgun response'),
            ]))
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, f'https://api.screenshotmachine.com?{query_string}')]))
     @patch.multiple('breathecode.services.google_cloud.Storage',
                     __init__=MagicMock(return_value=None),
@@ -54,7 +57,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
 
         self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [])
         self.assertEqual(requests.get.call_args_list, [])
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [])
 
         self.assertEqual(File.upload.call_args_list, [])
         self.assertEqual(File.url.call_args_list, [])
@@ -67,7 +70,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
            apply_requests_get_mock([
                (200, f'https://api.screenshotmachine.com?{query_string}', 'mailgun response'),
            ]))
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, f'https://api.screenshotmachine.com?{query_string}')]))
     @patch.multiple('breathecode.services.google_cloud.Storage',
                     __init__=MagicMock(return_value=None),
@@ -101,7 +104,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
             call(f'https://api.screenshotmachine.com?{query_string}', stream=True),
         ])
         self.assertEqual(
-            signals.user_specialty_saved.send.call_args_list,
+            signals.user_specialty_saved.send_robust.call_args_list,
             [
                 # Mixer
                 call(instance=model.user_specialty, sender=model.user_specialty.__class__),
@@ -120,7 +123,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
            apply_requests_get_mock([
                (200, f'https://api.screenshotmachine.com?{query_string}', 'mailgun response'),
            ]))
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
     @patch.multiple('breathecode.services.google_cloud.Storage',
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
@@ -153,7 +156,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
             call(f'https://api.screenshotmachine.com?{query_string}', stream=True),
         ])
         self.assertEqual(
-            signals.user_specialty_saved.send.call_args_list,
+            signals.user_specialty_saved.send_robust.call_args_list,
             [
                 # Mixer
                 call(instance=model.user_specialty, sender=model.user_specialty.__class__),
@@ -172,7 +175,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
            apply_requests_get_mock([
                (200, f'https://api.screenshotmachine.com?{query_string}', 'mailgun response'),
            ]))
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
     @patch.multiple('breathecode.services.google_cloud.Storage',
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
@@ -203,7 +206,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
 
         self.assertEqual(requests.get.call_args_list, [])
         self.assertEqual(
-            signals.user_specialty_saved.send.call_args_list,
+            signals.user_specialty_saved.send_robust.call_args_list,
             [
                 # Mixer
                 call(instance=model.user_specialty, sender=model.user_specialty.__class__),
@@ -222,7 +225,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
            apply_requests_get_mock([
                (200, f'https://api.screenshotmachine.com?{query_string}', 'mailgun response'),
            ]))
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
     @patch.multiple('breathecode.services.google_cloud.Storage',
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
@@ -252,7 +255,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
         ])
 
         self.assertEqual(requests.get.call_args_list, [])
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [
             call(instance=model.user_specialty, sender=model.user_specialty.__class__),
         ])
 

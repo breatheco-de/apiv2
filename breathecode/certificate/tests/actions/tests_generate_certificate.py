@@ -66,9 +66,9 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_generate_certificate__with_user_without_cohort(self):
         model = self.generate_models(user=True)
         try:
@@ -79,7 +79,7 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
 
         self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [])
 
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 without CohortUser
@@ -88,9 +88,9 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_generate_certificate__without_cohort_user(self):
         model = self.generate_models(user=True, cohort=True)
         try:
@@ -101,19 +101,19 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
 
         self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [])
 
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Cohort not ended
     """
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_generate_certificate__cohort_not_ended(self):
         cohort_user_kwargs = {
             'finantial_status': 'FULLY_PAID',
@@ -178,7 +178,7 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
             [expected])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [
             call(instance=user_specialty, sender=user_specialty.__class__),
         ])
 
@@ -189,9 +189,9 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_generate_certificate__without_syllabus_version(self):
         cohort_kwargs = {'stage': 'ENDED'}
         model = self.generate_models(user=True, cohort=True, cohort_user=True, cohort_kwargs=cohort_kwargs)
@@ -204,7 +204,7 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
         self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 without Specialty
@@ -213,9 +213,9 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_generate_certificate__without_specialty(self):
         cohort_kwargs = {'stage': 'ENDED'}
         model = self.generate_models(user=True,
@@ -232,7 +232,7 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
 
         self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [])
 
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 without Syllabus
@@ -241,9 +241,9 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_generate_certificate__without_syllabus(self):
         cohort_kwargs = {'stage': 'ENDED'}
         model = self.generate_models(user=True,
@@ -260,7 +260,7 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
 
         self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [])
 
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 without default Layout
@@ -269,9 +269,9 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_generate_certificate__without_specialty_layout(self):
         cohort_kwargs = {'stage': 'ENDED'}
         model = self.generate_models(user=True,
@@ -290,7 +290,7 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
 
         self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [])
 
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 without main teacher
@@ -299,9 +299,9 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_generate_certificate__without_teacher(self):
         cohort_kwargs = {'stage': 'ENDED'}
         model = self.generate_models(user=True,
@@ -321,7 +321,7 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
 
         self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [])
 
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Bad financial status
@@ -330,9 +330,9 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_generate_certificate_with_bad_student_financial_status(self):
         cohort_kwargs = {'stage': 'ENDED'}
         model = self.generate_models(user=True,
@@ -385,7 +385,7 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
             [expected])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [
             call(instance=user_specialty, sender=user_specialty.__class__),
         ])
 
@@ -396,9 +396,9 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_generate_certificate__with_student_that_didnt_finish_tasks(self):
         cohort_kwargs = {'stage': 'ENDED'}
         task_kwargs = {'task_type': 'PROJECT', 'revision_status': 'PENDING'}
@@ -474,7 +474,7 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
             [expected])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [
             call(instance=user_specialty, sender=user_specialty.__class__),
         ])
 
@@ -485,9 +485,9 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_generate_certificate__with_student_that_didnt_finish_tasks_without_mandatory(self):
         cohort_kwargs = {'stage': 'ENDED'}
         task_kwargs = {'task_type': 'PROJECT', 'revision_status': 'PENDING'}
@@ -552,7 +552,7 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
             [expected])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [
             call(instance=user_specialty, sender=user_specialty.__class__),
         ])
 
@@ -563,9 +563,9 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_generate_certificate__with_student_that_didnt_finish_mandatory_tasks(self):
         cohort_kwargs = {'stage': 'ENDED'}
         task_kwargs = {'task_type': 'PROJECT', 'revision_status': 'PENDING'}
@@ -631,7 +631,7 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
             [expected])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [
             call(instance=user_specialty, sender=user_specialty.__class__),
         ])
 
@@ -642,9 +642,9 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_generate_certificate__without_proper_educational_status(self):
         cohort_kwargs = {'stage': 'ENDED'}
         cohort_user_kwargs = {'finantial_status': 'FULLY_PAID'}
@@ -697,7 +697,7 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
             [expected])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [
             call(instance=user_specialty, sender=user_specialty.__class__),
         ])
 
@@ -708,9 +708,9 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_generate_certificate__with_cohort_user__with_finantial_status_eq_up_to_date(self):
         cohort_kwargs = {'stage': 'ENDED'}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE'}
@@ -763,7 +763,7 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
             [expected])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [
             call(instance=user_specialty, sender=user_specialty.__class__),
         ])
 
@@ -771,13 +771,13 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
     🔽🔽🔽 Student dropped
     """
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_generate_certificate__with_cohort_user__with_educational_status_eq_dropped(self):
         cohort_kwargs = {'stage': 'ENDED'}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'DROPPED'}
@@ -831,7 +831,7 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
             [expected])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [
             call(instance=user_specialty, sender=user_specialty.__class__),
         ])
 
@@ -839,13 +839,13 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
     🔽🔽🔽 Cohort not finished
     """
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_generate_certificate__with_cohort_not_finished(self):
         cohort_kwargs = {'stage': 'ENDED'}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
@@ -901,7 +901,7 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
                          }])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [
             call(instance=user_specialty, sender=user_specialty.__class__),
         ])
 
@@ -909,13 +909,13 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
     🔽🔽🔽 Generate certificate
     """
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_generate_certificate(self):
         cohort_kwargs = {'stage': 'ENDED', 'current_day': 9545799}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
@@ -981,7 +981,7 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
                          }])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [
             call(instance=user_specialty, sender=user_specialty.__class__),
         ])
 
@@ -989,13 +989,13 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
     🔽🔽🔽 Translations
     """
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_generate_certificate__lang_en(self):
         cohort_kwargs = {'stage': 'ENDED', 'current_day': 9545799, 'language': 'en'}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
@@ -1063,17 +1063,17 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
                          }])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [
             call(instance=user_specialty, sender=user_specialty.__class__),
         ])
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @pytest.mark.parametrize('current_day,duration_in_days,never_ends', [
         (9545799, 9545799, False),
         (1, 9545799, True),
@@ -1094,7 +1094,7 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
                                      cohort_user_kwargs=cohort_user_kwargs,
                                      syllabus_kwargs=syllabus_kwargs)
 
-        signals.user_specialty_saved.send.call_args_list = []
+        signals.user_specialty_saved.send_robust.call_args_list = []
 
         base = model.copy()
         del base['user']
@@ -1145,17 +1145,17 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
                          }])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [
             call(instance=user_specialty, sender=user_specialty.__class__),
         ])
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     @pytest.mark.parametrize('stage', ['INACTIVE', 'PREWORK', 'STARTED', 'FINAL_PROJECT', 'ENDED'])
     def test_generate_certificate__lang_es__never_ends_true(self, stage):
         cohort_kwargs = {'stage': stage, 'current_day': 1, 'language': 'es', 'never_ends': True}
@@ -1183,7 +1183,7 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
                                              cohort_user_kwargs=cohort_user_kwargs,
                                              models=base)
 
-        signals.user_specialty_saved.send.call_args_list = []
+        signals.user_specialty_saved.send_robust.call_args_list = []
 
         start = timezone.now()
         result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
@@ -1225,17 +1225,17 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
                          }])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [
             call(instance=user_specialty, sender=user_specialty.__class__),
         ])
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_generate_certificate__lang_es__never_ends_true__stage_deleted(self):
         stage = 'DELETED'
         cohort_kwargs = {'stage': stage, 'current_day': 1, 'language': 'es', 'never_ends': True}
@@ -1260,25 +1260,25 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
         cohort_user_kwargs = {'role': 'TEACHER'}
         self.generate_models(user=True, cohort_user=True, cohort_user_kwargs=cohort_user_kwargs, models=base)
 
-        signals.user_specialty_saved.send.call_args_list = []
+        signals.user_specialty_saved.send_robust.call_args_list = []
 
         with pytest.raises(ValidationException, match='missing-cohort-user'):
             self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
 
         self.assertEqual(self.clear_preview_url(self.bc.database.list_of('certificate.UserSpecialty')), [])
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Retry generate certificate
     """
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_generate_certificate__retry_generate_certificate(self):
         cohort_kwargs = {'stage': 'ENDED', 'current_day': 9545799}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
@@ -1317,6 +1317,6 @@ class TestActionGenerateCertificate(LegacyAPITestCase):
         self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [user_specialty])
 
         user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [
             call(instance=user_specialty, sender=user_specialty.__class__),
         ])

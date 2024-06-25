@@ -11,9 +11,8 @@ from django.urls.base import reverse_lazy
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
-
 from breathecode.authenticate.tests.mocks.mocks import FakeResponse
+from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 from ...models import Role
 from ..mixins.new_auth_test_case import AuthTestCase
@@ -39,8 +38,8 @@ def setup(db, monkeypatch):
 
     monkeypatch.setattr('requests.get', GithubRequestsMock.apply_get_requests_mock())
     monkeypatch.setattr('requests.post', post_mock)
-    monkeypatch.setattr('django.db.models.signals.pre_delete.send', mock.MagicMock(return_value=None))
-    monkeypatch.setattr('breathecode.admissions.signals.student_edu_status_updated.send',
+    monkeypatch.setattr('django.db.models.signals.pre_delete.send_robust', mock.MagicMock(return_value=None))
+    monkeypatch.setattr('breathecode.admissions.signals.student_edu_status_updated.send_robust',
                         mock.MagicMock(return_value=None))
     yield
 

@@ -12,7 +12,7 @@ class TestModelProfileAcademy(LegacyAPITestCase):
     🔽🔽🔽 Adding a ProfileAcademy, with bad role
     """
 
-    @patch('django.db.models.signals.post_save.send', MagicMock())
+    @patch('django.db.models.signals.post_save.send_robust', MagicMock())
     def test_adding_a_profile_academy__with_bad_role(self, enable_signals):
         enable_signals()
 
@@ -27,7 +27,7 @@ class TestModelProfileAcademy(LegacyAPITestCase):
     🔽🔽🔽 Adding a ProfileAcademy, with right role, status INVITED
     """
 
-    @patch('django.db.models.signals.post_save.send', MagicMock())
+    @patch('django.db.models.signals.post_save.send_robust', MagicMock())
     def test_adding_a_profile_academy__with_right_role__status_invited(self, enable_signals):
         enable_signals()
 
@@ -50,7 +50,7 @@ class TestModelProfileAcademy(LegacyAPITestCase):
     🔽🔽🔽 Adding a ProfileAcademy, with right role, status ACTIVE
     """
 
-    @patch('django.db.models.signals.post_save.send', MagicMock())
+    @patch('django.db.models.signals.post_save.send_robust', MagicMock())
     def test_adding_a_profile_academy__with_right_role__status_active(self, enable_signals):
         enable_signals()
 
@@ -72,7 +72,7 @@ class TestModelProfileAcademy(LegacyAPITestCase):
     🔽🔽🔽 Adding two ProfileAcademy, with right role, status ACTIVE
     """
 
-    @patch('django.db.models.signals.post_save.send', MagicMock())
+    @patch('django.db.models.signals.post_save.send_robust', MagicMock())
     def test_adding_two_profile_academy__with_right_role__status_active(self, enable_signals):
         enable_signals()
 

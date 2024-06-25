@@ -74,7 +74,7 @@ def get_serializer(bc: Breathecode, asset, asset_category=None, data={}):
 
 @pytest.fixture(autouse=True)
 def setup(db, monkeypatch):
-    monkeypatch.setattr('breathecode.registry.signals.asset_slug_modified.send', MagicMock())
+    monkeypatch.setattr('breathecode.registry.signals.asset_slug_modified.send_robust', MagicMock())
     yield
 
 

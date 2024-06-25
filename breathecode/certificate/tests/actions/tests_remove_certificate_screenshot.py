@@ -2,11 +2,30 @@
 Tasks tests
 """
 from unittest.mock import MagicMock, PropertyMock, call, patch
-from ...actions import remove_certificate_screenshot
-from ..mixins import CertificateTestCase
-from ...models import UserSpecialty
+
+import pytest
+
 import breathecode.certificate.signals as signals
-from breathecode.services.google_cloud import Storage, File
+from breathecode.services.google_cloud import File, Storage
+
+from ...actions import remove_certificate_screenshot
+from ...models import UserSpecialty
+from ..mixins import CertificateTestCase
+
+
+@pytest.fixture(autouse=True)
+def setup(db, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr('breathecode.certificate.signals.user_specialty_saved.send_robust', MagicMock())
+    monkeypatch.setattr('breathecode.services.google_cloud.Storage.__init__', MagicMock(return_value=None))
+    monkeypatch.setattr('breathecode.services.google_cloud.Storage.client', PropertyMock(), raising=False)
+    monkeypatch.setattr('breathecode.services.google_cloud.File.__init__', MagicMock(return_value=None))
+    monkeypatch.setattr('breathecode.services.google_cloud.File.bucket', PropertyMock(), raising=False)
+    monkeypatch.setattr('breathecode.services.google_cloud.File.file_name', PropertyMock(), raising=False)
+    monkeypatch.setattr('breathecode.services.google_cloud.File.blob', PropertyMock(return_value=1), raising=False)
+    monkeypatch.setattr('breathecode.services.google_cloud.File.upload', MagicMock())
+    monkeypatch.setattr('breathecode.services.google_cloud.File.delete', MagicMock())
+    monkeypatch.setattr('breathecode.services.google_cloud.File.url',
+                        MagicMock(return_value='https://xyz/hardcoded_url'))
 
 
 class ActionCertificateScreenshotTestCase(CertificateTestCase):
@@ -15,20 +34,6 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     🔽🔽🔽 UserSpecialty not exists
     """
 
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch.multiple('breathecode.services.google_cloud.Storage',
-                    __init__=MagicMock(return_value=None),
-                    client=PropertyMock(),
-                    create=True)
-    @patch.multiple('breathecode.services.google_cloud.File',
-                    __init__=MagicMock(return_value=None),
-                    bucket=PropertyMock(),
-                    file_name=PropertyMock(),
-                    blob=PropertyMock(return_value=1),
-                    upload=MagicMock(),
-                    delete=MagicMock(),
-                    url=MagicMock(return_value='https://xyz/hardcoded_url'),
-                    create=True)
     def test_remove_certificate_screenshot_with_invalid_id(self):
         """remove_certificate_screenshot don't call open in development environment"""
 
@@ -37,27 +42,13 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
 
         self.assertEqual(self.bc.database.list_of('certificate.UserSpecialty'), [])
 
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [])
         self.assertEqual(File.delete.call_args_list, [])
 
     """
     🔽🔽🔽 With preview_url as a empty string
     """
 
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch.multiple('breathecode.services.google_cloud.Storage',
-                    __init__=MagicMock(return_value=None),
-                    client=PropertyMock(),
-                    create=True)
-    @patch.multiple('breathecode.services.google_cloud.File',
-                    __init__=MagicMock(return_value=None),
-                    bucket=PropertyMock(),
-                    file_name=PropertyMock(),
-                    blob=PropertyMock(return_value=1),
-                    upload=MagicMock(),
-                    delete=MagicMock(),
-                    url=MagicMock(return_value='https://xyz/hardcoded_url'),
-                    create=True)
     def test_remove_certificate_screenshot__with_preview_url_as_empty_string(self):
         """remove_certificate_screenshot don't call open in development environment"""
 
@@ -73,7 +64,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
             },
         ])
 
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [
             call(instance=model.user_specialty, sender=model.user_specialty.__class__),
         ])
         self.assertEqual(File.delete.call_args_list, [])
@@ -82,20 +73,6 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     🔽🔽🔽 With preview_url as a None
     """
 
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch.multiple('breathecode.services.google_cloud.Storage',
-                    __init__=MagicMock(return_value=None),
-                    client=PropertyMock(),
-                    create=True)
-    @patch.multiple('breathecode.services.google_cloud.File',
-                    __init__=MagicMock(return_value=None),
-                    bucket=PropertyMock(),
-                    file_name=PropertyMock(),
-                    blob=PropertyMock(return_value=1),
-                    upload=MagicMock(),
-                    delete=MagicMock(),
-                    url=MagicMock(return_value='https://xyz/hardcoded_url'),
-                    create=True)
     def test_remove_certificate_screenshot__with_preview_url_as_none(self):
         """remove_certificate_screenshot don't call open in development environment"""
 
@@ -111,7 +88,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
             },
         ])
 
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+        self.assertEqual(signals.user_specialty_saved.send_robust.call_args_list, [
             call(instance=model.user_specialty, sender=model.user_specialty.__class__),
         ])
         self.assertEqual(File.delete.call_args_list, [])
@@ -120,20 +97,6 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     🔽🔽🔽 With a properly preview_url
     """
 
-    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    @patch.multiple('breathecode.services.google_cloud.Storage',
-                    __init__=MagicMock(return_value=None),
-                    client=PropertyMock(),
-                    create=True)
-    @patch.multiple('breathecode.services.google_cloud.File',
-                    __init__=MagicMock(return_value=None),
-                    bucket=PropertyMock(),
-                    file_name=PropertyMock(),
-                    blob=PropertyMock(return_value=1),
-                    upload=MagicMock(),
-                    delete=MagicMock(),
-                    url=MagicMock(return_value='https://xyz/hardcoded_url'),
-                    create=True)
     def test_remove_certificate_screenshot__with_a_properly_preview_url(self):
         """remove_certificate_screenshot don't call open in development environment"""
 
@@ -151,7 +114,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
         ])
 
         self.assertEqual(
-            signals.user_specialty_saved.send.call_args_list,
+            signals.user_specialty_saved.send_robust.call_args_list,
             [
                 # Mixer
                 call(instance=model.user_specialty, sender=model.user_specialty.__class__),

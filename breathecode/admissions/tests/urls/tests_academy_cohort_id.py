@@ -9,8 +9,7 @@ from django.utils import timezone
 from rest_framework import status
 
 from breathecode.admissions.caches import CohortCache
-from breathecode.utils.api_view_extensions.api_view_extension_handlers import \
-    APIViewExtensionHandlers
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from breathecode.utils.datetime_integer import DatetimeInteger
 
 from ..mixins import AdmissionsTestCase
@@ -24,8 +23,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Auth
     """
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id__without_auth(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
@@ -39,8 +38,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id_put__without_capability(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
@@ -60,9 +59,9 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Put without cohort
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id__put__without_cohort(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -76,7 +75,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      syllabus=True)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         data = {}
         response = self.client.put(url, data)
@@ -86,15 +85,15 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
-        self.assertEqual(cohort_saved.send.call_args_list, [])
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Put not have ending_date and never_ends
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id__put__without_ending_date_or_never_ends(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -104,7 +103,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_cohort', role='potato')
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         data = {}
         response = self.client.put(url, data)
@@ -118,15 +117,15 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
-        self.assertEqual(cohort_saved.send.call_args_list, [])
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Put with ending_date and never_ends=True
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id__put__with_ending_date_and_never_ends_true(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -136,7 +135,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_cohort', role='potato')
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         data = {
             'ending_date': timezone.now().isoformat(),
@@ -154,15 +153,15 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
-        self.assertEqual(cohort_saved.send.call_args_list, [])
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Put with date
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id__put(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -172,7 +171,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_cohort', role='potato')
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         data = {
             'never_ends': True,
@@ -224,16 +223,16 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              'never_ends': True,
                          }])
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
-        self.assertEqual(cohort_saved.send.call_args_list,
+        self.assertEqual(cohort_saved.send_robust.call_args_list,
                          [call(instance=model.cohort, sender=model.cohort.__class__, created=False)])
 
     """
     🔽🔽🔽 Put with date, kickoff_date greater than ending_date
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id__put__kickoff_date_greater_than_ending_date(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -249,7 +248,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      role='potato')
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         cases = [
             {
@@ -276,15 +275,15 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                 self.model_to_dict(model, 'cohort'),
             ])
             self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
-            self.assertEqual(cohort_saved.send.call_args_list, [])
+            self.assertEqual(cohort_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Put syllabus with id instead of {slug}.v{id}
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id__put__with_id__with_bad_syllabus_version_malformed(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -299,7 +298,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      syllabus_version=True)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
         data = {
@@ -320,15 +319,15 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
-        self.assertEqual(cohort_saved.send.call_args_list, [])
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Put syllabus but it doesn't exists
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id__put__with_id__with_bad_syllabus_version(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -342,7 +341,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      syllabus=True)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
         data = {
@@ -363,15 +362,15 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
-        self.assertEqual(cohort_saved.send.call_args_list, [])
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Put syllabus with bad slug {slug}.v{id}
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id__put__with_id__with_bad_syllabus_version__with_bad_slug(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -389,7 +388,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      syllabus_kwargs=syllabus_kwargs)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
         data = {
@@ -410,15 +409,15 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
-        self.assertEqual(cohort_saved.send.call_args_list, [])
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Put syllabus with bad version {slug}.v{id}
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id__put__with_id__with_bad_syllabus_version__with_bad_version(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -437,7 +436,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      cohort_kwargs=cohort_kwargs)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
         data = {
@@ -458,15 +457,15 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
-        self.assertEqual(cohort_saved.send.call_args_list, [])
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Put assigning the syllabus version 1
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id__put__with_id__assigning_syllabus_version_1(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -492,7 +491,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      syllabus_kwargs=syllabus_kwargs)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         model2 = self.generate_models(academy=model.academy,
                                       skip_cohort=True,
@@ -523,15 +522,15 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             self.bc.format.to_dict(model.cohort_time_slot),
         ])
 
-        self.assertEqual(cohort_saved.send.call_args_list, [])
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Put with some data
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id__put__with_id__with_data_in_body(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -556,7 +555,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      syllabus_kwargs=syllabus_kwargs)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         model2 = self.generate_models(academy=model.academy,
                                       skip_cohort=True,
@@ -695,12 +694,12 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              'starting_at': syllabus_schedule_time_slot.starting_at,
                          } for syllabus_schedule_time_slot in model2.syllabus_schedule_time_slot])
 
-        self.assertEqual(cohort_saved.send.call_args_list,
+        self.assertEqual(cohort_saved.send_robust.call_args_list,
                          [call(instance=model.cohort, sender=model.cohort.__class__, created=False)])
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id__put__with_id__with_data_in_body__cohort_with_timezone(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -725,7 +724,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      syllabus_kwargs=syllabus_kwargs)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         model2 = self.generate_models(academy=model.academy,
                                       skip_cohort=True,
@@ -864,16 +863,16 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              'starting_at': syllabus_schedule_time_slot.starting_at,
                          } for syllabus_schedule_time_slot in model2.syllabus_schedule_time_slot])
 
-        self.assertEqual(cohort_saved.send.call_args_list,
+        self.assertEqual(cohort_saved.send_robust.call_args_list,
                          [call(instance=model.cohort, sender=model.cohort.__class__, created=False)])
 
     """
     🔽🔽🔽 Put with some data, of other academy, syllabus public
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id__put__with_id__schedule_related_to_syllabus_of_other_academy_public(self):
         """Test /cohort/:id without auth"""
 
@@ -899,7 +898,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      syllabus_kwargs=syllabus_kwargs)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         syllabus = {'private': False}
         model2 = self.generate_models(academy=1,
@@ -1039,16 +1038,16 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              'starting_at': syllabus_schedule_time_slot.starting_at,
                          } for syllabus_schedule_time_slot in model2.syllabus_schedule_time_slot])
 
-        self.assertEqual(cohort_saved.send.call_args_list,
+        self.assertEqual(cohort_saved.send_robust.call_args_list,
                          [call(instance=model.cohort, sender=model.cohort.__class__, created=False)])
 
     """
     🔽🔽🔽 Put with some data, of other academy, syllabus private
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id__put__with_id__schedule_related_to_syllabus_of_other_academy_private(self):
         """Test /cohort/:id without auth"""
 
@@ -1074,7 +1073,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      syllabus_kwargs=syllabus_kwargs)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         syllabus = {'private': True}
         model2 = self.generate_models(academy=1,
@@ -1192,16 +1191,16 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                          }])
 
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
-        self.assertEqual(cohort_saved.send.call_args_list,
+        self.assertEqual(cohort_saved.send_robust.call_args_list,
                          [call(instance=model.cohort, sender=model.cohort.__class__, created=False)])
 
     """
     🔽🔽🔽 Get data
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id__get__with_id(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -1217,7 +1216,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      syllabus_version=True)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         model_dict = self.remove_dinamics_fields(model['cohort'].__dict__)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
@@ -1279,15 +1278,15 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.count_cohort(), 1)
         self.assertEqual(self.get_cohort_dict(1), model_dict)
-        self.assertEqual(cohort_saved.send.call_args_list, [])
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Get with bad slug
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id__get__with_bad_slug(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -1301,22 +1300,22 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                              syllabus=True)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': 'they-killed-kenny'})
         response = self.client.get(url)
 
         self.assertEqual(response.data, None)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(cohort_saved.send.call_args_list, [])
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Get with slug
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id__get__with_slug(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -1332,7 +1331,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      syllabus_version=True)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         model_dict = self.remove_dinamics_fields(model['cohort'].__dict__)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].slug})
@@ -1396,15 +1395,15 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.count_cohort(), 1)
         self.assertEqual(self.get_cohort_dict(1), model_dict)
-        self.assertEqual(cohort_saved.send.call_args_list, [])
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Delete with bad id
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id__delete__with_bad_id(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -1420,7 +1419,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      cohort_user=True)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': 0})
         self.assertEqual(self.count_cohort_user(), 1)
@@ -1429,15 +1428,15 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.count_cohort_stage(model['cohort'].id), 'INACTIVE')
-        self.assertEqual(cohort_saved.send.call_args_list, [])
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Delete with id
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id__delete__with_id(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -1452,7 +1451,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      syllabus=True)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
         self.assertEqual(self.count_cohort_stage(model['cohort'].id), 'INACTIVE')
@@ -1461,12 +1460,12 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.count_cohort_user(), 0)
         self.assertEqual(self.count_cohort_stage(model['cohort'].id), 'DELETED')
-        self.assertEqual(cohort_saved.send.call_args_list,
+        self.assertEqual(cohort_saved.send_robust.call_args_list,
                          [call(instance=model.cohort, sender=model.cohort.__class__, created=False)])
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_academy_cohort_id__delete__cohort_with_students(self):
         from breathecode.admissions.signals import cohort_saved
 
@@ -1478,7 +1477,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      cohort_user=True)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': 1})
         response = self.client.delete(url)
@@ -1492,16 +1491,16 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{**self.model_to_dict(model, 'cohort')}])
-        self.assertEqual(cohort_saved.send.call_args_list, [])
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Spy the extensions
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
     @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id__get__spy_extensions(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -1517,7 +1516,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      syllabus_version=True)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
         self.client.get(url)
@@ -1526,10 +1525,10 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             call(['CacheExtension', 'LanguageExtension', 'LookupExtension', 'PaginationExtension', 'SortExtension']),
         ])
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
     @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id__get__spy_extension_arguments(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -1545,7 +1544,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      syllabus_version=True)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
         self.client.get(url)

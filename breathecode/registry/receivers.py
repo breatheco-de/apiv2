@@ -4,9 +4,9 @@ import os
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from breathecode.assessment.models import Question, Option
 from breathecode.admissions.models import SyllabusVersion
 from breathecode.admissions.signals import syllabus_version_json_updated
+from breathecode.assessment.models import Option, Question
 from breathecode.assignments.models import Task
 from breathecode.assignments.signals import assignment_created
 from breathecode.monitoring.models import RepositoryWebhook
@@ -18,11 +18,11 @@ from .tasks import (
     async_add_syllabus_translations,
     async_create_asset_thumbnail,
     async_delete_asset_images,
+    async_generate_quiz_config,
     async_regenerate_asset_readme,
     async_remove_img_from_cloud,
     async_synchonize_repository_content,
     async_update_frontend_asset_cache,
-    async_generate_quiz_config,
 )
 
 logger = logging.getLogger(__name__)
@@ -139,7 +139,7 @@ def model_a_deleted(sender, instance, **kwargs):
     try:
         if instance.assessment and not instance.assessment.is_archived:
             async_generate_quiz_config(instance.assessment.id)
-    except:
+    except Exception:
         pass
 
 
@@ -148,5 +148,5 @@ def model_b_deleted(sender, instance, **kwargs):
     try:
         if instance.assessment and not instance.assessment.is_archived:
             async_generate_quiz_config(instance.question.assessment.id)
-    except:
+    except Exception:
         pass

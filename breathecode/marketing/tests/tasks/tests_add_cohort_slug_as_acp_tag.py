@@ -3,8 +3,10 @@ Test /answer/:id
 """
 import os
 from unittest.mock import MagicMock, call, patch
+
 from breathecode.marketing.tasks import add_cohort_slug_as_acp_tag
 from breathecode.tests.mocks import apply_requests_request_mock
+
 from ..mixins import MarketingTestCase
 
 GOOGLE_CLOUD_KEY = os.getenv('GOOGLE_CLOUD_KEY', None)
@@ -29,7 +31,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
     @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
     def test_add_cohort_slug_as_acp_tag__without_academy(self):
         import logging
@@ -46,7 +48,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
     @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
     def test_add_cohort_slug_as_acp_tag__without_active_campaign_academy(self):
         import logging
@@ -70,7 +72,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
     @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
     def test_add_cohort_slug_as_acp_tag__without_cohort(self):
         import logging
@@ -96,7 +98,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
     @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
     def test_add_cohort_slug_as_acp_tag(self):
         import logging
@@ -133,7 +135,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
     @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
     def test_add_cohort_slug_as_acp_tag_type_cohort(self):
         import logging
@@ -163,7 +165,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
     @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
     def test_add_cohort_slug_as_acp_tag__tag_exists(self):
         import logging
@@ -199,7 +201,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
     @patch('requests.post', apply_requests_request_mock([(404, AC_URL, AC_ERROR_RESPONSE)]))
     def test_add_cohort_slug_as_acp_tag__status_404(self):
         import logging
