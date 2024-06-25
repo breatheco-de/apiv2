@@ -3,17 +3,11 @@ Headers mixin
 """
 
 import re
-from datetime import datetime, timedelta
+from datetime import UTC, datetime
+
 from django.utils import timezone
+
 from breathecode.utils.datetime_integer import DatetimeInteger
-
-
-def get_utc():
-    date = timezone.now()
-    return date.tzinfo
-
-
-UTC = get_utc()
 
 __all__ = ['DatetimeMixin']
 
@@ -36,7 +30,7 @@ class DatetimeMixin():
         """
         return timezone.now()
 
-    def datetime_to_iso(self, date=datetime.utcnow()) -> str:
+    def datetime_to_iso(self, date=datetime.now(UTC)) -> str:
         """
         Transform a datetime to ISO 8601 format.
 
@@ -72,7 +66,7 @@ class DatetimeMixin():
         date = datetime.fromisoformat(string)
         return timezone.make_aware(date)
 
-    def datetime_to_ical(self, date=datetime.utcnow(), utc=True) -> str:
+    def datetime_to_ical(self, date=datetime.now(UTC), utc=True) -> str:
         s = f'{date.year:04}{date.month:02}{date.day:02}T{date.hour:02}{date.minute:02}{date.second:02}'
         if utc:
             s += 'Z'

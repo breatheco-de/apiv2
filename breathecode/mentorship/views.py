@@ -488,7 +488,10 @@ class ForwardMeetUrl:
 
         # if the mentor is not the user, then we assume is the mentee
         mentee = self.token.user if is_token_of_mentee else None
-        sessions = self.get_pending_sessions_or_create(mentor, service, mentee)
+        try:
+            sessions = self.get_pending_sessions_or_create(mentor, service, mentee)
+        except Exception as e:
+            return render_message(self.request, str(e), status=400, academy=mentor.academy)
 
         if not is_token_of_mentee and sessions.count() > 0 and str(sessions.first().id) != self.query_params['session']:
             return self.render_pick_session(mentor, sessions)

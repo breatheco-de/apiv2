@@ -46,7 +46,8 @@ def redirect_new_container(request, token):
 
     user = token.user
     cohort_id = request.GET.get('cohort', None)
-    if cohort_id is None: return render_message(request, 'Please specificy a cohort in the URL')
+    if cohort_id is None or cohort_id in ['','undefined']:
+        return render_message(request, 'Please specificy a cohort in the URL')
 
     url = request.GET.get('repo', None)
     if url is None:

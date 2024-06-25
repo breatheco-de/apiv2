@@ -92,9 +92,18 @@ def apply_get_env(configuration={}):
     return get_env
 
 
-def render_message(message, data={}):
+def render_message(message, data={}, academy=None):
     request = None
     context = {'MESSAGE': message, 'BUTTON': None, 'BUTTON_TARGET': '_blank', 'LINK': None, **data}
+
+    if academy:
+        context['COMPANY_INFO_EMAIL'] = academy.feedback_email
+        context['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
+        context['COMPANY_LOGO'] = academy.logo_url
+        context['COMPANY_NAME'] = academy.name
+
+        if 'heading' not in data:
+            context['heading'] = academy.name
 
     return loader.render_to_string('message.html', context, request)
 
@@ -537,7 +546,14 @@ class AuthenticateTestSuite(MentorshipTestCase):
 
     def test_with_mentor_profile(self):
         service = {'slug': 'join_mentorship'}
-        model = self.bc.database.create(user=1, token=1, mentor_profile=1, mentorship_service=1, service=service)
+        model = self.bc.database.create(user=1,
+                                        token=1,
+                                        mentor_profile=1,
+                                        mentorship_service={
+                                            'language': 'en',
+                                            'video_provider': 'DAILY'
+                                        },
+                                        service=service)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
         url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
@@ -582,7 +598,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
             model = self.bc.database.create(user=1,
                                             token=1,
                                             mentor_profile=mentor_profile,
-                                            mentorship_service=1,
+                                            mentorship_service={
+                                                'language': 'en',
+                                                'video_provider': 'DAILY'
+                                            },
                                             service=service)
 
             querystring = self.bc.format.to_querystring({'token': model.token.key})
@@ -634,7 +653,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
             model = self.bc.database.create(user=1,
                                             token=1,
                                             mentor_profile=mentor_profile,
-                                            mentorship_service=1,
+                                            mentorship_service={
+                                                'language': 'en',
+                                                'video_provider': 'DAILY'
+                                            },
                                             service=service)
 
             querystring = self.bc.format.to_querystring({'token': model.token.key})
@@ -701,7 +723,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
             model = self.bc.database.create(user=1,
                                             token=1,
                                             mentor_profile=mentor_profile,
-                                            mentorship_service=1,
+                                            mentorship_service={
+                                                'language': 'en',
+                                                'video_provider': 'DAILY'
+                                            },
                                             service=service)
 
             querystring = self.bc.format.to_querystring({'token': model.token.key})
@@ -773,7 +798,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
             model = self.bc.database.create(user=1,
                                             token=1,
                                             mentor_profile=mentor_profile,
-                                            mentorship_service=1,
+                                            mentorship_service={
+                                                'language': 'en',
+                                                'video_provider': 'DAILY'
+                                            },
                                             service=service)
 
             querystring = self.bc.format.to_querystring({'token': model.token.key})
@@ -1174,7 +1202,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
             model = self.bc.database.create(mentor_profile=mentor_profile,
                                             mentorship_session=mentorship_session,
                                             user=user,
-                                            mentorship_service=1,
+                                            mentorship_service={
+                                                'language': 'en',
+                                                'video_provider': 'DAILY'
+                                            },
                                             academy=academy)
 
             model.mentorship_session.mentee = None
@@ -1220,6 +1251,86 @@ class AuthenticateTestSuite(MentorshipTestCase):
             self.bc.database.delete('auth.User')
             self.bc.database.delete('payments.Service')
 
+    """
+    🔽🔽🔽 GET without MentorProfile, good statuses with mentor urls, MentorshipSession without mentee
+    passing session and mentee but mentee does not exist, user without name
+    """
+
+    @patch('breathecode.mentorship.actions.get_pending_sessions_or_create',
+           MagicMock(side_effect=Exception('Error inside get_pending_sessions_or_create')))
+    @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
+    @patch('os.getenv', MagicMock(side_effect=apply_get_env({
+        'DAILY_API_URL': URL,
+        'DAILY_API_KEY': API_KEY,
+    })))
+    @patch('requests.request',
+           apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
+               'name': ROOM_NAME,
+               'url': ROOM_URL,
+           })]))
+    def test_error_inside_get_pending_sessions_or_create(self):
+        cases = [{
+            'status': x,
+            'online_meeting_url': self.bc.fake.url(),
+            'booking_url': self.bc.fake.url(),
+        } for x in ['ACTIVE', 'UNLISTED']]
+        permission = {'codename': 'join_mentorship'}
+
+        id = 0
+        for mentor_profile in cases:
+            id += 1
+
+            user = {'first_name': '', 'last_name': ''}
+            base = self.bc.database.create(user=user, token=1, group=1, permission=permission)
+
+            mentorship_session = {'mentee_id': None}
+            academy = {'available_as_saas': False}
+            model = self.bc.database.create(mentor_profile=mentor_profile,
+                                            mentorship_session=mentorship_session,
+                                            user=user,
+                                            mentorship_service={
+                                                'language': 'en',
+                                                'video_provider': 'DAILY'
+                                            },
+                                            academy=academy)
+
+            model.mentorship_session.mentee = None
+            model.mentorship_session.save()
+
+            querystring = self.bc.format.to_querystring({
+                'token': base.token.key,
+            })
+            url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
+                               kwargs={
+                                   'mentor_slug': model.mentor_profile.slug,
+                                   'service_slug': model.mentorship_service.slug
+                               }) + f'?{querystring}'
+            response = self.client.get(url)
+
+            content = self.bc.format.from_bytes(response.content)
+            expected = render_message('Error inside get_pending_sessions_or_create', academy=model.academy)
+
+            # dump error in external files
+            if content != expected:
+                with open('content.html', 'w') as f:
+                    f.write(content)
+
+                with open('expected.html', 'w') as f:
+                    f.write(expected)
+
+            self.assertEqual(content, expected)
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
+                self.bc.format.to_dict(model.mentor_profile),
+            ])
+            self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
+            self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
+
+            # teardown
+            self.bc.database.delete('mentorship.MentorProfile')
+            self.bc.database.delete('auth.Permission')
+            self.bc.database.delete('auth.User')
+
     # TODO: disabled until have a new feature flags manager
     # """
     # 🔽🔽🔽 GET without MentorProfile, good statuses with mentor urls, MentorshipSession without mentee
@@ -1259,7 +1370,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
     #         model = self.bc.database.create(mentor_profile=mentor_profile,
     #                                         mentorship_session=mentorship_session,
     #                                         user=user,
-    #                                         mentorship_service=1,
+    #                                         mentorship_service={'language': 'en', 'video_provider': 'DAILY'},
     #                                         academy=academy)
 
     #         model.mentorship_session.mentee = None
@@ -1336,7 +1447,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
             model = self.bc.database.create(mentor_profile=mentor_profile,
                                             mentorship_session=mentorship_session,
                                             user=user,
-                                            mentorship_service=1,
+                                            mentorship_service={
+                                                'language': 'en',
+                                                'video_provider': 'DAILY'
+                                            },
                                             academy=academy)
 
             model.mentorship_session.mentee = None
@@ -1415,7 +1529,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
             model = self.bc.database.create(mentor_profile=mentor_profile,
                                             mentorship_session=mentorship_session,
                                             user=user,
-                                            mentorship_service=1,
+                                            mentorship_service={
+                                                'language': 'en',
+                                                'video_provider': 'DAILY'
+                                            },
                                             academy=academy,
                                             plan={
                                                 'is_renewable': False,
@@ -1506,7 +1623,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             how_many = random.randint(1, 100)
             consumable = {'how_many': how_many}
             delta = timedelta(seconds=random.randint(1, 1000))
-            mentorship_service = {'max_duration': delta}
+            mentorship_service = {'max_duration': delta, 'language': 'en'}
             model = self.bc.database.create(mentor_profile=mentor_profile,
                                             mentorship_session=mentorship_session,
                                             user=user,
@@ -1619,7 +1736,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             mentorship_session = {'mentee_id': None}
             academy = {'available_as_saas': True}
             delta = timedelta(seconds=random.randint(1, 1000))
-            mentorship_service = {'max_duration': delta}
+            mentorship_service = {'max_duration': delta, 'language': 'en'}
             model = self.bc.database.create(mentor_profile=mentor_profile,
                                             mentorship_session=mentorship_session,
                                             user=user,
@@ -1793,20 +1910,28 @@ class AuthenticateTestSuite(MentorshipTestCase):
 
             mentorship_session_base = {'mentee_id': base.user.id, 'ends_at': ends_at}
             # session, token
-            cases = [({
-                **mentorship_session_base,
-                'allow_mentors_to_extend': True,
-            }, None), ({
-                **mentorship_session_base,
-                'allow_mentee_to_extend': True,
-            }, 1)]
+            cases = [
+                ({
+                    **mentorship_session_base,
+                    'allow_mentee_to_extend': True,
+                    'allow_mentors_to_extend': False,
+                }, None),
+                ({
+                    **mentorship_session_base,
+                    'allow_mentee_to_extend': False,
+                    'allow_mentors_to_extend': True,
+                }, 1),
+            ]
 
             for mentorship_session, token in cases:
                 model = self.bc.database.create(mentor_profile=mentor_profile,
                                                 mentorship_session=mentorship_session,
                                                 user=user,
                                                 token=token,
-                                                mentorship_service=1,
+                                                mentorship_service={
+                                                    'language': 'en',
+                                                    'video_provider': 'DAILY'
+                                                },
                                                 service=base.service)
 
                 model.mentorship_session.mentee = None
@@ -1900,9 +2025,13 @@ class AuthenticateTestSuite(MentorshipTestCase):
             # session, token
             cases = [({
                 'allow_mentors_to_extend': True,
-            }, None), ({
+                'allow_mentee_to_extend': False,
+                'language': 'en',
+            }, 1), ({
+                'allow_mentee_to_extend': False,
                 'allow_mentee_to_extend': True,
-            }, 1)]
+                'language': 'en',
+            }, None)]
 
             for mentorship_service, token in cases:
                 model = self.bc.database.create(mentor_profile=mentor_profile,
@@ -2002,10 +2131,12 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 ({
                     'allow_mentors_to_extend': False,
                     'allow_mentee_to_extend': False,
+                    'language': 'en',
                 }, None),
                 ({
                     'allow_mentors_to_extend': False,
                     'allow_mentee_to_extend': False,
+                    'language': 'en',
                 }, 1),
             ]
 
@@ -2116,7 +2247,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
                                                 mentorship_session=mentorship_session,
                                                 user=user,
                                                 token=token,
-                                                mentorship_service=1,
+                                                mentorship_service={
+                                                    'language': 'en',
+                                                    'video_provider': 'DAILY'
+                                                },
                                                 service=base.service)
 
                 model.mentorship_session.mentee = None
@@ -2216,7 +2350,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
                                             mentorship_session=mentorship_session,
                                             user=user,
                                             token=token,
-                                            mentorship_service=1,
+                                            mentorship_service={
+                                                'language': 'en',
+                                                'video_provider': 'DAILY'
+                                            },
                                             service=base.service)
 
             model.mentorship_session.mentee = None
@@ -2315,7 +2452,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
                                             mentorship_session=mentorship_session,
                                             user=user,
                                             token=token,
-                                            mentorship_service=1,
+                                            mentorship_service={
+                                                'language': 'en',
+                                                'video_provider': 'DAILY'
+                                            },
                                             service=base.service,
                                             academy=academy)
 
@@ -2392,7 +2532,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             consumable = {'how_many': how_many}
 
             delta = timedelta(seconds=random.randint(1, 1000))
-            mentorship_service = {'max_duration': delta}
+            mentorship_service = {'max_duration': delta, 'language': 'en'}
             base = self.bc.database.create(user=user,
                                            token=1,
                                            service=service,
@@ -2668,6 +2808,7 @@ def test__post__auth__no_saas__finantial_status_no_late(bc: Breathecode, client:
         mentorship_session = {
             **mentorship_session_base,
             'allow_mentee_to_extend': True,
+            'name': 'Session 1',
         }
         token = 1
 
@@ -2675,7 +2816,10 @@ def test__post__auth__no_saas__finantial_status_no_late(bc: Breathecode, client:
                                    mentorship_session=mentorship_session,
                                    user=user,
                                    token=token,
-                                   mentorship_service=1,
+                                   mentorship_service={
+                                       'language': 'en',
+                                       'video_provider': 'DAILY'
+                                   },
                                    service=base.service)
 
         model.mentorship_session.mentee = None
@@ -2798,7 +2942,10 @@ def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: fx
                                    mentorship_session=mentorship_session,
                                    user=user,
                                    token=token,
-                                   mentorship_service=1)
+                                   mentorship_service={
+                                       'language': 'en',
+                                       'video_provider': 'DAILY'
+                                   })
 
         model.mentorship_session.mentee = None
         model.mentorship_session.save()

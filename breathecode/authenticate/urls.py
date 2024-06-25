@@ -69,11 +69,18 @@ from .views import (
     sync_gitpod_users_view,
 )
 
-IS_TEST_EMV = os.getenv('EMV', 'test') == 'test'
-
+# avoiding issues on test environment due that the fixture are loaded after this app
+ENV = os.getenv('ENV')
+TEST_ENV = (ENV == 'test' or ENV not in ['development', 'staging', 'production'])
+LOGIN_URL = '/v1/auth/view/login'
 app_url = os.getenv('APP_URL')
-if app_url is None and IS_TEST_EMV:
-    app_url = 'http://localhost:3000'
+
+if TEST_ENV and not app_url:
+    import faker
+
+    fake = faker.Faker()
+
+    app_url = fake.url().replace('http://', 'https://')
 
 app_name = 'authenticate'
 urlpatterns = [
@@ -150,7 +157,7 @@ urlpatterns = [
 
     # authorize
     path('authorize/<str:app_slug>',
-         authorize_view(login_url='/v1/auth/view/login', app_url=app_url, get_language=get_user_language),
+         authorize_view(login_url=LOGIN_URL, app_url=app_url, get_language=get_user_language),
          name='authorize_slug'),
 
     # apps

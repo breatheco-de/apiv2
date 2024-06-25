@@ -1,20 +1,37 @@
-import logging, json, os, re, pathlib, base64, hashlib, requests
+import base64
+import hashlib
+import json
+import logging
+import os
+import pathlib
+import re
 from typing import Optional
-from breathecode.media.models import Media, MediaResolution
-from breathecode.utils.views import set_query_parameter
-from breathecode.services.google_cloud.storage import Storage
-from django.db.models import Q
-from django.utils import timezone
-from django.template.loader import get_template
 from urllib.parse import urlencode
+
+import requests
+from django.db.models import Q
+from django.template.loader import get_template
+from django.utils import timezone
+from github import Github
+
 from breathecode.assessment.actions import create_from_asset
 from breathecode.authenticate.models import CredentialsGithub
-from .models import Asset, AssetImage, AssetTechnology, AssetErrorLog, ASSET_STATUS, OriginalityScan, ContentVariable
-from .serializers import AssetBigSerializer
-from .utils import (LessonValidator, ExerciseValidator, QuizValidator, AssetException, ProjectValidator,
-                    ArticleValidator, OriginalityWrapper)
-from github import Github
+from breathecode.media.models import Media, MediaResolution
 from breathecode.registry import tasks
+from breathecode.services.google_cloud.storage import Storage
+from breathecode.utils.views import set_query_parameter
+
+from .models import ASSET_STATUS, Asset, AssetErrorLog, AssetImage, AssetTechnology, ContentVariable, OriginalityScan
+from .serializers import AssetBigSerializer
+from .utils import (
+    ArticleValidator,
+    AssetException,
+    ExerciseValidator,
+    LessonValidator,
+    OriginalityWrapper,
+    ProjectValidator,
+    QuizValidator,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +41,9 @@ ASSET_STATUS_DICT = [x for x, y in ASSET_STATUS]
 # remove markdown elemnts from text and return the clean text output only
 def unmark(text):
 
-    from markdown import Markdown
     from io import StringIO
+
+    from markdown import Markdown
 
     def unmark_element(element, stream=None):
         if stream is None:
@@ -361,6 +379,23 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
 
         if 'title' in fm and fm['title'] != '':
             asset.title = fm['title']
+
+        def parse_boolean(value):
+            true_values = {'1', 'true'}
+            false_values = {'0', 'false'}
+            if isinstance(value, bool):
+                return value
+            if isinstance(value, (int, str)):
+                value_str = str(value).lower()  # Convert value to string and lowercase
+                if value_str in true_values:
+                    return True
+                elif value_str in false_values:
+                    return False
+
+            raise ValueError(f"Invalid value for boolean conversion: {value}")
+
+        if 'table_of_contents' in fm and fm['table_of_contents'] != '':
+            asset.enable_table_of_content = parse_boolean(fm['table_of_contents'])
 
         if 'video' in fm and fm['video'] != '':
             asset.intro_video_url = fm['video']
@@ -702,6 +737,7 @@ def process_asset_config(asset, config):
             if isinstance(config['video']['solution'], str):
                 asset.solution_video_url = get_video_url(str(config['video']['solution']))
                 asset.with_video = True
+                asset.with_solutions = True
             else:
                 if 'en' in config['video']['solution']:
                     config['video']['solution']['us'] = config['video']['solution']['en']
@@ -709,6 +745,7 @@ def process_asset_config(asset, config):
                     config['video']['solution']['en'] = config['video']['solution']['us']
 
                 if asset.lang in config['video']['solution']:
+                    asset.with_solutions = True
                     asset.solution_video_url = get_video_url(str(config['video']['solution'][asset.lang]))
                     asset.with_video = True
 
@@ -716,12 +753,19 @@ def process_asset_config(asset, config):
         asset.duration = config['duration']
     if 'difficulty' in config:
         asset.difficulty = config['difficulty'].upper()
+    if 'videoSolutions' in config:
+        asset.with_solutions = True
+        asset.with_video = True
     if 'solution' in config:
         asset.solution_url = config['solution']
         asset.with_solutions = True
 
-    if 'projectType' in config:
-        asset.gitpod = config['projectType'] == 'tutorial'
+    if 'projectType' in config and config['projectType'] == 'tutorial':
+        asset.gitpod = True
+        asset.interactive = True
+    if 'grading' in config and config['grading'] in ['isolated', 'incremental']:
+        asset.gitpod = True
+        asset.interactive = True
 
     if 'technologies' in config:
         asset.technologies.clear()

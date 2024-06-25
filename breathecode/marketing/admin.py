@@ -463,6 +463,7 @@ class ActiveCampaignWebhookAdmin(admin.ModelAdmin):
 @admin.register(Downloadable)
 class DownloadableAdmin(admin.ModelAdmin):
     list_display = ('slug', 'name', 'academy', 'status', 'open_link')
+    raw_id_fields = ['author']
 
     def open_link(self, obj):
         return format_html(f"<a href='{obj.destination_url}' target='parent'>open link</a>")

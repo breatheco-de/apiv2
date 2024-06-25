@@ -352,6 +352,12 @@ class Database:
 
         pending = {}
 
+        keys = [*models.keys()]
+
+        for key in keys:
+            if models[key] is None or models[key] == 0:
+                del models[key]
+
         # get descriptors
         for model_alias, _value in models.items():
             try:
