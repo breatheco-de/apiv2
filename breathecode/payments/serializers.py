@@ -497,6 +497,7 @@ class GetPaymentMethod(serpy.Serializer):
     id = serpy.Field()
     title = serpy.Field()
     lang = serpy.Field()
+    is_credit_card = serpy.Field()
     description = serpy.Field()
     third_party_link = serpy.Field()
     academy = GetAcademySmallSerializer(required=False, many=False)
