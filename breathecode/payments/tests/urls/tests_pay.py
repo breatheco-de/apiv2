@@ -500,6 +500,64 @@ def test_free_trial__with_plan_offer(bc: Breathecode, client: APIClient):
     )
 
 
+def test_free_trial__with_plan_offer_with_conversion_info(bc: Breathecode, client: APIClient):
+    bag = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+        'expires_at': UTC_NOW,
+        'status': 'CHECKING',
+        'type': 'BAG',
+    }
+
+    plan = {'is_renewable': False}
+
+    model = bc.database.create(user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1, plan_offer=1)
+    client.force_authenticate(user=model.user)
+
+    url = reverse_lazy('payments:pay')
+    data = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+        'conversion_info': {
+            'landing_url': '/home'
+        },
+    }
+    response = client.post(url, data, format='json')
+
+    json = response.json()
+    expected = get_serializer(bc, model.currency, model.user, data={})
+
+    assert json == expected
+    assert response.status_code == status.HTTP_201_CREATED
+
+    assert bc.database.list_of('payments.Bag') == [{
+        **bc.format.to_dict(model.bag),
+        'token': None,
+        'status': 'PAID',
+        'expires_at': None,
+    }]
+    assert bc.database.list_of('payments.Invoice') == [format_invoice_item()]
+    assert bc.database.list_of('authenticate.UserSetting') == [
+        format_user_setting({'lang': 'en'}),
+    ]
+
+    bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+    bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+    assert tasks.build_subscription.delay.call_args_list == []
+    assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.build_free_subscription.delay.call_args_list == [
+        call(1, 1, conversion_info="{'landing_url': '/home'}")
+    ]
+
+    bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+    bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [call(1, 1)])
+    bc.check.calls(
+        activity_tasks.add_activity.delay.call_args_list,
+        [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+            call(1, 'checkout_completed', related_type='payments.Invoice', related_id=1),
+        ],
+    )
+
+
 @pytest.mark.parametrize(
     'exc_cls,silent_code',
     [
@@ -1085,6 +1143,84 @@ def test_with_installments(bc: Breathecode, client: APIClient):
     bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
     assert tasks.build_subscription.delay.call_args_list == []
     assert tasks.build_plan_financing.delay.call_args_list == [call(1, 1, conversion_info='')]
+    assert tasks.build_free_subscription.delay.call_args_list == []
+
+    bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+    bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [call(1, 1)])
+    bc.check.calls(
+        activity_tasks.add_activity.delay.call_args_list,
+        [
+            call(1, 'bag_created', related_type='payments.Bag', related_id=1),
+            call(1, 'checkout_completed', related_type='payments.Invoice', related_id=1),
+        ],
+    )
+
+
+def test_with_installments_with_conversion_info(bc: Breathecode, client: APIClient):
+    how_many_installments = random.randint(1, 12)
+    charge = random.random() * 99 + 1
+    bag = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+        'expires_at': UTC_NOW,
+        'status': 'CHECKING',
+        'type': 'BAG',
+        **generate_amounts_by_time(),
+    }
+    financing_option = {
+        'monthly_price': charge,
+        'how_many_months': how_many_installments,
+    }
+    plan = {'is_renewable': False}
+
+    model = bc.database.create(
+        user=1,
+        bag=bag,
+        academy=1,
+        currency=1,
+        plan=plan,
+        service_item=1,
+        financing_option=financing_option,
+    )
+    client.force_authenticate(user=model.user)
+
+    url = reverse_lazy('payments:pay')
+    data = {
+        'token': 'xdxdxdxdxdxdxdxdxdxd',
+        'how_many_installments': how_many_installments,
+        'conversion_info': {
+            'landing_url': '/home'
+        },
+    }
+    response = client.post(url, data, format='json')
+
+    json = response.json()
+    expected = get_serializer(bc, model.currency, model.user, data={'amount': math.ceil(charge)})
+
+    assert json == expected
+    assert response.status_code == status.HTTP_201_CREATED
+
+    assert bc.database.list_of('payments.Bag') == [{
+        **bc.format.to_dict(model.bag),
+        'token': None,
+        'status': 'PAID',
+        #  'chosen_period': 'NO_SET',
+        'expires_at': None,
+        'how_many_installments': how_many_installments,
+    }]
+    assert bc.database.list_of('payments.Invoice') == [
+        format_invoice_item({
+            'amount': math.ceil(charge),
+            'stripe_id': '1',
+        }),
+    ]
+    assert bc.database.list_of('authenticate.UserSetting') == [
+        format_user_setting({'lang': 'en'}),
+    ]
+
+    bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+    bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+    assert tasks.build_subscription.delay.call_args_list == []
+    assert tasks.build_plan_financing.delay.call_args_list == [call(1, 1, conversion_info="{'landing_url': '/home'}")]
     assert tasks.build_free_subscription.delay.call_args_list == []
 
     bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
