@@ -24,7 +24,6 @@ def subscription_item(data={}):
         'selected_cohort_set_id': None,
         'selected_event_type_set_id': None,
         'selected_mentorship_service_set_id': None,
-        'selected_service_set_id': None,
         'academy_id': 1,
         'is_refundable': True,
         'paid_at': UTC_NOW,

@@ -233,7 +233,7 @@ class UserInvite(models.Model):
             tasks_authenticate.async_validate_email_invite.delay(self.id)
 
         if status_updated:
-            signals.invite_status_updated.send(instance=self, sender=UserInvite)
+            signals.invite_status_updated.send_robust(instance=self, sender=UserInvite)
 
         self._email = self.email
         self._old_status = self.status
@@ -280,7 +280,7 @@ class ProfileAcademy(models.Model):
     def save(self, *args, **kwargs):
 
         if self.__old_status != self.status and self.status == 'ACTIVE':
-            academy_invite_accepted.send(instance=self, sender=ProfileAcademy)
+            academy_invite_accepted.send_robust(instance=self, sender=ProfileAcademy)
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 

@@ -25,11 +25,11 @@ def x(db, monkeypatch):
     monkeypatch.setattr('logging.Logger.info', MagicMock())
     monkeypatch.setattr('logging.Logger.error', MagicMock())
 
-    monkeypatch.setattr('breathecode.assignments.signals.assignment_created.send', empty)
-    monkeypatch.setattr('breathecode.assignments.signals.assignment_status_updated.send', empty)
+    monkeypatch.setattr('breathecode.assignments.signals.assignment_created.send_robust', empty)
+    monkeypatch.setattr('breathecode.assignments.signals.assignment_status_updated.send_robust', empty)
     monkeypatch.setattr('breathecode.activity.tasks.get_attendancy_log.delay', empty)
-    monkeypatch.setattr('django.db.models.signals.pre_delete.send', empty)
-    monkeypatch.setattr('breathecode.admissions.signals.student_edu_status_updated.send', empty)
+    monkeypatch.setattr('django.db.models.signals.pre_delete.send_robust', empty)
+    monkeypatch.setattr('breathecode.admissions.signals.student_edu_status_updated.send_robust', empty)
 
     yield
 

@@ -136,7 +136,7 @@ class SurveyTestSuite(FeedbackTestCase):
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.bc.database.list_of('feedback.Survey'), [])
 
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     def test_academy_survey_id__delete__answered(self):
         """Test /academy/survey_id delete answered(self)."""
         self.headers(academy=1)

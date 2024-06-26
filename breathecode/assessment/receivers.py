@@ -1,11 +1,11 @@
 import logging
 from typing import Any, Type
-from breathecode.admissions.signals import syllabus_asset_slug_updated
-from .signals import userassessment_status_updated
-from .models import UserAssessment
-from .tasks import async_close_userassignment
+
 from django.dispatch import receiver
-from breathecode.assignments import tasks
+
+from .models import UserAssessment
+from .signals import userassessment_status_updated
+from .tasks import async_close_userassignment
 
 logger = logging.getLogger(__name__)
 

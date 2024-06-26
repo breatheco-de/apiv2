@@ -260,7 +260,7 @@ class RepositorySubscriptionAdmin(admin.ModelAdmin):
 def process_webhook(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
     for hook in queryset.all():
-        github_webhook.send(instance=hook, sender=RepositoryWebhook)
+        github_webhook.send_robust(instance=hook, sender=RepositoryWebhook)
 
 
 @admin.register(RepositoryWebhook)

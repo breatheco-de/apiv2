@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 @receiver(post_save)
 def update_user_group(sender, instance, created: bool, **_):
     # redirect to other signal to be able to mock it
-    user_info_updated.send(sender=sender, instance=instance, created=created)
+    user_info_updated.send_robust(sender=sender, instance=instance, created=created)
 
 
 @receiver(user_info_updated)
@@ -68,7 +68,7 @@ def set_user_group(sender, instance, created: bool, **_):
 @receiver(post_delete)
 def delete_user_group(sender, instance, **_):
     # redirect to other signal to be able to mock it
-    user_info_deleted.send(sender=sender, instance=instance)
+    user_info_deleted.send_robust(sender=sender, instance=instance)
 
 
 @receiver(user_info_deleted)
@@ -103,7 +103,7 @@ def unset_user_group(sender, instance, **_):
 
 @receiver(pre_delete, sender=CohortUser)
 def delete_cohort_user(sender, instance, **_):
-    cohort_user_deleted.send(sender=sender, instance=instance)
+    cohort_user_deleted.send_robust(sender=sender, instance=instance)
 
 
 @receiver(cohort_user_deleted, sender=CohortUser)

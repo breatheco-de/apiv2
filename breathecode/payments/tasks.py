@@ -645,13 +645,11 @@ def build_subscription(self,
         cohort_set = plan.cohort_set
         event_type_set = plan.event_type_set
         mentorship_service_set = plan.mentorship_service_set
-        service_set = plan.service_set
 
     else:
         cohort_set = None
         event_type_set = None
         mentorship_service_set = None
-        service_set = None
 
     subscription_start_at = start_date or invoice.paid_at
 
@@ -662,7 +660,6 @@ def build_subscription(self,
                                                selected_cohort_set=cohort_set,
                                                selected_event_type_set=event_type_set,
                                                selected_mentorship_service_set=mentorship_service_set,
-                                               selected_service_set=service_set,
                                                valid_until=None,
                                                next_payment_at=subscription_start_at + relativedelta(months=months),
                                                status='ACTIVE',
@@ -722,13 +719,11 @@ def build_plan_financing(self,
         cohort_set = plan.cohort_set
         event_type_set = plan.event_type_set
         mentorship_service_set = plan.mentorship_service_set
-        service_set = plan.service_set
 
     else:
         cohort_set = None
         event_type_set = None
         mentorship_service_set = None
-        service_set = None
 
     print('conversion_info')
     print(conversion_info)
@@ -739,7 +734,6 @@ def build_plan_financing(self,
                                              selected_cohort_set=cohort_set,
                                              selected_event_type_set=event_type_set,
                                              selected_mentorship_service_set=mentorship_service_set,
-                                             selected_service_set=service_set,
                                              valid_until=invoice.paid_at + relativedelta(months=months - 1),
                                              plan_expires_at=invoice.paid_at + delta,
                                              monthly_price=invoice.amount,
@@ -795,13 +789,11 @@ def build_free_subscription(self, bag_id: int, invoice_id: int, conversion_info:
             cohort_set = plan.cohort_set
             event_type_set = plan.event_type_set
             mentorship_service_set = plan.mentorship_service_set
-            service_set = plan.service_set
 
         else:
             cohort_set = None
             event_type_set = None
             mentorship_service_set = None
-            service_set = None
 
         if is_free_trial:
             extra = {
@@ -828,7 +820,6 @@ def build_free_subscription(self, bag_id: int, invoice_id: int, conversion_info:
                                                    selected_cohort_set=cohort_set,
                                                    selected_event_type_set=event_type_set,
                                                    selected_mentorship_service_set=mentorship_service_set,
-                                                   selected_service_set=service_set,
                                                    next_payment_at=until,
                                                    conversion_info=parsed_conversion_info,
                                                    **extra)
@@ -858,7 +849,7 @@ def end_the_consumption_session(self, consumption_session_id: int, how_many: flo
         raise AbortTask(f'ConsumptionSession with id {consumption_session_id} already processed')
 
     consumable = session.consumable
-    consume_service.send(instance=consumable, sender=consumable.__class__, how_many=how_many)
+    consume_service.send_robust(instance=consumable, sender=consumable.__class__, how_many=how_many)
 
     session.was_discounted = True
     session.status = 'DONE'
@@ -934,7 +925,7 @@ def refund_mentoring_session(session_id: int, **_: Any):
 
         how_many = consumption_session.how_many
         consumable = consumption_session.consumable
-        reimburse_service_units.send(instance=consumable, sender=consumable.__class__, how_many=how_many)
+        reimburse_service_units.send_robust(instance=consumable, sender=consumable.__class__, how_many=how_many)
 
     consumption_session.status = 'CANCELLED'
     consumption_session.save()

@@ -359,6 +359,11 @@ def get_user_settings(user_id: int) -> UserSetting:
     return settings
 
 
+@sync_to_async
+def aget_user_settings(user_id: int) -> UserSetting:
+    return get_user_settings(user_id)
+
+
 def get_user_language(request: WSGIRequest | AsyncRequest) -> str:
     lang = request.META.get('HTTP_ACCEPT_LANGUAGE')
 

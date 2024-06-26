@@ -152,8 +152,8 @@ class AcademyEventTestSuite(EventTestCase):
 
     # When: no auth
     # Then: return 401
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_no_auth(self):
         self.headers(academy=1)
         url = reverse_lazy('events:me_event_id', kwargs={'event_id': 1})
@@ -168,8 +168,8 @@ class AcademyEventTestSuite(EventTestCase):
 
     # When: zero Event
     # Then: return 404
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_zero_items(self):
         self.headers(academy=1)
         url = reverse_lazy('events:me_event_id', kwargs={'event_id': 1})
@@ -188,8 +188,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Given: 1 Event, 1 EventType and 1 User
     # When: No EventTypeVisibilitySetting
     # Then: return 404
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_no_visible(self):
         self.headers(academy=1)
         url = reverse_lazy('events:me_event_id', kwargs={'event_id': 1})
@@ -210,8 +210,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Given: 1 Event, 1 EventType, 1 User, 1 Academy and 1 CohortUser
     # When: visible in this cohort
     # Then: return 200
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_visible_in_this_cohort(self):
         self.headers(academy=1)
         url = reverse_lazy('events:me_event_id', kwargs={'event_id': 1})
@@ -245,8 +245,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Given: 1 Event, 1 EventType, 1 User, 1 Academy and 1 CohortUser
     # When: visible in this academy
     # Then: return 200
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_visible_in_this_academy(self):
         self.headers(academy=1)
         url = reverse_lazy('events:me_event_id', kwargs={'event_id': 1})
@@ -279,8 +279,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Given: 1 Event, 1 EventType, 1 User, 1 Academy and 1 CohortUser
     # When: visible in this academy
     # Then: return 200
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_visible_in_this_syllabus(self):
         self.headers(academy=1)
         url = reverse_lazy('events:me_event_id', kwargs={'event_id': 1})
@@ -316,8 +316,8 @@ class AcademyEventTestSuite(EventTestCase):
     # Given: 1 Event, 1 EventType, 1 EventTypeSet, 1 User, 1 Academy and 1 Subscription
     # When: visible in this subscription
     # Then: return 200
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_visible_in_this_subscription(self):
         self.headers(academy=1)
         url = reverse_lazy('events:me_event_id', kwargs={'event_id': 1})
@@ -350,8 +350,8 @@ class AcademyEventTestSuite(EventTestCase):
     #     -> 1 Profile and 2 ProfileTranslation
     # When: visible in this plan financing
     # Then: return 200
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_visible_in_this_plan_financing(self):
         self.headers(academy=1)
         url = reverse_lazy('events:me_event_id', kwargs={'event_id': 1})

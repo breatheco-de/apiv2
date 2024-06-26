@@ -3,9 +3,11 @@ Test /answer/:id
 """
 import os
 from unittest.mock import MagicMock, call, patch
+
 from breathecode.marketing.tasks import add_cohort_task_to_student
 from breathecode.tests.mocks import apply_requests_request_mock
 from breathecode.tests.mocks.requests import apply_requests_post_mock
+
 from ..mixins import MarketingTestCase
 
 GOOGLE_CLOUD_KEY = os.getenv('GOOGLE_CLOUD_KEY', None)
@@ -32,7 +34,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('requests.get', apply_requests_request_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
     def test_add_cohort_task_to_student__without_academy(self):
@@ -49,7 +51,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('requests.get', apply_requests_request_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
     def test_add_cohort_task_to_student__without_active_campaign_academy(self):
@@ -71,7 +73,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('requests.get', apply_requests_request_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
     def test_add_cohort_task_to_student__without_user(self):
@@ -96,7 +98,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('requests.get', apply_requests_request_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
     def test_add_cohort_task_to_student__without_cohort(self):
@@ -122,7 +124,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('requests.get', apply_requests_request_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
     def test_add_cohort_task_to_student(self):
@@ -156,7 +158,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('requests.get', apply_requests_request_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
     def test_add_cohort_task_to_student__tag_exists(self):
@@ -192,7 +194,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('requests.get', apply_requests_request_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(404, AC_POST_URL, AC_POST_RESPONSE)]))
     def test_add_cohort_task_to_student__tag_exists__active_campaign_returns_404(self):
@@ -231,7 +233,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('requests.get', apply_requests_request_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, {})]))
     def test_add_cohort_task_to_student__tag_exists__the_api_was_changed(self):
@@ -269,7 +271,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('requests.get', apply_requests_request_mock([(200, AC_URL, AC_EMPTY_RESPONSE)]))
     def test_add_cohort_task_to_student__status_404(self):
         import logging

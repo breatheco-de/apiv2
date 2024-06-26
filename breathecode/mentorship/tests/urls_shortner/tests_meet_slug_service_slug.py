@@ -32,15 +32,15 @@ API_KEY = random.randint(1, 1000000000)
 
 
 @pytest.fixture(autouse=True)
-def setup(db, fake):
-    os.environ['APP_URL'] = fake.url()
+def setup(db, fake, monkeypatch: pytest.MonkeyPatch):
+    # os.environ['APP_URL'] = fake.url()
+    monkeypatch.setenv('APP_URL', fake.url())
 
     yield
 
 
 def format_consumable(data={}):
     return {
-        'service_set_id': None,
         'cohort_set_id': None,
         'event_type_set_id': None,
         'how_many': 0,
@@ -476,8 +476,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
 
     def test_without_mentor_profile(self):
-        permission = {'codename': 'join_mentorship'}
-        model = self.bc.database.create(user=1, token=1, group=1, permission=permission)
+        service = {'slug': 'join_mentorship'}
+        model = self.bc.database.create(user=1, token=1, service=service)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
         url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
@@ -510,8 +510,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
 
     def test_no_mentorship_service(self):
         slug = self.bc.fake.slug()
-        permission = {'codename': 'join_mentorship'}
-        model = self.bc.database.create(user=1, token=1, mentor_profile=1, group=1, permission=permission)
+        service = {'slug': 'join_mentorship'}
+        model = self.bc.database.create(user=1, token=1, mentor_profile=1, service=service)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
         url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
@@ -545,7 +545,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
 
     def test_with_mentor_profile(self):
-        permission = {'codename': 'join_mentorship'}
+        service = {'slug': 'join_mentorship'}
         model = self.bc.database.create(user=1,
                                         token=1,
                                         mentor_profile=1,
@@ -553,8 +553,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                                             'language': 'en',
                                             'video_provider': 'DAILY'
                                         },
-                                        group=1,
-                                        permission=permission)
+                                        service=service)
 
         querystring = self.bc.format.to_querystring({'token': model.token.key})
         url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
@@ -595,7 +594,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
         cases = [{'status': x} for x in ['INVITED', 'INNACTIVE']]
 
         for mentor_profile in cases:
-            permission = {'codename': 'join_mentorship'}
+            service = {'slug': 'join_mentorship'}
             model = self.bc.database.create(user=1,
                                             token=1,
                                             mentor_profile=mentor_profile,
@@ -603,8 +602,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                                                 'language': 'en',
                                                 'video_provider': 'DAILY'
                                             },
-                                            group=1,
-                                            permission=permission)
+                                            service=service)
 
             querystring = self.bc.format.to_querystring({'token': model.token.key})
             url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
@@ -640,6 +638,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             # teardown
             self.bc.database.delete('mentorship.MentorProfile')
             self.bc.database.delete('auth.Permission')
+            self.bc.database.delete('payments.Service')
 
     """
     🔽🔽🔽 GET without MentorProfile, good statuses without mentor urls
@@ -650,7 +649,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
         cases = [{'status': x} for x in ['ACTIVE', 'UNLISTED']]
 
         for mentor_profile in cases:
-            permission = {'codename': 'join_mentorship'}
+            service = {'slug': 'join_mentorship'}
             model = self.bc.database.create(user=1,
                                             token=1,
                                             mentor_profile=mentor_profile,
@@ -658,8 +657,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                                                 'language': 'en',
                                                 'video_provider': 'DAILY'
                                             },
-                                            group=1,
-                                            permission=permission)
+                                            service=service)
 
             querystring = self.bc.format.to_querystring({'token': model.token.key})
             url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
@@ -697,6 +695,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             # teardown
             self.bc.database.delete('mentorship.MentorProfile')
             self.bc.database.delete('auth.Permission')
+            self.bc.database.delete('payments.Service')
 
     """
     🔽🔽🔽 GET without MentorProfile, good statuses with mentor urls, with mentee
@@ -720,7 +719,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
         } for x in ['ACTIVE', 'UNLISTED']]
 
         for mentor_profile in cases:
-            permission = {'codename': 'join_mentorship'}
+            service = {'slug': 'join_mentorship'}
             model = self.bc.database.create(user=1,
                                             token=1,
                                             mentor_profile=mentor_profile,
@@ -728,8 +727,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                                                 'language': 'en',
                                                 'video_provider': 'DAILY'
                                             },
-                                            group=1,
-                                            permission=permission)
+                                            service=service)
 
             querystring = self.bc.format.to_querystring({'token': model.token.key})
             url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
@@ -766,6 +764,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             # teardown
             self.bc.database.delete('mentorship.MentorProfile')
             self.bc.database.delete('auth.Permission')
+            self.bc.database.delete('payments.Service')
 
     """
     🔽🔽🔽 GET without MentorProfile, good statuses with mentor urls, with mentee of other user
@@ -795,7 +794,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             id += 1
 
             mentor_profile = {**args, 'user_id': 1}
-            permission = {'codename': 'join_mentorship'}
+            service = {'slug': 'join_mentorship'}
             model = self.bc.database.create(user=1,
                                             token=1,
                                             mentor_profile=mentor_profile,
@@ -803,8 +802,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                                                 'language': 'en',
                                                 'video_provider': 'DAILY'
                                             },
-                                            group=1,
-                                            permission=permission)
+                                            service=service)
 
             querystring = self.bc.format.to_querystring({'token': model.token.key})
             url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
@@ -843,6 +841,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             # teardown
             self.bc.database.delete('mentorship.MentorProfile')
             self.bc.database.delete('auth.Permission')
+            self.bc.database.delete('payments.Service')
 
     """
     🔽🔽🔽 GET without MentorProfile, good statuses with mentor urls, MentorshipSession without mentee
@@ -866,8 +865,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
             'booking_url': self.bc.fake.url(),
         } for x in ['ACTIVE', 'UNLISTED']]
 
-        permission = {'codename': 'join_mentorship'}
-        base = self.bc.database.create(user=1, token=1, group=1, permission=permission)
+        service = {'slug': 'join_mentorship'}
+        base = self.bc.database.create(user=1, token=1, service=service)
 
         id = 0
         for mentor_profile in cases:
@@ -942,8 +941,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
             'booking_url': self.bc.fake.url(),
         } for x in ['ACTIVE', 'UNLISTED']]
 
-        permission = {'codename': 'join_mentorship'}
-        base = self.bc.database.create(user=1, token=1, group=1, permission=permission)
+        service = {'slug': 'join_mentorship'}
+        base = self.bc.database.create(user=1, token=1, service=service)
 
         id = 0
         for mentor_profile in cases:
@@ -1034,8 +1033,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
             } for x in ['COMPLETED', 'FAILED', 'IGNORED']]
 
             for mentorship_session in session_cases:
-                permission = {'codename': 'join_mentorship'}
-                base = self.bc.database.create(user=1, token=1, group=1, permission=permission)
+                service = {'slug': 'join_mentorship'}
+                base = self.bc.database.create(user=1, token=1, service=service)
 
                 model = self.bc.database.create(mentor_profile=mentor_profile,
                                                 mentorship_session=mentorship_session,
@@ -1086,6 +1085,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 # teardown
                 self.bc.database.delete('mentorship.MentorProfile')
                 self.bc.database.delete('auth.Permission')
+                self.bc.database.delete('payments.Service')
 
     """
     🔽🔽🔽 GET without MentorProfile, good statuses with mentor urls, MentorshipSession without mentee
@@ -1113,8 +1113,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
         for mentor_profile in cases:
             id += 1
 
-            permission = {'codename': 'join_mentorship'}
-            base = self.bc.database.create(user=1, token=1, group=1, permission=permission)
+            service = {'slug': 'join_mentorship'}
+            base = self.bc.database.create(user=1, token=1, service=service)
 
             mentorship_session = {'mentee_id': None}
             model = self.bc.database.create(mentor_profile=mentor_profile,
@@ -1165,6 +1165,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             # teardown
             self.bc.database.delete('mentorship.MentorProfile')
             self.bc.database.delete('auth.Permission')
+            self.bc.database.delete('payments.Service')
 
     """
     🔽🔽🔽 GET without MentorProfile, good statuses with mentor urls, MentorshipSession without mentee
@@ -1187,14 +1188,14 @@ class AuthenticateTestSuite(MentorshipTestCase):
             'online_meeting_url': self.bc.fake.url(),
             'booking_url': self.bc.fake.url(),
         } for x in ['ACTIVE', 'UNLISTED']]
-        permission = {'codename': 'join_mentorship'}
+        service = {'slug': 'join_mentorship'}
 
         id = 0
         for mentor_profile in cases:
             id += 1
 
             user = {'first_name': '', 'last_name': ''}
-            base = self.bc.database.create(user=user, token=1, group=1, permission=permission)
+            base = self.bc.database.create(user=user, token=1, service=service)
 
             mentorship_session = {'mentee_id': None}
             academy = {'available_as_saas': False}
@@ -1248,6 +1249,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             self.bc.database.delete('mentorship.MentorProfile')
             self.bc.database.delete('auth.Permission')
             self.bc.database.delete('auth.User')
+            self.bc.database.delete('payments.Service')
 
     """
     🔽🔽🔽 GET without MentorProfile, good statuses with mentor urls, MentorshipSession without mentee
@@ -1354,14 +1356,14 @@ class AuthenticateTestSuite(MentorshipTestCase):
     #         'online_meeting_url': self.bc.fake.url(),
     #         'booking_url': self.bc.fake.url(),
     #     } for x in ['ACTIVE', 'UNLISTED']]
-    #     permission = {'codename': 'join_mentorship'}
+    #     service= {'slug': 'join_mentorship'}
 
     #     id = 0
     #     for mentor_profile in cases:
     #         id += 1
 
     #         user = {'first_name': '', 'last_name': ''}
-    #         base = self.bc.database.create(user=user, token=1, group=1, permission=permission)
+    #         base = self.bc.database.create(user=user, token=1,  service=service)
 
     #         mentorship_session = {'mentee_id': None}
     #         academy = {'available_as_saas': True}
@@ -1412,6 +1414,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
     #         self.bc.database.delete('mentorship.MentorProfile')
     #         self.bc.database.delete('auth.Permission')
     #         self.bc.database.delete('auth.User')
+    #         self.bc.database.delete('payments.Service')
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({
@@ -1430,14 +1433,14 @@ class AuthenticateTestSuite(MentorshipTestCase):
             'online_meeting_url': self.bc.fake.url(),
             'booking_url': self.bc.fake.url(),
         } for x in ['ACTIVE', 'UNLISTED']]
-        permission = {'codename': 'join_mentorship'}
+        service = {'slug': 'join_mentorship'}
 
         id = 0
         for mentor_profile in cases:
             id += 1
 
             user = {'first_name': '', 'last_name': ''}
-            base = self.bc.database.create(user=user, token=1, group=1, permission=permission)
+            base = self.bc.database.create(user=user, token=1, service=service)
 
             mentorship_session = {'mentee_id': None}
             academy = {'available_as_saas': True}
@@ -1492,6 +1495,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             self.bc.database.delete('mentorship.MentorProfile')
             self.bc.database.delete('auth.Permission')
             self.bc.database.delete('auth.User')
+            self.bc.database.delete('payments.Service')
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({
@@ -1511,14 +1515,14 @@ class AuthenticateTestSuite(MentorshipTestCase):
             'online_meeting_url': self.bc.fake.url(),
             'booking_url': self.bc.fake.url(),
         } for x in ['ACTIVE', 'UNLISTED']]
-        permission = {'codename': 'join_mentorship'}
+        service = {'slug': 'join_mentorship'}
 
         id = 0
         for mentor_profile in cases:
             id += 1
 
             user = {'first_name': '', 'last_name': ''}
-            base = self.bc.database.create(user=user, token=1, group=1, permission=permission, mentorship_service_set=1)
+            base = self.bc.database.create(user=user, token=1, service=service, mentorship_service_set=1)
 
             mentorship_session = {'mentee_id': None}
             academy = {'available_as_saas': True}
@@ -1585,6 +1589,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             self.bc.database.delete('mentorship.MentorProfile')
             self.bc.database.delete('auth.Permission')
             self.bc.database.delete('auth.User')
+            self.bc.database.delete('payments.Service')
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({
@@ -1605,7 +1610,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             'online_meeting_url': self.bc.fake.url(),
             'booking_url': self.bc.fake.url(),
         } for x in ['ACTIVE', 'UNLISTED']]
-        permission = {'codename': 'join_mentorship'}
+        service = {'slug': 'join_mentorship'}
 
         id = 0
         for mentor_profile in cases:
@@ -1628,8 +1633,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
 
             base = self.bc.database.create(user=user,
                                            token=1,
-                                           group=1,
-                                           permission=permission,
+                                           service=service,
                                            mentorship_service=model.mentorship_service,
                                            mentorship_service_set=1,
                                            consumable=consumable)
@@ -1700,6 +1704,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             self.bc.database.delete('mentorship.MentorProfile')
             self.bc.database.delete('auth.Permission')
             self.bc.database.delete('auth.User')
+            self.bc.database.delete('payments.Service')
             tasks.end_the_consumption_session.apply_async.call_args_list = []
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
@@ -1720,7 +1725,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             'online_meeting_url': self.bc.fake.url(),
             'booking_url': self.bc.fake.url(),
         } for x in ['ACTIVE', 'UNLISTED']]
-        permission = {'codename': 'join_mentorship'}
+        service = {'slug': 'join_mentorship'}
 
         id = 0
         for mentor_profile in cases:
@@ -1736,8 +1741,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                                             mentorship_session=mentorship_session,
                                             user=user,
                                             token=1,
-                                            group=1,
-                                            permission=permission,
+                                            service=service,
                                             mentorship_service=mentorship_service,
                                             mentorship_service_set=1,
                                             academy=academy)
@@ -1783,6 +1787,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             self.bc.database.delete('mentorship.MentorProfile')
             self.bc.database.delete('auth.Permission')
             self.bc.database.delete('auth.User')
+            self.bc.database.delete('payments.Service')
 
     """
     🔽🔽🔽 GET without MentorProfile, good statuses with mentor urls, MentorshipSession without mentee
@@ -1812,8 +1817,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
             id += 1
 
             user = {'first_name': '', 'last_name': ''}
-            permission = {'codename': 'join_mentorship'}
-            base = self.bc.database.create(user=user, token=1, group=1, permission=permission)
+            service = {'slug': 'join_mentorship'}
+            base = self.bc.database.create(user=user, token=1, service=service)
 
             ends_at = UTC_NOW - timedelta(seconds=10)
             mentorship_session = {'mentee_id': None, 'ends_at': ends_at}
@@ -1867,6 +1872,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             # teardown
             self.bc.database.delete('mentorship.MentorProfile')
             self.bc.database.delete('auth.Permission')
+            self.bc.database.delete('payments.Service')
 
     """
     🔽🔽🔽 GET without MentorProfile, good statuses with mentor urls, MentorshipSession without mentee
@@ -1897,8 +1903,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
             id += 1
 
             user = {'first_name': '', 'last_name': ''}
-            permission = {'codename': 'join_mentorship'}
-            base = self.bc.database.create(user=user, token=1, group=1, permission=permission)
+            service = {'slug': 'join_mentorship'}
+            base = self.bc.database.create(user=user, token=1, service=service)
 
             ends_at = UTC_NOW - timedelta(seconds=10)
 
@@ -1926,8 +1932,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                                                     'language': 'en',
                                                     'video_provider': 'DAILY'
                                                 },
-                                                group=1,
-                                                permission=base.permission)
+                                                service=base.service)
 
                 model.mentorship_session.mentee = None
                 model.mentorship_session.save()
@@ -1981,6 +1986,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 self.bc.database.delete('mentorship.MentorProfile')
 
             self.bc.database.delete('auth.Permission')
+            self.bc.database.delete('payments.Service')
 
     """
     🔽🔽🔽 GET without MentorProfile, with ends_at, with extend true, extend_session raise exception
@@ -2010,8 +2016,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
             id += 1
 
             user = {'first_name': '', 'last_name': ''}
-            permission = {'codename': 'join_mentorship'}
-            base = self.bc.database.create(user=user, token=1, group=1, permission=permission)
+            service = {'slug': 'join_mentorship'}
+            base = self.bc.database.create(user=user, token=1, service=service)
 
             ends_at = UTC_NOW - timedelta(seconds=10)
 
@@ -2033,8 +2039,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                                                 user=user,
                                                 token=token,
                                                 mentorship_service=mentorship_service,
-                                                group=1,
-                                                permission=base.permission)
+                                                service=base.service)
 
                 model.mentorship_session.mentee = None
                 model.mentorship_session.save()
@@ -2085,6 +2090,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 self.bc.database.delete('mentorship.MentorProfile')
 
             self.bc.database.delete('auth.Permission')
+            self.bc.database.delete('payments.Service')
 
     """
     🔽🔽🔽 GET without MentorProfile, with ends_at, with extend true, extend_session raise exception,
@@ -2114,8 +2120,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
             id += 1
 
             user = {'first_name': '', 'last_name': ''}
-            permission = {'codename': 'join_mentorship'}
-            base = self.bc.database.create(user=user, token=1, group=1, permission=permission)
+            service = {'slug': 'join_mentorship'}
+            base = self.bc.database.create(user=user, token=1, service=service)
 
             ends_at = UTC_NOW - timedelta(seconds=10)
 
@@ -2140,8 +2146,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                                                 user=user,
                                                 token=token,
                                                 mentorship_service=mentorship_service,
-                                                group=1,
-                                                permission=base.permission)
+                                                service=base.service)
 
                 model.mentorship_session.mentee = None
                 model.mentorship_session.save()
@@ -2192,6 +2197,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
 
             # teardown
             self.bc.database.delete('auth.Permission')
+            self.bc.database.delete('payments.Service')
 
     """
     🔽🔽🔽 GET without MentorProfile, with ends_at, with extend true, extend_session raise exception, redirect
@@ -2221,8 +2227,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
             id += 1
 
             user = {'first_name': '', 'last_name': ''}
-            permission = {'codename': 'join_mentorship'}
-            base = self.bc.database.create(user=user, token=1, group=1, permission=permission)
+            service = {'slug': 'join_mentorship'}
+            base = self.bc.database.create(user=user, token=1, service=service)
 
             ends_at = UTC_NOW - timedelta(seconds=3600 / 2 + 1)
 
@@ -2245,8 +2251,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                                                     'language': 'en',
                                                     'video_provider': 'DAILY'
                                                 },
-                                                group=1,
-                                                permission=base.permission)
+                                                service=base.service)
 
                 model.mentorship_session.mentee = None
                 model.mentorship_session.save()
@@ -2299,6 +2304,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 self.bc.database.delete('mentorship.MentorProfile')
 
             self.bc.database.delete('auth.Permission')
+            self.bc.database.delete('payments.Service')
 
     """
     🔽🔽🔽 GET without MentorProfile, with ends_at, with extend true, extend_session raise exception, redirect
@@ -2328,8 +2334,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
             id += 1
 
             user = {'first_name': '', 'last_name': ''}
-            permission = {'codename': 'join_mentorship'}
-            base = self.bc.database.create(user=user, token=1, group=1, permission=permission)
+            service = {'slug': 'join_mentorship'}
+            base = self.bc.database.create(user=user, token=1, service=service)
 
             ends_at = UTC_NOW - timedelta(seconds=3600 / 2 + 1)
 
@@ -2348,8 +2354,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                                                 'language': 'en',
                                                 'video_provider': 'DAILY'
                                             },
-                                            group=1,
-                                            permission=base.permission)
+                                            service=base.service)
 
             model.mentorship_session.mentee = None
             model.mentorship_session.save()
@@ -2400,6 +2405,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             self.bc.database.delete('mentorship.MentorProfile')
 
             self.bc.database.delete('auth.Permission')
+            self.bc.database.delete('payments.Service')
 
     """
     🔽🔽🔽 GET without MentorProfile, with ends_at, with extend true, extend_session raise exception, redirect
@@ -2429,8 +2435,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
             id += 1
 
             user = {'first_name': '', 'last_name': ''}
-            permission = {'codename': 'join_mentorship'}
-            base = self.bc.database.create(user=user, token=1, group=1, permission=permission)
+            service = {'slug': 'join_mentorship'}
+            base = self.bc.database.create(user=user, token=1, service=service)
 
             ends_at = UTC_NOW - timedelta(seconds=3600 / 2 + 1)
 
@@ -2450,8 +2456,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                                                 'language': 'en',
                                                 'video_provider': 'DAILY'
                                             },
-                                            group=1,
-                                            permission=base.permission,
+                                            service=base.service,
                                             academy=academy)
 
             model.mentorship_session.mentee = None
@@ -2495,6 +2500,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             self.bc.database.delete('mentorship.MentorProfile')
 
             self.bc.database.delete('auth.Permission')
+            self.bc.database.delete('payments.Service')
 
     @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({
@@ -2520,7 +2526,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             id += 1
 
             user = {'first_name': '', 'last_name': ''}
-            permission = {'codename': 'join_mentorship'}
+            service = {'slug': 'join_mentorship'}
             academy = {'available_as_saas': True}
             how_many = random.randint(1, 100)
             consumable = {'how_many': how_many}
@@ -2529,8 +2535,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             mentorship_service = {'max_duration': delta, 'language': 'en'}
             base = self.bc.database.create(user=user,
                                            token=1,
-                                           group=1,
-                                           permission=permission,
+                                           service=service,
                                            consumable=consumable,
                                            mentorship_service=mentorship_service,
                                            mentorship_service_set=1,
@@ -2550,8 +2555,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                                             user=user,
                                             token=token,
                                             mentorship_service=base.mentorship_service,
-                                            group=1,
-                                            permission=base.permission)
+                                            service=base.service)
 
             model.mentorship_session.mentee = None
             model.mentorship_session.save()
@@ -2625,6 +2629,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             self.bc.database.delete('auth.Permission')
             self.bc.database.delete('payments.ConsumptionSession')
             self.bc.database.delete('payments.Consumable')
+            self.bc.database.delete('payments.Service')
 
     """
     🔽🔽🔽 GET mock get_pending_sessions_or_create to get a empty queryset
@@ -2644,6 +2649,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
     @patch('breathecode.mentorship.actions.get_pending_sessions_or_create',
            MagicMock(side_effect=get_empty_mentorship_session_queryset))
     def test_get_pending_sessions_or_create_returns_empty_queryset(self):
+
         cases = [{
             'status': x,
             'online_meeting_url': self.bc.fake.url(),
@@ -2668,8 +2674,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
             ]
 
             for user, name in cases:
-                permission = {'codename': 'join_mentorship'}
-                base = self.bc.database.create(user=user, token=1, group=1, permission=permission)
+                service = {'slug': 'join_mentorship'}
+                base = self.bc.database.create(user=user, token=1, service=service)
 
                 ends_at = UTC_NOW - timedelta(seconds=10)
                 mentorship_session = {'mentee_id': None, 'ends_at': ends_at}
@@ -2719,6 +2725,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 # teardown
                 self.bc.database.delete('mentorship.MentorProfile')
                 self.bc.database.delete('auth.Permission')
+                self.bc.database.delete('payments.Service')
 
 
 # Given: A no SAAS student who has paid
@@ -2787,11 +2794,10 @@ def test__post__auth__no_saas__finantial_status_no_late(bc: Breathecode, client:
         id += 1
 
         user = {'first_name': '', 'last_name': ''}
-        permission = {'codename': 'join_mentorship'}
+        service = {'slug': 'join_mentorship'}
         base = bc.database.create(user=user,
                                   token=1,
-                                  group=1,
-                                  permission=permission,
+                                  service=service,
                                   academy=academy,
                                   cohort=cohort,
                                   cohort_user=cohort_user)
@@ -2814,8 +2820,7 @@ def test__post__auth__no_saas__finantial_status_no_late(bc: Breathecode, client:
                                        'language': 'en',
                                        'video_provider': 'DAILY'
                                    },
-                                   group=1,
-                                   permission=base.permission)
+                                   service=base.service)
 
         model.mentorship_session.mentee = None
         model.mentorship_session.save()
@@ -2864,6 +2869,7 @@ def test__post__auth__no_saas__finantial_status_no_late(bc: Breathecode, client:
         # teardown
         bc.database.delete('mentorship.MentorProfile')
         bc.database.delete('auth.Permission')
+        bc.database.delete('payments.Service')
 
 
 # Given: A no SAAS student who hasn't paid
@@ -2913,12 +2919,11 @@ def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: fx
         id += 1
 
         user = {'first_name': '', 'last_name': ''}
-        permission = {'codename': 'join_mentorship'}
+        service = {'slug': 'join_mentorship'}
         cohort_user = {'finantial_status': 'LATE', 'educational_status': 'ACTIVE'}
         base = bc.database.create(user=user,
                                   token=1,
-                                  group=1,
-                                  permission=permission,
+                                  service=service,
                                   academy=academy,
                                   cohort=cohort,
                                   cohort_user=cohort_user)
@@ -2940,9 +2945,7 @@ def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: fx
                                    mentorship_service={
                                        'language': 'en',
                                        'video_provider': 'DAILY'
-                                   },
-                                   group=1,
-                                   permission=base.permission)
+                                   })
 
         model.mentorship_session.mentee = None
         model.mentorship_session.save()
@@ -2996,3 +2999,4 @@ def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: fx
         # teardown
         bc.database.delete('mentorship.MentorProfile')
         bc.database.delete('auth.Permission')
+        bc.database.delete('payments.Service')

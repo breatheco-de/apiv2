@@ -12,10 +12,10 @@ logger = logging.getLogger(__name__)
 def validate_quiz_json(quiz, allow_override=False):
 
     if 'info' not in quiz:
-        raise ValidationException(f'Quiz is missing info json property')
+        raise ValidationException('Quiz is missing info json property')
 
     if 'slug' not in quiz['info']:
-        raise ValidationException(f'Missing info.slug on quiz info')
+        raise ValidationException('Missing info.slug on quiz info')
 
     _result = {'questions': []}
 
@@ -30,7 +30,7 @@ def validate_quiz_json(quiz, allow_override=False):
     elif 'id' in quiz['info']: _result['id'] = quiz['info']['id']
 
     if 'questions' not in quiz:
-        raise Exception(f'Missing "questions" property in quiz')
+        raise Exception('Missing "questions" property in quiz')
 
     title = 'Untitled assessment'
     if 'name' in quiz['info']: title = quiz['info']['name']

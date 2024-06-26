@@ -22,7 +22,7 @@ from breathecode.authenticate.models import ProfileAcademy
 from breathecode.notify.actions import send_email_message
 from breathecode.registry.permissions.consumers import asset_by_slug
 from breathecode.services.seo import SEOAnalyzer
-from breathecode.utils import GenerateLookupsMixin, capable_of
+from breathecode.utils import GenerateLookupsMixin, capable_of, consume
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators.has_permission import has_permission
 from breathecode.utils.i18n import translation
@@ -68,6 +68,7 @@ from .serializers import (
     AssetPUTSerializer,
     AssetSerializer,
     AssetTechnologySerializer,
+    AssetTinySerializer,
     KeywordClusterBigSerializer,
     KeywordClusterMidSerializer,
     KeywordSmallSerializer,
@@ -83,7 +84,6 @@ from .serializers import (
     SEOReportSerializer,
     TechnologyPUTSerializer,
     VariableSmallSerializer,
-    AssetTinySerializer,
 )
 from .tasks import async_pull_from_github
 
@@ -857,7 +857,7 @@ class AssetSupersedesView(APIView, GenerateLookupsMixin):
             while _aux.previous_version is not None:
                 previous.append(_aux.previous_version)
                 _aux = _aux.previous_version
-        except:
+        except Exception:
             pass
 
         return Response({
@@ -1147,7 +1147,7 @@ class V2AcademyAssetView(APIView):
     extensions = APIViewExtensions(cache=AssetCache, sort='-published_at', paginate=True)
 
     @capable_of('read_asset')
-    @has_permission('read-lesson', consumer=asset_by_slug)
+    @consume('read-lesson', consumer=asset_by_slug)
     def get(self, request, asset: Asset, academy: Academy):
         serializer = AcademyAssetSerializer(asset)
         return Response(serializer.data)

@@ -19,8 +19,8 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.certificate.actions.generate_certificate', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_async_generate_certificate__cohort_user_not_found(self):
         layout = 'vanilla'
         async_generate_certificate(1, 1, layout)
@@ -37,8 +37,8 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.certificate.actions.generate_certificate', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_async_generate_certificate_with_user_role_student(self):
         cohort_user = {'role': 'STUDENT'}
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
@@ -66,8 +66,8 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.certificate.actions.generate_certificate', MagicMock(side_effect=Exception()))
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_async_generate_certificate_with_user_role_teacher(self):
         cohort_user = {'role': 'STUDENT'}
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):

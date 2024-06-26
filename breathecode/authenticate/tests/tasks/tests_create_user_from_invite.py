@@ -14,7 +14,8 @@ def setup(db, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr('breathecode.authenticate.tasks.async_validate_email_invite.delay', MagicMock())
     monkeypatch.setattr('logging.Logger.error', MagicMock())
     monkeypatch.setattr('breathecode.notify.actions.send_email_message', MagicMock())
-    monkeypatch.setattr(create_user_from_invite, 'delay', MagicMock())
+    monkeypatch.setattr('breathecode.authenticate.signals.invite_status_updated.send_robust', MagicMock())
+
     yield
 
 
@@ -39,7 +40,7 @@ def user_serializer(data={}):
 
 
 def test_no_invites(bc: Breathecode):
-    create_user_from_invite(1)
+    create_user_from_invite.delay(1)
 
     assert bc.database.list_of('authenticate.UserInvite') == []
     assert bc.database.list_of('auth.User') == []
@@ -51,7 +52,7 @@ def test_no_invites(bc: Breathecode):
 def test_invite_not_accepted(bc: Breathecode, status):
     model = bc.database.create(user_invite={'status': status})
 
-    create_user_from_invite(1)
+    create_user_from_invite.delay(1)
 
     assert bc.database.list_of('authenticate.UserInvite') == [bc.format.to_dict(model.user_invite)]
     assert bc.database.list_of('auth.User') == []
@@ -62,7 +63,7 @@ def test_invite_not_accepted(bc: Breathecode, status):
 def test_no_email(bc: Breathecode):
     model = bc.database.create(user_invite={'status': 'ACCEPTED'})
 
-    create_user_from_invite(1)
+    create_user_from_invite.delay(1)
 
     assert bc.database.list_of('authenticate.UserInvite') == [bc.format.to_dict(model.user_invite)]
     assert bc.database.list_of('auth.User') == []
@@ -80,7 +81,7 @@ def test_user_exists(bc: Breathecode, fake, is_linked_the_user):
 
     model = bc.database.create(user_invite=user_invite, user=user)
 
-    create_user_from_invite(1)
+    create_user_from_invite.delay(1)
 
     assert bc.database.list_of('authenticate.UserInvite') == [
         {
@@ -99,7 +100,7 @@ def test_invite_accepted(bc: Breathecode, fake):
 
     model = bc.database.create(user_invite=user_invite)
 
-    create_user_from_invite(1)
+    create_user_from_invite.delay(1)
 
     assert bc.database.list_of('authenticate.UserInvite') == [bc.format.to_dict(model.user_invite)]
 

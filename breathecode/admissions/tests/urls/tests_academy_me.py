@@ -1,16 +1,18 @@
 """
 Test /cohort
 """
-from datetime import timedelta
 import random
-from django.utils import timezone
-from breathecode.admissions.caches import CohortCache
+from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
-from django.urls.base import reverse_lazy
-from rest_framework import status
-from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 
+from django.urls.base import reverse_lazy
+from django.utils import timezone
+from rest_framework import status
+
+from breathecode.admissions.caches import CohortCache
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from breathecode.utils.datetime_integer import DatetimeInteger
+
 from ..mixins import AdmissionsTestCase
 
 
@@ -67,7 +69,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Put without required fields
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
     def test__put__without_required_fields(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -82,7 +84,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      syllabus=True)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         data = {}
         response = self.client.put(url, data, format='json')
@@ -98,13 +100,13 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Academy'), [
             self.bc.format.to_dict(model.academy),
         ])
-        self.assertEqual(cohort_saved.send.call_args_list, [])
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Put with Academy, try to modify slug
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
     def test__put__with_academy__try_to_modify_slug(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -119,7 +121,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      syllabus=True)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         data = {
             'name': self.bc.fake.name(),
@@ -135,13 +137,13 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.Academy'), [
             self.bc.format.to_dict(model.academy),
         ])
-        self.assertEqual(cohort_saved.send.call_args_list, [])
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Put with Academy, passing all the fields
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
     def test__put__with_academy__passing_all_the_fields(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -158,7 +160,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      syllabus=True)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         country = random.choice(model.country)
         city = random.choice(model.city)
@@ -184,13 +186,13 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             **self.bc.format.to_dict(model.academy),
             **data,
         }])
-        self.assertEqual(cohort_saved.send.call_args_list, [])
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Put with Academy, passing all the wrong fields
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
     def test__put__with_academy__passing_all_the_wrong_fields(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -207,7 +209,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      syllabus=True)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         country = random.choice(model.country)
         city = random.choice(model.city)
@@ -261,13 +263,13 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             **self.bc.format.to_dict(model.academy),
             **data,
         }])
-        self.assertEqual(cohort_saved.send.call_args_list, [])
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Put with Academy, passing all the fields
     """
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
     def test__put__with_academy__passing_all_the_status(self):
         """Test /cohort/:id without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -284,7 +286,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      syllabus=True)
 
         # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
+        cohort_saved.send_robust.call_args_list = []
 
         country = random.choice(model.country)
         city = random.choice(model.city)
@@ -310,4 +312,4 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             **self.bc.format.to_dict(model.academy),
             **data,
         }])
-        self.assertEqual(cohort_saved.send.call_args_list, [])
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])

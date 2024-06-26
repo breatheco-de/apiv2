@@ -1,15 +1,23 @@
-import base64, frontmatter, markdown, pathlib, logging, re, hashlib
+import base64
+import hashlib
+import logging
+import pathlib
+import re
 from urllib.parse import urlparse
+
+import frontmatter
+import markdown
+from django.contrib.auth.models import AnonymousUser, User
 from django.db import models
-from django.contrib.auth.models import User
-from django.contrib.auth.models import AnonymousUser
-from django.template.loader import get_template
-from breathecode.admissions.models import Academy, SyllabusVersion
-from django.utils import timezone
 from django.db.models import Q
-from .signals import (asset_slug_modified, asset_readme_modified, asset_title_modified, asset_status_updated)
+from django.template.loader import get_template
+from django.utils import timezone
 from slugify import slugify
+
+from breathecode.admissions.models import Academy, SyllabusVersion
 from breathecode.assessment.models import Assessment
+
+from .signals import asset_readme_modified, asset_slug_modified, asset_status_updated, asset_title_modified
 
 __all__ = ['AssetTechnology', 'Asset', 'AssetAlias']
 logger = logging.getLogger(__name__)
@@ -511,11 +519,12 @@ class Asset(models.Model):
         super().save(*args, **kwargs)
         self.__old_slug = self.slug
         self.__old_readme_raw = self.readme_raw
+        self.__old_status = self.status
 
-        if slug_modified: asset_slug_modified.send(instance=self, sender=Asset)
-        if readme_modified: asset_readme_modified.send(instance=self, sender=Asset)
-        if title_modified: asset_title_modified.send(instance=self, sender=Asset)
-        if status_modified: asset_status_updated.send(instance=self, sender=Asset)
+        if slug_modified: asset_slug_modified.send_robust(instance=self, sender=Asset)
+        if readme_modified: asset_readme_modified.send_robust(instance=self, sender=Asset)
+        if title_modified: asset_title_modified.send_robust(instance=self, sender=Asset)
+        if status_modified: asset_status_updated.send_robust(instance=self, sender=Asset)
 
     def get_preview_generation_url(self):
 
