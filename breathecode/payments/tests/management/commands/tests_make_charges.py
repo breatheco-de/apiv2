@@ -73,6 +73,66 @@ def test_with_two_subscriptions__expired(bc: Breathecode, delta, status, status_
     assert tasks.charge_subscription.delay.call_args_list == []
 
 
+@pytest.mark.parametrize('delta_valid_until, delta_next_payment_at', [
+    (relativedelta(0), -relativedelta(days=7, seconds=1)),
+    (relativedelta(days=28), -relativedelta(days=7, seconds=1)),
+])
+def test_with_two_subscriptions__payment_issue__gt_7_days(bc: Breathecode, delta_valid_until, delta_next_payment_at,
+                                                          utc_now):
+
+    if delta_valid_until:
+        valid_until = utc_now + delta_valid_until
+
+    else:
+        valid_until = None
+
+    next_payment_at = utc_now + delta_next_payment_at
+
+    subscription = {'valid_until': valid_until, 'next_payment_at': next_payment_at, 'status': 'PAYMENT_ISSUE'}
+
+    model = bc.database.create(subscription=(2, subscription))
+
+    command = Command()
+    result = command.handle()
+
+    assert result == None
+    db = bc.format.to_dict(model.subscription)
+    for i in range(len(db)):
+        db[i]['status'] = 'EXPIRED'
+
+    assert bc.database.list_of('payments.Subscription') == db
+    assert tasks.charge_subscription.delay.call_args_list == []
+
+
+@pytest.mark.parametrize('delta_valid_until, delta_next_payment_at', [
+    (relativedelta(0), -relativedelta(days=6)),
+    (relativedelta(days=28), -relativedelta(days=6)),
+])
+def test_with_two_subscriptions__payment_issue__lt_7_days(bc: Breathecode, delta_valid_until, delta_next_payment_at,
+                                                          utc_now):
+
+    if delta_valid_until:
+        valid_until = utc_now + delta_valid_until
+
+    else:
+        valid_until = None
+
+    next_payment_at = utc_now + delta_next_payment_at
+
+    subscription = {'valid_until': valid_until, 'next_payment_at': next_payment_at, 'status': 'PAYMENT_ISSUE'}
+
+    model = bc.database.create(subscription=(2, subscription))
+
+    command = Command()
+    result = command.handle()
+
+    assert result == None
+    db = bc.format.to_dict(model.subscription)
+
+    assert bc.database.list_of('payments.Subscription') == db
+    assert tasks.charge_subscription.delay.call_args_list == [call(1), call(2)]
+
+
 @pytest.mark.parametrize('delta, status', [
     (relativedelta(days=2, seconds=1), 'ACTIVE'),
     (relativedelta(days=2, seconds=1), 'ERROR'),
