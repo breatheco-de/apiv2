@@ -30,7 +30,7 @@ UTC_NOW = timezone.now()
 @pytest.fixture(autouse=True)
 def setup(db, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    monkeypatch.setattr('breathecode.payments.signals.consume_service.send', MagicMock(return_value=None))
+    monkeypatch.setattr('breathecode.payments.signals.consume_service.send_robust', MagicMock(return_value=None))
     monkeypatch.setattr('breathecode.payments.models.ConsumptionSession.build_session',
                         MagicMock(wraps=models.ConsumptionSession.build_session))
 
@@ -283,7 +283,7 @@ class TestNoConsumer:
 
         @sync_to_async
         def check_consume_service():
-            assert payments_signals.consume_service.send.call_args_list == []
+            assert payments_signals.consume_service.send_robust.call_args_list == []
 
         await check_consume_service()
 
@@ -304,7 +304,7 @@ class TestNoConsumer:
 
         @sync_to_async
         def check_consume_service():
-            assert payments_signals.consume_service.send.call_args_list == []
+            assert payments_signals.consume_service.send_robust.call_args_list == []
 
         await check_consume_service()
 
@@ -325,7 +325,7 @@ class TestNoConsumer:
 
         @sync_to_async
         def check_consume_service():
-            assert payments_signals.consume_service.send.call_args_list == []
+            assert payments_signals.consume_service.send_robust.call_args_list == []
 
         await check_consume_service()
 
@@ -350,7 +350,7 @@ class TestNoConsumer:
 
         @sync_to_async
         def check_consume_service():
-            assert payments_signals.consume_service.send.call_args_list == []
+            assert payments_signals.consume_service.send_robust.call_args_list == []
 
         await check_consume_service()
 
@@ -379,7 +379,7 @@ class TestNoConsumer:
 
         @sync_to_async
         def check_consume_service():
-            assert payments_signals.consume_service.send.call_args_list == [
+            assert payments_signals.consume_service.send_robust.call_args_list == [
                 call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
             ]
 
@@ -411,7 +411,7 @@ class TestNoConsumer:
 
         @sync_to_async
         def check_consume_service():
-            assert payments_signals.consume_service.send.call_args_list == []
+            assert payments_signals.consume_service.send_robust.call_args_list == []
 
         await check_consume_service()
 
@@ -440,7 +440,7 @@ class TestNoConsumer:
 
         @sync_to_async
         def check_consume_service():
-            assert payments_signals.consume_service.send.call_args_list == [
+            assert payments_signals.consume_service.send_robust.call_args_list == [
                 call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
             ]
 
@@ -472,7 +472,7 @@ class TestNoConsumer:
 
         @sync_to_async
         def check_consume_service():
-            assert payments_signals.consume_service.send.call_args_list == [
+            assert payments_signals.consume_service.send_robust.call_args_list == [
                 call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
             ]
 
@@ -497,7 +497,7 @@ class TestConsumer:
 
         @sync_to_async
         def check_consume_service():
-            assert payments_signals.consume_service.send.call_args_list == []
+            assert payments_signals.consume_service.send_robust.call_args_list == []
 
         await check_consume_service()
 
@@ -518,7 +518,7 @@ class TestConsumer:
 
         @sync_to_async
         def check_consume_service():
-            assert payments_signals.consume_service.send.call_args_list == []
+            assert payments_signals.consume_service.send_robust.call_args_list == []
 
         await check_consume_service()
 
@@ -540,7 +540,7 @@ class TestConsumer:
 
         @sync_to_async
         def check_consume_service():
-            assert payments_signals.consume_service.send.call_args_list == []
+            assert payments_signals.consume_service.send_robust.call_args_list == []
 
         await check_consume_service()
 
@@ -590,7 +590,7 @@ class TestConsumer:
 
         @sync_to_async
         def check_consume_service():
-            assert payments_signals.consume_service.send.call_args_list == []
+            assert payments_signals.consume_service.send_robust.call_args_list == []
 
         await check_consume_service()
 
@@ -646,7 +646,7 @@ class TestConsumer:
 
         @sync_to_async
         def check_consume_service():
-            assert payments_signals.consume_service.send.call_args_list == [
+            assert payments_signals.consume_service.send_robust.call_args_list == [
                 call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
             ]
 
@@ -705,7 +705,7 @@ class TestConsumer:
 
         @sync_to_async
         def check_consume_service():
-            assert payments_signals.consume_service.send.call_args_list == []
+            assert payments_signals.consume_service.send_robust.call_args_list == []
 
         await check_consume_service()
 
@@ -761,7 +761,7 @@ class TestConsumer:
 
         @sync_to_async
         def check_consume_service():
-            assert payments_signals.consume_service.send.call_args_list == [
+            assert payments_signals.consume_service.send_robust.call_args_list == [
                 call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
             ]
 
@@ -821,7 +821,7 @@ class TestConsumer:
 
         @sync_to_async
         def check_consume_service():
-            assert payments_signals.consume_service.send.call_args_list == []
+            assert payments_signals.consume_service.send_robust.call_args_list == []
 
         await check_consume_service()
 
@@ -879,7 +879,7 @@ class TestConsumer:
 
         @sync_to_async
         def check_consume_service():
-            assert payments_signals.consume_service.send.call_args_list == [
+            assert payments_signals.consume_service.send_robust.call_args_list == [
                 call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
             ]
 
@@ -945,7 +945,7 @@ class TestConsumptionSession:
 
         @sync_to_async
         def check_consume_service():
-            assert payments_signals.consume_service.send.call_args_list == [
+            assert payments_signals.consume_service.send_robust.call_args_list == [
                 call(instance=model.consumable, sender=model.consumable.__class__, how_many=1),
             ]
 
@@ -1001,7 +1001,7 @@ class TestConsumptionSession:
 
         @sync_to_async
         def check_consume_service():
-            assert payments_signals.consume_service.send.call_args_list == []
+            assert payments_signals.consume_service.send_robust.call_args_list == []
 
         await check_consume_service()
 
@@ -1054,6 +1054,6 @@ class TestConsumptionSession:
 
         @sync_to_async
         def check_consume_service():
-            assert payments_signals.consume_service.send.call_args_list == []
+            assert payments_signals.consume_service.send_robust.call_args_list == []
 
         await check_consume_service()

@@ -258,7 +258,7 @@ def consume(service: str, consumer: Optional[Consumer] = None, format:str='json'
 
                 elif it_will_consume:
                     item = context['consumables'].first()
-                    consume_service.send(instance=item, sender=item.__class__, how_many=context['price'])
+                    consume_service.send_robust(instance=item, sender=item.__class__, how_many=context['price'])
 
                 return response
 
@@ -369,7 +369,7 @@ def consume(service: str, consumer: Optional[Consumer] = None, format:str='json'
 
                 elif it_will_consume:
                     item = await context['consumables'].afirst()
-                    consume_service.send(instance=item, sender=item.__class__, how_many=context['price'])
+                    consume_service.send_robust(instance=item, sender=item.__class__, how_many=context['price'])
 
                 return response
 

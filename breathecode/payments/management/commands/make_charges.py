@@ -15,7 +15,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         utc_now = timezone.now()
-        statuses = ['CANCELLED', 'DEPRECATED', 'FREE_TRIAL']
+        statuses = ['CANCELLED', 'DEPRECATED', 'FREE_TRIAL', 'EXPIRED']
 
         avoid_expire_these_statuses = Q(status='EXPIRED') | Q(status='ERROR') | Q(status='PAYMENT_ISSUE') | Q(
             status='FULLY_PAID') | Q(status='FREE_TRIAL') | Q(status='CANCELLED') | Q(status='DEPRECATED')
@@ -25,6 +25,10 @@ class Command(BaseCommand):
         params = {
             'next_payment_at__lte': utc_now + timedelta(days=1),
         }
+
+        Subscription.objects.filter(Q(valid_until__gte=utc_now) | Q(valid_until__isnull=True),
+                                    next_payment_at__lte=utc_now - timedelta(days=7),
+                                    status='PAYMENT_ISSUE').update(status='EXPIRED')
 
         Subscription.objects.filter(valid_until__lte=utc_now).exclude(avoid_expire_these_statuses).update(
             status='EXPIRED')
