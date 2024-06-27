@@ -35,7 +35,7 @@ from breathecode.utils import (
     response_207,
 )
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from breathecode.utils.decorators import consume, has_permission
+from breathecode.utils.decorators import consume
 from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils.views import private_view, render_message
