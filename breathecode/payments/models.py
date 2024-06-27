@@ -993,6 +993,10 @@ class AbstractIOweYou(models.Model):
 
     # this reminds the plans to change the stock scheduler on change
     plans = models.ManyToManyField(Plan, blank=True, help_text='Plans to be supplied')
+    conversion_info = models.JSONField(default=None,
+                                       blank=True,
+                                       null=True,
+                                       help_text='UTMs and other conversion information.')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

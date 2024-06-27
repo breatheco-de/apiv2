@@ -73,7 +73,7 @@ from breathecode.payments.serializers import (
 )
 from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import reimburse_service_units
-from breathecode.utils import APIViewExtensions, getLogger
+from breathecode.utils import APIViewExtensions, getLogger, validate_conversion_info
 from breathecode.utils.decorators.capable_of import capable_of
 from breathecode.utils.i18n import translation
 from breathecode.utils.redis import Lock
@@ -1636,6 +1636,11 @@ class PayView(APIView):
         utc_now = timezone.now()
         lang = get_user_language(request)
 
+        conversion_info = request.data['conversion_info'] if 'conversion_info' in request.data else None
+        validate_conversion_info(conversion_info, lang)
+
+        conversion_info = str(conversion_info) if conversion_info is not None else ''
+
         with transaction.atomic():
             sid = transaction.savepoint()
             try:
@@ -1814,13 +1819,13 @@ class PayView(APIView):
                 transaction.savepoint_commit(sid)
 
                 if amount == 0:
-                    tasks.build_free_subscription.delay(bag.id, invoice.id)
+                    tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
 
                 elif bag.how_many_installments > 0:
-                    tasks.build_plan_financing.delay(bag.id, invoice.id)
+                    tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info)
 
                 else:
-                    tasks.build_subscription.delay(bag.id, invoice.id)
+                    tasks.build_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
 
                 if plans := bag.plans.all():
                     for plan in plans:
