@@ -857,7 +857,7 @@ def pull_quiz_asset(github, asset: Asset):
 
     # "slug":    "introduction-networking-es",
     # "name":    "Introducción a redes",
-    # "status":    "draft",
+    # "difficulty":    "beginner",
     # "main":    "Bienvenido al mundo de las redes. Este primer paso te llevara a grandes cosas en el futuro...",
     # "results": "¡Felicidades! Ahora el mundo estará un poco más seguro gracias a tí...",
     # "technologies": ["redes"],
@@ -876,6 +876,9 @@ def pull_quiz_asset(github, asset: Asset):
             for tech_slug in _config['technologies']:
                 technology = AssetTechnology.get_or_create(tech_slug)
                 asset.technologies.add(technology)
+              
+        if 'difficulty' in _config and _config['technologies'] != '':
+                asset.difficulty = _config['difficulty']
 
     asset.save()
 
