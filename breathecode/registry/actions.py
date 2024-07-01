@@ -393,6 +393,16 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
             asset.technologies.clear()
             for tech_slug in _techs:
                 technology = AssetTechnology.get_or_create(tech_slug)
+
+                # if the technology is not multi lang
+                if technology.lang is not None and technology.lang != "":
+                    # skip technology because it does not match the asset lang
+                    if technology.lang in ['us','en'] and asset.lang not in ['us','en']:
+                        continue
+                    elif:
+                        technology.lang != asset.lang
+                        continue
+                      
                 asset.technologies.add(technology)
 
     return asset
