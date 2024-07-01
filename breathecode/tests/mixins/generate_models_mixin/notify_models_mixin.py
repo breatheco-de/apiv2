@@ -2,7 +2,8 @@
 Collections of mixins used to login in authorize microservice
 """
 from breathecode.tests.mixins.models_mixin import ModelsMixin
-from .utils import is_valid, create_models, just_one
+
+from .utils import create_models, is_valid, just_one
 
 
 class NotifyModelsMixin(ModelsMixin):
@@ -81,6 +82,9 @@ class NotifyModelsMixin(ModelsMixin):
 
         if not 'hook' in models and is_valid(hook):
             kargs = {}
+
+            if 'user' in models:
+                kargs['user'] = just_one(models['user'])
 
             models['hook'] = create_models(hook, 'notify.Hook', **kargs)
 

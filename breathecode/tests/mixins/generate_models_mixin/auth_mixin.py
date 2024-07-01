@@ -32,6 +32,7 @@ class AuthMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                              app_user_agreement=False,
                              first_party_credentials=False,
                              task_watcher=False,
+                             hook=False,
                              profile_academy='',
                              user_kwargs={},
                              group_kwargs={},
@@ -58,7 +59,7 @@ class AuthMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                                      or is_valid(invoice) or is_valid(subscription) or is_valid(bag)
                                      or is_valid(user_setting) or is_valid(consumption_session)
                                      or is_valid(provisioning_container) or is_valid(app_user_agreement)
-                                     or is_valid(first_party_credentials) or is_valid(task_watcher)):
+                                     or is_valid(first_party_credentials) or is_valid(task_watcher) or is_valid(hook)):
             kargs = {}
 
             if 'group' in models:

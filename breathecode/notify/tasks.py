@@ -139,6 +139,8 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
 
     logger.info('Starting async_deliver_hook')
 
+    has_response = False
+
     try:
         if isinstance(payload, dict):
             payload = parse_payload(payload)
@@ -155,6 +157,7 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
                                  data=encoded_payload,
                                  headers={'Content-Type': 'application/json'},
                                  timeout=2)
+        has_response = True
 
         if hook_id:
             hook_model_cls = HookManager.get_hook_model()
@@ -182,6 +185,9 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
                 hook.total_calls = hook.total_calls + 1
                 hook.save()
 
-    except Exception:
+    except Exception as e:
         logger.error(payload)
-        raise AbortTask(f'Error while trying to save hook call with status code {response.status_code}. {payload}')
+        if has_response:
+            raise AbortTask(f'Error while trying to save hook call with status code {response.status_code}. {payload}')
+
+        raise e
