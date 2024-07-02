@@ -1,16 +1,20 @@
 import binascii
 import json
 import os
+import re
 from datetime import timedelta
 from urllib.parse import urlparse
 
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 from breathecode.admissions.models import Academy
 from breathecode.notify.models import SlackChannel
 
 __all__ = ['Application', 'Endpoint', 'MonitorScript']
+
+GITHUB_URL_PATTERN = re.compile(r'https:\/\/github\.com\/(?P<user>[^\/]+)\/(?P<repo>[^\/]+)\/?')
 
 LOADING = 'LOADING'
 OPERATIONAL = 'OPERATIONAL'
@@ -215,10 +219,22 @@ class RepositorySubscription(models.Model):
             raise Exception(f'Invalid URL format for: {self.repository}')
 
     def save(self, *args, **kwargs):
+        from breathecode.assignments.models import RepositoryDeletionOrder
         if not self.pk:
             self.token = binascii.hexlify(os.urandom(20)).decode()
 
-        return super().save(*args, **kwargs)
+        super().save(*args, **kwargs)
+
+        match = GITHUB_URL_PATTERN.search(self.repository)
+        if match:
+            user = match.group('user')
+            repo_name = match.group('repo')
+
+            RepositoryDeletionOrder.objects.filter(provider=RepositoryDeletionOrder.Provider.GITHUB,
+                                                   repository_user__iexact=user,
+                                                   repository_name__iexact=repo_name).exclude(
+                                                       Q(status=RepositoryDeletionOrder.Status.DELETED)
+                                                       | Q(status=RepositoryDeletionOrder.Status.CANCELLED)).delete()
 
 
 PENDING = 'PENDING'
