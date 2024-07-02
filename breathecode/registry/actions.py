@@ -392,7 +392,7 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
                 elif value_str in false_values:
                     return False
 
-            raise ValueError(f"Invalid value for boolean conversion: {value}")
+            raise ValueError(f'Invalid value for boolean conversion: {value}')
 
         if 'table_of_contents' in fm and fm['table_of_contents'] != '':
             asset.enable_table_of_content = parse_boolean(fm['table_of_contents'])
@@ -412,6 +412,15 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
             asset.technologies.clear()
             for tech_slug in _techs:
                 technology = AssetTechnology.get_or_create(tech_slug)
+
+                # if the technology is not multi lang
+                if technology.lang is not None and technology.lang != '':
+                    # skip technology because it does not match the asset lang
+                    if technology.lang in ['us', 'en'] and asset.lang not in ['us', 'en']:
+                        continue
+                    elif technology.lang != asset.lang:
+                        continue
+
                 asset.technologies.add(technology)
 
     return asset
@@ -760,17 +769,27 @@ def process_asset_config(asset, config):
         asset.solution_url = config['solution']
         asset.with_solutions = True
 
-    if 'projectType' in config and config['projectType'] == 'tutorial':
-        asset.gitpod = True
+    if 'grading' not in config and ('projectType' not in config or config['projectType'] != 'tutorial'):
+        asset.interactive = False
+        asset.gitpod = False
+    elif 'projectType' in config and config['projectType'] == 'tutorial':
+        asset.gitpod = 'localhostOnly' not in config or not config['localhostOnly']
         asset.interactive = True
-    if 'grading' in config and config['grading'] in ['isolated', 'incremental']:
-        asset.gitpod = True
+    elif 'grading' in config and config['grading'] in ['isolated', 'incremental']:
+        asset.gitpod = 'localhostOnly' not in config or not config['localhostOnly']
         asset.interactive = True
 
     if 'technologies' in config:
         asset.technologies.clear()
         for tech_slug in config['technologies']:
             technology = AssetTechnology.get_or_create(tech_slug)
+            # if the technology is not multi lang
+            if technology.lang is not None and technology.lang != '':
+                # skip technology because it does not match the asset lang
+                if technology.lang in ['us', 'en'] and asset.lang not in ['us', 'en']:
+                    continue
+                elif technology.lang != asset.lang:
+                    continue
             asset.technologies.add(technology)
 
     if 'delivery' in config:
@@ -875,7 +894,7 @@ def pull_quiz_asset(github, asset: Asset):
 
     # "slug":    "introduction-networking-es",
     # "name":    "Introducción a redes",
-    # "status":    "draft",
+    # "difficulty":    "beginner",
     # "main":    "Bienvenido al mundo de las redes. Este primer paso te llevara a grandes cosas en el futuro...",
     # "results": "¡Felicidades! Ahora el mundo estará un poco más seguro gracias a tí...",
     # "technologies": ["redes"],
@@ -894,6 +913,9 @@ def pull_quiz_asset(github, asset: Asset):
             for tech_slug in _config['technologies']:
                 technology = AssetTechnology.get_or_create(tech_slug)
                 asset.technologies.add(technology)
+
+        if 'difficulty' in _config and _config['technologies'] != '':
+            asset.difficulty = _config['difficulty']
 
     asset.save()
 

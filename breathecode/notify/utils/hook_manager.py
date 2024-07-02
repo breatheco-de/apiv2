@@ -246,8 +246,8 @@ class HookManagerClass(object):
         except Exception as e:
             instance, _ = HookError.objects.get_or_create(message=str(e), event=hook.event)
 
-            if instance.hooks.filter(id=instance.id).exists() is False:
-                instance.hooks.add(instance)
+            if instance.hooks.filter(id=hook.id).exists() is False:
+                instance.hooks.add(hook)
 
 
 HookManager = HookManagerClass()
