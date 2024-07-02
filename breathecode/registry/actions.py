@@ -373,11 +373,12 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
                     return True
                 elif value_str in false_values:
                     return False
-        
-            raise ValueError(f"Invalid value for boolean conversion: {value}")
+
+            raise ValueError(f'Invalid value for boolean conversion: {value}')
+
         if 'table_of_contents' in fm and fm['table_of_contents'] != '':
             asset.enable_table_of_content = parse_boolean(fm['table_of_contents'])
-          
+
         if 'video' in fm and fm['video'] != '':
             asset.intro_video_url = fm['video']
 
@@ -395,13 +396,13 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
                 technology = AssetTechnology.get_or_create(tech_slug)
 
                 # if the technology is not multi lang
-                if technology.lang is not None and technology.lang != "":
+                if technology.lang is not None and technology.lang != '':
                     # skip technology because it does not match the asset lang
-                    if technology.lang in ['us','en'] and asset.lang not in ['us','en']:
+                    if technology.lang in ['us', 'en'] and asset.lang not in ['us', 'en']:
                         continue
                     elif technology.lang != asset.lang:
                         continue
-                      
+
                 asset.technologies.add(technology)
 
     return asset
@@ -680,13 +681,13 @@ def process_asset_config(asset, config):
     if not config:
         raise Exception('No configuration json found')
 
-    if asset.asset_type in ["QUIZ"]:
+    if asset.asset_type in ['QUIZ']:
         raise Exception('Can only process exercise and project config objects')
-      
+
     # only replace title and description of English language
     if 'title' in config:
         if isinstance(config['title'], str):
-            if (asset.lang in ['','us', 'en'] or asset.title == '' or asset.title is None):
+            if (asset.lang in ['', 'us', 'en'] or asset.title == '' or asset.title is None):
                 asset.title = config['title']
         elif isinstance(config['title'], dict) and asset.lang in config['title']:
             asset.title = config['title'][asset.lang]
@@ -694,7 +695,7 @@ def process_asset_config(asset, config):
     if 'description' in config:
         if isinstance(config['description'], str):
             # avoid replacing descriptions for other languages
-            if (asset.lang in ['','us', 'en'] or asset.description == '' or asset.description is None):
+            if (asset.lang in ['', 'us', 'en'] or asset.description == '' or asset.description is None):
                 asset.description = config['description']
         # there are multiple translations, and the translation exists for this lang
         elif isinstance(config['description'], dict) and asset.lang in config['description']:
@@ -751,21 +752,20 @@ def process_asset_config(asset, config):
         asset.with_solutions = True
 
     if 'projectType' in config and config['projectType'] == 'tutorial':
-        asset.gitpod = True
+        asset.gitpod = 'localhostOnly' not in config or not config['localhostOnly']
         asset.interactive = True
     if 'grading' in config and config['grading'] in ['isolated', 'incremental']:
-        asset.gitpod = True
+        asset.gitpod = 'localhostOnly' not in config or not config['localhostOnly']
         asset.interactive = True
-      
 
     if 'technologies' in config:
         asset.technologies.clear()
         for tech_slug in config['technologies']:
             technology = AssetTechnology.get_or_create(tech_slug)
             # if the technology is not multi lang
-            if technology.lang is not None and technology.lang != "":
+            if technology.lang is not None and technology.lang != '':
                 # skip technology because it does not match the asset lang
-                if technology.lang in ['us','en'] and asset.lang not in ['us','en']:
+                if technology.lang in ['us', 'en'] and asset.lang not in ['us', 'en']:
                     continue
                 elif technology.lang != asset.lang:
                     continue
@@ -892,9 +892,9 @@ def pull_quiz_asset(github, asset: Asset):
             for tech_slug in _config['technologies']:
                 technology = AssetTechnology.get_or_create(tech_slug)
                 asset.technologies.add(technology)
-              
+
         if 'difficulty' in _config and _config['technologies'] != '':
-                asset.difficulty = _config['difficulty']
+            asset.difficulty = _config['difficulty']
 
     asset.save()
 
