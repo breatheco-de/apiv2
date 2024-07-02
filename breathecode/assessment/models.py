@@ -1,12 +1,14 @@
-from django.db import models
-import os
 import binascii
-import hashlib
+import os
 from datetime import timedelta
+
 from django.contrib.auth.models import User
-from breathecode.admissions.models import Academy
-from . import signals
 from django.core.validators import RegexValidator
+from django.db import models
+
+from breathecode.admissions.models import Academy
+
+from . import signals
 
 __all__ = ['UserProxy', 'Assessment', 'Question', 'Option', 'UserAssessment', 'Answer']
 
@@ -295,7 +297,7 @@ class UserAssessment(models.Model):
 
         # Answer is being closed
         if self.status != self._old_status:
-            signals.userassessment_status_updated.send(instance=self, sender=self.__class__)
+            signals.userassessment_status_updated.send_robust(instance=self, sender=self.__class__)
 
         return super().save(*args, **kwargs)
 

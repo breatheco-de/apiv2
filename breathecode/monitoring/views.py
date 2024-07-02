@@ -2,10 +2,10 @@ import logging
 import os
 
 import stripe
-from django.utils import timezone
 from circuitbreaker import CircuitBreakerError
 from django.db.models import Q
 from django.http import StreamingHttpResponse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -154,7 +154,7 @@ def process_github_webhook(request, subscription_token):
         webhook = add_github_webhook(payload, academy_slug)
         if webhook:
             logger.debug('triggering signal github_webhook: ' + payload['scope'])
-            github_webhook.send(instance=webhook, sender=RepositoryWebhook)
+            github_webhook.send_robust(instance=webhook, sender=RepositoryWebhook)
             return Response(payload, status=status.HTTP_200_OK)
         else:
             logger.debug(f'Error at processing github webhook from academy {academy_slug}')
@@ -182,7 +182,7 @@ def process_stripe_webhook(request):
         raise ValidationException('Not allowed', code=403, slug='not-allowed')
 
     if event := add_stripe_webhook(event):
-        signals.stripe_webhook.send(event=event, sender=event.__class__)
+        signals.stripe_webhook.send_robust(event=event, sender=event.__class__)
 
     return Response({'success': True})
 

@@ -1,13 +1,15 @@
-from breathecode.utils import serpy
-from breathecode.utils.i18n import translation
 from django.contrib.auth.models import AnonymousUser
-from breathecode.admissions.models import Academy
-from .models import Assessment, Question, Option, UserAssessment, Answer
-from breathecode.marketing.models import AcademyAlias
-from rest_framework import serializers
 from django.utils import timezone
-from breathecode.utils.datetime_integer import from_now, duration_to_str
+from rest_framework import serializers
+
+from breathecode.admissions.models import Academy
+from breathecode.utils import serpy
+from breathecode.utils.datetime_integer import duration_to_str, from_now
+from breathecode.utils.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
+
+from .models import Answer, Assessment, Option, Question, UserAssessment
+
 
 class UserSerializer(serpy.Serializer):
     id = serpy.Field()
@@ -219,8 +221,8 @@ class AnswerSerializer(serializers.ModelSerializer):
         if not uass:
             raise ValidationException(
                 translation(lang,
-                            en=f'user assessment not found for this token',
-                            es=f'No se han encontrado un user assessment con ese token',
+                            en='user assessment not found for this token',
+                            es='No se han encontrado un user assessment con ese token',
                             slug='not-found'))
         validated_data['user_assessment'] = uass
 
@@ -236,8 +238,8 @@ class AnswerSerializer(serializers.ModelSerializer):
             if Answer.objects.filter(option=data['option'], user_assessment=uass).count() > 0:
                 raise ValidationException(
                     translation(lang,
-                                en=f'This answer has already been answered on this user assessment',
-                                es=f'Esta opción ya fue respondida para este assessment',
+                                en='This answer has already been answered on this user assessment',
+                                es='Esta opción ya fue respondida para este assessment',
                                 slug='already-answered'))
 
         return super().validate(validated_data)
@@ -297,8 +299,8 @@ class PostUserAssessmentSerializer(serializers.ModelSerializer):
         if not academy:
             raise ValidationException(
                 translation(lang,
-                            en=f'Could not determine academy ownership of this user assessment',
-                            es=f'No se ha podido determinar a que academia pertenece este user assessment',
+                            en='Could not determine academy ownership of this user assessment',
+                            es='No se ha podido determinar a que academia pertenece este user assessment',
                             slug='not-academy-detected'))
 
         if not isinstance(request.user, AnonymousUser):
@@ -306,8 +308,8 @@ class PostUserAssessmentSerializer(serializers.ModelSerializer):
         elif 'owner_email' not in data or not data['owner_email']:
             raise ValidationException(
                 translation(lang,
-                            en=f'User assessment cannot be tracked because its missing owner information',
-                            es=f'Este user assessment no puede registrarse porque no tiene informacion del owner',
+                            en='User assessment cannot be tracked because its missing owner information',
+                            es='Este user assessment no puede registrarse porque no tiene informacion del owner',
                             slug='no-owner-detected'))
 
         return super().validate({**data, 'academy': academy})
@@ -357,7 +359,7 @@ class PUTUserAssessmentSerializer(serializers.ModelSerializer):
             raise ValidationException(
                 translation(lang,
                             en=f'User assessment cannot be updated because is {self.instance.status}',
-                            es=f'El user assessment status no se puede editar mas porque esta {elf.instance.status}',
+                            es=f'El user assessment status no se puede editar mas porque esta {self.instance.status}',
                             slug='invalid-status'))
 
         return super().validate({**data})

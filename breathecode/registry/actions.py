@@ -1,20 +1,37 @@
-import logging, json, os, re, pathlib, base64, hashlib, requests
+import base64
+import hashlib
+import json
+import logging
+import os
+import pathlib
+import re
 from typing import Optional
-from breathecode.media.models import Media, MediaResolution
-from breathecode.utils.views import set_query_parameter
-from breathecode.services.google_cloud.storage import Storage
-from django.db.models import Q
-from django.utils import timezone
-from django.template.loader import get_template
 from urllib.parse import urlencode
+
+import requests
+from django.db.models import Q
+from django.template.loader import get_template
+from django.utils import timezone
+from github import Github
+
 from breathecode.assessment.actions import create_from_asset
 from breathecode.authenticate.models import CredentialsGithub
-from .models import Asset, AssetImage, AssetTechnology, AssetErrorLog, ASSET_STATUS, OriginalityScan, ContentVariable
-from .serializers import AssetBigSerializer
-from .utils import (LessonValidator, ExerciseValidator, QuizValidator, AssetException, ProjectValidator,
-                    ArticleValidator, OriginalityWrapper)
-from github import Github
+from breathecode.media.models import Media, MediaResolution
 from breathecode.registry import tasks
+from breathecode.services.google_cloud.storage import Storage
+from breathecode.utils.views import set_query_parameter
+
+from .models import ASSET_STATUS, Asset, AssetErrorLog, AssetImage, AssetTechnology, ContentVariable, OriginalityScan
+from .serializers import AssetBigSerializer
+from .utils import (
+    ArticleValidator,
+    AssetException,
+    ExerciseValidator,
+    LessonValidator,
+    OriginalityWrapper,
+    ProjectValidator,
+    QuizValidator,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +41,9 @@ ASSET_STATUS_DICT = [x for x, y in ASSET_STATUS]
 # remove markdown elemnts from text and return the clean text output only
 def unmark(text):
 
-    from markdown import Markdown
     from io import StringIO
+
+    from markdown import Markdown
 
     def unmark_element(element, stream=None):
         if stream is None:

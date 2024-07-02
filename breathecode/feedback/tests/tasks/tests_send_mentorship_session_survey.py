@@ -59,7 +59,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'ENV': 'test', 'API_URL': API_URL})))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     def test_send_mentorship_session_survey__without_mentorship_session(self):
         from logging import Logger
 
@@ -84,7 +84,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'ENV': 'test', 'API_URL': API_URL})))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     def test_send_mentorship_session_survey__with_mentorship_session(self):
         from logging import Logger
 
@@ -109,7 +109,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'ENV': 'test', 'API_URL': API_URL})))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     def test_send_mentorship_session_survey__with_mentorship_session__with_mentee__session_started_not_finished(self):
         from logging import Logger
 
@@ -139,7 +139,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'ENV': 'test', 'API_URL': API_URL})))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     def test_send_mentorship_session_survey__with_mentorship_session__with_mentee__session_not_started_but_finished(
             self):
         from logging import Logger
@@ -170,7 +170,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'ENV': 'test', 'API_URL': API_URL})))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     def test_send_mentorship_session_survey__with_mentorship_session__with_mentee__session_started_and_finished(self):
         from logging import Logger
 
@@ -201,7 +201,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'ENV': 'test', 'API_URL': API_URL})))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     def test_send_mentorship_session_survey__with_mentorship_session__with_mentee(self):
         from logging import Logger
 
@@ -232,7 +232,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'ENV': 'test', 'API_URL': API_URL})))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     def test_send_mentorship_session_survey__with_mentorship_session__with_mentee__with_mentorship_service(self):
         from logging import Logger
 
@@ -292,7 +292,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'ENV': 'test', 'API_URL': API_URL})))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     def test_send_mentorship_session_survey__with_mentorship_session__with_mentee__with_answer(self):
         from logging import Logger
 
@@ -343,7 +343,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'ENV': 'test', 'API_URL': API_URL})))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     def test_send_mentorship_session_survey__with_mentorship_session__with_mentee__with_answer_answered(self):
         from logging import Logger
 

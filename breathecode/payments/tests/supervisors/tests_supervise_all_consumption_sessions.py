@@ -125,7 +125,7 @@ def tests_so_much_cancelled_sessions__no_unsafe_sessions(database: dfx.Database,
         'status': 'DONE',
         **x
     } for _ in range(8)]
-    database.create(consumption_session=consumption_sessions, service_set=1)
+    database.create(consumption_session=consumption_sessions)
 
     supervise_all_consumption_sessions()
 
@@ -149,7 +149,7 @@ def tests_so_much_cancelled_sessions__unsafe_sessions(database: dfx.Database, su
         'status': 'DONE',
         **x
     } for _ in range(6)]
-    model = database.create(consumption_session=consumption_sessions, service_set=1, user=1)
+    model = database.create(consumption_session=consumption_sessions, user=1, service={'type': 'VOID'})
 
     supervise_all_consumption_sessions()
 

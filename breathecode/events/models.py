@@ -1,12 +1,15 @@
 import binascii
 import os
-from django.db import models
+import uuid as uuid_lib
+
 from django.contrib.auth.models import User
-from .signals import event_status_updated, new_event_order, new_event_attendee
+from django.db import models
+from slugify import slugify
+
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, Syllabus
 from breathecode.utils.validators.language import validate_language_code
-from slugify import slugify
-import uuid as uuid_lib
+
+from .signals import event_status_updated, new_event_attendee, new_event_order
 
 PENDING = 'PENDING'
 PERSISTED = 'PERSISTED'
@@ -279,9 +282,9 @@ class Event(models.Model):
 
         super().save(*args, **kwargs)
 
-        event_saved.send(instance=self, sender=self.__class__, created=created)
+        event_saved.send_robust(instance=self, sender=self.__class__, created=created)
 
-        if status_updated: event_status_updated.send(instance=self, sender=Event)
+        if status_updated: event_status_updated.send_robust(instance=self, sender=Event)
 
 
 PENDING = 'PENDING'
@@ -328,9 +331,9 @@ class EventCheckin(models.Model):
 
         super().save(*args, **kwargs)
 
-        if creating: new_event_order.send(instance=self, sender=EventCheckin)
+        if creating: new_event_order.send_robust(instance=self, sender=EventCheckin)
         elif status_updated and self.status == 'DONE':
-            new_event_attendee.send(instance=self, sender=EventCheckin)
+            new_event_attendee.send_robust(instance=self, sender=EventCheckin)
 
 
 # PENDING = 'PENDING'

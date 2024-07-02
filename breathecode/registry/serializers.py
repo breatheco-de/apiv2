@@ -322,7 +322,7 @@ class AcademyAssetSerializer(AssetSerializer):
             while _aux.previous_version is not None:
                 prev_versions.append(_aux.previous_version)
                 _aux = _aux.previous_version
-        except:
+        except Exception:
             pass
 
         serializer = AssetTinySerializer(prev_versions, many=True)
@@ -824,14 +824,14 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                     raise ValidationException(
                         f'Asset {data["superseded_by"].id} is already superseding {_prev.asset_type}: {_prev.slug}',
                         code=400)
-            except:
+            except Exception:
                 pass
 
             try:
                 previous_version = self.instance.previous_version
                 if previous_version and data['superseded_by'].id == previous_version.id:
                     raise ValidationException('One asset cannot have its previous version also superseding', code=400)
-            except:
+            except Exception:
                 pass
 
         if category is None:

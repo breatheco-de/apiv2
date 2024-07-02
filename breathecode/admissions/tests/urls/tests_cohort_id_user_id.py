@@ -3,14 +3,17 @@ Test /cohort/:id/user/:id
 """
 import re
 from unittest.mock import MagicMock, patch
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
+    apply_google_cloud_bucket_mock,
+    apply_google_cloud_client_mock,
 )
+
 from ..mixins import AdmissionsTestCase
 
 
@@ -56,8 +59,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id_user_id_without_auth(self):
         """Test /cohort/:id/user/:id without auth"""
         url = reverse_lazy('admissions:cohort_id_user_id', kwargs={'cohort_id': 1, 'user_id': 1})
@@ -73,8 +76,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id_user_id_put_with_bad_cohort_id(self):
         """Test /cohort/:id/user/:id without auth"""
         model = self.generate_models(authenticate=True)
@@ -90,8 +93,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id_user_id_put_with_bad_user_id(self):
         """Test /cohort/:id/user/:id without auth"""
         model = self.generate_models(authenticate=True, cohort=True)
@@ -107,8 +110,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id_user_id_put_with_bad_id(self):
         """Test /cohort/:id/user/:id without auth"""
         model = self.generate_models(authenticate=True, cohort=True, user=True)
@@ -128,8 +131,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id_user_id_put_with_id_but_without_user(self):
         """Test /cohort/:id/user/:id without auth"""
         model = self.generate_models(authenticate=True, cohort=True)
@@ -149,8 +152,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id_user_id_put_with_id_but_with_user(self):
         """Test /cohort/:id/user/:id without auth"""
         model = self.generate_models(authenticate=True, cohort=True, user=True)
@@ -170,8 +173,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id_user_id_put_with_id(self):
         """Test /cohort/:id/user/:id without auth"""
         model = self.generate_models(authenticate=True,
@@ -199,8 +202,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id_user_id_delete_with_id_with_bad_user_id(self):
         """Test /cohort/:id/user/:id without auth"""
         model = self.generate_models(authenticate=True,
@@ -217,8 +220,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id_user_id_delete_with_id_with_bad_cohort_id(self):
         """Test /cohort/:id/user/:id without auth"""
         model = self.generate_models(authenticate=True,
@@ -235,8 +238,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id_user_id_delete_with_id(self):
         """Test /cohort/:id/user/:id without auth"""
         model = self.generate_models(authenticate=True,
@@ -258,8 +261,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id_user_id_put_with_unsuccess_task(self):
         """Test /cohort/:id/user/:id without auth"""
         task = {'task_status': 'PENDING', 'task_type': 'PROJECT', 'associated_slug': 'testing-slug'}
@@ -300,8 +303,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id_user_id_put_with_unsuccess_finantial_status(self):
         """Test /cohort/:id/user/:id without auth"""
         model = self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True, cohort_user=True)
@@ -324,8 +327,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_cohort_id_user_id_put_with_stage_delete(self):
         """Test /cohort/:id/user/:id without auth"""
         cohort_kwargs = {'stage': 'DELETED'}

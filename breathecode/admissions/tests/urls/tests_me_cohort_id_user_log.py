@@ -3,14 +3,17 @@ Test /cohort/:id/user/:id
 """
 import re
 from unittest.mock import MagicMock, patch
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
+    apply_google_cloud_bucket_mock,
+    apply_google_cloud_client_mock,
 )
+
 from ..mixins import AdmissionsTestCase
 
 
@@ -27,8 +30,8 @@ def get_serializer(cohort_user, cohort, data={}):
 class CohortIdUserIdTestSuite(AdmissionsTestCase):
     """Test /cohort/:id/user/:id"""
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_no_auth(self):
         """Test /cohort/:id/user/:id without auth"""
         url = reverse_lazy('admissions:me_cohort_id_user_log', kwargs={'cohort_id': 1})
@@ -41,8 +44,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_zero_items(self):
         """Test /cohort/:id/user/:id without auth"""
         model = self.generate_models(user=1)
@@ -56,8 +59,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [])
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_two_items(self):
         """Test /cohort/:id/user/:id without auth"""
 

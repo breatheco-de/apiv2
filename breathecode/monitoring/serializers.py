@@ -1,11 +1,11 @@
 import logging
 
+from django.core.validators import URLValidator
 from rest_framework import serializers
 
 from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.monitoring.actions import subscribe_repository
 from breathecode.monitoring.models import RepositorySubscription
-from django.core.validators import URLValidator
 from breathecode.monitoring.tasks import async_subscribe_repo, async_unsubscribe_repo
 from breathecode.utils import serpy
 from breathecode.utils.i18n import translation
@@ -80,8 +80,8 @@ class RepositorySubscriptionSerializer(serializers.ModelSerializer):
             try:
                 url_validator(data['repository'])
                 if 'github.com' not in data['repository']:
-                    raise ValidationError('Only GitHub repositories can be subscribed to')
-            except ValidationError as e:
+                    raise serializers.ValidationError('Only GitHub repositories can be subscribed to')
+            except serializers.ValidationError as e:
                 raise ValidationException(
                     translation(lang,
                                 en=str(e),

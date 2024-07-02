@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 @receiver(consume_service, sender=Consumable)
 def consume_service_receiver(sender: Type[Consumable], instance: Consumable, how_many: float, **kwargs):
     if instance.how_many == 0:
-        lose_service_permissions.send(instance=instance, sender=sender)
+        lose_service_permissions.send_robust(instance=instance, sender=sender)
         return
 
     if instance.how_many == -1:
@@ -35,7 +35,7 @@ def consume_service_receiver(sender: Type[Consumable], instance: Consumable, how
     instance.save()
 
     if instance.how_many == 0:
-        lose_service_permissions.send(instance=instance, sender=sender)
+        lose_service_permissions.send_robust(instance=instance, sender=sender)
 
 
 @receiver(reimburse_service_units, sender=Consumable)
@@ -49,7 +49,7 @@ def reimburse_service_units_receiver(sender: Type[Consumable], instance: Consuma
     instance.save()
 
     if grant_permissions:
-        grant_service_permissions.send(instance=instance, sender=sender)
+        grant_service_permissions.send_robust(instance=instance, sender=sender)
 
 
 @receiver(lose_service_permissions, sender=Consumable)
@@ -90,7 +90,7 @@ def plan_m2m_wrapper(sender: Type[Plan.service_items.through], instance: Plan, *
     if kwargs['action'] != 'post_add':
         return
 
-    update_plan_m2m_service_items.send(sender=sender, instance=instance)
+    update_plan_m2m_service_items.send_robust(sender=sender, instance=instance)
 
 
 @receiver(update_plan_m2m_service_items, sender=Plan.service_items.through)

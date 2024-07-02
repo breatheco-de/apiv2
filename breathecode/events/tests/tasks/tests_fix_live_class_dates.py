@@ -1,16 +1,18 @@
 import binascii
-from datetime import timedelta, datetime
 import logging
-import random
 import os
-import pytz
+import random
+from datetime import datetime, timedelta
 from unittest.mock import MagicMock, call, patch
 
-from breathecode.events.tasks import fix_live_class_dates
-from ..mixins.new_events_tests_case import EventTestCase
-from ...signals import event_saved
-import breathecode.events.actions as actions
+import pytz
 from django.utils import timezone
+
+import breathecode.events.actions as actions
+from breathecode.events.tasks import fix_live_class_dates
+
+from ...signals import event_saved
+from ..mixins.new_events_tests_case import EventTestCase
 
 UTC_NOW = datetime(year=2022, month=12, day=30, hour=9, minute=24, second=0, microsecond=0, tzinfo=pytz.UTC)
 URANDOM = os.urandom(20)
@@ -37,7 +39,7 @@ class AcademyEventTestSuite(EventTestCase):
     @patch.object(actions, 'export_event_to_eventbrite', MagicMock())
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(logging.Logger, 'debug', MagicMock())
-    @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.timeslot_saved.send_robust', MagicMock())
     def test_0_items(self):
         fix_live_class_dates.delay(1)
 
@@ -50,7 +52,7 @@ class AcademyEventTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(logging.Logger, 'debug', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.timeslot_saved.send_robust', MagicMock())
     def test_cohort_in_the_past(self):
         cohort = {
             'never_ends': False,
@@ -95,7 +97,7 @@ class AcademyEventTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(logging.Logger, 'debug', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
-    @patch('breathecode.admissions.signals.timeslot_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.timeslot_saved.send_robust', MagicMock())
     def test_upcoming_cohort(self):
         cohort = {
             'never_ends': False,

@@ -100,25 +100,25 @@ def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
         _answers.append(new_answer(answer))
 
         # ask for each teacher, with a max of 2 teachers
-        cont = 0
+        count = 0
         for ct in cohort_teacher:
-            if cont >= survey.max_teachers_to_ask:
+            if count >= survey.max_teachers_to_ask:
                 break
             answer = Answer(mentor=ct.user, cohort=survey.cohort, academy=survey.cohort.academy, lang=survey.lang)
             _answers.append(new_answer(answer))
-            cont = cont + 1
+            count = count + 1
 
         # ask for the first TA
         cohort_assistant = CohortUser.objects.filter(cohort=survey.cohort,
                                                      role='ASSISTANT',
                                                      educational_status__in=['ACTIVE', 'GRADUATED'])
-        cont = 0
+        count = 0
         for ca in cohort_assistant:
-            if cont >= survey.max_assistants_to_ask:
+            if count >= survey.max_assistants_to_ask:
                 break
             answer = Answer(mentor=ca.user, cohort=survey.cohort, academy=survey.cohort.academy, lang=survey.lang)
             _answers.append(new_answer(answer))
-            cont = cont + 1
+            count = count + 1
 
         # ask for the whole academy
         answer = Answer(academy=survey.cohort.academy, lang=survey.lang)

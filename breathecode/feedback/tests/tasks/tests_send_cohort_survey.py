@@ -31,8 +31,8 @@ class SendCohortSurvey(FeedbackTestCase):
     @patch('breathecode.feedback.tasks.generate_user_cohort_survey_answers', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('logging.Logger.info', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_when_survey_is_none(self):
 
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
@@ -54,8 +54,8 @@ class SendCohortSurvey(FeedbackTestCase):
     @patch('breathecode.feedback.tasks.generate_user_cohort_survey_answers', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('logging.Logger.info', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_when_user_is_none(self):
 
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
@@ -74,8 +74,8 @@ class SendCohortSurvey(FeedbackTestCase):
     @patch('breathecode.feedback.tasks.generate_user_cohort_survey_answers', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('logging.Logger.info', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_when_survey_has_expired(self):
 
         created = timezone.now() - timedelta(hours=48, minutes=1)
@@ -104,8 +104,8 @@ class SendCohortSurvey(FeedbackTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('logging.Logger.info', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_send_cohort_when_student_does_not_belong_to_cohort(self):
 
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
@@ -128,8 +128,8 @@ class SendCohortSurvey(FeedbackTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_when_student_not_found(self):
 
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
@@ -162,10 +162,10 @@ class SendCohortSurvey(FeedbackTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('logging.Logger.info', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_when_an_email_is_sent(self):
         statuses = ['ACTIVE', 'GRADUATED']
 
@@ -210,10 +210,10 @@ class SendCohortSurvey(FeedbackTestCase):
     @patch('logging.Logger.info', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('breathecode.notify.actions.send_slack', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
     @patch('breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_when_an_email_is_sent_with_slack_team_and_user(self):
         statuses = ['ACTIVE', 'GRADUATED']
 

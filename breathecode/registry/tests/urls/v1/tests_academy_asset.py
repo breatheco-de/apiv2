@@ -128,6 +128,7 @@ def post_serializer(academy, category, data={}):
         'with_video': False,
         'superseded_by': None,
         'enable_table_of_content': True,
+        'updated_at': UTC_NOW.isoformat().replace('+00:00', 'Z'),
         **data,
     }
 
@@ -190,7 +191,7 @@ def put_serializer(academy, category, asset, data={}):
 
 @pytest.fixture(autouse=True)
 def setup(db, monkeypatch):
-    monkeypatch.setattr('breathecode.registry.signals.asset_slug_modified.send', MagicMock())
+    monkeypatch.setattr('breathecode.registry.signals.asset_slug_modified.send_robust', MagicMock())
     yield
 
 
@@ -243,6 +244,7 @@ def test__post__without_category(bc: Breathecode, client: APIClient):
 
 
 @patch('breathecode.registry.tasks.async_pull_from_github.delay', MagicMock())
+@patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
 def test__post__with__all__mandatory__properties(bc: Breathecode, client: APIClient):
     """Test /Asset creation with all mandatory properties"""
     model = bc.database.create(

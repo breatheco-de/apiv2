@@ -7,8 +7,8 @@ from unittest.mock import MagicMock, call, patch
 
 from django.utils import timezone
 
-from breathecode.activity.tasks import get_attendancy_log
 from breathecode.activity import tasks
+from breathecode.activity.tasks import get_attendancy_log
 from breathecode.utils import NDB
 
 from ...models import StudentActivity
@@ -45,8 +45,8 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(NDB, '__init__', MagicMock(return_value=None))
     @patch.object(NDB, 'fetch', MagicMock(return_value=[]))
     @patch('breathecode.activity.tasks.get_attendancy_log_per_cohort_user.delay', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_not_found(self):
         get_attendancy_log.delay(1)
 
@@ -68,8 +68,8 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(NDB, '__init__', MagicMock(return_value=None))
     @patch.object(NDB, 'fetch', MagicMock(return_value=[]))
     @patch('breathecode.activity.tasks.get_attendancy_log_per_cohort_user.delay', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_syllabus_not_found(self):
         with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
             model = self.bc.database.create(cohort=1)
@@ -100,8 +100,8 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(NDB, '__init__', MagicMock(return_value=None))
     @patch.object(NDB, 'fetch', MagicMock(return_value=[]))
     @patch('breathecode.activity.tasks.get_attendancy_log_per_cohort_user.delay', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_syllabus_version_with_json_with_bad_format(self):
         syllabus_versions = [
             {
@@ -186,9 +186,9 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(NDB, '__init__', MagicMock(return_value=None))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.activity.tasks.get_attendancy_log_per_cohort_user.delay', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_the_student_attended_the_first_day(self):
         cases = [
             ([get_datastore_seed(self.bc.fake.slug(), 1, {'slug': 'classroom_attendance'})], [], [1], []),
@@ -266,8 +266,8 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(NDB, '__init__', MagicMock(return_value=None))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.activity.tasks.get_attendancy_log_per_cohort_user.delay', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_the_students_attended_all_days(self):
         cases = [
             ([
@@ -470,8 +470,8 @@ class MediaTestSuite(MediaTestCase):
     @patch('breathecode.utils.ndb.NDB.__init__', MagicMock(return_value=None))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.activity.tasks.get_attendancy_log_per_cohort_user.delay', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_the_students_attended_all_days__the_days_is_string(self):
         cases = [
             ([
@@ -676,8 +676,8 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(NDB, '__init__', MagicMock(return_value=None))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.activity.tasks.get_attendancy_log_per_cohort_user.delay', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_the_students_attended_all_days__duration_in_days(self):
         cases = [
             ([
@@ -1079,8 +1079,8 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(NDB, '__init__', MagicMock(return_value=None))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.activity.tasks.get_attendancy_log_per_cohort_user.delay', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_the_students_attended_all_days__duration_in_days__two_cohort_users(self):
         cases = [
             ([
@@ -1480,9 +1480,9 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(NDB, '__init__', MagicMock(return_value=None))
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     @patch('breathecode.activity.tasks.get_attendancy_log_per_cohort_user.delay', MagicMock())
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock())
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_the_students_attended_all_days__duration_in_days__two_cohort_users__they_was_deleted(self):
         cases = [
             ([

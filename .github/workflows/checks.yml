@@ -180,73 +180,73 @@ jobs:
       - name: Check for undefined variables
         run: pipenv run flake8 --select=F
 
-  bad-docstrings:
-    needs: cache
-    runs-on: ubuntu-latest
-    continue-on-error: true
+  # bad-docstrings:
+  #   needs: cache
+  #   runs-on: ubuntu-latest
+  #   continue-on-error: true
 
-    steps:
-      - uses: actions/checkout@v3
+  #   steps:
+  #     - uses: actions/checkout@v3
 
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
+  #     - name: Set up Python ${{ env.PYTHON_VERSION }}
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: ${{ env.PYTHON_VERSION }}
 
-      # Cache Pipenv packages
-      - name: Cache Pipenv packages
-        uses: actions/cache@v2
-        id: cache
-        with:
-          path: |
-            ~/.local/share/virtualenvs
-            ~/.cache/pip
-          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
+  #     # Cache Pipenv packages
+  #     - name: Cache Pipenv packages
+  #       uses: actions/cache@v2
+  #       id: cache
+  #       with:
+  #         path: |
+  #           ~/.local/share/virtualenvs
+  #           ~/.cache/pip
+  #         key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
 
-      # Install Pipenv
-      - name: Install dependencies
-        if: steps.cache.outputs.cache-hit == 'true'
-        run: |
-          pip install pipenv
+  #     # Install Pipenv
+  #     - name: Install dependencies
+  #       if: steps.cache.outputs.cache-hit == 'true'
+  #       run: |
+  #         pip install pipenv
 
-      - name: Check for undefined variables
-        run: pipenv run flake8 --select=D
+  #     - name: Check for undefined variables
+  #       run: pipenv run flake8 --select=D
 
-  code-complexity:
-    needs: cache
-    runs-on: ubuntu-latest
-    continue-on-error: true
+  # code-complexity:
+  #   needs: cache
+  #   runs-on: ubuntu-latest
+  #   continue-on-error: true
 
-    steps:
-      - uses: actions/checkout@v3
+  #   steps:
+  #     - uses: actions/checkout@v3
 
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
+  #     - name: Set up Python ${{ env.PYTHON_VERSION }}
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: ${{ env.PYTHON_VERSION }}
 
-      # Cache Pipenv packages
-      - name: Cache Pipenv packages
-        uses: actions/cache@v2
-        id: cache
-        with:
-          path: |
-            ~/.local/share/virtualenvs
-            ~/.cache/pip
-          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
+  #     # Cache Pipenv packages
+  #     - name: Cache Pipenv packages
+  #       uses: actions/cache@v2
+  #       id: cache
+  #       with:
+  #         path: |
+  #           ~/.local/share/virtualenvs
+  #           ~/.cache/pip
+  #         key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
 
-      # Install Pipenv
-      - name: Install dependencies
-        if: steps.cache.outputs.cache-hit == 'true'
-        run: |
-          pip install pipenv
+  #     # Install Pipenv
+  #     - name: Install dependencies
+  #       if: steps.cache.outputs.cache-hit == 'true'
+  #       run: |
+  #         pip install pipenv
 
-      - name: Check for undefined variables
-        run: pipenv run flake8 --select=C
+  #     - name: Check for undefined variables
+  #       run: pipenv run flake8 --select=C
 
   naming-conventions:
     needs: cache

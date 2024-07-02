@@ -207,10 +207,10 @@ def update_asset_on_json(from_slug, to_slug, asset_type, simulate=True):
             s.save()
 
     if not simulate and len(findings) > 0:
-        syllabus_asset_slug_updated.send(sender=update_asset_on_json,
-                                         from_slug=from_slug,
-                                         to_slug=to_slug,
-                                         asset_type=asset_type)
+        syllabus_asset_slug_updated.send_robust(sender=update_asset_on_json,
+                                                from_slug=from_slug,
+                                                to_slug=to_slug,
+                                                asset_type=asset_type)
 
     return findings
 

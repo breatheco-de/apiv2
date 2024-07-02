@@ -21,12 +21,12 @@ import breathecode.activity.tasks as tasks_activity
 import breathecode.assignments.tasks as tasks
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.assignments.permissions.consumers import code_revision_service
-from breathecode.authenticate.actions import get_user_language
+from breathecode.authenticate.actions import aget_user_language, get_user_language
 from breathecode.authenticate.models import ProfileAcademy, Token
 from breathecode.services.learnpack import LearnPack
 from breathecode.utils import GenerateLookupsMixin, capable_of, num_to_roman, response_207
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from breathecode.utils.decorators import has_permission
+from breathecode.utils.decorators import consume, has_permission
 from breathecode.utils.decorators.capable_of import acapable_of
 from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
@@ -945,17 +945,37 @@ class SubtaskMeView(APIView):
 
 class MeCodeRevisionView(APIView):
 
-    def get(self, request, task_id=None):
-        lang = get_user_language(request)
+    @sync_to_async
+    def get_user(self):
+        return self.request.user
+
+    @sync_to_async
+    def get_github_credentials(self):
+        res = None
+
+        if hasattr(self.request.user, 'credentialsgithub'):
+            res = self.request.user.credentialsgithub
+
+        return res
+
+    @sync_to_async
+    def has_github_credentials(self, user):
+        return hasattr(user, 'credentialsgithub')
+
+    async def get(self, request, task_id=None):
+        lang = await aget_user_language(request)
         params = {}
         for key in request.GET.keys():
             params[key] = request.GET.get(key)
 
-        if task_id and not (task := Task.objects.filter(id=task_id,
-                                                        user__id=request.user.id).exclude(github_url=None).first()):
+        user = await self.get_user()
+
+        if task_id and not (task := await Task.objects.filter(id=task_id, user__id=user.id).exclude(github_url=None
+                                                                                                    ).afirst()):
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
-        elif not hasattr(request.user, 'credentialsgithub'):
+        github_credentials = await self.get_github_credentials()
+        if github_credentials is None:
             raise ValidationException(translation(lang,
                                                   en='You need to connect your Github account first',
                                                   es='Necesitas conectar tu cuenta de Github primero',
@@ -965,34 +985,37 @@ class MeCodeRevisionView(APIView):
         if task_id and task and task.github_url:
             params['repo'] = task.github_url
 
-        params['github_username'] = request.user.credentialsgithub.username
+        params['github_username'] = github_credentials.username
 
-        with Service('rigobot', request.user.id, proxy=True) as s:
-            return s.get('/v1/finetuning/me/coderevision', params=params, stream=True)
+        async with Service('rigobot', user.id, proxy=True) as s:
+            return await s.get('/v1/finetuning/me/coderevision', params=params)
 
-    @has_permission('add_code_review', consumer=code_revision_service)
-    def post(self, request, task_id):
-        lang = get_user_language(request)
+    @consume('add_code_review', consumer=code_revision_service)
+    async def post(self, request, task_id):
+        lang = await aget_user_language(request)
         params = {}
         for key in request.GET.keys():
             params[key] = request.GET.get(key)
 
-        item = Task.objects.filter(id=task_id, user__id=request.user.id).first()
+        user = await self.get_user()
+
+        item = await Task.objects.filter(id=task_id, user__id=user.id).afirst()
         if item is None:
             raise ValidationException('Task not found', code=404, slug='task-not-found')
 
-        elif not hasattr(request.user, 'credentialsgithub'):
+        github_credentials = await self.get_github_credentials()
+        if github_credentials is None:
             raise ValidationException(translation(lang,
                                                   en='You need to connect your Github account first',
                                                   es='Necesitas conectar tu cuenta de Github primero',
                                                   slug='github-account-not-connected'),
                                       code=400)
 
-        params['github_username'] = request.user.credentialsgithub.username
+        params['github_username'] = github_credentials.username
         params['repo'] = item.github_url
 
-        with Service('rigobot', request.user.id, proxy=True) as s:
-            return s.post('/v1/finetuning/coderevision/', data=request.data, stream=True, params=params)
+        async with Service('rigobot', request.user.id, proxy=True) as s:
+            return await s.post('/v1/finetuning/coderevision/', data=request.data, params=params)
 
 
 class AcademyCodeRevisionView(APIView):
