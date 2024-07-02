@@ -151,6 +151,8 @@ class RepositorySubscriptionSerializer(serializers.ModelSerializer):
                     en=str(e),
                     es='Error al intentar subscribirse al repositorio, revisa la subscripción para mas detalles',
                     slug='github-error'))
+        
+        return instance
 
     def update(self, instance, validated_data):
         if instance.status == 'DISABLED' and validated_data['status'] == 'OPERATIONAL':
