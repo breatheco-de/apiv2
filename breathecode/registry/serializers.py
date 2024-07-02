@@ -205,6 +205,8 @@ class AssetHookSerializer(serpy.Serializer):
     status = serpy.Field()
     graded = serpy.Field()
     gitpod = serpy.Field()
+    interactive = serpy.Field()
+    enable_table_of_content = serpy.Field()
     preview = serpy.Field()
     external = serpy.Field()
     solution_video_url = serpy.Field()
@@ -239,6 +241,8 @@ class AssetSerializer(serpy.Serializer):
     status = serpy.Field()
     graded = serpy.Field()
     gitpod = serpy.Field()
+    enable_table_of_content = serpy.Field()
+    interactive = serpy.Field()
     preview = serpy.Field()
     external = serpy.Field()
     solution_video_url = serpy.Field()
@@ -347,7 +351,7 @@ class AssetBigSerializer(AssetMidSerializer):
     last_synch_at = serpy.Field()
     status_text = serpy.Field()
     published_at = serpy.Field()
-    
+
     enable_table_of_content = serpy.Field()
 
     delivery_instructions = serpy.Field()
@@ -389,7 +393,7 @@ class AssetBigAndTechnologySerializer(AssetBigSerializer):
 class AssetBigAndTechnologyPublishedSerializer(AssetBigSerializer):
 
     assessment = AssessmentSmallSerializer(required=False)
-    
+
     technologies = serpy.MethodField()
     translations = serpy.MethodField()
 
@@ -854,19 +858,20 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                 data['published_at'] = now
             elif validated_data['status'] != 'PUBLISHED':
                 data['published_at'] = None
-        
+
         if 'readme_url' in validated_data:
+
             def get_repo_url(url):
                 parsed_url = urlparse(url)
                 # Extract the scheme, netloc, and the first two parts of the path (organization/repository)
-                repo_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+                repo_url = f'{parsed_url.scheme}://{parsed_url.netloc}'
                 path_parts = parsed_url.path.strip('/').split('/')
                 if len(path_parts) >= 2:
-                    repo_url += f"/{path_parts[0]}/{path_parts[1]}"
+                    repo_url += f'/{path_parts[0]}/{path_parts[1]}'
                 return repo_url
+
             repo = get_repo_url(validated_data['readme_url'])
             data['url'] = repo
-            
 
         # Check if preview img is being deleted
         if 'preview' in validated_data:
