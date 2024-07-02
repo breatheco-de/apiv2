@@ -51,7 +51,7 @@ django-phonenumber-field==7.3.0
 django-redis==5.4.0
 django-sql-explorer==3.2.1
 django-storages==1.14.2
-djangorestframework==3.14.0
+djangorestframework==3.15.2
 djangorestframework-csv==3.0.2
 drf-yasg==1.21.7
 eventbrite==3.3.5
