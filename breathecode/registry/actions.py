@@ -751,10 +751,13 @@ def process_asset_config(asset, config):
         asset.solution_url = config['solution']
         asset.with_solutions = True
 
-    if 'projectType' in config and config['projectType'] == 'tutorial':
+    if 'grading' not in config and ('projectType' not in config or config['projectType'] != 'tutorial'):
+        asset.interactive = False
+        asset.gitpod = False
+    elif 'projectType' in config and config['projectType'] == 'tutorial':
         asset.gitpod = 'localhostOnly' not in config or not config['localhostOnly']
         asset.interactive = True
-    if 'grading' in config and config['grading'] in ['isolated', 'incremental']:
+    elif 'grading' in config and config['grading'] in ['isolated', 'incremental']:
         asset.gitpod = 'localhostOnly' not in config or not config['localhostOnly']
         asset.interactive = True
 
