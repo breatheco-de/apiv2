@@ -1,4 +1,5 @@
 from django.utils import timezone
+from urllib.parse import urlparse
 from rest_framework import serializers, status
 from slugify import slugify
 
@@ -853,6 +854,19 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                 data['published_at'] = now
             elif validated_data['status'] != 'PUBLISHED':
                 data['published_at'] = None
+        
+        if 'readme_url' in validated_data:
+            def get_repo_url(url):
+                parsed_url = urlparse(url)
+                # Extract the scheme, netloc, and the first two parts of the path (organization/repository)
+                repo_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+                path_parts = parsed_url.path.strip('/').split('/')
+                if len(path_parts) >= 2:
+                    repo_url += f"/{path_parts[0]}/{path_parts[1]}"
+                return repo_url
+            repo = get_repo_url(validated_data['readme_url'])
+            data['url'] = repo
+            
 
         # Check if preview img is being deleted
         if 'preview' in validated_data:
