@@ -399,8 +399,7 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
                     # skip technology because it does not match the asset lang
                     if technology.lang in ['us','en'] and asset.lang not in ['us','en']:
                         continue
-                    elif:
-                        technology.lang != asset.lang
+                    elif technology.lang != asset.lang:
                         continue
                       
                 asset.technologies.add(technology)
@@ -768,8 +767,7 @@ def process_asset_config(asset, config):
                 # skip technology because it does not match the asset lang
                 if technology.lang in ['us','en'] and asset.lang not in ['us','en']:
                     continue
-                elif:
-                    technology.lang != asset.lang
+                elif technology.lang != asset.lang:
                     continue
             asset.technologies.add(technology)
 
