@@ -9,21 +9,20 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('freelance', '0001_initial'),
+        ("freelance", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='issue',
-            name='author',
-            field=models.ForeignKey(default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to=settings.AUTH_USER_MODEL),
+            model_name="issue",
+            name="author",
+            field=models.ForeignKey(
+                default=None, null=True, on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL
+            ),
         ),
         migrations.AlterField(
-            model_name='issue',
-            name='duration_in_minutes',
+            model_name="issue",
+            name="duration_in_minutes",
             field=models.FloatField(default=0),
         ),
     ]

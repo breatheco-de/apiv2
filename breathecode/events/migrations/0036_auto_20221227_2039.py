@@ -7,24 +7,26 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0035_alter_eventtype_academy'),
+        ("events", "0035_alter_eventtype_academy"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='eventtype',
-            name='lang',
-            field=models.CharField(default='en',
-                                   max_length=5,
-                                   validators=[breathecode.utils.validators.language.validate_language_code]),
+            model_name="eventtype",
+            name="lang",
+            field=models.CharField(
+                default="en", max_length=5, validators=[breathecode.utils.validators.language.validate_language_code]
+            ),
         ),
         migrations.AlterField(
-            model_name='event',
-            name='lang',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   max_length=5,
-                                   null=True,
-                                   validators=[breathecode.utils.validators.language.validate_language_code]),
+            model_name="event",
+            name="lang",
+            field=models.CharField(
+                blank=True,
+                default=None,
+                max_length=5,
+                null=True,
+                validators=[breathecode.utils.validators.language.validate_language_code],
+            ),
         ),
     ]

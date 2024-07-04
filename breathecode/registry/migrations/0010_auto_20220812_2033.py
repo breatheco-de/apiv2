@@ -6,67 +6,64 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0009_auto_20220701_1948'),
+        ("registry", "0009_auto_20220701_1948"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='assetkeyword',
-            name='difficulty',
-            field=models.FloatField(blank=True, default=None, help_text='From 1 to 100', null=True),
+            model_name="assetkeyword",
+            name="difficulty",
+            field=models.FloatField(blank=True, default=None, help_text="From 1 to 100", null=True),
         ),
         migrations.AddField(
-            model_name='assetkeyword',
-            name='expected_monthly_traffic',
-            field=models.FloatField(blank=True,
-                                    default=None,
-                                    help_text='You can get this info from Ahrefs or GKP',
-                                    null=True),
+            model_name="assetkeyword",
+            name="expected_monthly_traffic",
+            field=models.FloatField(
+                blank=True, default=None, help_text="You can get this info from Ahrefs or GKP", null=True
+            ),
         ),
         migrations.AddField(
-            model_name='assetkeyword',
-            name='is_important',
+            model_name="assetkeyword",
+            name="is_important",
             field=models.BooleanField(default=True),
         ),
         migrations.AddField(
-            model_name='assetkeyword',
-            name='is_urgent',
+            model_name="assetkeyword",
+            name="is_urgent",
             field=models.BooleanField(default=True),
         ),
         migrations.AddField(
-            model_name='assetkeyword',
-            name='optimization_rating',
-            field=models.FloatField(blank=True, default=None, help_text='Automatically filled (1 to 100)', null=True),
+            model_name="assetkeyword",
+            name="optimization_rating",
+            field=models.FloatField(blank=True, default=None, help_text="Automatically filled (1 to 100)", null=True),
         ),
         migrations.AddField(
-            model_name='keywordcluster',
-            name='internal_description',
-            field=models.TextField(blank=True,
-                                   default=None,
-                                   help_text='How will be this cluster be used in the SEO strategy',
-                                   null=True),
+            model_name="keywordcluster",
+            name="internal_description",
+            field=models.TextField(
+                blank=True, default=None, help_text="How will be this cluster be used in the SEO strategy", null=True
+            ),
         ),
         migrations.AddField(
-            model_name='keywordcluster',
-            name='is_important',
+            model_name="keywordcluster",
+            name="is_important",
             field=models.BooleanField(default=True),
         ),
         migrations.AddField(
-            model_name='keywordcluster',
-            name='is_urgent',
+            model_name="keywordcluster",
+            name="is_urgent",
             field=models.BooleanField(default=True),
         ),
         migrations.AddField(
-            model_name='keywordcluster',
-            name='landing_page_url',
-            field=models.URLField(blank=True,
-                                  default=None,
-                                  help_text='All keyword articles must point to this page',
-                                  null=True),
+            model_name="keywordcluster",
+            name="landing_page_url",
+            field=models.URLField(
+                blank=True, default=None, help_text="All keyword articles must point to this page", null=True
+            ),
         ),
         migrations.AddField(
-            model_name='keywordcluster',
-            name='optimization_rating',
-            field=models.FloatField(blank=True, default=None, help_text='Automatically filled (1 to 100)', null=True),
+            model_name="keywordcluster",
+            name="optimization_rating",
+            field=models.FloatField(blank=True, default=None, help_text="Automatically filled (1 to 100)", null=True),
         ),
     ]

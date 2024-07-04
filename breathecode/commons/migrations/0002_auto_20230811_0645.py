@@ -6,22 +6,30 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('commons', '0001_initial'),
+        ("commons", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='taskmanager',
-            name='status_message',
+            model_name="taskmanager",
+            name="status_message",
             field=models.TextField(blank=True, max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='taskmanager',
-            name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('DONE', 'Done'), ('CANCELLED', 'Cancelled'),
-                                            ('REVERSED', 'Reversed'), ('PAUSED', 'Paused'), ('ABORTED', 'Aborted'),
-                                            ('ERROR', 'Error')],
-                                   default='PENDING',
-                                   max_length=20),
+            model_name="taskmanager",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("PENDING", "Pending"),
+                    ("DONE", "Done"),
+                    ("CANCELLED", "Cancelled"),
+                    ("REVERSED", "Reversed"),
+                    ("PAUSED", "Paused"),
+                    ("ABORTED", "Aborted"),
+                    ("ERROR", "Error"),
+                ],
+                default="PENDING",
+                max_length=20,
+            ),
         ),
     ]

@@ -1,7 +1,6 @@
 import serpy
 
-__all__ = ['Field']
+__all__ = ["Field"]
 
 
-class Field(serpy.Field):
-    ...
+class Field(serpy.Field): ...

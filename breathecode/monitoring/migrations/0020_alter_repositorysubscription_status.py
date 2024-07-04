@@ -6,16 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('monitoring', '0019_repositorysubscription_hook_id_and_more'),
+        ("monitoring", "0019_repositorysubscription_hook_id_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='repositorysubscription',
-            name='status',
-            field=models.CharField(choices=[('OPERATIONAL', 'Operational'), ('CRITICAL', 'Critical'),
-                                            ('DISABLED', 'Disabled')],
-                                   default='CRITICAL',
-                                   max_length=20),
+            model_name="repositorysubscription",
+            name="status",
+            field=models.CharField(
+                choices=[("OPERATIONAL", "Operational"), ("CRITICAL", "Critical"), ("DISABLED", "Disabled")],
+                default="CRITICAL",
+                max_length=20,
+            ),
         ),
     ]

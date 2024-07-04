@@ -7,7 +7,7 @@ from breathecode.tests.mixins.generate_models_mixin.exceptions import BadArgumen
 
 from .argument_parser import argument_parser
 
-__all__ = ['create_models']
+__all__ = ["create_models"]
 
 logger = logging.getLogger(__name__)
 
@@ -21,11 +21,11 @@ def cycle(how_many):
 
 def debug_mixer(attr, path, **kwargs):
     for how_many, arguments in argument_parser(attr):
-        sentence = ''
+        sentence = ""
         if how_many > 1:
-            sentence += f'mixer.cycle({how_many}).blend('
+            sentence += f"mixer.cycle({how_many}).blend("
         else:
-            sentence += 'mixer.blend('
+            sentence += "mixer.blend("
 
         sentence += f"'{path}', "
         values = {
@@ -36,11 +36,11 @@ def debug_mixer(attr, path, **kwargs):
             if isinstance(values[key], str):
                 sentence += f"{key}='{values[key]}', "
             elif isinstance(values[key], int) or isinstance(values[key], list):
-                sentence += f'{key}={values[key]}, '
+                sentence += f"{key}={values[key]}, "
             else:
-                sentence += f'{key}=<{values[key]}>, '
+                sentence += f"{key}=<{values[key]}>, "
 
-        sentence = sentence[:-2] + ')'
+        sentence = sentence[:-2] + ")"
         print(sentence)
 
 
@@ -49,10 +49,14 @@ def create_models(attr, path, **kwargs):
     # debug_mixer(attr, path, **kwargs)
 
     result = [
-        cycle(how_many).blend(path, **{
-            **kwargs,
-            **arguments,
-        }) for how_many, arguments in argument_parser(attr)
+        cycle(how_many).blend(
+            path,
+            **{
+                **kwargs,
+                **arguments,
+            },
+        )
+        for how_many, arguments in argument_parser(attr)
     ]
 
     if len(result) == 1:

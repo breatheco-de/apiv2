@@ -5,7 +5,7 @@ from datetime import timedelta
 
 
 class Command(BaseCommand):
-    help = 'Delete logs and other garbage'
+    help = "Delete logs and other garbage"
 
     def handle(self, *args, **options):
 

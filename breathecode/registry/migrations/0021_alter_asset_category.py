@@ -7,17 +7,25 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0020_auto_20221202_0016'),
+        ("registry", "0020_auto_20221202_0016"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='asset',
-            name='category',
-            field=models.ForeignKey(choices=[('PROJECT', 'Project'), ('EXERCISE', 'Exercise'), ('QUIZ', 'Quiz'),
-                                             ('LESSON', 'Lesson'), ('VIDEO', 'Video'), ('ARTICLE', 'Article')],
-                                    null=True,
-                                    on_delete=django.db.models.deletion.SET_NULL,
-                                    to='registry.assetcategory'),
+            model_name="asset",
+            name="category",
+            field=models.ForeignKey(
+                choices=[
+                    ("PROJECT", "Project"),
+                    ("EXERCISE", "Exercise"),
+                    ("QUIZ", "Quiz"),
+                    ("LESSON", "Lesson"),
+                    ("VIDEO", "Video"),
+                    ("ARTICLE", "Article"),
+                ],
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="registry.assetcategory",
+            ),
         ),
     ]

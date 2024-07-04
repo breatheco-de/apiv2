@@ -41,20 +41,20 @@ def set_user_group(sender, instance, created: bool, **_):
     # prevent errors with migrations
     try:
         if sender == User:
-            group = Group.objects.filter(name='Default').first()
+            group = Group.objects.filter(name="Default").first()
             groups = instance.groups
 
-        is_valid_profile_academy = sender == ProfileAcademy and instance.user and instance.status == 'ACTIVE'
-        if is_valid_profile_academy and instance.role.slug == 'student':
-            group = Group.objects.filter(name='Student').first()
+        is_valid_profile_academy = sender == ProfileAcademy and instance.user and instance.status == "ACTIVE"
+        if is_valid_profile_academy and instance.role.slug == "student":
+            group = Group.objects.filter(name="Student").first()
             groups = instance.user.groups
 
-        if is_valid_profile_academy and instance.role.slug == 'teacher':
-            group = Group.objects.filter(name='Teacher').first()
+        if is_valid_profile_academy and instance.role.slug == "teacher":
+            group = Group.objects.filter(name="Teacher").first()
             groups = instance.user.groups
 
         if sender == MentorProfile:
-            group = Group.objects.filter(name='Mentor').first()
+            group = Group.objects.filter(name="Mentor").first()
             groups = instance.user.groups
 
         if groups and group:
@@ -77,24 +77,26 @@ def unset_user_group(sender, instance, **_):
     group = None
     groups = None
 
-    is_valid_profile_academy = sender == ProfileAcademy and instance.user and instance.status == 'ACTIVE'
-    if is_valid_profile_academy and instance.role.slug == 'student':
-        should_be_deleted = not ProfileAcademy.objects.filter(user=instance.user, role__slug='student',
-                                                              status='ACTIVE').exists()
+    is_valid_profile_academy = sender == ProfileAcademy and instance.user and instance.status == "ACTIVE"
+    if is_valid_profile_academy and instance.role.slug == "student":
+        should_be_deleted = not ProfileAcademy.objects.filter(
+            user=instance.user, role__slug="student", status="ACTIVE"
+        ).exists()
 
-        group = Group.objects.filter(name='Student').first()
+        group = Group.objects.filter(name="Student").first()
         groups = instance.user.groups
 
-    if is_valid_profile_academy and instance.role.slug == 'teacher':
-        should_be_deleted = not ProfileAcademy.objects.filter(user=instance.user, role__slug='teacher',
-                                                              status='ACTIVE').exists()
+    if is_valid_profile_academy and instance.role.slug == "teacher":
+        should_be_deleted = not ProfileAcademy.objects.filter(
+            user=instance.user, role__slug="teacher", status="ACTIVE"
+        ).exists()
 
-        group = Group.objects.filter(name='Teacher').first()
+        group = Group.objects.filter(name="Teacher").first()
         groups = instance.user.groups
 
     if sender == MentorProfile:
         should_be_deleted = not MentorProfile.objects.filter(user=instance.user).exists()
-        group = Group.objects.filter(name='Mentor').first()
+        group = Group.objects.filter(name="Mentor").first()
         groups = instance.user.groups
 
     if should_be_deleted and groups and group:
@@ -113,11 +115,11 @@ def post_delete_cohort_user(sender, instance, **_):
     if instance.cohort.never_ends:
         return None
 
-    logger.debug('Cohort user deleted, removing from organization')
+    logger.debug("Cohort user deleted, removing from organization")
     args = (instance.cohort.id, instance.user.id)
-    kwargs = {'force': True}
+    kwargs = {"force": True}
 
-    manager = schedule_task(async_remove_from_organization, '3w')
+    manager = schedule_task(async_remove_from_organization, "3w")
     if not manager.exists(*args, **kwargs):
         manager.call(*args, **kwargs)
 
@@ -125,8 +127,8 @@ def post_delete_cohort_user(sender, instance, **_):
 @receiver(student_edu_status_updated, sender=CohortUser)
 def post_save_cohort_user(sender, instance, **_):
 
-    logger.debug('User educational status updated to: ' + str(instance.educational_status))
-    if instance.educational_status == 'ACTIVE':
+    logger.debug("User educational status updated to: " + str(instance.educational_status))
+    if instance.educational_status == "ACTIVE":
 
         # never ending cohorts cannot be in synch with github
         if instance.cohort.never_ends:
@@ -136,13 +138,16 @@ def post_save_cohort_user(sender, instance, **_):
     else:
         args = (instance.cohort.id, instance.user.id)
 
-        manager = schedule_task(async_remove_from_organization, '3w')
+        manager = schedule_task(async_remove_from_organization, "3w")
         if not manager.exists(*args):
             manager.call(*args)
 
 
 @receiver(invite_status_updated, sender=UserInvite)
 def handle_invite_accepted(sender: Type[UserInvite], instance: UserInvite, **_):
-    if instance.status == 'ACCEPTED' and not instance.user and User.objects.filter(
-            email=instance.email).exists() is False:
+    if (
+        instance.status == "ACCEPTED"
+        and not instance.user
+        and User.objects.filter(email=instance.email).exists() is False
+    ):
         tasks.create_user_from_invite.apply_async(args=[instance.id], countdown=60)

@@ -1,6 +1,7 @@
 """
 This file contains test over AcademyInviteView, if it change, the duck tests will deleted
 """
+
 import os
 import random
 import re
@@ -25,18 +26,18 @@ UTC_NOW = timezone.now()
 # IMPORTANT: the loader.render_to_string in a function is inside of function render
 def render_message(message):
     request = None
-    context = {'MESSAGE': message, 'BUTTON': None, 'LINK': os.getenv('APP_URL', '')}
+    context = {"MESSAGE": message, "BUTTON": None, "LINK": os.getenv("APP_URL", "")}
 
-    return loader.render_to_string('message.html', context, request)
+    return loader.render_to_string("message.html", context, request)
 
 
 def post_serializer(self, user_invite, data={}):
     return {
-        'created_at': self.bc.datetime.to_iso_string(user_invite.created_at),
-        'email': user_invite.email,
-        'id': user_invite.id,
-        'sent_at': user_invite.sent_at,
-        'status': user_invite.status,
+        "created_at": self.bc.datetime.to_iso_string(user_invite.created_at),
+        "email": user_invite.email,
+        "id": user_invite.id,
+        "sent_at": user_invite.sent_at,
+        "status": user_invite.status,
         **data,
     }
 
@@ -45,269 +46,293 @@ class AuthenticateJSONTestSuite(AuthTestCase):
     # When: No invites
     # Then: Return 404
     def test_not_found(self):
-        """Test """
+        """Test"""
 
-        url = reverse_lazy('authenticate:confirmation_token', kwargs={'token': 'hash'})
+        url = reverse_lazy("authenticate:confirmation_token", kwargs={"token": "hash"})
 
-        response = self.client.get(url, format='json', headers={'accept': 'application/json'})
+        response = self.client.get(url, format="json", headers={"accept": "application/json"})
         json = response.json()
-        expected = {'detail': 'user-invite-not-found', 'status_code': 404}
+        expected = {"detail": "user-invite-not-found", "status_code": 404}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 404)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
+        self.assertEqual(self.bc.database.list_of("authenticate.UserInvite"), [])
 
     # Given: 1 UserInvite
     # When: No email
     # Then: Return 400
     def test_no_email(self):
-        """Test """
+        """Test"""
 
         model = self.bc.database.create(user_invite=1)
-        url = reverse_lazy('authenticate:confirmation_token', kwargs={'token': model.user_invite.token})
+        url = reverse_lazy("authenticate:confirmation_token", kwargs={"token": model.user_invite.token})
 
-        response = self.client.get(url, format='json', headers={'accept': 'application/json'})
+        response = self.client.get(url, format="json", headers={"accept": "application/json"})
         json = response.json()
-        expected = {'detail': 'without-email', 'status_code': 400}
+        expected = {"detail": "without-email", "status_code": 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
-            self.bc.format.to_dict(model.user_invite),
-        ])
+        self.assertEqual(
+            self.bc.database.list_of("authenticate.UserInvite"),
+            [
+                self.bc.format.to_dict(model.user_invite),
+            ],
+        )
 
     # Given: 1 UserInvite
     # When: Email already validated
     # Then: Return 400
     def test_already_validated(self):
-        """Test """
+        """Test"""
 
         user_invite = {
-            'email': self.bc.fake.email(),
-            'is_email_validated': True,
+            "email": self.bc.fake.email(),
+            "is_email_validated": True,
         }
         model = self.bc.database.create(user_invite=user_invite)
-        url = reverse_lazy('authenticate:confirmation_token', kwargs={'token': model.user_invite.token})
+        url = reverse_lazy("authenticate:confirmation_token", kwargs={"token": model.user_invite.token})
 
-        response = self.client.get(url, format='json', headers={'accept': 'application/json'})
+        response = self.client.get(url, format="json", headers={"accept": "application/json"})
         json = response.json()
-        expected = {'detail': 'email-already-validated', 'status_code': 400}
+        expected = {"detail": "email-already-validated", "status_code": 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
-            self.bc.format.to_dict(model.user_invite),
-        ])
+        self.assertEqual(
+            self.bc.database.list_of("authenticate.UserInvite"),
+            [
+                self.bc.format.to_dict(model.user_invite),
+            ],
+        )
 
     # Given: 1 UserInvite
     # When: email and email is not validated
     # Then: Return 200
     def test_done(self):
-        """Test """
+        """Test"""
 
-        user_invite = {'email': self.bc.fake.email()}
+        user_invite = {"email": self.bc.fake.email()}
         model = self.bc.database.create(user_invite=user_invite)
-        url = reverse_lazy('authenticate:confirmation_token', kwargs={'token': model.user_invite.token})
+        url = reverse_lazy("authenticate:confirmation_token", kwargs={"token": model.user_invite.token})
 
-        response = self.client.get(url, format='json', headers={'accept': 'application/json'})
+        response = self.client.get(url, format="json", headers={"accept": "application/json"})
         json = response.json()
         expected = post_serializer(self, model.user_invite)
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
-            {
-                **self.bc.format.to_dict(model.user_invite),
-                'is_email_validated': True,
-            },
-        ])
+        self.assertEqual(
+            self.bc.database.list_of("authenticate.UserInvite"),
+            [
+                {
+                    **self.bc.format.to_dict(model.user_invite),
+                    "is_email_validated": True,
+                },
+            ],
+        )
 
     # Given: 1 UserInvite
     # When: Email and email already validated
     # Then: Return 400
     def test_2_errors(self):
-        """Test """
+        """Test"""
 
         user_invite = {
-            'is_email_validated': True,
+            "is_email_validated": True,
         }
         model = self.bc.database.create(user_invite=user_invite)
-        url = reverse_lazy('authenticate:confirmation_token', kwargs={'token': model.user_invite.token})
+        url = reverse_lazy("authenticate:confirmation_token", kwargs={"token": model.user_invite.token})
 
-        response = self.client.get(url, format='json', headers={'accept': 'application/json'})
+        response = self.client.get(url, format="json", headers={"accept": "application/json"})
         json = response.json()
         expected = [
             {
-                'detail': 'without-email',
-                'status_code': 400,
+                "detail": "without-email",
+                "status_code": 400,
             },
             {
-                'detail': 'email-already-validated',
-                'status_code': 400,
+                "detail": "email-already-validated",
+                "status_code": 400,
             },
         ]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
-            self.bc.format.to_dict(model.user_invite),
-        ])
+        self.assertEqual(
+            self.bc.database.list_of("authenticate.UserInvite"),
+            [
+                self.bc.format.to_dict(model.user_invite),
+            ],
+        )
 
 
 class AuthenticateHTMLTestSuite(AuthTestCase):
     # When: No invites
     # Then: Return 404
     def test_not_found(self):
-        """Test """
+        """Test"""
 
-        url = reverse_lazy('authenticate:confirmation_token', kwargs={'token': 'hash'})
+        url = reverse_lazy("authenticate:confirmation_token", kwargs={"token": "hash"})
 
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_message('user-invite-not-found')
+        expected = render_message("user-invite-not-found")
 
         # dump error in external files
         if content != expected:
-            with open('content.html', 'w') as f:
+            with open("content.html", "w") as f:
                 f.write(content)
 
-            with open('expected.html', 'w') as f:
+            with open("expected.html", "w") as f:
                 f.write(expected)
 
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, 404)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
+        self.assertEqual(self.bc.database.list_of("authenticate.UserInvite"), [])
 
     # Given: 1 UserInvite
     # When: No email
     # Then: Return 400
     def test_no_email(self):
-        """Test """
+        """Test"""
 
         model = self.bc.database.create(user_invite=1)
-        url = reverse_lazy('authenticate:confirmation_token', kwargs={'token': model.user_invite.token})
+        url = reverse_lazy("authenticate:confirmation_token", kwargs={"token": model.user_invite.token})
 
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_message('without-email.')
+        expected = render_message("without-email.")
 
         # dump error in external files
         if content != expected:
-            with open('content.html', 'w') as f:
+            with open("content.html", "w") as f:
                 f.write(content)
 
-            with open('expected.html', 'w') as f:
+            with open("expected.html", "w") as f:
                 f.write(expected)
 
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, 400)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
-            self.bc.format.to_dict(model.user_invite),
-        ])
+        self.assertEqual(
+            self.bc.database.list_of("authenticate.UserInvite"),
+            [
+                self.bc.format.to_dict(model.user_invite),
+            ],
+        )
 
     # Given: 1 UserInvite
     # When: Email already validated
     # Then: Return 400
     def test_already_validated(self):
-        """Test """
+        """Test"""
 
         user_invite = {
-            'email': self.bc.fake.email(),
-            'is_email_validated': True,
+            "email": self.bc.fake.email(),
+            "is_email_validated": True,
         }
         model = self.bc.database.create(user_invite=user_invite)
-        url = reverse_lazy('authenticate:confirmation_token', kwargs={'token': model.user_invite.token})
+        url = reverse_lazy("authenticate:confirmation_token", kwargs={"token": model.user_invite.token})
 
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_message('email-already-validated.')
+        expected = render_message("email-already-validated.")
 
         # dump error in external files
         if content != expected:
-            with open('content.html', 'w') as f:
+            with open("content.html", "w") as f:
                 f.write(content)
 
-            with open('expected.html', 'w') as f:
+            with open("expected.html", "w") as f:
                 f.write(expected)
 
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, 400)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
-            self.bc.format.to_dict(model.user_invite),
-        ])
+        self.assertEqual(
+            self.bc.database.list_of("authenticate.UserInvite"),
+            [
+                self.bc.format.to_dict(model.user_invite),
+            ],
+        )
 
     # Given: 1 UserInvite
     # When: email and email is not validated
     # Then: Return 200
     def test_done(self):
-        """Test """
+        """Test"""
 
-        user_invite = {'email': self.bc.fake.email()}
+        user_invite = {"email": self.bc.fake.email()}
         model = self.bc.database.create(user_invite=user_invite)
-        url = reverse_lazy('authenticate:confirmation_token', kwargs={'token': model.user_invite.token})
+        url = reverse_lazy("authenticate:confirmation_token", kwargs={"token": model.user_invite.token})
 
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_message('Your email was validated, you can close this page.')
+        expected = render_message("Your email was validated, you can close this page.")
 
         # dump error in external files
         if content != expected:
-            with open('content.html', 'w') as f:
+            with open("content.html", "w") as f:
                 f.write(content)
 
-            with open('expected.html', 'w') as f:
+            with open("expected.html", "w") as f:
                 f.write(expected)
 
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, 200)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
-            {
-                **self.bc.format.to_dict(model.user_invite),
-                'is_email_validated': True,
-            },
-        ])
+        self.assertEqual(
+            self.bc.database.list_of("authenticate.UserInvite"),
+            [
+                {
+                    **self.bc.format.to_dict(model.user_invite),
+                    "is_email_validated": True,
+                },
+            ],
+        )
 
     # Given: 1 UserInvite
     # When: Email and email already validated
     # Then: Return 400
     def test_2_errors(self):
-        """Test """
+        """Test"""
 
         user_invite = {
-            'is_email_validated': True,
+            "is_email_validated": True,
         }
         model = self.bc.database.create(user_invite=user_invite)
-        url = reverse_lazy('authenticate:confirmation_token', kwargs={'token': model.user_invite.token})
+        url = reverse_lazy("authenticate:confirmation_token", kwargs={"token": model.user_invite.token})
 
         response = self.client.get(url)
 
         content = self.bc.format.from_bytes(response.content)
-        expected = render_message('without-email. email-already-validated.')
+        expected = render_message("without-email. email-already-validated.")
 
         # dump error in external files
         if content != expected:
-            with open('content.html', 'w') as f:
+            with open("content.html", "w") as f:
                 f.write(content)
 
-            with open('expected.html', 'w') as f:
+            with open("expected.html", "w") as f:
                 f.write(expected)
 
         self.assertEqual(content, expected)
         self.assertEqual(response.status_code, 400)
 
-        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
-            self.bc.format.to_dict(model.user_invite),
-        ])
+        self.assertEqual(
+            self.bc.database.list_of("authenticate.UserInvite"),
+            [
+                self.bc.format.to_dict(model.user_invite),
+            ],
+        )

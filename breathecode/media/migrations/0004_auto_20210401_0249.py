@@ -7,21 +7,20 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0015_auto_20210302_0254'),
-        ('media', '0003_media_hits'),
+        ("admissions", "0015_auto_20210302_0254"),
+        ("media", "0003_media_hits"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='media',
-            name='owner',
+            model_name="media",
+            name="owner",
         ),
         migrations.AddField(
-            model_name='media',
-            name='academy',
-            field=models.ForeignKey(blank=True,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='admissions.academy'),
+            model_name="media",
+            name="academy",
+            field=models.ForeignKey(
+                blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="admissions.academy"
+            ),
         ),
     ]

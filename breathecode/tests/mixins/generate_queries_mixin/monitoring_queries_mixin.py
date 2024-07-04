@@ -3,8 +3,8 @@ Collections of mixins used to login in authorize microservice
 """
 
 
-class MonitoringQueriesMixin():
+class MonitoringQueriesMixin:
 
     def generate_monitoring_queries(self):
         """Generate queries"""
-        return {'module': 'monitoring', 'models': ['Application', 'Endpoint', 'MonitorScript']}
+        return {"module": "monitoring", "models": ["Application", "Endpoint", "MonitorScript"]}

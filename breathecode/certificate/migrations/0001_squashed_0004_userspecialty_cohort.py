@@ -8,62 +8,69 @@ import django.utils.timezone
 
 class Migration(migrations.Migration):
 
-    replaces = [('certificate', '0001_initial'), ('certificate', '0002_auto_20200907_2333'),
-                ('certificate', '0003_userspecialty_signed_by'), ('certificate', '0004_userspecialty_cohort')]
+    replaces = [
+        ("certificate", "0001_initial"),
+        ("certificate", "0002_auto_20200907_2333"),
+        ("certificate", "0003_userspecialty_signed_by"),
+        ("certificate", "0004_userspecialty_cohort"),
+    ]
 
     initial = True
 
     dependencies = [
-        ('admissions', '0008_auto_20200708_0049'),
+        ("admissions", "0008_auto_20200708_0049"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Specialty',
+            name="Specialty",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('slug', models.SlugField(max_length=150, unique=True)),
-                ('name', models.CharField(max_length=150)),
-                ('logo_url', models.CharField(blank=True, default=None, max_length=250, null=True)),
-                ('duration_in_hours', models.IntegerField(blank=True, default=None, null=True)),
-                ('expiration_day_delta', models.IntegerField(blank=True, default=None, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("slug", models.SlugField(max_length=150, unique=True)),
+                ("name", models.CharField(max_length=150)),
+                ("logo_url", models.CharField(blank=True, default=None, max_length=250, null=True)),
+                ("duration_in_hours", models.IntegerField(blank=True, default=None, null=True)),
+                ("expiration_day_delta", models.IntegerField(blank=True, default=None, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
         ),
         migrations.CreateModel(
-            name='Badge',
+            name="Badge",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('slug', models.SlugField(max_length=150, unique=True)),
-                ('name', models.CharField(max_length=150)),
-                ('logo_url', models.CharField(blank=True, default=None, max_length=250, null=True)),
-                ('duration_in_hours', models.IntegerField()),
-                ('expiration_day_delta', models.IntegerField(blank=True, default=None, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('specialties', models.ManyToManyField(to='certificate.Specialty')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("slug", models.SlugField(max_length=150, unique=True)),
+                ("name", models.CharField(max_length=150)),
+                ("logo_url", models.CharField(blank=True, default=None, max_length=250, null=True)),
+                ("duration_in_hours", models.IntegerField()),
+                ("expiration_day_delta", models.IntegerField(blank=True, default=None, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("specialties", models.ManyToManyField(to="certificate.Specialty")),
             ],
         ),
         migrations.CreateModel(
-            name='UserSpecialty',
+            name="UserSpecialty",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('token', models.CharField(db_index=True, max_length=40, unique=True)),
-                ('expires_at', models.DateTimeField(blank=True, default=None, null=True)),
-                ('academy', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
-                ('specialty', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
-                                                to='certificate.specialty')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
-                ('created_at', models.DateTimeField(auto_now_add=True, default=django.utils.timezone.now)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('signed_by', models.CharField(default='Bob Dylan', max_length=100)),
-                ('cohort',
-                 models.ForeignKey(blank=True,
-                                   null=True,
-                                   on_delete=django.db.models.deletion.CASCADE,
-                                   to='admissions.cohort')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("token", models.CharField(db_index=True, max_length=40, unique=True)),
+                ("expires_at", models.DateTimeField(blank=True, default=None, null=True)),
+                ("academy", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="admissions.academy")),
+                (
+                    "specialty",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="certificate.specialty"),
+                ),
+                ("user", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                ("created_at", models.DateTimeField(auto_now_add=True, default=django.utils.timezone.now)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("signed_by", models.CharField(default="Bob Dylan", max_length=100)),
+                (
+                    "cohort",
+                    models.ForeignKey(
+                        blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="admissions.cohort"
+                    ),
+                ),
             ],
         ),
     ]

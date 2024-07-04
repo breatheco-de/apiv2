@@ -1,4 +1,4 @@
-__all__ = ['Object']
+__all__ = ["Object"]
 
 
 class Object(object):

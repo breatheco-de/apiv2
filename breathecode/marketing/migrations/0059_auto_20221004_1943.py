@@ -6,26 +6,28 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0047_merge_20220924_0611'),
-        ('marketing', '0058_alter_formentry_storage_status'),
+        ("admissions", "0047_merge_20220924_0611"),
+        ("marketing", "0058_alter_formentry_storage_status"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='AcademyProxy',
+            name="AcademyProxy",
             fields=[],
             options={
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
+                "proxy": True,
+                "indexes": [],
+                "constraints": [],
             },
-            bases=('admissions.academy', ),
+            bases=("admissions.academy",),
         ),
         migrations.AlterField(
-            model_name='leadgenerationapp',
-            name='app_id',
-            field=models.CharField(help_text='Unique token generated only for this app, can be reset to revoke access',
-                                   max_length=255,
-                                   unique=True),
+            model_name="leadgenerationapp",
+            name="app_id",
+            field=models.CharField(
+                help_text="Unique token generated only for this app, can be reset to revoke access",
+                max_length=255,
+                unique=True,
+            ),
         ),
     ]

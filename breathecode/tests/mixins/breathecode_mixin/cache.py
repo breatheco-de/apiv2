@@ -5,7 +5,7 @@ from . import interfaces
 
 from ..cache_mixin import CacheMixin
 
-__all__ = ['Cache']
+__all__ = ["Cache"]
 
 
 class Cache:

@@ -6,19 +6,19 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('assessment', '0009_assessmentthreshold_title'),
+        ("assessment", "0009_assessmentthreshold_title"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='assessmentthreshold',
-            name='tags',
+            model_name="assessmentthreshold",
+            name="tags",
             field=models.CharField(
                 blank=True,
                 default=None,
-                help_text=
-                'Ideal to group thresholds under a taxonomy, that way you can have several groups of thresholds for the same quiz',
+                help_text="Ideal to group thresholds under a taxonomy, that way you can have several groups of thresholds for the same quiz",
                 max_length=255,
-                null=True),
+                null=True,
+            ),
         ),
     ]

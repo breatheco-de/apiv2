@@ -9,6 +9,6 @@ logger = logging.getLogger(__name__)
 
 @receiver(github_webhook, sender=RepositoryWebhook)
 def post_webhook_received(sender, instance, **kwargs):
-    if instance.scope in ['issues', 'issue_comment']:
-        logger.debug('Received github webhook signal for issues')
+    if instance.scope in ["issues", "issue_comment"]:
+        logger.debug("Received github webhook signal for issues")
         async_repository_issue_github.delay(instance.id)

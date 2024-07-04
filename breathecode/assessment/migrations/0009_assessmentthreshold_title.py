@@ -6,17 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('assessment', '0008_alter_answer_option_alter_userassessment_status'),
+        ("assessment", "0008_alter_answer_option_alter_userassessment_status"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='assessmentthreshold',
-            name='title',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   help_text='Title is good for internal use',
-                                   max_length=255,
-                                   null=True),
+            model_name="assessmentthreshold",
+            name="title",
+            field=models.CharField(
+                blank=True, default=None, help_text="Title is good for internal use", max_length=255, null=True
+            ),
         ),
     ]

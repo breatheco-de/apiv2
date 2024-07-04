@@ -6,17 +6,16 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authenticate', '0036_githubacademyuserlog'),
-        ('payments', '0025_auto_20230317_0702'),
+        ("authenticate", "0036_githubacademyuserlog"),
+        ("payments", "0025_auto_20230317_0702"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='plan',
-            name='invites',
-            field=models.ManyToManyField(blank=True,
-                                         help_text="Plan's invites",
-                                         related_name='plans',
-                                         to='authenticate.UserInvite'),
+            model_name="plan",
+            name="invites",
+            field=models.ManyToManyField(
+                blank=True, help_text="Plan's invites", related_name="plans", to="authenticate.UserInvite"
+            ),
         ),
     ]

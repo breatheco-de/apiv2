@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authenticate', '0046_auto_20231024_1958'),
+        ("authenticate", "0046_auto_20231024_1958"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='userinvite',
-            name='email_quality',
+            model_name="userinvite",
+            name="email_quality",
             field=models.FloatField(blank=True, default=None, null=True),
         ),
         migrations.AddField(
-            model_name='userinvite',
-            name='email_status',
+            model_name="userinvite",
+            name="email_status",
             field=models.JSONField(blank=True, default=None, null=True),
         ),
     ]

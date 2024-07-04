@@ -7,32 +7,40 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0056_auto_20220503_1543'),
+        ("marketing", "0056_auto_20220503_1543"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='activecampaignacademy',
-            name='duplicate_leads_delta_avoidance',
+            model_name="activecampaignacademy",
+            name="duplicate_leads_delta_avoidance",
             field=models.DurationField(
                 default=datetime.timedelta(seconds=1800),
-                help_text='Leads that apply to the same course on this timedelta will not be sent to AC'),
+                help_text="Leads that apply to the same course on this timedelta will not be sent to AC",
+            ),
         ),
         migrations.AddField(
-            model_name='formentry',
-            name='storage_status_text',
+            model_name="formentry",
+            name="storage_status_text",
             field=models.CharField(
                 blank=True,
-                default='',
-                help_text='Will show exception message or any other cloud on the error that occurred (if any)',
-                max_length=250),
+                default="",
+                help_text="Will show exception message or any other cloud on the error that occurred (if any)",
+                max_length=250,
+            ),
         ),
         migrations.AlterField(
-            model_name='formentry',
-            name='storage_status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('PERSISTED', 'Persisted'),
-                                            ('DUPLICATED', 'Duplicated'), ('ERROR', 'ERROR')],
-                                   default='PENDING',
-                                   max_length=15),
+            model_name="formentry",
+            name="storage_status",
+            field=models.CharField(
+                choices=[
+                    ("PENDING", "Pending"),
+                    ("PERSISTED", "Persisted"),
+                    ("DUPLICATED", "Duplicated"),
+                    ("ERROR", "ERROR"),
+                ],
+                default="PENDING",
+                max_length=15,
+            ),
         ),
     ]

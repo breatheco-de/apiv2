@@ -7,18 +7,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('payments', '0011_auto_20230106_0029'),
+        ("payments", "0011_auto_20230106_0029"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='consumptionsession',
-            name='duration',
+            model_name="consumptionsession",
+            name="duration",
             field=models.DurationField(default=datetime.timedelta),
         ),
         migrations.AlterField(
-            model_name='consumptionsession',
-            name='request',
+            model_name="consumptionsession",
+            name="request",
             field=models.JSONField(blank=True, default=dict),
         ),
     ]

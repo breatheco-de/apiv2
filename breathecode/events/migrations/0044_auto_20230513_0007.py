@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0043_auto_20230509_0801'),
+        ("events", "0043_auto_20230509_0801"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='event',
-            name='free_for_bootcamps',
+            model_name="event",
+            name="free_for_bootcamps",
             field=models.BooleanField(blank=True, default=None, null=True),
         ),
         migrations.AddField(
-            model_name='eventtype',
-            name='free_for_bootcamps',
+            model_name="eventtype",
+            name="free_for_bootcamps",
             field=models.BooleanField(default=True),
         ),
     ]

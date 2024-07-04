@@ -6,18 +6,24 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0006_auto_20200703_1951'),
+        ("admissions", "0006_auto_20200703_1951"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='cohortuser',
-            name='educational_status',
-            field=models.CharField(choices=[('ACTIVE', 'Active'), ('POSTPONED', 'Postponed'),
-                                            ('GRADUATED', 'Graduated'), ('SUSPENDED', 'Suspended'),
-                                            ('DROPPED', 'Dropped')],
-                                   default=None,
-                                   max_length=15,
-                                   null=True),
+            model_name="cohortuser",
+            name="educational_status",
+            field=models.CharField(
+                choices=[
+                    ("ACTIVE", "Active"),
+                    ("POSTPONED", "Postponed"),
+                    ("GRADUATED", "Graduated"),
+                    ("SUSPENDED", "Suspended"),
+                    ("DROPPED", "Dropped"),
+                ],
+                default=None,
+                max_length=15,
+                null=True,
+            ),
         ),
     ]

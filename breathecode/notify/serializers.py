@@ -24,21 +24,21 @@ class HookSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Hook
-        read_only_fields = ('user', )
-        exclude = ['sample_data']
+        read_only_fields = ("user",)
+        exclude = ["sample_data"]
 
     def validate(self, data):
 
-        if data['event'] not in settings.HOOK_EVENTS:
-            err_msg = 'Unexpected event {}'.format(data['event'])
-            raise ValidationException(err_msg, slug='invalid-event')
+        if data["event"] not in settings.HOOK_EVENTS:
+            err_msg = "Unexpected event {}".format(data["event"])
+            raise ValidationException(err_msg, slug="invalid-event")
 
         # superadmins can subscribe to any hook without needed an academy token
-        if not self.context['request'].user.is_superuser:
-            academy = Academy.objects.filter(slug=self.context['request'].user.username).first()
+        if not self.context["request"].user.is_superuser:
+            academy = Academy.objects.filter(slug=self.context["request"].user.username).first()
             if academy is None:
-                raise ValidationException('No valid academy token found', slug='invalid-academy-token')
+                raise ValidationException("No valid academy token found", slug="invalid-academy-token")
 
-        data['user'] = self.context['request'].user
+        data["user"] = self.context["request"].user
 
         return super().validate(data)

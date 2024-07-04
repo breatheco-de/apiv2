@@ -8,58 +8,62 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0048_academy_main_currency'),
-        ('payments', '0006_auto_20221223_2218'),
+        ("admissions", "0048_academy_main_currency"),
+        ("payments", "0006_auto_20221223_2218"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='PlanOffer',
+            name="PlanOffer",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('from_syllabus', models.ManyToManyField(to='admissions.Syllabus')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("from_syllabus", models.ManyToManyField(to="admissions.Syllabus")),
             ],
         ),
         migrations.AddField(
-            model_name='bag',
-            name='how_many_installments',
+            model_name="bag",
+            name="how_many_installments",
             field=models.IntegerField(default=0),
         ),
         migrations.AddField(
-            model_name='plan',
-            name='is_renewable',
+            model_name="plan",
+            name="is_renewable",
             field=models.BooleanField(
                 default=True,
-                help_text='Is if true, it will create a reneweval subscription instead of a plan financing'),
+                help_text="Is if true, it will create a reneweval subscription instead of a plan financing",
+            ),
         ),
         migrations.AlterField(
-            model_name='plan',
-            name='financing_options',
-            field=models.ManyToManyField(blank=True,
-                                         help_text='If the plan is renew, it would be ignore',
-                                         to='payments.FinancingOption'),
+            model_name="plan",
+            name="financing_options",
+            field=models.ManyToManyField(
+                blank=True, help_text="If the plan is renew, it would be ignore", to="payments.FinancingOption"
+            ),
         ),
         migrations.CreateModel(
-            name='PlanOfferTranslation',
+            name="PlanOfferTranslation",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('lang',
-                 models.CharField(max_length=5,
-                                  validators=[breathecode.utils.validators.language.validate_language_code])),
-                ('title', models.CharField(max_length=60)),
-                ('description', models.CharField(max_length=255)),
-                ('short_description', models.CharField(max_length=255)),
-                ('offer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='payments.planoffer')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "lang",
+                    models.CharField(
+                        max_length=5, validators=[breathecode.utils.validators.language.validate_language_code]
+                    ),
+                ),
+                ("title", models.CharField(max_length=60)),
+                ("description", models.CharField(max_length=255)),
+                ("short_description", models.CharField(max_length=255)),
+                ("offer", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="payments.planoffer")),
             ],
         ),
         migrations.AddField(
-            model_name='planoffer',
-            name='original_plan',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='payments.plan'),
+            model_name="planoffer",
+            name="original_plan",
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="payments.plan"),
         ),
         migrations.AddField(
-            model_name='planoffer',
-            name='suggested_plans',
-            field=models.ManyToManyField(related_name='_payments_planoffer_suggested_plans_+', to='payments.Plan'),
+            model_name="planoffer",
+            name="suggested_plans",
+            field=models.ManyToManyField(related_name="_payments_planoffer_suggested_plans_+", to="payments.Plan"),
         ),
     ]

@@ -30,4 +30,4 @@ def shared_task(func=None, *args, **kwargs):
     if func:
         return decorator(func, with_self=False)
 
-    return inner  #this is the fun_obj mentioned in the above content
+    return inner  # this is the fun_obj mentioned in the above content

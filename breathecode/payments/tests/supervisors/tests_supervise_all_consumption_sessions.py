@@ -21,10 +21,13 @@ class Supervisor:
 
     def list(self):
         supervisors = SupervisorModel.objects.all()
-        return [{
-            'task_module': supervisor.task_module,
-            'task_name': supervisor.task_name,
-        } for supervisor in supervisors]
+        return [
+            {
+                "task_module": supervisor.task_module,
+                "task_name": supervisor.task_name,
+            }
+            for supervisor in supervisors
+        ]
 
     @sync_to_async
     def alist(self):
@@ -55,29 +58,31 @@ def supervisor(db, bc: Breathecode):
 def setup(db, monkeypatch: pytest.MonkeyPatch):
     from breathecode.monitoring.models import Supervisor
 
-    monkeypatch.setattr('logging.Logger.error', MagicMock())
-    monkeypatch.setattr('breathecode.payments.supervisors.MIN_PENDING_SESSIONS', 2)
-    monkeypatch.setattr('breathecode.payments.supervisors.MIN_CANCELLED_SESSIONS', 2)
+    monkeypatch.setattr("logging.Logger.error", MagicMock())
+    monkeypatch.setattr("breathecode.payments.supervisors.MIN_PENDING_SESSIONS", 2)
+    monkeypatch.setattr("breathecode.payments.supervisors.MIN_CANCELLED_SESSIONS", 2)
 
-    fn_module = 'breathecode.payments.supervisors'
-    fn_name = 'supervise_all_consumption_sessions'
-    Supervisor.objects.get_or_create(task_module=fn_module,
-                                     task_name=fn_name,
-                                     defaults={
-                                         'delta': timedelta(seconds=3600),
-                                         'ran_at': None,
-                                     })
+    fn_module = "breathecode.payments.supervisors"
+    fn_name = "supervise_all_consumption_sessions"
+    Supervisor.objects.get_or_create(
+        task_module=fn_module,
+        task_name=fn_name,
+        defaults={
+            "delta": timedelta(seconds=3600),
+            "ran_at": None,
+        },
+    )
 
     yield
 
 
 def db(data={}):
     return {
-        'delta': timedelta(seconds=3600),
-        'id': 0,
-        'ran_at': None,
-        'task_module': '',
-        'task_name': '',
+        "delta": timedelta(seconds=3600),
+        "id": 0,
+        "ran_at": None,
+        "task_module": "",
+        "task_name": "",
         **data,
     }
 
@@ -87,78 +92,73 @@ def tests_no_sessions(supervisor: Supervisor):
 
     assert supervisor.list() == [
         {
-            'task_module': 'breathecode.payments.supervisors',
-            'task_name': 'supervise_all_consumption_sessions',
+            "task_module": "breathecode.payments.supervisors",
+            "task_name": "supervise_all_consumption_sessions",
         },
     ]
-    assert supervisor.log('breathecode.payments.supervisors', 'supervise_all_consumption_sessions') == []
+    assert supervisor.log("breathecode.payments.supervisors", "supervise_all_consumption_sessions") == []
 
 
-def tests_so_much_pending_sessions(database: dfx.Database, supervisor: Supervisor, utc_now: datetime,
-                                   random: cfx.Random):
+def tests_so_much_pending_sessions(
+    database: dfx.Database, supervisor: Supervisor, utc_now: datetime, random: cfx.Random
+):
     eta = utc_now - timedelta(seconds=(3600 * random.int(1, 24)) - 1)
-    x = {'eta': eta}
-    consumption_sessions = [{'status': 'PENDING', **x} for _ in range(3)] + [{'status': 'DONE', **x} for _ in range(7)]
+    x = {"eta": eta}
+    consumption_sessions = [{"status": "PENDING", **x} for _ in range(3)] + [{"status": "DONE", **x} for _ in range(7)]
     database.create(consumption_session=consumption_sessions)
 
     supervise_all_consumption_sessions()
 
     assert supervisor.list() == [
         {
-            'task_module': 'breathecode.payments.supervisors',
-            'task_name': 'supervise_all_consumption_sessions',
+            "task_module": "breathecode.payments.supervisors",
+            "task_name": "supervise_all_consumption_sessions",
         },
     ]
-    assert supervisor.log('breathecode.payments.supervisors', 'supervise_all_consumption_sessions') == [
-        'There has so much pending consumption sessions, 3 pending and rate 42.86%',
+    assert supervisor.log("breathecode.payments.supervisors", "supervise_all_consumption_sessions") == [
+        "There has so much pending consumption sessions, 3 pending and rate 42.86%",
     ]
 
 
-def tests_so_much_cancelled_sessions__no_unsafe_sessions(database: dfx.Database, supervisor: Supervisor,
-                                                         utc_now: datetime, random: cfx.Random):
+def tests_so_much_cancelled_sessions__no_unsafe_sessions(
+    database: dfx.Database, supervisor: Supervisor, utc_now: datetime, random: cfx.Random
+):
     eta = utc_now - timedelta(seconds=(3600 * random.int(1, 24)) - 1)
-    x = {'eta': eta}
-    consumption_sessions = [{
-        'status': 'CANCELLED',
-        **x
-    } for _ in range(2)] + [{
-        'status': 'DONE',
-        **x
-    } for _ in range(8)]
+    x = {"eta": eta}
+    consumption_sessions = [{"status": "CANCELLED", **x} for _ in range(2)] + [
+        {"status": "DONE", **x} for _ in range(8)
+    ]
     database.create(consumption_session=consumption_sessions)
 
     supervise_all_consumption_sessions()
 
     assert supervisor.list() == [
         {
-            'task_module': 'breathecode.payments.supervisors',
-            'task_name': 'supervise_all_consumption_sessions',
+            "task_module": "breathecode.payments.supervisors",
+            "task_name": "supervise_all_consumption_sessions",
         },
     ]
-    assert supervisor.log('breathecode.payments.supervisors', 'supervise_all_consumption_sessions') == []
+    assert supervisor.log("breathecode.payments.supervisors", "supervise_all_consumption_sessions") == []
 
 
-def tests_so_much_cancelled_sessions__unsafe_sessions(database: dfx.Database, supervisor: Supervisor, utc_now: datetime,
-                                                      random: cfx.Random):
+def tests_so_much_cancelled_sessions__unsafe_sessions(
+    database: dfx.Database, supervisor: Supervisor, utc_now: datetime, random: cfx.Random
+):
     eta = utc_now - timedelta(seconds=(3600 * random.int(1, 24)) - 1)
-    x = {'eta': eta, 'operation_code': 'unsafe-consume-service-set', 'user_id': 1}
-    consumption_sessions = [{
-        'status': 'CANCELLED',
-        **x
-    } for _ in range(4)] + [{
-        'status': 'DONE',
-        **x
-    } for _ in range(6)]
-    model = database.create(consumption_session=consumption_sessions, user=1, service={'type': 'VOID'})
+    x = {"eta": eta, "operation_code": "unsafe-consume-service-set", "user_id": 1}
+    consumption_sessions = [{"status": "CANCELLED", **x} for _ in range(4)] + [
+        {"status": "DONE", **x} for _ in range(6)
+    ]
+    model = database.create(consumption_session=consumption_sessions, user=1, service={"type": "VOID"})
 
     supervise_all_consumption_sessions()
 
     assert supervisor.list() == [
         {
-            'task_module': 'breathecode.payments.supervisors',
-            'task_name': 'supervise_all_consumption_sessions',
+            "task_module": "breathecode.payments.supervisors",
+            "task_name": "supervise_all_consumption_sessions",
         },
     ]
-    assert supervisor.log('breathecode.payments.supervisors', 'supervise_all_consumption_sessions') == [
-        f'There has 66.67% cancelled consumption sessions, due to a bug or a cheater, user {model.user.email}',
+    assert supervisor.log("breathecode.payments.supervisors", "supervise_all_consumption_sessions") == [
+        f"There has 66.67% cancelled consumption sessions, due to a bug or a cheater, user {model.user.email}",
     ]

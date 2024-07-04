@@ -21,10 +21,13 @@ class Supervisor:
 
     def list(self):
         supervisors = SupervisorModel.objects.all()
-        return [{
-            'task_module': supervisor.task_module,
-            'task_name': supervisor.task_name,
-        } for supervisor in supervisors]
+        return [
+            {
+                "task_module": supervisor.task_module,
+                "task_name": supervisor.task_name,
+            }
+            for supervisor in supervisors
+        ]
 
     @sync_to_async
     def alist(self):
@@ -60,17 +63,17 @@ def supervisor(db, bc: Breathecode):
 
 @pytest.fixture(autouse=True)
 def setup(db, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr('breathecode.feedback.tasks.send_mentorship_session_survey.delay', MagicMock())
+    monkeypatch.setattr("breathecode.feedback.tasks.send_mentorship_session_survey.delay", MagicMock())
     yield
 
 
 def db(data={}):
     return {
-        'delta': timedelta(seconds=3600),
-        'id': 0,
-        'ran_at': None,
-        'task_module': '',
-        'task_name': '',
+        "delta": timedelta(seconds=3600),
+        "id": 0,
+        "ran_at": None,
+        "task_module": "",
+        "task_name": "",
         **data,
     }
 
@@ -79,52 +82,56 @@ def tests_issue_not_found(database: capy.Database):
     res = no_survey_for_session(1)
 
     assert res is None
-    assert database.list_of('mentorship.MentorshipSession') == []
+    assert database.list_of("mentorship.MentorshipSession") == []
     assert send_mentorship_session_survey.delay.call_args_list == []
 
 
 def tests_mentorship_session_not_found(database: capy.Database, format: capy.Format):
-    fn_module = 'breathecode.feedback.supervisors'
-    fn_name = 'supervise_mentorship_survey'
-    database.create(supervisor={
-        'task_module': fn_module,
-        'task_name': fn_name,
-    },
-                    supervisor_issue={
-                        'code': 'no-survey-for-session',
-                        'fixed': None,
-                        'params': {
-                            'session_id': 1,
-                        },
-                    })
+    fn_module = "breathecode.feedback.supervisors"
+    fn_name = "supervise_mentorship_survey"
+    database.create(
+        supervisor={
+            "task_module": fn_module,
+            "task_name": fn_name,
+        },
+        supervisor_issue={
+            "code": "no-survey-for-session",
+            "fixed": None,
+            "params": {
+                "session_id": 1,
+            },
+        },
+    )
 
     res = no_survey_for_session(1)
 
     assert res is None
-    assert database.list_of('mentorship.MentorshipSession') == []
+    assert database.list_of("mentorship.MentorshipSession") == []
     assert send_mentorship_session_survey.delay.call_args_list == []
 
 
 def tests_no_answer(database: capy.Database, format: capy.Format):
-    fn_module = 'breathecode.feedback.supervisors'
-    fn_name = 'supervise_mentorship_survey'
-    model = database.create(mentorship_session=1,
-                            supervisor={
-                                'task_module': fn_module,
-                                'task_name': fn_name,
-                            },
-                            supervisor_issue={
-                                'code': 'no-survey-for-session',
-                                'fixed': None,
-                                'params': {
-                                    'session_id': 1,
-                                },
-                            })
+    fn_module = "breathecode.feedback.supervisors"
+    fn_name = "supervise_mentorship_survey"
+    model = database.create(
+        mentorship_session=1,
+        supervisor={
+            "task_module": fn_module,
+            "task_name": fn_name,
+        },
+        supervisor_issue={
+            "code": "no-survey-for-session",
+            "fixed": None,
+            "params": {
+                "session_id": 1,
+            },
+        },
+    )
 
     res = no_survey_for_session(1)
 
     assert res is None
-    assert database.list_of('mentorship.MentorshipSession') == [
+    assert database.list_of("mentorship.MentorshipSession") == [
         format.to_obj_repr(model.mentorship_session),
     ]
 
@@ -132,28 +139,30 @@ def tests_no_answer(database: capy.Database, format: capy.Format):
 
 
 def tests_answer(database: capy.Database, format: capy.Format):
-    fn_module = 'breathecode.feedback.supervisors'
-    fn_name = 'supervise_mentorship_survey'
-    model = database.create(mentorship_session=1,
-                            supervisor={
-                                'task_module': fn_module,
-                                'task_name': fn_name,
-                            },
-                            supervisor_issue={
-                                'code': 'no-survey-for-session',
-                                'fixed': None,
-                                'params': {
-                                    'session_id': 1,
-                                },
-                            },
-                            feedback__answer=1,
-                            city=1,
-                            country=1)
+    fn_module = "breathecode.feedback.supervisors"
+    fn_name = "supervise_mentorship_survey"
+    model = database.create(
+        mentorship_session=1,
+        supervisor={
+            "task_module": fn_module,
+            "task_name": fn_name,
+        },
+        supervisor_issue={
+            "code": "no-survey-for-session",
+            "fixed": None,
+            "params": {
+                "session_id": 1,
+            },
+        },
+        feedback__answer=1,
+        city=1,
+        country=1,
+    )
 
     res = no_survey_for_session(1)
 
     assert res is True
-    assert database.list_of('mentorship.MentorshipSession') == [
+    assert database.list_of("mentorship.MentorshipSession") == [
         format.to_obj_repr(model.mentorship_session),
     ]
 

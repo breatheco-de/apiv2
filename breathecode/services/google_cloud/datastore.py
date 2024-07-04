@@ -6,11 +6,12 @@ from .credentials import resolve_credentials
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['Datastore']
+__all__ = ["Datastore"]
 
 
 class Datastore:
     """Google Cloud Storage"""
+
     client = None
 
     def __init__(self):
@@ -26,22 +27,22 @@ class Datastore:
         Returns:
             Fetch: Fetch object
         """
-        kind = kwargs.pop('kind')
+        kind = kwargs.pop("kind")
         query = self.client.query(kind=kind)
 
         limit = 100
         offset = 0
 
-        if 'offset' in kwargs:
-            offset = kwargs['offset']
-            kwargs.pop('offset')
+        if "offset" in kwargs:
+            offset = kwargs["offset"]
+            kwargs.pop("offset")
 
-        if 'limit' in kwargs:
-            limit = kwargs['limit']
-            kwargs.pop('limit')
+        if "limit" in kwargs:
+            limit = kwargs["limit"]
+            kwargs.pop("limit")
 
         for key in kwargs:
-            query.add_filter(key, '=', kwargs[key])
+            query.add_filter(key, "=", kwargs[key])
 
         if order_by:
             query.order = order_by
@@ -67,11 +68,11 @@ class Datastore:
 
         """
 
-        kind = kwargs.pop('kind')
+        kind = kwargs.pop("kind")
         query = self.client.query(kind=kind)
 
         for key in kwargs:
-            query.add_filter(key, '=', kwargs[key])
+            query.add_filter(key, "=", kwargs[key])
 
         query.keys_only()
 

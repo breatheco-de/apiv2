@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authenticate', '0042_auto_20230805_0323'),
+        ("authenticate", "0042_auto_20230805_0323"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='appoptionalscope',
-            name='agreed_at',
+            model_name="appoptionalscope",
+            name="agreed_at",
             field=models.DateTimeField(auto_now_add=True),
         ),
         migrations.AlterField(
-            model_name='apprequiredscope',
-            name='agreed_at',
+            model_name="apprequiredscope",
+            name="agreed_at",
             field=models.DateTimeField(auto_now_add=True),
         ),
     ]

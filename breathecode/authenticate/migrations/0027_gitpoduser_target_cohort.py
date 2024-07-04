@@ -7,18 +7,20 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0040_auto_20220510_2208'),
-        ('authenticate', '0026_gitpoduser'),
+        ("admissions", "0040_auto_20220510_2208"),
+        ("authenticate", "0026_gitpoduser"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='gitpoduser',
-            name='target_cohort',
-            field=models.ForeignKey(blank=True,
-                                    default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.SET_NULL,
-                                    to='admissions.cohort'),
+            model_name="gitpoduser",
+            name="target_cohort",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="admissions.cohort",
+            ),
         ),
     ]

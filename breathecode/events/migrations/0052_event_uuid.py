@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0051_alter_event_free_for_bootcamps'),
+        ("events", "0051_alter_event_free_for_bootcamps"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='event',
-            name='uuid',
+            model_name="event",
+            name="uuid",
             field=models.UUIDField(blank=True, default=None, editable=False, null=True),
         ),
     ]

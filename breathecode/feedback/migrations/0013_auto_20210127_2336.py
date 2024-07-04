@@ -8,45 +8,61 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0014_auto_20201218_0534'),
-        ('feedback', '0012_answer_token'),
+        ("admissions", "0014_auto_20201218_0534"),
+        ("feedback", "0012_answer_token"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Survey',
+            name="Survey",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('lang', models.CharField(blank=True, default='en', max_length=3)),
-                ('avg_score',
-                 models.CharField(blank=True,
-                                  default=None,
-                                  help_text='The avg from all the answers taken under this survey',
-                                  max_length=250,
-                                  null=True)),
-                ('status',
-                 models.CharField(choices=[('PENDING', 'Pending'), ('SENT', 'Sent'), ('OPENED', 'Opened'),
-                                           ('EXPIRED', 'Expired')],
-                                  default='PENDING',
-                                  max_length=15)),
-                ('duration',
-                 models.DurationField(default=datetime.timedelta(days=1),
-                                      help_text='No one will be able to answer after this period of time')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('cohort', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.cohort')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("lang", models.CharField(blank=True, default="en", max_length=3)),
+                (
+                    "avg_score",
+                    models.CharField(
+                        blank=True,
+                        default=None,
+                        help_text="The avg from all the answers taken under this survey",
+                        max_length=250,
+                        null=True,
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("PENDING", "Pending"),
+                            ("SENT", "Sent"),
+                            ("OPENED", "Opened"),
+                            ("EXPIRED", "Expired"),
+                        ],
+                        default="PENDING",
+                        max_length=15,
+                    ),
+                ),
+                (
+                    "duration",
+                    models.DurationField(
+                        default=datetime.timedelta(days=1),
+                        help_text="No one will be able to answer after this period of time",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("cohort", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="admissions.cohort")),
             ],
         ),
         migrations.AddField(
-            model_name='answer',
-            name='survey',
+            model_name="answer",
+            name="survey",
             field=models.ForeignKey(
                 blank=True,
                 default=None,
-                help_text=
-                'You can group one or more answers in one survey, the survey does not belong to any student in particular but answers belong to the student that answered',
+                help_text="You can group one or more answers in one survey, the survey does not belong to any student in particular but answers belong to the student that answered",
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
-                to='feedback.survey'),
+                to="feedback.survey",
+            ),
         ),
     ]

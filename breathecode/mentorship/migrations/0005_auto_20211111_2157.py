@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('mentorship', '0004_alter_mentorshipsession_status'),
+        ("mentorship", "0004_alter_mentorshipsession_status"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='mentorprofile',
-            name='bio',
+            model_name="mentorprofile",
+            name="bio",
             field=models.TextField(blank=True, default=None, max_length=500, null=True),
         ),
         migrations.AddField(
-            model_name='mentorshipservice',
-            name='description',
+            model_name="mentorshipservice",
+            name="description",
             field=models.TextField(blank=True, default=None, max_length=500, null=True),
         ),
     ]

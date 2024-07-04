@@ -18,11 +18,11 @@ from breathecode.utils.sqlalchemy import BigQueryBase
 client = None
 engine = None
 
-__all__ = ['BigQuery']
+__all__ = ["BigQuery"]
 
 
 def is_test_env():
-    return os.getenv('ENV') == 'test'
+    return os.getenv("ENV") == "test"
 
 
 class BigQueryModel:
@@ -63,7 +63,7 @@ class BigQueryModel:
             raise Exception(errors)
 
 
-class BigQuerySet():
+class BigQuerySet:
     query: dict[str, Any]
     agg: list[Any]
     fields: Optional[list[str]]
@@ -90,7 +90,7 @@ class BigQuerySet():
         if self._table_ref:
             return self._table_ref
 
-        table_ref = f'{self.dataset}.{self.table}'
+        table_ref = f"{self.dataset}.{self.table}"
 
         # Fetch the schema of the table
         table = self.client.get_table(table_ref)
@@ -122,20 +122,20 @@ class BigQuerySet():
         table = self._get_table()
         table.schema = schema
 
-        self.client.update_table(table, ['schema'])
+        self.client.update_table(table, ["schema"])
 
     def set_query(self, *args: Any, **kwargs: Any) -> None:
         self.query.update(kwargs)
 
-    def limit_by(self, name: int) -> 'BigQuerySet':
+    def limit_by(self, name: int) -> "BigQuerySet":
         self.limit = name
         return self
 
-    def order_by(self, *name: str) -> 'BigQuerySet':
+    def order_by(self, *name: str) -> "BigQuerySet":
         self.order = name
         return self
 
-    def group_by(self, *name: str) -> 'BigQuerySet':
+    def group_by(self, *name: str) -> "BigQuerySet":
         self.group = name
         return self
 
@@ -156,41 +156,41 @@ class BigQuerySet():
         query_job = self.client.query(sql, *params, **kwparams)
         return query_job.result()
 
-    def filter(self, *args: Any, **kwargs: Any) -> 'BigQuerySet':
+    def filter(self, *args: Any, **kwargs: Any) -> "BigQuerySet":
         self.set_query(*args, **kwargs)
         return self
 
     def attribute_parser(self, key: str) -> tuple[str, str, str]:
-        operand = '='
-        key = key.replace('__', '.')
-        if key[-4:] == '.gte':
+        operand = "="
+        key = key.replace("__", ".")
+        if key[-4:] == ".gte":
             key = key[:-4]
-            operand = '>='
-        elif key[-3:] == '.gt':
+            operand = ">="
+        elif key[-3:] == ".gt":
             key = key[:-3]
-            operand = '>'
-        elif key[-3:] == '.lt':
+            operand = ">"
+        elif key[-3:] == ".lt":
             key = key[:-3]
-            operand = '<'
-        if key[-4:] == '.lte':
+            operand = "<"
+        if key[-4:] == ".lte":
             key = key[:-4]
-            operand = '<='
-        if key[-5:] == '.like':
+            operand = "<="
+        if key[-5:] == ".like":
             key = key[:-5]
-            operand = 'LIKE'
-        return key, operand, 'x__' + key.replace('.', '__')
+            operand = "LIKE"
+        return key, operand, "x__" + key.replace(".", "__")
 
     def get_type(self, elem: Any) -> None:
         if isinstance(elem, int):
-            return 'INT64'
+            return "INT64"
         if isinstance(elem, float):
-            return 'FLOAT64'
+            return "FLOAT64"
         if isinstance(elem, bool):
-            return 'BOOL'
+            return "BOOL"
         if isinstance(elem, str):
-            return 'STRING'
+            return "STRING"
         if isinstance(elem, datetime):
-            return 'DATETIME'
+            return "DATETIME"
 
     def get_params(self) -> tuple[list[Any], dict[str, Any]]:
         if not self.query:
@@ -204,11 +204,11 @@ class BigQuerySet():
             query_params.append(bigquery.ScalarQueryParameter(var_name, self.get_type(val), val))
 
         job_config = bigquery.QueryJobConfig(query_parameters=query_params)
-        kwparams['job_config'] = job_config
+        kwparams["job_config"] = job_config
 
         return params, kwparams
 
-    def select(self, *names: str) -> 'BigQuerySet':
+    def select(self, *names: str) -> "BigQuerySet":
         self.fields = names
         return self
 
@@ -216,15 +216,15 @@ class BigQuerySet():
         operation = None
         attribute = None
         if isinstance(agg, Sum):
-            operation = 'SUM'
+            operation = "SUM"
             attribute = agg._constructor_args[0][0]
 
         if isinstance(agg, Count):
-            operation = 'COUNT'
+            operation = "COUNT"
             attribute = agg._constructor_args[0][0]
 
         if isinstance(agg, Avg):
-            operation = 'AVG'
+            operation = "AVG"
             attribute = agg._constructor_args[0][0]
 
         return operation, attribute
@@ -248,54 +248,54 @@ class BigQuerySet():
             query = f"""SELECT * FROM `{self.project_id}.{self.dataset}.{self.table}` """
 
         if self.query:
-            query += 'WHERE '
+            query += "WHERE "
             for key, _ in self.query.items():
                 key, operand, var_name = self.attribute_parser(key)
-                query += f'{key} {operand} @{var_name} AND '
+                query += f"{key} {operand} @{var_name} AND "
             query = query[:-5]
 
         if self.group:
-            group_by = ', '.join(self.group)
-            query += f' GROUP BY {group_by}'
+            group_by = ", ".join(self.group)
+            query += f" GROUP BY {group_by}"
 
         if self.order:
-            order_by = ', '.join(self.order)
-            query += f' ORDER BY {order_by} DESC'
+            order_by = ", ".join(self.order)
+            query += f" ORDER BY {order_by} DESC"
 
         if self.limit:
-            query += f' LIMIT {self.limit}'
+            query += f" LIMIT {self.limit}"
 
         return query
 
     def json_query(self, query: dict[str, Any]):
-        if 'filter' in query:
-            self.filter(**query['filter'])
+        if "filter" in query:
+            self.filter(**query["filter"])
 
-        if 'fields' in query:
-            self.select(*query['fields'])
+        if "fields" in query:
+            self.select(*query["fields"])
 
-        if 'by' in query:
-            self.group_by(*query['by'])
+        if "by" in query:
+            self.group_by(*query["by"])
 
-        if 'order' in query:
-            self.order_by(*query['order'])
+        if "order" in query:
+            self.order_by(*query["order"])
 
-        if 'limit' in query:
-            self.limit_by(query['limit'])
+        if "limit" in query:
+            self.limit_by(query["limit"])
 
-        if 'grouping_function' in query:
-            grouping_function = query['grouping_function']
+        if "grouping_function" in query:
+            grouping_function = query["grouping_function"]
             aggs = []
-            if 'sum' in grouping_function:
-                for value in grouping_function['sum']:
+            if "sum" in grouping_function:
+                for value in grouping_function["sum"]:
                     aggs.append(Sum(value))
 
-            if 'count' in grouping_function:
-                for value in grouping_function['count']:
+            if "count" in grouping_function:
+                for value in grouping_function["count"]:
                     aggs.append(Count(value))
 
-            if 'avg' in grouping_function:
-                for value in grouping_function['avg']:
+            if "avg" in grouping_function:
+                for value in grouping_function["avg"]:
                     aggs.append(Avg(value))
 
             result = self.aggregate(*aggs)
@@ -348,21 +348,21 @@ class BigQuery(metaclass=BigQueryMeta):
         credentials.resolve_credentials()
 
         if not engine and is_test_env():
-            engine = create_engine('sqlite:///:memory:', echo=False)
+            engine = create_engine("sqlite:///:memory:", echo=False)
 
-            client_options = ClientOptions(api_endpoint='http://0.0.0.0:9050')
+            client_options = ClientOptions(api_endpoint="http://0.0.0.0:9050")
             client = bigquery.Client(
-                'test',
+                "test",
                 client_options=client_options,
                 credentials=AnonymousCredentials(),
             )
 
         if not engine:
-            project = os.getenv('GOOGLE_PROJECT_ID', '')
-            engine = create_engine(f'bigquery://{project}')
+            project = os.getenv("GOOGLE_PROJECT_ID", "")
+            engine = create_engine(f"bigquery://{project}")
 
             credentials.resolve_credentials()
-            client = bigquery.Client(location='us-central1')
+            client = bigquery.Client(location="us-central1")
 
     @classmethod
     def session(cls) -> sessionmaker:
@@ -399,7 +399,7 @@ class BigQuery(metaclass=BigQueryMeta):
             cls._setup_engine()
 
         credentials.resolve_credentials()
-        return client, os.getenv('GOOGLE_PROJECT_ID', 'test'), os.getenv('BIGQUERY_DATASET', '')
+        return client, os.getenv("GOOGLE_PROJECT_ID", "test"), os.getenv("BIGQUERY_DATASET", "")
 
     @classmethod
     def table(cls, table: str) -> BigQuerySet:

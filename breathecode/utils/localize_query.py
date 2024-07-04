@@ -3,7 +3,7 @@ from django.contrib.auth.models import AnonymousUser
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['localize_query']
+__all__ = ["localize_query"]
 
 
 def localize_query(query, request, matcher=None):
@@ -13,11 +13,11 @@ def localize_query(query, request, matcher=None):
     if isinstance(request.user, AnonymousUser):
         return None
 
-    academy_ids = ProfileAcademy.objects.filter(user=request.user).values_list('academy__id', flat=True)
+    academy_ids = ProfileAcademy.objects.filter(user=request.user).values_list("academy__id", flat=True)
 
     kwargs = {}
     if matcher is None:
-        kwargs['academy__id__in'] = academy_ids
+        kwargs["academy__id__in"] = academy_ids
     else:
         kwargs[matcher] = academy_ids
 

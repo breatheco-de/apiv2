@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0022_auto_20210113_1940'),
+        ("events", "0022_auto_20210113_1940"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='eventbritewebhook',
-            name='organization_id',
+            model_name="eventbritewebhook",
+            name="organization_id",
             field=models.CharField(blank=True, default=None, max_length=20, null=True),
         ),
     ]

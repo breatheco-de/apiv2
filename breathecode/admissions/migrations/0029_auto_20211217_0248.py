@@ -7,56 +7,56 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0028_auto_20211217_0134'),
+        ("admissions", "0028_auto_20211217_0134"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='cohorttimeslot',
-            name='ending_at',
+            model_name="cohorttimeslot",
+            name="ending_at",
             field=models.BigIntegerField(
                 default=202101010000,
-                help_text=
-                'The first 4 number are year, the next 2 number are month, the next 2 number are day, the next 2 number are hour and the last 2 number are second',
+                help_text="The first 4 number are year, the next 2 number are month, the next 2 number are day, the next 2 number are hour and the last 2 number are second",
                 validators=[
                     django.core.validators.MaxValueValidator(300000000000),
-                    django.core.validators.MinValueValidator(202101010000)
-                ]),
+                    django.core.validators.MinValueValidator(202101010000),
+                ],
+            ),
         ),
         migrations.AddField(
-            model_name='cohorttimeslot',
-            name='starting_at',
+            model_name="cohorttimeslot",
+            name="starting_at",
             field=models.BigIntegerField(
                 default=202101010000,
-                help_text=
-                'The first 4 number are year, the next 2 number are month, the next 2 number are day, the next 2 number are hour and the last 2 number are second',
+                help_text="The first 4 number are year, the next 2 number are month, the next 2 number are day, the next 2 number are hour and the last 2 number are second",
                 validators=[
                     django.core.validators.MaxValueValidator(300000000000),
-                    django.core.validators.MinValueValidator(202101010000)
-                ]),
+                    django.core.validators.MinValueValidator(202101010000),
+                ],
+            ),
         ),
         migrations.AddField(
-            model_name='specialtymodetimeslot',
-            name='ending_at',
+            model_name="specialtymodetimeslot",
+            name="ending_at",
             field=models.BigIntegerField(
                 default=202101010000,
-                help_text=
-                'The first 4 number are year, the next 2 number are month, the next 2 number are day, the next 2 number are hour and the last 2 number are second',
+                help_text="The first 4 number are year, the next 2 number are month, the next 2 number are day, the next 2 number are hour and the last 2 number are second",
                 validators=[
                     django.core.validators.MaxValueValidator(300000000000),
-                    django.core.validators.MinValueValidator(202101010000)
-                ]),
+                    django.core.validators.MinValueValidator(202101010000),
+                ],
+            ),
         ),
         migrations.AddField(
-            model_name='specialtymodetimeslot',
-            name='starting_at',
+            model_name="specialtymodetimeslot",
+            name="starting_at",
             field=models.BigIntegerField(
                 default=202101010000,
-                help_text=
-                'The first 4 number are year, the next 2 number are month, the next 2 number are day, the next 2 number are hour and the last 2 number are second',
+                help_text="The first 4 number are year, the next 2 number are month, the next 2 number are day, the next 2 number are hour and the last 2 number are second",
                 validators=[
                     django.core.validators.MaxValueValidator(300000000000),
-                    django.core.validators.MinValueValidator(202101010000)
-                ]),
+                    django.core.validators.MinValueValidator(202101010000),
+                ],
+            ),
         ),
     ]

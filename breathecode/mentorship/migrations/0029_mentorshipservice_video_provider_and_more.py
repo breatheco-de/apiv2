@@ -9,98 +9,128 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0064_academy_legal_name'),
-        ('mentorship', '0028_mentorshipsession_questions_and_answers'),
+        ("admissions", "0064_academy_legal_name"),
+        ("mentorship", "0028_mentorshipsession_questions_and_answers"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='mentorshipservice',
-            name='video_provider',
-            field=models.CharField(blank=True,
-                                   choices=[('DAILY', 'Daily'), ('GOOGLE_MEET', 'Google Meet')],
-                                   default='GOOGLE_MEET',
-                                   max_length=15),
+            model_name="mentorshipservice",
+            name="video_provider",
+            field=models.CharField(
+                blank=True,
+                choices=[("DAILY", "Daily"), ("GOOGLE_MEET", "Google Meet")],
+                default="GOOGLE_MEET",
+                max_length=15,
+            ),
         ),
         migrations.AlterField(
-            model_name='mentorshipservice',
-            name='allow_mentee_to_extend',
-            field=models.BooleanField(blank=True,
-                                      default=None,
-                                      help_text='If true, mentees will be able to extend mentorship session'),
+            model_name="mentorshipservice",
+            name="allow_mentee_to_extend",
+            field=models.BooleanField(
+                blank=True, default=None, help_text="If true, mentees will be able to extend mentorship session"
+            ),
         ),
         migrations.AlterField(
-            model_name='mentorshipservice',
-            name='allow_mentors_to_extend',
-            field=models.BooleanField(blank=True,
-                                      default=None,
-                                      help_text='If true, mentors will be able to extend mentorship session'),
+            model_name="mentorshipservice",
+            name="allow_mentors_to_extend",
+            field=models.BooleanField(
+                blank=True, default=None, help_text="If true, mentors will be able to extend mentorship session"
+            ),
         ),
         migrations.AlterField(
-            model_name='mentorshipservice',
-            name='duration',
-            field=models.DurationField(blank=True,
-                                       default=None,
-                                       help_text='Default duration for mentorship sessions of this service'),
+            model_name="mentorshipservice",
+            name="duration",
+            field=models.DurationField(
+                blank=True, default=None, help_text="Default duration for mentorship sessions of this service"
+            ),
         ),
         migrations.AlterField(
-            model_name='mentorshipservice',
-            name='language',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US',
-                                   max_length=5,
-                                   validators=[breathecode.utils.validators.language.validate_language_code]),
+            model_name="mentorshipservice",
+            name="language",
+            field=models.CharField(
+                blank=True,
+                default=None,
+                help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
+                max_length=5,
+                validators=[breathecode.utils.validators.language.validate_language_code],
+            ),
         ),
         migrations.AlterField(
-            model_name='mentorshipservice',
-            name='max_duration',
+            model_name="mentorshipservice",
+            name="max_duration",
             field=models.DurationField(
                 blank=True,
                 default=None,
-                help_text='Maximum allowed duration or extra time, make it 0 for unlimited meetings'),
+                help_text="Maximum allowed duration or extra time, make it 0 for unlimited meetings",
+            ),
         ),
         migrations.AlterField(
-            model_name='mentorshipservice',
-            name='missed_meeting_duration',
+            model_name="mentorshipservice",
+            name="missed_meeting_duration",
             field=models.DurationField(
                 blank=True,
                 default=None,
-                help_text="Duration that will be paid when the mentee doesn't come to the session"),
+                help_text="Duration that will be paid when the mentee doesn't come to the session",
+            ),
         ),
         migrations.CreateModel(
-            name='AcademyMentorshipSettings',
+            name="AcademyMentorshipSettings",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('duration',
-                 models.DurationField(default=datetime.timedelta(seconds=3600),
-                                      help_text='Default duration for mentorship sessions of this service')),
-                ('max_duration',
-                 models.DurationField(
-                     default=datetime.timedelta(seconds=7200),
-                     help_text='Maximum allowed duration or extra time, make it 0 for unlimited meetings')),
-                ('missed_meeting_duration',
-                 models.DurationField(
-                     default=datetime.timedelta(seconds=600),
-                     help_text="Duration that will be paid when the mentee doesn't come to the session")),
-                ('language',
-                 models.CharField(default='en',
-                                  help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US',
-                                  max_length=5,
-                                  validators=[breathecode.utils.validators.language.validate_language_code])),
-                ('allow_mentee_to_extend',
-                 models.BooleanField(default=True,
-                                     help_text='If true, mentees will be able to extend mentorship session')),
-                ('allow_mentors_to_extend',
-                 models.BooleanField(default=True,
-                                     help_text='If true, mentors will be able to extend mentorship session')),
-                ('video_provider',
-                 models.CharField(choices=[('DAILY', 'Daily'), ('GOOGLE_MEET', 'Google Meet')],
-                                  default='GOOGLE_MEET',
-                                  max_length=15)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('academy', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "duration",
+                    models.DurationField(
+                        default=datetime.timedelta(seconds=3600),
+                        help_text="Default duration for mentorship sessions of this service",
+                    ),
+                ),
+                (
+                    "max_duration",
+                    models.DurationField(
+                        default=datetime.timedelta(seconds=7200),
+                        help_text="Maximum allowed duration or extra time, make it 0 for unlimited meetings",
+                    ),
+                ),
+                (
+                    "missed_meeting_duration",
+                    models.DurationField(
+                        default=datetime.timedelta(seconds=600),
+                        help_text="Duration that will be paid when the mentee doesn't come to the session",
+                    ),
+                ),
+                (
+                    "language",
+                    models.CharField(
+                        default="en",
+                        help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
+                        max_length=5,
+                        validators=[breathecode.utils.validators.language.validate_language_code],
+                    ),
+                ),
+                (
+                    "allow_mentee_to_extend",
+                    models.BooleanField(
+                        default=True, help_text="If true, mentees will be able to extend mentorship session"
+                    ),
+                ),
+                (
+                    "allow_mentors_to_extend",
+                    models.BooleanField(
+                        default=True, help_text="If true, mentors will be able to extend mentorship session"
+                    ),
+                ),
+                (
+                    "video_provider",
+                    models.CharField(
+                        choices=[("DAILY", "Daily"), ("GOOGLE_MEET", "Google Meet")],
+                        default="GOOGLE_MEET",
+                        max_length=15,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("academy", models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to="admissions.academy")),
             ],
         ),
     ]

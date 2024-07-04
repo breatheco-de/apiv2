@@ -9,21 +9,23 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('authenticate', '0001_initial'),
+        ("authenticate", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='CredentialsQuickBooks',
+            name="CredentialsQuickBooks",
             fields=[
-                ('quibooks_code', models.CharField(max_length=255, primary_key=True, serialize=False)),
-                ('quibooks_realmid', models.CharField(max_length=255)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('user',
-                 models.OneToOneField(blank=True,
-                                      on_delete=django.db.models.deletion.CASCADE,
-                                      to=settings.AUTH_USER_MODEL)),
+                ("quibooks_code", models.CharField(max_length=255, primary_key=True, serialize=False)),
+                ("quibooks_realmid", models.CharField(max_length=255)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "user",
+                    models.OneToOneField(
+                        blank=True, on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL
+                    ),
+                ),
             ],
         ),
     ]

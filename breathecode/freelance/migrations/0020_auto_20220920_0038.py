@@ -7,22 +7,24 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('freelance', '0019_bill_invoice'),
+        ("freelance", "0019_bill_invoice"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='bill',
-            name='invoice',
+            model_name="bill",
+            name="invoice",
         ),
         migrations.AddField(
-            model_name='issue',
-            name='invoice',
-            field=models.ForeignKey(blank=True,
-                                    default=None,
-                                    help_text='Attach this issue to a project invoice',
-                                    null=True,
-                                    on_delete=django.db.models.deletion.SET_DEFAULT,
-                                    to='freelance.projectinvoice'),
+            model_name="issue",
+            name="invoice",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                help_text="Attach this issue to a project invoice",
+                null=True,
+                on_delete=django.db.models.deletion.SET_DEFAULT,
+                to="freelance.projectinvoice",
+            ),
         ),
     ]

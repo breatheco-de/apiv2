@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0002_asset_html'),
+        ("registry", "0002_asset_html"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='asset',
-            name='readme_url',
+            model_name="asset",
+            name="readme_url",
             field=models.URLField(
                 blank=True,
                 default=None,
-                help_text=
-                'This will be used to synch only lessons from github. Projects, quizzes and exercises it will try README.md for english and README.lang.md for other langs',
-                null=True),
+                help_text="This will be used to synch only lessons from github. Projects, quizzes and exercises it will try README.md for english and README.lang.md for other langs",
+                null=True,
+            ),
         ),
     ]

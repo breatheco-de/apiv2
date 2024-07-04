@@ -4,10 +4,10 @@ from ...actions import bind_formentry_with_webhook
 
 
 class Command(BaseCommand):
-    help = 'Clean data from marketing module'
+    help = "Clean data from marketing module"
 
     def handle(self, *args, **options):
 
-        hooks = ActiveCampaignWebhook.objects.filter(status='ERROR')
+        hooks = ActiveCampaignWebhook.objects.filter(status="ERROR")
         for h in hooks:
             bind_formentry_with_webhook(h)

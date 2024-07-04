@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0042_auto_20211028_2048'),
+        ("marketing", "0042_auto_20211028_2048"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='activecampaignacademy',
-            name='ac_url',
+            model_name="activecampaignacademy",
+            name="ac_url",
             field=models.URLField(),
         ),
         migrations.AlterField(
-            model_name='formentry',
-            name='utm_url',
+            model_name="formentry",
+            name="utm_url",
             field=models.URLField(blank=True, default=None, max_length=2000, null=True),
         ),
     ]

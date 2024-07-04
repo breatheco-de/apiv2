@@ -6,14 +6,14 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('certificate', '0002_auto_20200907_2333'),
+        ("certificate", "0002_auto_20200907_2333"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='userspecialty',
-            name='signed_by',
-            field=models.CharField(default='Bob Dylan', max_length=100),
+            model_name="userspecialty",
+            name="signed_by",
+            field=models.CharField(default="Bob Dylan", max_length=100),
             preserve_default=False,
         ),
     ]

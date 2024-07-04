@@ -10,13 +10,13 @@ from ...models import ActiveCampaignWebhook
 
 
 class Command(BaseCommand):
-    help = 'Clean data from marketing module'
+    help = "Clean data from marketing module"
 
     def handle(self, *args, **options):
 
-        hooks = ActiveCampaignWebhook.objects.filter(Q(run_at=None)
-                                                     | Q(run_at__lte=timezone.now() - timedelta(days=3)),
-                                                     status='PENDING').only('id')
+        hooks = ActiveCampaignWebhook.objects.filter(
+            Q(run_at=None) | Q(run_at__lte=timezone.now() - timedelta(days=3)), status="PENDING"
+        ).only("id")
 
         for h in hooks:
             async_activecampaign_webhook.delay(h.id)

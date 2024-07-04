@@ -7,17 +7,19 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0030_activecampaignacademy_event_attendancy_automation'),
+        ("marketing", "0030_activecampaignacademy_event_attendancy_automation"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='activecampaignacademy',
-            name='event_attendancy_automation',
-            field=models.ForeignKey(blank=True,
-                                    default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='marketing.automation'),
+            model_name="activecampaignacademy",
+            name="event_attendancy_automation",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to="marketing.automation",
+            ),
         ),
     ]

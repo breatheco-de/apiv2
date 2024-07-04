@@ -6,16 +6,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('provisioning', '0006_auto_20230705_1635'),
+        ("provisioning", "0006_auto_20230705_1635"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='provisioningactivity',
-            name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('PERSISTED', 'Persisted'), ('IGNORED', 'Ignored'),
-                                            ('ERROR', 'Error')],
-                                   default='PENDING',
-                                   max_length=20),
+            model_name="provisioningactivity",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("PENDING", "Pending"),
+                    ("PERSISTED", "Persisted"),
+                    ("IGNORED", "Ignored"),
+                    ("ERROR", "Error"),
+                ],
+                default="PENDING",
+                max_length=20,
+            ),
         ),
     ]

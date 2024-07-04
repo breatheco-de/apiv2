@@ -2,12 +2,13 @@ from unittest.mock import patch, MagicMock, call
 from django.http.request import HttpRequest
 
 from ..mixins import MonitoringTestCase
+
 # that 'import as' is thanks pytest think 'test_app' is one fixture
 from ...admin import test_app as check_app
 from ...models import Application
 
 CURRENT_MOCK = MagicMock()
-CURRENT_PATH = 'breathecode.monitoring.tasks.monitor_app'
+CURRENT_PATH = "breathecode.monitoring.tasks.monitor_app"
 
 
 # This tests check functions are called, remember that this functions are
@@ -37,7 +38,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         result = check_app(None, request, Application.objects.all())
 
         self.assertEqual(result, None)
-        self.assertEqual(mock.call_args_list, [call(model['application'].id) for model in models])
+        self.assertEqual(mock.call_args_list, [call(model["application"].id) for model in models])
 
     @patch(CURRENT_PATH, CURRENT_MOCK)
     def tests_test_app_length_3(self):
@@ -50,4 +51,4 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         result = check_app(None, request, Application.objects.all())
 
         self.assertEqual(result, None)
-        self.assertEqual(mock.call_args_list, [call(model['application'].id) for model in models])
+        self.assertEqual(mock.call_args_list, [call(model["application"].id) for model in models])

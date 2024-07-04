@@ -6,16 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('feedback', '0024_survey_response_rate'),
+        ("feedback", "0024_survey_response_rate"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='review',
-            name='nps_previous_rating',
-            field=models.FloatField(blank=True,
-                                    default=None,
-                                    help_text='Automatically calculated based on NPS survey responses',
-                                    null=True),
+            model_name="review",
+            name="nps_previous_rating",
+            field=models.FloatField(
+                blank=True, default=None, help_text="Automatically calculated based on NPS survey responses", null=True
+            ),
         ),
     ]

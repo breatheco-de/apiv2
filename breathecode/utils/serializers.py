@@ -6,13 +6,13 @@ class ModelSerializer(ModelSerializer):
     status_fields = []
 
     def __init__(self, *args, **kwargs):
-        has_data = 'data' in kwargs
+        has_data = "data" in kwargs
 
-        if has_data and isinstance(kwargs['data'], list):
-            kwargs['data'] = [self._format_values(x) for x in kwargs['data']]
+        if has_data and isinstance(kwargs["data"], list):
+            kwargs["data"] = [self._format_values(x) for x in kwargs["data"]]
 
-        elif has_data and isinstance(kwargs['data'], dict):
-            kwargs['data'] = self._format_values(kwargs['data'])
+        elif has_data and isinstance(kwargs["data"], dict):
+            kwargs["data"] = self._format_values(kwargs["data"])
 
         super().__init__(*args, **kwargs)
 

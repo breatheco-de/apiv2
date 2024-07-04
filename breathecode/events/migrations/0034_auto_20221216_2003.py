@@ -7,62 +7,70 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0048_academy_main_currency'),
-        ('events', '0033_auto_20221208_1246'),
+        ("admissions", "0048_academy_main_currency"),
+        ("events", "0033_auto_20221208_1246"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='EventTypeVisibilitySetting',
+            name="EventTypeVisibilitySetting",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('academy', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
-                ('cohort',
-                 models.ForeignKey(blank=True,
-                                   null=True,
-                                   on_delete=django.db.models.deletion.CASCADE,
-                                   to='admissions.cohort')),
-                ('syllabus',
-                 models.ForeignKey(blank=True,
-                                   null=True,
-                                   on_delete=django.db.models.deletion.CASCADE,
-                                   to='admissions.syllabus')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("academy", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="admissions.academy")),
+                (
+                    "cohort",
+                    models.ForeignKey(
+                        blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="admissions.cohort"
+                    ),
+                ),
+                (
+                    "syllabus",
+                    models.ForeignKey(
+                        blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="admissions.syllabus"
+                    ),
+                ),
             ],
         ),
         migrations.RemoveField(
-            model_name='eventtypecohort',
-            name='cohort',
+            model_name="eventtypecohort",
+            name="cohort",
         ),
         migrations.RemoveField(
-            model_name='eventtypecohort',
-            name='event_type',
+            model_name="eventtypecohort",
+            name="event_type",
         ),
         migrations.RemoveField(
-            model_name='eventtypesyllabus',
-            name='event_type',
+            model_name="eventtypesyllabus",
+            name="event_type",
         ),
         migrations.RemoveField(
-            model_name='eventtypesyllabus',
-            name='syllabus',
+            model_name="eventtypesyllabus",
+            name="syllabus",
         ),
         migrations.RemoveField(
-            model_name='eventtype',
-            name='shared_with_academies',
+            model_name="eventtype",
+            name="shared_with_academies",
         ),
         migrations.RemoveField(
-            model_name='eventtype',
-            name='shared_with_cohorts',
+            model_name="eventtype",
+            name="shared_with_cohorts",
         ),
         migrations.RemoveField(
-            model_name='eventtype',
-            name='shared_with_syllabus',
+            model_name="eventtype",
+            name="shared_with_syllabus",
         ),
-        migrations.DeleteModel(name='EventTypeAcademy', ),
-        migrations.DeleteModel(name='EventTypeCohort', ),
-        migrations.DeleteModel(name='EventTypeSyllabus', ),
+        migrations.DeleteModel(
+            name="EventTypeAcademy",
+        ),
+        migrations.DeleteModel(
+            name="EventTypeCohort",
+        ),
+        migrations.DeleteModel(
+            name="EventTypeSyllabus",
+        ),
         migrations.AddField(
-            model_name='eventtype',
-            name='visibility_settings',
-            field=models.ManyToManyField(blank=True, to='events.EventTypeVisibilitySetting'),
+            model_name="eventtype",
+            name="visibility_settings",
+            field=models.ManyToManyField(blank=True, to="events.EventTypeVisibilitySetting"),
         ),
     ]

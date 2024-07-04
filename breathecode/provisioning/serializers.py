@@ -11,6 +11,7 @@ from .models import ProvisioningBill, ProvisioningContainer
 
 class AcademySerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     name = serpy.Field()
@@ -18,6 +19,7 @@ class AcademySerializer(serpy.Serializer):
 
 class ContainerMeSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     web_url = serpy.Field()
     status = serpy.Field()
@@ -30,6 +32,7 @@ class ContainerMeSmallSerializer(serpy.Serializer):
 
 class ContainerMeBigSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     web_url = serpy.Field()
     status = serpy.Field()
@@ -95,25 +98,31 @@ class ProvisioningContainerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProvisioningContainer
-        include = ('task_associated_slug', 'has_uncommitted_changes', 'branch_name', 'destination_status',
-                   'destination_status_text')
+        include = (
+            "task_associated_slug",
+            "has_uncommitted_changes",
+            "branch_name",
+            "destination_status",
+            "destination_status_text",
+        )
 
     def validate(self, data):
 
-        if 'slug' in data and data['slug'] is not None:
+        if "slug" in data and data["slug"] is not None:
 
-            if not re.match(r'^[-\w]+$', data['slug']):
+            if not re.match(r"^[-\w]+$", data["slug"]):
                 raise ValidationException(
                     f'Invalid link slug {data["slug"]}, should only contain letters, numbers and slash "-"',
-                    slug='invalid-slug-format')
+                    slug="invalid-slug-format",
+                )
 
-        #NOTE: this have the propertly academy but it's not defined here
+        # NOTE: this have the propertly academy but it's not defined here
         return data
 
     def create(self, validated_data):
         from breathecode.marketing.models import ShortLink
 
-        return ShortLink.objects.create(**validated_data, author=self.context.get('request').user)
+        return ShortLink.objects.create(**validated_data, author=self.context.get("request").user)
 
 
 class ProvisioningConsumptionKindHTMLSerializer(serpy.Serializer):
@@ -164,29 +173,32 @@ class ProvisioningBillSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProvisioningBill
-        fields = ('status', )
+        fields = ("status",)
 
     def validate(self, data):
 
-        if self.instance and 'status' in data and self.instance.status in ['PAID', 'ERROR']:
-            status = data['status'].lower()
-            raise ValidationException(translation(
-                self.context['lang'],
-                en=f'You cannot change the status of this bill due to it is marked as {status}',
-                es='No puedes cambiar el estado de esta factura debido a que esta marcada '
-                f'como {status}',
-                slug='readonly-bill-status'),
-                                      code=400)
+        if self.instance and "status" in data and self.instance.status in ["PAID", "ERROR"]:
+            status = data["status"].lower()
+            raise ValidationException(
+                translation(
+                    self.context["lang"],
+                    en=f"You cannot change the status of this bill due to it is marked as {status}",
+                    es="No puedes cambiar el estado de esta factura debido a que esta marcada " f"como {status}",
+                    slug="readonly-bill-status",
+                ),
+                code=400,
+            )
 
-        if self.instance and 'status' in data and data['status'] in ['PAID', 'ERROR']:
-            status = data['status'].lower()
-            raise ValidationException(translation(
-                self.context['lang'],
-                en=f'You cannot set the status of this bill to {status} because this status is '
-                'forbidden',
-                es=f'No puedes cambiar el estado de esta factura a {status} porque este estado esta '
-                'prohibido',
-                slug='invalid-bill-status'),
-                                      code=400)
+        if self.instance and "status" in data and data["status"] in ["PAID", "ERROR"]:
+            status = data["status"].lower()
+            raise ValidationException(
+                translation(
+                    self.context["lang"],
+                    en=f"You cannot set the status of this bill to {status} because this status is " "forbidden",
+                    es=f"No puedes cambiar el estado de esta factura a {status} porque este estado esta " "prohibido",
+                    slug="invalid-bill-status",
+                ),
+                code=400,
+            )
 
         return data

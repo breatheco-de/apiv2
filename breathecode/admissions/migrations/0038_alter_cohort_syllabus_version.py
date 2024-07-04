@@ -7,16 +7,15 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0037_alter_cohort_schedule'),
+        ("admissions", "0037_alter_cohort_schedule"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='cohort',
-            name='syllabus_version',
-            field=models.ForeignKey(default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.SET_NULL,
-                                    to='admissions.syllabusversion'),
+            model_name="cohort",
+            name="syllabus_version",
+            field=models.ForeignKey(
+                default=None, null=True, on_delete=django.db.models.deletion.SET_NULL, to="admissions.syllabusversion"
+            ),
         ),
     ]

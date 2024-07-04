@@ -11,7 +11,7 @@ class TestModelProfileAcademy(LegacyAPITestCase):
 
         model = self.bc.database.create(profile_academy=1)
 
-        self.assertEqual(self.bc.database.list_of('auth.Group'), [])
+        self.assertEqual(self.bc.database.list_of("auth.Group"), [])
         self.assertEqual(self.bc.format.table(model.profile_academy.user.groups.all()), [])
 
     """
@@ -25,7 +25,7 @@ class TestModelProfileAcademy(LegacyAPITestCase):
         model1 = self.bc.database.create(group=1)  # keep before user
         model2 = self.bc.database.create(profile_academy=1)
 
-        self.assertEqual(self.bc.database.list_of('auth.Group'), [self.bc.format.to_dict(model1.group)])
+        self.assertEqual(self.bc.database.list_of("auth.Group"), [self.bc.format.to_dict(model1.group)])
         self.assertEqual(self.bc.format.table(model2.profile_academy.user.groups.all()), [])
 
     """
@@ -36,11 +36,11 @@ class TestModelProfileAcademy(LegacyAPITestCase):
         enable_signals()
 
         # keep separated
-        group = {'name': 'Student'}
+        group = {"name": "Student"}
         model1 = self.bc.database.create(group=group)  # keep before user
         model2 = self.bc.database.create(profile_academy=1)
 
-        self.assertEqual(self.bc.database.list_of('auth.Group'), [self.bc.format.to_dict(model1.group)])
+        self.assertEqual(self.bc.database.list_of("auth.Group"), [self.bc.format.to_dict(model1.group)])
         self.assertEqual(self.bc.format.table(model2.profile_academy.user.groups.all()), [])
 
     """
@@ -51,11 +51,11 @@ class TestModelProfileAcademy(LegacyAPITestCase):
         enable_signals()
 
         # keep separated
-        group = {'name': 'Student'}
+        group = {"name": "Student"}
         model1 = self.bc.database.create(group=group)  # keep before user
-        model2 = self.bc.database.create(profile_academy=1, role='student')
+        model2 = self.bc.database.create(profile_academy=1, role="student")
 
-        self.assertEqual(self.bc.database.list_of('auth.Group'), [self.bc.format.to_dict(model1.group)])
+        self.assertEqual(self.bc.database.list_of("auth.Group"), [self.bc.format.to_dict(model1.group)])
         self.assertEqual(self.bc.format.table(model2.profile_academy.user.groups.all()), [])
 
     """
@@ -66,15 +66,18 @@ class TestModelProfileAcademy(LegacyAPITestCase):
         enable_signals()
 
         # keep separated
-        group = {'name': 'Student'}
-        profile_academy = {'status': 'ACTIVE'}
+        group = {"name": "Student"}
+        profile_academy = {"status": "ACTIVE"}
         model1 = self.bc.database.create(group=group)  # keep before user
-        model2 = self.bc.database.create(profile_academy=profile_academy, role='student')
+        model2 = self.bc.database.create(profile_academy=profile_academy, role="student")
 
-        self.assertEqual(self.bc.database.list_of('auth.Group'), [self.bc.format.to_dict(model1.group)])
-        self.assertEqual(self.bc.format.table(model2.profile_academy.user.groups.all()), [
-            self.bc.format.to_dict(model1.group),
-        ])
+        self.assertEqual(self.bc.database.list_of("auth.Group"), [self.bc.format.to_dict(model1.group)])
+        self.assertEqual(
+            self.bc.format.table(model2.profile_academy.user.groups.all()),
+            [
+                self.bc.format.to_dict(model1.group),
+            ],
+        )
 
 
 class TestModelUser(LegacyAPITestCase):
@@ -87,7 +90,7 @@ class TestModelUser(LegacyAPITestCase):
 
         model = self.bc.database.create(user=1)
 
-        self.assertEqual(self.bc.database.list_of('auth.Group'), [])
+        self.assertEqual(self.bc.database.list_of("auth.Group"), [])
         self.assertEqual(self.bc.format.table(model.user.groups.all()), [])
 
     """
@@ -101,7 +104,7 @@ class TestModelUser(LegacyAPITestCase):
         model1 = self.bc.database.create(group=1)  # keep before user
         model2 = self.bc.database.create(user=1)
 
-        self.assertEqual(self.bc.database.list_of('auth.Group'), [self.bc.format.to_dict(model1.group)])
+        self.assertEqual(self.bc.database.list_of("auth.Group"), [self.bc.format.to_dict(model1.group)])
         self.assertEqual(self.bc.format.table(model2.user.groups.all()), [])
 
     """
@@ -111,12 +114,12 @@ class TestModelUser(LegacyAPITestCase):
     def test_adding_a_user__the_group_name_match(self, enable_signals):
         enable_signals()
 
-        group = {'name': 'Default'}
+        group = {"name": "Default"}
         model1 = self.bc.database.create(group=group)  # keep before user
         model2 = self.bc.database.create(user=1)
 
-        self.assertEqual(self.bc.database.list_of('auth.Group'), [self.bc.format.to_dict(model1.group)])
-        self.assertEqual(self.bc.format.table(model2.user.groups.all()), [{'id': 1, 'name': 'Default'}])
+        self.assertEqual(self.bc.database.list_of("auth.Group"), [self.bc.format.to_dict(model1.group)])
+        self.assertEqual(self.bc.format.table(model2.user.groups.all()), [{"id": 1, "name": "Default"}])
 
 
 class TestModelMentorProfile(LegacyAPITestCase):
@@ -129,7 +132,7 @@ class TestModelMentorProfile(LegacyAPITestCase):
 
         model = self.bc.database.create(mentor_profile=1)
 
-        self.assertEqual(self.bc.database.list_of('auth.Group'), [])
+        self.assertEqual(self.bc.database.list_of("auth.Group"), [])
         self.assertEqual(self.bc.format.table(model.mentor_profile.user.groups.all()), [])
 
     """
@@ -143,7 +146,7 @@ class TestModelMentorProfile(LegacyAPITestCase):
         model1 = self.bc.database.create(group=1)  # keep before user
         model2 = self.bc.database.create(mentor_profile=1)
 
-        self.assertEqual(self.bc.database.list_of('auth.Group'), [self.bc.format.to_dict(model1.group)])
+        self.assertEqual(self.bc.database.list_of("auth.Group"), [self.bc.format.to_dict(model1.group)])
         self.assertEqual(self.bc.format.table(model2.mentor_profile.user.groups.all()), [])
 
     """
@@ -154,11 +157,14 @@ class TestModelMentorProfile(LegacyAPITestCase):
         enable_signals()
 
         # keep separated
-        group = {'name': 'Mentor'}
+        group = {"name": "Mentor"}
         model1 = self.bc.database.create(group=group)  # keep before user
         model2 = self.bc.database.create(mentor_profile=1)
 
-        self.assertEqual(self.bc.database.list_of('auth.Group'), [self.bc.format.to_dict(model1.group)])
-        self.assertEqual(self.bc.format.table(model2.mentor_profile.user.groups.all()), [
-            self.bc.format.to_dict(model1.group),
-        ])
+        self.assertEqual(self.bc.database.list_of("auth.Group"), [self.bc.format.to_dict(model1.group)])
+        self.assertEqual(
+            self.bc.format.table(model2.mentor_profile.user.groups.all()),
+            [
+                self.bc.format.to_dict(model1.group),
+            ],
+        )

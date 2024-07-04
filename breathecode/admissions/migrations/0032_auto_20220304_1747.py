@@ -7,21 +7,22 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0031_academy_icon_url'),
+        ("admissions", "0031_academy_icon_url"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='specialtymodetimeslot',
-            name='academy',
+            model_name="specialtymodetimeslot",
+            name="academy",
         ),
         migrations.AddField(
-            model_name='specialtymode',
-            name='academy',
-            field=models.ForeignKey(default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='admissions.academy'),
+            model_name="specialtymode",
+            name="academy",
+            field=models.ForeignKey(
+                default=None, null=True, on_delete=django.db.models.deletion.CASCADE, to="admissions.academy"
+            ),
         ),
-        migrations.DeleteModel(name='AcademySpecialtyMode', ),
+        migrations.DeleteModel(
+            name="AcademySpecialtyMode",
+        ),
     ]

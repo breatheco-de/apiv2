@@ -1,4 +1,4 @@
-class BucketMock():
+class BucketMock:
     name = None
     bucket = None
     files = {}
@@ -11,6 +11,7 @@ class BucketMock():
 
     def blob(self, blob_name):
         from google.cloud.storage import Blob
+
         self.files[blob_name] = Blob(blob_name, self)
         return self.files[blob_name]
 

@@ -7,17 +7,16 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0013_auto_20201209_0216'),
-        ('assignments', '0004_auto_20200708_0049'),
+        ("admissions", "0013_auto_20201209_0216"),
+        ("assignments", "0004_auto_20200708_0049"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='task',
-            name='cohort',
-            field=models.ForeignKey(blank=True,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='admissions.cohort'),
+            model_name="task",
+            name="cohort",
+            field=models.ForeignKey(
+                blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="admissions.cohort"
+            ),
         ),
     ]

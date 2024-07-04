@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('mentorship', '0027_mentorprofile_availability_report'),
+        ("mentorship", "0027_mentorprofile_availability_report"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='mentorshipsession',
-            name='questions_and_answers',
+            model_name="mentorshipsession",
+            name="questions_and_answers",
             field=models.JSONField(blank=True, default=None, null=True),
         ),
     ]

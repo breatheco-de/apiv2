@@ -1,6 +1,6 @@
 from enum import IntEnum
 
-__all__ = ['MutatorOrder']
+__all__ = ["MutatorOrder"]
 
 
 class MutatorOrder(IntEnum):

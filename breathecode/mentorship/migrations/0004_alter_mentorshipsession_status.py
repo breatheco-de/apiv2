@@ -6,17 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('mentorship', '0003_auto_20211110_2055'),
+        ("mentorship", "0003_auto_20211110_2055"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='mentorshipsession',
-            name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('STARTED', 'Started'), ('COMPLETED', 'Completed'),
-                                            ('FAILED', 'Failed')],
-                                   default='PENDING',
-                                   help_text='Options are: PENDING, STARTED, COMPLETED, FAILED',
-                                   max_length=15),
+            model_name="mentorshipsession",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("PENDING", "Pending"),
+                    ("STARTED", "Started"),
+                    ("COMPLETED", "Completed"),
+                    ("FAILED", "Failed"),
+                ],
+                default="PENDING",
+                help_text="Options are: PENDING, STARTED, COMPLETED, FAILED",
+                max_length=15,
+            ),
         ),
     ]

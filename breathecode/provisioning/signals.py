@@ -2,6 +2,6 @@
 
 from task_manager.django.dispatch import Emisor
 
-emisor = Emisor('breathecode.provisioning')
+emisor = Emisor("breathecode.provisioning")
 
-process_stripe_event = emisor.signal('process_stripe_event')
+process_stripe_event = emisor.signal("process_stripe_event")

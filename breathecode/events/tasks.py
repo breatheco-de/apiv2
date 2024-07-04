@@ -16,13 +16,13 @@ logger = logging.getLogger(__name__)
 
 @shared_task(bind=True, priority=TaskPriority.STUDENT.value)
 def mark_live_class_as_started(self, live_class_id: int):
-    logger.info(f'Starting mark live class {live_class_id} as started')
+    logger.info(f"Starting mark live class {live_class_id} as started")
 
     now = timezone.now()
 
     live_class = LiveClass.objects.filter(id=live_class_id).first()
     if not live_class:
-        logger.error(f'Live Class {live_class_id} not fount')
+        logger.error(f"Live Class {live_class_id} not fount")
         return
 
     live_class.started_at = now
@@ -34,16 +34,16 @@ def mark_live_class_as_started(self, live_class_id: int):
 def persist_organization_events(self, args):
     from .actions import sync_org_events
 
-    logger.debug('Starting persist_organization_events')
-    org = Organization.objects.get(id=args['org_id'])
+    logger.debug("Starting persist_organization_events")
+    org = Organization.objects.get(id=args["org_id"])
     sync_org_events(org)
     return True
 
 
 @shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
 def async_eventbrite_webhook(self, eventbrite_webhook_id):
-    logger.debug('Starting async_eventbrite_webhook')
-    status = 'ok'
+    logger.debug("Starting async_eventbrite_webhook")
+    status = "ok"
 
     webhook = EventbriteWebhook.objects.filter(id=eventbrite_webhook_id).first()
     organization_id = webhook.organization_id
@@ -54,30 +54,30 @@ def async_eventbrite_webhook(self, eventbrite_webhook_id):
             client = Eventbrite(organization.eventbrite_key)
             client.execute_action(eventbrite_webhook_id)
         except Exception as e:
-            logger.debug('Eventbrite exception')
+            logger.debug("Eventbrite exception")
             logger.debug(str(e))
-            status = 'error'
+            status = "error"
 
     else:
-        message = f"Organization {organization_id} doesn\'t exist"
+        message = f"Organization {organization_id} doesn't exist"
 
-        webhook.status = 'ERROR'
+        webhook.status = "ERROR"
         webhook.status_text = message
         webhook.save()
 
         logger.debug(message)
-        status = 'error'
+        status = "error"
 
-    logger.debug(f'Eventbrite status: {status}')
+    logger.debug(f"Eventbrite status: {status}")
 
 
 @shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
 def build_live_classes_from_timeslot(self, timeslot_id: int):
-    logger.info(f'Starting build_live_classes_from_timeslot with id {timeslot_id}')
+    logger.info(f"Starting build_live_classes_from_timeslot with id {timeslot_id}")
 
     timeslot = CohortTimeSlot.objects.filter(id=timeslot_id).first()
     if not timeslot:
-        logger.error(f'Timeslot {timeslot_id} not fount')
+        logger.error(f"Timeslot {timeslot_id} not fount")
         return
 
     utc_now = timezone.now()
@@ -95,24 +95,24 @@ def build_live_classes_from_timeslot(self, timeslot_id: int):
         ending_at += relativedelta(days=1)
 
     if not until_date:
-        logger.error(f'Timeslot {timeslot_id} not have a ending date')
+        logger.error(f"Timeslot {timeslot_id} not have a ending date")
         live_classes.delete()
 
         return
 
     delta = relativedelta(0)
 
-    if timeslot.recurrency_type == 'DAILY':
+    if timeslot.recurrency_type == "DAILY":
         delta += relativedelta(days=1)
 
-    if timeslot.recurrency_type == 'WEEKLY':
+    if timeslot.recurrency_type == "WEEKLY":
         delta += relativedelta(weeks=1)
 
-    if timeslot.recurrency_type == 'MONTHLY':
+    if timeslot.recurrency_type == "MONTHLY":
         delta += relativedelta(months=1)
 
     if not delta:
-        logger.error(f'{timeslot.recurrency_type} is not a valid or not implemented recurrency_type')
+        logger.error(f"{timeslot.recurrency_type} is not a valid or not implemented recurrency_type")
         return
 
     while True:
@@ -125,7 +125,8 @@ def build_live_classes_from_timeslot(self, timeslot_id: int):
                 starting_at=starting_at,
                 ending_at=ending_at,
                 cohort_time_slot=timeslot,
-                defaults={'remote_meeting_url': cohort.online_meeting_url or ''})
+                defaults={"remote_meeting_url": cohort.online_meeting_url or ""},
+            )
 
             live_classes = live_classes.exclude(id=schedule.id)
 
@@ -140,17 +141,17 @@ def build_live_classes_from_timeslot(self, timeslot_id: int):
 
 @shared_task(bind=False, priority=TaskPriority.FIXER.value)
 def fix_live_class_dates(timeslot_id: int):
-    logger.info(f'Starting fix_live_class_dates with id {timeslot_id}')
+    logger.info(f"Starting fix_live_class_dates with id {timeslot_id}")
 
     timeslot = CohortTimeSlot.objects.filter(id=timeslot_id).first()
     if not timeslot:
-        logger.error(f'Timeslot {timeslot_id} not fount')
+        logger.error(f"Timeslot {timeslot_id} not fount")
         return
 
     utc_now = timezone.now()
 
     if timeslot.cohort.ending_date and timeslot.cohort.ending_date < utc_now:
-        logger.info(f'Cohort {timeslot.cohort.id} is finished')
+        logger.info(f"Cohort {timeslot.cohort.id} is finished")
         return
 
     cohort = timeslot.cohort
@@ -163,20 +164,20 @@ def fix_live_class_dates(timeslot_id: int):
 
     delta = relativedelta(0)
 
-    if timeslot.recurrency_type == 'DAILY':
+    if timeslot.recurrency_type == "DAILY":
         delta += relativedelta(days=1)
 
-    if timeslot.recurrency_type == 'WEEKLY':
+    if timeslot.recurrency_type == "WEEKLY":
         delta += relativedelta(weeks=1)
 
-    if timeslot.recurrency_type == 'MONTHLY':
+    if timeslot.recurrency_type == "MONTHLY":
         delta += relativedelta(months=1)
 
     if not delta:
-        logger.error(f'{timeslot.recurrency_type} is not a valid or not implemented recurrency_type')
+        logger.error(f"{timeslot.recurrency_type} is not a valid or not implemented recurrency_type")
         return
 
-    for live_class in LiveClass.objects.filter(cohort_time_slot=timeslot).order_by('starting_at'):
+    for live_class in LiveClass.objects.filter(cohort_time_slot=timeslot).order_by("starting_at"):
 
         if live_class.starting_at < utc_now or starting_at < cohort.kickoff_date:
             starting_at += delta

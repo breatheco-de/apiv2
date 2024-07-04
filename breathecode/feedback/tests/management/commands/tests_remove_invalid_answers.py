@@ -13,56 +13,80 @@ from ...mixins import FeedbackTestCase
 
 @pytest.fixture(autouse=True)
 def setup(db, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
+    monkeypatch.setattr("breathecode.feedback.signals.survey_answered.send_robust", MagicMock())
 
 
-@patch('sys.stdout.write', MagicMock())
+@patch("sys.stdout.write", MagicMock())
 def test_run_handler(db, bc: Breathecode):
-    surveys = [{'cohort_id': n} for n in range(1, 4)]
-    cohort_users = [{
-        'cohort_id': n,
-        'user_id': n,
-        'educational_status': random.choice(['POSTPONED', 'SUSPENDED', 'DROPPED'])
-    } for n in range(1, 4)]
-    answers = [{
-        'survey_id': n,
-        'cohort_id': n,
-        'user_id': n,
-        'status': random.choice(['ANSWERED', 'OPENED']),
-        'score': random.randint(1, 10),
-    } for n in range(1, 4)] + [{
-        'survey_id': n,
-        'cohort_id': n,
-        'user_id': n,
-        'status': random.choice(['PENDING', 'SENT', 'EXPIRED']),
-        'score': None,
-    } for n in range(1, 4)] + [{
-        'survey_id': n,
-        'cohort_id': n,
-        'user_id': n,
-        'status': random.choice(['ANSWERED', 'OPENED']),
-        'score': None,
-    } for n in range(1, 4)] + [{
-        'survey_id': n,
-        'cohort_id': n,
-        'user_id': n,
-        'status': random.choice(['ANSWERED', 'OPENED']),
-        'score': random.randint(1, 10),
-    } for n in range(1, 4)] + [{
-        'survey_id': n,
-        'cohort_id': n,
-        'user_id': n,
-        'status': random.choice(['PENDING', 'SENT', 'EXPIRED']),
-        'score': None,
-    } for n in range(1, 4)] + [{
-        'survey_id': n,
-        'cohort_id': n,
-        'user_id': n,
-        'status': random.choice(['ANSWERED', 'OPENED']),
-        'score': None,
-    } for n in range(1, 4)]
+    surveys = [{"cohort_id": n} for n in range(1, 4)]
+    cohort_users = [
+        {"cohort_id": n, "user_id": n, "educational_status": random.choice(["POSTPONED", "SUSPENDED", "DROPPED"])}
+        for n in range(1, 4)
+    ]
+    answers = (
+        [
+            {
+                "survey_id": n,
+                "cohort_id": n,
+                "user_id": n,
+                "status": random.choice(["ANSWERED", "OPENED"]),
+                "score": random.randint(1, 10),
+            }
+            for n in range(1, 4)
+        ]
+        + [
+            {
+                "survey_id": n,
+                "cohort_id": n,
+                "user_id": n,
+                "status": random.choice(["PENDING", "SENT", "EXPIRED"]),
+                "score": None,
+            }
+            for n in range(1, 4)
+        ]
+        + [
+            {
+                "survey_id": n,
+                "cohort_id": n,
+                "user_id": n,
+                "status": random.choice(["ANSWERED", "OPENED"]),
+                "score": None,
+            }
+            for n in range(1, 4)
+        ]
+        + [
+            {
+                "survey_id": n,
+                "cohort_id": n,
+                "user_id": n,
+                "status": random.choice(["ANSWERED", "OPENED"]),
+                "score": random.randint(1, 10),
+            }
+            for n in range(1, 4)
+        ]
+        + [
+            {
+                "survey_id": n,
+                "cohort_id": n,
+                "user_id": n,
+                "status": random.choice(["PENDING", "SENT", "EXPIRED"]),
+                "score": None,
+            }
+            for n in range(1, 4)
+        ]
+        + [
+            {
+                "survey_id": n,
+                "cohort_id": n,
+                "user_id": n,
+                "status": random.choice(["ANSWERED", "OPENED"]),
+                "score": None,
+            }
+            for n in range(1, 4)
+        ]
+    )
 
-    with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+    with patch("breathecode.activity.tasks.get_attendancy_log.delay", MagicMock()):
 
         model = bc.database.create(user=3, survey=surveys, answer=answers, cohort=3, cohort_user=cohort_users)
 
@@ -71,16 +95,16 @@ def test_run_handler(db, bc: Breathecode):
     # reset in this line because some people left print in some places
     sys.stdout.write.call_args_list = []
 
-    with patch('sys.stderr.write', MagicMock()):
+    with patch("sys.stderr.write", MagicMock()):
         command = Command()
         command.handle()
 
         assert sys.stderr.write.call_args_list == []
 
-    assert bc.database.list_of('feedback.Survey') == bc.format.to_dict(model.survey)
+    assert bc.database.list_of("feedback.Survey") == bc.format.to_dict(model.survey)
 
     # this ignore the answers is not answered or opened
-    assert bc.database.list_of('feedback.Answer') == [
+    assert bc.database.list_of("feedback.Answer") == [
         bc.format.to_dict(answer_db[0]),
         bc.format.to_dict(answer_db[1]),
         bc.format.to_dict(answer_db[2]),
@@ -95,4 +119,4 @@ def test_run_handler(db, bc: Breathecode):
         bc.format.to_dict(answer_db[17]),
     ]
 
-    assert sys.stdout.write.call_args_list == [call('Successfully deleted invalid answers\n')]
+    assert sys.stdout.write.call_args_list == [call("Successfully deleted invalid answers\n")]

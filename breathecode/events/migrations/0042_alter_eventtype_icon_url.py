@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0041_eventtype_icon_url'),
+        ("events", "0041_eventtype_icon_url"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='eventtype',
-            name='icon_url',
+            model_name="eventtype",
+            name="icon_url",
             field=models.URLField(default=None, null=True),
         ),
     ]

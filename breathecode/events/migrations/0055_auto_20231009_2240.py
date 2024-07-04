@@ -6,28 +6,28 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0054_alter_event_uuid'),
+        ("events", "0054_alter_event_uuid"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='eventcheckin',
-            name='utm_campaign',
+            model_name="eventcheckin",
+            name="utm_campaign",
             field=models.CharField(blank=True, default=None, max_length=70, null=True),
         ),
         migrations.AddField(
-            model_name='eventcheckin',
-            name='utm_medium',
+            model_name="eventcheckin",
+            name="utm_medium",
             field=models.CharField(blank=True, default=None, max_length=70, null=True),
         ),
         migrations.AddField(
-            model_name='eventcheckin',
-            name='utm_source',
+            model_name="eventcheckin",
+            name="utm_source",
             field=models.CharField(blank=True, default=None, max_length=70, null=True),
         ),
         migrations.AddField(
-            model_name='eventcheckin',
-            name='utm_url',
+            model_name="eventcheckin",
+            name="utm_url",
             field=models.CharField(blank=True, default=None, max_length=2000, null=True),
         ),
     ]

@@ -7,18 +7,20 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0031_academy_icon_url'),
-        ('monitoring', '0014_csvdownload'),
+        ("admissions", "0031_academy_icon_url"),
+        ("monitoring", "0014_csvdownload"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='csvdownload',
-            name='academy',
-            field=models.ForeignKey(blank=True,
-                                    default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='admissions.academy'),
+            model_name="csvdownload",
+            name="academy",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to="admissions.academy",
+            ),
         ),
     ]

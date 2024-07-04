@@ -6,33 +6,33 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0001_initial'),
+        ("admissions", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='academy',
-            name='latitude',
+            model_name="academy",
+            name="latitude",
             field=models.DecimalField(blank=True, decimal_places=6, max_digits=9, null=True),
         ),
         migrations.AlterField(
-            model_name='academy',
-            name='logistical_information',
+            model_name="academy",
+            name="logistical_information",
             field=models.CharField(blank=True, max_length=150, null=True),
         ),
         migrations.AlterField(
-            model_name='academy',
-            name='longitude',
+            model_name="academy",
+            name="longitude",
             field=models.DecimalField(blank=True, decimal_places=6, max_digits=9, null=True),
         ),
         migrations.AlterField(
-            model_name='academy',
-            name='state',
+            model_name="academy",
+            name="state",
             field=models.CharField(blank=True, max_length=30, null=True),
         ),
         migrations.AlterField(
-            model_name='academy',
-            name='zip_code',
+            model_name="academy",
+            name="zip_code",
             field=models.IntegerField(blank=True, null=True),
         ),
     ]

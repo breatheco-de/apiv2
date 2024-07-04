@@ -13,10 +13,10 @@ class ParseDateAdminTestSuite(EventTestCase):
     🔽🔽🔽 With zero Event
     """
 
-    @patch('breathecode.marketing.tasks.add_event_slug_as_acp_tag.delay', MagicMock())
+    @patch("breathecode.marketing.tasks.add_event_slug_as_acp_tag.delay", MagicMock())
     def test_with_zero_events(self):
 
-        Event = self.bc.database.get_model('events.Event')
+        Event = self.bc.database.get_model("events.Event")
         queryset = Event.objects.filter()
 
         reattempt_add_event_slug_as_acp_tag(None, None, queryset)
@@ -27,12 +27,12 @@ class ParseDateAdminTestSuite(EventTestCase):
     🔽🔽🔽 With two Event
     """
 
-    @patch('breathecode.marketing.tasks.add_event_slug_as_acp_tag.delay', MagicMock())
+    @patch("breathecode.marketing.tasks.add_event_slug_as_acp_tag.delay", MagicMock())
     def test_with_two_event(self):
 
         self.bc.database.create(event=2)
 
-        Event = self.bc.database.get_model('events.Event')
+        Event = self.bc.database.get_model("events.Event")
         queryset = Event.objects.filter()
 
         reattempt_add_event_slug_as_acp_tag(None, None, queryset)
@@ -43,12 +43,12 @@ class ParseDateAdminTestSuite(EventTestCase):
     🔽🔽🔽 With zero Event with Academy
     """
 
-    @patch('breathecode.marketing.tasks.add_event_slug_as_acp_tag.delay', MagicMock())
+    @patch("breathecode.marketing.tasks.add_event_slug_as_acp_tag.delay", MagicMock())
     def test_with_zero_events__with_academy(self):
 
         self.bc.database.create(academy=1)
 
-        Event = self.bc.database.get_model('events.Event')
+        Event = self.bc.database.get_model("events.Event")
         queryset = Event.objects.filter()
 
         reattempt_add_event_slug_as_acp_tag(None, None, queryset)
@@ -59,17 +59,20 @@ class ParseDateAdminTestSuite(EventTestCase):
     🔽🔽🔽 With two Event with Academy
     """
 
-    @patch('breathecode.marketing.tasks.add_event_slug_as_acp_tag.delay', MagicMock())
+    @patch("breathecode.marketing.tasks.add_event_slug_as_acp_tag.delay", MagicMock())
     def test_with_two_events__with_academy(self):
 
         self.bc.database.create(event=2, academy=1)
 
-        Event = self.bc.database.get_model('events.Event')
+        Event = self.bc.database.get_model("events.Event")
         queryset = Event.objects.filter()
 
         reattempt_add_event_slug_as_acp_tag(None, None, queryset)
 
-        self.assertEqual(tasks.add_event_slug_as_acp_tag.delay.call_args_list, [
-            call(1, 1, force=True),
-            call(2, 1, force=True),
-        ])
+        self.assertEqual(
+            tasks.add_event_slug_as_acp_tag.delay.call_args_list,
+            [
+                call(1, 1, force=True),
+                call(2, 1, force=True),
+            ],
+        )

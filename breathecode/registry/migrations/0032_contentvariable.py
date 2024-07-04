@@ -7,44 +7,63 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0058_alter_cohort_available_as_saas'),
-        ('registry', '0031_alter_asset_status'),
+        ("admissions", "0058_alter_cohort_available_as_saas"),
+        ("registry", "0031_alter_asset_status"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ContentVariable',
+            name="ContentVariable",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('key', models.CharField(max_length=100)),
-                ('value', models.TextField()),
-                ('default_value', models.TextField()),
-                ('lang',
-                 models.CharField(blank=True,
-                                  default=None,
-                                  help_text='Leave blank if will be shown in all languages',
-                                  max_length=2,
-                                  null=True)),
-                ('var_type',
-                 models.CharField(choices=[('MARKDOWN', 'Markdown'), ('PYTHON_CODE', 'Python'),
-                                           ('FETCH_JSON', 'Fetch json from url'),
-                                           ('FETCH_TEXT', 'Fetch text from url')],
-                                  default='MARKDOWN',
-                                  help_text='Code vars accept python code, Fetch vars accept HTTP GET',
-                                  max_length=20)),
-                ('status',
-                 models.CharField(choices=[('PENDING', 'Pending'), ('ERROR', 'Error'), ('COMPLETED', 'Completed')],
-                                  default='PENDING',
-                                  help_text='Code vars accept python code, Fetch vars accept HTTP GET',
-                                  max_length=20)),
-                ('status_text',
-                 models.TextField(blank=True,
-                                  default=None,
-                                  help_text='If the var is code or fetch here will be the error processing info',
-                                  null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('academy', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("key", models.CharField(max_length=100)),
+                ("value", models.TextField()),
+                ("default_value", models.TextField()),
+                (
+                    "lang",
+                    models.CharField(
+                        blank=True,
+                        default=None,
+                        help_text="Leave blank if will be shown in all languages",
+                        max_length=2,
+                        null=True,
+                    ),
+                ),
+                (
+                    "var_type",
+                    models.CharField(
+                        choices=[
+                            ("MARKDOWN", "Markdown"),
+                            ("PYTHON_CODE", "Python"),
+                            ("FETCH_JSON", "Fetch json from url"),
+                            ("FETCH_TEXT", "Fetch text from url"),
+                        ],
+                        default="MARKDOWN",
+                        help_text="Code vars accept python code, Fetch vars accept HTTP GET",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[("PENDING", "Pending"), ("ERROR", "Error"), ("COMPLETED", "Completed")],
+                        default="PENDING",
+                        help_text="Code vars accept python code, Fetch vars accept HTTP GET",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "status_text",
+                    models.TextField(
+                        blank=True,
+                        default=None,
+                        help_text="If the var is code or fetch here will be the error processing info",
+                        null=True,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("academy", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="admissions.academy")),
             ],
         ),
     ]

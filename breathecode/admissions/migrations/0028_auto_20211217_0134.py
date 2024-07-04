@@ -6,24 +6,24 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0027_auto_20211205_2249'),
+        ("admissions", "0027_auto_20211205_2249"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='cohorttimeslot',
-            name='ending_at',
+            model_name="cohorttimeslot",
+            name="ending_at",
         ),
         migrations.RemoveField(
-            model_name='cohorttimeslot',
-            name='starting_at',
+            model_name="cohorttimeslot",
+            name="starting_at",
         ),
         migrations.RemoveField(
-            model_name='specialtymodetimeslot',
-            name='ending_at',
+            model_name="specialtymodetimeslot",
+            name="ending_at",
         ),
         migrations.RemoveField(
-            model_name='specialtymodetimeslot',
-            name='starting_at',
+            model_name="specialtymodetimeslot",
+            name="starting_at",
         ),
     ]
