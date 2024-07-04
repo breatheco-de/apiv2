@@ -6,19 +6,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('assessment', '0002_auto_20221107_2155'),
+        ("assessment", "0002_auto_20221107_2155"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='assessment',
-            name='is_instant_feedback',
-            field=models.BooleanField(default=True,
-                                      help_text='If true, users will know immediately if their answer was correct'),
+            model_name="assessment",
+            name="is_instant_feedback",
+            field=models.BooleanField(
+                default=True, help_text="If true, users will know immediately if their answer was correct"
+            ),
         ),
         migrations.AlterField(
-            model_name='question',
-            name='lang',
-            field=models.CharField(blank=True, default='us', max_length=3),
+            model_name="question",
+            name="lang",
+            field=models.CharField(blank=True, default="us", max_length=3),
         ),
     ]

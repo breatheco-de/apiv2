@@ -7,13 +7,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0018_auto_20200708_0049'),
+        ("marketing", "0018_auto_20200708_0049"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='contact',
-            name='phone',
+            model_name="contact",
+            name="phone",
             field=models.CharField(
                 blank=True,
                 default=None,
@@ -22,12 +22,14 @@ class Migration(migrations.Migration):
                 validators=[
                     django.core.validators.RegexValidator(
                         message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
-                        regex='^\\+?1?\\d{9,15}$')
-                ]),
+                        regex="^\\+?1?\\d{9,15}$",
+                    )
+                ],
+            ),
         ),
         migrations.AlterField(
-            model_name='formentry',
-            name='phone',
+            model_name="formentry",
+            name="phone",
             field=models.CharField(
                 blank=True,
                 default=None,
@@ -36,7 +38,9 @@ class Migration(migrations.Migration):
                 validators=[
                     django.core.validators.RegexValidator(
                         message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
-                        regex='^\\+?1?\\d{9,15}$')
-                ]),
+                        regex="^\\+?1?\\d{9,15}$",
+                    )
+                ],
+            ),
         ),
     ]

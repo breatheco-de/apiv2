@@ -1,7 +1,7 @@
 from .blob_mock import BlobMock
 
 
-class BucketMock():
+class BucketMock:
     name = None
     bucket = None
     files = {}

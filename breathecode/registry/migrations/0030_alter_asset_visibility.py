@@ -6,16 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0029_syllabusversionproxy'),
+        ("registry", "0029_syllabusversionproxy"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='asset',
-            name='visibility',
-            field=models.CharField(choices=[('PUBLIC', 'Public'), ('UNLISTED', 'Unlisted'), ('PRIVATE', 'Private')],
-                                   default='PUBLIC',
-                                   help_text="It won't be shown on the website unleast the status is published",
-                                   max_length=20),
+            model_name="asset",
+            name="visibility",
+            field=models.CharField(
+                choices=[("PUBLIC", "Public"), ("UNLISTED", "Unlisted"), ("PRIVATE", "Private")],
+                default="PUBLIC",
+                help_text="It won't be shown on the website unleast the status is published",
+                max_length=20,
+            ),
         ),
     ]

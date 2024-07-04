@@ -4,35 +4,35 @@ from linked_services.django.models import App, AppOptionalScope, AppRequiredScop
 # if it does not require an agreement, add scopes is not necessary
 APPS = [
     {
-        'name': 'Rigobot',
-        'slug': 'rigobot',
-        'require_an_agreement': False,
-        'required_scopes': [],
-        'optional_scopes': [],
+        "name": "Rigobot",
+        "slug": "rigobot",
+        "require_an_agreement": False,
+        "required_scopes": [],
+        "optional_scopes": [],
     },
 ]
 
 SCOPES = [
     {
-        'name': 'Read user',
-        'slug': 'read:user',
-        'description': 'Can read user information',
+        "name": "Read user",
+        "slug": "read:user",
+        "description": "Can read user information",
     },
     {
-        'name': 'Webhook',
-        'slug': 'webhook',
-        'description': 'Can receive updates from 4Geeks',
+        "name": "Webhook",
+        "slug": "webhook",
+        "description": "Can receive updates from 4Geeks",
     },
 ]
 
 
 class Command(BaseCommand):
-    help = 'Create default system capabilities'
+    help = "Create default system capabilities"
 
     def handle(self, *args, **options):
         cache = {}
         for scope in SCOPES:
-            slug = scope['slug']
+            slug = scope["slug"]
             x, created = Scope.objects.get_or_create(slug=slug, defaults=scope)
 
             if not created:
@@ -43,16 +43,16 @@ class Command(BaseCommand):
             cache[slug] = x
 
         for app in APPS:
-            slug = app['slug']
-            required_scopes = app['required_scopes']
-            optional_scopes = app['optional_scopes']
+            slug = app["slug"]
+            required_scopes = app["required_scopes"]
+            optional_scopes = app["optional_scopes"]
 
             x = App.objects.filter(slug=slug).first()
             if not x:
                 continue
 
             for key, value in app.items():
-                if key == 'required_scopes' or key == 'optional_scopes':
+                if key == "required_scopes" or key == "optional_scopes":
                     continue
 
                 setattr(x, key, value)

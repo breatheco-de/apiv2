@@ -9,26 +9,28 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('notify', '0008_remove_slackteam_credentials'),
+        ("notify", "0008_remove_slackteam_credentials"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Hook',
+            name="Hook",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created', models.DateTimeField(auto_now_add=True)),
-                ('updated', models.DateTimeField(auto_now=True)),
-                ('event', models.CharField(db_index=True, max_length=64, verbose_name='Event')),
-                ('target', models.URLField(max_length=255, verbose_name='Target URL')),
-                ('user',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
-                                   related_name='hooks',
-                                   to=settings.AUTH_USER_MODEL)),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("created", models.DateTimeField(auto_now_add=True)),
+                ("updated", models.DateTimeField(auto_now=True)),
+                ("event", models.CharField(db_index=True, max_length=64, verbose_name="Event")),
+                ("target", models.URLField(max_length=255, verbose_name="Target URL")),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name="hooks", to=settings.AUTH_USER_MODEL
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
-                'swappable': 'HOOK_CUSTOM_MODEL',
+                "abstract": False,
+                "swappable": "HOOK_CUSTOM_MODEL",
             },
         ),
     ]

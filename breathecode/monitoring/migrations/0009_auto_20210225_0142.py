@@ -6,32 +6,50 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('monitoring', '0008_monitorscript'),
+        ("monitoring", "0008_monitorscript"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='application',
-            name='status',
-            field=models.CharField(choices=[('LOADING', 'Loading'), ('OPERATIONAL', 'Operational'), ('MINOR', 'Minor'),
-                                            ('CRITICAL', 'Critical')],
-                                   default='OPERATIONAL',
-                                   max_length=20),
+            model_name="application",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("LOADING", "Loading"),
+                    ("OPERATIONAL", "Operational"),
+                    ("MINOR", "Minor"),
+                    ("CRITICAL", "Critical"),
+                ],
+                default="OPERATIONAL",
+                max_length=20,
+            ),
         ),
         migrations.AlterField(
-            model_name='endpoint',
-            name='status',
-            field=models.CharField(choices=[('LOADING', 'Loading'), ('OPERATIONAL', 'Operational'), ('MINOR', 'Minor'),
-                                            ('CRITICAL', 'Critical')],
-                                   default='OPERATIONAL',
-                                   max_length=20),
+            model_name="endpoint",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("LOADING", "Loading"),
+                    ("OPERATIONAL", "Operational"),
+                    ("MINOR", "Minor"),
+                    ("CRITICAL", "Critical"),
+                ],
+                default="OPERATIONAL",
+                max_length=20,
+            ),
         ),
         migrations.AlterField(
-            model_name='monitorscript',
-            name='status',
-            field=models.CharField(choices=[('LOADING', 'Loading'), ('OPERATIONAL', 'Operational'), ('MINOR', 'Minor'),
-                                            ('CRITICAL', 'Critical')],
-                                   default='OPERATIONAL',
-                                   max_length=20),
+            model_name="monitorscript",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("LOADING", "Loading"),
+                    ("OPERATIONAL", "Operational"),
+                    ("MINOR", "Minor"),
+                    ("CRITICAL", "Critical"),
+                ],
+                default="OPERATIONAL",
+                max_length=20,
+            ),
         ),
     ]

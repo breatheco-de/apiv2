@@ -8,7 +8,7 @@ class Platform(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.name} ({self.id})'
+        return f"{self.name} ({self.id})"
 
 
 class Position(models.Model):
@@ -17,34 +17,36 @@ class Position(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.name} ({self.id})'
+        return f"{self.name} ({self.id})"
 
 
 class ZyteProject(models.Model):
     zyte_api_key = models.CharField(max_length=150)
     zyte_api_deploy = models.CharField(max_length=50)
     zyte_api_spider_number = models.IntegerField(
-        null=False, blank=False, help_text='This number is the one that corresponds when the ZYTE spider was created.')
+        null=False, blank=False, help_text="This number is the one that corresponds when the ZYTE spider was created."
+    )
     zyte_api_last_job_number = models.IntegerField(
-        default=0, null=True, blank=True, help_text='(Optional field) Start at 0 but increase with each search.')
+        default=0, null=True, blank=True, help_text="(Optional field) Start at 0 but increase with each search."
+    )
 
     platform = models.ForeignKey(Platform, on_delete=models.CASCADE, null=False, blank=False)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.platform} {self.zyte_api_key} {self.zyte_api_deploy} ({self.id})'
+        return f"{self.platform} {self.zyte_api_key} {self.zyte_api_deploy} ({self.id})"
 
 
-SYNCHED = 'SYNCHED'
-PENDING = 'PENDING'
-WARNING = 'WARNING'
-ERROR = 'ERROR'
+SYNCHED = "SYNCHED"
+PENDING = "PENDING"
+WARNING = "WARNING"
+ERROR = "ERROR"
 SPIDER_STATUS = (
-    (SYNCHED, 'Synched'),
-    (PENDING, 'Pending'),
-    (WARNING, 'Warning'),
-    (ERROR, 'Error'),
+    (SYNCHED, "Synched"),
+    (PENDING, "Pending"),
+    (WARNING, "Warning"),
+    (ERROR, "Error"),
 )
 
 
@@ -55,20 +57,17 @@ class Spider(models.Model):
     name = models.CharField(max_length=150)
     position = models.ForeignKey(Position, on_delete=models.CASCADE, null=False, blank=False)
     job_search = models.CharField(max_length=150)
-    loc_search = models.CharField(max_length=150,
-                                  null=True,
-                                  blank=True,
-                                  help_text='This field may be optional on some platforms.')
+    loc_search = models.CharField(
+        max_length=150, null=True, blank=True, help_text="This field may be optional on some platforms."
+    )
     zyte_project = models.ForeignKey(ZyteProject, on_delete=models.CASCADE, null=False, blank=False)
-    zyte_spider_number = models.IntegerField(default=0,
-                                             null=True,
-                                             blank=True,
-                                             help_text='This number must be copy from ZYTE')
-    zyte_job_number = models.IntegerField(default=0,
-                                          null=True,
-                                          blank=True,
-                                          help_text='Start at 0 but increase on each fetch')
-    zyte_fetch_count = models.IntegerField(default=0, help_text='The number of spider job excecutions to fetch')
+    zyte_spider_number = models.IntegerField(
+        default=0, null=True, blank=True, help_text="This number must be copy from ZYTE"
+    )
+    zyte_job_number = models.IntegerField(
+        default=0, null=True, blank=True, help_text="Start at 0 but increase on each fetch"
+    )
+    zyte_fetch_count = models.IntegerField(default=0, help_text="The number of spider job excecutions to fetch")
     zyte_last_fetch_date = models.DateTimeField(null=True, blank=True)
     spider_last_run_status = models.CharField(max_length=15, choices=SPIDER_STATUS, default=PENDING)
     spider_last_run_desc = models.CharField(max_length=200, null=True, blank=True)
@@ -83,7 +82,7 @@ class Spider(models.Model):
         self.zyte_job_number = self.zyte_project.zyte_api_last_job_number
 
     def __str__(self):
-        return f'{self.name} ({self.id})'
+        return f"{self.name} ({self.id})"
 
 
 class PositionAlias(models.Model):
@@ -93,7 +92,7 @@ class PositionAlias(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.name} ({self.id})'
+        return f"{self.name} ({self.id})"
 
 
 class CareerTag(models.Model):
@@ -102,7 +101,7 @@ class CareerTag(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.slug} ({self.id})'
+        return f"{self.slug} ({self.id})"
 
 
 class Location(models.Model):
@@ -111,7 +110,7 @@ class Location(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.name} ({self.id})'
+        return f"{self.name} ({self.id})"
 
 
 class LocationAlias(models.Model):
@@ -121,7 +120,7 @@ class LocationAlias(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.name} ({self.id})'
+        return f"{self.name} ({self.id})"
 
 
 class Employer(models.Model):
@@ -131,40 +130,40 @@ class Employer(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.name} {self.name} ({self.id})'
+        return f"{self.name} {self.name} ({self.id})"
 
 
-OPENED = 'OPENED'
-FILLED = 'FILLED'
+OPENED = "OPENED"
+FILLED = "FILLED"
 JOB_STATUS = (
-    (OPENED, 'Opened'),
-    (FILLED, 'Filled'),
+    (OPENED, "Opened"),
+    (FILLED, "Filled"),
 )
 
-FULLTIME = 'Full-time'
-INTERNSHIP = 'Internship'
-PARTTIME = 'Part-time'
-TEMPORARY = 'Temporary'
-CONTRACT = 'Contract'
+FULLTIME = "Full-time"
+INTERNSHIP = "Internship"
+PARTTIME = "Part-time"
+TEMPORARY = "Temporary"
+CONTRACT = "Contract"
 JOB_TYPE = (
-    (FULLTIME, 'Full-time'),
-    (INTERNSHIP, 'Internship'),
-    (PARTTIME, 'Part-time'),
-    (TEMPORARY, 'Temporary'),
-    (CONTRACT, 'Contract'),
+    (FULLTIME, "Full-time"),
+    (INTERNSHIP, "Internship"),
+    (PARTTIME, "Part-time"),
+    (TEMPORARY, "Temporary"),
+    (CONTRACT, "Contract"),
 )
 
-USD = 'USD'  # United States dollar
-CRC = 'CRC'  # Costa Rican colón
-CLP = 'CLP'  # Chilean peso
-EUR = 'EUR'  # Euro
-UYU = 'UYU'  # Uruguayan peso
+USD = "USD"  # United States dollar
+CRC = "CRC"  # Costa Rican colón
+CLP = "CLP"  # Chilean peso
+EUR = "EUR"  # Euro
+UYU = "UYU"  # Uruguayan peso
 CURRENCIES = (
-    (USD, 'USD'),
-    (CRC, 'CRC'),
-    (CLP, 'CLP'),
-    (EUR, 'EUR'),
-    (UYU, 'UYU'),
+    (USD, "USD"),
+    (CRC, "CRC"),
+    (CLP, "CLP"),
+    (EUR, "EUR"),
+    (UYU, "UYU"),
 )
 
 
@@ -181,7 +180,7 @@ class Job(models.Model):
     salary = models.CharField(max_length=253, null=True, blank=True)
     job_description = models.TextField(null=True, blank=True)
     job_type = models.CharField(max_length=15, choices=JOB_TYPE, default=FULLTIME)
-    remote = models.BooleanField(default=False, verbose_name='Remote')
+    remote = models.BooleanField(default=False, verbose_name="Remote")
     employer = models.ForeignKey(Employer, on_delete=models.CASCADE, null=True, blank=True)
     position = models.ForeignKey(Position, on_delete=models.CASCADE, null=False, blank=False)
     career_tags = models.ManyToManyField(CareerTag, blank=True)
@@ -190,4 +189,4 @@ class Job(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.title} ({self.id})'
+        return f"{self.title} ({self.id})"

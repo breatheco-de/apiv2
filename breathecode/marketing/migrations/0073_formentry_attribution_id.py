@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0072_alter_formentry_phone'),
+        ("marketing", "0072_alter_formentry_phone"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='formentry',
-            name='attribution_id',
+            model_name="formentry",
+            name="attribution_id",
             field=models.BigIntegerField(
                 blank=True,
                 default=None,
-                help_text=
-                'Keep a consistent attribution from al the previous applications from the same email (it will reset to a new one for each WON)',
-                null=True),
+                help_text="Keep a consistent attribution from al the previous applications from the same email (it will reset to a new one for each WON)",
+                null=True,
+            ),
         ),
     ]

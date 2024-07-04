@@ -1,19 +1,25 @@
 repos:
-  - repo: https://github.com/google/yapf
-    rev: "v0.40.2" # Use the sha / tag you want to point at
+  - repo: https://github.com/psf/black
+    rev: "24.4.2" # Use the sha / tag you want to point at
     hooks:
-      - id: yapf
-        language: python
-        entry: yapf
-        args: [-i, -vv]
-        types: [python]
-        additional_dependencies: ['toml']
-  # -   repo: https://github.com/PyCQA/flake8
-  #     rev: 6.1.0  # pick the desired flake8 version
-  #     hooks:
-  #     -   id: flake8
+      - id: black
+
+  # - repo: https://github.com/pycqa/isort
+  #   rev: 5.13.2
+  #   hooks:
+  #     - id: isort
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.1.0
+    hooks:
+      - id: flake8
+        additional_dependencies:
+          - flake8-bugbear
+          - flake8-docstrings
+        # exclude: ^src/blib2to3/
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v4.6.0
     # docs https://pre-commit.com/hooks.html
     hooks:
       - id: trailing-whitespace
@@ -23,10 +29,10 @@ repos:
       - id: check-yaml
       - id: debug-statements
       - id: check-merge-conflict
-      - id: double-quote-string-fixer
       - id: end-of-file-fixer
       - id: detect-private-key
       - id: check-toml
+
   - repo: meta
     hooks:
       - id: check-hooks-apply

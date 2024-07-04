@@ -6,44 +6,53 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('payments', '0047_paymentmethod'),
+        ("payments", "0047_paymentmethod"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='serviceset',
-            name='academy',
+            model_name="serviceset",
+            name="academy",
         ),
         migrations.RemoveField(
-            model_name='serviceset',
-            name='services',
+            model_name="serviceset",
+            name="services",
         ),
         migrations.RemoveField(
-            model_name='plan',
-            name='service_set',
+            model_name="plan",
+            name="service_set",
         ),
         migrations.RemoveField(
-            model_name='subscription',
-            name='selected_service_set',
+            model_name="subscription",
+            name="selected_service_set",
         ),
         migrations.RemoveField(
-            model_name='planfinancing',
-            name='selected_service_set',
+            model_name="planfinancing",
+            name="selected_service_set",
         ),
         migrations.RemoveField(
-            model_name='consumable',
-            name='service_set',
+            model_name="consumable",
+            name="service_set",
         ),
         migrations.AlterField(
-            model_name='service',
-            name='type',
-            field=models.CharField(choices=[('COHORT_SET', 'Cohort set'),
-                                            ('MENTORSHIP_SERVICE_SET', 'Mentorship service set'),
-                                            ('EVENT_TYPE_SET', 'Event type set'), ('VOID', 'Void')],
-                                   default='COHORT_SET',
-                                   help_text='Service type',
-                                   max_length=22),
+            model_name="service",
+            name="type",
+            field=models.CharField(
+                choices=[
+                    ("COHORT_SET", "Cohort set"),
+                    ("MENTORSHIP_SERVICE_SET", "Mentorship service set"),
+                    ("EVENT_TYPE_SET", "Event type set"),
+                    ("VOID", "Void"),
+                ],
+                default="COHORT_SET",
+                help_text="Service type",
+                max_length=22,
+            ),
         ),
-        migrations.DeleteModel(name='ServiceSetTranslation', ),
-        migrations.DeleteModel(name='ServiceSet', ),
+        migrations.DeleteModel(
+            name="ServiceSetTranslation",
+        ),
+        migrations.DeleteModel(
+            name="ServiceSet",
+        ),
     ]

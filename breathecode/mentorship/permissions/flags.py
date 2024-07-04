@@ -6,7 +6,7 @@ from breathecode.admissions.permissions import contexts as admissions_contexts
 
 from breathecode.services import LaunchDarkly
 
-__all__ = ['api']
+__all__ = ["api"]
 
 
 class Release:
@@ -21,7 +21,7 @@ class Release:
 
         context = ld.join_contexts(user_context, mentorship_service_context, academy_context)
 
-        return ld.get('api.release.enable_consume_mentorships', context, False)
+        return ld.get("api.release.enable_consume_mentorships", context, False)
 
 
 class API:

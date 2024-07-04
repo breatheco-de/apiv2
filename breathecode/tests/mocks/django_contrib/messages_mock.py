@@ -1,4 +1,4 @@
-class MessagesMock():
+class MessagesMock:
     request = None
     message = None
     call_list = []
@@ -11,9 +11,9 @@ class MessagesMock():
     def success(self, request, message):
         self.request = request
         self.message = message
-        self.call_list.append('success')
+        self.call_list.append("success")
 
     def error(self, request, message):
         self.request = request
         self.message = message
-        self.call_list.append('error')
+        self.call_list.append("error")

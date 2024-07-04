@@ -6,7 +6,7 @@ import pytest
 from faker import Faker
 from PIL import Image as PilImage
 
-__all__ = ['image', 'Image']
+__all__ = ["image", "Image"]
 
 
 @final
@@ -41,17 +41,17 @@ class Image:
 
         size = (y_size, x_size)
 
-        filename = self._fake.slug() + '.png'
+        filename = self._fake.slug() + ".png"
         while filename in self._filenames:
-            filename = self._fake.slug() + '.png'
+            filename = self._fake.slug() + ".png"
 
-        image = PilImage.new('RGB', size)
+        image = PilImage.new("RGB", size)
         arr = np.random.randint(low=0, high=255, size=(size[1], size[0]))
 
-        image = PilImage.fromarray(arr.astype('uint8'))
-        image.save(filename, 'PNG')
+        image = PilImage.fromarray(arr.astype("uint8"))
+        image.save(filename, "PNG")
 
-        file = open(filename, 'rb')
+        file = open(filename, "rb")
         self._filenames.append(filename)
 
         return file

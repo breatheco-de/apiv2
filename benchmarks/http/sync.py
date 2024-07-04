@@ -4,7 +4,7 @@ import httpx
 import requests
 
 times = 100
-url = 'https://www.google.com'
+url = "https://www.google.com"
 timeout = 100000
 
 
@@ -21,7 +21,7 @@ def main():
             secs = t2 - t1
             father_time.append(secs)
 
-    print('HTTPX: ', sum(father_time))
+    print("HTTPX: ", sum(father_time))
 
     father_time = []
     for url in url_list:
@@ -31,8 +31,8 @@ def main():
         secs = t2 - t1
         father_time.append(secs)
 
-    print('REQUESTS: ', sum(father_time))
+    print("REQUESTS: ", sum(father_time))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

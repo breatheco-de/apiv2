@@ -7,18 +7,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authenticate', '0028_auto_20220704_0322'),
+        ("authenticate", "0028_auto_20220704_0322"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='UserSetting',
+            name="UserSetting",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('lang',
-                 models.CharField(default='en',
-                                  max_length=5,
-                                  validators=[breathecode.utils.validators.language.validate_language_code])),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "lang",
+                    models.CharField(
+                        default="en",
+                        max_length=5,
+                        validators=[breathecode.utils.validators.language.validate_language_code],
+                    ),
+                ),
             ],
         ),
     ]

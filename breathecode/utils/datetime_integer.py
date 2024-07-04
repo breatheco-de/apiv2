@@ -6,12 +6,12 @@ from dateutil import parser
 from dateutil.tz import gettz, tzutc
 from django.utils import timezone
 
-__all__ = ['DatetimeInteger', 'duration_to_str', 'from_now']
+__all__ = ["DatetimeInteger", "duration_to_str", "from_now"]
 
 
 def duration_to_str(duration, include_seconds=False, include_days=False):
     if duration is None:
-        return 'none'
+        return "none"
 
     total_seconds = duration.seconds
     sec_value = total_seconds % (24 * 3600)
@@ -20,26 +20,26 @@ def duration_to_str(duration, include_seconds=False, include_days=False):
     min = sec_value // 60
     sec_value %= 60
 
-    msg = ''
+    msg = ""
     if include_days and duration.days > 0:
-        msg = f'{duration.days} days, '
+        msg = f"{duration.days} days, "
 
     if hour_value > 0:
-        msg += f'{hour_value} hr'
+        msg += f"{hour_value} hr"
         if min > 0:
-            msg += f', {min} min'
+            msg += f", {min} min"
         if sec_value > 0 and include_seconds:
-            msg += f' and {sec_value} sec'
+            msg += f" and {sec_value} sec"
         return msg
     elif min > 0:
-        msg = f'{min} min'
+        msg = f"{min} min"
         if sec_value > 0 and include_seconds:
-            msg += f' and {sec_value} sec'
+            msg += f" and {sec_value} sec"
         return msg
     elif sec_value > 0 and include_seconds:
-        return f'{sec_value} sec'
+        return f"{sec_value} sec"
     else:
-        return 'none'
+        return "none"
 
 
 def from_now(_date, include_seconds=False, include_days=False):
@@ -53,7 +53,7 @@ def from_now(_date, include_seconds=False, include_days=False):
 class Datetime(datetime):
 
     def __setattr__(self, key, value):
-        if key == 'info':
+        if key == "info":
             object.__setattr__(self, key, value)
         else:
             super(Datetime, self).__setattr__(key, value)
@@ -80,63 +80,53 @@ class DatetimeInteger:
 
     @staticmethod
     def from_datetime(timezone: str, date: datetime) -> int:
-        return int(date.astimezone(gettz(timezone)).strftime('%Y%m%d%H%M'))
+        return int(date.astimezone(gettz(timezone)).strftime("%Y%m%d%H%M"))
 
     @staticmethod
     def from_iso_string(timezone: str, string: str) -> int:
         date = parser.parse(string)
         tz = gettz(timezone)
 
-        return int(date.astimezone(tzutc()).astimezone(tz).strftime('%Y%m%d%H%M'))
+        return int(date.astimezone(tzutc()).astimezone(tz).strftime("%Y%m%d%H%M"))
 
     @staticmethod
     def to_iso_string(timezone: str, integer: int) -> str:
         tz = gettz(timezone)
-        matches = re.match(r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$', str(integer))
+        matches = re.match(r"^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$", str(integer))
         if not matches:
             return None
 
         elements = matches.groups()
-        date = datetime(int(elements[0]),
-                        int(elements[1]),
-                        int(elements[2]),
-                        int(elements[3]),
-                        int(elements[4]),
-                        tzinfo=tz)
+        date = datetime(
+            int(elements[0]), int(elements[1]), int(elements[2]), int(elements[3]), int(elements[4]), tzinfo=tz
+        )
 
-        return re.sub(r'\+00:00', 'Z', date.astimezone(tzutc()).isoformat())
+        return re.sub(r"\+00:00", "Z", date.astimezone(tzutc()).isoformat())
 
     @staticmethod
     def to_datetime(timezone: str, integer: int) -> datetime:
         tz = pytz.timezone(timezone)
-        matches = re.match(r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$', str(integer))
+        matches = re.match(r"^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$", str(integer))
         if not matches:
             return None
 
         elements = matches.groups()
-        date = datetime(int(elements[0]),
-                        int(elements[1]),
-                        int(elements[2]),
-                        int(elements[3]),
-                        int(elements[4]),
-                        0,
-                        tzinfo=tz)
+        date = datetime(
+            int(elements[0]), int(elements[1]), int(elements[2]), int(elements[3]), int(elements[4]), 0, tzinfo=tz
+        )
 
         return date
 
     @staticmethod
     def to_utc_datetime(timezone: str, integer: int) -> datetime:
         tz = pytz.timezone(timezone)
-        matches = re.match(r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$', str(integer))
+        matches = re.match(r"^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$", str(integer))
         if not matches:
             return None
 
         elements = matches.groups()
-        date = datetime(int(elements[0]),
-                        int(elements[1]),
-                        int(elements[2]),
-                        int(elements[3]),
-                        int(elements[4]),
-                        tzinfo=tz)
+        date = datetime(
+            int(elements[0]), int(elements[1]), int(elements[2]), int(elements[3]), int(elements[4]), tzinfo=tz
+        )
 
         return date.astimezone(pytz.UTC)

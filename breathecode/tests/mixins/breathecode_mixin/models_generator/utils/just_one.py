@@ -1,6 +1,6 @@
 from typing import Any
 
-__all__ = ['just_one']
+__all__ = ["just_one"]
 
 
 def just_one(attr: Any) -> bool:

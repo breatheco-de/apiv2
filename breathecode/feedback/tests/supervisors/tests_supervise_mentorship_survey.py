@@ -20,10 +20,13 @@ class Supervisor:
 
     def list(self):
         supervisors = SupervisorModel.objects.all()
-        return [{
-            'task_module': supervisor.task_module,
-            'task_name': supervisor.task_name,
-        } for supervisor in supervisors]
+        return [
+            {
+                "task_module": supervisor.task_module,
+                "task_name": supervisor.task_name,
+            }
+            for supervisor in supervisors
+        ]
 
     @sync_to_async
     def alist(self):
@@ -61,29 +64,31 @@ def supervisor(db, bc: Breathecode):
 def setup(db, monkeypatch: pytest.MonkeyPatch):
     from breathecode.monitoring.models import Supervisor
 
-    monkeypatch.setattr('logging.Logger.error', MagicMock())
-    monkeypatch.setattr('breathecode.payments.supervisors.MIN_PENDING_SESSIONS', 2)
-    monkeypatch.setattr('breathecode.payments.supervisors.MIN_CANCELLED_SESSIONS', 2)
+    monkeypatch.setattr("logging.Logger.error", MagicMock())
+    monkeypatch.setattr("breathecode.payments.supervisors.MIN_PENDING_SESSIONS", 2)
+    monkeypatch.setattr("breathecode.payments.supervisors.MIN_CANCELLED_SESSIONS", 2)
 
-    fn_module = 'breathecode.feedback.supervisors'
-    fn_name = 'supervise_mentorship_survey'
-    Supervisor.objects.get_or_create(task_module=fn_module,
-                                     task_name=fn_name,
-                                     defaults={
-                                         'delta': timedelta(seconds=3600),
-                                         'ran_at': None,
-                                     })
+    fn_module = "breathecode.feedback.supervisors"
+    fn_name = "supervise_mentorship_survey"
+    Supervisor.objects.get_or_create(
+        task_module=fn_module,
+        task_name=fn_name,
+        defaults={
+            "delta": timedelta(seconds=3600),
+            "ran_at": None,
+        },
+    )
 
     yield
 
 
 def db(data={}):
     return {
-        'delta': timedelta(seconds=3600),
-        'id': 0,
-        'ran_at': None,
-        'task_module': '',
-        'task_name': '',
+        "delta": timedelta(seconds=3600),
+        "id": 0,
+        "ran_at": None,
+        "task_module": "",
+        "task_name": "",
         **data,
     }
 
@@ -98,7 +103,7 @@ def tests_no_sessions(supervisor: Supervisor):
     #         'task_name': 'supervise_mentorship_survey',
     #     },
     # ]
-    assert supervisor.log('breathecode.feedback.supervisors', 'supervise_mentorship_survey') == []
+    assert supervisor.log("breathecode.feedback.supervisors", "supervise_mentorship_survey") == []
 
     # sessions = MentorshipSession.objects.filter(status='COMPLETED',
     #                                             started_at__isnull=False,
@@ -109,76 +114,87 @@ def tests_no_sessions(supervisor: Supervisor):
     #                                             created_at__gte=utc_now - timedelta(days=5))
 
 
-@pytest.mark.parametrize('status', [
-    'PENDING',
-    'STARTED',
-    'FAILED',
-    'IGNORED',
-    'CANCELED',
-])
-@pytest.mark.parametrize('started_at, ended_at, mentor, mentee', [
-    (None, None, 0, 0),
-    (timedelta(0), None, 0, 0),
-    (None, timedelta(0), 0, 0),
-    (None, None, 1, 0),
-    (None, None, 0, 1),
-])
-def tests_invalid_sessions(database: capy.Database, supervisor: Supervisor, utc_now: datetime, status, started_at,
-                           ended_at, mentor, mentee):
-    mentorship_session = {'status': status, 'mentor': mentor, 'mentee': mentee}
+@pytest.mark.parametrize(
+    "status",
+    [
+        "PENDING",
+        "STARTED",
+        "FAILED",
+        "IGNORED",
+        "CANCELED",
+    ],
+)
+@pytest.mark.parametrize(
+    "started_at, ended_at, mentor, mentee",
+    [
+        (None, None, 0, 0),
+        (timedelta(0), None, 0, 0),
+        (None, timedelta(0), 0, 0),
+        (None, None, 1, 0),
+        (None, None, 0, 1),
+    ],
+)
+def tests_invalid_sessions(
+    database: capy.Database, supervisor: Supervisor, utc_now: datetime, status, started_at, ended_at, mentor, mentee
+):
+    mentorship_session = {"status": status, "mentor": mentor, "mentee": mentee}
     if started_at is not None:
-        mentorship_session['started_at'] = utc_now + started_at
+        mentorship_session["started_at"] = utc_now + started_at
 
     if ended_at is not None:
-        mentorship_session['ended_at'] = utc_now + ended_at
+        mentorship_session["ended_at"] = utc_now + ended_at
 
     database.create(user=1, mentorship_session=(2, mentorship_session))
 
     supervise_mentorship_survey()
 
-    assert supervisor.log('breathecode.feedback.supervisors', 'supervise-mentorshipsurvey') == []
+    assert supervisor.log("breathecode.feedback.supervisors", "supervise-mentorshipsurvey") == []
 
 
-@pytest.mark.parametrize('delta, answer', [
-    (timedelta(0), False),
-    (timedelta(0), True),
-    (timedelta(minutes=5, seconds=1), True),
-])
-def tests_found_sessions(database: capy.Database, supervisor: Supervisor, utc_now: datetime, delta: timedelta,
-                         answer: bool):
+@pytest.mark.parametrize(
+    "delta, answer",
+    [
+        (timedelta(0), False),
+        (timedelta(0), True),
+        (timedelta(minutes=5, seconds=1), True),
+    ],
+)
+def tests_found_sessions(
+    database: capy.Database, supervisor: Supervisor, utc_now: datetime, delta: timedelta, answer: bool
+):
     mentorship_session = {
-        'status': 'COMPLETED',
-        'mentor': 1,
-        'mentee': 1,
-        'started_at': utc_now,
-        'ended_at': utc_now + delta,
+        "status": "COMPLETED",
+        "mentor": 1,
+        "mentee": 1,
+        "started_at": utc_now,
+        "ended_at": utc_now + delta,
     }
 
     if answer:
-        answer = [{'mentorship_session_id': n + 1, 'token_id': n + 1} for n in range(2)]
+        answer = [{"mentorship_session_id": n + 1, "token_id": n + 1} for n in range(2)]
 
     database.create(user=1, mentorship_session=(2, mentorship_session), feedback__answer=answer, token=2)
 
     supervise_mentorship_survey()
 
-    assert supervisor.log('breathecode.feedback.supervisors', 'supervise_mentorship_survey') == []
+    assert supervisor.log("breathecode.feedback.supervisors", "supervise_mentorship_survey") == []
 
 
 def tests_sessions_with_no_surveys(database: capy.Database, supervisor: Supervisor, utc_now: datetime):
     delta = timedelta(minutes=5, seconds=1)
     mentorship_session = {
-        'status': 'COMPLETED',
-        'mentor': 1,
-        'mentee': 1,
-        'started_at': utc_now,
-        'ended_at': utc_now + delta,
+        "status": "COMPLETED",
+        "mentor": 1,
+        "mentee": 1,
+        "started_at": utc_now,
+        "ended_at": utc_now + delta,
     }
 
     database.create(user=1, mentorship_session=(2, mentorship_session))
 
     supervise_mentorship_survey()
 
-    assert supervisor.log('breathecode.feedback.supervisors', 'supervise_mentorship_survey') == [
+    assert supervisor.log("breathecode.feedback.supervisors", "supervise_mentorship_survey") == [
         "Session 1 hasn't a survey",
         "Session 2 hasn't a survey",
     ]

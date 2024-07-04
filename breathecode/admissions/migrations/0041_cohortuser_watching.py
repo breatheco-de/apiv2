@@ -6,14 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0040_auto_20220510_2208'),
+        ("admissions", "0040_auto_20220510_2208"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='cohortuser',
-            name='watching',
-            field=models.BooleanField(default=False,
-                                      help_text='You can active students to the watch list and monitor them closely'),
+            model_name="cohortuser",
+            name="watching",
+            field=models.BooleanField(
+                default=False, help_text="You can active students to the watch list and monitor them closely"
+            ),
         ),
     ]

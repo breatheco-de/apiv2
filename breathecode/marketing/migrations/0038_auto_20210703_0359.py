@@ -9,22 +9,24 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('marketing', '0037_auto_20210608_0627'),
+        ("marketing", "0037_auto_20210608_0627"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='formentry',
-            name='user',
-            field=models.ForeignKey(blank=True,
-                                    default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.SET_NULL,
-                                    to=settings.AUTH_USER_MODEL),
+            model_name="formentry",
+            name="user",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='formentry',
-            name='won_at',
+            model_name="formentry",
+            name="won_at",
             field=models.DateTimeField(blank=True, default=None, null=True),
         ),
     ]

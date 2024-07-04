@@ -1,8 +1,8 @@
 from django.core.cache import cache
 
-IS_DJANGO_REDIS = hasattr(cache, 'delete_pattern')
+IS_DJANGO_REDIS = hasattr(cache, "delete_pattern")
 
-__all__ = ['Lock']
+__all__ = ["Lock"]
 
 if IS_DJANGO_REDIS:
     from redis.lock import Lock

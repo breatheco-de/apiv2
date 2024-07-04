@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0073_formentry_attribution_id'),
+        ("marketing", "0073_formentry_attribution_id"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='coursetranslation',
-            name='landing_url',
+            model_name="coursetranslation",
+            name="landing_url",
             field=models.URLField(
                 blank=True,
                 default=None,
-                help_text=
-                'Landing URL used on call to actions where the course is shown. A URL is needed per each translation.',
-                null=True),
+                help_text="Landing URL used on call to actions where the course is shown. A URL is needed per each translation.",
+                null=True,
+            ),
         ),
     ]

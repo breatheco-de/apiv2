@@ -7,17 +7,19 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('certificate', '0005_auto_20200929_1916'),
+        ("certificate", "0005_auto_20200929_1916"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='userspecialty',
-            name='layout',
-            field=models.ForeignKey(blank=True,
-                                    default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='certificate.layoutdesign'),
+            model_name="userspecialty",
+            name="layout",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to="certificate.layoutdesign",
+            ),
         ),
     ]

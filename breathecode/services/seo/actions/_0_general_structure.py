@@ -10,18 +10,18 @@ def general_structure(client, report):
     asset = client.asset
 
     readme = asset.get_readme(parse=True)
-    if 'html' not in readme:
-        report.fatal(f'Asset with {asset.slug} readme cannot be parse into an HTML')
+    if "html" not in readme:
+        report.fatal(f"Asset with {asset.slug} readme cannot be parse into an HTML")
         return False
 
-    h1s = BeautifulSoup(readme['html'], features='html.parser').find_all('h1')
+    h1s = BeautifulSoup(readme["html"], features="html.parser").find_all("h1")
     total_h1s = len(h1s)
     if total_h1s > 0:
-        report.bad(-20, f'We found {total_h1s} please remove all of them')
+        report.bad(-20, f"We found {total_h1s} please remove all of them")
 
-    h2s = BeautifulSoup(readme['html'], features='html.parser').find_all('h2')
+    h2s = BeautifulSoup(readme["html"], features="html.parser").find_all("h2")
     if len(h2s) == 0:
-        report.bad(-20, 'Include at least one h2 heading in the article')
+        report.bad(-20, "Include at least one h2 heading in the article")
 
 
 general_structure.description = """

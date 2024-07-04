@@ -9,43 +9,54 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('registry', '0006_auto_20220623_0134'),
+        ("registry", "0006_auto_20220623_0134"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='asset',
-            name='requirements',
+            model_name="asset",
+            name="requirements",
             field=models.TextField(
                 blank=True,
                 default=None,
-                help_text='Brief for the copywriters, mainly used to describe what this lessons needs to be about',
-                null=True),
+                help_text="Brief for the copywriters, mainly used to describe what this lessons needs to be about",
+                null=True,
+            ),
         ),
         migrations.AlterField(
-            model_name='asset',
-            name='status',
-            field=models.CharField(choices=[('UNASSIGNED', 'Unassigned'), ('WRITING', 'Writing'), ('DRAFT', 'Draft'),
-                                            ('PUBLISHED', 'Published')],
-                                   default='UNASSIGNED',
-                                   help_text='Related to the publishing of the asset',
-                                   max_length=20),
+            model_name="asset",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("UNASSIGNED", "Unassigned"),
+                    ("WRITING", "Writing"),
+                    ("DRAFT", "Draft"),
+                    ("PUBLISHED", "Published"),
+                ],
+                default="UNASSIGNED",
+                help_text="Related to the publishing of the asset",
+                max_length=20,
+            ),
         ),
         migrations.CreateModel(
-            name='AssetComment',
+            name="AssetComment",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('text', models.TextField()),
-                ('resolved', models.BooleanField(default=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('asset', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='registry.asset')),
-                ('author',
-                 models.ForeignKey(blank=True,
-                                   default=None,
-                                   help_text='Who wrote the lesson, not necessarily the owner',
-                                   null=True,
-                                   on_delete=django.db.models.deletion.SET_NULL,
-                                   to=settings.AUTH_USER_MODEL)),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("text", models.TextField()),
+                ("resolved", models.BooleanField(default=False)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("asset", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="registry.asset")),
+                (
+                    "author",
+                    models.ForeignKey(
+                        blank=True,
+                        default=None,
+                        help_text="Who wrote the lesson, not necessarily the owner",
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
     ]

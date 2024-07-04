@@ -3,7 +3,7 @@ from django.http import StreamingHttpResponse
 from django.contrib import messages
 from django.utils.safestring import mark_safe
 
-__all__ = ['AdminExportCsvMixin']
+__all__ = ["AdminExportCsvMixin"]
 
 
 class Echo:
@@ -29,17 +29,20 @@ class AdminExportCsvMixin:
         writer.writerow(field_names)
         return StreamingHttpResponse(
             (writer.writerow((getattr(obj, field) for field in field_names)) for obj in queryset),
-            content_type='text/csv',
-            headers={'Content-Disposition': 'attachment; filename={}.csv'.format(meta)},
+            content_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename={}.csv".format(meta)},
         )
 
     def async_export_as_csv(self, request, queryset):
         from breathecode.monitoring.tasks import async_download_csv
+
         meta = self.model._meta
-        ids = list(queryset.values_list('pk', flat=True))
+        ids = list(queryset.values_list("pk", flat=True))
         async_download_csv.delay(self.model.__module__, meta.object_name, ids)
         messages.add_message(
-            request, messages.INFO,
+            request,
+            messages.INFO,
             mark_safe(
                 'Data is being downloaded, <a href="/admin/monitoring/csvdownload/">you can check your download here.</a>'
-            ))
+            ),
+        )

@@ -1,6 +1,7 @@
 """
 Test /answer
 """
+
 import random
 from uuid import uuid4
 from django.utils import timezone
@@ -20,22 +21,25 @@ UTC_NOW = timezone.now()
 
 def bigquery_client_mock(self, user_id=1):
     n = 1
-    rows_to_insert = [{
-        'id': uuid4().hex,
-        'user_id': user_id,
-        'kind': self.bc.fake.slug(),
-        'related': {
-            'type': f'{self.bc.fake.slug()}.{self.bc.fake.slug()}',
-            'id': random.randint(1, 100),
-            'slug': self.bc.fake.slug(),
-        },
-        'meta': {
-            self.bc.fake.slug().replace('-', '_'): self.bc.fake.slug(),
-            self.bc.fake.slug().replace('-', '_'): self.bc.fake.slug(),
-            self.bc.fake.slug().replace('-', '_'): self.bc.fake.slug(),
-        },
-        'timestamp': timezone.now().isoformat(),
-    } for _ in range(n)]
+    rows_to_insert = [
+        {
+            "id": uuid4().hex,
+            "user_id": user_id,
+            "kind": self.bc.fake.slug(),
+            "related": {
+                "type": f"{self.bc.fake.slug()}.{self.bc.fake.slug()}",
+                "id": random.randint(1, 100),
+                "slug": self.bc.fake.slug(),
+            },
+            "meta": {
+                self.bc.fake.slug().replace("-", "_"): self.bc.fake.slug(),
+                self.bc.fake.slug().replace("-", "_"): self.bc.fake.slug(),
+                self.bc.fake.slug().replace("-", "_"): self.bc.fake.slug(),
+            },
+            "timestamp": timezone.now().isoformat(),
+        }
+        for _ in range(n)
+    ]
 
     result_mock = MagicMock()
     result_mock.result.return_value = iter([AttrDict(**kwargs) for kwargs in rows_to_insert])
@@ -43,8 +47,8 @@ def bigquery_client_mock(self, user_id=1):
     client_mock = MagicMock()
     client_mock.query.return_value = result_mock
 
-    project_id = 'test'
-    dataset = '4geeks'
+    project_id = "test"
+    dataset = "4geeks"
 
     query = f"""
                 SELECT *
@@ -61,19 +65,19 @@ def bigquery_client_mock(self, user_id=1):
 class MediaTestSuite(MediaTestCase):
 
     def test_no_auth(self):
-        url = reverse_lazy('v2:activity:me_activity_id', kwargs={'activity_id': '1234'})
+        url = reverse_lazy("v2:activity:me_activity_id", kwargs={"activity_id": "1234"})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_get_one(self):
-        url = reverse_lazy('v2:activity:me_activity_id', kwargs={'activity_id': '1234'})
+        url = reverse_lazy("v2:activity:me_activity_id", kwargs={"activity_id": "1234"})
         self.generate_models(authenticate=True)
 
         val = bigquery_client_mock(self, user_id=1)
         (client_mock, result_mock, query, project_id, dataset, expected) = val
 
-        with patch('breathecode.services.google_cloud.big_query.BigQuery.client') as mock:
+        with patch("breathecode.services.google_cloud.big_query.BigQuery.client") as mock:
             mock.return_value = (client_mock, project_id, dataset)
             response = self.client.get(url)
             json = response.json()

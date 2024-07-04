@@ -6,27 +6,36 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('commons', '0005_rename_attemps_taskmanager_attempts'),
+        ("commons", "0005_rename_attemps_taskmanager_attempts"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='taskmanager',
-            name='task_id',
-            field=models.CharField(default='', max_length=36),
+            model_name="taskmanager",
+            name="task_id",
+            field=models.CharField(default="", max_length=36),
         ),
         migrations.AlterField(
-            model_name='taskmanager',
-            name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('DONE', 'Done'), ('CANCELLED', 'Cancelled'),
-                                            ('REVERSED', 'Reversed'), ('PAUSED', 'Paused'), ('ABORTED', 'Aborted'),
-                                            ('ERROR', 'Error'), ('SCHEDULED', 'Scheduled')],
-                                   default='PENDING',
-                                   max_length=20),
+            model_name="taskmanager",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("PENDING", "Pending"),
+                    ("DONE", "Done"),
+                    ("CANCELLED", "Cancelled"),
+                    ("REVERSED", "Reversed"),
+                    ("PAUSED", "Paused"),
+                    ("ABORTED", "Aborted"),
+                    ("ERROR", "Error"),
+                    ("SCHEDULED", "Scheduled"),
+                ],
+                default="PENDING",
+                max_length=20,
+            ),
         ),
         migrations.AlterField(
-            model_name='taskmanager',
-            name='total_pages',
+            model_name="taskmanager",
+            name="total_pages",
             field=models.IntegerField(blank=True, default=1, null=True),
         ),
     ]

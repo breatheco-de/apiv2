@@ -1,6 +1,7 @@
 """
 Test /answer
 """
+
 import pytest
 from random import randint
 from unittest.mock import MagicMock, call, patch
@@ -30,11 +31,13 @@ class ProvisioningTestSuite(ProvisioningTestCase):
             profile_academy=1,
         )
         model2 = self.bc.database.create(profile_academy=1)
-        model3 = self.bc.database.create(academy=model.profile_academy.academy,
-                                         provisioning_vendor={
-                                             'name': 'gitpod',
-                                         },
-                                         provisioning_profile={'cohorts': [model.cohort.id]})
+        model3 = self.bc.database.create(
+            academy=model.profile_academy.academy,
+            provisioning_vendor={
+                "name": "gitpod",
+            },
+            provisioning_profile={"cohorts": [model.cohort.id]},
+        )
 
         vendor = get_provisioning_vendor(model.user.id, model.profile_academy, model.cohort)
         self.assertEqual(vendor.id, model3.provisioning_vendor.id)
@@ -51,20 +54,28 @@ class ProvisioningTestSuite(ProvisioningTestCase):
             cohort=1,
             profile_academy=1,
         )
-        vendor1 = self.bc.database.create(provisioning_vendor={
-            'name': 'gitpod',
-        }, )
-        vendor2 = self.bc.database.create(provisioning_vendor={
-            'name': 'github',
-        }, )
+        vendor1 = self.bc.database.create(
+            provisioning_vendor={
+                "name": "gitpod",
+            },
+        )
+        vendor2 = self.bc.database.create(
+            provisioning_vendor={
+                "name": "github",
+            },
+        )
 
-        profile1 = self.bc.database.create(provisioning_vendor=vendor1,
-                                           academy=model.profile_academy.academy,
-                                           provisioning_profile={'members': [model.profile_academy.id]})
+        profile1 = self.bc.database.create(
+            provisioning_vendor=vendor1,
+            academy=model.profile_academy.academy,
+            provisioning_profile={"members": [model.profile_academy.id]},
+        )
 
-        profile2 = self.bc.database.create(provisioning_vendor=vendor2,
-                                           academy=model.profile_academy.academy,
-                                           provisioning_profile={'members': [model.profile_academy.id]})
+        profile2 = self.bc.database.create(
+            provisioning_vendor=vendor2,
+            academy=model.profile_academy.academy,
+            provisioning_profile={"members": [model.profile_academy.id]},
+        )
 
         with pytest.raises(Exception):
             vendor = get_provisioning_vendor(model.user.id, model.profile_academy, model.cohort)
@@ -78,20 +89,28 @@ class ProvisioningTestSuite(ProvisioningTestCase):
             cohort=1,
             profile_academy=1,
         )
-        vendor1 = self.bc.database.create(provisioning_vendor={
-            'name': 'gitpod',
-        }, )
-        vendor2 = self.bc.database.create(provisioning_vendor={
-            'name': 'github',
-        }, )
+        vendor1 = self.bc.database.create(
+            provisioning_vendor={
+                "name": "gitpod",
+            },
+        )
+        vendor2 = self.bc.database.create(
+            provisioning_vendor={
+                "name": "github",
+            },
+        )
 
-        profile1 = self.bc.database.create(provisioning_vendor=vendor1,
-                                           academy=model.profile_academy.academy,
-                                           provisioning_profile={'cohorts': [model.cohort.id]})
+        profile1 = self.bc.database.create(
+            provisioning_vendor=vendor1,
+            academy=model.profile_academy.academy,
+            provisioning_profile={"cohorts": [model.cohort.id]},
+        )
 
-        profile2 = self.bc.database.create(provisioning_vendor=vendor2,
-                                           academy=model.profile_academy.academy,
-                                           provisioning_profile={'cohorts': [model.cohort.id]})
+        profile2 = self.bc.database.create(
+            provisioning_vendor=vendor2,
+            academy=model.profile_academy.academy,
+            provisioning_profile={"cohorts": [model.cohort.id]},
+        )
 
         with pytest.raises(Exception):
             vendor = get_provisioning_vendor(model.user.id, model.profile_academy, model.cohort)
@@ -105,38 +124,38 @@ class ProvisioningTestSuite(ProvisioningTestCase):
         vendor1 = self.bc.database.create(
             provisioning_vendor=1,
             provisioning_vendor_kwargs={
-                'name': 'gitpod',
+                "name": "gitpod",
             },
         )
         vendor2 = self.bc.database.create(
             provisioning_vendor=1,
             provisioning_vendor_kwargs={
-                'name': 'github',
+                "name": "github",
             },
         )
 
-        profile1 = self.bc.database.create(academy=model.profile_academy.academy,
-                                           provisioning_profile=1,
-                                           provisioning_profile_kwargs={
-                                               'vendor': vendor1.provisioning_vendor,
-                                               'members': None,
-                                               'cohorts': None,
-                                               'academy': model.profile_academy.academy
-                                           })
+        profile1 = self.bc.database.create(
+            academy=model.profile_academy.academy,
+            provisioning_profile=1,
+            provisioning_profile_kwargs={
+                "vendor": vendor1.provisioning_vendor,
+                "members": None,
+                "cohorts": None,
+                "academy": model.profile_academy.academy,
+            },
+        )
 
-        profile2 = self.bc.database.create(academy=model.profile_academy.academy,
-                                           provisioning_profile=1,
-                                           provisioning_profile_kwargs={
-                                               'vendor': vendor2.provisioning_vendor,
-                                               'members': [model.profile_academy.id]
-                                           })
+        profile2 = self.bc.database.create(
+            academy=model.profile_academy.academy,
+            provisioning_profile=1,
+            provisioning_profile_kwargs={"vendor": vendor2.provisioning_vendor, "members": [model.profile_academy.id]},
+        )
 
-        profile3 = self.bc.database.create(academy=model.profile_academy.academy,
-                                           provisioning_profile=1,
-                                           provisioning_profile_kwargs={
-                                               'vendor': vendor1.provisioning_vendor,
-                                               'cohorts': [model.cohort.id]
-                                           })
+        profile3 = self.bc.database.create(
+            academy=model.profile_academy.academy,
+            provisioning_profile=1,
+            provisioning_profile_kwargs={"vendor": vendor1.provisioning_vendor, "cohorts": [model.cohort.id]},
+        )
 
         vendor = get_provisioning_vendor(model.user.id, model.profile_academy, model.cohort)
         self.assertEqual(vendor.name, vendor2.provisioning_vendor.name)
@@ -150,31 +169,32 @@ class ProvisioningTestSuite(ProvisioningTestCase):
         vendor1 = self.bc.database.create(
             provisioning_vendor=1,
             provisioning_vendor_kwargs={
-                'name': 'gitpod',
+                "name": "gitpod",
             },
         )
         vendor2 = self.bc.database.create(
             provisioning_vendor=1,
             provisioning_vendor_kwargs={
-                'name': 'github',
+                "name": "github",
             },
         )
 
-        profile1 = self.bc.database.create(academy=model.profile_academy.academy,
-                                           provisioning_profile=1,
-                                           provisioning_profile_kwargs={
-                                               'vendor': vendor1.provisioning_vendor,
-                                               'members': None,
-                                               'cohorts': None,
-                                               'academy': model.profile_academy.academy
-                                           })
+        profile1 = self.bc.database.create(
+            academy=model.profile_academy.academy,
+            provisioning_profile=1,
+            provisioning_profile_kwargs={
+                "vendor": vendor1.provisioning_vendor,
+                "members": None,
+                "cohorts": None,
+                "academy": model.profile_academy.academy,
+            },
+        )
 
-        profile2 = self.bc.database.create(academy=model.profile_academy.academy,
-                                           provisioning_profile=1,
-                                           provisioning_profile_kwargs={
-                                               'vendor': vendor2.provisioning_vendor,
-                                               'cohorts': [model.cohort.id]
-                                           })
+        profile2 = self.bc.database.create(
+            academy=model.profile_academy.academy,
+            provisioning_profile=1,
+            provisioning_profile_kwargs={"vendor": vendor2.provisioning_vendor, "cohorts": [model.cohort.id]},
+        )
 
         vendor = get_provisioning_vendor(model.user.id, model.profile_academy, model.cohort)
         self.assertEqual(vendor.name, vendor2.provisioning_vendor.name)

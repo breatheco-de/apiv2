@@ -7,14 +7,14 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0048_academy_main_currency'),
-        ('events', '0034_auto_20221216_2003'),
+        ("admissions", "0048_academy_main_currency"),
+        ("events", "0034_auto_20221216_2003"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='eventtype',
-            name='academy',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='admissions.academy'),
+            model_name="eventtype",
+            name="academy",
+            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to="admissions.academy"),
         ),
     ]

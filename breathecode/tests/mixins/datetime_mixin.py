@@ -9,14 +9,14 @@ from django.utils import timezone
 
 from breathecode.utils.datetime_integer import DatetimeInteger
 
-__all__ = ['DatetimeMixin']
+__all__ = ["DatetimeMixin"]
 
 
-class DatetimeMixin():
+class DatetimeMixin:
     """Datetime mixin"""
 
     def time_to_string(self, t: datetime) -> str:
-        return t.strftime('%H:%M:%S')
+        return t.strftime("%H:%M:%S")
 
     def datetime_now(self) -> datetime:
         """
@@ -41,7 +41,7 @@ class DatetimeMixin():
         self.bc.datetime.to_iso_string(utc_now)  # equals to '2022-03-21T07:51:55.068Z'
         ```
         """
-        return re.sub(r'\+00:00$', 'Z', date.replace(tzinfo=UTC).isoformat())
+        return re.sub(r"\+00:00$", "Z", date.replace(tzinfo=UTC).isoformat())
 
     def integer_to_iso(self, timezone: str, integer: int) -> str:
         return DatetimeInteger.to_iso_string(timezone, integer)
@@ -62,14 +62,14 @@ class DatetimeMixin():
         self.bc.datetime.from_iso_string('2022-03-21T07:51:55.068Z')
         ```
         """
-        string = re.sub(r'Z$', '', iso)
+        string = re.sub(r"Z$", "", iso)
         date = datetime.fromisoformat(string)
         return timezone.make_aware(date)
 
     def datetime_to_ical(self, date=datetime.now(UTC), utc=True) -> str:
-        s = f'{date.year:04}{date.month:02}{date.day:02}T{date.hour:02}{date.minute:02}{date.second:02}'
+        s = f"{date.year:04}{date.month:02}{date.day:02}T{date.hour:02}{date.minute:02}{date.second:02}"
         if utc:
-            s += 'Z'
+            s += "Z"
 
         return s
 
@@ -79,7 +79,7 @@ class DatetimeMixin():
             return True
 
         try:
-            string = re.sub(r'Z$', '', date)
+            string = re.sub(r"Z$", "", date)
             datetime.fromisoformat(string)
             self.assertTrue(True)
             return True

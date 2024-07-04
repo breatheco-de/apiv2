@@ -6,25 +6,25 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0043_auto_20220830_1505'),
+        ("admissions", "0043_auto_20220830_1505"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='syllabusversion',
-            name='integrity_check_at',
+            model_name="syllabusversion",
+            name="integrity_check_at",
             field=models.DateTimeField(blank=True, default=None, null=True),
         ),
         migrations.AddField(
-            model_name='syllabusversion',
-            name='integrity_report',
+            model_name="syllabusversion",
+            name="integrity_report",
             field=models.JSONField(blank=True, default=None, null=True),
         ),
         migrations.AddField(
-            model_name='syllabusversion',
-            name='integrity_status',
-            field=models.CharField(choices=[('ERROR', 'Error'), ('PENDING', 'Pending'), ('OK', 'Ok')],
-                                   default='PENDING',
-                                   max_length=15),
+            model_name="syllabusversion",
+            name="integrity_status",
+            field=models.CharField(
+                choices=[("ERROR", "Error"), ("PENDING", "Pending"), ("OK", "Ok")], default="PENDING", max_length=15
+            ),
         ),
     ]

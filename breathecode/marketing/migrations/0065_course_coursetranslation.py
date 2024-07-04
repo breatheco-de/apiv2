@@ -8,42 +8,53 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0055_cohort_available_as_saas'),
-        ('marketing', '0064_auto_20230217_0523'),
+        ("admissions", "0055_cohort_available_as_saas"),
+        ("marketing", "0064_auto_20230217_0523"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Course',
+            name="Course",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('slug', models.SlugField(max_length=150, unique=True)),
-                ('status',
-                 models.CharField(choices=[('ACTIVE', 'Active'), ('DELETED', 'Deleted'), ('ARCHIVED', 'Archived')],
-                                  default='ACTIVE',
-                                  max_length=15)),
-                ('visibility',
-                 models.CharField(choices=[('PRIVATE', 'Private'), ('UNLISTED', 'Unlisted'), ('PUBLIC', 'Public')],
-                                  default='PRIVATE',
-                                  max_length=15)),
-                ('icon_url', models.URLField(help_text='Image icon to show on website')),
-                ('technologies', models.CharField(max_length=150)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('academy', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
-                ('syllabus', models.ManyToManyField(blank=True, to='admissions.Syllabus')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("slug", models.SlugField(max_length=150, unique=True)),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[("ACTIVE", "Active"), ("DELETED", "Deleted"), ("ARCHIVED", "Archived")],
+                        default="ACTIVE",
+                        max_length=15,
+                    ),
+                ),
+                (
+                    "visibility",
+                    models.CharField(
+                        choices=[("PRIVATE", "Private"), ("UNLISTED", "Unlisted"), ("PUBLIC", "Public")],
+                        default="PRIVATE",
+                        max_length=15,
+                    ),
+                ),
+                ("icon_url", models.URLField(help_text="Image icon to show on website")),
+                ("technologies", models.CharField(max_length=150)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("academy", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="admissions.academy")),
+                ("syllabus", models.ManyToManyField(blank=True, to="admissions.Syllabus")),
             ],
         ),
         migrations.CreateModel(
-            name='CourseTranslation',
+            name="CourseTranslation",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('lang',
-                 models.CharField(max_length=5,
-                                  validators=[breathecode.utils.validators.language.validate_language_code])),
-                ('title', models.CharField(max_length=60)),
-                ('description', models.CharField(max_length=255)),
-                ('course', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='marketing.course')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "lang",
+                    models.CharField(
+                        max_length=5, validators=[breathecode.utils.validators.language.validate_language_code]
+                    ),
+                ),
+                ("title", models.CharField(max_length=60)),
+                ("description", models.CharField(max_length=255)),
+                ("course", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="marketing.course")),
             ],
         ),
     ]

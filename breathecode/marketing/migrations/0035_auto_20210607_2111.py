@@ -7,21 +7,21 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0018_alter_cohortuser_role'),
-        ('marketing', '0034_auto_20210430_0035'),
+        ("admissions", "0018_alter_cohortuser_role"),
+        ("marketing", "0034_auto_20210430_0035"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='formentry',
-            name='ac_academy',
+            model_name="formentry",
+            name="ac_academy",
         ),
         migrations.CreateModel(
-            name='AcademyAlias',
+            name="AcademyAlias",
             fields=[
-                ('slug', models.SlugField(primary_key=True, serialize=False)),
-                ('active_campaign_slug', models.SlugField()),
-                ('academy', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
+                ("slug", models.SlugField(primary_key=True, serialize=False)),
+                ("active_campaign_slug", models.SlugField()),
+                ("academy", models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to="admissions.academy")),
             ],
         ),
     ]

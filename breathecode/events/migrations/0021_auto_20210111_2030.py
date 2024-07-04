@@ -6,20 +6,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0020_eventbritewebhook'),
+        ("events", "0020_eventbritewebhook"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='eventbritewebhook',
-            name='status_text',
+            model_name="eventbritewebhook",
+            name="status_text",
             field=models.CharField(blank=True, default=None, max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='eventbritewebhook',
-            name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('DONE', 'Done'), ('ERROR', 'Error')],
-                                   default='PENDING',
-                                   max_length=9),
+            model_name="eventbritewebhook",
+            name="status",
+            field=models.CharField(
+                choices=[("PENDING", "Pending"), ("DONE", "Done"), ("ERROR", "Error")], default="PENDING", max_length=9
+            ),
         ),
     ]

@@ -3,7 +3,7 @@ import os
 import django
 
 # Set the Django settings module.
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'breathecode.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "breathecode.settings")
 
 # Configure Django.
 django.setup()
@@ -16,8 +16,7 @@ class SerializerMeta(type):
         ...
 
 
-class Serializer(metaclass=SerializerMeta):
-    ...
+class Serializer(metaclass=SerializerMeta): ...
 
 
 from breathecode.admissions.models import Cohort

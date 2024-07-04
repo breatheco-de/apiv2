@@ -33,7 +33,7 @@ class FakeBucketObject:
 @pytest.fixture(autouse=True)
 def setup(monkeypatch, fake):
 
-    monkeypatch.setattr('breathecode.admissions.actions.get_bucket_object', lambda x: FakeBucketObject(fake.url()))
+    monkeypatch.setattr("breathecode.admissions.actions.get_bucket_object", lambda x: FakeBucketObject(fake.url()))
     yield
 
 
@@ -41,14 +41,14 @@ def setup(monkeypatch, fake):
 def context():
 
     request = HttpRequest()
-    request.META['HTTP_ACCEPT'] = 'application/json'
+    request.META["HTTP_ACCEPT"] = "application/json"
     request = Request(request)
 
     context = {
-        'view': None,
-        'args': (),
-        'kwargs': {},
-        'request': request,
+        "view": None,
+        "args": (),
+        "kwargs": {},
+        "request": request,
     }
 
     yield context
@@ -58,7 +58,7 @@ def context():
 def set_env(monkeypatch):
 
     def wrapper(env):
-        monkeypatch.setenv('ENV', env)
+        monkeypatch.setenv("ENV", env)
 
     yield wrapper
 
@@ -68,7 +68,7 @@ def get_queryset(db, bc: Breathecode):
 
     def wrapper(n):
         bc.database.create(academy=n)
-        academy_cls = bc.database.get_model('admissions.Academy')
+        academy_cls = bc.database.get_model("admissions.Academy")
         return academy_cls.objects.all()
 
     yield wrapper
@@ -76,8 +76,8 @@ def get_queryset(db, bc: Breathecode):
 
 # When: no slug is provided
 # Then: the message is returned
-@pytest.mark.parametrize('extra', [{}, {'silent': False}, {'silent': None}])
-@pytest.mark.parametrize('env', ['test', 'dev', 'prod', 'qa', 'staging', 'development', 'production', ''])
+@pytest.mark.parametrize("extra", [{}, {"silent": False}, {"silent": None}])
+@pytest.mark.parametrize("env", ["test", "dev", "prod", "qa", "staging", "development", "production", ""])
 def test_payment_exception__no_slug(fake, context, set_env, env, extra):
     set_env(env)
 
@@ -89,8 +89,8 @@ def test_payment_exception__no_slug(fake, context, set_env, env, extra):
     res = exception_handler(exc, context)
 
     expected = {
-        'detail': message,
-        'status_code': 402,
+        "detail": message,
+        "status_code": 402,
     }
 
     assert isinstance(res, Response)
@@ -100,12 +100,13 @@ def test_payment_exception__no_slug(fake, context, set_env, env, extra):
 
 # When: a slug is provided and the env is test
 # Then: the slug is returned
-@pytest.mark.parametrize('with_data', [True, False])
-@pytest.mark.parametrize('with_queryset', [True, False])
-@pytest.mark.parametrize('extra', [{}, {'silent': False}, {'silent': None}])
-def test_payment_exception__test_env__use_the_slug(fake, context, set_env, extra, get_kwargs, with_data, get_queryset,
-                                                   with_queryset):
-    set_env('test')
+@pytest.mark.parametrize("with_data", [True, False])
+@pytest.mark.parametrize("with_queryset", [True, False])
+@pytest.mark.parametrize("extra", [{}, {"silent": False}, {"silent": None}])
+def test_payment_exception__test_env__use_the_slug(
+    fake, context, set_env, extra, get_kwargs, with_data, get_queryset, with_queryset
+):
+    set_env("test")
 
     slug = fake.slug()
     message = fake.sentence()
@@ -113,29 +114,32 @@ def test_payment_exception__test_env__use_the_slug(fake, context, set_env, extra
 
     if with_data:
         data = get_kwargs(5)
-        extra['data'] = data
+        extra["data"] = data
 
     if with_queryset:
         queryset = get_queryset(5)
-        extra['queryset'] = queryset
+        extra["queryset"] = queryset
 
     exc = PaymentException(message, slug=slug, **extra)
     res = exception_handler(exc, context)
 
     expected = {
-        'detail': slug,
-        'status_code': 402,
+        "detail": slug,
+        "status_code": 402,
     }
 
     if with_data:
-        expected['data'] = data
+        expected["data"] = data
 
     if with_queryset:
-        expected['items'] = [{
-            'pk': x.id,
-            'slug': x.slug,
-            'name': x.name,
-        } for x in queryset]
+        expected["items"] = [
+            {
+                "pk": x.id,
+                "slug": x.slug,
+                "name": x.name,
+            }
+            for x in queryset
+        ]
 
     assert isinstance(res, Response)
     assert res.data == expected
@@ -144,8 +148,8 @@ def test_payment_exception__test_env__use_the_slug(fake, context, set_env, extra
 
 # When: a slug is provided and the env is not test
 # Then: the message is returned
-@pytest.mark.parametrize('extra', [{}, {'silent': False}, {'silent': None}])
-@pytest.mark.parametrize('env', ['dev', 'prod', 'qa', 'staging', 'development', 'production', ''])
+@pytest.mark.parametrize("extra", [{}, {"silent": False}, {"silent": None}])
+@pytest.mark.parametrize("env", ["dev", "prod", "qa", "staging", "development", "production", ""])
 def test_payment_exception__anything_but_test_env__does_not_use_the_slug(fake, context, set_env, env, extra):
     set_env(env)
 
@@ -156,8 +160,8 @@ def test_payment_exception__anything_but_test_env__does_not_use_the_slug(fake, c
     res = exception_handler(exc, context)
 
     expected = {
-        'detail': message,
-        'status_code': 402,
+        "detail": message,
+        "status_code": 402,
     }
 
     assert isinstance(res, Response)
@@ -167,7 +171,7 @@ def test_payment_exception__anything_but_test_env__does_not_use_the_slug(fake, c
 
 # When: a slug and silent=True is provided and the env is not test
 # Then: the message is returned
-@pytest.mark.parametrize('env', ['dev', 'prod', 'qa', 'staging', 'development', 'production', ''])
+@pytest.mark.parametrize("env", ["dev", "prod", "qa", "staging", "development", "production", ""])
 def test_payment_exception__anything_but_test_env__silent_code(fake, context, set_env, env):
     set_env(env)
 
@@ -179,10 +183,10 @@ def test_payment_exception__anything_but_test_env__silent_code(fake, context, se
 
     assert isinstance(res, Response)
     assert res.data == {
-        'detail': message,
-        'silent': True,
-        'silent_code': slug,
-        'status_code': 402,
+        "detail": message,
+        "silent": True,
+        "silent_code": slug,
+        "status_code": 402,
     }
     assert res.status_code == status.HTTP_402_PAYMENT_REQUIRED
 
@@ -190,7 +194,7 @@ def test_payment_exception__anything_but_test_env__silent_code(fake, context, se
 # When: a slug and silent=True is provided and the env is test
 # Then: the message is returned
 def test_payment_exception__test_env__silent_code(fake, context, set_env):
-    set_env('test')
+    set_env("test")
 
     slug = fake.slug()
     message = fake.sentence()
@@ -200,10 +204,10 @@ def test_payment_exception__test_env__silent_code(fake, context, set_env):
 
     assert isinstance(res, Response)
     assert res.data == {
-        'detail': slug,
-        'silent': True,
-        'silent_code': slug,
-        'status_code': 402,
+        "detail": slug,
+        "silent": True,
+        "silent_code": slug,
+        "status_code": 402,
     }
     assert res.status_code == status.HTTP_402_PAYMENT_REQUIRED
 
@@ -211,7 +215,7 @@ def test_payment_exception__test_env__silent_code(fake, context, set_env):
 # When: a slug and silent=True is provided and the env is test with multiple errors
 # Then: it returns each error
 def test_payment_exception__test_env__multiple_errors(fake, context, set_env, get_kwargs, get_queryset):
-    set_env('test')
+    set_env("test")
 
     slugs = [fake.slug() for _ in range(3)]
     messages = [fake.sentence() for _ in range(5)]
@@ -230,35 +234,21 @@ def test_payment_exception__test_env__multiple_errors(fake, context, set_env, ge
     res = exception_handler(exc, context)
 
     expected = [
+        {"detail": messages[0], "status_code": 402},
+        {"detail": messages[1], "silent": True, "silent_code": "undefined", "status_code": 402},
+        {"detail": slugs[0], "silent": True, "silent_code": slugs[0], "status_code": 402},
+        {"data": data, "detail": slugs[1], "status_code": 402},
         {
-            'detail': messages[0],
-            'status_code': 402
-        },
-        {
-            'detail': messages[1],
-            'silent': True,
-            'silent_code': 'undefined',
-            'status_code': 402
-        },
-        {
-            'detail': slugs[0],
-            'silent': True,
-            'silent_code': slugs[0],
-            'status_code': 402
-        },
-        {
-            'data': data,
-            'detail': slugs[1],
-            'status_code': 402
-        },
-        {
-            'detail': slugs[2],
-            'items': [{
-                'pk': x.id,
-                'slug': x.slug,
-                'name': x.name,
-            } for x in queryset],
-            'status_code': 402
+            "detail": slugs[2],
+            "items": [
+                {
+                    "pk": x.id,
+                    "slug": x.slug,
+                    "name": x.name,
+                }
+                for x in queryset
+            ],
+            "status_code": 402,
         },
     ]
 
@@ -269,8 +259,8 @@ def test_payment_exception__test_env__multiple_errors(fake, context, set_env, ge
 
 # When: no slug is provided
 # Then: the message is returned
-@pytest.mark.parametrize('extra', [{}, {'silent': False}, {'silent': None}])
-@pytest.mark.parametrize('env', ['test', 'dev', 'prod', 'qa', 'staging', 'development', 'production', ''])
+@pytest.mark.parametrize("extra", [{}, {"silent": False}, {"silent": None}])
+@pytest.mark.parametrize("env", ["test", "dev", "prod", "qa", "staging", "development", "production", ""])
 def test_validation_exception__no_slug(fake, context, set_env, env, extra):
     set_env(env)
 
@@ -283,8 +273,8 @@ def test_validation_exception__no_slug(fake, context, set_env, env, extra):
     res = exception_handler(exc, context)
 
     expected = {
-        'detail': message,
-        'status_code': status_code,
+        "detail": message,
+        "status_code": status_code,
     }
 
     assert isinstance(res, Response)
@@ -294,12 +284,13 @@ def test_validation_exception__no_slug(fake, context, set_env, env, extra):
 
 # When: a slug is provided and the env is test
 # Then: the slug is returned
-@pytest.mark.parametrize('with_data', [True, False])
-@pytest.mark.parametrize('with_queryset', [True, False])
-@pytest.mark.parametrize('extra', [{}, {'silent': False}, {'silent': None}])
-def test_validation_exception__test_env__use_the_slug(fake, context, set_env, extra, get_kwargs, with_data,
-                                                      get_queryset, with_queryset):
-    set_env('test')
+@pytest.mark.parametrize("with_data", [True, False])
+@pytest.mark.parametrize("with_queryset", [True, False])
+@pytest.mark.parametrize("extra", [{}, {"silent": False}, {"silent": None}])
+def test_validation_exception__test_env__use_the_slug(
+    fake, context, set_env, extra, get_kwargs, with_data, get_queryset, with_queryset
+):
+    set_env("test")
 
     slug = fake.slug()
     message = fake.sentence()
@@ -308,29 +299,32 @@ def test_validation_exception__test_env__use_the_slug(fake, context, set_env, ex
 
     if with_data:
         data = get_kwargs(5)
-        extra['data'] = data
+        extra["data"] = data
 
     if with_queryset:
         queryset = get_queryset(5)
-        extra['queryset'] = queryset
+        extra["queryset"] = queryset
 
     exc = ValidationException(message, slug=slug, code=status_code, **extra)
     res = exception_handler(exc, context)
 
     expected = {
-        'detail': slug,
-        'status_code': status_code,
+        "detail": slug,
+        "status_code": status_code,
     }
 
     if with_data:
-        expected['data'] = data
+        expected["data"] = data
 
     if with_queryset:
-        expected['items'] = [{
-            'pk': x.id,
-            'slug': x.slug,
-            'name': x.name,
-        } for x in queryset]
+        expected["items"] = [
+            {
+                "pk": x.id,
+                "slug": x.slug,
+                "name": x.name,
+            }
+            for x in queryset
+        ]
 
     assert isinstance(res, Response)
     assert res.data == expected
@@ -339,8 +333,8 @@ def test_validation_exception__test_env__use_the_slug(fake, context, set_env, ex
 
 # When: a slug is provided and the env is not test
 # Then: the message is returned
-@pytest.mark.parametrize('extra', [{}, {'silent': False}, {'silent': None}])
-@pytest.mark.parametrize('env', ['dev', 'prod', 'qa', 'staging', 'development', 'production', ''])
+@pytest.mark.parametrize("extra", [{}, {"silent": False}, {"silent": None}])
+@pytest.mark.parametrize("env", ["dev", "prod", "qa", "staging", "development", "production", ""])
 def test_validation_exception__anything_but_test_env__does_not_use_the_slug(fake, context, set_env, env, extra):
     set_env(env)
 
@@ -352,8 +346,8 @@ def test_validation_exception__anything_but_test_env__does_not_use_the_slug(fake
     res = exception_handler(exc, context)
 
     expected = {
-        'detail': message,
-        'status_code': status_code,
+        "detail": message,
+        "status_code": status_code,
     }
 
     assert isinstance(res, Response)
@@ -363,7 +357,7 @@ def test_validation_exception__anything_but_test_env__does_not_use_the_slug(fake
 
 # When: a slug and silent=True is provided and the env is not test
 # Then: the message is returned
-@pytest.mark.parametrize('env', ['dev', 'prod', 'qa', 'staging', 'development', 'production', ''])
+@pytest.mark.parametrize("env", ["dev", "prod", "qa", "staging", "development", "production", ""])
 def test_validation_exception__anything_but_test_env__silent_code(fake, context, set_env, env):
     set_env(env)
 
@@ -376,10 +370,10 @@ def test_validation_exception__anything_but_test_env__silent_code(fake, context,
 
     assert isinstance(res, Response)
     assert res.data == {
-        'detail': message,
-        'silent': True,
-        'silent_code': slug,
-        'status_code': status_code,
+        "detail": message,
+        "silent": True,
+        "silent_code": slug,
+        "status_code": status_code,
     }
     assert res.status_code == status_code
 
@@ -387,7 +381,7 @@ def test_validation_exception__anything_but_test_env__silent_code(fake, context,
 # When: a slug and silent=True is provided and the env is test
 # Then: the message is returned
 def test_validation_exception__test_env__silent_code(fake, context, set_env):
-    set_env('test')
+    set_env("test")
 
     slug = fake.slug()
     message = fake.sentence()
@@ -398,19 +392,20 @@ def test_validation_exception__test_env__silent_code(fake, context, set_env):
 
     assert isinstance(res, Response)
     assert res.data == {
-        'detail': slug,
-        'silent': True,
-        'silent_code': slug,
-        'status_code': status_code,
+        "detail": slug,
+        "silent": True,
+        "silent_code": slug,
+        "status_code": status_code,
     }
     assert res.status_code == status_code
 
 
 # When: a slug and silent=True is provided and the env is test with multiple errors, any error
 # Then: it returns each error
-def test_validation_exception__test_env__any_status_code__multiple_errors(fake, context, set_env, get_kwargs,
-                                                                          get_queryset):
-    set_env('test')
+def test_validation_exception__test_env__any_status_code__multiple_errors(
+    fake, context, set_env, get_kwargs, get_queryset
+):
+    set_env("test")
 
     slugs = [fake.slug() for _ in range(3)]
     messages = [fake.sentence() for _ in range(5)]
@@ -433,34 +428,37 @@ def test_validation_exception__test_env__any_status_code__multiple_errors(fake, 
 
     expected = [
         {
-            'detail': messages[0],
-            'status_code': status_code,
+            "detail": messages[0],
+            "status_code": status_code,
         },
         {
-            'detail': messages[1],
-            'silent': True,
-            'silent_code': 'undefined',
-            'status_code': status_code,
+            "detail": messages[1],
+            "silent": True,
+            "silent_code": "undefined",
+            "status_code": status_code,
         },
         {
-            'detail': slugs[0],
-            'silent': True,
-            'silent_code': slugs[0],
-            'status_code': status_code,
+            "detail": slugs[0],
+            "silent": True,
+            "silent_code": slugs[0],
+            "status_code": status_code,
         },
         {
-            'data': data,
-            'detail': slugs[1],
-            'status_code': status_code,
+            "data": data,
+            "detail": slugs[1],
+            "status_code": status_code,
         },
         {
-            'detail': slugs[2],
-            'items': [{
-                'pk': x.id,
-                'slug': x.slug,
-                'name': x.name,
-            } for x in queryset],
-            'status_code': status_code,
+            "detail": slugs[2],
+            "items": [
+                {
+                    "pk": x.id,
+                    "slug": x.slug,
+                    "name": x.name,
+                }
+                for x in queryset
+            ],
+            "status_code": status_code,
         },
     ]
 
@@ -472,7 +470,7 @@ def test_validation_exception__test_env__any_status_code__multiple_errors(fake, 
 # When: a slug and silent=True is provided and the env is test with multiple errors, 207
 # Then: it returns each error
 def test_validation_exception__test_env__207__multiple_errors(fake, context, set_env, get_kwargs, get_queryset):
-    set_env('test')
+    set_env("test")
 
     slugs = [fake.slug() for _ in range(3)]
     messages = [fake.sentence() for _ in range(5)]
@@ -493,34 +491,37 @@ def test_validation_exception__test_env__207__multiple_errors(fake, context, set
 
     expected = [
         {
-            'detail': messages[0],
-            'status_code': 400,
+            "detail": messages[0],
+            "status_code": 400,
         },
         {
-            'detail': messages[1],
-            'silent': True,
-            'silent_code': 'undefined',
-            'status_code': status_codes[0],
+            "detail": messages[1],
+            "silent": True,
+            "silent_code": "undefined",
+            "status_code": status_codes[0],
         },
         {
-            'detail': slugs[0],
-            'silent': True,
-            'silent_code': slugs[0],
-            'status_code': status_codes[1],
+            "detail": slugs[0],
+            "silent": True,
+            "silent_code": slugs[0],
+            "status_code": status_codes[1],
         },
         {
-            'data': data,
-            'detail': slugs[1],
-            'status_code': status_codes[2],
+            "data": data,
+            "detail": slugs[1],
+            "status_code": status_codes[2],
         },
         {
-            'detail': slugs[2],
-            'items': [{
-                'pk': x.id,
-                'slug': x.slug,
-                'name': x.name,
-            } for x in queryset],
-            'status_code': status_codes[3],
+            "detail": slugs[2],
+            "items": [
+                {
+                    "pk": x.id,
+                    "slug": x.slug,
+                    "name": x.name,
+                }
+                for x in queryset
+            ],
+            "status_code": status_codes[3],
         },
     ]
 

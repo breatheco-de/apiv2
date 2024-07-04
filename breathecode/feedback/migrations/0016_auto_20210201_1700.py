@@ -6,21 +6,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('feedback', '0015_auto_20210129_2143'),
+        ("feedback", "0015_auto_20210129_2143"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='answer',
-            name='comment',
+            model_name="answer",
+            name="comment",
             field=models.TextField(blank=True, default=None, max_length=1000, null=True),
         ),
         migrations.AlterField(
-            model_name='survey',
-            name='status',
-            field=models.CharField(choices=[('SENT', 'Sent'), ('PENDING', 'Pending'), ('PARTIAL', 'Partial'),
-                                            ('FATAL', 'Fatal')],
-                                   default='PENDING',
-                                   max_length=15),
+            model_name="survey",
+            name="status",
+            field=models.CharField(
+                choices=[("SENT", "Sent"), ("PENDING", "Pending"), ("PARTIAL", "Partial"), ("FATAL", "Fatal")],
+                default="PENDING",
+                max_length=15,
+            ),
         ),
     ]

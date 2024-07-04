@@ -13,8 +13,8 @@ from breathecode.utils.api_view_extensions.extensions.lookup_extension import Lo
 
 from .extensions import CacheExtension
 
-__all__ = ['APIViewExtensionHandlers']
-is_test_env = os.getenv('ENV') == 'test'
+__all__ = ["APIViewExtensionHandlers"]
+is_test_env = os.getenv("ENV") == "test"
 
 
 class APIViewExtensionHandlers:
@@ -68,7 +68,7 @@ class APIViewExtensionHandlers:
 
         return queryset
 
-    def response(self, data: dict | list[dict], format='application/json'):
+    def response(self, data: dict | list[dict], format="application/json"):
         """Get the response of endpoint."""
 
         headers = {}

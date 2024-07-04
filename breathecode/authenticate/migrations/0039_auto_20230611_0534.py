@@ -6,29 +6,43 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authenticate', '0038_auto_20230513_0007'),
+        ("authenticate", "0038_auto_20230513_0007"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='githubacademyuserlog',
-            name='valid_until',
+            model_name="githubacademyuserlog",
+            name="valid_until",
             field=models.DateTimeField(blank=True, default=None, null=True),
         ),
         migrations.AlterField(
-            model_name='githubacademyuser',
-            name='storage_status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('SYNCHED', 'Synched'), ('ERROR', 'Error'),
-                                            ('UNKNOWN', 'Unknown'), ('PAYMENT_CONFLICT', 'Payment conflict')],
-                                   default='PENDING',
-                                   max_length=20),
+            model_name="githubacademyuser",
+            name="storage_status",
+            field=models.CharField(
+                choices=[
+                    ("PENDING", "Pending"),
+                    ("SYNCHED", "Synched"),
+                    ("ERROR", "Error"),
+                    ("UNKNOWN", "Unknown"),
+                    ("PAYMENT_CONFLICT", "Payment conflict"),
+                ],
+                default="PENDING",
+                max_length=20,
+            ),
         ),
         migrations.AlterField(
-            model_name='githubacademyuserlog',
-            name='storage_status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('SYNCHED', 'Synched'), ('ERROR', 'Error'),
-                                            ('UNKNOWN', 'Unknown'), ('PAYMENT_CONFLICT', 'Payment conflict')],
-                                   default='PENDING',
-                                   max_length=20),
+            model_name="githubacademyuserlog",
+            name="storage_status",
+            field=models.CharField(
+                choices=[
+                    ("PENDING", "Pending"),
+                    ("SYNCHED", "Synched"),
+                    ("ERROR", "Error"),
+                    ("UNKNOWN", "Unknown"),
+                    ("PAYMENT_CONFLICT", "Payment conflict"),
+                ],
+                default="PENDING",
+                max_length=20,
+            ),
         ),
     ]

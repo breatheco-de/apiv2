@@ -21,10 +21,11 @@ def get_calls():
 def apply_patch(db, monkeypatch):
     m1 = MagicMock()
 
-    monkeypatch.setattr('breathecode.activity.management.commands.upload_activities.get_activity_sampling_rate',
-                        lambda: 60)
-    monkeypatch.setattr('breathecode.activity.tasks.upload_activities.apply_async', m1)
-    monkeypatch.setattr('django.utils.timezone.now', lambda: UTC_NOW)
+    monkeypatch.setattr(
+        "breathecode.activity.management.commands.upload_activities.get_activity_sampling_rate", lambda: 60
+    )
+    monkeypatch.setattr("breathecode.activity.tasks.upload_activities.apply_async", m1)
+    monkeypatch.setattr("django.utils.timezone.now", lambda: UTC_NOW)
 
     yield m1
 

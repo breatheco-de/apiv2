@@ -12,23 +12,30 @@ import datetime
 from breathecode.marketing.models import ShortLink
 from breathecode.utils import ScriptNotification
 from django.db.models import Q
+
 # start your code here
 # Filtered list of shortlink objects with destination status error or not found
 destination_status_error_or_not_found = ShortLink.objects.filter(
-    Q(destination_status='ERROR') | Q(destination_status='NOT_FOUND'))
+    Q(destination_status="ERROR") | Q(destination_status="NOT_FOUND")
+)
 
 destination_status_error_or_not_found_list = [
-    '- URL: ' + item.destination + ' Status: ' + item.destination_status + ' Last clicked: ' +
-    f'{item.lastclick_at.strftime("%m/%d/%Y, %H:%M:%S") if item.lastclick_at != None else "never"}'
+    "- URL: "
+    + item.destination
+    + " Status: "
+    + item.destination_status
+    + " Last clicked: "
+    + f'{item.lastclick_at.strftime("%m/%d/%Y, %H:%M:%S") if item.lastclick_at != None else "never"}'
     for item in destination_status_error_or_not_found
 ]
 
 # Joining the list together for a display format
-destination_status_error_or_not_found_list_display = ('\n').join(destination_status_error_or_not_found_list)
+destination_status_error_or_not_found_list_display = ("\n").join(destination_status_error_or_not_found_list)
 
 if len(destination_status_error_or_not_found_list_display) > 0:
     raise ScriptNotification(
-        f'These shortlinks: {destination_status_error_or_not_found_list_display} are not working properly.',
-        slug='short-link-bad-destination-status')
+        f"These shortlinks: {destination_status_error_or_not_found_list_display} are not working properly.",
+        slug="short-link-bad-destination-status",
+    )
 
-print('All shortlinks working properly')
+print("All shortlinks working properly")

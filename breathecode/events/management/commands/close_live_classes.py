@@ -7,7 +7,7 @@ from django.utils import timezone
 
 
 class Command(BaseCommand):
-    help = 'Close live classes'
+    help = "Close live classes"
 
     def handle(self, *args: Any, **options: Any):
         live_classes = LiveClass.objects.filter(started_at__isnull=False, ended_at=None)

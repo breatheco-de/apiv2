@@ -1,6 +1,7 @@
 """
 Test cases for /academy/:id/member/:id
 """
+
 from datetime import timedelta
 from time import sleep
 from django.utils import timezone
@@ -25,7 +26,7 @@ class TokenTestSuite(AuthTestCase):
 
     def test_get_or_create__bad_user(self):
         with self.assertRaises(InvalidTokenType) as _:
-            Token.get_or_create(None, 'they-killed-kenny')
+            Token.get_or_create(None, "they-killed-kenny")
 
         self.assertEqual(self.all_token_dict(), [])
 
@@ -45,13 +46,13 @@ class TokenTestSuite(AuthTestCase):
         start = timezone.now()
         model = self.generate_models(user=True)
 
-        Token.get_or_create(model.user, token_type='login')
+        Token.get_or_create(model.user, token_type="login")
         end = timezone.now()
 
         db = self.all_token_dict()
-        created = db[0]['created']
-        expires_at = db[0]['expires_at']
-        token = db[0]['key']
+        created = db[0]["created"]
+        expires_at = db[0]["expires_at"]
+        token = db[0]["key"]
 
         self.assertGreater(created, start)
         self.assertLess(created, end)
@@ -61,23 +62,23 @@ class TokenTestSuite(AuthTestCase):
         self.assertGreater(expires_at, end + timedelta(days=1) - timedelta(seconds=10))
         self.assertToken(token)
 
-        del db[0]['created']
-        del db[0]['expires_at']
-        del db[0]['key']
+        del db[0]["created"]
+        del db[0]["expires_at"]
+        del db[0]["key"]
 
-        self.assertEqual(db, [{'id': 1, 'token_type': 'login', 'user_id': 1}])
+        self.assertEqual(db, [{"id": 1, "token_type": "login", "user_id": 1}])
 
     def test_get_or_create__token_type_login__passing_hours_length(self):
         start = timezone.now()
         model = self.generate_models(user=True)
 
-        Token.get_or_create(model.user, token_type='login', hours_length=2)
+        Token.get_or_create(model.user, token_type="login", hours_length=2)
         end = timezone.now()
 
         db = self.all_token_dict()
-        created = db[0]['created']
-        expires_at = db[0]['expires_at']
-        token = db[0]['key']
+        created = db[0]["created"]
+        expires_at = db[0]["expires_at"]
+        token = db[0]["key"]
 
         self.assertGreater(created, start)
         self.assertLess(created, end)
@@ -87,37 +88,42 @@ class TokenTestSuite(AuthTestCase):
         self.assertGreater(expires_at, end + timedelta(hours=2) - timedelta(seconds=10))
         self.assertToken(token)
 
-        del db[0]['created']
-        del db[0]['expires_at']
-        del db[0]['key']
+        del db[0]["created"]
+        del db[0]["expires_at"]
+        del db[0]["key"]
 
-        self.assertEqual(db, [{'id': 1, 'token_type': 'login', 'user_id': 1}])
+        self.assertEqual(db, [{"id": 1, "token_type": "login", "user_id": 1}])
 
     def test_get_or_create__token_type_login__passing_expires_at(self):
         expires_at = timezone.now() + timedelta(days=7)
         start = timezone.now()
         model = self.generate_models(user=True)
 
-        Token.get_or_create(model.user, token_type='login', expires_at=expires_at)
+        Token.get_or_create(model.user, token_type="login", expires_at=expires_at)
         end = timezone.now()
 
         db = self.all_token_dict()
-        created = db[0]['created']
-        token = db[0]['key']
+        created = db[0]["created"]
+        token = db[0]["key"]
 
         self.assertGreater(created, start)
         self.assertLess(created, end)
         self.assertToken(token)
 
-        del db[0]['created']
-        del db[0]['key']
+        del db[0]["created"]
+        del db[0]["key"]
 
-        self.assertEqual(db, [{
-            'id': 1,
-            'token_type': 'login',
-            'user_id': 1,
-            'expires_at': expires_at,
-        }])
+        self.assertEqual(
+            db,
+            [
+                {
+                    "id": 1,
+                    "token_type": "login",
+                    "user_id": 1,
+                    "expires_at": expires_at,
+                }
+            ],
+        )
 
     """
     🔽🔽🔽 get_or_create token_type one_time
@@ -127,33 +133,38 @@ class TokenTestSuite(AuthTestCase):
         start = timezone.now()
         model = self.generate_models(user=True)
 
-        Token.get_or_create(model.user, token_type='one_time')
+        Token.get_or_create(model.user, token_type="one_time")
         end = timezone.now()
 
         db = self.all_token_dict()
-        created = db[0]['created']
-        token = db[0]['key']
+        created = db[0]["created"]
+        token = db[0]["key"]
 
         self.assertGreater(created, start)
         self.assertLess(created, end)
 
         self.assertToken(token)
 
-        del db[0]['created']
-        del db[0]['key']
+        del db[0]["created"]
+        del db[0]["key"]
 
-        self.assertEqual(db, [{
-            'id': 1,
-            'token_type': 'one_time',
-            'user_id': 1,
-            'expires_at': None,
-        }])
+        self.assertEqual(
+            db,
+            [
+                {
+                    "id": 1,
+                    "token_type": "one_time",
+                    "user_id": 1,
+                    "expires_at": None,
+                }
+            ],
+        )
 
     def test_get_or_create__token_type_one_time__passing_hours_length(self):
         model = self.generate_models(user=True)
 
         with self.assertRaises(BadArguments) as _:
-            Token.get_or_create(model.user, token_type='one_time', hours_length=2)
+            Token.get_or_create(model.user, token_type="one_time", hours_length=2)
 
         self.assertEqual(self.all_token_dict(), [])
 
@@ -162,7 +173,7 @@ class TokenTestSuite(AuthTestCase):
         model = self.generate_models(user=True)
 
         with self.assertRaises(BadArguments) as _:
-            Token.get_or_create(model.user, token_type='one_time', expires_at=expires_at)
+            Token.get_or_create(model.user, token_type="one_time", expires_at=expires_at)
 
         self.assertEqual(self.all_token_dict(), [])
 
@@ -174,33 +185,38 @@ class TokenTestSuite(AuthTestCase):
         start = timezone.now()
         model = self.generate_models(user=True)
 
-        Token.get_or_create(model.user, token_type='permanent')
+        Token.get_or_create(model.user, token_type="permanent")
         end = timezone.now()
 
         db = self.all_token_dict()
-        created = db[0]['created']
-        token = db[0]['key']
+        created = db[0]["created"]
+        token = db[0]["key"]
 
         self.assertGreater(created, start)
         self.assertLess(created, end)
 
         self.assertToken(token)
 
-        del db[0]['created']
-        del db[0]['key']
+        del db[0]["created"]
+        del db[0]["key"]
 
-        self.assertEqual(db, [{
-            'id': 1,
-            'token_type': 'permanent',
-            'user_id': 1,
-            'expires_at': None,
-        }])
+        self.assertEqual(
+            db,
+            [
+                {
+                    "id": 1,
+                    "token_type": "permanent",
+                    "user_id": 1,
+                    "expires_at": None,
+                }
+            ],
+        )
 
     def test_get_or_create__token_type_permanent__passing_hours_length(self):
         model = self.generate_models(user=True)
 
         with self.assertRaises(BadArguments) as _:
-            Token.get_or_create(model.user, token_type='permanent', hours_length=2)
+            Token.get_or_create(model.user, token_type="permanent", hours_length=2)
 
         self.assertEqual(self.all_token_dict(), [])
 
@@ -209,7 +225,7 @@ class TokenTestSuite(AuthTestCase):
         model = self.generate_models(user=True)
 
         with self.assertRaises(BadArguments) as _:
-            Token.get_or_create(model.user, token_type='permanent', expires_at=expires_at)
+            Token.get_or_create(model.user, token_type="permanent", expires_at=expires_at)
 
         self.assertEqual(self.all_token_dict(), [])
 
@@ -221,13 +237,13 @@ class TokenTestSuite(AuthTestCase):
         start = timezone.now()
         model = self.generate_models(user=True)
 
-        Token.get_or_create(model.user, token_type='temporal')
+        Token.get_or_create(model.user, token_type="temporal")
         end = timezone.now()
 
         db = self.all_token_dict()
-        created = db[0]['created']
-        expires_at = db[0]['expires_at']
-        token = db[0]['key']
+        created = db[0]["created"]
+        expires_at = db[0]["expires_at"]
+        token = db[0]["key"]
 
         self.assertGreater(created, start)
         self.assertLess(created, end)
@@ -237,23 +253,23 @@ class TokenTestSuite(AuthTestCase):
         self.assertGreater(expires_at, end + timedelta(minutes=10) - timedelta(seconds=10))
         self.assertToken(token)
 
-        del db[0]['created']
-        del db[0]['expires_at']
-        del db[0]['key']
+        del db[0]["created"]
+        del db[0]["expires_at"]
+        del db[0]["key"]
 
-        self.assertEqual(db, [{'id': 1, 'token_type': 'temporal', 'user_id': 1}])
+        self.assertEqual(db, [{"id": 1, "token_type": "temporal", "user_id": 1}])
 
     def test_get_or_create__token_type_temporal__passing_hours_length(self):
         start = timezone.now()
         model = self.generate_models(user=True)
 
-        Token.get_or_create(model.user, token_type='temporal', hours_length=2)
+        Token.get_or_create(model.user, token_type="temporal", hours_length=2)
         end = timezone.now()
 
         db = self.all_token_dict()
-        created = db[0]['created']
-        expires_at = db[0]['expires_at']
-        token = db[0]['key']
+        created = db[0]["created"]
+        expires_at = db[0]["expires_at"]
+        token = db[0]["key"]
 
         self.assertGreater(created, start)
         self.assertLess(created, end)
@@ -263,37 +279,42 @@ class TokenTestSuite(AuthTestCase):
         self.assertGreater(expires_at, end + timedelta(hours=2) - timedelta(seconds=10))
         self.assertToken(token)
 
-        del db[0]['created']
-        del db[0]['expires_at']
-        del db[0]['key']
+        del db[0]["created"]
+        del db[0]["expires_at"]
+        del db[0]["key"]
 
-        self.assertEqual(db, [{'id': 1, 'token_type': 'temporal', 'user_id': 1}])
+        self.assertEqual(db, [{"id": 1, "token_type": "temporal", "user_id": 1}])
 
     def test_get_or_create__token_type_temporal__passing_expires_at(self):
         expires_at = timezone.now() + timedelta(days=7)
         start = timezone.now()
         model = self.generate_models(user=True)
 
-        Token.get_or_create(model.user, token_type='temporal', expires_at=expires_at)
+        Token.get_or_create(model.user, token_type="temporal", expires_at=expires_at)
         end = timezone.now()
 
         db = self.all_token_dict()
-        created = db[0]['created']
-        token = db[0]['key']
+        created = db[0]["created"]
+        token = db[0]["key"]
 
         self.assertGreater(created, start)
         self.assertLess(created, end)
         self.assertToken(token)
 
-        del db[0]['created']
-        del db[0]['key']
+        del db[0]["created"]
+        del db[0]["key"]
 
-        self.assertEqual(db, [{
-            'id': 1,
-            'token_type': 'temporal',
-            'user_id': 1,
-            'expires_at': expires_at,
-        }])
+        self.assertEqual(
+            db,
+            [
+                {
+                    "id": 1,
+                    "token_type": "temporal",
+                    "user_id": 1,
+                    "expires_at": expires_at,
+                }
+            ],
+        )
 
     """
     🔽🔽🔽 get_or_create hours_length and expires_at together
@@ -304,7 +325,7 @@ class TokenTestSuite(AuthTestCase):
         expires_at = timezone.now()
 
         with self.assertRaises(BadArguments) as _:
-            Token.get_or_create(model.user, token_type='login', hours_length=2, expires_at=expires_at)
+            Token.get_or_create(model.user, token_type="login", hours_length=2, expires_at=expires_at)
 
         self.assertEqual(self.all_token_dict(), [])
 
@@ -313,7 +334,7 @@ class TokenTestSuite(AuthTestCase):
         expires_at = timezone.now()
 
         with self.assertRaises(BadArguments) as _:
-            Token.get_or_create(model.user, token_type='one_time', hours_length=2, expires_at=expires_at)
+            Token.get_or_create(model.user, token_type="one_time", hours_length=2, expires_at=expires_at)
 
         self.assertEqual(self.all_token_dict(), [])
 
@@ -322,7 +343,7 @@ class TokenTestSuite(AuthTestCase):
         expires_at = timezone.now()
 
         with self.assertRaises(BadArguments) as _:
-            Token.get_or_create(model.user, token_type='permanent', hours_length=2, expires_at=expires_at)
+            Token.get_or_create(model.user, token_type="permanent", hours_length=2, expires_at=expires_at)
 
         self.assertEqual(self.all_token_dict(), [])
 
@@ -331,7 +352,7 @@ class TokenTestSuite(AuthTestCase):
         expires_at = timezone.now()
 
         with self.assertRaises(BadArguments) as _:
-            Token.get_or_create(model.user, token_type='temporal', hours_length=2, expires_at=expires_at)
+            Token.get_or_create(model.user, token_type="temporal", hours_length=2, expires_at=expires_at)
 
         self.assertEqual(self.all_token_dict(), [])
 
@@ -342,16 +363,16 @@ class TokenTestSuite(AuthTestCase):
     def test_get_or_create__token_type_login__token_exists(self):
         start = timezone.now()
         expires_at = timezone.now() - timedelta(days=1, seconds=1)
-        token_kwargs = {'expires_at': expires_at, 'token_type': 'login'}
+        token_kwargs = {"expires_at": expires_at, "token_type": "login"}
         model = self.generate_models(user=True, token=True, token_kwargs=token_kwargs)
 
-        Token.get_or_create(model.user, token_type='login')
+        Token.get_or_create(model.user, token_type="login")
         end = timezone.now()
 
         db = self.all_token_dict()
-        created = db[0]['created']
-        expires_at = db[0]['expires_at']
-        token = db[0]['key']
+        created = db[0]["created"]
+        expires_at = db[0]["expires_at"]
+        token = db[0]["key"]
 
         self.assertGreater(created, start)
         self.assertLess(created, end)
@@ -361,25 +382,25 @@ class TokenTestSuite(AuthTestCase):
         self.assertGreater(expires_at, end + timedelta(days=1) - timedelta(seconds=10))
         self.assertToken(token)
 
-        del db[0]['created']
-        del db[0]['expires_at']
-        del db[0]['key']
+        del db[0]["created"]
+        del db[0]["expires_at"]
+        del db[0]["key"]
 
-        self.assertEqual(db, [{'id': 2, 'token_type': 'login', 'user_id': 1}])
+        self.assertEqual(db, [{"id": 2, "token_type": "login", "user_id": 1}])
 
     def test_get_or_create__token_type_temporal__token_exists(self):
         start = timezone.now()
         expires_at = timezone.now() - timedelta(days=1, seconds=1)
-        token_kwargs = {'expires_at': expires_at, 'token_type': 'temporal'}
+        token_kwargs = {"expires_at": expires_at, "token_type": "temporal"}
         model = self.generate_models(user=True, token=True, token_kwargs=token_kwargs)
 
-        Token.get_or_create(model.user, token_type='temporal')
+        Token.get_or_create(model.user, token_type="temporal")
         end = timezone.now()
 
         db = self.all_token_dict()
-        created = db[0]['created']
-        expires_at = db[0]['expires_at']
-        token = db[0]['key']
+        created = db[0]["created"]
+        expires_at = db[0]["expires_at"]
+        token = db[0]["key"]
 
         self.assertGreater(created, start)
         self.assertLess(created, end)
@@ -389,64 +410,60 @@ class TokenTestSuite(AuthTestCase):
         self.assertGreater(expires_at, end + timedelta(minutes=10) - timedelta(seconds=10))
         self.assertToken(token)
 
-        del db[0]['created']
-        del db[0]['expires_at']
-        del db[0]['key']
+        del db[0]["created"]
+        del db[0]["expires_at"]
+        del db[0]["key"]
 
-        self.assertEqual(db, [{'id': 2, 'token_type': 'temporal', 'user_id': 1}])
+        self.assertEqual(db, [{"id": 2, "token_type": "temporal", "user_id": 1}])
 
     def test_get_or_create__token_type_one_time__token_exists(self):
         start = timezone.now()
         expires_at = None
-        token_kwargs = {'expires_at': expires_at, 'token_type': 'one_time'}
+        token_kwargs = {"expires_at": expires_at, "token_type": "one_time"}
         model = self.generate_models(user=True, token=True, token_kwargs=token_kwargs)
 
-        Token.get_or_create(model.user, token_type='one_time')
+        Token.get_or_create(model.user, token_type="one_time")
         end = timezone.now()
 
         db = self.all_token_dict()
-        created = db[1]['created']
-        token = db[1]['key']
+        created = db[1]["created"]
+        token = db[1]["key"]
 
         self.assertGreater(created, start)
         self.assertLess(created, end)
 
         self.assertToken(token)
 
-        del db[1]['created']
-        del db[1]['key']
+        del db[1]["created"]
+        del db[1]["key"]
 
         self.assertEqual(
             db,
-            [self.model_to_dict(model, 'token'), {
-                'id': 2,
-                'token_type': 'one_time',
-                'user_id': 1,
-                'expires_at': None
-            }])
+            [self.model_to_dict(model, "token"), {"id": 2, "token_type": "one_time", "user_id": 1, "expires_at": None}],
+        )
 
     def test_get_or_create__token_type_permanent__token_exists(self):
         start = timezone.now()
         expires_at = None
-        token_kwargs = {'expires_at': expires_at, 'token_type': 'permanent'}
+        token_kwargs = {"expires_at": expires_at, "token_type": "permanent"}
         model = self.generate_models(user=True, token=True, token_kwargs=token_kwargs)
 
-        Token.get_or_create(model.user, token_type='permanent')
+        Token.get_or_create(model.user, token_type="permanent")
         end = timezone.now()
 
         db = self.all_token_dict()
-        created = db[0]['created']
-        token = db[0]['key']
+        created = db[0]["created"]
+        token = db[0]["key"]
 
         self.assertGreater(created, start)
         self.assertLess(created, end)
 
         self.assertToken(token)
 
-        del db[0]['created']
-        del db[0]['key']
+        del db[0]["created"]
+        del db[0]["key"]
 
-        self.assertEqual(db, [{'id': 1, 'token_type': 'permanent', 'user_id': 1, 'expires_at': None}])
+        self.assertEqual(db, [{"id": 1, "token_type": "permanent", "user_id": 1, "expires_at": None}])
 
     """
     🔽🔽🔽 get_or_create two Token exists and this are expired
@@ -455,17 +472,17 @@ class TokenTestSuite(AuthTestCase):
     def test_get_or_create__token_type_login__token_exists__token_expired(self):
         start = timezone.now()
         expires_at = timezone.now() - timedelta(days=1, seconds=1)
-        token_kwargs = {'expires_at': expires_at, 'token_type': 'login'}
+        token_kwargs = {"expires_at": expires_at, "token_type": "login"}
         base = self.generate_models(user=True)
         models = [self.generate_models(token=True, token_kwargs=token_kwargs, models=base) for _ in range(0, 2)]
 
-        Token.get_or_create(base.user, token_type='login')
+        Token.get_or_create(base.user, token_type="login")
         end = timezone.now()
 
         db = self.all_token_dict()
-        created = db[0]['created']
-        expires_at = db[0]['expires_at']
-        token = db[0]['key']
+        created = db[0]["created"]
+        expires_at = db[0]["expires_at"]
+        token = db[0]["key"]
 
         self.assertGreater(created, start)
         self.assertLess(created, end)
@@ -475,26 +492,26 @@ class TokenTestSuite(AuthTestCase):
         self.assertGreater(expires_at, end + timedelta(days=1) - timedelta(seconds=10))
         self.assertToken(token)
 
-        del db[0]['created']
-        del db[0]['expires_at']
-        del db[0]['key']
+        del db[0]["created"]
+        del db[0]["expires_at"]
+        del db[0]["key"]
 
-        self.assertEqual(db, [{'id': 3, 'token_type': 'login', 'user_id': 1}])
+        self.assertEqual(db, [{"id": 3, "token_type": "login", "user_id": 1}])
 
     def test_get_or_create__token_type_temporal__token_exists__token_expired(self):
         start = timezone.now()
         expires_at = timezone.now() - timedelta(days=1, seconds=1)
-        token_kwargs = {'expires_at': expires_at, 'token_type': 'temporal'}
+        token_kwargs = {"expires_at": expires_at, "token_type": "temporal"}
         base = self.generate_models(user=True)
         models = [self.generate_models(token=True, token_kwargs=token_kwargs, models=base) for _ in range(0, 2)]
 
-        Token.get_or_create(base.user, token_type='temporal')
+        Token.get_or_create(base.user, token_type="temporal")
         end = timezone.now()
 
         db = self.all_token_dict()
-        created = db[0]['created']
-        expires_at = db[0]['expires_at']
-        token = db[0]['key']
+        created = db[0]["created"]
+        expires_at = db[0]["expires_at"]
+        token = db[0]["key"]
 
         self.assertGreater(created, start)
         self.assertLess(created, end)
@@ -504,11 +521,11 @@ class TokenTestSuite(AuthTestCase):
         self.assertGreater(expires_at, end + timedelta(minutes=10) - timedelta(seconds=10))
         self.assertToken(token)
 
-        del db[0]['created']
-        del db[0]['expires_at']
-        del db[0]['key']
+        del db[0]["created"]
+        del db[0]["expires_at"]
+        del db[0]["key"]
 
-        self.assertEqual(db, [{'id': 3, 'token_type': 'temporal', 'user_id': 1}])
+        self.assertEqual(db, [{"id": 3, "token_type": "temporal", "user_id": 1}])
 
     """
     🔽🔽🔽 validate_and_destroy bad arguments
@@ -522,7 +539,7 @@ class TokenTestSuite(AuthTestCase):
 
     def test_validate_and_destroy__bad_user(self):
         with self.assertRaises(TokenNotFound) as _:
-            Token.validate_and_destroy('they-killed-kenny')
+            Token.validate_and_destroy("they-killed-kenny")
 
         self.assertEqual(self.all_token_dict(), [])
 
@@ -539,38 +556,38 @@ class TokenTestSuite(AuthTestCase):
     """
 
     def test_validate_and_destroy__type_login(self):
-        token_kwargs = {'token_type': 'login'}
+        token_kwargs = {"token_type": "login"}
         model = self.generate_models(user=True, token=True, token_kwargs=token_kwargs)
 
         with self.assertRaises(TokenNotFound) as _:
             Token.validate_and_destroy(model.token.key)
 
-        self.assertEqual(self.all_token_dict(), [self.model_to_dict(model, 'token')])
+        self.assertEqual(self.all_token_dict(), [self.model_to_dict(model, "token")])
 
     def test_validate_and_destroy__type_temporal(self):
-        token_kwargs = {'token_type': 'temporal'}
+        token_kwargs = {"token_type": "temporal"}
         model = self.generate_models(user=True, token=True, token_kwargs=token_kwargs)
 
         with self.assertRaises(TokenNotFound) as _:
             Token.validate_and_destroy(model.token.key)
 
-        self.assertEqual(self.all_token_dict(), [self.model_to_dict(model, 'token')])
+        self.assertEqual(self.all_token_dict(), [self.model_to_dict(model, "token")])
 
     def test_validate_and_destroy__type_permanent(self):
-        token_kwargs = {'token_type': 'permanent'}
+        token_kwargs = {"token_type": "permanent"}
         model = self.generate_models(user=True, token=True, token_kwargs=token_kwargs)
 
         with self.assertRaises(TokenNotFound) as _:
             Token.validate_and_destroy(model.token.key)
 
-        self.assertEqual(self.all_token_dict(), [self.model_to_dict(model, 'token')])
+        self.assertEqual(self.all_token_dict(), [self.model_to_dict(model, "token")])
 
     """
     🔽🔽🔽 validate_and_destroy token_type is one_time
     """
 
     def test_validate_and_destroy__type_one_time(self):
-        token_kwargs = {'token_type': 'one_time'}
+        token_kwargs = {"token_type": "one_time"}
         model = self.generate_models(user=True, token=True, token_kwargs=token_kwargs)
         result = Token.validate_and_destroy(model.token.key)
 
@@ -582,7 +599,7 @@ class TokenTestSuite(AuthTestCase):
     """
 
     def test_validate_and_destroy__token_not_exists(self):
-        result = Token.get_valid('they-killed-kenny')
+        result = Token.get_valid("they-killed-kenny")
 
         self.assertEqual(result, None)
         self.assertEqual(self.all_token_dict(), [])
@@ -593,10 +610,10 @@ class TokenTestSuite(AuthTestCase):
 
     def test_validate_and_destroy__token_not_found(self):
         model = self.generate_models(token=True)
-        result = Token.get_valid('they-killed-kenny')
+        result = Token.get_valid("they-killed-kenny")
 
         self.assertEqual(result, None)
-        self.assertEqual(self.all_token_dict(), [self.model_to_dict(model, 'token')])
+        self.assertEqual(self.all_token_dict(), [self.model_to_dict(model, "token")])
 
     """
     🔽🔽🔽 get_valid Token exists
@@ -607,7 +624,7 @@ class TokenTestSuite(AuthTestCase):
         result = Token.get_valid(model.token.key)
 
         self.assertEqual(result, model.token)
-        self.assertEqual(self.all_token_dict(), [self.model_to_dict(model, 'token')])
+        self.assertEqual(self.all_token_dict(), [self.model_to_dict(model, "token")])
 
     """
     🔽🔽🔽 delete_expired_tokens Token not exists
@@ -631,7 +648,7 @@ class TokenTestSuite(AuthTestCase):
 
     def test_validate_and_destroy__token_exists_but_are_expired(self):
         now = timezone.now()
-        token_kwargs = {'expires_at': now - timedelta(seconds=1)}
+        token_kwargs = {"expires_at": now - timedelta(seconds=1)}
         self.generate_models(token=True, token_kwargs=token_kwargs)
         result = Token.delete_expired_tokens()
 
@@ -640,7 +657,7 @@ class TokenTestSuite(AuthTestCase):
 
     def test_validate_and_destroy__token_exists_but_are_expired__with_arg(self):
         now = timezone.now()
-        token_kwargs = {'expires_at': now - timedelta(seconds=1)}
+        token_kwargs = {"expires_at": now - timedelta(seconds=1)}
         self.generate_models(token=True, token_kwargs=token_kwargs)
         result = Token.delete_expired_tokens()
 
@@ -653,18 +670,18 @@ class TokenTestSuite(AuthTestCase):
 
     def test_validate_and_destroy__token_exists_and_is_valid(self):
         now = timezone.now()
-        token_kwargs = {'expires_at': now + timedelta(minutes=1)}
+        token_kwargs = {"expires_at": now + timedelta(minutes=1)}
         model = self.generate_models(token=True, token_kwargs=token_kwargs)
         result = Token.delete_expired_tokens()
 
         self.assertEqual(result, None)
-        self.assertEqual(self.all_token_dict(), [self.model_to_dict(model, 'token')])
+        self.assertEqual(self.all_token_dict(), [self.model_to_dict(model, "token")])
 
     def test_validate_and_destroy__token_exists_and_is_valid__with_arg(self):
         now = timezone.now()
-        token_kwargs = {'expires_at': now + timedelta(minutes=1)}
+        token_kwargs = {"expires_at": now + timedelta(minutes=1)}
         model = self.generate_models(token=True, token_kwargs=token_kwargs)
         result = Token.delete_expired_tokens()
 
         self.assertEqual(result, None)
-        self.assertEqual(self.all_token_dict(), [self.model_to_dict(model, 'token')])
+        self.assertEqual(self.all_token_dict(), [self.model_to_dict(model, "token")])

@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('mentorship', '0011_auto_20220402_0003'),
+        ("mentorship", "0011_auto_20220402_0003"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='mentorshipsession',
-            name='is_online',
+            model_name="mentorshipsession",
+            name="is_online",
             field=models.BooleanField(default=False),
         ),
     ]

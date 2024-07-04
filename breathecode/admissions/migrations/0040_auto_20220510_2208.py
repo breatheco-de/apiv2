@@ -6,20 +6,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0039_syllabus_main_technologies'),
+        ("admissions", "0039_syllabus_main_technologies"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='syllabusversion',
-            name='change_log_details',
+            model_name="syllabusversion",
+            name="change_log_details",
             field=models.TextField(blank=True, default=None, max_length=450, null=True),
         ),
         migrations.AddField(
-            model_name='syllabusversion',
-            name='status',
-            field=models.CharField(choices=[('PUBLISHED', 'Published'), ('DRAFT', 'Draft')],
-                                   default='PUBLISHED',
-                                   max_length=15),
+            model_name="syllabusversion",
+            name="status",
+            field=models.CharField(
+                choices=[("PUBLISHED", "Published"), ("DRAFT", "Draft")], default="PUBLISHED", max_length=15
+            ),
         ),
     ]

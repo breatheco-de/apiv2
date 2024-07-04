@@ -7,41 +7,39 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0014_auto_20201218_0534'),
-        ('authenticate', '0016_auto_20210113_0359'),
+        ("admissions", "0014_auto_20201218_0534"),
+        ("authenticate", "0016_auto_20210113_0359"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='userinvite',
-            name='academy',
-            field=models.ForeignKey(blank=True,
-                                    default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='admissions.academy'),
+            model_name="userinvite",
+            name="academy",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to="admissions.academy",
+            ),
         ),
         migrations.AlterField(
-            model_name='userinvite',
-            name='cohort',
-            field=models.ForeignKey(blank=True,
-                                    default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='admissions.cohort'),
+            model_name="userinvite",
+            name="cohort",
+            field=models.ForeignKey(
+                blank=True, default=None, null=True, on_delete=django.db.models.deletion.CASCADE, to="admissions.cohort"
+            ),
         ),
         migrations.AlterField(
-            model_name='userinvite',
-            name='role',
-            field=models.ForeignKey(blank=True,
-                                    default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='authenticate.role'),
+            model_name="userinvite",
+            name="role",
+            field=models.ForeignKey(
+                blank=True, default=None, null=True, on_delete=django.db.models.deletion.CASCADE, to="authenticate.role"
+            ),
         ),
         migrations.AlterField(
-            model_name='userinvite',
-            name='token',
+            model_name="userinvite",
+            name="token",
             field=models.CharField(max_length=255, unique=True),
         ),
     ]

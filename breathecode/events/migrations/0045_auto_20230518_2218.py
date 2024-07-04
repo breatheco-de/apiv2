@@ -7,22 +7,20 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0044_auto_20230513_0007'),
+        ("events", "0044_auto_20230513_0007"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='eventbritewebhook',
-            name='event',
-            field=models.ForeignKey(blank=True,
-                                    default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.SET_NULL,
-                                    to='events.event'),
+            model_name="eventbritewebhook",
+            name="event",
+            field=models.ForeignKey(
+                blank=True, default=None, null=True, on_delete=django.db.models.deletion.SET_NULL, to="events.event"
+            ),
         ),
         migrations.AddField(
-            model_name='eventbritewebhook',
-            name='payload',
-            field=models.JSONField(blank=True, default=None, help_text='Will be set by async task', null=True),
+            model_name="eventbritewebhook",
+            name="payload",
+            field=models.JSONField(blank=True, default=None, help_text="Will be set by async task", null=True),
         ),
     ]

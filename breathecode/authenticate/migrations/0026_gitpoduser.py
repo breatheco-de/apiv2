@@ -8,41 +8,51 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0040_auto_20220510_2208'),
+        ("admissions", "0040_auto_20220510_2208"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('authenticate', '0025_alter_userinvite_status'),
+        ("authenticate", "0025_alter_userinvite_status"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='GitpodUser',
+            name="GitpodUser",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('github_username', models.CharField(max_length=40)),
-                ('assignee_id', models.CharField(max_length=64)),
-                ('position_in_gitpod_team', models.PositiveSmallIntegerField()),
-                ('delete_status', models.TextField(blank=True, default=None, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('expires_at',
-                 models.DateTimeField(
-                     blank=True,
-                     default=None,
-                     help_text=
-                     'If a gitpod user is not connected to a real user and academy in the database, it will be deleted ASAP',
-                     null=True)),
-                ('academy',
-                 models.ForeignKey(blank=True,
-                                   default=None,
-                                   null=True,
-                                   on_delete=django.db.models.deletion.SET_NULL,
-                                   to='admissions.academy')),
-                ('user',
-                 models.OneToOneField(blank=True,
-                                      default=None,
-                                      null=True,
-                                      on_delete=django.db.models.deletion.SET_NULL,
-                                      to=settings.AUTH_USER_MODEL)),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("github_username", models.CharField(max_length=40)),
+                ("assignee_id", models.CharField(max_length=64)),
+                ("position_in_gitpod_team", models.PositiveSmallIntegerField()),
+                ("delete_status", models.TextField(blank=True, default=None, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "expires_at",
+                    models.DateTimeField(
+                        blank=True,
+                        default=None,
+                        help_text="If a gitpod user is not connected to a real user and academy in the database, it will be deleted ASAP",
+                        null=True,
+                    ),
+                ),
+                (
+                    "academy",
+                    models.ForeignKey(
+                        blank=True,
+                        default=None,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="admissions.academy",
+                    ),
+                ),
+                (
+                    "user",
+                    models.OneToOneField(
+                        blank=True,
+                        default=None,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
     ]

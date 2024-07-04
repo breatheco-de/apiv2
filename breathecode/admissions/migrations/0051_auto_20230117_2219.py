@@ -6,24 +6,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0050_alter_cohort_is_hidden_on_prework'),
+        ("admissions", "0050_alter_cohort_is_hidden_on_prework"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='cohorttimeslot',
-            name='removed_at',
-            field=models.DateTimeField(blank=True,
-                                       default=None,
-                                       help_text='This will be available until this date',
-                                       null=True),
+            model_name="cohorttimeslot",
+            name="removed_at",
+            field=models.DateTimeField(
+                blank=True, default=None, help_text="This will be available until this date", null=True
+            ),
         ),
         migrations.AddField(
-            model_name='syllabusscheduletimeslot',
-            name='removed_at',
-            field=models.DateTimeField(blank=True,
-                                       default=None,
-                                       help_text='This will be available until this date',
-                                       null=True),
+            model_name="syllabusscheduletimeslot",
+            name="removed_at",
+            field=models.DateTimeField(
+                blank=True, default=None, help_text="This will be available until this date", null=True
+            ),
         ),
     ]

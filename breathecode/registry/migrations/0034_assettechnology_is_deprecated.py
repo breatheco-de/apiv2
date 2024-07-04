@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0033_alter_contentvariable_default_value'),
+        ("registry", "0033_alter_contentvariable_default_value"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='assettechnology',
-            name='is_deprecated',
+            model_name="assettechnology",
+            name="is_deprecated",
             field=models.BooleanField(default=False),
         ),
     ]

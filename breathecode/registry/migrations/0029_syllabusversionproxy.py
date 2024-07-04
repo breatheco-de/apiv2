@@ -6,19 +6,19 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0056_auto_20230317_1657'),
-        ('registry', '0028_alter_asset_status'),
+        ("admissions", "0056_auto_20230317_1657"),
+        ("registry", "0028_alter_asset_status"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='SyllabusVersionProxy',
+            name="SyllabusVersionProxy",
             fields=[],
             options={
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
+                "proxy": True,
+                "indexes": [],
+                "constraints": [],
             },
-            bases=('admissions.syllabusversion', ),
+            bases=("admissions.syllabusversion",),
         ),
     ]

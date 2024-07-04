@@ -6,27 +6,29 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0062_alter_formentry_zip_code'),
+        ("marketing", "0062_alter_formentry_zip_code"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='formentry',
-            name='ac_deal_owner_full_name',
+            model_name="formentry",
+            name="ac_deal_owner_full_name",
             field=models.CharField(blank=True, default=None, max_length=150, null=True),
         ),
         migrations.AddField(
-            model_name='formentry',
-            name='ac_deal_owner_id',
+            model_name="formentry",
+            name="ac_deal_owner_id",
             field=models.CharField(blank=True, default=None, max_length=15, null=True),
         ),
         migrations.AddField(
-            model_name='formentry',
-            name='ac_expected_cohort_date',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   help_text='Which date is this student expecting to join',
-                                   max_length=100,
-                                   null=True),
+            model_name="formentry",
+            name="ac_expected_cohort_date",
+            field=models.CharField(
+                blank=True,
+                default=None,
+                help_text="Which date is this student expecting to join",
+                max_length=100,
+                null=True,
+            ),
         ),
     ]

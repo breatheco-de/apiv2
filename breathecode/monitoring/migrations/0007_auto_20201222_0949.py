@@ -7,25 +7,26 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('notify', '0008_remove_slackteam_credentials'),
-        ('monitoring', '0006_auto_20201222_0127'),
+        ("notify", "0008_remove_slackteam_credentials"),
+        ("monitoring", "0006_auto_20201222_0127"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='application',
-            name='notify_email',
+            model_name="application",
+            name="notify_email",
             field=models.CharField(blank=True, default=None, max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='application',
-            name='notify_slack_channel',
+            model_name="application",
+            name="notify_slack_channel",
             field=models.ForeignKey(
                 blank=True,
                 default=None,
-                help_text='Please pick an academy first to be able to see the available slack channels to notify',
+                help_text="Please pick an academy first to be able to see the available slack channels to notify",
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
-                to='notify.slackchannel'),
+                to="notify.slackchannel",
+            ),
         ),
     ]

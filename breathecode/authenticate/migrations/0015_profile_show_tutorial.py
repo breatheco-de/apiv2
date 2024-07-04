@@ -6,14 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authenticate', '0014_auto_20201218_0534'),
+        ("authenticate", "0014_auto_20201218_0534"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='profile',
-            name='show_tutorial',
-            field=models.BooleanField(default=True,
-                                      help_text='Set true if you want to show the tutorial on the user UI/UX'),
+            model_name="profile",
+            name="show_tutorial",
+            field=models.BooleanField(
+                default=True, help_text="Set true if you want to show the tutorial on the user UI/UX"
+            ),
         ),
     ]

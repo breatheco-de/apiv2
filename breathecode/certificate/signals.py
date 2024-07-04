@@ -2,6 +2,6 @@
 
 from task_manager.django.dispatch import Emisor
 
-emisor = Emisor('breathecode.certificate')
+emisor = Emisor("breathecode.certificate")
 
-user_specialty_saved = emisor.signal('user_specialty_saved')
+user_specialty_saved = emisor.signal("user_specialty_saved")

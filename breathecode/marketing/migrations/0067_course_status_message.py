@@ -6,17 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0066_coursetranslation_course_modules'),
+        ("marketing", "0066_coursetranslation_course_modules"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='course',
-            name='status_message',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   help_text='Error message if status is ERROR',
-                                   max_length=250,
-                                   null=True),
+            model_name="course",
+            name="status_message",
+            field=models.CharField(
+                blank=True, default=None, help_text="Error message if status is ERROR", max_length=250, null=True
+            ),
         ),
     ]

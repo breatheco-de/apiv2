@@ -6,17 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authenticate', '0034_academyauthsettings_github_error_log'),
+        ("authenticate", "0034_academyauthsettings_github_error_log"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='academyauthsettings',
-            name='github_default_team_ids',
+            model_name="academyauthsettings",
+            name="github_default_team_ids",
             field=models.CharField(
                 blank=True,
-                default='',
-                help_text='User will be invited to this github team ID when joining the github organization',
-                max_length=40),
+                default="",
+                help_text="User will be invited to this github team ID when joining the github organization",
+                max_length=40,
+            ),
         ),
     ]

@@ -7,23 +7,25 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0020_auto_20210727_1106'),
-        ('certificate', '0011_auto_20210701_1941'),
+        ("admissions", "0020_auto_20210727_1106"),
+        ("certificate", "0011_auto_20210701_1941"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='specialty',
-            name='certificate',
+            model_name="specialty",
+            name="certificate",
         ),
         migrations.AddField(
-            model_name='specialty',
-            name='syllabus',
-            field=models.OneToOneField(blank=True,
-                                       default=None,
-                                       help_text='This specialty represents only one certificate',
-                                       null=True,
-                                       on_delete=django.db.models.deletion.CASCADE,
-                                       to='admissions.syllabus'),
+            model_name="specialty",
+            name="syllabus",
+            field=models.OneToOneField(
+                blank=True,
+                default=None,
+                help_text="This specialty represents only one certificate",
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to="admissions.syllabus",
+            ),
         ),
     ]

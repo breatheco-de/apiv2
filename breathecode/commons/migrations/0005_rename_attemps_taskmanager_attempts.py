@@ -6,13 +6,13 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('commons', '0004_taskwatcher'),
+        ("commons", "0004_taskwatcher"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='taskmanager',
-            old_name='attemps',
-            new_name='attempts',
+            model_name="taskmanager",
+            old_name="attemps",
+            new_name="attempts",
         ),
     ]

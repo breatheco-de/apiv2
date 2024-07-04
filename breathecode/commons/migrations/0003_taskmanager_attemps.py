@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('commons', '0002_auto_20230811_0645'),
+        ("commons", "0002_auto_20230811_0645"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='taskmanager',
-            name='attemps',
+            model_name="taskmanager",
+            name="attemps",
             field=models.IntegerField(default=1),
         ),
     ]

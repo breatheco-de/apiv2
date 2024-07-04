@@ -1,6 +1,7 @@
 """
 Collections of mixins used to login in authorize microservice
 """
+
 from django.db.models import Model
 
 from breathecode.utils.attr_dict import AttrDict
@@ -28,21 +29,39 @@ from .provisioning_models_mixin import ProvisioningModelsMixin
 from .registry_models_mixin import RegistryModelsMixin
 from .task_manager_models_mixin import TaskManagerModelsMixin
 
-__all__ = ['GenerateModelsMixin']
+__all__ = ["GenerateModelsMixin"]
 
 
-class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMixin, AuthenticateMixin,
-                          CertificateModelsMixin, FeedbackModelsMixin, NotifyModelsMixin, EventsModelsMixin,
-                          AssessmentModelsMixin, FreelanceModelsMixin, MarketingModelsMixin, MonitoringModelsMixin,
-                          MediaModelsMixin, MentorshipModelsMixin, CareerModelsMixin, ContentTypesMixin,
-                          RegistryModelsMixin, PaymentsModelsMixin, ProvisioningModelsMixin, CommonsModelsMixin,
-                          LinkedServicesMixin, TaskManagerModelsMixin):
+class GenerateModelsMixin(
+    AuthMixin,
+    AssignmentsModelsMixin,
+    AdmissionsModelsMixin,
+    AuthenticateMixin,
+    CertificateModelsMixin,
+    FeedbackModelsMixin,
+    NotifyModelsMixin,
+    EventsModelsMixin,
+    AssessmentModelsMixin,
+    FreelanceModelsMixin,
+    MarketingModelsMixin,
+    MonitoringModelsMixin,
+    MediaModelsMixin,
+    MentorshipModelsMixin,
+    CareerModelsMixin,
+    ContentTypesMixin,
+    RegistryModelsMixin,
+    PaymentsModelsMixin,
+    ProvisioningModelsMixin,
+    CommonsModelsMixin,
+    LinkedServicesMixin,
+    TaskManagerModelsMixin,
+):
 
     def __detect_invalid_arguments__(self, models={}, **kwargs):
         """check if one argument is invalid to prevent errors"""
         for key in kwargs:
-            if key != 'authenticate' and not key.endswith('_kwargs') and not key in models:
-                print(f'key `{key}` should not be implemented in self.generate_models')
+            if key != "authenticate" and not key.endswith("_kwargs") and not key in models:
+                print(f"key `{key}` should not be implemented in self.generate_models")
 
     def __inject_models_in_instance__(self, models={}):
         """Add support to model.name instead of model['name']"""
@@ -52,9 +71,9 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMix
     def __flow_wrapper__(self, *args, **kwargs):
         models = {}
 
-        if 'models' in kwargs:
-            models = kwargs['models'].copy()
-            del kwargs['models']
+        if "models" in kwargs:
+            models = kwargs["models"].copy()
+            del kwargs["models"]
 
         for func in args:
             models = func(models=models, **kwargs)
@@ -77,21 +96,22 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMix
 
         for key in kwargs:
             kwarg = kwargs[key]
-            if isinstance(kwarg, Model) or (isinstance(kwarg, list) and len([x
-                                                                             for x in kwarg if isinstance(x, Model)])):
+            if isinstance(kwarg, Model) or (
+                isinstance(kwarg, list) and len([x for x in kwarg if isinstance(x, Model)])
+            ):
                 models[key] = kwarg
 
         return models
 
     def generate_models(self, models={}, **kwargs):
-        if '_new_implementation' not in kwargs:
-            print(f'The method `generate_models` is deprecated, use `self.bc.database.create` instead')
+        if "_new_implementation" not in kwargs:
+            print(f"The method `generate_models` is deprecated, use `self.bc.database.create` instead")
 
         else:
-            del kwargs['_new_implementation']
+            del kwargs["_new_implementation"]
 
-        if 'authenticate' in kwargs:
-            print(f'The argument `authenticate` is deprecated, use `self.bc.request.authenticate` instead')
+        if "authenticate" in kwargs:
+            print(f"The argument `authenticate` is deprecated, use `self.bc.request.authenticate` instead")
 
         self.maxDiff = None
         models = models.copy()

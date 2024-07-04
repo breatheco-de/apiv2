@@ -2,12 +2,12 @@ import os
 from django.core.management.base import BaseCommand
 from ...models import CohortUser
 
-HOST = os.environ.get('OLD_BREATHECODE_API')
-DATETIME_FORMAT = '%Y-%m-%d'
+HOST = os.environ.get("OLD_BREATHECODE_API")
+DATETIME_FORMAT = "%Y-%m-%d"
 
 
 class Command(BaseCommand):
-    help = 'Delete duplicate cohort users imported from old breathecode'
+    help = "Delete duplicate cohort users imported from old breathecode"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -17,16 +17,17 @@ class Command(BaseCommand):
         result = []
 
         # collector
-        qs = CohortUser.objects.order_by('id')
-        for user_id, cohort_id in set(qs.values_list('user__id', 'cohort__id')):
+        qs = CohortUser.objects.order_by("id")
+        for user_id, cohort_id in set(qs.values_list("user__id", "cohort__id")):
             result.append(
-                qs.filter(user__id=user_id, cohort__id=cohort_id).values('id', 'user__id', 'cohort__id').first())
+                qs.filter(user__id=user_id, cohort__id=cohort_id).values("id", "user__id", "cohort__id").first()
+            )
 
         # remove dups
         for data in result:
-            id = data['id']
-            user = data['user__id']
-            cohort = data['cohort__id']
+            id = data["id"]
+            user = data["user__id"]
+            cohort = data["cohort__id"]
 
             # # first graduated students
             # pref = CohortUser.objects.filter(user__id=user, cohort__id=cohort,
@@ -55,4 +56,4 @@ class Command(BaseCommand):
             # bulk delete but cohort user with that id
             (CohortUser.objects.filter(user__id=user, cohort__id=cohort).exclude(id=id).delete())
 
-        self.stdout.write(self.style.SUCCESS('Remove duplicates from cohort users has ended'))
+        self.stdout.write(self.style.SUCCESS("Remove duplicates from cohort users has ended"))

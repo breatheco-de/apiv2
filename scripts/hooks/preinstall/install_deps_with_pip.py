@@ -9,11 +9,13 @@ from scripts.utils.get_pip_path import get_pip_path
 # sudo dnf install boost-devel python3.12-devel
 
 pip_path = get_pip_path()
-commands = ';\n'.join([
-    f'{pip_path} install --upgrade pip',
-    f'{pip_path} install --upgrade yapf pipenv toml',
-    '',
-])
+commands = ";\n".join(
+    [
+        f"{pip_path} install --upgrade pip",
+        f"{pip_path} install --upgrade yapf pipenv toml",
+        "",
+    ]
+)
 
 exit_code = os.system(commands)
 

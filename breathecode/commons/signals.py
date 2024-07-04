@@ -2,6 +2,6 @@
 
 from task_manager.django.dispatch import Emisor
 
-emisor = Emisor('breathecode.commons')
+emisor = Emisor("breathecode.commons")
 
-update_cache = emisor.signal('update_cache')
+update_cache = emisor.signal("update_cache")

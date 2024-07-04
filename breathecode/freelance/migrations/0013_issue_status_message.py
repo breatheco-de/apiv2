@@ -6,17 +6,19 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('freelance', '0012_auto_20220222_0036'),
+        ("freelance", "0012_auto_20220222_0036"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='issue',
-            name='status_message',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   help_text='Important message like reasong why not included on bill, etc.',
-                                   max_length=255,
-                                   null=True),
+            model_name="issue",
+            name="status_message",
+            field=models.CharField(
+                blank=True,
+                default=None,
+                help_text="Important message like reasong why not included on bill, etc.",
+                max_length=255,
+                null=True,
+            ),
         ),
     ]

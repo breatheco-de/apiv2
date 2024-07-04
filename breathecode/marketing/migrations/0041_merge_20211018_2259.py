@@ -6,8 +6,8 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0039_formentry_ac_expected_cohort'),
-        ('marketing', '0040_formentry_current_download'),
+        ("marketing", "0039_formentry_ac_expected_cohort"),
+        ("marketing", "0040_formentry_current_download"),
     ]
 
     operations = []

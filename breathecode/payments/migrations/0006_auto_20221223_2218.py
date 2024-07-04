@@ -6,42 +6,42 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0048_academy_main_currency'),
-        ('payments', '0005_auto_20221214_1411'),
+        ("admissions", "0048_academy_main_currency"),
+        ("payments", "0005_auto_20221214_1411"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='plan',
-            name='pay_every',
+            model_name="plan",
+            name="pay_every",
         ),
         migrations.RemoveField(
-            model_name='plan',
-            name='pay_every_unit',
+            model_name="plan",
+            name="pay_every_unit",
         ),
         migrations.AddField(
-            model_name='bag',
-            name='selected_cohorts',
-            field=models.ManyToManyField(blank=True, to='admissions.Cohort'),
+            model_name="bag",
+            name="selected_cohorts",
+            field=models.ManyToManyField(blank=True, to="admissions.Cohort"),
         ),
         migrations.AlterField(
-            model_name='plan',
-            name='price_per_half',
+            model_name="plan",
+            name="price_per_half",
             field=models.FloatField(blank=True, default=None, null=True),
         ),
         migrations.AlterField(
-            model_name='plan',
-            name='price_per_month',
+            model_name="plan",
+            name="price_per_month",
             field=models.FloatField(blank=True, default=None, null=True),
         ),
         migrations.AlterField(
-            model_name='plan',
-            name='price_per_quarter',
+            model_name="plan",
+            name="price_per_quarter",
             field=models.FloatField(blank=True, default=None, null=True),
         ),
         migrations.AlterField(
-            model_name='plan',
-            name='price_per_year',
+            model_name="plan",
+            name="price_per_year",
             field=models.FloatField(blank=True, default=None, null=True),
         ),
     ]

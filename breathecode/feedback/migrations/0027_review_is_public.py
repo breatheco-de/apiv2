@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('feedback', '0026_auto_20220830_0808'),
+        ("feedback", "0026_auto_20220830_0808"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='review',
-            name='is_public',
+            model_name="review",
+            name="is_public",
             field=models.BooleanField(default=False),
         ),
     ]

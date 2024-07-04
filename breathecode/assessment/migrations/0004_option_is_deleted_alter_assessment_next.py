@@ -6,20 +6,21 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('assessment', '0003_auto_20221109_1529'),
+        ("assessment", "0003_auto_20221109_1529"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='option',
-            name='is_deleted',
+            model_name="option",
+            name="is_deleted",
             field=models.BooleanField(
                 default=False,
-                help_text='Options with collected answers cannot not be deleted, they will have this bullet true'),
+                help_text="Options with collected answers cannot not be deleted, they will have this bullet true",
+            ),
         ),
         migrations.AlterField(
-            model_name='assessment',
-            name='next',
+            model_name="assessment",
+            name="next",
             field=models.URLField(blank=True, default=None, null=True),
         ),
     ]

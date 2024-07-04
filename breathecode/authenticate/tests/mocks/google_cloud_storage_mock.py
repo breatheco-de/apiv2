@@ -1,10 +1,11 @@
 """
 Collections of mocks used to login in authorize microservice
 """
+
 from unittest.mock import Mock
 
 
-class GoogleCloudStorageMock():
+class GoogleCloudStorageMock:
 
     @staticmethod
     def get_bucket_object():

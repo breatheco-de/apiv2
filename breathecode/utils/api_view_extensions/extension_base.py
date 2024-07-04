@@ -30,8 +30,7 @@ class ExtensionBase:
     def _set_request(self, request: WSGIRequest) -> None:
         self._request = request
 
-    def _optional_dependencies(self, **kwargs) -> None:
-        ...
+    def _optional_dependencies(self, **kwargs) -> None: ...
 
     def __str__(self) -> str:
         return self.__class__.__name__
