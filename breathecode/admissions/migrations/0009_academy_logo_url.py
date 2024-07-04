@@ -6,14 +6,14 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0008_auto_20200708_0049'),
+        ("admissions", "0008_auto_20200708_0049"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='academy',
-            name='logo_url',
-            field=models.CharField(default='', max_length=255),
+            model_name="academy",
+            name="logo_url",
+            field=models.CharField(default="", max_length=255),
             preserve_default=False,
         ),
     ]

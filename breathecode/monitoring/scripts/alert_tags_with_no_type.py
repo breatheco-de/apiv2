@@ -20,8 +20,9 @@ if total_pending_tags > 0:
     - Tags with type=OTHER are not involved in the marketing process, probably used internaly for other things.
     - The tag functionality keeps being developed and there may be other cases not specified in this email.
 """,
-        status='CRITICAL',
-        title=f'There are {str(total_pending_tags)} tags without type in {academy.name}',
-        slug='academy-has-tags-without-type')
+        status="CRITICAL",
+        title=f"There are {str(total_pending_tags)} tags without type in {academy.name}",
+        slug="academy-has-tags-without-type",
+    )
 
-print(f'No tags without a type from {str(tags.count())} records')
+print(f"No tags without a type from {str(tags.count())} records")

@@ -6,26 +6,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('mentorship', '0021_calendlyorganization_calendlywebhook'),
+        ("mentorship", "0021_calendlyorganization_calendlywebhook"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='mentorprofile',
-            name='calendly_uuid',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   help_text='To be used by the calendly API',
-                                   max_length=150,
-                                   null=True),
+            model_name="mentorprofile",
+            name="calendly_uuid",
+            field=models.CharField(
+                blank=True, default=None, help_text="To be used by the calendly API", max_length=150, null=True
+            ),
         ),
         migrations.AddField(
-            model_name='mentorshipsession',
-            name='calendly_uuid',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   help_text='To be used by the calendly API',
-                                   max_length=150,
-                                   null=True),
+            model_name="mentorshipsession",
+            name="calendly_uuid",
+            field=models.CharField(
+                blank=True, default=None, help_text="To be used by the calendly API", max_length=150, null=True
+            ),
         ),
     ]

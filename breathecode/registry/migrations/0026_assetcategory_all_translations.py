@@ -6,15 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0025_alter_credentialsoriginality_usage'),
+        ("registry", "0025_alter_credentialsoriginality_usage"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='assetcategory',
-            name='all_translations',
-            field=models.ManyToManyField(blank=True,
-                                         related_name='_registry_assetcategory_all_translations_+',
-                                         to='registry.AssetCategory'),
+            model_name="assetcategory",
+            name="all_translations",
+            field=models.ManyToManyField(
+                blank=True, related_name="_registry_assetcategory_all_translations_+", to="registry.AssetCategory"
+            ),
         ),
     ]

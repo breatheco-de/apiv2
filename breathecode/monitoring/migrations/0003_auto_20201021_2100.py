@@ -6,37 +6,35 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('monitoring', '0002_auto_20201021_0027'),
+        ("monitoring", "0002_auto_20201021_0027"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='endpoint',
-            name='frequency_in_minutes',
+            model_name="endpoint",
+            name="frequency_in_minutes",
             field=models.FloatField(default=30),
         ),
         migrations.AlterField(
-            model_name='endpoint',
-            name='last_check',
+            model_name="endpoint",
+            name="last_check",
             field=models.DateTimeField(blank=True, default=None, null=True),
         ),
         migrations.AlterField(
-            model_name='endpoint',
-            name='response_text',
+            model_name="endpoint",
+            name="response_text",
             field=models.TextField(blank=True, default=None, null=True),
         ),
         migrations.AlterField(
-            model_name='endpoint',
-            name='status_code',
+            model_name="endpoint",
+            name="status_code",
             field=models.FloatField(default=200),
         ),
         migrations.AlterField(
-            model_name='endpoint',
-            name='test_pattern',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   help_text='If left blank sys will only ping',
-                                   max_length=100,
-                                   null=True),
+            model_name="endpoint",
+            name="test_pattern",
+            field=models.CharField(
+                blank=True, default=None, help_text="If left blank sys will only ping", max_length=100, null=True
+            ),
         ),
     ]

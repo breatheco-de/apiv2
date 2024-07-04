@@ -1,9 +1,12 @@
 """
 Test cases for /user
 """
+
 import re
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
 from ..mixins import AuthTestCase
 
 
@@ -14,14 +17,14 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /logout without token"""
         self.create_user()
 
-        url = reverse_lazy('authenticate:logout')
+        url = reverse_lazy("authenticate:logout")
         response = self.client.get(url)
 
-        detail = str(response.data['detail'])
-        status_code = int(response.data['status_code'])
+        detail = str(response.data["detail"])
+        status_code = int(response.data["status_code"])
 
         self.assertEqual(len(response.data), 2)
-        self.assertEqual(detail, 'Authentication credentials were not provided.')
+        self.assertEqual(detail, "Authentication credentials were not provided.")
         self.assertEqual(status_code, 401)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 

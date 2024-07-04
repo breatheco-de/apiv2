@@ -6,7 +6,7 @@ from breathecode.admissions.models import Cohort
 
 from . import signals
 
-__all__ = ['UserProxy', 'CohortProxy', 'Task', 'UserAttachment']
+__all__ = ["UserProxy", "CohortProxy", "Task", "UserAttachment"]
 
 
 class UserAttachment(models.Model):
@@ -22,48 +22,47 @@ class UserAttachment(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.name} ({self.id})'
+        return f"{self.name} ({self.id})"
 
 
 class AssignmentTelemetry(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     asset_slug = models.CharField(max_length=200)
-    telemetry = models.JSONField(null=True,
-                                 blank=True,
-                                 default=None,
-                                 help_text='Incoming JSON from LearnPack with detailed telemetry info')
+    telemetry = models.JSONField(
+        null=True, blank=True, default=None, help_text="Incoming JSON from LearnPack with detailed telemetry info"
+    )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
 
-PENDING = 'PENDING'
-DONE = 'DONE'
+PENDING = "PENDING"
+DONE = "DONE"
 TASK_STATUS = (
-    (PENDING, 'Pending'),
-    (DONE, 'Done'),
+    (PENDING, "Pending"),
+    (DONE, "Done"),
 )
 
-APPROVED = 'APPROVED'
-REJECTED = 'REJECTED'
-IGNORED = 'IGNORED'
+APPROVED = "APPROVED"
+REJECTED = "REJECTED"
+IGNORED = "IGNORED"
 REVISION_STATUS = (
-    (PENDING, 'Pending'),
-    (APPROVED, 'Approved'),
-    (REJECTED, 'Rejected'),
-    (IGNORED, 'Ignored'),
+    (PENDING, "Pending"),
+    (APPROVED, "Approved"),
+    (REJECTED, "Rejected"),
+    (IGNORED, "Ignored"),
 )
 
-PROJECT = 'PROJECT'
-QUIZ = 'QUIZ'
-LESSON = 'LESSON'
-EXERCISE = 'EXERCISE'
+PROJECT = "PROJECT"
+QUIZ = "QUIZ"
+LESSON = "LESSON"
+EXERCISE = "EXERCISE"
 TASK_TYPE = (
-    (PROJECT, 'project'),
-    (QUIZ, 'quiz'),
-    (LESSON, 'lesson'),
-    (EXERCISE, 'Exercise'),
+    (PROJECT, "project"),
+    (QUIZ, "quiz"),
+    (LESSON, "lesson"),
+    (EXERCISE, "Exercise"),
 )
 
 
@@ -80,8 +79,8 @@ class Task(models.Model):
         default=None,
         null=True,
         blank=True,
-        help_text=
-        'Learnpack telemetry json will be stored and shared among all the assignments form the same associalted_slug')
+        help_text="Learnpack telemetry json will be stored and shared among all the assignments form the same associalted_slug",
+    )
 
     associated_slug = models.SlugField(max_length=150, db_index=True)
     title = models.CharField(max_length=150, db_index=True)
@@ -101,8 +100,7 @@ class Task(models.Model):
         default=None,
         blank=True,
         null=True,
-        help_text=
-        'If readme contains checkboxes they will be converted into substasks and this json will kep track of completition'
+        help_text="If readme contains checkboxes they will be converted into substasks and this json will kep track of completition",
     )
 
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, blank=True, null=True)
@@ -154,42 +152,43 @@ class CohortProxy(Cohort):
         proxy = True
 
 
-PRIVATE = 'PRIVATE'
-UNLISTED = 'UNLISTED'
-PUBLIC = 'PUBLIC'
+PRIVATE = "PRIVATE"
+UNLISTED = "UNLISTED"
+PUBLIC = "PUBLIC"
 VISIBILITY_STATUS = (
-    (PRIVATE, 'Private'),
-    (UNLISTED, 'Unlisted'),
-    (PUBLIC, 'Public'),
+    (PRIVATE, "Private"),
+    (UNLISTED, "Unlisted"),
+    (PUBLIC, "Public"),
 )
 
 
 class FinalProject(models.Model):
-    repo_owner = models.ForeignKey(User,
-                                   on_delete=models.SET_NULL,
-                                   blank=True,
-                                   null=True,
-                                   related_name='projects_owned')
+    repo_owner = models.ForeignKey(
+        User, on_delete=models.SET_NULL, blank=True, null=True, related_name="projects_owned"
+    )
     name = models.CharField(max_length=150)
     one_line_desc = models.CharField(max_length=150)
     description = models.TextField()
 
-    members = models.ManyToManyField(User, related_name='final_projects')
+    members = models.ManyToManyField(User, related_name="final_projects")
 
-    project_status = models.CharField(max_length=15,
-                                      choices=TASK_STATUS,
-                                      default=PENDING,
-                                      help_text='Done projects will be reviewed for publication')
-    revision_status = models.CharField(max_length=15,
-                                       choices=REVISION_STATUS,
-                                       default=PENDING,
-                                       help_text='Only approved projects will display on the feature projects list')
+    project_status = models.CharField(
+        max_length=15, choices=TASK_STATUS, default=PENDING, help_text="Done projects will be reviewed for publication"
+    )
+    revision_status = models.CharField(
+        max_length=15,
+        choices=REVISION_STATUS,
+        default=PENDING,
+        help_text="Only approved projects will display on the feature projects list",
+    )
     revision_message = models.TextField(null=True, blank=True, default=None)
 
-    visibility_status = models.CharField(max_length=15,
-                                         choices=VISIBILITY_STATUS,
-                                         default=PRIVATE,
-                                         help_text='Public project will be visible to other users')
+    visibility_status = models.CharField(
+        max_length=15,
+        choices=VISIBILITY_STATUS,
+        default=PRIVATE,
+        help_text="Public project will be visible to other users",
+    )
 
     repo_url = models.URLField(blank=True, null=True, default=None)
     public_url = models.URLField(blank=True, null=True, default=None)
@@ -206,11 +205,11 @@ class FinalProject(models.Model):
 
 # PENDING = 'PENDING'
 # DONE = 'DONE'
-ERROR = 'ERROR'
+ERROR = "ERROR"
 LEARNPACK_WEBHOOK_STATUS = (
-    (PENDING, 'Pending'),
-    (DONE, 'Done'),
-    (ERROR, 'Error'),
+    (PENDING, "Pending"),
+    (DONE, "Done"),
+    (ERROR, "Error"),
 )
 
 
@@ -218,7 +217,7 @@ class LearnPackWebhook(models.Model):
 
     is_streaming = models.BooleanField()
     event = models.CharField(max_length=15)
-    payload = models.JSONField(blank=True, null=True, default=None, help_text='Will be set by learnpack')
+    payload = models.JSONField(blank=True, null=True, default=None, help_text="Will be set by learnpack")
     student = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, default=None)
     telemetry = models.ForeignKey(AssignmentTelemetry, on_delete=models.CASCADE, blank=True, null=True, default=None)
 
@@ -233,17 +232,17 @@ class LearnPackWebhook(models.Model):
 
 
 class Provider(models.TextChoices):
-    GITHUB = 'GITHUB', 'GitHub'
+    GITHUB = "GITHUB", "GitHub"
 
 
 class RepositoryDeletionOrder(models.Model):
     Provider = Provider
 
     class Status(models.TextChoices):
-        PENDING = 'PENDING', 'Pending'
-        ERROR = 'ERROR', 'Error'
-        DELETED = 'DELETED', 'Deleted'
-        CANCELLED = 'CANCELLED', 'Cancelled'
+        PENDING = "PENDING", "Pending"
+        ERROR = "ERROR", "Error"
+        DELETED = "DELETED", "Deleted"
+        CANCELLED = "CANCELLED", "Cancelled"
 
     provider = models.CharField(max_length=15, choices=Provider, default=Provider.GITHUB)
     status = models.CharField(max_length=15, choices=Status, default=Status.PENDING)
@@ -276,8 +275,10 @@ class RepositoryWhiteList(models.Model):
         self.full_clean()
         super().save(*args, **kwargs)
 
-        RepositoryDeletionOrder.objects.filter(provider=self.provider,
-                                               repository_user__iexact=self.repository_user,
-                                               repository_name__iexact=self.repository_name).exclude(
-                                                   Q(status=RepositoryDeletionOrder.Status.DELETED)
-                                                   | Q(status=RepositoryDeletionOrder.Status.CANCELLED)).delete()
+        RepositoryDeletionOrder.objects.filter(
+            provider=self.provider,
+            repository_user__iexact=self.repository_user,
+            repository_name__iexact=self.repository_name,
+        ).exclude(
+            Q(status=RepositoryDeletionOrder.Status.DELETED) | Q(status=RepositoryDeletionOrder.Status.CANCELLED)
+        ).delete()

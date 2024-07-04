@@ -6,20 +6,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('mentorship', '0006_auto_20220225_2059'),
+        ("mentorship", "0006_auto_20220225_2059"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='mentorshipservice',
-            name='allow_mentee_to_extend',
-            field=models.BooleanField(default=True,
-                                      help_text='If true, mentees will be able to extend mentorship session'),
+            model_name="mentorshipservice",
+            name="allow_mentee_to_extend",
+            field=models.BooleanField(
+                default=True, help_text="If true, mentees will be able to extend mentorship session"
+            ),
         ),
         migrations.AddField(
-            model_name='mentorshipservice',
-            name='allow_mentors_to_extend',
-            field=models.BooleanField(default=True,
-                                      help_text='If true, mentors will be able to extend mentorship session'),
+            model_name="mentorshipservice",
+            name="allow_mentors_to_extend",
+            field=models.BooleanField(
+                default=True, help_text="If true, mentors will be able to extend mentorship session"
+            ),
         ),
     ]

@@ -1,11 +1,13 @@
-from django.core.management.base import BaseCommand
-from ...models import RepositoryWebhook
-from django.utils import timezone
 from datetime import timedelta
+
+from django.core.management.base import BaseCommand
+from django.utils import timezone
+
+from ...models import RepositoryWebhook
 
 
 class Command(BaseCommand):
-    help = 'Delete logs and other garbage'
+    help = "Delete logs and other garbage"
 
     def handle(self, *args, **options):
 

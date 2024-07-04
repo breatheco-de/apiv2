@@ -12,6 +12,6 @@ logger = logging.getLogger(__name__)
 
 @receiver(userassessment_status_updated, sender=UserAssessment)
 def userassessment_status_updated(sender: Type[UserAssessment], instance: UserAssessment, **kwargs: Any):
-    logger.info('Processing userassessment_status_updated: ' + str(instance.id))
-    if instance.status == 'ANSWERED':
+    logger.info("Processing userassessment_status_updated: " + str(instance.id))
+    if instance.status == "ANSWERED":
         async_close_userassignment.delay(instance.id)

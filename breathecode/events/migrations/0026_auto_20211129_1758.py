@@ -6,33 +6,45 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0025_eventcheckin_attended_at'),
+        ("events", "0025_eventcheckin_attended_at"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='event',
-            name='sync_with_eventbrite',
+            model_name="event",
+            name="sync_with_eventbrite",
             field=models.BooleanField(default=False),
         ),
         migrations.AlterField(
-            model_name='event',
-            name='sync_status',
+            model_name="event",
+            name="sync_status",
             field=models.CharField(
-                choices=[('PENDING', 'Pending'), ('PERSISTED', 'Persisted'), ('ERROR', 'Error'), ('WARNING', 'Warning'),
-                         ('SYNCHED', 'Synched')],
-                default='PENDING',
-                help_text='One of: PENDING, PERSISTED or ERROR depending on how the eventbrite sync status',
-                max_length=9),
+                choices=[
+                    ("PENDING", "Pending"),
+                    ("PERSISTED", "Persisted"),
+                    ("ERROR", "Error"),
+                    ("WARNING", "Warning"),
+                    ("SYNCHED", "Synched"),
+                ],
+                default="PENDING",
+                help_text="One of: PENDING, PERSISTED or ERROR depending on how the eventbrite sync status",
+                max_length=9,
+            ),
         ),
         migrations.AlterField(
-            model_name='organization',
-            name='sync_status',
+            model_name="organization",
+            name="sync_status",
             field=models.CharField(
-                choices=[('PENDING', 'Pending'), ('PERSISTED', 'Persisted'), ('ERROR', 'Error'), ('WARNING', 'Warning'),
-                         ('SYNCHED', 'Synched')],
-                default='PENDING',
-                help_text='One of: PENDING, PERSISTED or ERROR depending on how the eventbrite sync status',
-                max_length=9),
+                choices=[
+                    ("PENDING", "Pending"),
+                    ("PERSISTED", "Persisted"),
+                    ("ERROR", "Error"),
+                    ("WARNING", "Warning"),
+                    ("SYNCHED", "Synched"),
+                ],
+                default="PENDING",
+                help_text="One of: PENDING, PERSISTED or ERROR depending on how the eventbrite sync status",
+                max_length=9,
+            ),
         ),
     ]

@@ -1,10 +1,11 @@
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import MagicMock, call, patch
+
 from django.http.request import HttpRequest
 from django.utils import timezone
 
-from ..mixins import MonitoringTestCase
 from ...admin import pause_for_one_day
 from ...models import Endpoint
+from ..mixins import MonitoringTestCase
 
 
 # This tests check functions are called, remember that this functions are
@@ -28,12 +29,14 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         self.assertEqual(result, None)
 
-        endpoints = [{
-            **endpoint, 'paused_until': None
-        } for endpoint in self.all_endpoint_dict() if self.assertDatetime(endpoint['paused_until'])]
-        self.assertEqual(endpoints, [{
-            **self.model_to_dict(model, 'endpoint'), 'frequency_in_minutes': 30.0
-        } for model in models])
+        endpoints = [
+            {**endpoint, "paused_until": None}
+            for endpoint in self.all_endpoint_dict()
+            if self.assertDatetime(endpoint["paused_until"])
+        ]
+        self.assertEqual(
+            endpoints, [{**self.model_to_dict(model, "endpoint"), "frequency_in_minutes": 30.0} for model in models]
+        )
 
     def tests_pause_for_one_day_length_3(self):
         request = HttpRequest()
@@ -43,9 +46,11 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         self.assertEqual(result, None)
 
-        endpoints = [{
-            **endpoint, 'paused_until': None
-        } for endpoint in self.all_endpoint_dict() if self.assertDatetime(endpoint['paused_until'])]
-        self.assertEqual(endpoints, [{
-            **self.model_to_dict(model, 'endpoint'), 'frequency_in_minutes': 30.0
-        } for model in models])
+        endpoints = [
+            {**endpoint, "paused_until": None}
+            for endpoint in self.all_endpoint_dict()
+            if self.assertDatetime(endpoint["paused_until"])
+        ]
+        self.assertEqual(
+            endpoints, [{**self.model_to_dict(model, "endpoint"), "frequency_in_minutes": 30.0} for model in models]
+        )

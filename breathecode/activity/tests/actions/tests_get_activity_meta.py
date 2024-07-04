@@ -1,6 +1,7 @@
 """
 Test /answer
 """
+
 from unittest.mock import MagicMock, call, patch
 
 from django.utils import timezone
@@ -25,22 +26,22 @@ def obj():
 
 
 ALLOWED_TYPES = [
-    ('auth.UserInvite', 'user_invite', 'invite_created', obj()),
-    ('auth.UserInvite', 'user_invite', 'invite_status_updated', obj()),
-    ('feedback.Answer', 'answer', 'nps_answered', obj()),
-    ('auth.User', 'user', 'login', obj()),
-    ('assignments.Task', 'task', 'open_syllabus_module', obj()),
-    ('assignments.Task', 'task', 'read_assignment', obj()),
-    ('assignments.Task', 'task', 'assignment_review_status_updated', obj()),
-    ('assignments.Task', 'task', 'assignment_status_updated', obj()),
-    ('events.EventCheckin', 'event_checkin', 'event_checkin_created', obj()),
-    ('events.EventCheckin', 'event_checkin', 'event_checkin_assisted', obj()),
-    ('payments.Bag', 'bag', 'bag_created', obj()),
-    ('payments.Subscription', 'subscription', 'checkout_completed', obj()),
-    ('payments.PlanFinancing', 'plan_financing', 'checkout_completed', obj()),
-    ('mentorship.MentorshipSession', 'mentorship_session', 'mentoring_session_scheduled', obj()),
-    ('mentorship.MentorshipSession', 'mentorship_session', 'mentorship_session_checkin', obj()),
-    ('mentorship.MentorshipSession', 'mentorship_session', 'mentorship_session_checkout', obj()),
+    ("auth.UserInvite", "user_invite", "invite_created", obj()),
+    ("auth.UserInvite", "user_invite", "invite_status_updated", obj()),
+    ("feedback.Answer", "answer", "nps_answered", obj()),
+    ("auth.User", "user", "login", obj()),
+    ("assignments.Task", "task", "open_syllabus_module", obj()),
+    ("assignments.Task", "task", "read_assignment", obj()),
+    ("assignments.Task", "task", "assignment_review_status_updated", obj()),
+    ("assignments.Task", "task", "assignment_status_updated", obj()),
+    ("events.EventCheckin", "event_checkin", "event_checkin_created", obj()),
+    ("events.EventCheckin", "event_checkin", "event_checkin_assisted", obj()),
+    ("payments.Bag", "bag", "bag_created", obj()),
+    ("payments.Subscription", "subscription", "checkout_completed", obj()),
+    ("payments.PlanFinancing", "plan_financing", "checkout_completed", obj()),
+    ("mentorship.MentorshipSession", "mentorship_session", "mentoring_session_scheduled", obj()),
+    ("mentorship.MentorshipSession", "mentorship_session", "mentorship_session_checkin", obj()),
+    ("mentorship.MentorshipSession", "mentorship_session", "mentorship_session_checkout", obj()),
 ]
 
 
@@ -57,14 +58,14 @@ class MediaTestSuite(MediaTestCase):
     def test_type_and_no_id_or_slug(self):
         kind = self.bc.fake.slug()
 
-        with self.assertRaisesMessage(AbortTask, 'related_id or related_slug must be present'):
-            get_activity_meta(kind, related_type='auth.User')
+        with self.assertRaisesMessage(AbortTask, "related_id or related_slug must be present"):
+            get_activity_meta(kind, related_type="auth.User")
 
     def test_bad_related_type(self):
         related_type = self.bc.fake.slug()
         kind = self.bc.fake.slug()
 
-        with self.assertRaisesMessage(AbortTask, f'{related_type} is not supported yet'):
+        with self.assertRaisesMessage(AbortTask, f"{related_type} is not supported yet"):
             get_activity_meta(kind, related_type=related_type, related_id=1)
 
     def test_kind_not_sopported_by_related_type(self):
@@ -72,12 +73,19 @@ class MediaTestSuite(MediaTestCase):
         kind = self.bc.fake.slug()
 
         allowed = [
-            'auth.UserInvite', 'feedback.Answer', 'auth.User', 'assignments.Task', 'events.EventCheckin',
-            'payments.Bag', 'payments.Subscription', 'payments.PlanFinancing', 'mentorship.MentorshipSession'
+            "auth.UserInvite",
+            "feedback.Answer",
+            "auth.User",
+            "assignments.Task",
+            "events.EventCheckin",
+            "payments.Bag",
+            "payments.Subscription",
+            "payments.PlanFinancing",
+            "mentorship.MentorshipSession",
         ]
 
         for related_type in allowed:
-            with self.assertRaisesMessage(AbortTask, f'kind {kind} is not supported by {related_type}'):
+            with self.assertRaisesMessage(AbortTask, f"kind {kind} is not supported by {related_type}"):
                 get_activity_meta(kind, related_type=related_type, related_id=1)
 
     def test_kind_sopported_by_related_type(self):

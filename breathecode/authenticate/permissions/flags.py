@@ -1,8 +1,7 @@
-__all__ = ['api']
+__all__ = ["api"]
 
 
-class API:
-    ...
+class API: ...
 
 
 api = API()

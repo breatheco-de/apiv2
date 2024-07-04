@@ -1,16 +1,20 @@
 import logging
+
 import google.cloud.storage as storage
-import breathecode.services.google_cloud.credentials as credentials
-from .file import File
 from circuitbreaker import circuit
+
+import breathecode.services.google_cloud.credentials as credentials
+
+from .file import File
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['Storage']
+__all__ = ["Storage"]
 
 
 class Storage:
     """Google Cloud Storage"""
+
     client: storage.Client
 
     def __init__(self) -> None:

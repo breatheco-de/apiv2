@@ -4,11 +4,11 @@ from logging import getLogger as getBaseLogger
 from logging import root
 from typing import Annotated, Optional
 
-IS_TEST_ENV = 'ENV' in os.environ and os.environ['ENV'] == 'test'
+IS_TEST_ENV = "ENV" in os.environ and os.environ["ENV"] == "test"
 
-__all__ = ['getLogger', 'Logger']
+__all__ = ["getLogger", "Logger"]
 
-Base = Annotated[BaseLogger, 'The original Logger']
+Base = Annotated[BaseLogger, "The original Logger"]
 
 
 def getLogger(name: Optional[str] = None):  # noqa: N802

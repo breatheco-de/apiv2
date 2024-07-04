@@ -21,7 +21,7 @@ from .actions import sync_slack_team_channel, sync_slack_team_users
 
 
 def get_api_url():
-    return os.getenv('API_URL', '')
+    return os.getenv("API_URL", "")
 
 
 logger = logging.getLogger(__name__)
@@ -29,74 +29,75 @@ logger = logging.getLogger(__name__)
 
 @shared_task(priority=TaskPriority.REALTIME.value)
 def async_slack_team_channel(team_id):
-    logger.debug('Starting async_slack_team_channel')
+    logger.debug("Starting async_slack_team_channel")
     return sync_slack_team_channel(team_id)
 
 
 @shared_task(priority=TaskPriority.REALTIME.value)
 def send_mentorship_starting_notification(session_id):
-    logger.debug('Starting send_mentorship_starting_notification')
+    logger.debug("Starting send_mentorship_starting_notification")
 
     session = MentorshipSession.objects.filter(id=session_id, mentee__isnull=False).first()
     if not session:
-        logger.error(f'No mentorship session found for {session_id}')
+        logger.error(f"No mentorship session found for {session_id}")
         return False
 
-    token, created = Token.get_or_create(session.mentor.user, token_type='temporal', hours_length=2)
+    token, created = Token.get_or_create(session.mentor.user, token_type="temporal", hours_length=2)
 
     actions.send_email_message(
-        'message',
-        session.mentor.user.email, {
-            'SUBJECT': 'Mentorship session starting',
-            'MESSAGE':
-            f'Mentee {session.mentee.first_name} {session.mentee.last_name} is joining your session, please come back to this email when the session is over to marke it as completed',
-            'BUTTON': 'Finish and review this session',
-            'LINK': f'{get_api_url()}/mentor/session/{session.id}?token={token.key}',
+        "message",
+        session.mentor.user.email,
+        {
+            "SUBJECT": "Mentorship session starting",
+            "MESSAGE": f"Mentee {session.mentee.first_name} {session.mentee.last_name} is joining your session, please come back to this email when the session is over to marke it as completed",
+            "BUTTON": "Finish and review this session",
+            "LINK": f"{get_api_url()}/mentor/session/{session.id}?token={token.key}",
         },
-        academy=session.mentor.academy)
+        academy=session.mentor.academy,
+    )
 
     return True
 
 
 @shared_task(priority=TaskPriority.REALTIME.value)
 def async_slack_team_users(team_id):
-    logger.debug('Starting async_slack_team_users')
+    logger.debug("Starting async_slack_team_users")
     return sync_slack_team_users(team_id)
 
 
 @shared_task(priority=TaskPriority.REALTIME.value)
 def async_slack_action(post_data):
-    logger.debug('Starting async_slack_action')
+    logger.debug("Starting async_slack_action")
     try:
         client = Slack()
         success = client.execute_action(context=post_data)
         if success:
-            logger.debug('Successfully process slack action')
+            logger.debug("Successfully process slack action")
             return True
         else:
-            logger.error('Error processing slack action')
+            logger.error("Error processing slack action")
             return False
 
     except Exception:
-        logger.exception('Error processing slack action')
+        logger.exception("Error processing slack action")
         return False
 
 
 @shared_task(priority=TaskPriority.REALTIME.value)
 def async_slack_command(post_data):
-    logger.debug('Starting async_slack_command')
+    logger.debug("Starting async_slack_command")
     try:
         client = Slack()
         success = client.execute_command(context=post_data)
         if success:
-            logger.debug('Successfully process slack command')
+            logger.debug("Successfully process slack command")
             return True
         else:
-            logger.error('Error processing slack command')
+            logger.error("Error processing slack command")
             return False
 
     except Exception:
-        logger.exception('Error processing slack command')
+        logger.exception("Error processing slack command")
         return False
 
 
@@ -120,7 +121,7 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
         for key in payload.keys():
             # TypeError("string indices must be integers, not 'str'")
             if isinstance(payload[key], datetime):
-                payload[key] = payload[key].isoformat().replace('+00:00', 'Z')
+                payload[key] = payload[key].isoformat().replace("+00:00", "Z")
 
             elif isinstance(payload[key], Decimal):
                 payload[key] = str(payload[key])
@@ -137,7 +138,7 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
 
         return payload
 
-    logger.info('Starting async_deliver_hook')
+    logger.info("Starting async_deliver_hook")
 
     try:
         if isinstance(payload, dict):
@@ -151,10 +152,9 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
             payload = l
 
         encoded_payload = json.dumps(payload, cls=DjangoJSONEncoder)
-        response = requests.post(url=target,
-                                 data=encoded_payload,
-                                 headers={'Content-Type': 'application/json'},
-                                 timeout=2)
+        response = requests.post(
+            url=target, data=encoded_payload, headers={"Content-Type": "application/json"}, timeout=2
+        )
 
         if hook_id:
             hook_model_cls = HookManager.get_hook_model()
@@ -168,8 +168,8 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
                 if not isinstance(data, list):
                     data = []
 
-                if 'data' in payload and isinstance(payload['data'], dict):
-                    data.append(payload['data'])
+                if "data" in payload and isinstance(payload["data"], dict):
+                    data.append(payload["data"])
                 elif isinstance(payload, dict):
                     data.append(json.loads(encoded_payload))
 
@@ -184,4 +184,4 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
 
     except Exception:
         logger.error(payload)
-        raise AbortTask(f'Error while trying to save hook call with status code {response.status_code}. {payload}')
+        raise AbortTask(f"Error while trying to save hook call with status code {response.status_code}. {payload}")

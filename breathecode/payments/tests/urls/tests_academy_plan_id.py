@@ -12,35 +12,35 @@ from ..mixins import PaymentsTestCase
 
 def academy_serializer(academy):
     return {
-        'id': academy.id,
-        'name': academy.name,
-        'slug': academy.slug,
+        "id": academy.id,
+        "name": academy.name,
+        "slug": academy.slug,
     }
 
 
 def service_item_serializer(service_item, service):
     return {
-        'how_many': service_item.how_many,
-        'service': {
-            'groups': [],
-            'private': service.private,
-            'slug': service.slug,
-            'title': service.title,
-            'icon_url': service.icon_url,
+        "how_many": service_item.how_many,
+        "service": {
+            "groups": [],
+            "private": service.private,
+            "slug": service.slug,
+            "title": service.title,
+            "icon_url": service.icon_url,
         },
-        'unit_type': service_item.unit_type,
-        'sort_priority': service_item.sort_priority,
+        "unit_type": service_item.unit_type,
+        "sort_priority": service_item.sort_priority,
     }
 
 
 def financing_option_serializer(financing_option, currency):
     return {
-        'currency': {
-            'code': currency.code,
-            'name': currency.name,
+        "currency": {
+            "code": currency.code,
+            "name": currency.name,
         },
-        'how_many_months': financing_option.how_many_months,
-        'monthly_price': financing_option.monthly_price,
+        "how_many_months": financing_option.how_many_months,
+        "monthly_price": financing_option.monthly_price,
     }
 
 
@@ -55,62 +55,57 @@ def get_serializer(event, currency, service=None, academy=None, service_items=[]
         academy = academy_serializer(academy)
 
     return {
-        'slug': event.slug,
-        'currency': {
-            'code': currency.code,
-            'name': currency.name,
+        "slug": event.slug,
+        "currency": {
+            "code": currency.code,
+            "name": currency.name,
         },
-        'financing_options': financing_options,
-        'has_available_cohorts': len(cohorts) > 0,
-        'has_waiting_list': event.has_waiting_list,
-        'is_renewable': event.is_renewable,
-        'owner': academy,
-        'price_per_half': event.price_per_half,
-        'price_per_month': event.price_per_month,
-        'price_per_quarter': event.price_per_quarter,
-        'price_per_year': event.price_per_year,
-        'service_items': service_items,
-        'slug': event.slug,
-        'status': event.status,
-        'time_of_life': event.time_of_life,
-        'time_of_life_unit': event.time_of_life_unit,
-        'trial_duration': event.trial_duration,
-        'trial_duration_unit': event.trial_duration_unit,
+        "financing_options": financing_options,
+        "has_available_cohorts": len(cohorts) > 0,
+        "has_waiting_list": event.has_waiting_list,
+        "is_renewable": event.is_renewable,
+        "owner": academy,
+        "price_per_half": event.price_per_half,
+        "price_per_month": event.price_per_month,
+        "price_per_quarter": event.price_per_quarter,
+        "price_per_year": event.price_per_year,
+        "service_items": service_items,
+        "slug": event.slug,
+        "status": event.status,
+        "time_of_life": event.time_of_life,
+        "time_of_life_unit": event.time_of_life_unit,
+        "trial_duration": event.trial_duration,
+        "trial_duration_unit": event.trial_duration_unit,
     }
 
 
-def put_serializer(event,
-                   currency,
-                   service=None,
-                   academy=None,
-                   service_items=[],
-                   financing_options=[],
-                   cohorts=[],
-                   data={}):
+def put_serializer(
+    event, currency, service=None, academy=None, service_items=[], financing_options=[], cohorts=[], data={}
+):
 
     return {
-        'id': event.id,
-        'slug': event.slug,
-        'currency': currency.id,
-        'financing_options': [x.id for x in financing_options],
-        'has_waiting_list': event.has_waiting_list,
-        'is_renewable': event.is_renewable,
-        'owner': academy.id,
-        'price_per_half': event.price_per_half,
-        'price_per_month': event.price_per_month,
-        'price_per_quarter': event.price_per_quarter,
-        'price_per_year': event.price_per_year,
-        'service_items': [x.id for x in service_items],
-        'slug': event.slug,
-        'status': event.status,
-        'time_of_life': event.time_of_life,
-        'time_of_life_unit': event.time_of_life_unit,
-        'trial_duration': event.trial_duration,
-        'trial_duration_unit': event.trial_duration_unit,
-        'mentorship_service_set': event.mentorship_service_set,
-        'cohort_set': event.cohort_set,
-        'event_type_set': event.event_type_set,
-        'invites': [],
+        "id": event.id,
+        "slug": event.slug,
+        "currency": currency.id,
+        "financing_options": [x.id for x in financing_options],
+        "has_waiting_list": event.has_waiting_list,
+        "is_renewable": event.is_renewable,
+        "owner": academy.id,
+        "price_per_half": event.price_per_half,
+        "price_per_month": event.price_per_month,
+        "price_per_quarter": event.price_per_quarter,
+        "price_per_year": event.price_per_year,
+        "service_items": [x.id for x in service_items],
+        "slug": event.slug,
+        "status": event.status,
+        "time_of_life": event.time_of_life,
+        "time_of_life_unit": event.time_of_life_unit,
+        "trial_duration": event.trial_duration,
+        "trial_duration_unit": event.trial_duration_unit,
+        "mentorship_service_set": event.mentorship_service_set,
+        "cohort_set": event.cohort_set,
+        "event_type_set": event.event_type_set,
+        "invites": [],
         **data,
     }
 
@@ -121,15 +116,15 @@ class SignalTestSuite(PaymentsTestCase):
     # When: get with no auth
     # Then: return 200
     def test__no_auth(self):
-        url = reverse_lazy('payments:academy_plan_id', kwargs={'plan_id': 1})
+        url = reverse_lazy("payments:academy_plan_id", kwargs={"plan_id": 1})
         response = self.client.get(url)
 
         json = response.json()
-        expected = {'detail': 'Authentication credentials were not provided.', 'status_code': 401}
+        expected = {"detail": "Authentication credentials were not provided.", "status_code": 401}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
+        self.assertEqual(self.bc.database.list_of("payments.Plan"), [])
 
     # Given: 0 Plan
     # When: get with no auth
@@ -140,25 +135,25 @@ class SignalTestSuite(PaymentsTestCase):
         self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
-        url = reverse_lazy('payments:academy_plan_id', kwargs={'plan_id': 1})
+        url = reverse_lazy("payments:academy_plan_id", kwargs={"plan_id": 1})
         response = self.client.get(url)
 
         json = response.json()
         expected = {
-            'detail': "You (user: 1) don't have this capability: read_plan for academy 1",
-            'status_code': 403,
+            "detail": "You (user: 1) don't have this capability: read_plan for academy 1",
+            "status_code": 403,
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
+        self.assertEqual(self.bc.database.list_of("payments.Plan"), [])
 
     # When: Not found
     # Then: return 404
     def test__not_found(self):
         model = self.bc.database.create(
             user=1,
-            capability='read_plan',
+            capability="read_plan",
             role=1,
             profile_academy=1,
             skip_cohort=True,
@@ -167,200 +162,231 @@ class SignalTestSuite(PaymentsTestCase):
         self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
-        url = reverse_lazy('payments:academy_plan_id', kwargs={'plan_id': 1})
+        url = reverse_lazy("payments:academy_plan_id", kwargs={"plan_id": 1})
         response = self.client.get(url)
 
         json = response.json()
-        expected = {'detail': 'not-found', 'status_code': 404}
+        expected = {"detail": "not-found", "status_code": 404}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(self.bc.database.list_of('payments.Plan'), [])
+        self.assertEqual(self.bc.database.list_of("payments.Plan"), [])
 
     # Given: 2 Plan, 4 PlanServiceItem, 2 ServiceItem and 1 Service
     # When: get with no auth and plan is renewable
     # Then: return 200 with 2 Plan with no financial options
     def test__two_items__plan_is_renewable(self):
-        plan = {'time_of_life': None, 'time_of_life_unit': None, 'is_renewable': True}
-        plan_service_items = [{'service_item_id': n, 'plan_id': 1} for n in range(1, 3)]
-        model = self.bc.database.create(plan=plan,
-                                        user=1,
-                                        capability='read_plan',
-                                        role=1,
-                                        profile_academy=1,
-                                        skip_cohort=True,
-                                        service_item=2,
-                                        plan_service_item=plan_service_items,
-                                        financing_option=2)
+        plan = {"time_of_life": None, "time_of_life_unit": None, "is_renewable": True}
+        plan_service_items = [{"service_item_id": n, "plan_id": 1} for n in range(1, 3)]
+        model = self.bc.database.create(
+            plan=plan,
+            user=1,
+            capability="read_plan",
+            role=1,
+            profile_academy=1,
+            skip_cohort=True,
+            service_item=2,
+            plan_service_item=plan_service_items,
+            financing_option=2,
+        )
 
         self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
-        url = reverse_lazy('payments:academy_plan_id', kwargs={'plan_id': 1})
+        url = reverse_lazy("payments:academy_plan_id", kwargs={"plan_id": 1})
         response = self.client.get(url)
 
         json = response.json()
-        expected = get_serializer(model.plan,
-                                  model.currency,
-                                  model.service,
-                                  academy=model.academy,
-                                  service_items=model.service_item,
-                                  financing_options=[])
+        expected = get_serializer(
+            model.plan,
+            model.currency,
+            model.service,
+            academy=model.academy,
+            service_items=model.service_item,
+            financing_options=[],
+        )
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('payments.Plan'), [
-            self.bc.format.to_dict(model.plan),
-        ])
+        self.assertEqual(
+            self.bc.database.list_of("payments.Plan"),
+            [
+                self.bc.format.to_dict(model.plan),
+            ],
+        )
 
     # When: get is called
     # Then: it's setup properly
-    @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
-    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    @patch.object(APIViewExtensionHandlers, "_spy_extensions", MagicMock())
+    @patch.object(APIViewExtensionHandlers, "_spy_extension_arguments", MagicMock())
     def test_get__spy_extensions(self):
-        plan = {'time_of_life': None, 'time_of_life_unit': None, 'is_renewable': True}
-        plan_service_items = [{'service_item_id': n, 'plan_id': 1} for n in range(1, 3)]
-        model = self.bc.database.create(plan=plan,
-                                        user=1,
-                                        capability='read_plan',
-                                        role=1,
-                                        profile_academy=1,
-                                        skip_cohort=True,
-                                        service_item=2,
-                                        plan_service_item=plan_service_items,
-                                        financing_option=2)
+        plan = {"time_of_life": None, "time_of_life_unit": None, "is_renewable": True}
+        plan_service_items = [{"service_item_id": n, "plan_id": 1} for n in range(1, 3)]
+        model = self.bc.database.create(
+            plan=plan,
+            user=1,
+            capability="read_plan",
+            role=1,
+            profile_academy=1,
+            skip_cohort=True,
+            service_item=2,
+            plan_service_item=plan_service_items,
+            financing_option=2,
+        )
 
         self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
-        url = reverse_lazy('payments:academy_plan_id', kwargs={'plan_id': 1})
+        url = reverse_lazy("payments:academy_plan_id", kwargs={"plan_id": 1})
         self.client.get(url)
 
-        self.bc.check.calls(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['LanguageExtension', 'LookupExtension', 'PaginationExtension', 'SortExtension']),
-        ])
+        self.bc.check.calls(
+            APIViewExtensionHandlers._spy_extensions.call_args_list,
+            [
+                call(["LanguageExtension", "LookupExtension", "PaginationExtension", "SortExtension"]),
+            ],
+        )
 
-        self.bc.check.calls(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
-            call(sort='-id', paginate=True),
-        ])
+        self.bc.check.calls(
+            APIViewExtensionHandlers._spy_extension_arguments.call_args_list,
+            [
+                call(sort="-id", paginate=True),
+            ],
+        )
 
     # Given: 2 Plan, 4 PlanServiceItem, 2 ServiceItem and 1 Service
     # When: get with no auth and plan is renewable
     # Then: return 200 but not found
     def test__put__not_found(self):
-        plan = {'time_of_life': None, 'time_of_life_unit': None, 'is_renewable': True}
-        plan_service_items = [{'service_item_id': n, 'plan_id': 1} for n in range(1, 3)]
-        model = self.bc.database.create(plan=plan,
-                                        user=1,
-                                        capability='crud_plan',
-                                        role=1,
-                                        profile_academy=1,
-                                        skip_cohort=True,
-                                        service_item=2,
-                                        plan_service_item=plan_service_items,
-                                        financing_option=2)
+        plan = {"time_of_life": None, "time_of_life_unit": None, "is_renewable": True}
+        plan_service_items = [{"service_item_id": n, "plan_id": 1} for n in range(1, 3)]
+        model = self.bc.database.create(
+            plan=plan,
+            user=1,
+            capability="crud_plan",
+            role=1,
+            profile_academy=1,
+            skip_cohort=True,
+            service_item=2,
+            plan_service_item=plan_service_items,
+            financing_option=2,
+        )
 
         self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         data = {
-            'slug': self.bc.fake.slug(),
-            'is_renewable': random.choice([True, False]),
-            'status': random.choice(['DRAFT', 'ACTIVE', 'UNLISTED', 'DELETED', 'DISCONTINUED']),
-            'is_onboarding': random.choice([True, False]),
-            'has_waiting_list': random.choice([True, False]),
+            "slug": self.bc.fake.slug(),
+            "is_renewable": random.choice([True, False]),
+            "status": random.choice(["DRAFT", "ACTIVE", "UNLISTED", "DELETED", "DISCONTINUED"]),
+            "is_onboarding": random.choice([True, False]),
+            "has_waiting_list": random.choice([True, False]),
         }
 
         if random.choice([True, False]):
-            data['time_of_life'] = random.randint(1, 100)
-            data['time_of_life_unit'] = random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR'])
-            data['is_renewable'] = False
+            data["time_of_life"] = random.randint(1, 100)
+            data["time_of_life_unit"] = random.choice(["DAY", "WEEK", "MONTH", "YEAR"])
+            data["is_renewable"] = False
 
         else:
-            data['time_of_life'] = None
-            data['time_of_life_unit'] = None
-            data['is_renewable'] = True
+            data["time_of_life"] = None
+            data["time_of_life_unit"] = None
+            data["is_renewable"] = True
 
         if random.choice([True, False]):
-            data['trial_duration'] = random.randint(1, 100)
-            data['trial_duration_unit'] = random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR'])
+            data["trial_duration"] = random.randint(1, 100)
+            data["trial_duration_unit"] = random.choice(["DAY", "WEEK", "MONTH", "YEAR"])
 
         else:
-            data['trial_duration'] = random.randint(1, 100)
-            data['trial_duration_unit'] = random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR'])
+            data["trial_duration"] = random.randint(1, 100)
+            data["trial_duration_unit"] = random.choice(["DAY", "WEEK", "MONTH", "YEAR"])
 
-        url = reverse_lazy('payments:academy_plan_id', kwargs={'plan_id': 2})
-        response = self.client.put(url, data, format='json')
+        url = reverse_lazy("payments:academy_plan_id", kwargs={"plan_id": 2})
+        response = self.client.put(url, data, format="json")
 
         json = response.json()
-        expected = {'detail': 'not-found', 'status_code': 404}
+        expected = {"detail": "not-found", "status_code": 404}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(self.bc.database.list_of('payments.Plan'), [{
-            **self.bc.format.to_dict(model.plan),
-        }])
+        self.assertEqual(
+            self.bc.database.list_of("payments.Plan"),
+            [
+                {
+                    **self.bc.format.to_dict(model.plan),
+                }
+            ],
+        )
 
     # Given: 2 Plan, 4 PlanServiceItem, 2 ServiceItem and 1 Service
     # When: get with no auth and plan is renewable
     # Then: return 200 and change all fields
     def test__put__all_fields(self):
-        plan = {'time_of_life': None, 'time_of_life_unit': None, 'is_renewable': True}
-        plan_service_items = [{'service_item_id': n, 'plan_id': 1} for n in range(1, 3)]
-        model = self.bc.database.create(plan=plan,
-                                        user=1,
-                                        capability='crud_plan',
-                                        role=1,
-                                        profile_academy=1,
-                                        skip_cohort=True,
-                                        service_item=2,
-                                        plan_service_item=plan_service_items,
-                                        financing_option=2)
+        plan = {"time_of_life": None, "time_of_life_unit": None, "is_renewable": True}
+        plan_service_items = [{"service_item_id": n, "plan_id": 1} for n in range(1, 3)]
+        model = self.bc.database.create(
+            plan=plan,
+            user=1,
+            capability="crud_plan",
+            role=1,
+            profile_academy=1,
+            skip_cohort=True,
+            service_item=2,
+            plan_service_item=plan_service_items,
+            financing_option=2,
+        )
 
         self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         data = {
-            'slug': self.bc.fake.slug(),
-            'is_renewable': random.choice([True, False]),
-            'status': random.choice(['DRAFT', 'ACTIVE', 'UNLISTED', 'DELETED', 'DISCONTINUED']),
-            'is_onboarding': random.choice([True, False]),
-            'has_waiting_list': random.choice([True, False]),
+            "slug": self.bc.fake.slug(),
+            "is_renewable": random.choice([True, False]),
+            "status": random.choice(["DRAFT", "ACTIVE", "UNLISTED", "DELETED", "DISCONTINUED"]),
+            "is_onboarding": random.choice([True, False]),
+            "has_waiting_list": random.choice([True, False]),
         }
 
         if random.choice([True, False]):
-            data['time_of_life'] = random.randint(1, 100)
-            data['time_of_life_unit'] = random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR'])
-            data['is_renewable'] = False
+            data["time_of_life"] = random.randint(1, 100)
+            data["time_of_life_unit"] = random.choice(["DAY", "WEEK", "MONTH", "YEAR"])
+            data["is_renewable"] = False
 
         else:
-            data['time_of_life'] = None
-            data['time_of_life_unit'] = None
-            data['is_renewable'] = True
+            data["time_of_life"] = None
+            data["time_of_life_unit"] = None
+            data["is_renewable"] = True
 
         if random.choice([True, False]):
-            data['trial_duration'] = random.randint(1, 100)
-            data['trial_duration_unit'] = random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR'])
+            data["trial_duration"] = random.randint(1, 100)
+            data["trial_duration_unit"] = random.choice(["DAY", "WEEK", "MONTH", "YEAR"])
 
         else:
-            data['trial_duration'] = random.randint(1, 100)
-            data['trial_duration_unit'] = random.choice(['DAY', 'WEEK', 'MONTH', 'YEAR'])
+            data["trial_duration"] = random.randint(1, 100)
+            data["trial_duration_unit"] = random.choice(["DAY", "WEEK", "MONTH", "YEAR"])
 
-        url = reverse_lazy('payments:academy_plan_id', kwargs={'plan_id': 1})
-        response = self.client.put(url, data, format='json')
+        url = reverse_lazy("payments:academy_plan_id", kwargs={"plan_id": 1})
+        response = self.client.put(url, data, format="json")
 
         json = response.json()
-        expected = put_serializer(model.plan,
-                                  model.currency,
-                                  model.service,
-                                  academy=model.academy,
-                                  service_items=model.service_item,
-                                  financing_options=model.financing_option,
-                                  data=data)
+        expected = put_serializer(
+            model.plan,
+            model.currency,
+            model.service,
+            academy=model.academy,
+            service_items=model.service_item,
+            financing_options=model.financing_option,
+            data=data,
+        )
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('payments.Plan'), [{
-            **self.bc.format.to_dict(model.plan),
-            **data,
-        }])
+        self.assertEqual(
+            self.bc.database.list_of("payments.Plan"),
+            [
+                {
+                    **self.bc.format.to_dict(model.plan),
+                    **data,
+                }
+            ],
+        )

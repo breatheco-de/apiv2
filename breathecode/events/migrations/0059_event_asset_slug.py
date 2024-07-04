@@ -6,18 +6,19 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0058_auto_20231130_2015'),
+        ("events", "0058_auto_20231130_2015"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='event',
-            name='asset_slug',
+            model_name="event",
+            name="asset_slug",
             field=models.SlugField(
                 blank=True,
                 default=None,
-                help_text='Is the event is about a project, this field will have the asset slug of that project.',
+                help_text="Is the event is about a project, this field will have the asset slug of that project.",
                 max_length=200,
-                null=True),
+                null=True,
+            ),
         ),
     ]

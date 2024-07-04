@@ -1,8 +1,8 @@
 from typing import TypeVar
 
-__all__ = ['AttrDict']
+__all__ = ["AttrDict"]
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class AttrDict(dict):

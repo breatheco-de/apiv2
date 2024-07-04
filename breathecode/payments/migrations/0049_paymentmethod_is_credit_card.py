@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('payments', '0048_remove_serviceset_academy_remove_serviceset_services_and_more'),
+        ("payments", "0048_remove_serviceset_academy_remove_serviceset_services_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='paymentmethod',
-            name='is_credit_card',
+            model_name="paymentmethod",
+            name="is_credit_card",
             field=models.BooleanField(default=False),
         ),
     ]

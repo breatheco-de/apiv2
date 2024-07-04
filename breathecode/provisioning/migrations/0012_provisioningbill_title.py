@@ -6,17 +6,19 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('provisioning', '0011_auto_20230718_2159'),
+        ("provisioning", "0011_auto_20230718_2159"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='provisioningbill',
-            name='title',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   help_text="This title should describe what the Bill is about. I.e.: April's bill.",
-                                   max_length=40,
-                                   null=True),
+            model_name="provisioningbill",
+            name="title",
+            field=models.CharField(
+                blank=True,
+                default=None,
+                help_text="This title should describe what the Bill is about. I.e.: April's bill.",
+                max_length=40,
+                null=True,
+            ),
         ),
     ]

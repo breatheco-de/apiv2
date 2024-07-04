@@ -16,9 +16,9 @@ class HookManagerClass(object):
     HOOK_EVENTS = {}
 
     def __init__(self):
-        self.HOOK_EVENTS = getattr(settings, 'HOOK_EVENTS', None)
+        self.HOOK_EVENTS = getattr(settings, "HOOK_EVENTS", None)
         if self.HOOK_EVENTS is None:
-            raise Exception('You need to define settings.HOOK_EVENTS!')
+            raise Exception("You need to define settings.HOOK_EVENTS!")
 
     def get_event_actions_config(self):
         if self._HOOK_EVENT_ACTIONS_CONFIG is None:
@@ -26,8 +26,8 @@ class HookManagerClass(object):
             for event_name, auto in self.HOOK_EVENTS.items():
                 if not auto:
                     continue
-                model_label, action = auto.rsplit('.', 1)
-                action_parts = action.rsplit('+', 1)
+                model_label, action = auto.rsplit(".", 1)
+                action_parts = action.rsplit("+", 1)
                 action = action_parts[0]
                 ignore_user_override = False
                 if len(action_parts) == 2:
@@ -35,8 +35,10 @@ class HookManagerClass(object):
 
                 model_config = self._HOOK_EVENT_ACTIONS_CONFIG.setdefault(model_label, {})
                 if action in model_config:
-                    raise ImproperlyConfigured('settings.HOOK_EVENTS have a dublicate {action} for model '
-                                               '{model_label}'.format(action=action, model_label=model_label))
+                    raise ImproperlyConfigured(
+                        "settings.HOOK_EVENTS have a dublicate {action} for model "
+                        "{model_label}".format(action=action, model_label=model_label)
+                    )
                 model_config[action] = (
                     event_name,
                     ignore_user_override,
@@ -52,7 +54,7 @@ class HookManagerClass(object):
         from importlib import import_module
 
         try:
-            mod_name, func_name = path.rsplit('.', 1)
+            mod_name, func_name = path.rsplit(".", 1)
             mod = import_module(mod_name)
         except ImportError as e:
             raise ImportError('Error importing alert function {0}: "{1}"'.format(mod_name, e))
@@ -69,36 +71,37 @@ class HookManagerClass(object):
         Returns the Custom Hook model if defined in settings,
         otherwise the default Hook model.
         """
-        model_label = getattr(settings, 'HOOK_CUSTOM_MODEL', None)
+        model_label = getattr(settings, "HOOK_CUSTOM_MODEL", None)
         if django_apps:
-            model_label = (model_label or 'notify.Hook').replace('.models.', '.')
+            model_label = (model_label or "notify.Hook").replace(".models.", ".")
             try:
                 return django_apps.get_model(model_label, require_ready=False)
             except ValueError:
                 raise ImproperlyConfigured(
-                    f"Invalid model {model_label}, HOOK_CUSTOM_MODEL must be of the form 'app_label.model_name'")
+                    f"Invalid model {model_label}, HOOK_CUSTOM_MODEL must be of the form 'app_label.model_name'"
+                )
             except LookupError:
-                raise ImproperlyConfigured("HOOK_CUSTOM_MODEL refers to model '%s' that has not been installed" %
-                                           model_label)
+                raise ImproperlyConfigured(
+                    "HOOK_CUSTOM_MODEL refers to model '%s' that has not been installed" % model_label
+                )
         else:
-            if model_label not in (None, 'notify.Hook'):
+            if model_label not in (None, "notify.Hook"):
                 try:
                     self.get_module(settings.HOOK_CUSTOM_MODEL)
                 except ImportError:
-                    raise ImproperlyConfigured("HOOK_CUSTOM_MODEL refers to model '%s' that cannot be imported" %
-                                               model_label)
+                    raise ImproperlyConfigured(
+                        "HOOK_CUSTOM_MODEL refers to model '%s' that cannot be imported" % model_label
+                    )
 
-    def find_and_fire_hook(self,
-                           event_name,
-                           instance,
-                           user_override=None,
-                           payload_override=None,
-                           academy_override=None):
+    def find_and_fire_hook(
+        self, event_name, instance, user_override=None, payload_override=None, academy_override=None
+    ):
         """
         Look up Hooks that apply
         """
         try:
             from django.contrib.auth import get_user_model
+
             user_cls = get_user_model()
         except ImportError:
             from django.contrib.auth.models import User as user_cls  # noqa: N813
@@ -106,20 +109,21 @@ class HookManagerClass(object):
         if event_name not in self.HOOK_EVENTS.keys():
             raise Exception('"{}" does not exist in `settings.HOOK_EVENTS`.'.format(event_name))
 
-        filters = {'event': event_name}
+        filters = {"event": event_name}
 
         # only process hooks from instances from the same academy
         if academy_override is not None:
-            superadmins = user_cls.objects.filter(is_superuser=True).values_list('username', flat=True)
-            filters['user__username__in'] = [academy_override.slug] + list(superadmins)
-        elif hasattr(instance, 'academy') and instance.academy is not None:
-            superadmins = user_cls.objects.filter(is_superuser=True).values_list('username', flat=True)
-            filters['user__username__in'] = [instance.academy.slug] + list(superadmins)
+            superadmins = user_cls.objects.filter(is_superuser=True).values_list("username", flat=True)
+            filters["user__username__in"] = [academy_override.slug] + list(superadmins)
+        elif hasattr(instance, "academy") and instance.academy is not None:
+            superadmins = user_cls.objects.filter(is_superuser=True).values_list("username", flat=True)
+            filters["user__username__in"] = [instance.academy.slug] + list(superadmins)
         else:
             logger.debug(
-                f'Only admin will receive hook notification for {event_name} because entity has not academy property')
+                f"Only admin will receive hook notification for {event_name} because entity has not academy property"
+            )
             # Only the admin can retrieve events from objects that don't belong to any academy
-            filters['user__is_superuser'] = True
+            filters["user__is_superuser"] = True
 
         # Ignore the user if the user_override is False
         # if user_override is not False:
@@ -159,17 +163,18 @@ class HookManagerClass(object):
         """
 
         if event_name is False and (model is False or action is False):
-            raise TypeError('process_model_event() requires either `event_name` argument or '
-                            'both `model` and `action` arguments.')
+            raise TypeError(
+                "process_model_event() requires either `event_name` argument or " "both `model` and `action` arguments."
+            )
         if event_name:
             if trust_event_name:
                 pass
             elif event_name in self.HOOK_EVENTS:
                 auto = self.HOOK_EVENTS[event_name]
                 if auto:
-                    allowed_model, allowed_action = auto.rsplit('.', 1)
+                    allowed_model, allowed_action = auto.rsplit(".", 1)
 
-                    allowed_action_parts = allowed_action.rsplit('+', 1)
+                    allowed_action_parts = allowed_action.rsplit("+", 1)
                     allowed_action = allowed_action_parts[0]
 
                     model = model or allowed_model
@@ -187,12 +192,14 @@ class HookManagerClass(object):
                 user_override = False
 
         if event_name:
-            logger.debug(f'process_model_event for event_name={event_name}, user_override={user_override}')
-            self.find_and_fire_hook(event_name,
-                                    instance,
-                                    user_override=user_override,
-                                    payload_override=payload_override,
-                                    academy_override=academy_override)
+            logger.debug(f"process_model_event for event_name={event_name}, user_override={user_override}")
+            self.find_and_fire_hook(
+                event_name,
+                instance,
+                user_override=user_override,
+                payload_override=payload_override,
+                academy_override=academy_override,
+            )
 
     def deliver_hook(self, hook, instance, payload_override=None, academy_override=None):
         """
@@ -213,7 +220,7 @@ class HookManagerClass(object):
             if callable(payload):
                 payload = payload(hook, instance)
 
-            logger.debug(f'Calling delayed task deliver_hook for hook {hook.id}')
+            logger.debug(f"Calling delayed task deliver_hook for hook {hook.id}")
             async_deliver_hook.delay(hook.target, payload, hook_id=hook.id)
 
             return None

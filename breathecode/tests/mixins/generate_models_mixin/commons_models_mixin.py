@@ -1,6 +1,7 @@
 """
 Collections of mixins used to login in authorize microservice
 """
+
 from mixer.backend.django import mixer
 
 from breathecode.tests.mixins.models_mixin import ModelsMixin

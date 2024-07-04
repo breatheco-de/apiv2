@@ -6,25 +6,25 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('monitoring', '0018_auto_20230705_1635'),
+        ("monitoring", "0018_auto_20230705_1635"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='repositorysubscription',
-            name='hook_id',
-            field=models.IntegerField(blank=True, default=None, help_text='Assigned from github', null=True),
+            model_name="repositorysubscription",
+            name="hook_id",
+            field=models.IntegerField(blank=True, default=None, help_text="Assigned from github", null=True),
         ),
         migrations.AddField(
-            model_name='repositorysubscription',
-            name='status',
-            field=models.CharField(choices=[('OPERATIONAL', 'Operational'), ('CRITICAL', 'Critical')],
-                                   default='CRITICAL',
-                                   max_length=20),
+            model_name="repositorysubscription",
+            name="status",
+            field=models.CharField(
+                choices=[("OPERATIONAL", "Operational"), ("CRITICAL", "Critical")], default="CRITICAL", max_length=20
+            ),
         ),
         migrations.AddField(
-            model_name='repositorysubscription',
-            name='status_message',
-            field=models.TextField(blank=True, default='Waiting for ping', null=True),
+            model_name="repositorysubscription",
+            name="status_message",
+            field=models.TextField(blank=True, default="Waiting for ping", null=True),
         ),
     ]

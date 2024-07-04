@@ -1,10 +1,13 @@
-from .models import Bill
 from rest_framework import serializers
+
 from breathecode.utils import serpy
+
+from .models import Bill
 
 
 class AcademySerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     name = serpy.Field()
@@ -15,12 +18,14 @@ class AcademySerializer(serpy.Serializer):
 
 class PublicProfileSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     avatar_url = serpy.Field()
 
 
 class UserSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     first_name = serpy.Field()
@@ -31,6 +36,7 @@ class UserSerializer(serpy.Serializer):
 
 class SmallProjectSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     title = serpy.Field()
@@ -61,6 +67,7 @@ class SmallFreelancerMemberSerializer(serpy.Serializer):
 
 class SmallIssueSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     title = serpy.Field()
@@ -76,12 +83,14 @@ class SmallIssueSerializer(serpy.Serializer):
     included_in_bill = serpy.MethodField()
 
     def get_included_in_bill(self, obj):
-        return (obj.status_message is None or obj.status_message == '') and (obj.node_id is not None
-                                                                             and obj.node_id != '')
+        return (obj.status_message is None or obj.status_message == "") and (
+            obj.node_id is not None and obj.node_id != ""
+        )
 
 
 class BigProjectSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     title = serpy.Field()
@@ -94,6 +103,7 @@ class BigProjectSerializer(serpy.Serializer):
 
 class BigInvoiceSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     status = serpy.Field()
@@ -108,12 +118,13 @@ class BigInvoiceSerializer(serpy.Serializer):
     issues = serpy.MethodField()
 
     def get_issues(self, obj):
-        _issues = obj.issue_set.order_by('created_at').all()
+        _issues = obj.issue_set.order_by("created_at").all()
         return SmallIssueSerializer(_issues, many=True).data
 
 
 class BigBillSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     status = serpy.Field()
@@ -130,12 +141,13 @@ class BigBillSerializer(serpy.Serializer):
     issues = serpy.MethodField()
 
     def get_issues(self, obj):
-        _issues = obj.issue_set.order_by('created_at').all()
+        _issues = obj.issue_set.order_by("created_at").all()
         return SmallIssueSerializer(_issues, many=True).data
 
 
 class SmallBillSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     status = serpy.Field()
@@ -150,4 +162,4 @@ class BillSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Bill
-        exclude = ('freelancer', )
+        exclude = ("freelancer",)

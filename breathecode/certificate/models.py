@@ -8,7 +8,7 @@ from django.utils import timezone
 import breathecode.certificate.signals as signals
 from breathecode.admissions.models import Academy, Cohort, Syllabus
 
-__all__ = ['UserProxy', 'Specialty', 'Badge', 'LayoutDesign', 'UserSpecialty']
+__all__ = ["UserProxy", "Specialty", "Badge", "LayoutDesign", "UserSpecialty"]
 
 
 class UserProxy(User):
@@ -33,12 +33,14 @@ class Specialty(models.Model):
     # how long it takes to expire, leave null for unlimited
     expiration_day_delta = models.IntegerField(blank=True, null=True, default=None)
 
-    syllabus = models.OneToOneField(Syllabus,
-                                    on_delete=models.CASCADE,
-                                    help_text='This specialty represents only one certificate',
-                                    blank=True,
-                                    null=True,
-                                    default=None)
+    syllabus = models.OneToOneField(
+        Syllabus,
+        on_delete=models.CASCADE,
+        help_text="This specialty represents only one certificate",
+        blank=True,
+        null=True,
+        default=None,
+    )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -71,7 +73,8 @@ class LayoutDesign(models.Model):
     name = models.CharField(max_length=40)
     is_default = models.BooleanField(
         default=False,
-        help_text='Will be used as default for all future certificates. Only one default layout per academy.')
+        help_text="Will be used as default for all future certificates. Only one default layout per academy.",
+    )
     html_content = models.TextField(null=True, default=None, blank=True)
     css_content = models.TextField(null=True, default=None, blank=True)
 
@@ -85,13 +88,13 @@ class LayoutDesign(models.Model):
         return self.name
 
 
-PENDING = 'PENDING'
-PERSISTED = 'PERSISTED'
-ERROR = 'ERROR'
+PENDING = "PENDING"
+PERSISTED = "PERSISTED"
+ERROR = "ERROR"
 USER_SPECIALTY_STATUS = (
-    (PENDING, 'Pending'),
-    (PERSISTED, 'Persisted'),
-    (ERROR, 'Error'),
+    (PENDING, "Pending"),
+    (PERSISTED, "Persisted"),
+    (ERROR, "Error"),
 )
 
 
@@ -108,7 +111,7 @@ class UserSpecialty(models.Model):
     layout = models.ForeignKey(LayoutDesign, on_delete=models.CASCADE, blank=True, null=True, default=None)
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, blank=True, null=True)
     signed_by = models.CharField(max_length=100)
-    signed_by_role = models.CharField(max_length=100, default='Director')
+    signed_by_role = models.CharField(max_length=100, default="Director")
     issued_at = models.DateTimeField(default=None, blank=True, null=True)
     update_hash = models.CharField(max_length=40, blank=True, null=True)
 
@@ -119,30 +122,31 @@ class UserSpecialty(models.Model):
 
     def generate_update_hash(self):
         kwargs = {
-            'signed_by': self.signed_by,
-            'signed_by_role': self.signed_by_role,
-            'status': self.status,
-            'layout': self.layout,
-            'expires_at': self.expires_at,
-            'issued_at': self.issued_at,
+            "signed_by": self.signed_by,
+            "signed_by_role": self.signed_by_role,
+            "status": self.status,
+            "layout": self.layout,
+            "expires_at": self.expires_at,
+            "issued_at": self.issued_at,
         }
 
-        important_fields = ['signed_by', 'signed_by_role', 'status', 'layout', 'expires_at', 'issued_at']
-        important_values = '-'.join(
-            [str(kwargs.get(field) if field in kwargs else None) for field in sorted(important_fields)])
+        important_fields = ["signed_by", "signed_by_role", "status", "layout", "expires_at", "issued_at"]
+        important_values = "-".join(
+            [str(kwargs.get(field) if field in kwargs else None) for field in sorted(important_fields)]
+        )
 
-        return hashlib.sha1(important_values.encode('UTF-8')).hexdigest()
+        return hashlib.sha1(important_values.encode("UTF-8")).hexdigest()
 
     def clean(self):
         if self.status == ERROR:
             return
 
         if self.cohort is not None and self.cohort.academy.id != self.academy.id:
-            raise ValidationError('Cohort academy does not match the specified academy for this certificate')
+            raise ValidationError("Cohort academy does not match the specified academy for this certificate")
 
         utc_now = timezone.now()
-        if self.token is None or self.token == '':
-            self.token = hashlib.sha1((str(self.user.id) + str(utc_now)).encode('UTF-8')).hexdigest()
+        if self.token is None or self.token == "":
+            self.token = hashlib.sha1((str(self.user.id) + str(utc_now)).encode("UTF-8")).hexdigest()
 
         # set expiration
         if self.specialty.expiration_day_delta is not None:

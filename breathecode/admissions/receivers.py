@@ -19,31 +19,33 @@ logger = logging.getLogger(__name__)
 
 @receiver(cohort_log_saved, sender=Cohort)
 def process_cohort_history_log(sender: Type[Cohort], instance: Cohort, **kwargs: Any):
-    logger.info('Processing Cohort history log for cohort: ' + str(instance.id))
+    logger.info("Processing Cohort history log for cohort: " + str(instance.id))
 
     activity_tasks.get_attendancy_log.delay(instance.id)
 
 
 @receiver(cohort_user_created, sender=Cohort)
 async def new_cohort_user(sender: Type[Cohort], instance: Cohort, **kwargs: Any):
-    logger.info('Processing Cohort history log for cohort: ' + str(instance.id))
+    logger.info("Processing Cohort history log for cohort: " + str(instance.id))
 
-    await authenticate_actions.send_webhook('rigobot',
-                                            'cohort_user.created',
-                                            user=instance.user,
-                                            data={
-                                                'user': {
-                                                    'id': instance.user.id,
-                                                    'email': instance.user.email,
-                                                    'first_name': instance.user.first_name,
-                                                    'last_name': instance.user.last_name,
-                                                },
-                                            })
+    await authenticate_actions.send_webhook(
+        "rigobot",
+        "cohort_user.created",
+        user=instance.user,
+        data={
+            "user": {
+                "id": instance.user.id,
+                "email": instance.user.email,
+                "first_name": instance.user.first_name,
+                "last_name": instance.user.last_name,
+            },
+        },
+    )
 
 
 @receiver(revision_status_updated, sender=Task, weak=False)
 def mark_saas_student_as_graduated(sender: Type[Task], instance: Task, **kwargs: Any):
-    logger.info('Processing available as saas student\'s tasks and marking as GRADUATED if it is')
+    logger.info("Processing available as saas student's tasks and marking as GRADUATED if it is")
 
     if instance.cohort is None:
         return
@@ -53,12 +55,11 @@ def mark_saas_student_as_graduated(sender: Type[Task], instance: Task, **kwargs:
     if not cohort.available_as_saas:
         return
 
-    pending_tasks = how_many_pending_tasks(cohort.syllabus_version,
-                                           instance.user,
-                                           task_types=['PROJECT'],
-                                           only_mandatory=True)
+    pending_tasks = how_many_pending_tasks(
+        cohort.syllabus_version, instance.user, task_types=["PROJECT"], only_mandatory=True
+    )
 
     if pending_tasks == 0:
         cohort_user = CohortUser.objects.filter(user=instance.user.id, cohort=cohort.id).first()
-        cohort_user.educational_status = 'GRADUATED'
+        cohort_user.educational_status = "GRADUATED"
         cohort_user.save()

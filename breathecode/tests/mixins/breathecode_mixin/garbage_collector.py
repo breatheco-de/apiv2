@@ -1,17 +1,20 @@
 from __future__ import annotations
-from io import TextIOWrapper
+
 import os
-from rest_framework.test import APITestCase
+from io import TextIOWrapper
+
 from faker import Faker
+from rest_framework.test import APITestCase
+
 from . import interfaces
 
-__all__ = ['Check']
+__all__ = ["Check"]
 fake = Faker()
 
 IMAGE_TYPES = {
-    'png': 'PNG',
-    'jpg': 'JPEG',
-    'jpeg': 'JPEG',
+    "png": "PNG",
+    "jpg": "JPEG",
+    "jpeg": "JPEG",
 }
 
 

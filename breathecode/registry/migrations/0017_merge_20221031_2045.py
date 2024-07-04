@@ -6,8 +6,8 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0016_assettechnology_sort_priority'),
-        ('registry', '0016_auto_20221029_0531'),
+        ("registry", "0016_assettechnology_sort_priority"),
+        ("registry", "0016_auto_20221029_0531"),
     ]
 
     operations = []

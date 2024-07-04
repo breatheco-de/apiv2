@@ -226,7 +226,7 @@ class FormEntryHookSerializer(serpy.Serializer):
         return CohortHookSerializer(_cohort).data
 
     def get_is_won(self, obj):
-        return obj.deal_status == 'WON'
+        return obj.deal_status == "WON"
 
 
 class FormEntrySmallSerializer(serpy.Serializer):
@@ -323,7 +323,7 @@ class FormEntryBigSerializer(serpy.Serializer):
     def get_tag_objects(self, obj):
         tag_ids = []
         if obj.tags is not None:
-            tag_ids = obj.tags.split(',')
+            tag_ids = obj.tags.split(",")
 
         tags = Tag.objects.filter(slug__in=tag_ids, ac_academy__academy=obj.calculate_academy())
         return TagSmallSerializer(tags, many=True).data
@@ -331,7 +331,7 @@ class FormEntryBigSerializer(serpy.Serializer):
     def get_automation_objects(self, obj):
         automation_ids = []
         if obj.automations is not None:
-            automation_ids = obj.automations.split(',')
+            automation_ids = obj.automations.split(",")
 
         automations = Automation.objects.filter(slug__in=automation_ids, ac_academy__academy=obj.calculate_academy())
         return AutomationSmallSerializer(automations, many=True).data
@@ -376,12 +376,12 @@ class GetCourseSmallSerializer(serpy.Serializer):
         return obj.academy.id
 
     def get_syllabus(self, obj):
-        return [x for x in obj.syllabus.all().values_list('id', flat=True)]
+        return [x for x in obj.syllabus.all().values_list("id", flat=True)]
 
     def get_course_translation(self, obj):
         query_args = []
-        query_kwargs = {'course': obj}
-        obj.lang = obj.lang or 'en'
+        query_kwargs = {"course": obj}
+        obj.lang = obj.lang or "en"
 
         query_args.append(Q(lang=obj.lang) | Q(lang=obj.lang[:2]) | Q(lang__startswith=obj.lang[:2]))
 
@@ -413,30 +413,30 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
     class Meta:
         model = FormEntry
         exclude = ()
-        read_only_fields = ['id']
+        read_only_fields = ["id"]
 
     def create(self, validated_data):
 
         academy = None
-        if 'location' in validated_data:
-            alias = AcademyAlias.objects.filter(active_campaign_slug=validated_data['location']).first()
+        if "location" in validated_data:
+            alias = AcademyAlias.objects.filter(active_campaign_slug=validated_data["location"]).first()
             if alias is not None:
                 academy = alias.academy
             else:
-                academy = Academy.objects.filter(active_campaign_slug=validated_data['location']).first()
+                academy = Academy.objects.filter(active_campaign_slug=validated_data["location"]).first()
 
         # copy the validated data just to do small last minute corrections
         data = validated_data.copy()
 
         # "us" language will become "en" language, its the right lang code
-        if 'language' in data and data['language'] == 'us':
-            data['language'] = 'en'
+        if "language" in data and data["language"] == "us":
+            data["language"] = "en"
 
-        if 'tag_objects' in data and data['tag_objects'] != '':
-            tag_ids = data['tag_objects'].split(',')
-            data['tags'] = Tag.objects.filter(id__in=tag_ids)
+        if "tag_objects" in data and data["tag_objects"] != "":
+            tag_ids = data["tag_objects"].split(",")
+            data["tags"] = Tag.objects.filter(id__in=tag_ids)
 
-        result = super().create({**data, 'academy': academy})
+        result = super().create({**data, "academy": academy})
         return result
 
 
@@ -445,51 +445,55 @@ class ShortLinkSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ShortLink
-        exclude = ('academy', 'author', 'hits', 'destination_status', 'destination_status_text')
+        exclude = ("academy", "author", "hits", "destination_status", "destination_status_text")
 
     def validate(self, data):
 
-        if 'slug' in data and data['slug'] is not None:
+        if "slug" in data and data["slug"] is not None:
 
-            if not re.match(r'^[-\w]+$', data['slug']):
+            if not re.match(r"^[-\w]+$", data["slug"]):
                 raise ValidationException(
                     f'Invalid link slug {data["slug"]}, should only contain letters, numbers and slash "-"',
-                    slug='invalid-slug-format')
+                    slug="invalid-slug-format",
+                )
 
-            link = ShortLink.objects.filter(slug=data['slug']).first()
+            link = ShortLink.objects.filter(slug=data["slug"]).first()
             if link is not None and (self.instance is None or self.instance.id != link.id):
-                raise ValidationException(f'Shortlink with slug {data["slug"]} already exists',
-                                          slug='shortlink-already-exists')
+                raise ValidationException(
+                    f'Shortlink with slug {data["slug"]} already exists', slug="shortlink-already-exists"
+                )
         elif self.instance is None:
             # only if it's being created I will pick a new slug, if not I will allow it to have the original slug
             latest_url = ShortLink.objects.all().last()
             if latest_url is None:
-                data['slug'] = 'L' + to_base(1)
+                data["slug"] = "L" + to_base(1)
             else:
-                data['slug'] = 'L' + to_base(latest_url.id + 1)
+                data["slug"] = "L" + to_base(latest_url.id + 1)
 
-        status = test_link(data['destination'])
-        if status['status_code'] < 200 or status['status_code'] > 299:
+        status = test_link(data["destination"])
+        if status["status_code"] < 200 or status["status_code"] > 299:
             raise ValidationException(f'Destination URL is invalid, returning status {status["status_code"]}')
 
-        academy = Academy.objects.filter(id=self.context['academy']).first()
+        academy = Academy.objects.filter(id=self.context["academy"]).first()
         if academy is None:
-            raise ValidationException(f'Academy {self.context["academy"]} not found', slug='academy-not-found')
+            raise ValidationException(f'Academy {self.context["academy"]} not found', slug="academy-not-found")
 
-        if self.instance is not None:  #creating a new link (instead of updating)
+        if self.instance is not None:  # creating a new link (instead of updating)
             utc_now = timezone.now()
             days_ago = self.instance.created_at + timedelta(days=1)
-            if days_ago < utc_now and (self.instance.destination != data['destination']
-                                       or self.instance.slug != data['slug']):
+            if days_ago < utc_now and (
+                self.instance.destination != data["destination"] or self.instance.slug != data["slug"]
+            ):
                 raise ValidationException(
-                    'You cannot update or delete short links that have been created more than 1 day ago, create a new link instead',
-                    slug='update-days-ago')
+                    "You cannot update or delete short links that have been created more than 1 day ago, create a new link instead",
+                    slug="update-days-ago",
+                )
 
-        return {**data, 'academy': academy}
+        return {**data, "academy": academy}
 
     def create(self, validated_data):
 
-        return ShortLink.objects.create(**validated_data, author=self.context.get('request').user)
+        return ShortLink.objects.create(**validated_data, author=self.context.get("request").user)
 
 
 class TagListSerializer(serializers.ListSerializer):
@@ -507,7 +511,7 @@ class PUTTagSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tag
-        exclude = ('slug', 'acp_id', 'subscribers', 'ac_academy', 'created_at', 'updated_at')
+        exclude = ("slug", "acp_id", "subscribers", "ac_academy", "created_at", "updated_at")
         list_serializer_class = TagListSerializer
 
 
@@ -516,7 +520,7 @@ class PUTAutomationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Automation
-        exclude = ('acp_id', 'ac_academy', 'created_at', 'updated_at', 'entered', 'exited')
+        exclude = ("acp_id", "ac_academy", "created_at", "updated_at", "entered", "exited")
         list_serializer_class = TagListSerializer
 
 
@@ -524,15 +528,15 @@ class ActiveCampaignAcademySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ActiveCampaignAcademy
-        exclude = ('academy', )
+        exclude = ("academy",)
 
     def validate(self, data):
 
-        academy = Academy.objects.filter(id=self.context['academy']).first()
+        academy = Academy.objects.filter(id=self.context["academy"]).first()
         if academy is None:
-            raise ValidationException(f'Academy {self.context["academy"]} not found', slug='academy-not-found')
+            raise ValidationException(f'Academy {self.context["academy"]} not found', slug="academy-not-found")
 
-        return {**data, 'academy': academy}
+        return {**data, "academy": academy}
 
     def create(self, validated_data):
         return ActiveCampaignAcademy.objects.create(**validated_data)

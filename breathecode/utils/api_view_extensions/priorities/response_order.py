@@ -1,6 +1,6 @@
 from enum import IntEnum
 
-__all__ = ['ResponseOrder']
+__all__ = ["ResponseOrder"]
 
 
 class ResponseOrder(IntEnum):

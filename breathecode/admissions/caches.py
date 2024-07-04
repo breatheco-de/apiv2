@@ -1,9 +1,11 @@
-from breathecode.utils import Cache
-from .models import Cohort, CohortUser, SyllabusVersion
-from breathecode.authenticate.models import ProfileAcademy
 from django.contrib.auth.models import User
 
-MODULE = 'admissions'
+from breathecode.authenticate.models import ProfileAcademy
+from breathecode.utils import Cache
+
+from .models import Cohort, CohortUser, SyllabusVersion
+
+MODULE = "admissions"
 
 
 class CohortCache(Cache):

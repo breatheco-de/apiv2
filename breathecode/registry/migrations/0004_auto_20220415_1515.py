@@ -6,25 +6,41 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0003_alter_asset_readme_url'),
+        ("registry", "0003_alter_asset_readme_url"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='asset',
-            name='asset_type',
-            field=models.CharField(choices=[('PROJECT', 'Project'), ('EXERCISE', 'Exercise'), ('QUIZ', 'Quiz'),
-                                            ('LESSON', 'Lesson'), ('VIDEO', 'Video'), ('ARTICLE', 'Article')],
-                                   max_length=20),
+            model_name="asset",
+            name="asset_type",
+            field=models.CharField(
+                choices=[
+                    ("PROJECT", "Project"),
+                    ("EXERCISE", "Exercise"),
+                    ("QUIZ", "Quiz"),
+                    ("LESSON", "Lesson"),
+                    ("VIDEO", "Video"),
+                    ("ARTICLE", "Article"),
+                ],
+                max_length=20,
+            ),
         ),
         migrations.AlterField(
-            model_name='asseterrorlog',
-            name='asset_type',
-            field=models.CharField(blank=True,
-                                   choices=[('PROJECT', 'Project'), ('EXERCISE', 'Exercise'), ('QUIZ', 'Quiz'),
-                                            ('LESSON', 'Lesson'), ('VIDEO', 'Video'), ('ARTICLE', 'Article')],
-                                   default=None,
-                                   max_length=20,
-                                   null=True),
+            model_name="asseterrorlog",
+            name="asset_type",
+            field=models.CharField(
+                blank=True,
+                choices=[
+                    ("PROJECT", "Project"),
+                    ("EXERCISE", "Exercise"),
+                    ("QUIZ", "Quiz"),
+                    ("LESSON", "Lesson"),
+                    ("VIDEO", "Video"),
+                    ("ARTICLE", "Article"),
+                ],
+                default=None,
+                max_length=20,
+                null=True,
+            ),
         ),
     ]

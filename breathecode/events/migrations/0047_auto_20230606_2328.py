@@ -6,30 +6,33 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0046_eventbritewebhook_attendee'),
+        ("events", "0046_eventbritewebhook_attendee"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='event',
-            name='status',
-            field=models.CharField(blank=True,
-                                   choices=[('ACTIVE', 'Active'), ('DRAFT', 'Draft'), ('DELETED', 'Deleted'),
-                                            ('FINISHED', 'Finished')],
-                                   default='DRAFT',
-                                   max_length=9),
+            model_name="event",
+            name="status",
+            field=models.CharField(
+                blank=True,
+                choices=[("ACTIVE", "Active"), ("DRAFT", "Draft"), ("DELETED", "Deleted"), ("FINISHED", "Finished")],
+                default="DRAFT",
+                max_length=9,
+            ),
         ),
         migrations.AlterField(
-            model_name='eventtype',
-            name='allow_shared_creation',
-            field=models.BooleanField(default=True,
-                                      help_text='Other academies are allowed to create events of this type'),
+            model_name="eventtype",
+            name="allow_shared_creation",
+            field=models.BooleanField(
+                default=True, help_text="Other academies are allowed to create events of this type"
+            ),
         ),
         migrations.AlterField(
-            model_name='eventtype',
-            name='free_for_bootcamps',
+            model_name="eventtype",
+            name="free_for_bootcamps",
             field=models.BooleanField(
                 default=True,
-                help_text='Users that belong to other no-saas academies will be able to join without consuming'),
+                help_text="Users that belong to other no-saas academies will be able to join without consuming",
+            ),
         ),
     ]

@@ -1,11 +1,20 @@
+from datetime import date, datetime, timedelta
+
 from rest_framework.test import APITestCase
-from datetime import datetime, timedelta, date
-from breathecode.tests.mixins import (GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, HeadersMixin,
-                                      DatetimeMixin, BreathecodeMixin)
+
+from breathecode.tests.mixins import (
+    BreathecodeMixin,
+    CacheMixin,
+    DatetimeMixin,
+    GenerateModelsMixin,
+    GenerateQueriesMixin,
+    HeadersMixin,
+)
 
 
-class CareerTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, HeadersMixin, DatetimeMixin,
-                     BreathecodeMixin):
+class CareerTestCase(
+    APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, HeadersMixin, DatetimeMixin, BreathecodeMixin
+):
     """CertificateTestCase with auth methods"""
 
     def setUp(self):

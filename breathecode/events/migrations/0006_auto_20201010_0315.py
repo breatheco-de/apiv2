@@ -6,23 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0005_auto_20201010_0257'),
+        ("events", "0005_auto_20201010_0257"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='venue',
-            name='eventbrite_id',
+            model_name="venue",
+            name="eventbrite_id",
             field=models.CharField(blank=True, default=None, max_length=80, null=True, unique=True),
         ),
         migrations.AddField(
-            model_name='venue',
-            name='eventbrite_url',
+            model_name="venue",
+            name="eventbrite_url",
             field=models.CharField(blank=True, default=None, max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='organizacion',
-            name='eventbrite_id',
+            model_name="organizacion",
+            name="eventbrite_id",
             field=models.CharField(blank=True, max_length=30, unique=True),
         ),
     ]

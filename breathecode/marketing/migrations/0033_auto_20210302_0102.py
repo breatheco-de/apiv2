@@ -6,26 +6,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0032_auto_20210128_1745'),
+        ("marketing", "0032_auto_20210128_1745"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='formentry',
-            name='deal_status',
-            field=models.CharField(blank=True,
-                                   choices=[('WON', 'Won'), ('LOST', 'Lost')],
-                                   default=None,
-                                   max_length=15,
-                                   null=True),
+            model_name="formentry",
+            name="deal_status",
+            field=models.CharField(
+                blank=True, choices=[("WON", "Won"), ("LOST", "Lost")], default=None, max_length=15, null=True
+            ),
         ),
         migrations.AddField(
-            model_name='formentry',
-            name='sentiment',
-            field=models.CharField(blank=True,
-                                   choices=[('GOOD', 'Good'), ('BAD', 'Bad')],
-                                   default=None,
-                                   max_length=15,
-                                   null=True),
+            model_name="formentry",
+            name="sentiment",
+            field=models.CharField(
+                blank=True, choices=[("GOOD", "Good"), ("BAD", "Bad")], default=None, max_length=15, null=True
+            ),
         ),
     ]

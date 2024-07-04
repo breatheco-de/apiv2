@@ -6,15 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0036_auto_20221227_2039'),
+        ("events", "0036_auto_20221227_2039"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='eventtype',
-            name='visibility_settings',
-            field=models.ManyToManyField(blank=True,
-                                         help_text='Visibility has to be configured every academy separately',
-                                         to='events.EventTypeVisibilitySetting'),
+            model_name="eventtype",
+            name="visibility_settings",
+            field=models.ManyToManyField(
+                blank=True,
+                help_text="Visibility has to be configured every academy separately",
+                to="events.EventTypeVisibilitySetting",
+            ),
         ),
     ]

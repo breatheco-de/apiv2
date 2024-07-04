@@ -1,12 +1,12 @@
-from breathecode.authenticate.models import User
-from breathecode.mentorship.models import MentorshipService
-from . import contexts
-from breathecode.authenticate.permissions import contexts as authenticate_contexts
 from breathecode.admissions.permissions import contexts as admissions_contexts
-
+from breathecode.authenticate.models import User
+from breathecode.authenticate.permissions import contexts as authenticate_contexts
+from breathecode.mentorship.models import MentorshipService
 from breathecode.services import LaunchDarkly
 
-__all__ = ['api']
+from . import contexts
+
+__all__ = ["api"]
 
 
 class Release:
@@ -21,7 +21,7 @@ class Release:
 
         context = ld.join_contexts(user_context, mentorship_service_context, academy_context)
 
-        return ld.get('api.release.enable_consume_mentorships', context, False)
+        return ld.get("api.release.enable_consume_mentorships", context, False)
 
 
 class API:

@@ -1,11 +1,11 @@
 from __future__ import annotations
+
 from rest_framework.test import APITestCase
 
+from ..cache_mixin import CacheMixin
 from . import interfaces
 
-from ..cache_mixin import CacheMixin
-
-__all__ = ['Cache']
+__all__ = ["Cache"]
 
 
 class Cache:

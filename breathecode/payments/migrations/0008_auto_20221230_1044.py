@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('payments', '0007_auto_20221229_1133'),
+        ("payments", "0007_auto_20221229_1133"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='plan',
-            name='schedulers',
-            field=models.ManyToManyField(blank=True, to='payments.PaymentServiceScheduler'),
+            model_name="plan",
+            name="schedulers",
+            field=models.ManyToManyField(blank=True, to="payments.PaymentServiceScheduler"),
         ),
         migrations.AlterField(
-            model_name='financingoption',
-            name='monthly_price',
+            model_name="financingoption",
+            name="monthly_price",
             field=models.FloatField(default=1),
         ),
     ]

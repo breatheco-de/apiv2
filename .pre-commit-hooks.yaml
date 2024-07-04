@@ -1,10 +1,17 @@
 
 # File configures YAPF to be used as a git hook with https://github.com/pre-commit/pre-commit
 
-- id: yapf
-  name: yapf
-  description: "A formatter for Python files."
-  entry: yapf
-  args: [-i, -vv] #inplace
-  language: python
-  types: [python]
+# - id: yapf
+#   name: yapf
+#   description: "A formatter for Python files."
+#   entry: yapf
+#   args: [-i, -vv] #inplace
+#   language: python
+#   types: [python]
+# - id: black
+#   name: black
+#   description: "Black: The uncompromising Python code formatter"
+#   entry: black
+#   language: python
+#   require_serial: true
+#   types_or: [python, pyi]

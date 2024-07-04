@@ -6,20 +6,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0008_auto_20201011_0016'),
+        ("events", "0008_auto_20201011_0016"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='venue',
-            name='status',
-            field=models.CharField(choices=[('ACTIVE', 'Active'), ('DRAFT', 'Draft'), ('DELETED', 'Deleted')],
-                                   default='DRAFT',
-                                   max_length=9),
+            model_name="venue",
+            name="status",
+            field=models.CharField(
+                choices=[("ACTIVE", "Active"), ("DRAFT", "Draft"), ("DELETED", "Deleted")],
+                default="DRAFT",
+                max_length=9,
+            ),
         ),
         migrations.AlterField(
-            model_name='venue',
-            name='street_address',
+            model_name="venue",
+            name="street_address",
             field=models.CharField(blank=True, default=None, max_length=250, null=True),
         ),
     ]

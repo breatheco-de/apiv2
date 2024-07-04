@@ -6,8 +6,8 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0078_alter_formentry_storage_status'),
-        ('marketing', '0083_alter_coursetranslation_video_url'),
+        ("marketing", "0078_alter_formentry_storage_status"),
+        ("marketing", "0083_alter_coursetranslation_video_url"),
     ]
 
     operations = []

@@ -6,8 +6,8 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('certificate', '0012_auto_20210727_1106'),
-        ('certificate', '0013_remove_userspecialty_issued_at'),
+        ("certificate", "0012_auto_20210727_1106"),
+        ("certificate", "0013_remove_userspecialty_issued_at"),
     ]
 
     operations = []

@@ -3,13 +3,13 @@ from typing import Generator, final
 import pytest
 from faker import Faker
 
-__all__ = ['Format', 'format']
+__all__ = ["Format", "format"]
 
 
 def _remove_dinamics_fields(dict, fields=None):
     """Remove dinamics fields from django models as dict"""
     if fields is None:
-        fields = ['_state', 'created_at', 'updated_at', '_password']
+        fields = ["_state", "created_at", "updated_at", "_password"]
 
     if not dict:
         return None
@@ -22,7 +22,7 @@ def _remove_dinamics_fields(dict, fields=None):
     # remove any field starting with __ (double underscore) because it is considered private
     without_private_keys = result.copy()
     for key in result:
-        if '__' in key or key.startswith('_'):
+        if "__" in key or key.startswith("_"):
             del without_private_keys[key]
 
     return without_private_keys
@@ -47,7 +47,7 @@ class Format:
         except ImportError:
             pass
 
-        raise NotImplementedError(f'Not implemented for {type(object)}')
+        raise NotImplementedError(f"Not implemented for {type(object)}")
 
     def to_obj_repr(self, object: object) -> str:
         """

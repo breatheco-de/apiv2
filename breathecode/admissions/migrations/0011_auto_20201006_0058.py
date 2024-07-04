@@ -6,20 +6,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0010_auto_20200929_1812'),
+        ("admissions", "0010_auto_20200929_1812"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='academy',
-            name='active_campaign_slug',
+            model_name="academy",
+            name="active_campaign_slug",
             field=models.SlugField(default=None, max_length=100, null=True),
         ),
         migrations.AddField(
-            model_name='certificate',
-            name='schedule_type',
-            field=models.CharField(choices=[('PART-TIME', 'Part-Time'), ('FULL-TIME', 'Full-Time')],
-                                   default='PART-TIME',
-                                   max_length=15),
+            model_name="certificate",
+            name="schedule_type",
+            field=models.CharField(
+                choices=[("PART-TIME", "Part-Time"), ("FULL-TIME", "Full-Time")], default="PART-TIME", max_length=15
+            ),
         ),
     ]

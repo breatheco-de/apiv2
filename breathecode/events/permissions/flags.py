@@ -1,13 +1,14 @@
 import logging
+
+from breathecode.admissions.permissions import contexts as admissions_contexts
 from breathecode.authenticate.models import User
 from breathecode.authenticate.permissions import contexts as authenticate_contexts
-from breathecode.admissions.permissions import contexts as admissions_contexts
 from breathecode.events.models import Event
-from . import contexts
-
 from breathecode.services import LaunchDarkly
 
-__all__ = ['api']
+from . import contexts
+
+__all__ = ["api"]
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ class Release:
     def enable_consume_live_classes(user: User) -> bool:
         ld = LaunchDarkly()
         user_context = authenticate_contexts.user(ld, user)
-        return ld.get('api.release.enable_consume_live_classes', user_context, False)
+        return ld.get("api.release.enable_consume_live_classes", user_context, False)
 
     @staticmethod
     def enable_consume_live_events(user: User, event: Event) -> bool:
@@ -37,7 +38,7 @@ class Release:
 
         context = ld.join_contexts(*collected_contexts)
 
-        return ld.get('api.release.enable_consume_live_events', context, False)
+        return ld.get("api.release.enable_consume_live_events", context, False)
 
 
 class API:

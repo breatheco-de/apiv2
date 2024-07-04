@@ -6,23 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0028_auto_20201218_0534'),
+        ("marketing", "0028_auto_20201218_0534"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='automation',
-            name='acp_id',
-            field=models.PositiveIntegerField(help_text='ID asigned in active campaign'),
+            model_name="automation",
+            name="acp_id",
+            field=models.PositiveIntegerField(help_text="ID asigned in active campaign"),
         ),
         migrations.AlterField(
-            model_name='tag',
-            name='acp_id',
-            field=models.IntegerField(help_text='The id coming from active campaign'),
+            model_name="tag",
+            name="acp_id",
+            field=models.IntegerField(help_text="The id coming from active campaign"),
         ),
         migrations.AlterField(
-            model_name='tag',
-            name='slug',
+            model_name="tag",
+            name="slug",
             field=models.SlugField(max_length=150),
         ),
     ]

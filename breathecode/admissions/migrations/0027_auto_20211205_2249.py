@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0026_remove_specialtymode_slug'),
+        ("admissions", "0026_remove_specialtymode_slug"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='cohorttimeslot',
-            name='timezone',
-            field=models.CharField(default='America/New_York', max_length=50),
+            model_name="cohorttimeslot",
+            name="timezone",
+            field=models.CharField(default="America/New_York", max_length=50),
         ),
         migrations.AddField(
-            model_name='specialtymodetimeslot',
-            name='timezone',
-            field=models.CharField(default='America/New_York', max_length=50),
+            model_name="specialtymodetimeslot",
+            name="timezone",
+            field=models.CharField(default="America/New_York", max_length=50),
         ),
     ]

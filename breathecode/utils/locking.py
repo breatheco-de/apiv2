@@ -36,7 +36,7 @@ from breathecode.setup import get_redis
 from breathecode.utils import getLogger
 
 logger = getLogger(__name__)
-ENV = os.getenv('ENV', '')
+ENV = os.getenv("ENV", "")
 redis_client = None
 
 
@@ -48,14 +48,14 @@ class LockManager(models.Manager):
 
         instance, created = None, False
 
-        if ENV != 'test':
+        if ENV != "test":
 
             if redis_client is None:
                 redis_client = get_redis()
 
             # Dynamically retrieve the class name and create a unique lock key based on the kwargs
             class_name = self.model.__name__
-            lock_key_elements = [str(kwargs.get(key, '')) for key in sorted(kwargs.keys())]
+            lock_key_elements = [str(kwargs.get(key, "")) for key in sorted(kwargs.keys())]
             lock_key = f"{class_name}_lock:{'_'.join(lock_key_elements)}"
 
             try:
@@ -64,7 +64,7 @@ class LockManager(models.Manager):
                         instance, created = super().get_or_create(**kwargs)
             except LockError:
                 # Handle the timeout, e.g., by logging, retrying, or returning an error
-                logger.error(f'Could not acquire lock for {class_name} on get_or_create, operation timed out.')
+                logger.error(f"Could not acquire lock for {class_name} on get_or_create, operation timed out.")
                 return None, False  # Indicate that the operation was not successful
         else:
             instance, created = super().get_or_create(**kwargs)

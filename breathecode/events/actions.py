@@ -19,12 +19,12 @@ from .utils import Eventbrite
 logger = logging.getLogger(__name__)
 
 status_map = {
-    'draft': 'DRAFT',
-    'live': 'ACTIVE',
-    'completed': 'COMPLETED',
-    'started': 'ACTIVE',
-    'ended': 'ACTIVE',
-    'canceled': 'DELETED',
+    "draft": "DRAFT",
+    "live": "ACTIVE",
+    "completed": "COMPLETED",
+    "started": "ACTIVE",
+    "ended": "ACTIVE",
+    "canceled": "DELETED",
 }
 
 
@@ -36,9 +36,9 @@ def get_my_event_types(_user):
         """
 
         return {
-            'visibility_settings__cohort': cohort,
-            'visibility_settings__syllabus': syllabus,
-            'visibility_settings__academy': academy,
+            "visibility_settings__cohort": cohort,
+            "visibility_settings__syllabus": syllabus,
+            "visibility_settings__academy": academy,
         }
 
     def get_related_resources():
@@ -48,25 +48,35 @@ def get_my_event_types(_user):
 
         def process_i_owe_you(i_owe_them: QuerySet[AbstractIOweYou]):
             for i_owe_you in i_owe_them:
-                if (i_owe_you.selected_cohort_set and i_owe_you.selected_cohort_set.cohorts.first().academy
-                        and i_owe_you.selected_cohort_set.cohorts.first().academy not in academies):
+                if (
+                    i_owe_you.selected_cohort_set
+                    and i_owe_you.selected_cohort_set.cohorts.first().academy
+                    and i_owe_you.selected_cohort_set.cohorts.first().academy not in academies
+                ):
                     academies.append(i_owe_you.selected_cohort_set.cohorts.first().academy)
 
                 if i_owe_you.selected_cohort_set and i_owe_you.selected_cohort_set.cohorts.first() not in cohorts:
                     cohorts.append(i_owe_you.selected_cohort_set.cohorts.first())
 
-                if (i_owe_you.selected_cohort_set and i_owe_you.selected_cohort_set.cohorts.first().syllabus_version
-                        and i_owe_you.selected_cohort_set.cohorts.first().syllabus_version.syllabus not in syllabus):
-                    syllabus.append({
-                        'syllabus': i_owe_you.selected_cohort_set.cohorts.first().syllabus_version.syllabus,
-                        'academy': i_owe_you.selected_cohort_set.cohorts.first().academy,
-                    })
+                if (
+                    i_owe_you.selected_cohort_set
+                    and i_owe_you.selected_cohort_set.cohorts.first().syllabus_version
+                    and i_owe_you.selected_cohort_set.cohorts.first().syllabus_version.syllabus not in syllabus
+                ):
+                    syllabus.append(
+                        {
+                            "syllabus": i_owe_you.selected_cohort_set.cohorts.first().syllabus_version.syllabus,
+                            "academy": i_owe_you.selected_cohort_set.cohorts.first().academy,
+                        }
+                    )
 
-                if (i_owe_you.selected_event_type_set and i_owe_you.selected_event_type_set.academy not in academies):
+                if i_owe_you.selected_event_type_set and i_owe_you.selected_event_type_set.academy not in academies:
                     academies.append(i_owe_you.selected_event_type_set.academy)
 
-                if (i_owe_you.selected_mentorship_service_set
-                        and i_owe_you.selected_mentorship_service_set.academy not in academies):
+                if (
+                    i_owe_you.selected_mentorship_service_set
+                    and i_owe_you.selected_mentorship_service_set.academy not in academies
+                ):
                     academies.append(i_owe_you.selected_mentorship_service_set.academy)
 
                 if i_owe_you.selected_event_type_set:
@@ -80,29 +90,32 @@ def get_my_event_types(_user):
         ids = []
 
         utc_now = timezone.now()
-        statuses = ['CANCELLED', 'DEPRECATED']
-        at_least_one_resource_linked = (Q(selected_cohort_set__isnull=False)
-                                        | Q(selected_mentorship_service_set__isnull=False)
-                                        | Q(selected_event_type_set__isnull=False))
+        statuses = ["CANCELLED", "DEPRECATED"]
+        at_least_one_resource_linked = (
+            Q(selected_cohort_set__isnull=False)
+            | Q(selected_mentorship_service_set__isnull=False)
+            | Q(selected_event_type_set__isnull=False)
+        )
 
         cohort_users = CohortUser.objects.filter(user=_user)
         cohort_users_with_syllabus = cohort_users.filter(cohort__syllabus_version__isnull=False)
 
-        subscriptions = Subscription.objects.filter(at_least_one_resource_linked,
-                                                    Q(valid_until=None)
-                                                    | Q(valid_until__gte=utc_now),
-                                                    user=_user).exclude(status__in=statuses)
+        subscriptions = Subscription.objects.filter(
+            at_least_one_resource_linked, Q(valid_until=None) | Q(valid_until__gte=utc_now), user=_user
+        ).exclude(status__in=statuses)
 
-        plan_financings = PlanFinancing.objects.filter(at_least_one_resource_linked,
-                                                       valid_until__gte=utc_now,
-                                                       user=_user).exclude(status__in=statuses)
+        plan_financings = PlanFinancing.objects.filter(
+            at_least_one_resource_linked, valid_until__gte=utc_now, user=_user
+        ).exclude(status__in=statuses)
 
         for cohort_user in cohort_users_with_syllabus:
             if cohort_user.cohort.syllabus_version.syllabus not in cohorts:
-                syllabus.append({
-                    'syllabus': cohort_user.cohort.syllabus_version.syllabus,
-                    'academy': cohort_user.cohort.academy,
-                })
+                syllabus.append(
+                    {
+                        "syllabus": cohort_user.cohort.syllabus_version.syllabus,
+                        "academy": cohort_user.cohort.academy,
+                    }
+                )
 
         for cohort_user in cohort_users:
             if cohort_user.cohort.academy not in cohorts:
@@ -141,11 +154,11 @@ def get_my_event_types(_user):
 
         # shared with a specific syllabus
         for s in syllabus:
-            kwargs = build_query_params(academy=s['academy'], syllabus=s['syllabus'])
+            kwargs = build_query_params(academy=s["academy"], syllabus=s["syllabus"])
             if query:
-                query |= Q(**kwargs, academy=s['academy']) | Q(**kwargs, allow_shared_creation=True)
+                query |= Q(**kwargs, academy=s["academy"]) | Q(**kwargs, allow_shared_creation=True)
             else:
-                query = Q(**kwargs, academy=s['academy']) | Q(**kwargs, allow_shared_creation=True)
+                query = Q(**kwargs, academy=s["academy"]) | Q(**kwargs, allow_shared_creation=True)
 
         if ids:
             if query:
@@ -163,12 +176,12 @@ def get_my_event_types(_user):
 
 def sync_org_venues(org):
     if org.academy is None:
-        raise Exception('First you must specify to which academy this organization belongs')
+        raise Exception("First you must specify to which academy this organization belongs")
 
     client = Eventbrite(org.eventbrite_key)
     result = client.get_organization_venues(org.eventbrite_id)
 
-    for data in result['venues']:
+    for data in result["venues"]:
         create_or_update_venue(data, org, force_update=True)
 
     return True
@@ -176,51 +189,50 @@ def sync_org_venues(org):
 
 def create_or_update_organizer(data, org, force_update=False):
     if org.academy is None:
-        raise Exception('First you must specify to which academy this organization belongs')
+        raise Exception("First you must specify to which academy this organization belongs")
 
-    organizer = Organizer.objects.filter(eventbrite_id=data['id']).first()
+    organizer = Organizer.objects.filter(eventbrite_id=data["id"]).first()
 
     try:
         if organizer is None:
-            organizer = Organizer(name=data['name'],
-                                  description=data['description']['text'],
-                                  eventbrite_id=data['id'],
-                                  organization=org)
+            organizer = Organizer(
+                name=data["name"], description=data["description"]["text"], eventbrite_id=data["id"], organization=org
+            )
             organizer.save()
 
         elif force_update == True:
-            organizer.name = data['name']
-            organizer.description = data['description']['text']
+            organizer.name = data["name"]
+            organizer.description = data["description"]["text"]
             organizer.save()
 
     except Exception as e:
-        print('Error saving organizer eventbrite_id: ' + str(data['id']) + ' skipping to the next', e)
+        print("Error saving organizer eventbrite_id: " + str(data["id"]) + " skipping to the next", e)
 
     return organizer
 
 
 def create_or_update_venue(data, org, force_update=False):
     if not org.academy:
-        logger.error(f'The organization {org} not have a academy assigned')
+        logger.error(f"The organization {org} not have a academy assigned")
         return
 
-    venue = Venue.objects.filter(eventbrite_id=data['id'], academy__id=org.academy.id).first()
+    venue = Venue.objects.filter(eventbrite_id=data["id"], academy__id=org.academy.id).first()
 
     if venue and not force_update:
         return
 
     kwargs = {
-        'title': data['name'],
-        'street_address': data['address']['address_1'],
-        'country': data['address']['country'],
-        'city': data['address']['city'],
-        'state': data['address']['region'],
-        'zip_code': data['address']['postal_code'],
-        'latitude': data['latitude'],
-        'longitude': data['longitude'],
-        'eventbrite_id': data['id'],
-        'eventbrite_url': data['resource_uri'],
-        'academy': org.academy,
+        "title": data["name"],
+        "street_address": data["address"]["address_1"],
+        "country": data["address"]["country"],
+        "city": data["address"]["city"],
+        "state": data["address"]["region"],
+        "zip_code": data["address"]["postal_code"],
+        "latitude": data["latitude"],
+        "longitude": data["longitude"],
+        "eventbrite_id": data["id"],
+        "eventbrite_url": data["resource_uri"],
+        "academy": org.academy,
         # 'organization': org,
     }
 
@@ -242,57 +254,58 @@ def create_or_update_venue(data, org, force_update=False):
 
 def export_event_description_to_eventbrite(event: Event) -> None:
     if not event:
-        logger.error('Event is not being provided')
+        logger.error("Event is not being provided")
         return
 
     if not event.eventbrite_id:
-        logger.error(f'Event {event.id} not have the integration with eventbrite')
+        logger.error(f"Event {event.id} not have the integration with eventbrite")
         return
 
     if not event.organization:
-        logger.error(f'Event {event.id} not have a organization assigned')
+        logger.error(f"Event {event.id} not have a organization assigned")
         return
 
     if not event.description:
-        logger.warning(f'The event {event.id} not have description yet')
+        logger.warning(f"The event {event.id} not have description yet")
         return
 
     eventbrite_id = event.eventbrite_id
     client = Eventbrite(event.organization.eventbrite_key)
 
     payload = {
-        'modules': [{
-            'type': 'text',
-            'data': {
-                'body': {
-                    'type': 'text',
-                    'text': event.description,
-                    'alignment': 'left',
+        "modules": [
+            {
+                "type": "text",
+                "data": {
+                    "body": {
+                        "type": "text",
+                        "text": event.description,
+                        "alignment": "left",
+                    },
                 },
-            },
-        }],
-        'publish':
-        True,
-        'purpose':
-        'listing',
+            }
+        ],
+        "publish": True,
+        "purpose": "listing",
     }
 
     try:
         structured_content = client.get_event_description(eventbrite_id)
-        result = client.create_or_update_event_description(eventbrite_id, structured_content['page_version_number'],
-                                                           payload)
+        result = client.create_or_update_event_description(
+            eventbrite_id, structured_content["page_version_number"], payload
+        )
 
-        if not result['modules']:
-            error = 'Could not create event description in eventbrite'
+        if not result["modules"]:
+            error = "Could not create event description in eventbrite"
             logger.error(error)
 
             event.eventbrite_sync_description = error
-            event.eventbrite_sync_status = 'ERROR'
+            event.eventbrite_sync_status = "ERROR"
             event.save()
 
         else:
             event.eventbrite_sync_description = timezone.now()
-            event.eventbrite_sync_status = 'SYNCHED'
+            event.eventbrite_sync_status = "SYNCHED"
             event.save()
 
     except Exception as e:
@@ -300,13 +313,13 @@ def export_event_description_to_eventbrite(event: Event) -> None:
         logger.error(error)
 
         event.eventbrite_sync_description = error
-        event.eventbrite_sync_status = 'ERROR'
+        event.eventbrite_sync_status = "ERROR"
         event.save()
 
 
 def export_event_to_eventbrite(event: Event, org: Organization):
     if not org.academy:
-        logger.error(f'The organization {org} not have a academy assigned')
+        logger.error(f"The organization {org} not have a academy assigned")
         return
 
     timezone = org.academy.timezone
@@ -314,23 +327,23 @@ def export_event_to_eventbrite(event: Event, org: Organization):
     now = get_current_iso_string()
 
     data = {
-        'event.name.html': event.title,
-        'event.description.html': event.description,
-        'event.start.utc': re.sub(r'\+00:00$', 'Z', event.starting_at.isoformat()),
-        'event.end.utc': re.sub(r'\+00:00$', 'Z', event.ending_at.isoformat()),
+        "event.name.html": event.title,
+        "event.description.html": event.description,
+        "event.start.utc": re.sub(r"\+00:00$", "Z", event.starting_at.isoformat()),
+        "event.end.utc": re.sub(r"\+00:00$", "Z", event.ending_at.isoformat()),
         # 'event.summary': event.excerpt,
-        'event.capacity': event.capacity,
-        'event.online_event': event.online_event,
-        'event.url': event.eventbrite_url,
-        'event.currency': event.currency,
+        "event.capacity": event.capacity,
+        "event.online_event": event.online_event,
+        "event.url": event.eventbrite_url,
+        "event.currency": event.currency,
     }
 
     if event.eventbrite_organizer_id:
-        data['event.organizer_id'] = event.eventbrite_organizer_id
+        data["event.organizer_id"] = event.eventbrite_organizer_id
 
     if timezone:
-        data['event.start.timezone'] = timezone
-        data['event.end.timezone'] = timezone
+        data["event.start.timezone"] = timezone
+        data["event.end.timezone"] = timezone
 
     try:
         if event.eventbrite_id:
@@ -338,16 +351,16 @@ def export_event_to_eventbrite(event: Event, org: Organization):
 
         else:
             result = client.create_organization_event(org.eventbrite_id, data)
-            event.eventbrite_id = str(result['id'])
+            event.eventbrite_id = str(result["id"])
 
         event.eventbrite_sync_description = now
-        event.eventbrite_sync_status = 'SYNCHED'
+        event.eventbrite_sync_status = "SYNCHED"
 
         export_event_description_to_eventbrite(event)
 
     except Exception as e:
-        event.eventbrite_sync_description = f'{now} => {e}'
-        event.eventbrite_sync_status = 'ERROR'
+        event.eventbrite_sync_description = f"{now} => {e}"
+        event.eventbrite_sync_status = "ERROR"
 
     event.save()
     return event
@@ -355,7 +368,7 @@ def export_event_to_eventbrite(event: Event, org: Organization):
 
 def sync_org_events(org):
     if not org.academy:
-        logger.error(f'The organization {org} not have a academy assigned')
+        logger.error(f"The organization {org} not have a academy assigned")
         return
 
     client = Eventbrite(org.eventbrite_key)
@@ -363,21 +376,21 @@ def sync_org_events(org):
 
     try:
 
-        for data in result['events']:
+        for data in result["events"]:
             update_or_create_event(data, org)
 
-        org.sync_status = 'PERSISTED'
+        org.sync_status = "PERSISTED"
         org.sync_desc = f"Success with {len(result['events'])} events..."
         org.save()
 
     except Exception as e:
         if org:
-            org.sync_status = 'ERROR'
-            org.sync_desc = 'Error: ' + str(e)
+            org.sync_status = "ERROR"
+            org.sync_desc = "Error: " + str(e)
             org.save()
         raise e
 
-    events = Event.objects.filter(sync_with_eventbrite=True, eventbrite_sync_status='PENDING')
+    events = Event.objects.filter(sync_with_eventbrite=True, eventbrite_sync_status="PENDING")
     for event in events:
         export_event_to_eventbrite(event, org)
 
@@ -393,15 +406,15 @@ def get_current_iso_string():
 
 def update_event_description_from_eventbrite(event: Event) -> None:
     if not event:
-        logger.error('Event is not being provided')
+        logger.error("Event is not being provided")
         return
 
     if not event.eventbrite_id:
-        logger.error(f'Event {event.id} not have the integration with eventbrite')
+        logger.error(f"Event {event.id} not have the integration with eventbrite")
         return
 
     if not event.organization:
-        logger.error(f'Event {event.id} not have a organization assigned')
+        logger.error(f"Event {event.id} not have a organization assigned")
         return
 
     eventbrite_id = event.eventbrite_id
@@ -409,58 +422,58 @@ def update_event_description_from_eventbrite(event: Event) -> None:
 
     try:
         data = client.get_event_description(eventbrite_id)
-        event.description = data['modules'][0]['data']['body']['text']
+        event.description = data["modules"][0]["data"]["body"]["text"]
         event.eventbrite_sync_description = timezone.now()
-        event.eventbrite_sync_status = 'PERSISTED'
+        event.eventbrite_sync_status = "PERSISTED"
         event.save()
 
     except Exception:
-        error = f'The event {eventbrite_id} is coming from eventbrite not have a description'
+        error = f"The event {eventbrite_id} is coming from eventbrite not have a description"
         logger.warning(error)
         event.eventbrite_sync_description = error
-        event.eventbrite_sync_status = 'ERROR'
+        event.eventbrite_sync_status = "ERROR"
 
 
 def update_or_create_event(data, org):
-    if data is None:  #skip if no data
-        logger.warning('Ignored event')
+    if data is None:  # skip if no data
+        logger.warning("Ignored event")
         return False
 
     if not org.academy:
-        logger.error(f'The organization {org} not have a academy assigned')
+        logger.error(f"The organization {org} not have a academy assigned")
         return
 
     now = get_current_iso_string()
 
-    if data['status'] not in status_map:
-        raise Exception('Uknown eventbrite status ' + data['status'])
+    if data["status"] not in status_map:
+        raise Exception("Uknown eventbrite status " + data["status"])
 
-    event = Event.objects.filter(eventbrite_id=data['id'], organization__id=org.id).first()
+    event = Event.objects.filter(eventbrite_id=data["id"], organization__id=org.id).first()
     try:
         venue = None
-        if 'venue' in data and data['venue'] is not None:
-            venue = create_or_update_venue(data['venue'], org)
+        if "venue" in data and data["venue"] is not None:
+            venue = create_or_update_venue(data["venue"], org)
         organizer = None
-        if 'organizer' in data and data['organizer'] is not None:
-            organizer = create_or_update_organizer(data['organizer'], org, force_update=True)
+        if "organizer" in data and data["organizer"] is not None:
+            organizer = create_or_update_organizer(data["organizer"], org, force_update=True)
         else:
-            print('Event without organizer', data)
+            print("Event without organizer", data)
 
         kwargs = {
-            'title': data['name']['text'],
-            'excerpt': data['description']['text'],
-            'starting_at': data['start']['utc'],
-            'ending_at': data['end']['utc'],
-            'capacity': data['capacity'],
-            'online_event': data['online_event'],
-            'eventbrite_id': data['id'],
-            'eventbrite_url': data['url'],
-            'status': status_map[data['status']],
-            'eventbrite_status': data['status'],
-            'currency': data['currency'],
-            'organization': org,
+            "title": data["name"]["text"],
+            "excerpt": data["description"]["text"],
+            "starting_at": data["start"]["utc"],
+            "ending_at": data["end"]["utc"],
+            "capacity": data["capacity"],
+            "online_event": data["online_event"],
+            "eventbrite_id": data["id"],
+            "eventbrite_url": data["url"],
+            "status": status_map[data["status"]],
+            "eventbrite_status": data["status"],
+            "currency": data["currency"],
+            "organization": org,
             # organizer: organizer,
-            'venue': venue,
+            "venue": venue,
         }
 
         if event is None:
@@ -471,11 +484,11 @@ def update_or_create_event(data, org):
             for attr in kwargs:
                 setattr(event, attr, kwargs[attr])
 
-        if 'published' in data:
-            event.published_at = data['published']
+        if "published" in data:
+            event.published_at = data["published"]
 
-        if 'logo' in data and data['logo'] is not None:
-            event.banner = data['logo']['url']
+        if "logo" in data and data["logo"] is not None:
+            event.banner = data["logo"]["url"]
 
         if not event.url:
             event.url = event.eventbrite_url
@@ -488,15 +501,15 @@ def update_or_create_event(data, org):
             event.academy = org.academy
 
         event.eventbrite_sync_description = now
-        event.eventbrite_sync_status = 'PERSISTED'
+        event.eventbrite_sync_status = "PERSISTED"
         event.save()
 
         update_event_description_from_eventbrite(event)
 
     except Exception as e:
         if event is not None:
-            event.eventbrite_sync_description = f'{now} => {e}'
-            event.eventbrite_sync_status = 'ERROR'
+            event.eventbrite_sync_description = f"{now} => {e}"
+            event.eventbrite_sync_status = "ERROR"
             event.save()
         raise e
 
@@ -504,32 +517,32 @@ def update_or_create_event(data, org):
 
 
 def publish_event_from_eventbrite(data, org: Organization) -> None:
-    if not data:  #skip if no data
-        logger.info('Ignored event')
-        raise ValueError('data is empty')
+    if not data:  # skip if no data
+        logger.info("Ignored event")
+        raise ValueError("data is empty")
 
     now = get_current_iso_string()
 
     try:
-        events = Event.objects.filter(eventbrite_id=data['id'], organization__id=org.id)
+        events = Event.objects.filter(eventbrite_id=data["id"], organization__id=org.id)
         if events.count() == 0:
             raise Warning(f'The event with the eventbrite id `{data["id"]}` doesn\'t exist')
 
         for event in events:
-            event.status = 'ACTIVE'
-            event.eventbrite_status = data['status']
+            event.status = "ACTIVE"
+            event.eventbrite_status = data["status"]
             event.eventbrite_sync_description = now
-            event.eventbrite_sync_status = 'PERSISTED'
+            event.eventbrite_sync_status = "PERSISTED"
             event.save()
             logger.info(f'The events with the eventbrite id `{data["id"]}` were saved')
         return events.first()
 
     except Warning as e:
-        logger.error(f'{now} => {e}')
+        logger.error(f"{now} => {e}")
         raise e
 
     except Exception as e:
-        logger.exception(f'{now} => the body is coming from eventbrite has change')
+        logger.exception(f"{now} => the body is coming from eventbrite has change")
         raise e
 
 
@@ -608,28 +621,32 @@ def update_timeslots_out_of_range(start: datetime, end: datetime, timeslots: Que
             ending_at = fix_datetime_weekday(end, ending_at, prev=True)
             starting_at = ending_at - delta
 
-        lists.append({
-            **vars(timeslot),
-            'starting_at': starting_at,
-            'ending_at': ending_at,
-        })
+        lists.append(
+            {
+                **vars(timeslot),
+                "starting_at": starting_at,
+                "ending_at": ending_at,
+            }
+        )
 
-    return sorted(lists, key=lambda x: (x['starting_at'], x['ending_at']))
+    return sorted(lists, key=lambda x: (x["starting_at"], x["ending_at"]))
 
 
 def fix_datetime_weekday(current: datetime, timeslot: datetime, prev: bool = False, next: bool = False) -> datetime:
     if not prev and not next:
-        raise Exception('You should provide a prev or next argument')
+        raise Exception("You should provide a prev or next argument")
 
     days = 0
     weekday = timeslot.weekday()
-    postulate = datetime(year=current.year,
-                         month=current.month,
-                         day=current.day,
-                         hour=timeslot.hour,
-                         minute=timeslot.minute,
-                         second=timeslot.second,
-                         tzinfo=timeslot.tzinfo)
+    postulate = datetime(
+        year=current.year,
+        month=current.month,
+        day=current.day,
+        hour=timeslot.hour,
+        minute=timeslot.minute,
+        second=timeslot.second,
+        tzinfo=timeslot.tzinfo,
+    )
 
     while True:
         if prev:
@@ -646,51 +663,51 @@ def fix_datetime_weekday(current: datetime, timeslot: datetime, prev: bool = Fal
 
 
 RECURRENCY_TYPE = {
-    'DAILY': 'day',
-    'WEEKLY': 'week',
-    'MONTHLY': 'month',
+    "DAILY": "day",
+    "WEEKLY": "week",
+    "MONTHLY": "month",
 }
 
 
 def get_cohort_description(timeslot: CohortTimeSlot) -> str:
-    description = ''
+    description = ""
 
     if timeslot.recurrent:
-        description += f'every {RECURRENCY_TYPE[timeslot.recurrency_type]}, '
+        description += f"every {RECURRENCY_TYPE[timeslot.recurrency_type]}, "
 
     localtime = pytz.timezone(timeslot.cohort.academy.timezone)
 
     starting_at = localtime.localize(timeslot.starting_at)
     ending_at = localtime.localize(timeslot.ending_at)
 
-    starting_weekday = starting_at.strftime('%A').upper()
-    ending_weekday = ending_at.strftime('%A').upper()
+    starting_weekday = starting_at.strftime("%A").upper()
+    ending_weekday = ending_at.strftime("%A").upper()
 
     if starting_weekday == ending_weekday:
-        description += f'{starting_weekday}'
+        description += f"{starting_weekday}"
 
     else:
-        description += f'{starting_weekday} and {ending_weekday} '
+        description += f"{starting_weekday} and {ending_weekday} "
 
-    starting_hour = starting_at.strftime('%I:%M %p')
-    ending_hour = ending_at.strftime('%I:%M %p')
-    description += f'from {starting_hour} to {ending_hour}'
+    starting_hour = starting_at.strftime("%I:%M %p")
+    ending_hour = ending_at.strftime("%I:%M %p")
+    description += f"from {starting_hour} to {ending_hour}"
 
     return description.capitalize()
 
 
 def get_ical_cohort_description(item: Cohort):
-    description = ''
+    description = ""
     # description = f'{description}Url: {item.url}\n'
 
     if item.name:
-        description = f'{description}Name: {item.name}\n'
+        description = f"{description}Name: {item.name}\n"
 
     if item.academy:
-        description = f'{description}Academy: {item.academy.name}\n'
+        description = f"{description}Academy: {item.academy.name}\n"
 
     if item.language:
-        description = f'{description}Language: {item.language.upper()}\n'
+        description = f"{description}Language: {item.language.upper()}\n"
 
     if item.private:
         description = f'{description}Private: {"Yes" if item.private else "No"}\n'
@@ -705,7 +722,7 @@ def get_ical_cohort_description(item: Cohort):
 
 @functools.lru_cache(maxsize=1)
 def is_eventbrite_enabled():
-    if 'ENV' in os.environ and os.environ['ENV'] == 'test':
+    if "ENV" in os.environ and os.environ["ENV"] == "test":
         return True
 
-    return os.getenv('EVENTBRITE', '0') == '1'
+    return os.getenv("EVENTBRITE", "0") == "1"

@@ -1,15 +1,16 @@
 import re
-from contextlib2 import contextmanager
+
 import pytest
+from contextlib2 import contextmanager
+from rest_framework.test import APIClient
 
 from breathecode.tests.mixins.breathecode_mixin import BreathecodeMixin
 from breathecode.tests.mixins.cache_mixin import CacheMixin
 from breathecode.tests.mixins.generate_models_mixin.generate_models_mixin import GenerateModelsMixin
-from rest_framework.test import APIClient
 
-__all__ = ['LegacyAPITestCase']
+__all__ = ["LegacyAPITestCase"]
 
-token_pattern = re.compile(r'^[0-9a-zA-Z]{,40}$')
+token_pattern = re.compile(r"^[0-9a-zA-Z]{,40}$")
 
 
 class LegacyAPITestCase(BreathecodeMixin, GenerateModelsMixin, CacheMixin):
@@ -56,7 +57,7 @@ class LegacyAPITestCase(BreathecodeMixin, GenerateModelsMixin, CacheMixin):
         except expected_exception as e:
             assert str(e) == expected_message, f"Expected '{expected_message}', but got '{str(e)}'"
         except Exception as e:
-            pytest.fail(f'Expected {expected_exception} but it was not raised.')
+            pytest.fail(f"Expected {expected_exception} but it was not raised.")
 
     def assertToken(self, expected: str):
         """

@@ -6,7 +6,7 @@ from breathecode.setup import resolve_gcloud_credentials
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['resolve_credentials']
+__all__ = ["resolve_credentials"]
 
 
 def resolve_credentials():

@@ -6,48 +6,48 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0023_auto_20201011_0014'),
+        ("marketing", "0023_auto_20201011_0014"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='formentry',
-            name='fb_ad_id',
+            model_name="formentry",
+            name="fb_ad_id",
             field=models.IntegerField(blank=True, default=None, null=True),
         ),
         migrations.AddField(
-            model_name='formentry',
-            name='fb_adgroup_id',
+            model_name="formentry",
+            name="fb_adgroup_id",
             field=models.IntegerField(blank=True, default=None, null=True),
         ),
         migrations.AddField(
-            model_name='formentry',
-            name='fb_form_id',
+            model_name="formentry",
+            name="fb_form_id",
             field=models.IntegerField(blank=True, default=None, null=True),
         ),
         migrations.AddField(
-            model_name='formentry',
-            name='fb_leadgen_id',
+            model_name="formentry",
+            name="fb_leadgen_id",
             field=models.IntegerField(blank=True, default=None, null=True),
         ),
         migrations.AddField(
-            model_name='formentry',
-            name='fb_page_id',
+            model_name="formentry",
+            name="fb_page_id",
             field=models.IntegerField(blank=True, default=None, null=True),
         ),
         migrations.AlterField(
-            model_name='formentry',
-            name='email',
+            model_name="formentry",
+            name="email",
             field=models.CharField(blank=True, default=None, max_length=150, null=True),
         ),
         migrations.AlterField(
-            model_name='formentry',
-            name='language',
-            field=models.CharField(default='en', max_length=2),
+            model_name="formentry",
+            name="language",
+            field=models.CharField(default="en", max_length=2),
         ),
         migrations.AlterField(
-            model_name='formentry',
-            name='utm_url',
+            model_name="formentry",
+            name="utm_url",
             field=models.CharField(blank=True, default=None, max_length=250, null=True),
         ),
     ]

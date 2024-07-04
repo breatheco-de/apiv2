@@ -6,15 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0010_automation'),
+        ("marketing", "0010_automation"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='automation',
-            name='status',
-            field=models.PositiveSmallIntegerField(choices=[('2', 'Active'), ('1', 'Innactive'), ('0', 'Uknown')],
-                                                   default='0',
-                                                   help_text='2 = inactive, 1=active'),
+            model_name="automation",
+            name="status",
+            field=models.PositiveSmallIntegerField(
+                choices=[("2", "Active"), ("1", "Innactive"), ("0", "Uknown")],
+                default="0",
+                help_text="2 = inactive, 1=active",
+            ),
         ),
     ]

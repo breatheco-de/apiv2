@@ -19,16 +19,16 @@ from breathecode.assessment.models import Assessment
 
 from .signals import asset_readme_modified, asset_slug_modified, asset_status_updated, asset_title_modified
 
-__all__ = ['AssetTechnology', 'Asset', 'AssetAlias']
+__all__ = ["AssetTechnology", "Asset", "AssetAlias"]
 logger = logging.getLogger(__name__)
 
-PUBLIC = 'PUBLIC'
-UNLISTED = 'UNLISTED'
-PRIVATE = 'PRIVATE'
+PUBLIC = "PUBLIC"
+UNLISTED = "UNLISTED"
+PRIVATE = "PRIVATE"
 VISIBILITY = (
-    (PUBLIC, 'Public'),
-    (UNLISTED, 'Unlisted'),
-    (PRIVATE, 'Private'),
+    (PUBLIC, "Public"),
+    (UNLISTED, "Unlisted"),
+    (PRIVATE, "Private"),
 )
 SORT_PRIORITY = (
     (1, 1),
@@ -44,33 +44,32 @@ class SyllabusVersionProxy(SyllabusVersion):
 
 
 class AssetTechnology(models.Model):
-    slug = models.SlugField(max_length=200, unique=True, help_text='Technologies are unified within all 4geeks.com')
+    slug = models.SlugField(max_length=200, unique=True, help_text="Technologies are unified within all 4geeks.com")
     title = models.CharField(max_length=200, blank=True)
-    lang = models.CharField(max_length=2,
-                            blank=True,
-                            default=None,
-                            null=True,
-                            help_text='Leave blank if will be shown in all languages')
-    parent = models.ForeignKey('self', on_delete=models.SET_NULL, default=None, blank=True, null=True)
-    is_deprecated = models.BooleanField(default=False,
-                                        help_text='If True, the technology will be programmatically deleted.')
-    featured_asset = models.ForeignKey('Asset', on_delete=models.SET_NULL, default=None, blank=True, null=True)
+    lang = models.CharField(
+        max_length=2, blank=True, default=None, null=True, help_text="Leave blank if will be shown in all languages"
+    )
+    parent = models.ForeignKey("self", on_delete=models.SET_NULL, default=None, blank=True, null=True)
+    is_deprecated = models.BooleanField(
+        default=False, help_text="If True, the technology will be programmatically deleted."
+    )
+    featured_asset = models.ForeignKey("Asset", on_delete=models.SET_NULL, default=None, blank=True, null=True)
     visibility = models.CharField(
         max_length=20,
         choices=VISIBILITY,
         default=UNLISTED,
-        help_text=
-        'If public, the front-end will generate a landing page. If unlisted, it won\'t have a landing page but will be shown in assets. If private, it won\'t be shown anywhere of the front-end.'
+        help_text="If public, the front-end will generate a landing page. If unlisted, it won't have a landing page but will be shown in assets. If private, it won't be shown anywhere of the front-end.",
     )
 
     description = models.TextField(null=True, blank=True, default=None)
-    icon_url = models.URLField(null=True, blank=True, default=None, help_text='Image icon to show on website')
+    icon_url = models.URLField(null=True, blank=True, default=None, help_text="Image icon to show on website")
     sort_priority = models.IntegerField(
         null=False,
         choices=SORT_PRIORITY,
         blank=False,
         default=3,
-        help_text='Priority to sort technology (1, 2, or 3): One is more important and goes first than three.')
+        help_text="Priority to sort technology (1, 2, or 3): One is more important and goes first than three.",
+    )
 
     def __str__(self):
         return self.title
@@ -94,7 +93,7 @@ class AssetTechnology(models.Model):
 
     def validate(self):
         if self.is_deprecated and self.parent is None:
-            raise Exception('You cannot mark a technology as deprecated if it doesn\'t have a parent technology')
+            raise Exception("You cannot mark a technology as deprecated if it doesn't have a parent technology")
 
 
 class AssetCategory(models.Model):
@@ -105,18 +104,17 @@ class AssetCategory(models.Model):
 
     slug = models.SlugField(max_length=200)
     title = models.CharField(max_length=200)
-    lang = models.CharField(max_length=2, help_text='E.g: en, es, it')
+    lang = models.CharField(max_length=2, help_text="E.g: en, es, it")
     description = models.TextField(null=True, blank=True, default=None)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 
-    all_translations = models.ManyToManyField('self', blank=True)
+    all_translations = models.ManyToManyField("self", blank=True)
 
     # Ideal for generating blog post thumbnails
     auto_generate_previews = models.BooleanField(default=False)
-    preview_generation_url = models.URLField(null=True,
-                                             blank=True,
-                                             default=None,
-                                             help_text='Will be POSTed to get preview image')
+    preview_generation_url = models.URLField(
+        null=True, blank=True, default=None, help_text="Will be POSTed to get preview image"
+    )
 
     visibility = models.CharField(max_length=20, choices=VISIBILITY, default=PUBLIC)
 
@@ -132,7 +130,7 @@ class AssetCategory(models.Model):
             # Prevent multiple keywords with same slug
             cat = AssetCategory.objects.filter(slug=self.slug, academy=self.academy).exclude(id=self.id).first()
             if cat is not None:
-                raise Exception(f'Category with slug {self.slug} already exists on this academy')
+                raise Exception(f"Category with slug {self.slug} already exists on this academy")
 
         super().save(*args, **kwargs)
 
@@ -145,31 +143,27 @@ class KeywordCluster(models.Model):
 
     slug = models.SlugField(max_length=200)
     title = models.CharField(max_length=200)
-    lang = models.CharField(max_length=2, help_text='E.g: en, es, it')
+    lang = models.CharField(max_length=2, help_text="E.g: en, es, it")
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     visibility = models.CharField(max_length=20, choices=VISIBILITY, default=PUBLIC)
-    landing_page_url = models.URLField(blank=True,
-                                       null=True,
-                                       default=None,
-                                       help_text='All keyword articles must point to this page')
+    landing_page_url = models.URLField(
+        blank=True, null=True, default=None, help_text="All keyword articles must point to this page"
+    )
     is_deprecated = models.BooleanField(
         default=False,
-        help_text=
-        'Used when you want to stop using this cluster, all previous articles will be kept but no new articles will be assigned'
+        help_text="Used when you want to stop using this cluster, all previous articles will be kept but no new articles will be assigned",
     )
 
     is_important = models.BooleanField(default=True)
     is_urgent = models.BooleanField(default=True)
 
-    internal_description = models.TextField(default=None,
-                                            null=True,
-                                            blank=True,
-                                            help_text='How will be this cluster be used in the SEO strategy')
+    internal_description = models.TextField(
+        default=None, null=True, blank=True, help_text="How will be this cluster be used in the SEO strategy"
+    )
 
-    optimization_rating = models.FloatField(null=True,
-                                            blank=True,
-                                            default=None,
-                                            help_text='Automatically filled (1 to 100)')
+    optimization_rating = models.FloatField(
+        null=True, blank=True, default=None, help_text="Automatically filled (1 to 100)"
+    )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -183,7 +177,7 @@ class KeywordCluster(models.Model):
             # Prevent multiple keywords with same slug
             cluster = KeywordCluster.objects.filter(slug=self.slug, academy=self.academy).first()
             if cluster is not None:
-                raise Exception(f'Cluster with slug {self.slug} already exists on this academy')
+                raise Exception(f"Cluster with slug {self.slug} already exists on this academy")
 
         super().save(*args, **kwargs)
 
@@ -196,15 +190,14 @@ class AssetKeyword(models.Model):
 
     slug = models.SlugField(max_length=200)
     title = models.CharField(max_length=200)
-    lang = models.CharField(max_length=2, help_text='E.g: en, es, it')
+    lang = models.CharField(max_length=2, help_text="E.g: en, es, it")
 
     cluster = models.ForeignKey(KeywordCluster, on_delete=models.SET_NULL, default=None, blank=True, null=True)
 
-    expected_monthly_traffic = models.FloatField(null=True,
-                                                 blank=True,
-                                                 default=None,
-                                                 help_text='You can get this info from Ahrefs or GKP')
-    difficulty = models.FloatField(null=True, blank=True, default=None, help_text='From 1 to 100')
+    expected_monthly_traffic = models.FloatField(
+        null=True, blank=True, default=None, help_text="You can get this info from Ahrefs or GKP"
+    )
+    difficulty = models.FloatField(null=True, blank=True, default=None, help_text="From 1 to 100")
     is_important = models.BooleanField(default=True)
     is_urgent = models.BooleanField(default=True)
 
@@ -222,58 +215,58 @@ class AssetKeyword(models.Model):
             # Prevent multiple keywords with same slug and make category mandatory
             keyword = AssetKeyword.objects.filter(slug=self.slug, academy=self.academy).first()
             if keyword is not None:
-                raise Exception(f'Keyword with slug {self.slug} already exists on this academy')
+                raise Exception(f"Keyword with slug {self.slug} already exists on this academy")
 
         super().save(*args, **kwargs)
 
 
-PROJECT = 'PROJECT'
-EXERCISE = 'EXERCISE'
-LESSON = 'LESSON'
-QUIZ = 'QUIZ'
-VIDEO = 'VIDEO'
-ARTICLE = 'ARTICLE'
+PROJECT = "PROJECT"
+EXERCISE = "EXERCISE"
+LESSON = "LESSON"
+QUIZ = "QUIZ"
+VIDEO = "VIDEO"
+ARTICLE = "ARTICLE"
 TYPE = (
-    (PROJECT, 'Project'),
-    (EXERCISE, 'Exercise'),
-    (QUIZ, 'Quiz'),
-    (LESSON, 'Lesson'),
-    (VIDEO, 'Video'),
-    (ARTICLE, 'Article'),
+    (PROJECT, "Project"),
+    (EXERCISE, "Exercise"),
+    (QUIZ, "Quiz"),
+    (LESSON, "Lesson"),
+    (VIDEO, "Video"),
+    (ARTICLE, "Article"),
 )
 
-BEGINNER = 'BEGINNER'
-EASY = 'EASY'
-INTERMEDIATE = 'INTERMEDIATE'
-HARD = 'HARD'
+BEGINNER = "BEGINNER"
+EASY = "EASY"
+INTERMEDIATE = "INTERMEDIATE"
+HARD = "HARD"
 DIFFICULTY = (
-    (HARD, 'Hard'),
-    (INTERMEDIATE, 'Intermediate'),
-    (EASY, 'Easy'),
-    (BEGINNER, 'Beginner'),
+    (HARD, "Hard"),
+    (INTERMEDIATE, "Intermediate"),
+    (EASY, "Easy"),
+    (BEGINNER, "Beginner"),
 )
 
-NOT_STARTED = 'NOT_STARTED'
-PLANNING = 'PLANNING'
-WRITING = 'WRITING'
-DRAFT = 'DRAFT'
-OPTIMIZED = 'OPTIMIZED'
-PUBLISHED = 'PUBLISHED'
+NOT_STARTED = "NOT_STARTED"
+PLANNING = "PLANNING"
+WRITING = "WRITING"
+DRAFT = "DRAFT"
+OPTIMIZED = "OPTIMIZED"
+PUBLISHED = "PUBLISHED"
 ASSET_STATUS = (
-    (NOT_STARTED, 'Not Started'),
-    (PLANNING, 'Planning'),
-    (WRITING, 'Writing'),
-    (DRAFT, 'Draft'),
-    (OPTIMIZED, 'Optimized'),
-    (PUBLISHED, 'Published'),
+    (NOT_STARTED, "Not Started"),
+    (PLANNING, "Planning"),
+    (WRITING, "Writing"),
+    (DRAFT, "Draft"),
+    (OPTIMIZED, "Optimized"),
+    (PUBLISHED, "Published"),
 )
 
 ASSET_SYNC_STATUS = (
-    ('PENDING', 'Pending'),
-    ('ERROR', 'Error'),
-    ('OK', 'Ok'),
-    ('WARNING', 'Warning'),
-    ('NEEDS_RESYNC', 'Needs Resync'),
+    ("PENDING", "Pending"),
+    ("ERROR", "Error"),
+    ("OK", "Ok"),
+    ("WARNING", "Warning"),
+    ("NEEDS_RESYNC", "Needs Resync"),
 )
 
 
@@ -289,18 +282,15 @@ class Asset(models.Model):
     slug = models.SlugField(
         max_length=200,
         unique=True,
-        help_text=
-        'Asset must be unique within the entire database because they could be published into 4geeks.com (shared among all academies)',
-        db_index=True)
+        help_text="Asset must be unique within the entire database because they could be published into 4geeks.com (shared among all academies)",
+        db_index=True,
+    )
     title = models.CharField(max_length=200, blank=True, db_index=True)
-    lang = models.CharField(max_length=2,
-                            blank=True,
-                            null=True,
-                            default=None,
-                            help_text='E.g: en, es, it',
-                            db_index=True)
+    lang = models.CharField(
+        max_length=2, blank=True, null=True, default=None, help_text="E.g: en, es, it", db_index=True
+    )
 
-    all_translations = models.ManyToManyField('self', blank=True)
+    all_translations = models.ManyToManyField("self", blank=True)
     technologies = models.ManyToManyField(AssetTechnology, blank=True)
 
     category = models.ForeignKey(
@@ -318,14 +308,14 @@ class Asset(models.Model):
         null=True,
         blank=True,
         default=None,
-        help_text='Brief for the copywriters, mainly used to describe what this lessons needs to be about')
+        help_text="Brief for the copywriters, mainly used to describe what this lessons needs to be about",
+    )
 
     readme_url = models.URLField(
         null=True,
         blank=True,
         default=None,
-        help_text=
-        'This will be used to synch only lessons from github. Projects, quizzes and exercises it will try README.md for english and README.lang.md for other langs'
+        help_text="This will be used to synch only lessons from github. Projects, quizzes and exercises it will try README.md for english and README.lang.md for other langs",
     )
     intro_video_url = models.URLField(null=True, blank=True, default=None)
     solution_video_url = models.URLField(null=True, blank=True, default=None)
@@ -341,20 +331,22 @@ class Asset(models.Model):
 
     external = models.BooleanField(
         default=False,
-        help_text=
-        'External assets will open in a new window, they are not built using breathecode or learnpack tecnology',
-        db_index=True)
+        help_text="External assets will open in a new window, they are not built using breathecode or learnpack tecnology",
+        db_index=True,
+    )
 
     enable_table_of_content = models.BooleanField(
-        default=True, help_text='If true, it shows a tabled on contents on top of the lesson')
-    interactive = models.BooleanField(default=False, db_index=True, help_text='If true, it means is learnpack enabled')
+        default=True, help_text="If true, it shows a tabled on contents on top of the lesson"
+    )
+    interactive = models.BooleanField(default=False, db_index=True, help_text="If true, it means is learnpack enabled")
     with_solutions = models.BooleanField(default=False, db_index=True)
     with_video = models.BooleanField(default=False, db_index=True)
     graded = models.BooleanField(default=False, db_index=True)
     gitpod = models.BooleanField(
         default=False,
-        help_text='If true, it means it can be opened on cloud provisioning vendors like Gitpod or Codespaces')
-    duration = models.IntegerField(null=True, blank=True, default=None, help_text='In hours')
+        help_text="If true, it means it can be opened on cloud provisioning vendors like Gitpod or Codespaces",
+    )
+    duration = models.IntegerField(null=True, blank=True, default=None, help_text="In hours")
 
     difficulty = models.CharField(max_length=20, choices=DIFFICULTY, default=None, null=True, blank=True)
 
@@ -363,90 +355,102 @@ class Asset(models.Model):
         max_length=20,
         choices=VISIBILITY,
         default=PUBLIC,
-        help_text='This is an internal property. It won\'t be shown internally to other academies unless is public',
-        db_index=True)
+        help_text="This is an internal property. It won't be shown internally to other academies unless is public",
+        db_index=True,
+    )
     asset_type = models.CharField(max_length=20, choices=TYPE, db_index=True)
 
     superseded_by = models.OneToOneField(
-        'Asset',
-        related_name='previous_version',
+        "Asset",
+        related_name="previous_version",
         on_delete=models.SET_NULL,
         null=True,
         default=None,
         blank=True,
-        help_text=
-        'The newer version of the article (null if it is the latest version). This is used for technology deprecation, for example, a new article to explain the new version of react router'
+        help_text="The newer version of the article (null if it is the latest version). This is used for technology deprecation, for example, a new article to explain the new version of react router",
     )
 
-    status = models.CharField(max_length=20,
-                              choices=ASSET_STATUS,
-                              default=NOT_STARTED,
-                              help_text='It won\'t be shown on the website until the status is published',
-                              db_index=True)
+    status = models.CharField(
+        max_length=20,
+        choices=ASSET_STATUS,
+        default=NOT_STARTED,
+        help_text="It won't be shown on the website until the status is published",
+        db_index=True,
+    )
 
     is_auto_subscribed = models.BooleanField(
         default=True,
-        help_text=
-        'If auto subscribed, the system will attempt to listen to push event and update the asset meta based on github')
-    sync_status = models.CharField(max_length=20,
-                                   choices=ASSET_SYNC_STATUS,
-                                   default=None,
-                                   null=True,
-                                   blank=True,
-                                   help_text='Internal state automatically set by the system based on sync',
-                                   db_index=True)
+        help_text="If auto subscribed, the system will attempt to listen to push event and update the asset meta based on github",
+    )
+    sync_status = models.CharField(
+        max_length=20,
+        choices=ASSET_SYNC_STATUS,
+        default=None,
+        null=True,
+        blank=True,
+        help_text="Internal state automatically set by the system based on sync",
+        db_index=True,
+    )
     last_synch_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
     github_commit_hash = models.CharField(max_length=100, null=True, blank=True, default=None, db_index=True)
 
-    test_status = models.CharField(max_length=20,
-                                   choices=ASSET_SYNC_STATUS,
-                                   default=None,
-                                   null=True,
-                                   blank=True,
-                                   help_text='Internal state automatically set by the system based on test',
-                                   db_index=True)
+    test_status = models.CharField(
+        max_length=20,
+        choices=ASSET_SYNC_STATUS,
+        default=None,
+        null=True,
+        blank=True,
+        help_text="Internal state automatically set by the system based on test",
+        db_index=True,
+    )
     published_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
     last_test_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
-    status_text = models.TextField(null=True,
-                                   default=None,
-                                   blank=True,
-                                   help_text='Used by the sych status to provide feedback')
+    status_text = models.TextField(
+        null=True, default=None, blank=True, help_text="Used by the sych status to provide feedback"
+    )
 
-    authors_username = models.CharField(max_length=80,
-                                        null=True,
-                                        default=None,
-                                        blank=True,
-                                        help_text='Github usernames separated by comma',
-                                        db_index=True)
-    assessment = models.ForeignKey(Assessment,
-                                   on_delete=models.SET_NULL,
-                                   default=None,
-                                   blank=True,
-                                   null=True,
-                                   help_text='Connection with the assessment breathecode app')
-    author = models.ForeignKey(User,
-                               on_delete=models.SET_NULL,
-                               default=None,
-                               blank=True,
-                               null=True,
-                               help_text='Who wrote the lesson, not necessarily the owner')
-    owner = models.ForeignKey(User,
-                              on_delete=models.SET_NULL,
-                              related_name='owned_lessons',
-                              default=None,
-                              blank=True,
-                              null=True,
-                              help_text='The owner has the github premissions to update the lesson')
+    authors_username = models.CharField(
+        max_length=80,
+        null=True,
+        default=None,
+        blank=True,
+        help_text="Github usernames separated by comma",
+        db_index=True,
+    )
+    assessment = models.ForeignKey(
+        Assessment,
+        on_delete=models.SET_NULL,
+        default=None,
+        blank=True,
+        null=True,
+        help_text="Connection with the assessment breathecode app",
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        default=None,
+        blank=True,
+        null=True,
+        help_text="Who wrote the lesson, not necessarily the owner",
+    )
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name="owned_lessons",
+        default=None,
+        blank=True,
+        null=True,
+        help_text="The owner has the github premissions to update the lesson",
+    )
 
     is_seo_tracked = models.BooleanField(default=True, db_index=True)
-    seo_keywords = models.ManyToManyField(AssetKeyword,
-                                          blank=True,
-                                          help_text='Optimize for a max of two keywords per asset')
+    seo_keywords = models.ManyToManyField(
+        AssetKeyword, blank=True, help_text="Optimize for a max of two keywords per asset"
+    )
 
-    optimization_rating = models.FloatField(null=True,
-                                            blank=True,
-                                            default=None,
-                                            help_text='Automatically filled (1 to 100)')
+    optimization_rating = models.FloatField(
+        null=True, blank=True, default=None, help_text="Automatically filled (1 to 100)"
+    )
     last_seo_scan_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
     seo_json_status = models.JSONField(null=True, blank=True, default=None)
 
@@ -454,39 +458,44 @@ class Asset(models.Model):
 
     last_cleaning_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
     cleaning_status_details = models.TextField(null=True, blank=True, default=None)
-    cleaning_status = models.CharField(max_length=20,
-                                       choices=ASSET_SYNC_STATUS,
-                                       default='PENDING',
-                                       null=True,
-                                       blank=True,
-                                       help_text='Internal state automatically set by the system based on cleanup',
-                                       db_index=True)
+    cleaning_status = models.CharField(
+        max_length=20,
+        choices=ASSET_SYNC_STATUS,
+        default="PENDING",
+        null=True,
+        blank=True,
+        help_text="Internal state automatically set by the system based on cleanup",
+        db_index=True,
+    )
 
-    delivery_instructions = models.TextField(null=True,
-                                             default=None,
-                                             blank=True,
-                                             help_text='Tell students how to deliver this project')
+    delivery_instructions = models.TextField(
+        null=True, default=None, blank=True, help_text="Tell students how to deliver this project"
+    )
     delivery_formats = models.CharField(
         max_length=255,
-        default='url',
-        help_text='Comma separated list of supported formats. Eg: url, image/png, application/pdf')
-    delivery_regex_url = models.CharField(max_length=255,
-                                          default=None,
-                                          blank=True,
-                                          null=True,
-                                          help_text='Will only be used if "url" is the delivery format')
+        default="url",
+        help_text="Comma separated list of supported formats. Eg: url, image/png, application/pdf",
+    )
+    delivery_regex_url = models.CharField(
+        max_length=255,
+        default=None,
+        blank=True,
+        null=True,
+        help_text='Will only be used if "url" is the delivery format',
+    )
 
     assets_related = models.ManyToManyField(
-        'self',
+        "self",
         blank=True,
         symmetrical=False,
-        help_text='Related assets used to get prepared before going through this asset.')
+        help_text="Related assets used to get prepared before going through this asset.",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.slug}'
+        return f"{self.slug}"
 
     def save(self, *args, **kwargs):
 
@@ -498,7 +507,7 @@ class Asset(models.Model):
         if self.__old_readme_raw != self.readme_raw:
             readme_modified = True
             self.readme_updated_at = timezone.now()
-            self.cleaning_status = 'PENDING'
+            self.cleaning_status = "PENDING"
 
         if self.__old_title != self.title:
             title_modified = True
@@ -512,7 +521,7 @@ class Asset(models.Model):
             alias = AssetAlias.objects.filter(slug=self.slug).first()
             if alias is not None:
                 raise Exception(
-                    f'New slug {self.slug} for {self.__old_slug} is already taken by alias for asset {alias.asset.slug}'
+                    f"New slug {self.slug} for {self.__old_slug} is already taken by alias for asset {alias.asset.slug}"
                 )
         self.full_clean()
 
@@ -521,10 +530,14 @@ class Asset(models.Model):
         self.__old_readme_raw = self.readme_raw
         self.__old_status = self.status
 
-        if slug_modified: asset_slug_modified.send_robust(instance=self, sender=Asset)
-        if readme_modified: asset_readme_modified.send_robust(instance=self, sender=Asset)
-        if title_modified: asset_title_modified.send_robust(instance=self, sender=Asset)
-        if status_modified: asset_status_updated.send_robust(instance=self, sender=Asset)
+        if slug_modified:
+            asset_slug_modified.send_robust(instance=self, sender=Asset)
+        if readme_modified:
+            asset_readme_modified.send_robust(instance=self, sender=Asset)
+        if title_modified:
+            asset_title_modified.send_robust(instance=self, sender=Asset)
+        if status_modified:
+            asset_status_updated.send_robust(instance=self, sender=Asset)
 
     def get_preview_generation_url(self):
 
@@ -536,14 +549,14 @@ class Asset(models.Model):
     def get_repo_meta(self):
         # def get_url_info(url: str):
         url = self.readme_url
-        result = re.search(r'blob\/([\w\-]+)', url)
+        result = re.search(r"blob\/([\w\-]+)", url)
         branch_name = None
         if result is not None:
             branch_name = result.group(1)
 
-        result = re.search(r'https?:\/\/github\.com\/([\w\-]+)\/([\w\-]+)\/?', url)
+        result = re.search(r"https?:\/\/github\.com\/([\w\-]+)\/([\w\-]+)\/?", url)
         if result is None:
-            raise Exception('Invalid URL when looking organization: ' + url)
+            raise Exception("Invalid URL when looking organization: " + url)
 
         org_name = result.group(1)
         repo_name = result.group(2)
@@ -555,91 +568,99 @@ class Asset(models.Model):
         if self.readme is None:
             self.readme = self.readme_raw
 
-        if self.readme is None or self.readme == '':
-            if self.asset_type != 'QUIZ':
-                AssetErrorLog(slug=AssetErrorLog.EMPTY_README,
-                              path=self.slug,
-                              asset_type=self.asset_type,
-                              asset=self,
-                              status_text='Readme file was not found').save()
+        if self.readme is None or self.readme == "":
+            if self.asset_type != "QUIZ":
+                AssetErrorLog(
+                    slug=AssetErrorLog.EMPTY_README,
+                    path=self.slug,
+                    asset_type=self.asset_type,
+                    asset=self,
+                    status_text="Readme file was not found",
+                ).save()
             self.set_readme(
-                get_template('empty.md').render({
-                    'title': self.title,
-                    'lang': self.lang,
-                    'asset_type': self.asset_type,
-                }))
+                get_template("empty.md").render(
+                    {
+                        "title": self.title,
+                        "lang": self.lang,
+                        "asset_type": self.asset_type,
+                    }
+                )
+            )
 
-        if self.readme_url is None and self.asset_type == 'LESSON':
+        if self.readme_url is None and self.asset_type == "LESSON":
             self.readme_url = self.url
             self.save()
 
         readme = {
-            'clean': self.readme,
-            'decoded': Asset.decode(self.readme),
-            'raw': self.readme_raw,
-            'decoded_raw': Asset.decode(self.readme_raw)
+            "clean": self.readme,
+            "decoded": Asset.decode(self.readme),
+            "raw": self.readme_raw,
+            "decoded_raw": Asset.decode(self.readme_raw),
         }
 
         if parse:
             # external assets will have a default markdown readme generated internally
-            extension = '.md'
-            if self.readme_url and self.readme_url != '':
+            extension = ".md"
+            if self.readme_url and self.readme_url != "":
                 u = urlparse(self.readme_url)
-                extension = pathlib.Path(u[2]).suffix if not self.external else '.md'
+                extension = pathlib.Path(u[2]).suffix if not self.external else ".md"
 
-            if extension in ['.md', '.mdx', '.txt']:
-                readme = self.parse(readme, format='markdown', remove_frontmatter=remove_frontmatter)
-            elif extension in ['.ipynb']:
-                readme = self.parse(readme, format='notebook')
+            if extension in [".md", ".mdx", ".txt"]:
+                readme = self.parse(readme, format="markdown", remove_frontmatter=remove_frontmatter)
+            elif extension in [".ipynb"]:
+                readme = self.parse(readme, format="notebook")
             else:
-                AssetErrorLog(slug=AssetErrorLog.INVALID_README_URL,
-                              path=self.slug,
-                              asset_type=self.asset_type,
-                              asset=self,
-                              status_text='Invalid Readme URL').save()
+                AssetErrorLog(
+                    slug=AssetErrorLog.INVALID_README_URL,
+                    path=self.slug,
+                    asset_type=self.asset_type,
+                    asset=self,
+                    status_text="Invalid Readme URL",
+                ).save()
         return readme
 
-    def parse(self, readme, format='markdown', remove_frontmatter=False):
-        if format == 'markdown':
-            _data = frontmatter.loads(readme['decoded'])
-            readme['frontmatter'] = _data.metadata
-            readme['frontmatter']['format'] = format
-            readme['decoded'] = _data.content
-            readme['html'] = markdown.markdown(_data.content, extensions=['markdown.extensions.fenced_code'])
-        if format == 'notebook':
+    def parse(self, readme, format="markdown", remove_frontmatter=False):
+        if format == "markdown":
+            _data = frontmatter.loads(readme["decoded"])
+            readme["frontmatter"] = _data.metadata
+            readme["frontmatter"]["format"] = format
+            readme["decoded"] = _data.content
+            readme["html"] = markdown.markdown(_data.content, extensions=["markdown.extensions.fenced_code"])
+        if format == "notebook":
             import nbformat
             from nbconvert import HTMLExporter
-            notebook = nbformat.reads(readme['decoded'], as_version=4)
+
+            notebook = nbformat.reads(readme["decoded"], as_version=4)
             # Instantiate the exporter. We use the `classic` template for now; we'll get into more details
             # later about how to customize the exporter further. You can use 'basic'
-            html_exporter = HTMLExporter(template_name='basic')
+            html_exporter = HTMLExporter(template_name="basic")
             # Process the notebook we loaded earlier
             body, resources = html_exporter.from_notebook_node(notebook)
-            readme['frontmatter'] = resources
-            readme['frontmatter']['format'] = format
-            readme['html'] = body
+            readme["frontmatter"] = resources
+            readme["frontmatter"]["format"] = format
+            readme["html"] = body
         return readme
 
     def get_thumbnail_name(self):
 
-        slug1 = self.category.slug if self.category is not None else 'default'
+        slug1 = self.category.slug if self.category is not None else "default"
         slug2 = self.slug
 
         if self.academy is None:
-            raise Exception('Asset needs to belong to an academy to generate its thumbnail')
+            raise Exception("Asset needs to belong to an academy to generate its thumbnail")
 
-        return f'{self.academy.slug}-{slug1}-{slug2}.png'
+        return f"{self.academy.slug}-{slug1}-{slug2}.png"
 
     @staticmethod
     def encode(content):
         if content is not None:
-            return str(base64.b64encode(content.encode('utf-8')).decode('utf-8'))
+            return str(base64.b64encode(content.encode("utf-8")).decode("utf-8"))
         return None
 
     @staticmethod
     def decode(content):
         if content is not None:
-            return base64.b64decode(content.encode('utf-8')).decode('utf-8')
+            return base64.b64decode(content.encode("utf-8")).decode("utf-8")
         return None
 
     def set_readme(self, content):
@@ -647,11 +668,9 @@ class Asset(models.Model):
         return self
 
     def log_error(self, error_slug, status_text=None):
-        error = AssetErrorLog(slug=error_slug,
-                              asset=self,
-                              asset_type=self.asset_type,
-                              status_text=status_text,
-                              path=self.slug)
+        error = AssetErrorLog(
+            slug=error_slug, asset=self, asset_type=self.asset_type, status_text=status_text, path=self.slug
+        )
         error.save()
         return error
 
@@ -661,9 +680,9 @@ class Asset(models.Model):
             return None
 
         config = self.assessment.to_json()
-        config['info']['description'] = self.description
-        config['lang'] = self.lang
-        config['technologies'] = [t.slug for t in self.technologies.all()]
+        config["info"]["description"] = self.description
+        config["lang"] = self.lang
+        config["technologies"] = [t.slug for t in self.technologies.all()]
 
         return config
 
@@ -672,14 +691,14 @@ class Asset(models.Model):
         if self.readme is None:
             return []
 
-        regex = r'\-\s\[(?P<status>[\sxX-])\]\s(?P<label>.+)'
-        findings = list(re.finditer(regex, self.get_readme()['decoded']))
+        regex = r"\-\s\[(?P<status>[\sxX-])\]\s(?P<label>.+)"
+        findings = list(re.finditer(regex, self.get_readme()["decoded"]))
         tasks = []
         while len(findings) > 0:
             task_find = findings.pop(0)
             task = task_find.groupdict()
-            task['id'] = hashlib.md5(task['label'].encode('utf-8')).hexdigest()
-            task['status'] = 'DONE' if 'status' in task and task['status'].strip().lower() == 'x' else 'PENDING'
+            task["id"] = hashlib.md5(task["label"].encode("utf-8")).hexdigest()
+            task["status"] = "DONE" if "status" in task and task["status"].strip().lower() == "x" else "PENDING"
 
             tasks.append(task)
         return tasks
@@ -700,11 +719,9 @@ class Asset(models.Model):
             AssetErrorLog(slug=AssetErrorLog.SLUG_NOT_FOUND, path=asset_slug, asset_type=asset_type, user=user).save()
             return None
         elif asset_type is not None and alias.asset.asset_type.lower() == asset_type.lower():
-            AssetErrorLog(slug=AssetErrorLog.DIFFERENT_TYPE,
-                          path=asset_slug,
-                          asset=alias.asset,
-                          asset_type=asset_type,
-                          user=user).save()
+            AssetErrorLog(
+                slug=AssetErrorLog.DIFFERENT_TYPE, path=asset_slug, asset=alias.asset, asset_type=asset_type, user=user
+            ).save()
 
         elif is_alias:
             return alias.asset
@@ -731,71 +748,73 @@ class AssetComment(models.Model):
     urgent = models.BooleanField(default=False)
     priority = models.SmallIntegerField(default=False)
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
-    author = models.ForeignKey(User,
-                               on_delete=models.SET_NULL,
-                               default=None,
-                               blank=True,
-                               null=True,
-                               help_text='Who wrote the comment or issue')
-    owner = models.ForeignKey(User,
-                              on_delete=models.SET_NULL,
-                              default=None,
-                              blank=True,
-                              null=True,
-                              related_name='assigned_comments',
-                              help_text='In charge of resolving the comment or issue')
-
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-
-    def __str__(self):
-        return 'AssetComment ' + str(self.id)
-
-
-ERROR = 'ERROR'
-FIXED = 'FIXED'
-IGNORED = 'IGNORED'
-ERROR_STATUS = (
-    (ERROR, 'Error'),
-    (FIXED, 'Fixed'),
-    (IGNORED, 'Ignored'),
-)
-
-
-class AssetErrorLog(models.Model):
-    SLUG_NOT_FOUND = 'slug-not-found'
-    DIFFERENT_TYPE = 'different-type'
-    EMPTY_README = 'empty-readme'
-    EMPTY_HTML = 'empty-html'
-    INVALID_URL = 'invalid-url'
-    INVALID_README_URL = 'invalid-readme-url'
-    README_SYNTAX = 'readme-syntax-error'
-
-    asset_type = models.CharField(max_length=20, choices=TYPE, default=None, null=True, blank=True)
-    slug = models.SlugField(max_length=200)
-    status = models.CharField(max_length=20, choices=ERROR_STATUS, default=ERROR)
-    path = models.CharField(max_length=200)
-    status_text = models.TextField(null=True,
-                                   blank=True,
-                                   default=None,
-                                   help_text='Status details, it may be set automatically if enough error information')
-    user = models.ForeignKey(User,
-                             on_delete=models.SET_NULL,
-                             default=None,
-                             null=True,
-                             help_text='The user how asked for the asset and got the error')
-    asset = models.ForeignKey(
-        Asset,
+    author = models.ForeignKey(
+        User, on_delete=models.SET_NULL, default=None, blank=True, null=True, help_text="Who wrote the comment or issue"
+    )
+    owner = models.ForeignKey(
+        User,
         on_delete=models.SET_NULL,
         default=None,
+        blank=True,
         null=True,
-        help_text=
-        'Assign an asset to this error and you will be able to create an alias for it from the django admin bulk actions "create alias"'
+        related_name="assigned_comments",
+        help_text="In charge of resolving the comment or issue",
     )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
 
     def __str__(self):
-        return f'Error {self.status} with {self.slug}'
+        return "AssetComment " + str(self.id)
+
+
+ERROR = "ERROR"
+FIXED = "FIXED"
+IGNORED = "IGNORED"
+ERROR_STATUS = (
+    (ERROR, "Error"),
+    (FIXED, "Fixed"),
+    (IGNORED, "Ignored"),
+)
+
+
+class AssetErrorLog(models.Model):
+    SLUG_NOT_FOUND = "slug-not-found"
+    DIFFERENT_TYPE = "different-type"
+    EMPTY_README = "empty-readme"
+    EMPTY_HTML = "empty-html"
+    INVALID_URL = "invalid-url"
+    INVALID_README_URL = "invalid-readme-url"
+    README_SYNTAX = "readme-syntax-error"
+
+    asset_type = models.CharField(max_length=20, choices=TYPE, default=None, null=True, blank=True)
+    slug = models.SlugField(max_length=200)
+    status = models.CharField(max_length=20, choices=ERROR_STATUS, default=ERROR)
+    path = models.CharField(max_length=200)
+    status_text = models.TextField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Status details, it may be set automatically if enough error information",
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        default=None,
+        null=True,
+        help_text="The user how asked for the asset and got the error",
+    )
+    asset = models.ForeignKey(
+        Asset,
+        on_delete=models.SET_NULL,
+        default=None,
+        null=True,
+        help_text='Assign an asset to this error and you will be able to create an alias for it from the django admin bulk actions "create alias"',
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+
+    def __str__(self):
+        return f"Error {self.status} with {self.slug}"
 
 
 class SEOReport(models.Model):
@@ -805,25 +824,27 @@ class SEOReport(models.Model):
         self.__shared_state = {}
         self.__log = []
 
-    report_type = models.CharField(max_length=40, help_text='Must be one of the services.seo.action script names')
-    status = models.CharField(max_length=20,
-                              choices=ASSET_SYNC_STATUS,
-                              default='PENDING',
-                              help_text='Internal state automatically set by the system')
+    report_type = models.CharField(max_length=40, help_text="Must be one of the services.seo.action script names")
+    status = models.CharField(
+        max_length=20,
+        choices=ASSET_SYNC_STATUS,
+        default="PENDING",
+        help_text="Internal state automatically set by the system",
+    )
     log = models.JSONField(default=None, null=True, blank=True)
     how_to_fix = models.TextField(default=None, null=True, blank=True)
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
-    rating = models.FloatField(default=None, null=True, blank=True, help_text='Automatically filled (1 to 100)')
+    rating = models.FloatField(default=None, null=True, blank=True, help_text="Automatically filled (1 to 100)")
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
 
     def fatal(self, msg):
-        self.__log.append({'rating': -100, 'msg': msg})
+        self.__log.append({"rating": -100, "msg": msg})
 
     def good(self, rating, msg):
-        self.__log.append({'rating': rating, 'msg': msg})
+        self.__log.append({"rating": rating, "msg": msg})
 
     def bad(self, rating, msg):
-        self.__log.append({'rating': rating, 'msg': msg})
+        self.__log.append({"rating": rating, "msg": msg})
 
     # this data will be shared among all reports as they are
     # being calculated in real time
@@ -831,16 +852,16 @@ class SEOReport(models.Model):
         return self.__shared_data
 
     def set_state(self, key, value):
-        attrs = ['words']
+        attrs = ["words"]
         if key in attrs:
             self.__shared_state[key]: value
         else:
-            raise Exception(f'Trying to set invalid property {key} on SEO report shared state')
+            raise Exception(f"Trying to set invalid property {key} on SEO report shared state")
 
     def get_rating(self):
         total_rating = 100
         for entry in self.__log:
-            total_rating += entry['rating']
+            total_rating += entry["rating"]
 
         if total_rating < 0:
             return 0
@@ -853,7 +874,7 @@ class SEOReport(models.Model):
         return self.__log
 
     def to_json(self, rating, msg):
-        return {'rating': self.get_rating(), 'log': self.__log}
+        return {"rating": self.get_rating(), "log": self.__log}
 
 
 class AssetImage(models.Model):
@@ -863,22 +884,24 @@ class AssetImage(models.Model):
     original_url = models.URLField(max_length=255)
     hash = models.CharField(max_length=64)
 
-    assets = models.ManyToManyField(Asset, blank=True, related_name='images')
+    assets = models.ManyToManyField(Asset, blank=True, related_name="images")
 
     last_download_at = models.DateTimeField(null=True, blank=True, default=None)
     download_details = models.TextField(null=True, blank=True, default=None)
-    download_status = models.CharField(max_length=20,
-                                       choices=ASSET_SYNC_STATUS,
-                                       default='PENDING',
-                                       null=True,
-                                       blank=True,
-                                       help_text='Internal state automatically set by the system based on download')
+    download_status = models.CharField(
+        max_length=20,
+        choices=ASSET_SYNC_STATUS,
+        default="PENDING",
+        null=True,
+        blank=True,
+        help_text="Internal state automatically set by the system based on download",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.name} ({self.id})'
+        return f"{self.name} ({self.id})"
 
 
 class CredentialsOriginality(models.Model):
@@ -894,10 +917,10 @@ class CredentialsOriginality(models.Model):
 
 
 ASSET_ORIGINALITY_STATUS = (
-    ('PENDING', 'Pending'),
-    ('ERROR', 'Error'),
-    ('COMPLETED', 'Completed'),
-    ('WARNING', 'Warning'),
+    ("PENDING", "Pending"),
+    ("ERROR", "Error"),
+    ("COMPLETED", "Completed"),
+    ("WARNING", "Warning"),
 )
 
 
@@ -911,10 +934,9 @@ class OriginalityScan(models.Model):
 
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
 
-    status = models.CharField(max_length=20,
-                              choices=ASSET_ORIGINALITY_STATUS,
-                              default='PENDING',
-                              help_text='Scan for originality')
+    status = models.CharField(
+        max_length=20, choices=ASSET_ORIGINALITY_STATUS, default="PENDING", help_text="Scan for originality"
+    )
     status_text = models.TextField(default=None, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -922,16 +944,16 @@ class OriginalityScan(models.Model):
 
 
 VARIABLE_TYPE = (
-    ('MARKDOWN', 'Markdown'),
-    ('PYTHON_CODE', 'Python'),
-    ('FETCH_JSON', 'Fetch json from url'),
-    ('FETCH_TEXT', 'Fetch text from url'),
+    ("MARKDOWN", "Markdown"),
+    ("PYTHON_CODE", "Python"),
+    ("FETCH_JSON", "Fetch json from url"),
+    ("FETCH_TEXT", "Fetch text from url"),
 )
 
 CONTENT_VAR_STATUS = (
-    ('PENDING', 'Pending'),
-    ('ERROR', 'Error'),
-    ('COMPLETED', 'Completed'),
+    ("PENDING", "Pending"),
+    ("ERROR", "Error"),
+    ("COMPLETED", "Completed"),
 )
 
 
@@ -940,30 +962,35 @@ class ContentVariable(models.Model):
     key = models.CharField(max_length=100)
     value = models.TextField()
     default_value = models.TextField(
-        help_text='If the variable type is fetch or code and the processing fails, the default value will be used')
+        help_text="If the variable type is fetch or code and the processing fails, the default value will be used"
+    )
 
-    lang = models.CharField(max_length=2,
-                            blank=True,
-                            default=None,
-                            null=True,
-                            help_text='Leave blank if will be shown in all languages')
+    lang = models.CharField(
+        max_length=2, blank=True, default=None, null=True, help_text="Leave blank if will be shown in all languages"
+    )
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 
-    var_type = models.CharField(max_length=20,
-                                choices=VARIABLE_TYPE,
-                                default='MARKDOWN',
-                                help_text='Code vars accept python code, Fetch vars accept HTTP GET')
+    var_type = models.CharField(
+        max_length=20,
+        choices=VARIABLE_TYPE,
+        default="MARKDOWN",
+        help_text="Code vars accept python code, Fetch vars accept HTTP GET",
+    )
 
-    status = models.CharField(max_length=20,
-                              choices=CONTENT_VAR_STATUS,
-                              default='PENDING',
-                              help_text='Code vars accept python code, Fetch vars accept HTTP GET')
+    status = models.CharField(
+        max_length=20,
+        choices=CONTENT_VAR_STATUS,
+        default="PENDING",
+        help_text="Code vars accept python code, Fetch vars accept HTTP GET",
+    )
 
-    status_text = models.TextField(null=True,
-                                   default=None,
-                                   blank=True,
-                                   help_text='If the var is code or fetch here will be the error processing info')
+    status_text = models.TextField(
+        null=True,
+        default=None,
+        blank=True,
+        help_text="If the var is code or fetch here will be the error processing info",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

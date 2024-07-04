@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0021_auto_20201009_0224'),
+        ("marketing", "0021_auto_20201009_0224"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='formentry',
-            name='browser_lang',
+            model_name="formentry",
+            name="browser_lang",
             field=models.CharField(blank=True, default=None, max_length=10, null=True),
         ),
     ]

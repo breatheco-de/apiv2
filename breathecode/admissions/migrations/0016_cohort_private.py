@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0015_auto_20210302_0254'),
+        ("admissions", "0015_auto_20210302_0254"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='cohort',
-            name='private',
+            model_name="cohort",
+            name="private",
             field=models.BooleanField(default=False),
         ),
     ]

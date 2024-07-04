@@ -6,33 +6,38 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('mentorship', '0009_mentorshipsession_allow_billing'),
+        ("mentorship", "0009_mentorshipsession_allow_billing"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='mentorshipbill',
-            name='ended_at',
-            field=models.DateTimeField(blank=True,
-                                       default=None,
-                                       help_text='The bill includes all sessions from started_at to ended_at',
-                                       null=True),
+            model_name="mentorshipbill",
+            name="ended_at",
+            field=models.DateTimeField(
+                blank=True,
+                default=None,
+                help_text="The bill includes all sessions from started_at to ended_at",
+                null=True,
+            ),
         ),
         migrations.AddField(
-            model_name='mentorshipbill',
-            name='started_at',
-            field=models.DateTimeField(blank=True,
-                                       default=None,
-                                       help_text='The bill includes all sessions from started_at to ended_at',
-                                       null=True),
+            model_name="mentorshipbill",
+            name="started_at",
+            field=models.DateTimeField(
+                blank=True,
+                default=None,
+                help_text="The bill includes all sessions from started_at to ended_at",
+                null=True,
+            ),
         ),
         migrations.AddField(
-            model_name='mentorshipsession',
-            name='suggested_accounted_duration',
+            model_name="mentorshipsession",
+            name="suggested_accounted_duration",
             field=models.DurationField(
                 blank=True,
                 default=None,
-                help_text='The automatic suggested duration to be paid to the mentor for this session',
-                null=True),
+                help_text="The automatic suggested duration to be paid to the mentor for this session",
+                null=True,
+            ),
         ),
     ]

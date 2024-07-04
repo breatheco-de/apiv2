@@ -1,14 +1,16 @@
 import logging
+
 from django.dispatch import receiver
-from breathecode.authenticate.signals import academy_invite_accepted
-from breathecode.events.signals import event_saved
-from breathecode.authenticate.models import ProfileAcademy
-from breathecode.admissions.models import CohortUser, Cohort, Academy
-from breathecode.events.models import Event
-from breathecode.admissions.signals import student_edu_status_updated, cohort_saved, academy_saved
-from .models import FormEntry, ActiveCampaignAcademy
+
 import breathecode.marketing.tasks as tasks
-from .models import Downloadable, AcademyAlias
+from breathecode.admissions.models import Academy, Cohort, CohortUser
+from breathecode.admissions.signals import academy_saved, cohort_saved, student_edu_status_updated
+from breathecode.authenticate.models import ProfileAcademy
+from breathecode.authenticate.signals import academy_invite_accepted
+from breathecode.events.models import Event
+from breathecode.events.signals import event_saved
+
+from .models import AcademyAlias, ActiveCampaignAcademy, Downloadable, FormEntry
 from .signals import downloadable_saved
 from .tasks import add_downloadable_slug_as_acp_tag
 
@@ -19,7 +21,7 @@ logger = logging.getLogger(__name__)
 def post_save_profileacademy(sender, instance, **kwargs):
     # if a new ProfileAcademy is created on the authanticate app
     # look for the email on the formentry list and bind it
-    logger.debug('Receiver for academy_invite_accepted triggered, linking the new user to its respective form entries')
+    logger.debug("Receiver for academy_invite_accepted triggered, linking the new user to its respective form entries")
     entries = FormEntry.objects.filter(email=instance.user.email, user__isnull=True)
     for entry in entries:
         entry.user = instance.user
@@ -28,8 +30,8 @@ def post_save_profileacademy(sender, instance, **kwargs):
 
 @receiver(student_edu_status_updated, sender=CohortUser)
 def student_edustatus_updated(sender, instance, *args, **kwargs):
-    if instance.educational_status == 'ACTIVE':
-        logger.warning(f'Student is now active in cohort `{instance.cohort.slug}`, processing task')
+    if instance.educational_status == "ACTIVE":
+        logger.warning(f"Student is now active in cohort `{instance.cohort.slug}`, processing task")
         tasks.add_cohort_task_to_student.delay(instance.user.id, instance.cohort.id, instance.cohort.academy.id)
 
 

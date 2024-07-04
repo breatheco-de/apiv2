@@ -1,8 +1,10 @@
-from breathecode.admissions.models import Academy
-from .models import Media, Category, MediaResolution
-from slugify import slugify
 from rest_framework import serializers
+from slugify import slugify
+
+from breathecode.admissions.models import Academy
 from breathecode.utils import serpy
+
+from .models import Category, Media, MediaResolution
 
 
 class GetAcademySerializer(serpy.Serializer):
@@ -41,7 +43,7 @@ class GetMediaSerializer(serpy.Serializer):
     academy = GetAcademySerializer(required=False)
 
     def get_thumbnail(self, obj):
-        return obj.url + '-thumbnail'
+        return obj.url + "-thumbnail"
 
     def get_categories(self, obj):
         return [GetCategorySerializer(x).data for x in obj.categories.all()]
@@ -56,7 +58,7 @@ class GetResolutionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MediaResolution
-        fields = ('id', 'hash', 'width', 'height', 'hits')
+        fields = ("id", "hash", "width", "height", "hits")
 
 
 class MediaListSerializer(serializers.ListSerializer):
@@ -65,16 +67,16 @@ class MediaListSerializer(serializers.ListSerializer):
         ret = []
 
         for data in validated_data:
-            item = [x for x in instance if x.id == data['id']]
+            item = [x for x in instance if x.id == data["id"]]
             item = item[0] if len(item) else None
 
-            if 'id' in data and not data['id']:
-                del data['id']
+            if "id" in data and not data["id"]:
+                del data["id"]
 
-            if 'id' in data:
-                if item and 'categories' in data and data['categories']:
-                    item.categories.set(data['categories'])
-                    del data['categories']
+            if "id" in data:
+                if item and "categories" in data and data["categories"]:
+                    item.categories.set(data["categories"])
+                    del data["categories"]
                 ret.append(self.child.update(item, data))
 
             else:
@@ -94,7 +96,7 @@ class MediaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Media
-        fields = ('id', 'url', 'thumbnail', 'hash', 'hits', 'slug', 'mime', 'name', 'categories', 'academy')
+        fields = ("id", "url", "thumbnail", "hash", "hits", "slug", "mime", "name", "categories", "academy")
         exclude = ()
         list_serializer_class = MediaListSerializer
 
@@ -110,14 +112,17 @@ class MediaPUTSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Media
-        fields = ('id', 'url', 'thumbnail', 'hash', 'hits', 'slug', 'mime', 'name', 'categories', 'academy')
+        fields = ("id", "url", "thumbnail", "hash", "hits", "slug", "mime", "name", "categories", "academy")
         exclude = ()
         list_serializer_class = MediaListSerializer
 
     def validate(self, data):
-        if 'hash' in data and 'academy' in data and isinstance(data['academy'], Academy):
-            data['id'] = Media.objects.filter(hash=data['hash'],
-                                              academy__id=data['academy'].id).values_list('id', flat=True).first()
+        if "hash" in data and "academy" in data and isinstance(data["academy"], Academy):
+            data["id"] = (
+                Media.objects.filter(hash=data["hash"], academy__id=data["academy"].id)
+                .values_list("id", flat=True)
+                .first()
+            )
 
         return data
 
@@ -130,10 +135,10 @@ class CategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
-        fields = ('name', 'slug', 'created_at', 'id')
+        fields = ("name", "slug", "created_at", "id")
 
     def create(self, validated_data):
 
-        _slug = slugify(validated_data['name'])
-        result = super().create({**validated_data, 'slug': _slug})
+        _slug = slugify(validated_data["name"])
+        result = super().create({**validated_data, "slug": _slug})
         return result

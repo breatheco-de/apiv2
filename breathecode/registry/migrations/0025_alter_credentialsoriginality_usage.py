@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0024_credentialsoriginality_originalityscan'),
+        ("registry", "0024_credentialsoriginality_originalityscan"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='credentialsoriginality',
-            name='usage',
+            model_name="credentialsoriginality",
+            name="usage",
             field=models.JSONField(default=dict),
         ),
     ]

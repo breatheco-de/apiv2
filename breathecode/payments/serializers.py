@@ -108,8 +108,8 @@ class GetServiceItemWithFeaturesSerializer(GetServiceItemSerializer):
 
     def get_features(self, obj):
         query_args = []
-        query_kwargs = {'service_item': obj}
-        obj.lang = obj.lang or 'en'
+        query_kwargs = {"service_item": obj}
+        obj.lang = obj.lang or "en"
 
         query_args.append(Q(lang=obj.lang) | Q(lang=obj.lang[:2]) | Q(lang__startswith=obj.lang[:2]))
 
@@ -188,8 +188,8 @@ class GetPlanOfferSerializer(serpy.Serializer):
 
     def get_details(self, obj):
         query_args = []
-        query_kwargs = {'offer': obj}
-        obj.lang = obj.lang or 'en'
+        query_kwargs = {"offer": obj}
+        obj.lang = obj.lang or "en"
 
         query_args.append(Q(lang=obj.lang) | Q(lang=obj.lang[:2]) | Q(lang__startswith=obj.lang[:2]))
 
@@ -269,8 +269,8 @@ class POSTAcademyServiceSerializer(serializers.ModelSerializer):
         exclude = ()
 
     def validate(self, data):
-        if 'price_per_unit' not in data:
-            raise ValidationError('You must specify a price per unit')
+        if "price_per_unit" not in data:
+            raise ValidationError("You must specify a price per unit")
 
         return data
 
@@ -287,7 +287,7 @@ class PUTAcademyServiceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AcademyService
-        fields = '__all__'
+        fields = "__all__"
 
     def validate(self, data):
 
@@ -371,8 +371,8 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
     selected_mentorship_service_set = GetMentorshipServiceSetSerializer(many=False, required=False)
     selected_event_type_set = GetEventTypeSetSerializer(many=False, required=False)
 
-    plans = serpy.ManyToManyField(GetPlanSmallSerializer(attr='plans', many=True))
-    invoices = serpy.ManyToManyField(GetInvoiceSerializer(attr='invoices', many=True))
+    plans = serpy.ManyToManyField(GetPlanSmallSerializer(attr="plans", many=True))
+    invoices = serpy.ManyToManyField(GetInvoiceSerializer(attr="invoices", many=True))
 
     next_payment_at = serpy.Field()
     valid_until = serpy.Field()
@@ -434,29 +434,29 @@ class ServiceSerializer(serializers.Serializer):
 
     class Meta:
         model = Service
-        fields = '__all__'
+        fields = "__all__"
 
     def validate(self, attrs):
         return attrs
 
 
 class ServiceItemSerializer(serializers.Serializer):
-    status_fields = ['unit_type']
+    status_fields = ["unit_type"]
 
     class Meta:
         model = ServiceItem
-        fields = '__all__'
+        fields = "__all__"
 
     def validate(self, attrs):
         return attrs
 
 
 class PlanSerializer(serializers.ModelSerializer):
-    status_fields = ['status', 'renew_every_unit', 'trial_duration_unit', 'time_of_life_unit']
+    status_fields = ["status", "renew_every_unit", "trial_duration_unit", "time_of_life_unit"]
 
     class Meta:
         model = Plan
-        fields = '__all__'
+        fields = "__all__"
 
     def validate(self, attrs):
         return attrs
@@ -473,11 +473,11 @@ class PlanSerializer(serializers.ModelSerializer):
 
 
 class PutPlanSerializer(PlanSerializer):
-    status_fields = ['status', 'renew_every_unit', 'trial_duration_unit', 'time_of_life_unit']
+    status_fields = ["status", "renew_every_unit", "trial_duration_unit", "time_of_life_unit"]
 
     class Meta:
         model = Plan
-        fields = '__all__'
+        fields = "__all__"
 
     def validate(self, attrs):
         return attrs

@@ -6,19 +6,19 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('freelance', '0010_repositoryissuewebhook'),
+        ("freelance", "0010_repositoryissuewebhook"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='issue',
-            name='node_id',
+            model_name="issue",
+            name="node_id",
             field=models.CharField(
                 blank=True,
                 default=None,
-                help_text=
-                'This is the only unique identifier we get from github, the issue number its not unique among repos',
+                help_text="This is the only unique identifier we get from github, the issue number its not unique among repos",
                 max_length=50,
-                null=True),
+                null=True,
+            ),
         ),
     ]

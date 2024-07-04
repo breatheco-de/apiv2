@@ -6,28 +6,33 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('mentorship', '0023_auto_20230512_2338'),
+        ("mentorship", "0023_auto_20230512_2338"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='calendlyorganization',
-            name='max_concurrent_sessions',
+            model_name="calendlyorganization",
+            name="max_concurrent_sessions",
             field=models.IntegerField(
                 default=None,
-                help_text=
-                'For example: Users will only be allowed to book 2 sessions per service at a time, they will have to wait for sessions to complete (or cancel) before booking again'
+                help_text="For example: Users will only be allowed to book 2 sessions per service at a time, they will have to wait for sessions to complete (or cancel) before booking again",
             ),
         ),
         migrations.AlterField(
-            model_name='mentorshipsession',
-            name='status',
+            model_name="mentorshipsession",
+            name="status",
             field=models.CharField(
-                choices=[('PENDING', 'Pending'), ('STARTED', 'Started'), ('COMPLETED', 'Completed'),
-                         ('CANCELED', 'Canceled'), ('FAILED', 'Failed'), ('IGNORED', 'Ignored')],
-                default='PENDING',
-                help_text=
-                'Options are: PENDING, STARTED, COMPLETED, CANCELED, FAILED, IGNORED. Ignored sessions will not be billed.',
-                max_length=15),
+                choices=[
+                    ("PENDING", "Pending"),
+                    ("STARTED", "Started"),
+                    ("COMPLETED", "Completed"),
+                    ("CANCELED", "Canceled"),
+                    ("FAILED", "Failed"),
+                    ("IGNORED", "Ignored"),
+                ],
+                default="PENDING",
+                help_text="Options are: PENDING, STARTED, COMPLETED, CANCELED, FAILED, IGNORED. Ignored sessions will not be billed.",
+                max_length=15,
+            ),
         ),
     ]

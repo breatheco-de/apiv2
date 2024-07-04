@@ -7,21 +7,21 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0042_asset_enable_table_of_content_alter_asset_gitpod_and_more'),
+        ("registry", "0042_asset_enable_table_of_content_alter_asset_gitpod_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='asset',
-            name='superseded_by',
+            model_name="asset",
+            name="superseded_by",
             field=models.OneToOneField(
                 blank=True,
                 default=None,
-                help_text=
-                'The newer version of the article (null if it is the latest version). This is used for technology deprecation, for example, a new article to explain the new version of react router',
+                help_text="The newer version of the article (null if it is the latest version). This is used for technology deprecation, for example, a new article to explain the new version of react router",
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
-                related_name='previous_version',
-                to='registry.asset'),
+                related_name="previous_version",
+                to="registry.asset",
+            ),
         ),
     ]

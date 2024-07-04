@@ -1,21 +1,23 @@
 from __future__ import annotations
-import re
+
 import inspect
-from rest_framework.test import APITestCase
+import re
 from typing import Optional
+
 from faker import Faker
+from rest_framework.test import APITestCase
 
-from .interfaces import BreathecodeInterface
-from .garbage_collector import GarbageCollector
 from .cache import Cache
-from .datetime import Datetime
-from .request import Request
-from .database import Database
 from .check import Check
+from .database import Database
+from .datetime import Datetime
 from .format import Format
+from .garbage_collector import GarbageCollector
+from .interfaces import BreathecodeInterface
 from .random import Random
+from .request import Request
 
-__all__ = ['Breathecode', 'fake']
+__all__ = ["Breathecode", "fake"]
 fake = Faker()
 
 
@@ -23,9 +25,9 @@ def print_arguments(func: callable) -> str:
     try:
         varnames = str(inspect.signature(func))
     except ValueError:
-        raise Exception(f'{func.__name__} is a invalid function/method')
+        raise Exception(f"{func.__name__} is a invalid function/method")
 
-    return varnames.replace('self, ', '').replace('cls, ', '')
+    return varnames.replace("self, ", "").replace("cls, ", "")
 
 
 class Breathecode(BreathecodeInterface):
@@ -81,51 +83,51 @@ class Breathecode(BreathecodeInterface):
         assert False
 
     def _get_doctring(self, path: str) -> None:
-        parts_of_path = path.split('.')
-        current_path = ''
+        parts_of_path = path.split(".")
+        current_path = ""
         current = None
 
         for part_of_path in parts_of_path:
             if not current:
                 if not hasattr(self._parent, part_of_path):
-                    current_path += f'.{part_of_path}'
+                    current_path += f".{part_of_path}"
                     break
 
                 current = getattr(self._parent, part_of_path)
 
             else:
                 if not hasattr(current, part_of_path):
-                    current_path += f'.{part_of_path}'
+                    current_path += f".{part_of_path}"
                     current = None
                     break
 
                 current = getattr(current, part_of_path)
 
         if current:
-            from unittest.mock import patch, MagicMock
+            from unittest.mock import MagicMock, patch
 
             if callable(current):
-                print(f'self.{path}{print_arguments(current)}:')
+                print(f"self.{path}{print_arguments(current)}:")
             else:
-                print(f'self.{path}:')
+                print(f"self.{path}:")
 
             print()
 
-            with patch('sys.stdout.write', MagicMock()) as mock:
+            with patch("sys.stdout.write", MagicMock()) as mock:
                 help(current)
 
             for args, _ in mock.call_args_list:
-                if args[0] == '\n':
+                if args[0] == "\n":
                     print()
-                lines = args[0].split('\n')
+                lines = args[0].split("\n")
 
                 for line in lines[3:-1]:
-                    print(f'    {line}')
+                    print(f"    {line}")
 
         else:
-            print(f'self.{path}:')
+            print(f"self.{path}:")
             print()
-            print(f'    self{current_path} not exists.')
+            print(f"    self{current_path} not exists.")
 
         print()
 
@@ -135,37 +137,37 @@ class Breathecode(BreathecodeInterface):
         result: list[str] = []
 
         if not parent:
-            result.append('bc')
+            result.append("bc")
 
-        parent = [x for x in dir(parent or self) if not x.startswith('_')]
+        parent = [x for x in dir(parent or self) if not x.startswith("_")]
 
         if last_item:
-            starts = '    ' + ('│   ' * (level - 1))
+            starts = "    " + ("│   " * (level - 1))
 
         else:
-            starts = '│   ' * level
+            starts = "│   " * level
 
         for key in parent:
             item = getattr(self, key)
 
             if callable(item):
-                result.append(f'{starts}├── {key}{print_arguments(item)}')
+                result.append(f"{starts}├── {key}{print_arguments(item)}")
 
             else:
-                result.append(f'{starts}├── {key}')
+                result.append(f"{starts}├── {key}")
 
                 last_item = parent.index(key) == len(parent) - 1
                 result = [*result, *Breathecode._help_tree(item, level + 1, item, last_item)]
 
-        result[-1] = result[-1].replace('  ├── ', '  └── ')
-        result[-1] = result[-1].replace(r'├── ([a-zA-Z0-9]+)$', r'└── \1')
+        result[-1] = result[-1].replace("  ├── ", "  └── ")
+        result[-1] = result[-1].replace(r"├── ([a-zA-Z0-9]+)$", r"└── \1")
 
         for n in range(len(result) - 1, -1, -1):
-            if result[n][0] == '├':
-                result[n] = re.sub(r'^├', r'└', result[n])
+            if result[n][0] == "├":
+                result[n] = re.sub(r"^├", r"└", result[n])
                 break
 
         if level == 0:
-            print('\n'.join(result))
+            print("\n".join(result))
 
         return result

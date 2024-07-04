@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authenticate', '0005_auto_20200814_0428'),
+        ("authenticate", "0005_auto_20200814_0428"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='token',
-            name='expires_at',
+            model_name="token",
+            name="expires_at",
             field=models.DateTimeField(blank=True, default=None, null=True),
         ),
     ]

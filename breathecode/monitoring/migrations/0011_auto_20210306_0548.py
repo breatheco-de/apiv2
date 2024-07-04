@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('monitoring', '0010_merge_20210302_0120'),
+        ("monitoring", "0010_merge_20210302_0120"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='endpoint',
-            name='status_code',
+            model_name="endpoint",
+            name="status_code",
             field=models.IntegerField(default=200),
         ),
     ]
