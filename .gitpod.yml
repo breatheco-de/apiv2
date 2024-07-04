@@ -33,4 +33,10 @@ vscode:
     - eamodio.gitlens
     - gruntfuggly.todo-tree
     - redhat.vscode-yaml
-    - bungcip.better-toml
+    - ms-python.black-formatter
+    - ms-python.isort
+    - janisdd.vscode-edit-csv
+    - tamasfe.even-better-toml
+    - ms-python.flake8
+    - donjayamanne.githistory
+    - ms-python.debugpy
