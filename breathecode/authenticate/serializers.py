@@ -15,7 +15,7 @@ from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_app_url, get_user_settings
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
-from breathecode.utils import serpy
+from breathecode.utils import serpy, validate_conversion_info
 from breathecode.utils.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 
@@ -649,26 +649,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                                           code=400)
 
         conversion_info = data.get('conversion_info', None)
-        if conversion_info is not None:
-            if not isinstance(conversion_info, dict):
-                raise ValidationException(translation(lang,
-                                                      en='conversion_info should be a JSON object',
-                                                      es='conversion_info debería ser un objeto de JSON',
-                                                      slug='conversion-info-json-type'),
-                                          code=400)
-
-            expected_keys = [
-                'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'utm_campaign',
-                'conversion_url', 'landing_url', 'user_agent', 'plan', 'location', 'translations'
-            ]
-
-            for key in conversion_info.keys():
-                if key not in expected_keys:
-                    raise ValidationException(translation(lang,
-                                                          en=f'Invalid key {key} provided in the conversion_info',
-                                                          es=f'Clave inválida {key} agregada en el conversion_info',
-                                                          slug='conversion-info-invalid-key'),
-                                              code=400)
+        validate_conversion_info(conversion_info, lang)
 
         return data
 
@@ -1401,27 +1382,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                                           code=400)
 
         conversion_info = data.get('conversion_info', None)
-        if conversion_info is not None:
-            if not isinstance(conversion_info, dict):
-                raise ValidationException(translation(lang,
-                                                      en='conversion_info should be a JSON object',
-                                                      es='conversion_info debería ser un objeto de JSON',
-                                                      slug='conversion-info-json-type'),
-                                          code=400)
-
-            expected_keys = [
-                'utm_placement', 'utm_medium', 'utm_source', 'utm_term', 'utm_content', 'utm_campaign',
-                'conversion_url', 'landing_url', 'user_agent', 'plan', 'location', 'internal_cta_placement',
-                'internal_cta_content', 'internal_cta_campaign'
-            ]
-
-            for key in conversion_info.keys():
-                if key not in expected_keys:
-                    raise ValidationException(translation(lang,
-                                                          en=f'Invalid key {key} provided in the conversion_info',
-                                                          es=f'Clave inválida {key} agregada en el conversion_info',
-                                                          slug='conversion-info-invalid-key'),
-                                              code=400)
+        validate_conversion_info(conversion_info, lang)
 
         return data
 

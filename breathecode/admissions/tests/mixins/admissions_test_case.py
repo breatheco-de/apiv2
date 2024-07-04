@@ -3,11 +3,19 @@ Collections of mixins used to login in authorize microservice
 """
 import re
 from unittest.mock import MagicMock, patch
+
 from django.urls.base import reverse_lazy
-from rest_framework.test import APITestCase
-from breathecode.tests.mixins import (GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, DatetimeMixin, ICallMixin,
-                                      BreathecodeMixin)
 from rest_framework import status
+from rest_framework.test import APITestCase
+
+from breathecode.tests.mixins import (
+    BreathecodeMixin,
+    CacheMixin,
+    DatetimeMixin,
+    GenerateModelsMixin,
+    GenerateQueriesMixin,
+    ICallMixin,
+)
 
 
 class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, DatetimeMixin, ICallMixin,
@@ -128,7 +136,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 'watching': False,
             }])
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
     def check_academy_cohort__with_data(self, models=None, deleted=False):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -157,7 +165,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
             ]
 
             # reset because this call are coming from mixer
-            cohort_saved.send.call_args_list = []
+            cohort_saved.send_robust.call_args_list = []
 
         models.sort(key=lambda x: x.cohort.kickoff_date, reverse=True)
 
@@ -247,10 +255,10 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), self.all_model_dict([x.cohort for x in models]))
-        self.assertEqual(cohort_saved.send.call_args_list, [])
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
         return models
 
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('breathecode.admissions.signals.cohort_saved.send_robust', MagicMock())
     def check_cohort_me__with_data(self, models=None, deleted=False):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
@@ -280,7 +288,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
             ]
 
             # reset because this call are coming from mixer
-            cohort_saved.send.call_args_list = []
+            cohort_saved.send_robust.call_args_list = []
 
         models.sort(key=lambda x: x.cohort.kickoff_date, reverse=True)
 
@@ -371,5 +379,5 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('admissions.Cohort'), self.all_model_dict([x.cohort for x in models]))
-        self.assertEqual(cohort_saved.send.call_args_list, [])
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
         return models

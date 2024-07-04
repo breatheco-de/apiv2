@@ -2,9 +2,10 @@ import random
 from unittest.mock import MagicMock, call, patch
 
 from breathecode.tests.mixins.breathecode_mixin.breathecode import fake
-from ..mixins import SlackTestCase
-from ...exceptions import SlackException
+
 from ...commands.student import execute
+from ...exceptions import SlackException
+from ..mixins import SlackTestCase
 
 API_URL = fake.url()[0:-1]
 
@@ -36,8 +37,8 @@ def apply_get_env(configuration={}):
 
 class SlackTestSuite(SlackTestCase):
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_slack_command___context_is_not_provide_or_is_none(self):
         """Testing  ."""
 
@@ -47,8 +48,8 @@ class SlackTestSuite(SlackTestCase):
         with self.assertRaisesMessage(SlackException, 'context-missing'):
             result = execute(users=[], context=None)
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_slack_command___user_is_not_authorized(self):
         """Testing  ."""
 
@@ -57,8 +58,8 @@ class SlackTestSuite(SlackTestCase):
         with self.assertRaisesMessage(SlackException, 'unauthorized-user'):
             result = execute(users=[], context=data)
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_slack_command___users_is_an_empty_list(self):
         """Testing  when passing and empty list to users."""
 
@@ -78,8 +79,8 @@ class SlackTestSuite(SlackTestCase):
         with self.assertRaisesMessage(SlackException, 'users-not-provided'):
             result = execute(users=[], context=data)
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_slack_command___user_not_registered_in_a_cohort(self):
         """Testing when user is not registered in a cohort."""
 
@@ -98,8 +99,8 @@ class SlackTestSuite(SlackTestCase):
         with self.assertRaisesMessage(SlackException, 'cohort-user-not-found'):
             result = execute(users=['fdd2325'], context=data)
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_slack_command___user_registered_in_a_cohort__without_financial_status_or_educational_status(self):
         """Testing when user is registered in a cohort."""
 
@@ -147,8 +148,8 @@ class SlackTestSuite(SlackTestCase):
         self.assertEqual(result, expected)
         self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [])
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_slack_command___user_registered_in_two_cohorts__with_financial_status_and_educational_status(self):
         """Testing when user is registered in a cohort."""
 
@@ -208,8 +209,8 @@ class SlackTestSuite(SlackTestCase):
         self.assertEqual(result, expected)
         self.assertEqual(self.bc.database.list_of('authenticate.Profile'), [])
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_slack_command___user_registered_in_two_different_cohorts__with_financial_status_and_educational_status(
             self):
         """Testing when user is registered in two different cohorts with financial and educational status."""
@@ -276,8 +277,8 @@ class SlackTestSuite(SlackTestCase):
     """
 
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'API_URL': API_URL})))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_slack_command___with_profile_empty(self):
         """Testing when user is registered in two different cohorts with financial and educational status."""
 
@@ -351,8 +352,8 @@ class SlackTestSuite(SlackTestCase):
     """
 
     @patch('os.getenv', MagicMock(side_effect=apply_get_env({'API_URL': API_URL})))
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_slack_command___with_profile_set(self):
         """Testing when user is registered in two different cohorts with financial and educational status."""
 

@@ -6,6 +6,7 @@ import os
 from datetime import timedelta
 from typing import Any, Optional
 
+from asgiref.sync import sync_to_async
 from currencies import Currency as CurrencyFormatter
 from django import forms
 from django.contrib.auth.models import Group, Permission, User
@@ -156,7 +157,7 @@ class Service(AbstractAsset):
         COHORT_SET = ('COHORT_SET', 'Cohort set')
         MENTORSHIP_SERVICE_SET = ('MENTORSHIP_SERVICE_SET', 'Mentorship service set')
         EVENT_TYPE_SET = ('EVENT_TYPE_SET', 'Event type set')
-        SERVICE_SET = ('SERVICE_SET', 'Service set')
+        VOID = ('VOID', 'Void')
 
     groups = models.ManyToManyField(Group,
                                     blank=True,
@@ -484,41 +485,6 @@ class AcademyService(models.Model):
         return super().save(*args, **kwargs)
 
 
-class ServiceSet(models.Model):
-    _lang = 'en'
-
-    slug = models.SlugField(max_length=100,
-                            unique=True,
-                            db_index=True,
-                            help_text='A human-readable identifier, it must be unique and it can only contain letters, '
-                            'numbers and hyphens')
-    academy = models.ForeignKey(Academy,
-                                on_delete=models.CASCADE,
-                                help_text='Academy',
-                                null=True,
-                                blank=True,
-                                default=None)
-    services = models.ManyToManyField(to=Service, blank=True, help_text='Services')
-
-    def save(self, *args, **kwargs):
-        self.full_clean()
-
-        super().save(*args, **kwargs)
-
-    def __str__(self) -> str:
-        return self.academy.name + ' -> ' + self.slug
-
-
-class ServiceSetTranslation(models.Model):
-    service_set = models.ForeignKey(ServiceSet, on_delete=models.CASCADE, help_text='Service set')
-    lang = models.CharField(max_length=5,
-                            validators=[validate_language_code],
-                            help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US')
-    title = models.CharField(max_length=60, help_text='Title of the cohort set')
-    description = models.CharField(max_length=255, help_text='Description of the cohort set')
-    short_description = models.CharField(max_length=255, help_text='Short description of the cohort set')
-
-
 ACTIVE = 'ACTIVE'
 UNLISTED = 'UNLISTED'
 DELETED = 'DELETED'
@@ -590,13 +556,6 @@ class Plan(AbstractPriceByTime):
                                        null=True,
                                        default=None,
                                        help_text='Event type set to be sold in this service and plan')
-
-    service_set = models.ForeignKey(ServiceSet,
-                                    on_delete=models.SET_NULL,
-                                    blank=True,
-                                    null=True,
-                                    default=None,
-                                    help_text='Service set to be sold in this service and plan')
 
     invites = models.ManyToManyField(UserInvite, blank=True, help_text='Plan\'s invites', related_name='plans')
 
@@ -1031,15 +990,13 @@ class AbstractIOweYou(models.Model):
                                                 blank=True,
                                                 default=None,
                                                 help_text='Event type set which the plans and services is for')
-    selected_service_set = models.ForeignKey(ServiceSet,
-                                             on_delete=models.CASCADE,
-                                             null=True,
-                                             blank=True,
-                                             default=None,
-                                             help_text='Service set which the plans and services is for')
 
     # this reminds the plans to change the stock scheduler on change
     plans = models.ManyToManyField(Plan, blank=True, help_text='Plans to be supplied')
+    conversion_info = models.JSONField(default=None,
+                                       blank=True,
+                                       null=True,
+                                       help_text='UTMs and other conversion information.')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -1093,7 +1050,7 @@ class PlanFinancing(AbstractIOweYou):
         super().save(*args, **kwargs)
 
         if on_create:
-            signals.planfinancing_created.send(instance=self, sender=self.__class__)
+            signals.planfinancing_created.send_robust(instance=self, sender=self.__class__)
 
 
 class Subscription(AbstractIOweYou):
@@ -1151,7 +1108,7 @@ class Subscription(AbstractIOweYou):
         super().save(*args, **kwargs)
 
         if on_create:
-            signals.subscription_created.send(instance=self, sender=self.__class__)
+            signals.subscription_created.send_robust(instance=self, sender=self.__class__)
 
 
 class SubscriptionServiceItem(models.Model):
@@ -1211,12 +1168,6 @@ class Consumable(AbstractServiceItem):
                                                blank=True,
                                                null=True,
                                                help_text='Mentorship service set which the consumable belongs to')
-    service_set = models.ForeignKey(ServiceSet,
-                                    on_delete=models.CASCADE,
-                                    default=None,
-                                    blank=True,
-                                    null=True,
-                                    help_text='Service set which the consumable belongs to')
 
     valid_until = models.DateTimeField(
         null=True,
@@ -1288,6 +1239,18 @@ class Consumable(AbstractServiceItem):
         }).exclude(how_many=0).order_by('id')
 
     @classmethod
+    @sync_to_async
+    def alist(cls,
+              *,
+              user: User | str | int,
+              lang: str = 'en',
+              service: Optional[Service | str | int] = None,
+              permission: Optional[Permission | str | int] = None,
+              extra: dict = None) -> QuerySet[Consumable]:
+
+        return cls.list(user=user, lang=lang, service=service, permission=permission, extra=extra)
+
+    @classmethod
     def get(cls,
             *,
             user: User | str | int,
@@ -1301,8 +1264,19 @@ class Consumable(AbstractServiceItem):
 
         return cls.list(user=user, lang=lang, service=service, permission=permission, extra=extra).first()
 
+    @classmethod
+    @sync_to_async
+    def aget(cls,
+             *,
+             user: User | str | int,
+             lang: str = 'en',
+             service: Optional[Service | str | int] = None,
+             permission: Optional[Permission | str | int] = None,
+             extra: Optional[dict] = None) -> Consumable | None:
+        return cls.get(user=user, lang=lang, service=service, permission=permission, extra=extra)
+
     def clean(self) -> None:
-        resources = [self.event_type_set, self.mentorship_service_set, self.service_set, self.cohort_set]
+        resources = [self.event_type_set, self.mentorship_service_set, self.cohort_set]
 
         how_many_resources_are_set = len([r for r in resources if r])
         settings = get_user_settings(self.user.id)
@@ -1329,7 +1303,7 @@ class Consumable(AbstractServiceItem):
         created = not self.id
 
         if created and self.how_many != 0:
-            signals.grant_service_permissions.send(instance=self, sender=self.__class__)
+            signals.grant_service_permissions.send_robust(instance=self, sender=self.__class__)
 
         super().save(*args, **kwargs)
 
@@ -1410,7 +1384,7 @@ class ConsumptionSession(models.Model):
 
         utc_now = timezone.now()
 
-        resource = consumable.mentorship_service_set or consumable.event_type_set or consumable.cohort_set or consumable.service_set
+        resource = consumable.mentorship_service_set or consumable.event_type_set or consumable.cohort_set
         id = resource.id if resource else 0
         slug = resource.slug if resource else ''
 
@@ -1459,6 +1433,16 @@ class ConsumptionSession(models.Model):
                                   user=user)
 
     @classmethod
+    @sync_to_async
+    def abuild_session(cls,
+                       request: WSGIRequest,
+                       consumable: Consumable,
+                       delta: timedelta,
+                       user: Optional[User] = None,
+                       operation_code: Optional[str] = None) -> 'ConsumptionSession':
+        return cls.build_session(request, consumable, delta, user, operation_code)
+
+    @classmethod
     def get_session(cls, request: WSGIRequest) -> 'ConsumptionSession':
         if not request.user.id:
             return None
@@ -1483,6 +1467,11 @@ class ConsumptionSession(models.Model):
         data = cls.sort_dict(data)
         return cls.objects.filter(eta__gte=utc_now, request=data, user=request.user).first()
 
+    @classmethod
+    @sync_to_async
+    def aget_session(cls, request: WSGIRequest) -> 'ConsumptionSession':
+        return cls.get_session(request)
+
     def will_consume(self, how_many: float = 1.0) -> None:
         # avoid dependency circle
         from breathecode.payments.tasks import end_the_consumption_session
@@ -1491,6 +1480,10 @@ class ConsumptionSession(models.Model):
         self.save()
 
         end_the_consumption_session.apply_async(args=(self.id, how_many), eta=self.eta)
+
+    @sync_to_async
+    def awill_consume(self, how_many: float = 1.0) -> None:
+        return self.will_consume(how_many)
 
 
 class PlanServiceItem(models.Model):
@@ -1648,3 +1641,20 @@ class FinancialReputation(models.Model):
 
     def __str__(self) -> str:
         return f'{self.user.email} -> {self.get_reputation()}'
+
+
+class PaymentMethod(models.Model):
+    """
+    Different payment methods of each academy have.
+    """
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text='Academy owner')
+    title = models.CharField(max_length=120, null=False, blank=False)
+    is_credit_card = models.BooleanField(default=False, null=False, blank=False)
+    description = models.CharField(max_length=255, help_text='Description of the payment method')
+    third_party_link = models.URLField(blank=True,
+                                       null=True,
+                                       default=None,
+                                       help_text='Link of a third party payment method')
+    lang = models.CharField(max_length=5,
+                            validators=[validate_language_code],
+                            help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US')

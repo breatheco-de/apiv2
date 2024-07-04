@@ -539,6 +539,26 @@ class VisibilityFilter(admin.SimpleListFilter):
         if self.value() == 'PRIVATE':
             return queryset.filter(visibility='PRIVATE')
 
+class SortPriorityFilter(admin.SimpleListFilter):
+
+    title = 'Sort Priority'
+
+    parameter_name = 'sort_priority'
+
+    def lookups(self, request, model_admin):
+
+        return (('1', '1'), ('2', '2'), ('3', '3'))
+
+    def queryset(self, request, queryset):
+        if self.value() == '1':
+            return queryset.filter(sort_priority='1')
+
+        if self.value() == '2':
+            return queryset.filter(sort_priority='2')
+
+        if self.value() == '3':
+            return queryset.filter(sort_priority='3')
+
 
 def mark_technologies_as_unlisted(modeladmin, request, queryset):
     technologies = queryset.all()
@@ -551,7 +571,7 @@ def mark_technologies_as_unlisted(modeladmin, request, queryset):
 class AssetTechnologyAdmin(admin.ModelAdmin):
     search_fields = ['title', 'slug']
     list_display = ('id', 'get_slug', 'title', 'parent', 'featured_asset', 'description', 'visibility', 'is_deprecated')
-    list_filter = (ParentFilter, VisibilityFilter, IsDeprecatedFilter)
+    list_filter = (ParentFilter, VisibilityFilter, IsDeprecatedFilter, SortPriorityFilter)
     raw_id_fields = ['parent', 'featured_asset']
 
     actions = (merge_technologies, slug_to_lower_case, mark_technologies_as_unlisted)

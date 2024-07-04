@@ -388,7 +388,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     🔽🔽🔽 GET with two MentorshipSession, one MentorProfile and one MentorshipService, passing status
     """
 
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     def test__get__with_two_mentor_profile__passing_bad_status(self):
         statuses = ['PENDING', 'STARTED', 'COMPLETED', 'FAILED', 'IGNORED']
 
@@ -427,7 +427,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             # teardown
             self.bc.database.delete('mentorship.MentorshipSession')
 
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     def test__get__with_two_mentor_profile__passing_status(self):
         statuses = ['PENDING', 'STARTED', 'COMPLETED', 'FAILED', 'IGNORED']
 
@@ -484,7 +484,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     🔽🔽🔽 GET with two MentorshipSession, one MentorProfile and one MentorshipService, passing billed
     """
 
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     def test__get__with_two_mentor_profile__passing_billed_as_true__without_mentorship_bill(self):
         model = self.bc.database.create(user=1,
                                         role=1,
@@ -510,7 +510,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.bc.format.to_dict(model.mentorship_session),
         ])
 
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     def test__get__with_two_mentor_profile__passing_billed_as_true__with_mentorship_bill(self):
         model = self.bc.database.create(user=1,
                                         role=1,
@@ -544,7 +544,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.bc.format.to_dict(model.mentorship_session),
         ])
 
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     def test__get__with_two_mentor_profile__passing_billed_as_false__with_mentorship_bill(self):
         model = self.bc.database.create(user=1,
                                         role=1,
@@ -571,7 +571,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.bc.format.to_dict(model.mentorship_session),
         ])
 
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     def test__get__with_two_mentor_profile__passing_billed_as_false__without_mentorship_bill(self):
         model = self.bc.database.create(user=1,
                                         role=1,
@@ -608,7 +608,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     🔽🔽🔽 GET with two MentorshipSession, one MentorProfile and one MentorshipService, passing started_after
     """
 
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     def test__get__with_two_mentor_profile__passing_bad_started_after(self):
         utc_now = timezone.now()
         mentorship_session = {'started_at': utc_now}
@@ -636,7 +636,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.bc.format.to_dict(model.mentorship_session),
         ])
 
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     def test__get__with_two_mentor_profile__passing_started_after(self):
         utc_now = timezone.now()
         mentorship_session = {'started_at': utc_now}
@@ -671,7 +671,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.bc.format.to_dict(model.mentorship_session),
         ])
 
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     def test__get__with_two_mentor_profile__passing_started_after__without_started_at(self):
         utc_now = timezone.now()
         model = self.bc.database.create(user=1,
@@ -714,7 +714,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     🔽🔽🔽 GET with two MentorshipSession, one MentorProfile and one MentorshipService, passing ended_before
     """
 
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     def test__get__with_two_mentor_profile__passing_bad_ended_before(self):
         utc_now = timezone.now()
         mentorship_session = {'ended_at': utc_now}
@@ -742,7 +742,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.bc.format.to_dict(model.mentorship_session),
         ])
 
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     def test__get__with_two_mentor_profile__passing_ended_before(self):
         utc_now = timezone.now()
         mentorship_session = {'ended_at': utc_now}
@@ -777,7 +777,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.bc.format.to_dict(model.mentorship_session),
         ])
 
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     def test__get__with_two_mentor_profile__passing_ended_before__without_ended_at(self):
         utc_now = timezone.now()
         model = self.bc.database.create(user=1,

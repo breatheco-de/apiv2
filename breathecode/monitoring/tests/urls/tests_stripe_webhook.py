@@ -1,13 +1,15 @@
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import MagicMock, call, patch
+
 from django.http.request import HttpRequest
 from django.urls import reverse_lazy
+from rest_framework import status
 
-from ..mixins import MonitoringTestCase
+from breathecode.monitoring import signals
+
 # that 'import as' is thanks pytest think 'test_endpoint' is one fixture
 from ...admin import test_endpoint as check_endpoint
 from ...models import Endpoint
-from rest_framework import status
-from breathecode.monitoring import signals
+from ..mixins import MonitoringTestCase
 
 CURRENT_MOCK = MagicMock()
 CURRENT_PATH = 'breathecode.monitoring.tasks.test_endpoint'
@@ -20,7 +22,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
     # When: no signature
     # Then: return 403
-    @patch('breathecode.monitoring.signals.stripe_webhook.send', MagicMock(return_value=None))
+    @patch('breathecode.monitoring.signals.stripe_webhook.send_robust', MagicMock(return_value=None))
     def tests_no_signature(self):
         # model = self.bc.database.create()
 
@@ -36,7 +38,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
     # When: invalid payload
     # Then: return 400
-    @patch('breathecode.monitoring.signals.stripe_webhook.send', MagicMock(return_value=None))
+    @patch('breathecode.monitoring.signals.stripe_webhook.send_robust', MagicMock(return_value=None))
     @patch('stripe.Webhook.construct_event', MagicMock(side_effect=ValueError('x')))
     def tests_invalid_payload(self):
         url = reverse_lazy('monitoring:stripe_webhook')
@@ -52,7 +54,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
     # When: invalid payload, inside action
     # Then: return 400
-    @patch('breathecode.monitoring.signals.stripe_webhook.send', MagicMock(return_value=None))
+    @patch('breathecode.monitoring.signals.stripe_webhook.send_robust', MagicMock(return_value=None))
     @patch('stripe.Webhook.construct_event', MagicMock(return_value={}))
     def tests_invalid_payload__inside_action(self):
         url = reverse_lazy('monitoring:stripe_webhook')
@@ -68,7 +70,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
     # When: success
     # Then: return 200
-    @patch('breathecode.monitoring.signals.stripe_webhook.send', MagicMock(return_value=None))
+    @patch('breathecode.monitoring.signals.stripe_webhook.send_robust', MagicMock(return_value=None))
     def tests_success(self):
         url = reverse_lazy('monitoring:stripe_webhook')
         self.bc.request.set_headers(stripe_signature='123')
@@ -106,6 +108,6 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         StripeEvent = self.bc.database.get_model('monitoring.StripeEvent')
         event = StripeEvent.objects.filter(id=1).first()
 
-        self.bc.check.calls(signals.stripe_webhook.send.call_args_list, [
+        self.bc.check.calls(signals.stripe_webhook.send_robust.call_args_list, [
             call(event=event, sender=event.__class__),
         ])

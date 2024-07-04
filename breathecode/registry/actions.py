@@ -1,20 +1,37 @@
-import logging, json, os, re, pathlib, base64, hashlib, requests
+import base64
+import hashlib
+import json
+import logging
+import os
+import pathlib
+import re
 from typing import Optional
-from breathecode.media.models import Media, MediaResolution
-from breathecode.utils.views import set_query_parameter
-from breathecode.services.google_cloud.storage import Storage
-from django.db.models import Q
-from django.utils import timezone
-from django.template.loader import get_template
 from urllib.parse import urlencode
+
+import requests
+from django.db.models import Q
+from django.template.loader import get_template
+from django.utils import timezone
+from github import Github
+
 from breathecode.assessment.actions import create_from_asset
 from breathecode.authenticate.models import CredentialsGithub
-from .models import Asset, AssetImage, AssetTechnology, AssetErrorLog, ASSET_STATUS, OriginalityScan, ContentVariable
-from .serializers import AssetBigSerializer
-from .utils import (LessonValidator, ExerciseValidator, QuizValidator, AssetException, ProjectValidator,
-                    ArticleValidator, OriginalityWrapper)
-from github import Github
+from breathecode.media.models import Media, MediaResolution
 from breathecode.registry import tasks
+from breathecode.services.google_cloud.storage import Storage
+from breathecode.utils.views import set_query_parameter
+
+from .models import ASSET_STATUS, Asset, AssetErrorLog, AssetImage, AssetTechnology, ContentVariable, OriginalityScan
+from .serializers import AssetBigSerializer
+from .utils import (
+    ArticleValidator,
+    AssetException,
+    ExerciseValidator,
+    LessonValidator,
+    OriginalityWrapper,
+    ProjectValidator,
+    QuizValidator,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +41,9 @@ ASSET_STATUS_DICT = [x for x, y in ASSET_STATUS]
 # remove markdown elemnts from text and return the clean text output only
 def unmark(text):
 
-    from markdown import Markdown
     from io import StringIO
+
+    from markdown import Markdown
 
     def unmark_element(element, stream=None):
         if stream is None:
@@ -373,11 +391,12 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
                     return True
                 elif value_str in false_values:
                     return False
-        
-            raise ValueError(f"Invalid value for boolean conversion: {value}")
+
+            raise ValueError(f'Invalid value for boolean conversion: {value}')
+
         if 'table_of_contents' in fm and fm['table_of_contents'] != '':
             asset.enable_table_of_content = parse_boolean(fm['table_of_contents'])
-          
+
         if 'video' in fm and fm['video'] != '':
             asset.intro_video_url = fm['video']
 
@@ -393,6 +412,15 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
             asset.technologies.clear()
             for tech_slug in _techs:
                 technology = AssetTechnology.get_or_create(tech_slug)
+
+                # if the technology is not multi lang
+                if technology.lang is not None and technology.lang != '':
+                    # skip technology because it does not match the asset lang
+                    if technology.lang in ['us', 'en'] and asset.lang not in ['us', 'en']:
+                        continue
+                    elif technology.lang != asset.lang:
+                        continue
+
                 asset.technologies.add(technology)
 
     return asset
@@ -671,13 +699,13 @@ def process_asset_config(asset, config):
     if not config:
         raise Exception('No configuration json found')
 
-    if asset.asset_type in ["QUIZ"]:
+    if asset.asset_type in ['QUIZ']:
         raise Exception('Can only process exercise and project config objects')
-      
+
     # only replace title and description of English language
     if 'title' in config:
         if isinstance(config['title'], str):
-            if (asset.lang in ['','us', 'en'] or asset.title == '' or asset.title is None):
+            if (asset.lang in ['', 'us', 'en'] or asset.title == '' or asset.title is None):
                 asset.title = config['title']
         elif isinstance(config['title'], dict) and asset.lang in config['title']:
             asset.title = config['title'][asset.lang]
@@ -685,7 +713,7 @@ def process_asset_config(asset, config):
     if 'description' in config:
         if isinstance(config['description'], str):
             # avoid replacing descriptions for other languages
-            if (asset.lang in ['','us', 'en'] or asset.description == '' or asset.description is None):
+            if (asset.lang in ['', 'us', 'en'] or asset.description == '' or asset.description is None):
                 asset.description = config['description']
         # there are multiple translations, and the translation exists for this lang
         elif isinstance(config['description'], dict) and asset.lang in config['description']:
@@ -741,18 +769,27 @@ def process_asset_config(asset, config):
         asset.solution_url = config['solution']
         asset.with_solutions = True
 
-    if 'projectType' in config and config['projectType'] == 'tutorial':
-        asset.gitpod = True
+    if 'grading' not in config and ('projectType' not in config or config['projectType'] != 'tutorial'):
+        asset.interactive = False
+        asset.gitpod = False
+    elif 'projectType' in config and config['projectType'] == 'tutorial':
+        asset.gitpod = 'localhostOnly' not in config or not config['localhostOnly']
         asset.interactive = True
-    if 'grading' in config and config['grading'] in ['isolated', 'incremental']:
-        asset.gitpod = True
+    elif 'grading' in config and config['grading'] in ['isolated', 'incremental']:
+        asset.gitpod = 'localhostOnly' not in config or not config['localhostOnly']
         asset.interactive = True
-      
 
     if 'technologies' in config:
         asset.technologies.clear()
         for tech_slug in config['technologies']:
             technology = AssetTechnology.get_or_create(tech_slug)
+            # if the technology is not multi lang
+            if technology.lang is not None and technology.lang != '':
+                # skip technology because it does not match the asset lang
+                if technology.lang in ['us', 'en'] and asset.lang not in ['us', 'en']:
+                    continue
+                elif technology.lang != asset.lang:
+                    continue
             asset.technologies.add(technology)
 
     if 'delivery' in config:
@@ -857,7 +894,7 @@ def pull_quiz_asset(github, asset: Asset):
 
     # "slug":    "introduction-networking-es",
     # "name":    "Introducción a redes",
-    # "status":    "draft",
+    # "difficulty":    "beginner",
     # "main":    "Bienvenido al mundo de las redes. Este primer paso te llevara a grandes cosas en el futuro...",
     # "results": "¡Felicidades! Ahora el mundo estará un poco más seguro gracias a tí...",
     # "technologies": ["redes"],
@@ -876,6 +913,9 @@ def pull_quiz_asset(github, asset: Asset):
             for tech_slug in _config['technologies']:
                 technology = AssetTechnology.get_or_create(tech_slug)
                 asset.technologies.add(technology)
+
+        if 'difficulty' in _config and _config['technologies'] != '':
+            asset.difficulty = _config['difficulty']
 
     asset.save()
 

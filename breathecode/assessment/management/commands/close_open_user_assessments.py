@@ -1,9 +1,8 @@
 import os
-from django.core.management.base import BaseCommand, CommandError
-from django.contrib.auth.models import User
-from django.utils import timezone
-from breathecode.admissions.models import CohortUser
-from django.db.models import Count
+
+from django.core.management.base import BaseCommand
+
+from breathecode.assessment.models import UserAssessment
 
 HOST = os.environ.get('OLD_BREATHECODE_API')
 DATETIME_FORMAT = '%Y-%m-%d'

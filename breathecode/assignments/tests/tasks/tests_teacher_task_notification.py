@@ -33,7 +33,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(os.getenv.call_args_list, [call('TEACHER_URL')])
         self.assertEqual(Logger.info.call_args_list, [call('Starting teacher_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [call('TEACHER_URL is not set as environment variable')])
-        self.assertEqual(signals.assignment_created.send.call_args_list, [])
+        self.assertEqual(signals.assignment_created.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 Without Task
@@ -59,7 +59,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(os.getenv.call_args_list, [call('TEACHER_URL')])
         self.assertEqual(Logger.info.call_args_list, [call('Starting teacher_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [call('Task not found')])
-        self.assertEqual(signals.assignment_created.send.call_args_list, [])
+        self.assertEqual(signals.assignment_created.send_robust.call_args_list, [])
 
     """
     🔽🔽🔽 With Task and Cohort
@@ -102,7 +102,7 @@ class MediaTestSuite(AssignmentsTestCase):
                 call('TEACHER_URL'),
             ])
         self.assertEqual(Logger.error.call_args_list, [])
-        self.assertEqual(signals.assignment_created.send.call_args_list,
+        self.assertEqual(signals.assignment_created.send_robust.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])
 
     """
@@ -148,7 +148,7 @@ class MediaTestSuite(AssignmentsTestCase):
             ])
         self.assertEqual(Logger.info.call_args_list, [call('Starting teacher_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
-        self.assertEqual(signals.assignment_created.send.call_args_list,
+        self.assertEqual(signals.assignment_created.send_robust.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])
 
     """
@@ -194,5 +194,5 @@ class MediaTestSuite(AssignmentsTestCase):
             ])
         self.assertEqual(Logger.info.call_args_list, [call('Starting teacher_task_notification')])
         self.assertEqual(Logger.error.call_args_list, [])
-        self.assertEqual(signals.assignment_created.send.call_args_list,
+        self.assertEqual(signals.assignment_created.send_robust.call_args_list,
                          [call(instance=model.task, sender=model.task.__class__)])

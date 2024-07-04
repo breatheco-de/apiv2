@@ -162,7 +162,7 @@ class Academy(models.Model):
         if created:
             self.__old_slug = self.slug
 
-        academy_saved.send(instance=self, sender=self.__class__, created=created)
+        academy_saved.send_robust(instance=self, sender=self.__class__, created=created)
 
 
 PARTIME = 'PART-TIME'
@@ -259,7 +259,7 @@ class SyllabusVersion(models.Model):
 
         super().save(*args, **kwargs)
 
-        if json_modified: syllabus_version_json_updated.send(instance=self, sender=SyllabusVersion)
+        if json_modified: syllabus_version_json_updated.send_robust(instance=self, sender=SyllabusVersion)
 
 
 class SyllabusSchedule(models.Model):
@@ -390,7 +390,7 @@ class Cohort(models.Model):
 
         super().save(*args, **kwargs)
 
-        signals.cohort_saved.send(instance=self, sender=self.__class__, created=False)
+        signals.cohort_saved.send_robust(instance=self, sender=self.__class__, created=False)
 
         self._current_history_log = self.history_log
 
@@ -406,13 +406,13 @@ class Cohort(models.Model):
 
         super().save(*args, **kwargs)
 
-        signals.cohort_saved.send(instance=self, sender=self.__class__, created=created)
+        signals.cohort_saved.send_robust(instance=self, sender=self.__class__, created=created)
 
         if self.history_log and self.history_log != self._current_history_log:
-            signals.cohort_log_saved.send(instance=self, sender=self.__class__, created=created)
+            signals.cohort_log_saved.send_robust(instance=self, sender=self.__class__, created=created)
 
         if stage_updated:
-            signals.cohort_stage_updated.send(instance=self, sender=self.__class__)
+            signals.cohort_stage_updated.send_robust(instance=self, sender=self.__class__)
 
         self._current_history_log = self.history_log
 
@@ -518,12 +518,12 @@ class CohortUser(models.Model):
         result = super().save(*args, **kwargs)  # Call the "real" save() method.
 
         if edu_status_updated:
-            signals.student_edu_status_updated.send(instance=self, sender=self.__class__)
+            signals.student_edu_status_updated.send_robust(instance=self, sender=self.__class__)
 
-        signals.cohort_log_saved.send(instance=self, sender=self.__class__)
+        signals.cohort_log_saved.send_robust(instance=self, sender=self.__class__)
 
         if on_create:
-            signals.cohort_user_created.send(instance=self, sender=self.__class__)
+            signals.cohort_user_created.send_robust(instance=self, sender=self.__class__)
 
         self.__old_edu_status = self.educational_status
 
@@ -597,7 +597,7 @@ class SyllabusScheduleTimeSlot(TimeSlot):
         self.full_clean()
         super().save(*args, **kwargs)
 
-        # signals.timeslot_saved.send(instance=self, sender=self.__class__, created=created)
+        # signals.timeslot_saved.send_robust(instance=self, sender=self.__class__, created=created)
 
 
 class CohortTimeSlot(TimeSlot):
@@ -616,4 +616,4 @@ class CohortTimeSlot(TimeSlot):
         self.full_clean()
         super().save(*args, **kwargs)
 
-        signals.timeslot_saved.send(instance=self, sender=self.__class__, created=created)
+        signals.timeslot_saved.send_robust(instance=self, sender=self.__class__, created=created)

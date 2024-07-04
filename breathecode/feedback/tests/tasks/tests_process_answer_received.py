@@ -22,7 +22,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
     @patch('logging.Logger.warning', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores', MagicMock(wraps=actions.calculate_survey_scores))
     @patch('breathecode.feedback.actions.calculate_survey_response_rate',
            MagicMock(wraps=actions.calculate_survey_response_rate))
@@ -44,7 +44,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
     @patch('logging.Logger.warning', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores', MagicMock(wraps=actions.calculate_survey_scores))
     @patch('breathecode.feedback.actions.calculate_survey_response_rate',
            MagicMock(wraps=actions.calculate_survey_response_rate))
@@ -71,7 +71,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
     @patch('logging.Logger.warning', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores', MagicMock(wraps=actions.calculate_survey_scores))
     @patch('breathecode.feedback.actions.calculate_survey_response_rate',
            MagicMock(wraps=actions.calculate_survey_response_rate))
@@ -102,7 +102,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
     @patch('logging.Logger.warning', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores', MagicMock(wraps=actions.calculate_survey_scores))
     @patch('breathecode.feedback.actions.calculate_survey_response_rate',
@@ -138,7 +138,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
     @patch('logging.Logger.warning', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores', MagicMock(wraps=actions.calculate_survey_scores))
     @patch('breathecode.feedback.actions.calculate_survey_response_rate',
@@ -174,7 +174,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
     @patch('logging.Logger.error', MagicMock())
     @patch('os.getenv', MagicMock(return_value=None))
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores', MagicMock(wraps=actions.calculate_survey_scores))
     @patch('breathecode.feedback.actions.calculate_survey_response_rate',
@@ -213,7 +213,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
         }])
 
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores', MagicMock(wraps=actions.calculate_survey_scores))
     @patch('breathecode.feedback.actions.calculate_survey_response_rate',
@@ -271,7 +271,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
                'SYSTEM_EMAIL': None,
                'ADMIN_URL': 'https://www.whatever.com'
            })))
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores', MagicMock(wraps=actions.calculate_survey_scores))
     @patch('breathecode.feedback.actions.calculate_survey_response_rate',
@@ -325,7 +325,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
             'SYSTEM_EMAIL': 'test@email.com',
             'ADMIN_URL': 'https://www.whatever.com'
         })))
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores', MagicMock(wraps=actions.calculate_survey_scores))
     @patch('breathecode.feedback.actions.calculate_survey_response_rate',
@@ -378,7 +378,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
             'SYSTEM_EMAIL': 'test@email.com',
             'ADMIN_URL': 'https://www.whatever.com'
         })))
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores', MagicMock(wraps=actions.calculate_survey_scores))
     @patch('breathecode.feedback.actions.calculate_survey_response_rate',
@@ -428,7 +428,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
     @patch('logging.Logger.warning', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    @patch('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     @patch('breathecode.feedback.actions.calculate_survey_scores', MagicMock(wraps=actions.calculate_survey_scores))
     @patch('breathecode.feedback.actions.calculate_survey_response_rate',

@@ -1,4 +1,5 @@
 import logging
+from datetime import timedelta
 
 from django.apps import apps as django_apps
 from django.conf import settings
@@ -41,6 +42,7 @@ class HookManagerClass(object):
                     event_name,
                     ignore_user_override,
                 )
+
         return self._HOOK_EVENT_ACTIONS_CONFIG
 
     def get_module(self, path):
@@ -194,6 +196,27 @@ class HookManagerClass(object):
                                     payload_override=payload_override,
                                     academy_override=academy_override)
 
+    def serialize(self, payload: dict | list | tuple) -> dict | list | tuple:
+
+        if isinstance(payload, (list, tuple)):
+            for item in payload:
+                self.serialize(item)
+
+            return payload
+
+        for key in payload:
+            if isinstance(payload[key], dict):
+                self.serialize(payload[key])
+
+            elif isinstance(payload[key], (list, tuple)):
+                for item in payload[key]:
+                    self.serialize(item)
+
+            elif isinstance(payload[key], timedelta):
+                payload[key] = payload[key].total_seconds()
+
+        return payload
+
     def deliver_hook(self, hook, instance, payload_override=None, academy_override=None):
         """
         Deliver the payload to the target URL.
@@ -214,6 +237,9 @@ class HookManagerClass(object):
                 payload = payload(hook, instance)
 
             logger.debug(f'Calling delayed task deliver_hook for hook {hook.id}')
+
+            self.serialize(payload)
+
             async_deliver_hook.delay(hook.target, payload, hook_id=hook.id)
 
             return None

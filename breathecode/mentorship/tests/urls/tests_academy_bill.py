@@ -391,7 +391,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     🔽🔽🔽 GET with two MentorshipSession, one MentorProfile and one MentorshipService, passing status
     """
 
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     def test__get__with_two_mentor_profile__passing_bad_status(self):
         statuses = ['DUE', 'APPROVED', 'PAID', 'IGNORED']
 
@@ -431,7 +431,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             # teardown
             self.bc.database.delete('mentorship.MentorshipBill')
 
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     def test__get__with_two_mentor_profile__passing_status(self):
         statuses = ['DUE', 'APPROVED', 'PAID', 'IGNORED']
 
@@ -487,7 +487,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     🔽🔽🔽 GET with two MentorshipSession, one MentorProfile and one MentorshipService, passing started_after
     """
 
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__get__with_two_mentor_profile__passing_bad_started_after(self):
         model = self.bc.database.create(user=1,
@@ -515,7 +515,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.bc.format.to_dict(model.mentorship_bill),
         ])
 
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__get__with_two_mentor_profile__passing_started_after(self):
         model = self.bc.database.create(user=1,
@@ -554,7 +554,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     🔽🔽🔽 GET with two MentorshipSession, one MentorProfile and one MentorshipService, passing ended_before
     """
 
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__get__with_two_mentor_profile__passing_bad_ended_before(self):
         model = self.bc.database.create(user=1,
@@ -582,7 +582,7 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             self.bc.format.to_dict(model.mentorship_bill),
         ])
 
-    @patch('breathecode.mentorship.signals.mentorship_session_status.send', MagicMock())
+    @patch('breathecode.mentorship.signals.mentorship_session_status.send_robust', MagicMock())
     @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
     def test__get__with_two_mentor_profile__passing_ended_before(self):
         model = self.bc.database.create(user=1,

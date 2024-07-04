@@ -3,14 +3,15 @@ Test /answer/:id
 """
 import re
 from datetime import datetime
-from unittest.mock import patch, MagicMock, call
-from django.urls.base import reverse_lazy
+from unittest.mock import MagicMock, call, patch
+
 import pytest
+from django.urls.base import reverse_lazy
 from rest_framework import status
-from breathecode.services.datetime_to_iso_format import datetime_to_iso_format
-import breathecode.activity.tasks as activity_tasks
 from rest_framework.test import APIClient
 
+import breathecode.activity.tasks as activity_tasks
+from breathecode.services.datetime_to_iso_format import datetime_to_iso_format
 from breathecode.tests.mixins.breathecode_mixin import Breathecode
 
 from ...signals import survey_answered
@@ -18,7 +19,7 @@ from ...signals import survey_answered
 
 @pytest.fixture(autouse=True)
 def setup(db, monkeypatch):
-    monkeypatch.setattr('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    monkeypatch.setattr('breathecode.feedback.signals.survey_answered.send_robust', MagicMock())
     monkeypatch.setattr(activity_tasks.add_activity, 'delay', MagicMock())
     yield
 
@@ -126,7 +127,7 @@ def test_answer_id_put_with_bad_id(bc: Breathecode, client: APIClient):
 
     assert json == expected
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert survey_answered.send.call_args_list == []
+    assert survey_answered.send_robust.call_args_list == []
     assert activity_tasks.add_activity.delay.call_args_list == []
 
 
@@ -146,7 +147,7 @@ def test_answer_id_put_without_score(bc: Breathecode, client: APIClient):
     assert json == {'non_field_errors': ['Score must be between 1 and 10']}
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert bc.database.list_of('feedback.Answer') == [db]
-    assert survey_answered.send.call_args_list == []
+    assert survey_answered.send_robust.call_args_list == []
     assert activity_tasks.add_activity.delay.call_args_list == []
 
 
@@ -167,7 +168,7 @@ def test_answer_id_put_with_score_less_of_1(bc: Breathecode, client: APIClient):
     assert json == {'non_field_errors': ['Score must be between 1 and 10']}
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert bc.database.list_of('feedback.Answer') == [db]
-    assert survey_answered.send.call_args_list == []
+    assert survey_answered.send_robust.call_args_list == []
     assert activity_tasks.add_activity.delay.call_args_list == []
 
 
@@ -188,7 +189,7 @@ def test_answer_id_put_with_score_more_of_10(bc: Breathecode, client: APIClient)
     assert json == {'non_field_errors': ['Score must be between 1 and 10']}
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert bc.database.list_of('feedback.Answer') == [db]
-    assert survey_answered.send.call_args_list == []
+    assert survey_answered.send_robust.call_args_list == []
     assert activity_tasks.add_activity.delay.call_args_list == []
 
 
@@ -253,7 +254,7 @@ def test_answer_id_put_with_all_valid_scores(bc: Breathecode, client: APIClient,
 
     assert dicts == [db]
 
-    assert survey_answered.send.call_args_list == [
+    assert survey_answered.send_robust.call_args_list == [
         call(instance=model.answer, sender=model.answer.__class__),
     ]
     assert activity_tasks.add_activity.delay.call_args_list == [
@@ -308,7 +309,7 @@ def test_answer_id_put_twice_same_score(bc: Breathecode, client: APIClient):
     db['comment'] = data['comment']
 
     assert bc.database.list_of('feedback.Answer') == [db]
-    assert survey_answered.send.call_args_list == [call(instance=model.answer, sender=model.answer.__class__)]
+    assert survey_answered.send_robust.call_args_list == [call(instance=model.answer, sender=model.answer.__class__)]
     assert activity_tasks.add_activity.delay.call_args_list == [
         call(1, 'nps_answered', related_type='feedback.Answer', related_id=1),
         call(1, 'nps_answered', related_type='feedback.Answer', related_id=1),

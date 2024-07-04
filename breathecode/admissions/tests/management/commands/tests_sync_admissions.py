@@ -9,8 +9,12 @@ from unittest.mock import MagicMock, patch
 from mixer.backend.django import mixer
 
 # from random import randint
-from breathecode.tests.mocks import (GOOGLE_CLOUD_PATH, apply_google_cloud_blob_mock, apply_google_cloud_bucket_mock,
-                                     apply_google_cloud_client_mock)
+from breathecode.tests.mocks import (
+    GOOGLE_CLOUD_PATH,
+    apply_google_cloud_blob_mock,
+    apply_google_cloud_bucket_mock,
+    apply_google_cloud_client_mock,
+)
 
 from ....management.commands.sync_admissions import Command
 from ....models import Cohort, CohortUser, User
@@ -48,8 +52,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     """Test /academy/cohort"""
 
     @patch(LEGACY_API_PATH['get'], apply_screenshotmachine_requests_get_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_students(self):
         """Test /academy/cohort without auth"""
         cohorts = set()
@@ -114,8 +118,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), cohort_user_acc)
 
     @patch(LEGACY_API_PATH['get'], apply_screenshotmachine_requests_get_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_students_twice(self):
         """Test /academy/cohort without auth"""
         cohorts = set()
@@ -181,8 +185,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), cohort_user_acc)
 
     @patch(LEGACY_API_PATH['get'], apply_screenshotmachine_requests_get_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_teachers(self):
         """Test /academy/cohort without auth"""
         cohorts = set()
@@ -247,8 +251,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), cohort_user_acc)
 
     @patch(LEGACY_API_PATH['get'], apply_screenshotmachine_requests_get_mock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     def test_teachers_twice(self):
         """Test /academy/cohort without auth"""
         cohorts = set()
