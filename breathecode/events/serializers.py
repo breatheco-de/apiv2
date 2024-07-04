@@ -186,7 +186,7 @@ class EventSmallSerializer(EventTinySerializer):
     eventbrite_sync_description = serpy.Field()
     tags = serpy.Field()
     asset_slug = serpy.Field()
-    host_user = UserSerializer(required=False)
+    host_user = UserBigSerializer(required=False)
     author = UserSerializer(required=False)
     asset = serpy.MethodField()
 

@@ -3742,15 +3742,7 @@
             "markers": "python_version >= '3.7'",
             "version": "==1.9.4"
         },
-        "zope.event": {
-            "hashes": [
-                "sha256:2832e95014f4db26c47a13fdaef84cef2f4df37e66b59d8f1f4a8f319a632c26",
-                "sha256:bac440d8d9891b4068e2b5a2c5e2c9765a9df762944bda6955f96bb9b91e67cd"
-            ],
-            "markers": "python_version >= '3.7'",
-            "version": "==5.0"
-        },
-        "zope.interface": {
+        "zope-interface": {
             "hashes": [
                 "sha256:00b5c3e9744dcdc9e84c24ed6646d5cf0cf66551347b310b3ffd70f056535854",
                 "sha256:0e4fa5d34d7973e6b0efa46fe4405090f3b406f64b6290facbb19dcbf642ad6b",
@@ -3791,6 +3783,14 @@
             ],
             "markers": "python_version >= '3.7'",
             "version": "==6.4.post2"
+        },
+        "zope.event": {
+            "hashes": [
+                "sha256:2832e95014f4db26c47a13fdaef84cef2f4df37e66b59d8f1f4a8f319a632c26",
+                "sha256:bac440d8d9891b4068e2b5a2c5e2c9765a9df762944bda6955f96bb9b91e67cd"
+            ],
+            "markers": "python_version >= '3.7'",
+            "version": "==5.0"
         },
         "zstandard": {
             "hashes": [
