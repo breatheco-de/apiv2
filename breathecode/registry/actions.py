@@ -17,7 +17,6 @@ from github import Github
 from breathecode.assessment.actions import create_from_asset
 from breathecode.authenticate.models import CredentialsGithub
 from breathecode.media.models import Media, MediaResolution
-from breathecode.registry import tasks
 from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils.views import set_query_parameter
 
@@ -603,6 +602,9 @@ class AssetThumbnailGenerator:
         Get thumbnail url for asset, the first element of tuple is the url, the second if is permanent
         redirect.
         """
+
+        from breathecode.registry import tasks
+
         if not self.asset:
             return (self._get_default_url(), False)
         media = self._get_media()
