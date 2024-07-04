@@ -6,18 +6,22 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('commons', '0008_merge_20240208_1959'),
+        ("commons", "0008_merge_20240208_1959"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='taskwatcher',
-            name='tasks',
+            model_name="taskwatcher",
+            name="tasks",
         ),
         migrations.RemoveField(
-            model_name='taskwatcher',
-            name='user',
+            model_name="taskwatcher",
+            name="user",
         ),
-        migrations.DeleteModel(name='TaskManager', ),
-        migrations.DeleteModel(name='TaskWatcher', ),
+        migrations.DeleteModel(
+            name="TaskManager",
+        ),
+        migrations.DeleteModel(
+            name="TaskWatcher",
+        ),
     ]

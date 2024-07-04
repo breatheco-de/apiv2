@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0016_cohort_private'),
+        ("admissions", "0016_cohort_private"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='cohort',
-            name='never_ends',
+            model_name="cohort",
+            name="never_ends",
             field=models.BooleanField(default=False),
         ),
     ]

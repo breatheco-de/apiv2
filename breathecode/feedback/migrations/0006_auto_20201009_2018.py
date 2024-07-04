@@ -6,27 +6,30 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('feedback', '0005_surveylog'),
+        ("feedback", "0005_surveylog"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='answer',
-            name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('SENT', 'Send'), ('ANSWERED', 'Answered'),
-                                            ('EXPIRED', 'Expired')],
-                                   default='PENDING',
-                                   max_length=15),
+            model_name="answer",
+            name="status",
+            field=models.CharField(
+                choices=[("PENDING", "Pending"), ("SENT", "Send"), ("ANSWERED", "Answered"), ("EXPIRED", "Expired")],
+                default="PENDING",
+                max_length=15,
+            ),
         ),
         migrations.AlterField(
-            model_name='answer',
-            name='comment',
+            model_name="answer",
+            name="comment",
             field=models.CharField(blank=True, default=None, max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='answer',
-            name='score',
+            model_name="answer",
+            name="score",
             field=models.CharField(blank=True, default=None, max_length=250, null=True),
         ),
-        migrations.DeleteModel(name='SurveyLog', ),
+        migrations.DeleteModel(
+            name="SurveyLog",
+        ),
     ]

@@ -6,9 +6,11 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('freelance', '0023_auto_20221221_1133'),
+        ("freelance", "0023_auto_20221221_1133"),
     ]
 
     operations = [
-        migrations.DeleteModel(name='RepositoryIssueWebhook', ),
+        migrations.DeleteModel(
+            name="RepositoryIssueWebhook",
+        ),
     ]

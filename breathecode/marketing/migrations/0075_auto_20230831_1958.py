@@ -7,21 +7,21 @@ from django.db import connection
 def convert_to_str(apps, schema_editor):
     with connection.cursor() as cursor:
         cursor.execute(
-            'UPDATE marketing_formentry SET attribution_id = CAST(attribution_id AS VARCHAR) WHERE attribution_id IS NOT NULL'
+            "UPDATE marketing_formentry SET attribution_id = CAST(attribution_id AS VARCHAR) WHERE attribution_id IS NOT NULL"
         )
 
 
 def convert_to_int(apps, schema_editor):
     with connection.cursor() as cursor:
         cursor.execute(
-            'UPDATE marketing_formentry SET attribution_id = CAST(attribution_id AS BIGINT) WHERE attribution_id IS NOT NULL'
+            "UPDATE marketing_formentry SET attribution_id = CAST(attribution_id AS BIGINT) WHERE attribution_id IS NOT NULL"
         )
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0074_alter_formentry_attribution_id'),
+        ("marketing", "0074_alter_formentry_attribution_id"),
     ]
 
     operations = [

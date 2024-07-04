@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('certificate', '0014_merge_20210810_0418'),
+        ("certificate", "0014_merge_20210810_0418"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='userspecialty',
-            name='issued_at',
+            model_name="userspecialty",
+            name="issued_at",
             field=models.DateTimeField(blank=True, default=None, null=True),
         ),
     ]

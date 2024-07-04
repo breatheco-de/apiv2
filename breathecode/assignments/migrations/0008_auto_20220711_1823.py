@@ -6,25 +6,37 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('assignments', '0007_finalproject'),
+        ("assignments", "0007_finalproject"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='finalproject',
-            name='revision_status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('APPROVED', 'Approved'), ('REJECTED', 'Rejected'),
-                                            ('IGNORED', 'Ignored')],
-                                   default='PENDING',
-                                   help_text='Only approved projects will display on the feature projects list',
-                                   max_length=15),
+            model_name="finalproject",
+            name="revision_status",
+            field=models.CharField(
+                choices=[
+                    ("PENDING", "Pending"),
+                    ("APPROVED", "Approved"),
+                    ("REJECTED", "Rejected"),
+                    ("IGNORED", "Ignored"),
+                ],
+                default="PENDING",
+                help_text="Only approved projects will display on the feature projects list",
+                max_length=15,
+            ),
         ),
         migrations.AlterField(
-            model_name='task',
-            name='revision_status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('APPROVED', 'Approved'), ('REJECTED', 'Rejected'),
-                                            ('IGNORED', 'Ignored')],
-                                   default='PENDING',
-                                   max_length=15),
+            model_name="task",
+            name="revision_status",
+            field=models.CharField(
+                choices=[
+                    ("PENDING", "Pending"),
+                    ("APPROVED", "Approved"),
+                    ("REJECTED", "Rejected"),
+                    ("IGNORED", "Ignored"),
+                ],
+                default="PENDING",
+                max_length=15,
+            ),
         ),
     ]

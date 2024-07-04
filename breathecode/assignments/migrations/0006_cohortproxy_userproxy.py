@@ -7,33 +7,33 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('auth', '0012_alter_user_first_name_max_length'),
-        ('admissions', '0014_auto_20201218_0534'),
-        ('assignments', '0005_task_cohort'),
+        ("auth", "0012_alter_user_first_name_max_length"),
+        ("admissions", "0014_auto_20201218_0534"),
+        ("assignments", "0005_task_cohort"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='CohortProxy',
+            name="CohortProxy",
             fields=[],
             options={
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
+                "proxy": True,
+                "indexes": [],
+                "constraints": [],
             },
-            bases=('admissions.cohort', ),
+            bases=("admissions.cohort",),
         ),
         migrations.CreateModel(
-            name='UserProxy',
+            name="UserProxy",
             fields=[],
             options={
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
+                "proxy": True,
+                "indexes": [],
+                "constraints": [],
             },
-            bases=('auth.user', ),
+            bases=("auth.user",),
             managers=[
-                ('objects', django.contrib.auth.models.UserManager()),
+                ("objects", django.contrib.auth.models.UserManager()),
             ],
         ),
     ]

@@ -7,36 +7,35 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0044_leadgenerationapp'),
+        ("marketing", "0044_leadgenerationapp"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='leadgenerationapp',
-            name='last_call_log',
+            model_name="leadgenerationapp",
+            name="last_call_log",
         ),
         migrations.AddField(
-            model_name='formentry',
-            name='lead_generation_app',
+            model_name="formentry",
+            name="lead_generation_app",
             field=models.ForeignKey(
                 default=None,
-                help_text='Other apps can send leads to breathecode but they need to be registered here',
+                help_text="Other apps can send leads to breathecode but they need to be registered here",
                 null=True,
                 on_delete=django.db.models.deletion.CASCADE,
-                to='marketing.leadgenerationapp'),
+                to="marketing.leadgenerationapp",
+            ),
         ),
         migrations.AddField(
-            model_name='leadgenerationapp',
-            name='last_request_data',
-            field=models.TextField(blank=True,
-                                   default=None,
-                                   help_text='Incomig payload from the last request',
-                                   max_length=450,
-                                   null=True),
+            model_name="leadgenerationapp",
+            name="last_request_data",
+            field=models.TextField(
+                blank=True, default=None, help_text="Incomig payload from the last request", max_length=450, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='leadgenerationapp',
-            name='language',
+            model_name="leadgenerationapp",
+            name="language",
             field=models.CharField(blank=True, default=None, max_length=2, null=True),
         ),
     ]

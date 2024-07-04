@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0039_asset_assets_related'),
+        ("registry", "0039_asset_assets_related"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='asset',
-            name='all_translations',
-            field=models.ManyToManyField(blank=True, to='registry.asset'),
+            model_name="asset",
+            name="all_translations",
+            field=models.ManyToManyField(blank=True, to="registry.asset"),
         ),
         migrations.AlterField(
-            model_name='assetcategory',
-            name='all_translations',
-            field=models.ManyToManyField(blank=True, to='registry.assetcategory'),
+            model_name="assetcategory",
+            name="all_translations",
+            field=models.ManyToManyField(blank=True, to="registry.assetcategory"),
         ),
     ]

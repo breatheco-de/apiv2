@@ -6,27 +6,29 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0001_initial'),
+        ("events", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='event',
-            name='exerpt',
-            field=models.TextField(default='something', max_length=500),
+            model_name="event",
+            name="exerpt",
+            field=models.TextField(default="something", max_length=500),
             preserve_default=False,
         ),
         migrations.AlterField(
-            model_name='event',
-            name='status',
-            field=models.CharField(blank=True,
-                                   choices=[('ACTIVE', 'Active'), ('DRAFT', 'Draft'), ('DELETED', 'Deleted')],
-                                   default='DRAFT',
-                                   max_length=9),
+            model_name="event",
+            name="status",
+            field=models.CharField(
+                blank=True,
+                choices=[("ACTIVE", "Active"), ("DRAFT", "Draft"), ("DELETED", "Deleted")],
+                default="DRAFT",
+                max_length=9,
+            ),
         ),
         migrations.AlterField(
-            model_name='venue',
-            name='title',
+            model_name="venue",
+            name="title",
             field=models.CharField(blank=True, max_length=200),
         ),
     ]

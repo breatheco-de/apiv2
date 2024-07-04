@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0024_auto_20210123_0324'),
+        ("events", "0024_auto_20210123_0324"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='eventcheckin',
-            name='attended_at',
+            model_name="eventcheckin",
+            name="attended_at",
             field=models.DateTimeField(blank=True, default=None, null=True),
         ),
     ]

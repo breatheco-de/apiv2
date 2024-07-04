@@ -6,8 +6,8 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('commons', '0007_taskmanager_exception_module_and_more'),
-        ('commons', '0007_taskmanager_started_at_alter_taskmanager_task_id'),
+        ("commons", "0007_taskmanager_exception_module_and_more"),
+        ("commons", "0007_taskmanager_started_at_alter_taskmanager_task_id"),
     ]
 
     operations = []

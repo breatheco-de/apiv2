@@ -6,8 +6,8 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0030_alter_event_host'),
-        ('events', '0030_auto_20220111_0518'),
+        ("events", "0030_alter_event_host"),
+        ("events", "0030_auto_20220111_0518"),
     ]
 
     operations = []

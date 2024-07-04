@@ -6,21 +6,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('feedback', '0014_auto_20210128_1745'),
+        ("feedback", "0014_auto_20210128_1745"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='survey',
-            name='status_json',
+            model_name="survey",
+            name="status_json",
             field=models.JSONField(blank=True, default=None, null=True),
         ),
         migrations.AlterField(
-            model_name='survey',
-            name='status',
-            field=models.CharField(choices=[('SENT', 'Sent'), ('PENDING', 'Pending'), ('PARTIAL', 'Partial'),
-                                            ('FATAL', 'FATAL')],
-                                   default='PENDING',
-                                   max_length=15),
+            model_name="survey",
+            name="status",
+            field=models.CharField(
+                choices=[("SENT", "Sent"), ("PENDING", "Pending"), ("PARTIAL", "Partial"), ("FATAL", "FATAL")],
+                default="PENDING",
+                max_length=15,
+            ),
         ),
     ]

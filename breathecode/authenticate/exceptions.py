@@ -9,7 +9,7 @@ class InvalidTokenType(Exception):
 
 class TokenNotFound(Exception):
 
-    def __init__(self, error: str = 'Token not found', *args: Any):
+    def __init__(self, error: str = "Token not found", *args: Any):
         super().__init__(error, *args)
 
 

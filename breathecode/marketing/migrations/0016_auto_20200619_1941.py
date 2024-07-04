@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0015_auto_20200619_1930'),
+        ("marketing", "0015_auto_20200619_1930"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='automation',
-            name='acp_id',
-            field=models.PositiveSmallIntegerField(help_text='ID asigned in active campaign', unique=True),
+            model_name="automation",
+            name="acp_id",
+            field=models.PositiveSmallIntegerField(help_text="ID asigned in active campaign", unique=True),
         ),
         migrations.AlterField(
-            model_name='tag',
-            name='acp_id',
-            field=models.IntegerField(help_text='The id coming from active campaign', unique=True),
+            model_name="tag",
+            name="acp_id",
+            field=models.IntegerField(help_text="The id coming from active campaign", unique=True),
         ),
     ]

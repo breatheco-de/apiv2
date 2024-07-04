@@ -6,16 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0052_utmfield'),
+        ("marketing", "0052_utmfield"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='tag',
-            name='description',
-            field=models.TextField(blank=True,
-                                   default=None,
-                                   help_text='How is this tag being used? Why is it needed?',
-                                   null=True),
+            model_name="tag",
+            name="description",
+            field=models.TextField(
+                blank=True, default=None, help_text="How is this tag being used? Why is it needed?", null=True
+            ),
         ),
     ]

@@ -1,14 +1,15 @@
 """
 Google Cloud Storage Mocks
 """
+
 from unittest.mock import MagicMock
 from .requests_mock import request_mock
 
 OLD_BREATHECODE_PATH = {
-    'request': 'requests.request',
+    "request": "requests.request",
 }
 
-OLD_BREATHECODE_INSTANCES = {'request': None}
+OLD_BREATHECODE_INSTANCES = {"request": None}
 
 
 def apply_old_breathecode_requests_request_mock():
@@ -17,6 +18,6 @@ def apply_old_breathecode_requests_request_mock():
     mock = MagicMock(side_effect=request_mock)
 
     # don't fix this line, this keep the old behavior
-    OLD_BREATHECODE_INSTANCES['request'] = OLD_BREATHECODE_INSTANCES['request'] or mock
+    OLD_BREATHECODE_INSTANCES["request"] = OLD_BREATHECODE_INSTANCES["request"] or mock
 
     return mock

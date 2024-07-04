@@ -6,24 +6,25 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0036_auto_20231110_1530'),
+        ("registry", "0036_auto_20231110_1530"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='assettechnology',
-            name='is_deprecated',
-            field=models.BooleanField(default=False,
-                                      help_text='If True, the technology will be programmatically deleted.'),
+            model_name="assettechnology",
+            name="is_deprecated",
+            field=models.BooleanField(
+                default=False, help_text="If True, the technology will be programmatically deleted."
+            ),
         ),
         migrations.AlterField(
-            model_name='assettechnology',
-            name='visibility',
+            model_name="assettechnology",
+            name="visibility",
             field=models.CharField(
-                choices=[('PUBLIC', 'Public'), ('UNLISTED', 'Unlisted'), ('PRIVATE', 'Private')],
-                default='UNLISTED',
-                help_text=
-                "If public, the front-end will generate a landing page. If unlisted, it won't have a landing page but will be shown in assets. If private, it won't be shown anywhere of the front-end.",
-                max_length=20),
+                choices=[("PUBLIC", "Public"), ("UNLISTED", "Unlisted"), ("PRIVATE", "Private")],
+                default="UNLISTED",
+                help_text="If public, the front-end will generate a landing page. If unlisted, it won't have a landing page but will be shown in assets. If private, it won't be shown anywhere of the front-end.",
+                max_length=20,
+            ),
         ),
     ]

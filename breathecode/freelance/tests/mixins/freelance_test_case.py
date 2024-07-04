@@ -1,17 +1,25 @@
 """
 Collections of mixins used to login in authorize microservice
 """
+
 import re
 from unittest.mock import MagicMock, patch
 from django.urls.base import reverse_lazy
 from rest_framework.test import APITestCase
-from breathecode.tests.mixins import (GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, DatetimeMixin, ICallMixin,
-                                      BreathecodeMixin)
+from breathecode.tests.mixins import (
+    GenerateModelsMixin,
+    CacheMixin,
+    GenerateQueriesMixin,
+    DatetimeMixin,
+    ICallMixin,
+    BreathecodeMixin,
+)
 from rest_framework import status
 
 
-class FreelanceTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, DatetimeMixin, ICallMixin,
-                        BreathecodeMixin):
+class FreelanceTestCase(
+    APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, DatetimeMixin, ICallMixin, BreathecodeMixin
+):
     """AdmissionsTestCase with auth methods"""
 
     def setUp(self):

@@ -46,7 +46,7 @@ class BaseScraper(ABC):
 
     @classmethod
     def save_tag(cls, keyword: str):
-        tag_slug = keyword.replace(' ', '-').replace('.', '-').lower()
+        tag_slug = keyword.replace(" ", "-").replace(".", "-").lower()
         tag = CareerTag.objects.filter(slug__iexact=tag_slug).first()
 
         if tag is None:
@@ -86,7 +86,7 @@ class BaseScraper(ABC):
     @classmethod
     def get_job_id_from_string(cls, string: str):
         if string:
-            regex = r'^(\d{1,9})\/(\d{1,3})\/(\d{1,3})$'
+            regex = r"^(\d{1,9})\/(\d{1,3})\/(\d{1,3})$"
             result = re.findall(regex, string).pop()
             deploy, num_spider, num_job = result
             return (int(deploy), int(num_spider), int(num_job))
@@ -95,12 +95,12 @@ class BaseScraper(ABC):
     def get_info_amount_jobs_saved(cls, data: list):
         items = 0
 
-        num_job = data[0]['num_job']
+        num_job = data[0]["num_job"]
         if isinstance(data, list):
             for dat in data:
-                if num_job < dat['num_job']:
-                    num_job = dat['num_job']
+                if num_job < dat["num_job"]:
+                    num_job = dat["num_job"]
 
-                items += dat['jobs_saved']
+                items += dat["jobs_saved"]
 
         return (items, num_job)

@@ -13,13 +13,13 @@ from rest_framework.test import APITestCase
 
 from . import interfaces
 
-__all__ = ['Random', 'fake']
+__all__ = ["Random", "fake"]
 fake = Faker()
 
 IMAGE_TYPES = {
-    'png': 'PNG',
-    'jpg': 'JPEG',
-    'jpeg': 'JPEG',
+    "png": "PNG",
+    "jpg": "JPEG",
+    "jpeg": "JPEG",
 }
 
 
@@ -33,7 +33,7 @@ class Random:
         self._parent = parent
         self._bc = bc
 
-    def image(self, width: int = 10, height: int = 10, ext='png') -> tuple[TextIOWrapper, str]:
+    def image(self, width: int = 10, height: int = 10, ext="png") -> tuple[TextIOWrapper, str]:
         """
         Generate a random image.
 
@@ -46,14 +46,14 @@ class Random:
         """
 
         size = (width, height)
-        filename = fake.slug() + f'.{ext}'
-        image = Image.new('RGB', size)
+        filename = fake.slug() + f".{ext}"
+        image = Image.new("RGB", size)
         arr = np.random.randint(low=0, high=255, size=(size[1], size[0]))
 
-        image = Image.fromarray(arr.astype('uint8'))
+        image = Image.fromarray(arr.astype("uint8"))
         image.save(filename, IMAGE_TYPES[ext])
 
-        file = open(filename, 'rb')
+        file = open(filename, "rb")
 
         self._bc.garbage_collector.register_image(file)
 
@@ -73,7 +73,7 @@ class Random:
 
         ext = self.string(lower=True, size=2)
 
-        file = tempfile.NamedTemporaryFile(suffix=f'.{ext}', delete=False)
+        file = tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False)
         file.write(os.urandom(1024))
 
         self._bc.garbage_collector.register_file(file)
@@ -81,7 +81,7 @@ class Random:
         return file, file.name
 
     def string(self, lower=False, upper=False, symbol=False, number=False, size=0) -> str:
-        chars = ''
+        chars = ""
 
         if lower:
             chars = chars + string.ascii_lowercase
@@ -95,4 +95,4 @@ class Random:
         if number:
             chars = chars + string.digits
 
-        return ''.join(random.choices(chars, k=size))
+        return "".join(random.choices(chars, k=size))

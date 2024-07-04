@@ -6,34 +6,37 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('monitoring', '0017_repositorysubscription_repositorywebhook'),
+        ("monitoring", "0017_repositorysubscription_repositorywebhook"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='StripeEvent',
+            name="StripeEvent",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('stripe_id', models.CharField(blank=True,
-                                               default=None,
-                                               help_text='Stripe id',
-                                               max_length=32,
-                                               null=True)),
-                ('type', models.CharField(help_text='Stripe event type', max_length=50)),
-                ('status',
-                 models.CharField(choices=[('PENDING', 'Pending'), ('DONE', 'Done'), ('ERROR', 'Error')],
-                                  default='PENDING',
-                                  max_length=9)),
-                ('status_texts', models.JSONField(blank=True, default=dict)),
-                ('data', models.JSONField(blank=True, default=dict)),
-                ('request', models.JSONField(blank=True, default=dict)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "stripe_id",
+                    models.CharField(blank=True, default=None, help_text="Stripe id", max_length=32, null=True),
+                ),
+                ("type", models.CharField(help_text="Stripe event type", max_length=50)),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[("PENDING", "Pending"), ("DONE", "Done"), ("ERROR", "Error")],
+                        default="PENDING",
+                        max_length=9,
+                    ),
+                ),
+                ("status_texts", models.JSONField(blank=True, default=dict)),
+                ("data", models.JSONField(blank=True, default=dict)),
+                ("request", models.JSONField(blank=True, default=dict)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
         ),
         migrations.AlterField(
-            model_name='repositorysubscription',
-            name='repository',
-            field=models.URLField(help_text='Github repo where the event ocurred', max_length=255),
+            model_name="repositorysubscription",
+            name="repository",
+            field=models.URLField(help_text="Github repo where the event ocurred", max_length=255),
         ),
     ]

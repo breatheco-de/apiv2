@@ -6,33 +6,35 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0014_auto_20221006_1957'),
+        ("registry", "0014_auto_20221006_1957"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='asset',
-            name='delivery_formats',
+            model_name="asset",
+            name="delivery_formats",
             field=models.CharField(
-                default='url',
-                help_text='Comma separated list of supported formats. Eg: url, image/png, application/pdf',
-                max_length=255),
+                default="url",
+                help_text="Comma separated list of supported formats. Eg: url, image/png, application/pdf",
+                max_length=255,
+            ),
         ),
         migrations.AddField(
-            model_name='asset',
-            name='delivery_instructions',
-            field=models.TextField(blank=True,
-                                   default=None,
-                                   help_text='Tell students how to deliver this project',
-                                   null=True),
+            model_name="asset",
+            name="delivery_instructions",
+            field=models.TextField(
+                blank=True, default=None, help_text="Tell students how to deliver this project", null=True
+            ),
         ),
         migrations.AddField(
-            model_name='asset',
-            name='delivery_regex_url',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   help_text='Will only be used if "url" is the delivery format',
-                                   max_length=255,
-                                   null=True),
+            model_name="asset",
+            name="delivery_regex_url",
+            field=models.CharField(
+                blank=True,
+                default=None,
+                help_text='Will only be used if "url" is the delivery format',
+                max_length=255,
+                null=True,
+            ),
         ),
     ]

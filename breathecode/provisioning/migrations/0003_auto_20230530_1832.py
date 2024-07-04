@@ -6,40 +6,48 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('provisioning', '0002_alter_provisioningvendor_invite_url'),
+        ("provisioning", "0002_alter_provisioningvendor_invite_url"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='provisioningbill',
-            name='hash',
+            model_name="provisioningbill",
+            name="hash",
             field=models.CharField(blank=True, default=None, max_length=64, null=True),
         ),
         migrations.AlterField(
-            model_name='provisioningactivity',
-            name='registered_at',
+            model_name="provisioningactivity",
+            name="registered_at",
             field=models.DateTimeField(
                 blank=True,
                 default=None,
-                help_text='When the activity happened, this field comes form the provisioning vendor',
-                null=True),
+                help_text="When the activity happened, this field comes form the provisioning vendor",
+                null=True,
+            ),
         ),
         migrations.AlterField(
-            model_name='provisioningbill',
-            name='currency_code',
-            field=models.CharField(default='USD', max_length=3),
+            model_name="provisioningbill",
+            name="currency_code",
+            field=models.CharField(default="USD", max_length=3),
         ),
         migrations.AlterField(
-            model_name='provisioningbill',
-            name='status',
-            field=models.CharField(choices=[('DUE', 'Due'), ('DISPUTED', 'Disputed'), ('IGNORED', 'Ignored'),
-                                            ('PENDING', 'Pending'), ('PAID', 'Paid')],
-                                   default='DUE',
-                                   max_length=20),
+            model_name="provisioningbill",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("DUE", "Due"),
+                    ("DISPUTED", "Disputed"),
+                    ("IGNORED", "Ignored"),
+                    ("PENDING", "Pending"),
+                    ("PAID", "Paid"),
+                ],
+                default="DUE",
+                max_length=20,
+            ),
         ),
         migrations.AlterField(
-            model_name='provisioningbill',
-            name='total_amount',
+            model_name="provisioningbill",
+            name="total_amount",
             field=models.FloatField(default=0),
         ),
     ]

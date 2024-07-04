@@ -6,33 +6,49 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('freelance', '0009_auto_20210326_0041'),
+        ("freelance", "0009_auto_20210326_0041"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='RepositoryIssueWebhook',
+            name="RepositoryIssueWebhook",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('webhook_action',
-                 models.CharField(blank=True,
-                                  default=None,
-                                  help_text='The specific action that was triggered on github for this webhook',
-                                  max_length=100,
-                                  null=True)),
-                ('run_at',
-                 models.DateTimeField(blank=True, default=None, help_text='Date/time that the webhook ran', null=True)),
-                ('repository', models.URLField(help_text='Github repo where the event occured', max_length=255)),
-                ('payload',
-                 models.JSONField(help_text='Info that came on the request, it varies depending on the webhook type')),
-                ('academy_slug', models.SlugField()),
-                ('status',
-                 models.CharField(choices=[('PENDING', 'Pending'), ('DONE', 'Done'), ('ERROR', 'Error')],
-                                  default='PENDING',
-                                  max_length=9)),
-                ('status_text', models.CharField(blank=True, default=None, max_length=255, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "webhook_action",
+                    models.CharField(
+                        blank=True,
+                        default=None,
+                        help_text="The specific action that was triggered on github for this webhook",
+                        max_length=100,
+                        null=True,
+                    ),
+                ),
+                (
+                    "run_at",
+                    models.DateTimeField(
+                        blank=True, default=None, help_text="Date/time that the webhook ran", null=True
+                    ),
+                ),
+                ("repository", models.URLField(help_text="Github repo where the event occured", max_length=255)),
+                (
+                    "payload",
+                    models.JSONField(
+                        help_text="Info that came on the request, it varies depending on the webhook type"
+                    ),
+                ),
+                ("academy_slug", models.SlugField()),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[("PENDING", "Pending"), ("DONE", "Done"), ("ERROR", "Error")],
+                        default="PENDING",
+                        max_length=9,
+                    ),
+                ),
+                ("status_text", models.CharField(blank=True, default=None, max_length=255, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
         ),
     ]

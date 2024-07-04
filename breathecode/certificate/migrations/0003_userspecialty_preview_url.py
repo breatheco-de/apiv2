@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('certificate', '0002_auto_20200908_0126'),
+        ("certificate", "0002_auto_20200908_0126"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='userspecialty',
-            name='preview_url',
+            model_name="userspecialty",
+            name="preview_url",
             field=models.CharField(blank=True, default=None, max_length=250, null=True),
         ),
     ]

@@ -6,23 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('certificate', '0001_squashed_0004_userspecialty_cohort'),
+        ("certificate", "0001_squashed_0004_userspecialty_cohort"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='userspecialty',
-            name='signed_by_role',
-            field=models.CharField(default='Director', max_length=100),
+            model_name="userspecialty",
+            name="signed_by_role",
+            field=models.CharField(default="Director", max_length=100),
         ),
         migrations.AlterField(
-            model_name='userspecialty',
-            name='created_at',
+            model_name="userspecialty",
+            name="created_at",
             field=models.DateTimeField(auto_now_add=True),
         ),
         migrations.AlterField(
-            model_name='userspecialty',
-            name='signed_by',
+            model_name="userspecialty",
+            name="signed_by",
             field=models.CharField(max_length=100),
         ),
     ]

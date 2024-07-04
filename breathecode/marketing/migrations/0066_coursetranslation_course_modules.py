@@ -6,17 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0065_course_coursetranslation'),
+        ("marketing", "0065_course_coursetranslation"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='coursetranslation',
-            name='course_modules',
+            model_name="coursetranslation",
+            name="course_modules",
             field=models.JSONField(
                 blank=True,
                 default=None,
-                help_text='The course modules should be a list of objects of each of the modules taught',
-                null=True),
+                help_text="The course modules should be a list of objects of each of the modules taught",
+                null=True,
+            ),
         ),
     ]

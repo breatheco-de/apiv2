@@ -6,48 +6,47 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authenticate', '0043_auto_20230817_0837'),
+        ("authenticate", "0043_auto_20230817_0837"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='profile',
-            name='show_tutorial',
-            field=models.BooleanField(db_index=True,
-                                      default=True,
-                                      help_text='Set true if you want to show the tutorial on the user UI/UX'),
+            model_name="profile",
+            name="show_tutorial",
+            field=models.BooleanField(
+                db_index=True, default=True, help_text="Set true if you want to show the tutorial on the user UI/UX"
+            ),
         ),
         migrations.AlterField(
-            model_name='profileacademy',
-            name='email',
+            model_name="profileacademy",
+            name="email",
             field=models.CharField(db_index=True, default=None, max_length=150, null=True),
         ),
         migrations.AlterField(
-            model_name='profileacademy',
-            name='first_name',
+            model_name="profileacademy",
+            name="first_name",
             field=models.CharField(db_index=True, default=None, max_length=100, null=True),
         ),
         migrations.AlterField(
-            model_name='profileacademy',
-            name='last_name',
+            model_name="profileacademy",
+            name="last_name",
             field=models.CharField(db_index=True, default=None, max_length=100, null=True),
         ),
         migrations.AlterField(
-            model_name='profileacademy',
-            name='status',
-            field=models.CharField(choices=[('INVITED', 'Invited'), ('ACTIVE', 'Active')],
-                                   db_index=True,
-                                   default='INVITED',
-                                   max_length=15),
+            model_name="profileacademy",
+            name="status",
+            field=models.CharField(
+                choices=[("INVITED", "Invited"), ("ACTIVE", "Active")], db_index=True, default="INVITED", max_length=15
+            ),
         ),
         migrations.AlterField(
-            model_name='token',
-            name='expires_at',
+            model_name="token",
+            name="expires_at",
             field=models.DateTimeField(blank=True, db_index=True, default=None, null=True),
         ),
         migrations.AlterField(
-            model_name='token',
-            name='token_type',
-            field=models.CharField(db_index=True, default='temporal', max_length=64),
+            model_name="token",
+            name="token_type",
+            field=models.CharField(db_index=True, default="temporal", max_length=64),
         ),
     ]

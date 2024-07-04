@@ -3,7 +3,7 @@ from django.db import models
 from breathecode.authenticate.models import CredentialsGithub
 from breathecode.admissions.models import Academy
 
-__all__ = ['Freelancer', 'Bill', 'Issue']
+__all__ = ["Freelancer", "Bill", "Issue"]
 
 
 class Freelancer(models.Model):
@@ -41,10 +41,11 @@ class Freelancer(models.Model):
 class AcademyFreelanceProject(models.Model):
 
     title = models.CharField(max_length=255)
-    repository = models.URLField(max_length=255, help_text='Github repo where the event occured')
+    repository = models.URLField(max_length=255, help_text="Github repo where the event occured")
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     total_client_hourly_price = models.FloatField(
-        help_text='How much will the client be billed for each our on this project')
+        help_text="How much will the client be billed for each our on this project"
+    )
 
     def __str__(self):
         return self.title
@@ -57,23 +58,25 @@ class FreelanceProjectMember(models.Model):
         null=True,
         blank=True,
         default=None,
-        help_text='Paid to the freelancer, leave blank to use the default freelancer price')
+        help_text="Paid to the freelancer, leave blank to use the default freelancer price",
+    )
     total_client_hourly_price = models.FloatField(
         null=True,
         blank=True,
         default=None,
-        help_text='Billed to the client on this project/freelancer, leave blank to use default from the project')
+        help_text="Billed to the client on this project/freelancer, leave blank to use default from the project",
+    )
 
 
-DUE = 'DUE'
-APPROVED = 'APPROVED'
-PAID = 'PAID'
-IGNORED = 'IGNORED'
+DUE = "DUE"
+APPROVED = "APPROVED"
+PAID = "PAID"
+IGNORED = "IGNORED"
 BILL_STATUS = (
-    (DUE, 'Due'),
-    (APPROVED, 'Approved'),
-    (IGNORED, 'Ignored'),
-    (PAID, 'Paid'),
+    (DUE, "Due"),
+    (APPROVED, "Approved"),
+    (IGNORED, "Ignored"),
+    (PAID, "Paid"),
 )
 
 
@@ -95,12 +98,13 @@ class ProjectInvoice(models.Model):
     @staticmethod
     def get_or_create(repository, academy_slug, status):
 
-        invoice = ProjectInvoice.objects.filter(status=status,
-                                                project__repository__iexact=repository,
-                                                project__academy__slug=academy_slug).first()
+        invoice = ProjectInvoice.objects.filter(
+            status=status, project__repository__iexact=repository, project__academy__slug=academy_slug
+        ).first()
         if invoice is None:
-            project = AcademyFreelanceProject.objects.filter(repository__iexact=repository,
-                                                             academy__slug=academy_slug).first()
+            project = AcademyFreelanceProject.objects.filter(
+                repository__iexact=repository, academy__slug=academy_slug
+            ).first()
             if project is None:
                 return None
 
@@ -117,12 +121,14 @@ class Bill(models.Model):
     total_duration_in_hours = models.FloatField(default=0)
     total_price = models.FloatField(default=0)
 
-    academy = models.ForeignKey(Academy,
-                                on_delete=models.CASCADE,
-                                null=True,
-                                default=None,
-                                blank=True,
-                                help_text='Will help catalog billing grouped by academy')
+    academy = models.ForeignKey(
+        Academy,
+        on_delete=models.CASCADE,
+        null=True,
+        default=None,
+        blank=True,
+        help_text="Will help catalog billing grouped by academy",
+    )
 
     reviewer = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None)
     freelancer = models.ForeignKey(Freelancer, on_delete=models.CASCADE)
@@ -132,17 +138,17 @@ class Bill(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
 
-IGNORED = 'IGNORED'
-DRAFT = 'DRAFT'
-TODO = 'TODO'
-DOING = 'DOING'
-DONE = 'DONE'
+IGNORED = "IGNORED"
+DRAFT = "DRAFT"
+TODO = "TODO"
+DOING = "DOING"
+DONE = "DONE"
 ISSUE_STATUS = (
-    (IGNORED, 'Ignored'),
-    (DRAFT, 'Draft'),
-    (TODO, 'Todo'),
-    (DOING, 'Doing'),
-    (DONE, 'Done'),
+    (IGNORED, "Ignored"),
+    (DRAFT, "Draft"),
+    (TODO, "Todo"),
+    (DOING, "Doing"),
+    (DONE, "Done"),
 )
 
 
@@ -154,13 +160,16 @@ class Issue(models.Model):
         default=None,
         null=True,
         blank=True,
-        help_text='This is the only unique identifier we get from github, the issue number is not unique among repos')
+        help_text="This is the only unique identifier we get from github, the issue number is not unique among repos",
+    )
     status = models.CharField(max_length=20, choices=ISSUE_STATUS, default=DRAFT)
-    status_message = models.CharField(max_length=255,
-                                      blank=True,
-                                      null=True,
-                                      default=None,
-                                      help_text='Important message like reason why not included on bill, etc.')
+    status_message = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Important message like reason why not included on bill, etc.",
+    )
 
     github_state = models.CharField(max_length=30, blank=True, null=True, default=None)
     github_number = models.PositiveIntegerField(blank=True, null=True, default=None)
@@ -175,19 +184,23 @@ class Issue(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None, blank=True)
     freelancer = models.ForeignKey(Freelancer, on_delete=models.CASCADE)
 
-    academy = models.ForeignKey(Academy,
-                                on_delete=models.CASCADE,
-                                null=True,
-                                default=None,
-                                blank=True,
-                                help_text='Will help catalog billing grouped by academy')
+    academy = models.ForeignKey(
+        Academy,
+        on_delete=models.CASCADE,
+        null=True,
+        default=None,
+        blank=True,
+        help_text="Will help catalog billing grouped by academy",
+    )
     bill = models.ForeignKey(Bill, on_delete=models.CASCADE, null=True, default=None, blank=True)
-    invoice = models.ForeignKey(ProjectInvoice,
-                                null=True,
-                                default=None,
-                                blank=True,
-                                on_delete=models.SET_DEFAULT,
-                                help_text='Attach this issue to a project invoice')
+    invoice = models.ForeignKey(
+        ProjectInvoice,
+        null=True,
+        default=None,
+        blank=True,
+        on_delete=models.SET_DEFAULT,
+        help_text="Attach this issue to a project invoice",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

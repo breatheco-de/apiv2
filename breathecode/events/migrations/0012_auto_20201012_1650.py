@@ -6,28 +6,28 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0011_remove_event_slug'),
+        ("events", "0011_remove_event_slug"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='event',
-            name='description',
+            model_name="event",
+            name="description",
             field=models.TextField(blank=True, default=None, max_length=2000, null=True),
         ),
         migrations.AlterField(
-            model_name='event',
-            name='exerpt',
+            model_name="event",
+            name="exerpt",
             field=models.TextField(blank=True, default=None, max_length=500, null=True),
         ),
         migrations.AlterField(
-            model_name='event',
-            name='lang',
+            model_name="event",
+            name="lang",
             field=models.CharField(blank=True, default=None, max_length=2, null=True),
         ),
         migrations.AlterField(
-            model_name='event',
-            name='title',
+            model_name="event",
+            name="title",
             field=models.CharField(blank=True, default=None, max_length=255, null=True),
         ),
     ]

@@ -6,31 +6,37 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authenticate', '0049_delete_appuseragreement'),
+        ("authenticate", "0049_delete_appuseragreement"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='app',
-            name='optional_scopes',
+            model_name="app",
+            name="optional_scopes",
         ),
         migrations.RemoveField(
-            model_name='apprequiredscope',
-            name='app',
+            model_name="apprequiredscope",
+            name="app",
         ),
         migrations.RemoveField(
-            model_name='apprequiredscope',
-            name='scope',
+            model_name="apprequiredscope",
+            name="scope",
         ),
         migrations.RemoveField(
-            model_name='app',
-            name='required_scopes',
+            model_name="app",
+            name="required_scopes",
         ),
         migrations.RemoveField(
-            model_name='optionalscopeset',
-            name='optional_scopes',
+            model_name="optionalscopeset",
+            name="optional_scopes",
         ),
-        migrations.DeleteModel(name='AppOptionalScope', ),
-        migrations.DeleteModel(name='AppRequiredScope', ),
-        migrations.DeleteModel(name='OptionalScopeSet', ),
+        migrations.DeleteModel(
+            name="AppOptionalScope",
+        ),
+        migrations.DeleteModel(
+            name="AppRequiredScope",
+        ),
+        migrations.DeleteModel(
+            name="OptionalScopeSet",
+        ),
     ]

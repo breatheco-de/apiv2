@@ -9,34 +9,36 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('freelance', '0008_auto_20210302_0254'),
+        ("freelance", "0008_auto_20210302_0254"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='bill',
-            name='status',
-            field=models.CharField(choices=[('DUE', 'Due'), ('APPROVED', 'Approved'), ('PAID', 'Paid')],
-                                   default='DUE',
-                                   max_length=20),
+            model_name="bill",
+            name="status",
+            field=models.CharField(
+                choices=[("DUE", "Due"), ("APPROVED", "Approved"), ("PAID", "Paid")], default="DUE", max_length=20
+            ),
         ),
         migrations.AlterField(
-            model_name='issue',
-            name='author',
-            field=models.ForeignKey(blank=True,
-                                    default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to=settings.AUTH_USER_MODEL),
+            model_name="issue",
+            name="author",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AlterField(
-            model_name='issue',
-            name='github_state',
+            model_name="issue",
+            name="github_state",
             field=models.CharField(blank=True, default=None, max_length=30, null=True),
         ),
         migrations.AlterField(
-            model_name='issue',
-            name='repository_url',
+            model_name="issue",
+            name="repository_url",
             field=models.URLField(blank=True, default=None, max_length=255, null=True),
         ),
     ]

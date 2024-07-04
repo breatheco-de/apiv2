@@ -6,14 +6,16 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0018_eventticket'),
+        ("events", "0018_eventticket"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='eventcheckin',
-            name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('DONE', 'Done')], default='PENDING', max_length=9),
+            model_name="eventcheckin",
+            name="status",
+            field=models.CharField(choices=[("PENDING", "Pending"), ("DONE", "Done")], default="PENDING", max_length=9),
         ),
-        migrations.DeleteModel(name='EventTicket', ),
+        migrations.DeleteModel(
+            name="EventTicket",
+        ),
     ]

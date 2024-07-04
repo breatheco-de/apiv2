@@ -7,7 +7,7 @@ from ldclient import Context, LDClient
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['LaunchDarkly']
+__all__ = ["LaunchDarkly"]
 
 clients: dict[str, LDClient] = {}
 
@@ -17,7 +17,7 @@ class LaunchDarkly:
     client: LDClient
 
     def __init__(self, api_key=None):
-        api_key = api_key or os.getenv('LAUNCH_DARKLY_API_KEY')
+        api_key = api_key or os.getenv("LAUNCH_DARKLY_API_KEY")
 
         if api_key not in clients:
             config = Config(api_key)
@@ -33,9 +33,10 @@ class LaunchDarkly:
         return self.client.variation_detail(key, context, default)
 
     def _validate_key(self, key):
-        if not re.findall(r'^[a-zA-Z0-9_\-\.]+$', key):
-            raise ValueError('The chosen key is invalid, it just must incluse letters, numbers, '
-                             'underscore, dash and dot')
+        if not re.findall(r"^[a-zA-Z0-9_\-\.]+$", key):
+            raise ValueError(
+                "The chosen key is invalid, it just must incluse letters, numbers, " "underscore, dash and dot"
+            )
 
     def context(self, key: str, name: str, kind: str, value: dict) -> Context:
         self._validate_key(key)

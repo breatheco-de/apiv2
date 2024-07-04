@@ -6,17 +6,19 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0039_downloadable'),
+        ("marketing", "0039_downloadable"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='formentry',
-            name='current_download',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   help_text='Slug of the breathecode.marketing.downloadable',
-                                   max_length=255,
-                                   null=True),
+            model_name="formentry",
+            name="current_download",
+            field=models.CharField(
+                blank=True,
+                default=None,
+                help_text="Slug of the breathecode.marketing.downloadable",
+                max_length=255,
+                null=True,
+            ),
         ),
     ]

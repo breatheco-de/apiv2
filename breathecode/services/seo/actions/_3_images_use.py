@@ -10,20 +10,20 @@ def images_use(client, report):
     asset = client.asset
 
     readme = asset.get_readme(parse=True)
-    if 'html' not in readme:
-        logger.fatal(f'Asset with {asset.slug} readme cannot be parse into an HTML')
+    if "html" not in readme:
+        logger.fatal(f"Asset with {asset.slug} readme cannot be parse into an HTML")
         return False
 
-    images = BeautifulSoup(readme['html'], features='html.parser').find_all('img')
+    images = BeautifulSoup(readme["html"], features="html.parser").find_all("img")
 
     for image in images:
-        if 'alt' not in image.attrs or image.attrs['alt'] == '':
+        if "alt" not in image.attrs or image.attrs["alt"] == "":
             report.bad(-10, f'No alt found for image with source "{image.attrs["src"]}"')
 
     if len(images) == 0:
-        report.bad(-5, 'Article must have at least one image, diagram or graphic')
+        report.bad(-5, "Article must have at least one image, diagram or graphic")
 
-    #report.good('No errors found on keyword density')
+    # report.good('No errors found on keyword density')
 
 
 images_use.description = """

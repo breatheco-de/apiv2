@@ -6,17 +6,19 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0038_alter_cohort_syllabus_version'),
+        ("admissions", "0038_alter_cohort_syllabus_version"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='syllabus',
-            name='main_technologies',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   help_text='Coma separated, E.g: HTML, CSS, Javascript',
-                                   max_length=150,
-                                   null=True),
+            model_name="syllabus",
+            name="main_technologies",
+            field=models.CharField(
+                blank=True,
+                default=None,
+                help_text="Coma separated, E.g: HTML, CSS, Javascript",
+                max_length=150,
+                null=True,
+            ),
         ),
     ]

@@ -13,7 +13,7 @@ from . import interfaces
 from ..sha256_mixin import Sha256Mixin
 from ..token_mixin import TokenMixin
 
-__all__ = ['Check']
+__all__ = ["Check"]
 
 
 class Check:
@@ -110,23 +110,23 @@ class Check:
         ```
         """
 
-        is_unittest = hasattr(self._parent, 'assertEqual')
+        is_unittest = hasattr(self._parent, "assertEqual")
 
         if is_unittest:
-            self._parent.assertEqual(len(first),
-                                     len(second),
-                                     msg=f'Does not have same length\n\n{first}\n\n!=\n\n{second}')
+            self._parent.assertEqual(
+                len(first), len(second), msg=f"Does not have same length\n\n{first}\n\n!=\n\n{second}"
+            )
 
             for i in range(0, len(first)):
-                self._parent.assertEqual(first[i].args, second[i].args, msg=f'args in index {i} does not match')
-                self._parent.assertEqual(first[i].kwargs, second[i].kwargs, msg=f'kwargs in index {i} does not match')
+                self._parent.assertEqual(first[i].args, second[i].args, msg=f"args in index {i} does not match")
+                self._parent.assertEqual(first[i].kwargs, second[i].kwargs, msg=f"kwargs in index {i} does not match")
 
         else:
-            assert len(first) == len(second), f'not have same length than {first}\n{second}'
+            assert len(first) == len(second), f"not have same length than {first}\n{second}"
 
             for i in range(0, len(first)):
-                assert first[i].args == second[i].args, f'args in index {i} does not match'
-                assert first[i].kwargs == second[i].kwargs, f'kwargs in index {i} does not match'
+                assert first[i].args == second[i].args, f"args in index {i} does not match"
+                assert first[i].kwargs == second[i].kwargs, f"kwargs in index {i} does not match"
 
     def _fill_partial_equality(self, first: dict, second: dict) -> dict:
         original = {}
@@ -162,10 +162,10 @@ class Check:
         """
 
         if not isinstance(query, QuerySet):
-            self._parent.fail('The first argument is not a QuerySet')
+            self._parent.fail("The first argument is not a QuerySet")
 
         if query.model != model:
-            self._parent.fail(f'The QuerySet is type {query.model.__name__} instead of {model.__name__}')
+            self._parent.fail(f"The QuerySet is type {query.model.__name__} instead of {model.__name__}")
 
     def queryset_with_pks(self, query: Any, pks: list[int]) -> None:
         """
@@ -190,7 +190,7 @@ class Check:
         """
 
         if not isinstance(query, QuerySet):
-            self._parent.fail('The first argument is not a QuerySet')
+            self._parent.fail("The first argument is not a QuerySet")
 
         assert [x.pk for x in query] == pks
 
@@ -216,24 +216,24 @@ class Check:
         """
 
         if not isinstance(query, list):
-            self._parent.fail('The first argument is not a list')
+            self._parent.fail("The first argument is not a list")
 
         self._parent.assertEqual([x.pk for x in query], pks)
 
-    def count_queries(self, n, db='default', verbose=False):
-        queries = [query['sql'] for query in connections[db].queries]
+    def count_queries(self, n, db="default", verbose=False):
+        queries = [query["sql"] for query in connections[db].queries]
 
         if not verbose:
-            self._parent.assertEqual(n, len(queries), 'different number of queries, use verbose=True to see more info')
+            self._parent.assertEqual(n, len(queries), "different number of queries, use verbose=True to see more info")
 
         if verbose and n != len(queries):
-            result = '\n'
-            result += '---------------- Queries ----------------\n\n'
+            result = "\n"
+            result += "---------------- Queries ----------------\n\n"
             for query in connections[db].queries:
                 result += f'{query["time"]} {query["sql"]}\n\n'
-            result += '----------------- Count -----------------\n\n'
-            result += f'Queries: {len(connections[db].queries)}\n\n'
-            result += '-----------------------------------------\n\n'
+            result += "----------------- Count -----------------\n\n"
+            result += f"Queries: {len(connections[db].queries)}\n\n"
+            result += "-----------------------------------------\n\n"
             self._parent.fail(result)
 
     @contextmanager
@@ -243,4 +243,4 @@ class Check:
         except expected_exception as e:
             assert str(e) == expected_message, f"Expected '{expected_message}', but got '{str(e)}'"
         except Exception as e:
-            pytest.fail(f'Expected {expected_exception} but it was not raised.')
+            pytest.fail(f"Expected {expected_exception} but it was not raised.")

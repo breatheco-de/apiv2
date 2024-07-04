@@ -6,19 +6,19 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0037_alter_eventtype_visibility_settings'),
+        ("events", "0037_alter_eventtype_visibility_settings"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='event',
-            name='live_stream_url',
+            model_name="event",
+            name="live_stream_url",
             field=models.URLField(
                 blank=True,
                 default=None,
-                help_text=
-                "This URL should have the URL of the meeting if it is an online event, if it's not online it should be empty.",
+                help_text="This URL should have the URL of the meeting if it is an online event, if it's not online it should be empty.",
                 max_length=255,
-                null=True),
+                null=True,
+            ),
         ),
     ]

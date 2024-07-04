@@ -6,19 +6,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0023_auto_20210812_2153'),
+        ("admissions", "0023_auto_20210812_2153"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='cohort',
-            name='online_meeting_url',
+            model_name="cohort",
+            name="online_meeting_url",
             field=models.URLField(blank=True, default=None, max_length=255, null=True),
         ),
         migrations.AddField(
-            model_name='cohort',
-            name='remote_available',
+            model_name="cohort",
+            name="remote_available",
             field=models.BooleanField(
-                default=True, help_text='True (default) if the students from other cities can take it from home'),
+                default=True, help_text="True (default) if the students from other cities can take it from home"
+            ),
         ),
     ]

@@ -6,15 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0032_contentvariable'),
+        ("registry", "0032_contentvariable"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='contentvariable',
-            name='default_value',
+            model_name="contentvariable",
+            name="default_value",
             field=models.TextField(
-                help_text=
-                'If the variable type is fetch or code and the processing fails, the default value will be used'),
+                help_text="If the variable type is fetch or code and the processing fails, the default value will be used"
+            ),
         ),
     ]

@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0011_auto_20201006_0058'),
+        ("admissions", "0011_auto_20201006_0058"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='academy',
-            name='timezone',
+            model_name="academy",
+            name="timezone",
             field=models.CharField(default=None, max_length=50, null=True),
         ),
         migrations.AddField(
-            model_name='cohort',
-            name='timezone',
+            model_name="cohort",
+            name="timezone",
             field=models.CharField(default=None, max_length=50, null=True),
         ),
     ]

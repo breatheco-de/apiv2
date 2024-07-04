@@ -1,6 +1,7 @@
 """
 Test /cohort/user
 """
+
 import random
 from unittest.mock import MagicMock, call, patch
 from breathecode.admissions.models import Cohort
@@ -15,7 +16,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 With zero Cohort
     """
 
-    @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
+    @patch("breathecode.activity.tasks.get_attendancy_log.delay", MagicMock())
     def test_without_cohorts(self):
         request = HttpRequest()
         queryset = Cohort.objects.all()
@@ -24,10 +25,10 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(tasks.get_attendancy_log.delay.call_args_list, [])
 
-    @patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock())
+    @patch("breathecode.activity.tasks.get_attendancy_log.delay", MagicMock())
     def test_with_many_cohorts(self):
         how_many = random.randint(2, 5)
-        with patch('breathecode.activity.tasks.get_attendancy_log.delay', MagicMock()):
+        with patch("breathecode.activity.tasks.get_attendancy_log.delay", MagicMock()):
             self.bc.database.create(cohort=how_many)
         request = HttpRequest()
         queryset = Cohort.objects.all()

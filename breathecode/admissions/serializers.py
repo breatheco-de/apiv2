@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 class CountrySerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     code = serpy.Field()
     name = serpy.Field()
@@ -36,6 +37,7 @@ class CountrySerializer(serpy.Serializer):
 
 class GetSyllabusSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     slug = serpy.Field()
     name = serpy.Field()
@@ -46,12 +48,14 @@ class GetSyllabusSmallSerializer(serpy.Serializer):
 
 class CitySerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     name = serpy.Field()
 
 
 class UserSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     email = serpy.Field()
@@ -59,12 +63,14 @@ class UserSmallSerializer(serpy.Serializer):
 
 class PublicProfileSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     avatar_url = serpy.Field()
 
 
 class ProfileSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     avatar_url = serpy.Field()
@@ -74,6 +80,7 @@ class ProfileSerializer(serpy.Serializer):
 
 class GetSmallAcademySerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     name = serpy.Field()
@@ -85,6 +92,7 @@ class GetSmallAcademySerializer(serpy.Serializer):
 
 class GetProfileAcademySmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     first_name = serpy.Field()
@@ -95,6 +103,7 @@ class GetProfileAcademySmallSerializer(serpy.Serializer):
 
 class ProfileAcademySmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     academy = GetSmallAcademySerializer()
     role = serpy.MethodField()
@@ -105,6 +114,7 @@ class ProfileAcademySmallSerializer(serpy.Serializer):
 
 class UserPublicSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     first_name = serpy.Field()
@@ -114,6 +124,7 @@ class UserPublicSerializer(serpy.Serializer):
 
 class UserSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     first_name = serpy.Field()
@@ -148,6 +159,7 @@ class GetTinnyCertificateSerializer(serpy.Serializer):
 
 class GithubSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     avatar_url = serpy.Field()
     name = serpy.Field()
@@ -200,6 +212,7 @@ class GetBigAcademySerializer(serpy.Serializer):
 
 class SyllabusVersionSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     version = serpy.Field()
     status = serpy.Field()
@@ -243,6 +256,7 @@ class SyllabusVersionSmallSerializer(serpy.Serializer):
 
 class GetSyllabusVersionSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     json = serpy.Field()
     version = serpy.Field()
     status = serpy.Field()
@@ -300,6 +314,7 @@ class GetSyllabusVersionSerializer(serpy.Serializer):
 
 class SmallCohortTimeSlotSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     id = serpy.Field()
     starting_at = serpy.DatetimeIntegerField()
     ending_at = serpy.DatetimeIntegerField()
@@ -309,6 +324,7 @@ class SmallCohortTimeSlotSerializer(serpy.Serializer):
 
 class GetCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     slug = serpy.Field()
@@ -338,6 +354,7 @@ class GetCohortSerializer(serpy.Serializer):
 
 class PublicCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     slug = serpy.Field()
@@ -353,7 +370,7 @@ class PublicCohortSerializer(serpy.Serializer):
     distance = serpy.MethodField()
     timezone = serpy.Field()
     schedule = GetSmallSyllabusScheduleSerializer(required=False)
-    timeslots = serpy.ManyToManyField(SmallCohortTimeSlotSerializer(attr='cohorttimeslot_set', many=True))
+    timeslots = serpy.ManyToManyField(SmallCohortTimeSlotSerializer(attr="cohorttimeslot_set", many=True))
 
     def get_distance(self, obj):
         if not obj.latitude or not obj.longitude or not obj.academy.latitude or not obj.academy.longitude:
@@ -364,6 +381,7 @@ class PublicCohortSerializer(serpy.Serializer):
 
 class GetSmallCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     slug = serpy.Field()
@@ -376,6 +394,7 @@ class GetSmallCohortSerializer(serpy.Serializer):
 
 class GetTeacherAcademySmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     first_name = serpy.Field()
@@ -396,15 +415,18 @@ class GetTeacherAcademySmallSerializer(serpy.Serializer):
         if obj.user is None:
             return []
 
-        return GetSmallCohortSerializer(Cohort.objects.filter(
-            cohortuser__user__id=obj.user.id,
-            cohortuser__role__in=['TEACHER',
-                                  'ASSISTANT']).exclude(stage__iexact='DELETED').order_by('-ending_date').all(),
-                                        many=True).data
+        return GetSmallCohortSerializer(
+            Cohort.objects.filter(cohortuser__user__id=obj.user.id, cohortuser__role__in=["TEACHER", "ASSISTANT"])
+            .exclude(stage__iexact="DELETED")
+            .order_by("-ending_date")
+            .all(),
+            many=True,
+        ).data
 
 
 class GetMeCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     slug = serpy.Field()
@@ -439,6 +461,7 @@ class CohortUserHookSerializer(serpy.Serializer):
 
 class CohortHookSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     slug = serpy.Field()
@@ -461,6 +484,7 @@ class CohortHookSerializer(serpy.Serializer):
 
 class GetCohortUserSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     id = serpy.Field()
     user = UserSerializer()
     cohort = GetSmallCohortSerializer()
@@ -478,6 +502,7 @@ class GetCohortUserSerializer(serpy.Serializer):
 
 class GetCohortUserTasksSerializer(GetCohortUserSerializer):
     """The serializer schema definition."""
+
     tasks = serpy.MethodField()
 
     def get_tasks(self, obj):
@@ -487,6 +512,7 @@ class GetCohortUserTasksSerializer(GetCohortUserSerializer):
 
 class GETCohortTimeSlotSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     id = serpy.Field()
     cohort = serpy.MethodField()
     starting_at = serpy.DatetimeIntegerField()
@@ -502,6 +528,7 @@ class GETCohortTimeSlotSerializer(serpy.Serializer):
 
 class GETSyllabusScheduleTimeSlotSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     id = serpy.Field()
     schedule = serpy.MethodField()
     starting_at = serpy.DatetimeIntegerField()
@@ -517,6 +544,7 @@ class GETSyllabusScheduleTimeSlotSerializer(serpy.Serializer):
 
 class GETCohortUserSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     cohort = GetMeCohortSerializer()
     role = serpy.Field()
@@ -530,6 +558,7 @@ class GETCohortUserSmallSerializer(serpy.Serializer):
 
 class UserMeSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     email = serpy.Field()
@@ -552,14 +581,15 @@ class UserMeSerializer(serpy.Serializer):
         return ProfileAcademySmallSerializer(roles, many=True).data
 
     def get_cohorts(self, obj):
-        cohorts = CohortUser.objects.filter(
-            user__id=obj.id).exclude(Q(educational_status='DROPPED')
-                                     | Q(educational_status='SUSPENDED'))
+        cohorts = CohortUser.objects.filter(user__id=obj.id).exclude(
+            Q(educational_status="DROPPED") | Q(educational_status="SUSPENDED")
+        )
         return GETCohortUserSmallSerializer(cohorts, many=True).data
 
 
 class GetSyllabusSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     slug = serpy.Field()
@@ -582,23 +612,23 @@ class GetSyllabusSerializer(serpy.Serializer):
 
 #        ↓ EDIT SERIALIZERS ↓
 class AcademySerializer(serializers.ModelSerializer):
-    status_fields = ['status']
+    status_fields = ["status"]
     country = CountrySerializer(required=True)
     city = CitySerializer(required=True)
 
     class Meta:
         model = Academy
-        fields = ['id', 'slug', 'name', 'street_address', 'country', 'city', 'is_hidden_on_prework']
+        fields = ["id", "slug", "name", "street_address", "country", "city", "is_hidden_on_prework"]
 
     def validate(self, data):
 
-        if 'slug' in data and data['slug'] != self.instance.slug:
-            raise ValidationException('Academy slug cannot be updated')
+        if "slug" in data and data["slug"] != self.instance.slug:
+            raise ValidationException("Academy slug cannot be updated")
 
         return data
 
     def update(self, instance, validated_data):
-        del validated_data['slug']
+        del validated_data["slug"]
         return super().update(instance, validated_data)
 
 
@@ -606,11 +636,11 @@ class SyllabusPOSTSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Syllabus
-        fields = ['id', 'slug']
+        fields = ["id", "slug"]
 
 
 class CohortSerializerMixin(serializers.ModelSerializer):
-    status_fields = ['stage']
+    status_fields = ["stage"]
 
     syllabus = serializers.CharField(required=False)
     syllabus_version = serializers.CharField(required=False)
@@ -618,97 +648,116 @@ class CohortSerializerMixin(serializers.ModelSerializer):
 
     def validate(self, data):
 
-        kickoff_date = (data['kickoff_date'] if 'kickoff_date' in data else None) or (self.instance.kickoff_date
-                                                                                      if self.instance else None)
+        kickoff_date = (data["kickoff_date"] if "kickoff_date" in data else None) or (
+            self.instance.kickoff_date if self.instance else None
+        )
 
-        ending_date = (data['ending_date'] if 'ending_date' in data else None) or (self.instance.ending_date
-                                                                                   if self.instance else None)
+        ending_date = (data["ending_date"] if "ending_date" in data else None) or (
+            self.instance.ending_date if self.instance else None
+        )
 
         if kickoff_date and ending_date and kickoff_date > ending_date:
-            raise ValidationException('kickoff_date cannot be greather than ending_date',
-                                      slug='kickoff-date-greather-than-ending-date')
+            raise ValidationException(
+                "kickoff_date cannot be greather than ending_date", slug="kickoff-date-greather-than-ending-date"
+            )
 
-        if 'stage' in data:
+        if "stage" in data:
             possible_stages = [stage_slug for stage_slug, stage_label in COHORT_STAGE]
-            if data['stage'] not in possible_stages:
-                raise ValidationException(f"Invalid cohort stage {data['stage']}", slug='invalid-cohort-stage')
+            if data["stage"] not in possible_stages:
+                raise ValidationException(f"Invalid cohort stage {data['stage']}", slug="invalid-cohort-stage")
 
-        if 'syllabus' in data:
-            strings = data['syllabus'].split('.v')
+        if "syllabus" in data:
+            strings = data["syllabus"].split(".v")
 
             if len(strings) != 2:
-                raise ValidationException('Syllabus field marformed(`${syllabus.slug}.v{syllabus_version.version}`)',
-                                          slug='syllabus-field-marformed')
+                raise ValidationException(
+                    "Syllabus field marformed(`${syllabus.slug}.v{syllabus_version.version}`)",
+                    slug="syllabus-field-marformed",
+                )
 
             [syllabus_slug, syllabus_version_number] = strings
 
             syllabus_version = None
-            if syllabus_version_number == 'latest':
-                syllabus_version = SyllabusVersion.objects.filter(
-                    Q(syllabus__academy_owner__id=self.context['academy'].id) | Q(syllabus__private=False),
-                    syllabus__slug=syllabus_slug,
-                ).filter(status='PUBLISHED').order_by('-version').first()
+            if syllabus_version_number == "latest":
+                syllabus_version = (
+                    SyllabusVersion.objects.filter(
+                        Q(syllabus__academy_owner__id=self.context["academy"].id) | Q(syllabus__private=False),
+                        syllabus__slug=syllabus_slug,
+                    )
+                    .filter(status="PUBLISHED")
+                    .order_by("-version")
+                    .first()
+                )
             else:
                 syllabus_version = SyllabusVersion.objects.filter(
-                    Q(syllabus__private=False) | Q(syllabus__academy_owner__id=self.context['academy'].id),
+                    Q(syllabus__private=False) | Q(syllabus__academy_owner__id=self.context["academy"].id),
                     syllabus__slug=syllabus_slug,
-                    version=syllabus_version_number).first()
+                    version=syllabus_version_number,
+                ).first()
 
             if not syllabus_version:
-                raise ValidationException(f'Syllabus {syllabus_version} doesn\'t exist',
-                                          slug='syllabus-version-not-found')
-
-            if syllabus_version_number == '1':
                 raise ValidationException(
-                    'Syllabus version 1 is only used for marketing purposes and it cannot be assigned to '
-                    'any cohort',
-                    slug='assigning-a-syllabus-version-1')
+                    f"Syllabus {syllabus_version} doesn't exist", slug="syllabus-version-not-found"
+                )
 
-            data['syllabus_version'] = syllabus_version
+            if syllabus_version_number == "1":
+                raise ValidationException(
+                    "Syllabus version 1 is only used for marketing purposes and it cannot be assigned to " "any cohort",
+                    slug="assigning-a-syllabus-version-1",
+                )
 
-            if 'syllabus' in data:
-                del data['syllabus']
+            data["syllabus_version"] = syllabus_version
 
-        if 'slug' in data:
-            cohort = Cohort.objects.filter(slug=data['slug']).first()
-            if cohort is not None and self.instance.slug != data['slug']:
-                raise ValidationException('Slug already exists for another cohort', slug='slug-already-exists')
+            if "syllabus" in data:
+                del data["syllabus"]
 
-        if 'available_as_saas' not in data or data['available_as_saas'] is None:
-            data['available_as_saas'] = self.context['academy'].available_as_saas
+        if "slug" in data:
+            cohort = Cohort.objects.filter(slug=data["slug"]).first()
+            if cohort is not None and self.instance.slug != data["slug"]:
+                raise ValidationException("Slug already exists for another cohort", slug="slug-already-exists")
+
+        if "available_as_saas" not in data or data["available_as_saas"] is None:
+            data["available_as_saas"] = self.context["academy"].available_as_saas
 
         if self.instance:
-            never_ends = (data['never_ends'] if 'never_ends' in data else self.instance.never_ends)
+            never_ends = data["never_ends"] if "never_ends" in data else self.instance.never_ends
 
-            ending_date = (data['ending_date'] if 'ending_date' in data else self.instance.ending_date)
+            ending_date = data["ending_date"] if "ending_date" in data else self.instance.ending_date
 
         else:
-            never_ends = 'never_ends' in data and data['never_ends']
-            ending_date = 'ending_date' in data and data['ending_date']
+            never_ends = "never_ends" in data and data["never_ends"]
+            ending_date = "ending_date" in data and data["ending_date"]
 
         if never_ends and ending_date:
-            raise ValidationException('A cohort that never ends cannot have ending date',
-                                      slug='cohort-with-ending-date-and-never-ends')
+            raise ValidationException(
+                "A cohort that never ends cannot have ending date", slug="cohort-with-ending-date-and-never-ends"
+            )
 
         if not never_ends and not ending_date:
-            raise ValidationException('A cohort most have ending date or it should be marked as ever_ends',
-                                      slug='cohort-without-ending-date-and-never-ends')
+            raise ValidationException(
+                "A cohort most have ending date or it should be marked as ever_ends",
+                slug="cohort-without-ending-date-and-never-ends",
+            )
 
-        if 'language' in data:
-            language = data['language']
+        if "language" in data:
+            language = data["language"]
             if type(language) == str:
-                data['language'] = language.lower()
+                data["language"] = language.lower()
             else:
-                raise ValidationException(f'Language property should be a string not a {type(language)}')
+                raise ValidationException(f"Language property should be a string not a {type(language)}")
 
         # if cohort is being activated the online_meeting_url should not be null
-        if self.instance is not None and (self.instance.online_meeting_url is None
-                                          or self.instance.online_meeting_url == '') and self.instance.remote_available:
-            stage = (data['stage'] if 'stage' in data else self.instance.stage)
-            if stage in ['STARTED', 'FINAL_PROJECT'] and stage != self.instance.stage:
+        if (
+            self.instance is not None
+            and (self.instance.online_meeting_url is None or self.instance.online_meeting_url == "")
+            and self.instance.remote_available
+        ):
+            stage = data["stage"] if "stage" in data else self.instance.stage
+            if stage in ["STARTED", "FINAL_PROJECT"] and stage != self.instance.stage:
                 raise ValidationException(
-                    'This cohort has a remote option but no online meeting URL has been specified',
-                    slug='remove-without-online-meeting')
+                    "This cohort has a remote option but no online meeting URL has been specified",
+                    slug="remove-without-online-meeting",
+                )
 
         return data
 
@@ -720,12 +769,31 @@ class CohortSerializer(CohortSerializerMixin):
 
     class Meta:
         model = Cohort
-        fields = ('id', 'slug', 'name', 'remote_available', 'kickoff_date', 'current_day', 'academy', 'syllabus',
-                  'schedule', 'syllabus_version', 'ending_date', 'stage', 'language', 'created_at', 'updated_at',
-                  'never_ends', 'online_meeting_url', 'timezone', 'is_hidden_on_prework', 'available_as_saas')
+        fields = (
+            "id",
+            "slug",
+            "name",
+            "remote_available",
+            "kickoff_date",
+            "current_day",
+            "academy",
+            "syllabus",
+            "schedule",
+            "syllabus_version",
+            "ending_date",
+            "stage",
+            "language",
+            "created_at",
+            "updated_at",
+            "never_ends",
+            "online_meeting_url",
+            "timezone",
+            "is_hidden_on_prework",
+            "available_as_saas",
+        )
 
     def create(self, validated_data):
-        del self.context['request']
+        del self.context["request"]
         cohort = Cohort.objects.create(**validated_data, **self.context)
 
         if cohort.schedule:
@@ -752,14 +820,32 @@ class CohortPUTSerializer(CohortSerializerMixin):
 
     class Meta:
         model = Cohort
-        fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'remote_available', 'current_day', 'stage',
-                  'language', 'syllabus', 'syllabus_version', 'schedule', 'never_ends', 'private', 'online_meeting_url',
-                  'timezone', 'current_module', 'is_hidden_on_prework', 'available_as_saas')
+        fields = (
+            "id",
+            "slug",
+            "name",
+            "kickoff_date",
+            "ending_date",
+            "remote_available",
+            "current_day",
+            "stage",
+            "language",
+            "syllabus",
+            "syllabus_version",
+            "schedule",
+            "never_ends",
+            "private",
+            "online_meeting_url",
+            "timezone",
+            "current_module",
+            "is_hidden_on_prework",
+            "available_as_saas",
+        )
 
     def update(self, instance, validated_data):
         last_schedule = instance.schedule
 
-        update_timeslots = 'schedule' in validated_data and last_schedule != validated_data['schedule']
+        update_timeslots = "schedule" in validated_data and last_schedule != validated_data["schedule"]
         cohort = super().update(instance, validated_data)
 
         if update_timeslots:
@@ -772,6 +858,7 @@ class CohortPUTSerializer(CohortSerializerMixin):
 
 class UserDJangoRestSerializer(serializers.ModelSerializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     # id = serializers.IntegerField()
     # first_name = serializers.CharField()
@@ -782,30 +869,32 @@ class UserDJangoRestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'email']
+        fields = ["id", "first_name", "last_name", "email"]
 
 
 class CohortUserSerializerMixin(serializers.ModelSerializer):
-    status_fields = ['role', 'finantial_status', 'educational_status']
+    status_fields = ["role", "finantial_status", "educational_status"]
 
     def count_certificates_by_cohort(self, cohort, user_id):
-        return CohortUser.objects.filter(Q(educational_status='ACTIVE') | Q(educational_status__isnull=True),
-                                         user_id=user_id,
-                                         role='STUDENT',
-                                         cohort__schedule=cohort.schedule).count()
+        return CohortUser.objects.filter(
+            Q(educational_status="ACTIVE") | Q(educational_status__isnull=True),
+            user_id=user_id,
+            role="STUDENT",
+            cohort__schedule=cohort.schedule,
+        ).count()
 
     def validate(self, data: OrderedDict):
-        self.context['index'] += 1
-        request = self.context['request']
+        self.context["index"] += 1
+        request = self.context["request"]
         is_post_method = not self.instance
 
         if isinstance(self.initial_data, list):
-            id = self.initial_data[self.context['index']].get('id')
+            id = self.initial_data[self.context["index"]].get("id")
         else:
-            id = self.initial_data.get('id')
+            id = self.initial_data.get("id")
 
-        user = data.get('user')
-        cohort = data.get('cohort')
+        user = data.get("user")
+        cohort = data.get("cohort")
 
         if isinstance(self.instance, CohortUser):
             instance = self.instance
@@ -828,84 +917,97 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         cohorts = localize_query(cohorts, request).first()
 
         if not cohorts:
-            logger.debug('Cohort not be found in related academies')
-            raise ValidationException('Specified cohort not be found')
+            logger.debug("Cohort not be found in related academies")
+            raise ValidationException("Specified cohort not be found")
 
-        prohibited_stages = ['INACTIVE', 'DELETED', 'ENDED']
+        prohibited_stages = ["INACTIVE", "DELETED", "ENDED"]
 
-        if is_post_method and 'cohort' in data and data['cohort'].stage in prohibited_stages:
+        if is_post_method and "cohort" in data and data["cohort"].stage in prohibited_stages:
 
-            stage = data['cohort'].stage
+            stage = data["cohort"].stage
 
-            raise ValidationException(f'You cannot add a student to a cohort that is {stage}.',
-                                      slug='adding-student-to-a-closed-cohort')
+            raise ValidationException(
+                f"You cannot add a student to a cohort that is {stage}.", slug="adding-student-to-a-closed-cohort"
+            )
 
-        if cohort.stage == 'DELETED':
-            raise ValidationException('cannot add or edit a user to a cohort that has been deleted',
-                                      slug='cohort-with-stage-deleted',
-                                      code=400)
+        if cohort.stage == "DELETED":
+            raise ValidationException(
+                "cannot add or edit a user to a cohort that has been deleted",
+                slug="cohort-with-stage-deleted",
+                code=400,
+            )
 
         count_cohort_users = CohortUser.objects.filter(user_id=user.id, cohort_id=cohort.id).count()
 
         if is_post_method and count_cohort_users:
-            raise ValidationException('That user already exists in this cohort')
+            raise ValidationException("That user already exists in this cohort")
 
-        if ('role' in data and data['role'] != 'STUDENT' and not ProfileAcademy.objects.filter(
-                user_id=user.id, academy__id=cohort.academy.id).exclude(role__slug='student').exists()):
-            raise ValidationException('The user must be staff member to this academy before it can be a teacher')
+        if (
+            "role" in data
+            and data["role"] != "STUDENT"
+            and not ProfileAcademy.objects.filter(user_id=user.id, academy__id=cohort.academy.id)
+            .exclude(role__slug="student")
+            .exists()
+        ):
+            raise ValidationException("The user must be staff member to this academy before it can be a teacher")
 
-        if (is_post_method and cohort.schedule and self.count_certificates_by_cohort(cohort, user.id) > 0):
+        if is_post_method and cohort.schedule and self.count_certificates_by_cohort(cohort, user.id) > 0:
             raise ValidationException(
-                'This student is already in another cohort for the same certificate, please mark him/her hi '
-                'educational status on this prior cohort different than ACTIVE before cotinuing')
+                "This student is already in another cohort for the same certificate, please mark him/her hi "
+                "educational status on this prior cohort different than ACTIVE before cotinuing"
+            )
 
-        role = data.get('role')
+        role = data.get("role")
 
-        exclude_params = {'id': instance.id} if instance else {}
-        if role == 'TEACHER' and (CohortUser.objects.filter(role=role,
-                                                            cohort_id=cohort.id).exclude(**exclude_params).count()):
-            raise ValidationException('There can only be one main instructor in a cohort')
+        exclude_params = {"id": instance.id} if instance else {}
+        if role == "TEACHER" and (
+            CohortUser.objects.filter(role=role, cohort_id=cohort.id).exclude(**exclude_params).count()
+        ):
+            raise ValidationException("There can only be one main instructor in a cohort")
 
         cohort_user = CohortUser.objects.filter(user__id=user.id, cohort__id=cohort.id).first()
 
         # move it in the view
         if not is_post_method and not cohort_user:
-            raise ValidationException('Cannot find CohortUser')
+            raise ValidationException("Cannot find CohortUser")
 
-        watching = data.get('watching') == True
-        if watching and cohort_user.educational_status != 'ACTIVE':
-            raise ValidationException('The student is not active in this cohort', slug='student-not-active')
+        watching = data.get("watching") == True
+        if watching and cohort_user.educational_status != "ACTIVE":
+            raise ValidationException("The student is not active in this cohort", slug="student-not-active")
 
-        is_graduated = ((data.get('educational_status')
-                         or (instance and instance.educational_status or '')) == 'GRADUATED')
+        is_graduated = (
+            data.get("educational_status") or (instance and instance.educational_status or "")
+        ) == "GRADUATED"
 
-        is_late = ((data.get('finantial_status') or (instance and instance.finantial_status or '')) == 'LATE')
+        is_late = (data.get("finantial_status") or (instance and instance.finantial_status or "")) == "LATE"
 
         if is_graduated and is_late:
-            raise ValidationException('Cannot be marked as `GRADUATED` if its financial '
-                                      'status is `LATE`')
+            raise ValidationException("Cannot be marked as `GRADUATED` if its financial " "status is `LATE`")
 
-        tasks_pending = Task.objects.filter(user_id=user.id,
-                                            task_status='PENDING',
-                                            task_type='PROJECT',
-                                            cohort__id=cohort.id).exclude(revision_status='IGNORED')
+        tasks_pending = Task.objects.filter(
+            user_id=user.id, task_status="PENDING", task_type="PROJECT", cohort__id=cohort.id
+        ).exclude(revision_status="IGNORED")
 
         mandatory_slugs = []
         for task in tasks_pending:
-            if 'days' in task.cohort.syllabus_version.__dict__['json']:
-                for day in task.cohort.syllabus_version.__dict__['json']['days']:
-                    for assignment in day['assignments']:
-                        if 'mandatory' not in assignment or ('mandatory' in assignment
-                                                             and assignment['mandatory'] == True):
-                            mandatory_slugs.append(assignment['slug'])
+            if "days" in task.cohort.syllabus_version.__dict__["json"]:
+                for day in task.cohort.syllabus_version.__dict__["json"]["days"]:
+                    for assignment in day["assignments"]:
+                        if "mandatory" not in assignment or (
+                            "mandatory" in assignment and assignment["mandatory"] == True
+                        ):
+                            mandatory_slugs.append(assignment["slug"])
 
-        has_tasks = Task.objects.filter(associated_slug__in=mandatory_slugs).exclude(
-            revision_status__in=['APPROVED', 'IGNORED']).count()
+        has_tasks = (
+            Task.objects.filter(associated_slug__in=mandatory_slugs)
+            .exclude(revision_status__in=["APPROVED", "IGNORED"])
+            .count()
+        )
 
         if is_graduated and has_tasks:
-            raise ValidationException('User has tasks with status pending the educational status cannot be GRADUATED')
+            raise ValidationException("User has tasks with status pending the educational status cannot be GRADUATED")
 
-        return {**data, 'cohort': cohort, 'user': user, 'id': id}
+        return {**data, "cohort": cohort, "user": user, "id": id}
 
 
 class CohortUserListSerializer(serializers.ListSerializer):
@@ -918,15 +1020,18 @@ class CohortUserListSerializer(serializers.ListSerializer):
 
         for key in range(0, len(items)):
             item = items[key]
-            items[key].id = CohortUser.objects.filter(cohort__id=item.cohort_id,
-                                                      user__id=item.user_id).values_list('id', flat=True).first()
+            items[key].id = (
+                CohortUser.objects.filter(cohort__id=item.cohort_id, user__id=item.user_id)
+                .values_list("id", flat=True)
+                .first()
+            )
 
         return items
 
     def update(self, instance, validated_data):
         # Maps for id->instance and id->data item.
         model_mapping = {model.id: model for model in instance}
-        data_mapping = {item['id']: item for item in validated_data}
+        data_mapping = {item["id"]: item for item in validated_data}
 
         # Perform creations and updates.
         ret = []
@@ -952,22 +1057,22 @@ class CohortUserSerializer(CohortUserSerializerMixin):
 
     class Meta:
         model = CohortUser
-        fields = ['id', 'user', 'cohort', 'role', 'educational_status', 'finantial_status']
+        fields = ["id", "user", "cohort", "role", "educational_status", "finantial_status"]
         list_serializer_class = CohortUserListSerializer
 
 
 class CohortTimeSlotSerializer(serializers.ModelSerializer):
-    status_fields = ['recurrency_type']
+    status_fields = ["recurrency_type"]
     starting_at = serializers.IntegerField(write_only=True)
     ending_at = serializers.IntegerField(write_only=True)
 
     class Meta:
         model = CohortTimeSlot
-        fields = ['id', 'cohort', 'starting_at', 'ending_at', 'recurrent', 'recurrency_type', 'timezone']
+        fields = ["id", "cohort", "starting_at", "ending_at", "recurrent", "recurrency_type", "timezone"]
 
 
 class SyllabusScheduleSerializer(serializers.ModelSerializer):
-    status_fields = ['schedule_type']
+    status_fields = ["schedule_type"]
 
     class Meta:
         model = SyllabusSchedule
@@ -975,7 +1080,7 @@ class SyllabusScheduleSerializer(serializers.ModelSerializer):
 
 
 class SyllabusSchedulePUTSerializer(serializers.ModelSerializer):
-    status_fields = ['schedule_type']
+    status_fields = ["schedule_type"]
 
     id = serializers.IntegerField(required=False)
     name = serializers.CharField(required=False)
@@ -989,25 +1094,26 @@ class SyllabusSchedulePUTSerializer(serializers.ModelSerializer):
 
 
 class SyllabusScheduleTimeSlotSerializer(serializers.ModelSerializer):
-    status_fields = ['recurrency_type']
+    status_fields = ["recurrency_type"]
     starting_at = serializers.IntegerField(write_only=True)
     ending_at = serializers.IntegerField(write_only=True)
 
     class Meta:
         model = SyllabusScheduleTimeSlot
         fields = [
-            'id',
-            'schedule',
-            'starting_at',
-            'ending_at',
-            'recurrent',
-            'recurrency_type',
-            'timezone',
+            "id",
+            "schedule",
+            "starting_at",
+            "ending_at",
+            "recurrent",
+            "recurrency_type",
+            "timezone",
         ]
 
 
 class CohortUserPOSTSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     cohort = serpy.Field()
@@ -1020,7 +1126,7 @@ class CohortUserPUTSerializer(CohortUserSerializerMixin):
 
     class Meta:
         model = CohortUser
-        fields = ['id', 'user', 'cohort', 'role', 'educational_status', 'finantial_status', 'watching']
+        fields = ["id", "user", "cohort", "role", "educational_status", "finantial_status", "watching"]
         list_serializer_class = CohortUserListSerializer
 
 
@@ -1029,8 +1135,16 @@ class SyllabusSerializer(serializers.ModelSerializer):
     class Meta:
         model = Syllabus
         fields = [
-            'id', 'slug', 'name', 'academy_owner', 'duration_in_days', 'duration_in_hours', 'week_hours', 'github_url',
-            'logo', 'private'
+            "id",
+            "slug",
+            "name",
+            "academy_owner",
+            "duration_in_days",
+            "duration_in_hours",
+            "week_hours",
+            "github_url",
+            "logo",
+            "private",
         ]
         exclude = ()
 
@@ -1040,48 +1154,47 @@ class SyllabusVersionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SyllabusVersion
-        fields = ['json', 'version', 'syllabus', 'status', 'change_log_details']
+        fields = ["json", "version", "syllabus", "status", "change_log_details"]
         exclude = ()
         extra_kwargs = {
-            'syllabus': {
-                'read_only': True
-            },
-            'version': {
-                'read_only': True
-            },
+            "syllabus": {"read_only": True},
+            "version": {"read_only": True},
         }
 
     def validate(self, data):
-        request = self.context['request']
+        request = self.context["request"]
 
         _data = super().validate(data)
-        if 'json' in data:
+        if "json" in data:
             try:
-                ignore = request.GET.get('ignore', '')
-                _log = test_syllabus(data['json'], ignore=ignore.lower().split(','))
+                ignore = request.GET.get("ignore", "")
+                _log = test_syllabus(data["json"], ignore=ignore.lower().split(","))
                 if _log.http_status() != 200:
                     raise ValidationException(
-                        f'There are {len(_log.errors)} errors in your syllabus, please validate before submitting',
-                        slug='syllabus-with-errors')
+                        f"There are {len(_log.errors)} errors in your syllabus, please validate before submitting",
+                        slug="syllabus-with-errors",
+                    )
             except Exception as e:
-                raise ValidationException(f'Error when testing the syllabus: {str(e)}', slug='syllabus-with-errors')
+                raise ValidationException(f"Error when testing the syllabus: {str(e)}", slug="syllabus-with-errors")
 
         return _data
 
     def create(self, validated_data):
-        syllabus = self.context['syllabus']
+        syllabus = self.context["syllabus"]
 
-        previous_syllabus = SyllabusVersion.objects.filter(syllabus=syllabus).order_by('-version').first()
+        previous_syllabus = SyllabusVersion.objects.filter(syllabus=syllabus).order_by("-version").first()
 
         version = 1
         if previous_syllabus is not None:
             version = previous_syllabus.version + 1
 
-        return super(SyllabusVersionSerializer, self).create({
-            **validated_data,
-            'syllabus': syllabus,
-            'version': version,
-        })
+        return super(SyllabusVersionSerializer, self).create(
+            {
+                **validated_data,
+                "syllabus": syllabus,
+                "version": version,
+            }
+        )
 
 
 class SyllabusVersionPutSerializer(serializers.ModelSerializer):
@@ -1090,37 +1203,35 @@ class SyllabusVersionPutSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SyllabusVersion
-        fields = ['json', 'version', 'syllabus', 'status']
+        fields = ["json", "version", "syllabus", "status"]
         exclude = ()
         extra_kwargs = {
-            'syllabus': {
-                'read_only': True
-            },
-            'version': {
-                'read_only': True
-            },
+            "syllabus": {"read_only": True},
+            "version": {"read_only": True},
         }
 
     def validate(self, data):
-        request = self.context['request']
+        request = self.context["request"]
 
         _data = super().validate(data)
-        if 'json' in data:
+        if "json" in data:
             try:
-                ignore = request.GET.get('ignore', '')
-                _log = test_syllabus(data['json'], ignore=ignore.lower().split(','))
+                ignore = request.GET.get("ignore", "")
+                _log = test_syllabus(data["json"], ignore=ignore.lower().split(","))
                 if _log.http_status() != 200:
                     raise ValidationException(
-                        f'There are {len(_log.errors)} errors in your syllabus, please validate before submitting',
-                        slug='syllabus-with-errors')
+                        f"There are {len(_log.errors)} errors in your syllabus, please validate before submitting",
+                        slug="syllabus-with-errors",
+                    )
             except Exception as e:
-                raise ValidationException(f'Error when testing the syllabus: {str(e)}', slug='syllabus-with-errors')
+                raise ValidationException(f"Error when testing the syllabus: {str(e)}", slug="syllabus-with-errors")
 
         return _data
 
 
 class AcademyReportSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     name = serpy.Field()
@@ -1136,29 +1247,29 @@ class AcademyReportSerializer(serpy.Serializer):
 
     def get_students(self, obj):
 
-        query = CohortUser.objects.filter(cohort__academy__id=obj.id, role='STUDENT')
+        query = CohortUser.objects.filter(cohort__academy__id=obj.id, role="STUDENT")
         return {
-            'total': query.count(),
-            'active': query.filter(educational_status='ACTIVE').count(),
-            'suspended': query.filter(educational_status='SUSPENDED').count(),
-            'graduated': query.filter(educational_status='GRADUATED').count(),
-            'dropped': query.filter(educational_status='DROPPED').count(),
+            "total": query.count(),
+            "active": query.filter(educational_status="ACTIVE").count(),
+            "suspended": query.filter(educational_status="SUSPENDED").count(),
+            "graduated": query.filter(educational_status="GRADUATED").count(),
+            "dropped": query.filter(educational_status="DROPPED").count(),
         }
 
     teachers = serpy.MethodField()
 
     def get_teachers(self, obj):
 
-        query = CohortUser.objects.filter(cohort__academy__id=obj.id, cohort__stage__in=['STARTED', 'FINAL_PROJECT'])
+        query = CohortUser.objects.filter(cohort__academy__id=obj.id, cohort__stage__in=["STARTED", "FINAL_PROJECT"])
         active = {
-            'main': query.filter(role='TEACHER').count(),
-            'assistant': query.filter(role='ASSISTANT').count(),
-            'reviewer': query.filter(role='REVIEWER').count(),
+            "main": query.filter(role="TEACHER").count(),
+            "assistant": query.filter(role="ASSISTANT").count(),
+            "reviewer": query.filter(role="REVIEWER").count(),
         }
-        active['total'] = int(active['main']) + int(active['assistant']) + int(active['reviewer'])
+        active["total"] = int(active["main"]) + int(active["assistant"]) + int(active["reviewer"])
 
-        total = ProfileAcademy.objects.filter(role__slug__in=['teacher', 'assistant'])
+        total = ProfileAcademy.objects.filter(role__slug__in=["teacher", "assistant"])
         return {
-            'total': total.count(),
-            'active': active,
+            "total": total.count(),
+            "active": active,
         }

@@ -6,16 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('mentorship', '0029_mentorshipservice_video_provider_and_more'),
+        ("mentorship", "0029_mentorshipservice_video_provider_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='mentorshipservice',
-            name='video_provider',
-            field=models.CharField(blank=True,
-                                   choices=[('DAILY', 'Daily'), ('GOOGLE_MEET', 'Google Meet')],
-                                   default=None,
-                                   max_length=15),
+            model_name="mentorshipservice",
+            name="video_provider",
+            field=models.CharField(
+                blank=True, choices=[("DAILY", "Daily"), ("GOOGLE_MEET", "Google Meet")], default=None, max_length=15
+            ),
         ),
     ]

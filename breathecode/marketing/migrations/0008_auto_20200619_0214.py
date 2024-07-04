@@ -6,33 +6,33 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0007_auto_20200619_0151'),
+        ("marketing", "0007_auto_20200619_0151"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='formentry',
-            name='location',
+            model_name="formentry",
+            name="location",
             field=models.CharField(default=None, max_length=20, null=True),
         ),
         migrations.AddField(
-            model_name='formentry',
-            name='referral_key',
+            model_name="formentry",
+            name="referral_key",
             field=models.CharField(default=None, max_length=50, null=True),
         ),
         migrations.AlterField(
-            model_name='formentry',
-            name='first_name',
-            field=models.CharField(default='', max_length=150),
+            model_name="formentry",
+            name="first_name",
+            field=models.CharField(default="", max_length=150),
         ),
         migrations.AlterField(
-            model_name='formentry',
-            name='utm_campaign',
+            model_name="formentry",
+            name="utm_campaign",
             field=models.CharField(default=None, max_length=50, null=True),
         ),
         migrations.AlterField(
-            model_name='formentry',
-            name='utm_medium',
+            model_name="formentry",
+            name="utm_medium",
             field=models.CharField(default=None, max_length=50, null=True),
         ),
     ]

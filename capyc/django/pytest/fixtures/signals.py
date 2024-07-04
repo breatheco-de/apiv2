@@ -9,7 +9,7 @@ import pytest
 from django.db.models.signals import ModelSignal
 from django.dispatch import Signal
 
-__all__ = ['signals', 'Signals', 'signals_map']
+__all__ = ["signals", "Signals", "signals_map"]
 
 
 def get_signal_files(path: str) -> list[str]:
@@ -18,7 +18,7 @@ def get_signal_files(path: str) -> list[str]:
     # Walk through the current directory and its subdirectories
     for folder, _, files in os.walk(path):
         for file in files:
-            if file == 'signals.py':
+            if file == "signals.py":
                 signal_files.append(os.path.join(folder, file))
 
     return signal_files
@@ -32,10 +32,10 @@ def get_signals(path: str, includes_root_folder=True) -> list[Signal]:
     # Initialize a list to store the file paths
     signal_files = get_signal_files(root_directory)
 
-    if '/' in root_directory:
-        separator = '/'
+    if "/" in root_directory:
+        separator = "/"
     else:
-        separator = '\\'
+        separator = "\\"
 
     res = {}
 
@@ -45,27 +45,28 @@ def get_signals(path: str, includes_root_folder=True) -> list[Signal]:
         if prefix.endswith(separator):
             prefix = prefix[:-1]
 
-        prefix = prefix.split(separator)[-1] + '.'
+        prefix = prefix.split(separator)[-1] + "."
 
     else:
-        prefix = ''
+        prefix = ""
 
     signal_files = [
-        prefix + '.'.join(x.replace(root_directory + separator, '').replace('.py', '').split(separator))
+        prefix + ".".join(x.replace(root_directory + separator, "").replace(".py", "").split(separator))
         for x in signal_files
     ]
 
-    signal_files = [x for x in signal_files if '-' not in x]
+    signal_files = [x for x in signal_files if "-" not in x]
 
     for module_path in signal_files:
         module = importlib.import_module(module_path)
         signals = [
-            x for x in dir(module)
-            if x[0] != '_' and (isinstance(getattr(module, x), Signal) or isinstance(getattr(module, x), ModelSignal))
+            x
+            for x in dir(module)
+            if x[0] != "_" and (isinstance(getattr(module, x), Signal) or isinstance(getattr(module, x), ModelSignal))
         ]
 
         for signal_path in signals:
-            res[f'{module_path}.{signal_path}'] = getattr(module, signal_path)
+            res[f"{module_path}.{signal_path}"] = getattr(module, signal_path)
 
     return res
 
@@ -79,19 +80,19 @@ def get_dependencies() -> list[str]:
         if os.path.exists(dir):
             for folder in os.listdir(dir):
                 folder_path = os.path.join(dir, folder)
-                if os.path.isdir(folder_path) and folder_path.endswith('.dist-info') is False:
+                if os.path.isdir(folder_path) and folder_path.endswith(".dist-info") is False:
                     dependency_folders.append(folder_path)
 
     return dependency_folders
 
 
 def check_path(dir: str, pattern: str):
-    linux_path = dir.replace('\\', '/')
-    windows_path = dir.replace('/', '\\')
+    linux_path = dir.replace("\\", "/")
+    windows_path = dir.replace("/", "\\")
     return linux_path not in dir and windows_path not in dir
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def signals_map():
     # Get the current working directory (root directory)
     root_directory = os.getcwd()
@@ -141,16 +142,18 @@ class Signals:
 
             return wrapper
 
-        self._monkeypatch.setattr('django.dispatch.Signal.send', mock(self._original_signal_send))
-        self._monkeypatch.setattr('django.dispatch.Signal.send_robust', mock(self._original_signal_send_robust))
+        self._monkeypatch.setattr("django.dispatch.Signal.send", mock(self._original_signal_send))
+        self._monkeypatch.setattr("django.dispatch.Signal.send_robust", mock(self._original_signal_send_robust))
 
-        self._monkeypatch.setattr('django.dispatch.dispatcher.Signal.send', mock(self._original_signal_send))
-        self._monkeypatch.setattr('django.dispatch.dispatcher.Signal.send_robust',
-                                  mock(self._original_signal_send_robust))
+        self._monkeypatch.setattr("django.dispatch.dispatcher.Signal.send", mock(self._original_signal_send))
+        self._monkeypatch.setattr(
+            "django.dispatch.dispatcher.Signal.send_robust", mock(self._original_signal_send_robust)
+        )
 
-        self._monkeypatch.setattr('django.db.models.signals.ModelSignal.send', mock(self._original_model_signal_send))
-        self._monkeypatch.setattr('django.db.models.signals.ModelSignal.send_robust',
-                                  mock(self._original_model_signal_send_robust))
+        self._monkeypatch.setattr("django.db.models.signals.ModelSignal.send", mock(self._original_model_signal_send))
+        self._monkeypatch.setattr(
+            "django.db.models.signals.ModelSignal.send_robust", mock(self._original_model_signal_send_robust)
+        )
 
     def enable(self, *to_enable, debug=False):
         """
@@ -166,15 +169,16 @@ class Signals:
 
         self._disabled = False
 
-        self._monkeypatch.setattr('django.dispatch.Signal.send', self._original_signal_send)
-        self._monkeypatch.setattr('django.dispatch.Signal.send_robust', self._original_signal_send_robust)
+        self._monkeypatch.setattr("django.dispatch.Signal.send", self._original_signal_send)
+        self._monkeypatch.setattr("django.dispatch.Signal.send_robust", self._original_signal_send_robust)
 
-        self._monkeypatch.setattr('django.dispatch.dispatcher.Signal.send', self._original_signal_send)
-        self._monkeypatch.setattr('django.dispatch.dispatcher.Signal.send_robust', self._original_signal_send_robust)
+        self._monkeypatch.setattr("django.dispatch.dispatcher.Signal.send", self._original_signal_send)
+        self._monkeypatch.setattr("django.dispatch.dispatcher.Signal.send_robust", self._original_signal_send_robust)
 
-        self._monkeypatch.setattr('django.db.models.signals.ModelSignal.send', self._original_model_signal_send)
-        self._monkeypatch.setattr('django.db.models.signals.ModelSignal.send_robust',
-                                  self._original_model_signal_send_robust)
+        self._monkeypatch.setattr("django.db.models.signals.ModelSignal.send", self._original_model_signal_send)
+        self._monkeypatch.setattr(
+            "django.db.models.signals.ModelSignal.send_robust", self._original_model_signal_send_robust
+        )
 
         if to_enable or debug:
             to_disable = [x for x in self._signals_map if x not in to_enable]
@@ -186,21 +190,21 @@ class Signals:
                     def send_mock(*args, **kwargs):
                         if debug:
                             try:
-                                print('  args\n    ', args)
+                                print("  args\n    ", args)
                             except Exception:
                                 pass
 
                             try:
-                                print('  kwargs\n    ', kwargs)
+                                print("  kwargs\n    ", kwargs)
                             except Exception:
                                 pass
 
-                            print('\n')
+                            print("\n")
 
                     self._monkeypatch.setattr(module, send_mock)
 
-                apply_mock(f'{signal}.send')
-                apply_mock(f'{signal}.send_robust')
+                apply_mock(f"{signal}.send")
+                apply_mock(f"{signal}.send_robust")
 
 
 @pytest.fixture

@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('assignments', '0011_alter_task_attachments'),
+        ("assignments", "0011_alter_task_attachments"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='finalproject',
-            name='screenshot',
+            model_name="finalproject",
+            name="screenshot",
             field=models.URLField(blank=True, default=None, null=True),
         ),
     ]

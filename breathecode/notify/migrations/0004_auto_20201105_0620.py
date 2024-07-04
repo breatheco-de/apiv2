@@ -7,18 +7,16 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0011_auto_20201006_0058'),
-        ('notify', '0003_auto_20201105_0619'),
+        ("admissions", "0011_auto_20201006_0058"),
+        ("notify", "0003_auto_20201105_0619"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='slackchannel',
-            name='cohort',
-            field=models.OneToOneField(blank=True,
-                                       default=None,
-                                       null=True,
-                                       on_delete=django.db.models.deletion.CASCADE,
-                                       to='admissions.cohort'),
+            model_name="slackchannel",
+            name="cohort",
+            field=models.OneToOneField(
+                blank=True, default=None, null=True, on_delete=django.db.models.deletion.CASCADE, to="admissions.cohort"
+            ),
         ),
     ]

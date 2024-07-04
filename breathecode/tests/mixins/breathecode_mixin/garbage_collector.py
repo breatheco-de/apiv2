@@ -5,13 +5,13 @@ from rest_framework.test import APITestCase
 from faker import Faker
 from . import interfaces
 
-__all__ = ['Check']
+__all__ = ["Check"]
 fake = Faker()
 
 IMAGE_TYPES = {
-    'png': 'PNG',
-    'jpg': 'JPEG',
-    'jpeg': 'JPEG',
+    "png": "PNG",
+    "jpg": "JPEG",
+    "jpeg": "JPEG",
 }
 
 

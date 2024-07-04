@@ -5,7 +5,7 @@ from . import credentials
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['FunctionV2']
+__all__ = ["FunctionV2"]
 
 
 class FunctionV2:
@@ -14,7 +14,7 @@ class FunctionV2:
     service_url: str
     method: str
 
-    def __init__(self, url, method='POST'):
+    def __init__(self, url, method="POST"):
         """
         Google Cloud Function constructor.
 
@@ -39,22 +39,19 @@ class FunctionV2:
 
         auth_req = GCRequest()
         token = id_token.fetch_id_token(auth_req, self.service_url)
-        headers = {'Authorization': f'Bearer {token}'}
+        headers = {"Authorization": f"Bearer {token}"}
 
         if data:
-            headers['Content-Type'] = 'application/json'
-            headers['Accept'] = 'application/json'
+            headers["Content-Type"] = "application/json"
+            headers["Accept"] = "application/json"
             data = json.dumps(data)
 
-        request = requests.request(self.method,
-                                   self.service_url,
-                                   data=data,
-                                   headers=headers,
-                                   params=params,
-                                   timeout=timeout)
+        request = requests.request(
+            self.method, self.service_url, data=data, headers=headers, params=params, timeout=timeout
+        )
 
-        logger.info(f'Cloud function {self.service_url}')
-        logger.info(request.content.decode('utf-8'))
+        logger.info(f"Cloud function {self.service_url}")
+        logger.info(request.content.decode("utf-8"))
 
         return request
 

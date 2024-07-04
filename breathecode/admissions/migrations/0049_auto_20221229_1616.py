@@ -6,24 +6,26 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0048_academy_main_currency'),
+        ("admissions", "0048_academy_main_currency"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='academy',
-            name='is_hidden_on_prework',
+            model_name="academy",
+            name="is_hidden_on_prework",
             field=models.BooleanField(
                 default=True,
-                help_text="Determines if the cohorts will be shown in the dashboard if it's status is 'PREWORK'"),
+                help_text="Determines if the cohorts will be shown in the dashboard if it's status is 'PREWORK'",
+            ),
         ),
         migrations.AddField(
-            model_name='cohort',
-            name='is_hidden_on_prework',
+            model_name="cohort",
+            name="is_hidden_on_prework",
             field=models.BooleanField(
                 blank=True,
                 default=None,
                 help_text="Determines if the cohort will be shown in the dashboard if it's status is 'PREWORK'",
-                null=True),
+                null=True,
+            ),
         ),
     ]

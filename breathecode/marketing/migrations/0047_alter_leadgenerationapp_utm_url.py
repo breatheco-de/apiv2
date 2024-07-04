@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0046_auto_20220113_2140'),
+        ("marketing", "0046_auto_20220113_2140"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='leadgenerationapp',
-            name='utm_url',
+            model_name="leadgenerationapp",
+            name="utm_url",
             field=models.CharField(blank=True, default=None, max_length=2000, null=True),
         ),
     ]

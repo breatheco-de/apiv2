@@ -1,17 +1,17 @@
 import subprocess
 from shutil import which
 
-__all__ = ['get_python_path']
+__all__ = ["get_python_path"]
 
 
 def get_python_path_per_executable(python3=False):
-    python_path = which('python' + '3' if python3 else '')
+    python_path = which("python" + "3" if python3 else "")
 
     if not python_path:
         return
 
-    result = subprocess.run([python_path, '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if result.stdout.decode('utf-8').startswith('Python 3'):
+    result = subprocess.run([python_path, "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if result.stdout.decode("utf-8").startswith("Python 3"):
         return python_path
 
 
@@ -24,4 +24,4 @@ def get_python_path():
     if path:
         return path
 
-    raise Exception('Python 3 is not installed')
+    raise Exception("Python 3 is not installed")

@@ -6,12 +6,14 @@ from breathecode.authenticate.serializers import GetProfileAcademyTinySerializer
 
 class ProfileSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     avatar_url = serpy.Field()
 
 
 class UserSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     first_name = serpy.Field()
@@ -21,6 +23,7 @@ class UserSmallSerializer(serpy.Serializer):
 
 class AcademyTinySerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     slug = serpy.Field()
@@ -29,6 +32,7 @@ class AcademyTinySerializer(serpy.Serializer):
 
 class AcademySmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     slug = serpy.Field()
@@ -39,6 +43,7 @@ class AcademySmallSerializer(serpy.Serializer):
 
 class TinyLayoutDesignSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     slug = serpy.Field()
     name = serpy.Field()
@@ -48,6 +53,7 @@ class TinyLayoutDesignSerializer(serpy.Serializer):
 
 class LayoutDesignSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     slug = serpy.Field()
     name = serpy.Field()
@@ -58,6 +64,7 @@ class LayoutDesignSerializer(serpy.Serializer):
 
 class SyllabusVersionSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     version = serpy.Field()
     slug = serpy.MethodField()
@@ -88,6 +95,7 @@ class SyllabusVersionSmallSerializer(serpy.Serializer):
 
 class CohortSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     slug = serpy.Field()
@@ -98,6 +106,7 @@ class CohortSmallSerializer(serpy.Serializer):
 
 class CohortMidSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     slug = serpy.Field()
@@ -110,6 +119,7 @@ class CohortMidSerializer(serpy.Serializer):
 
 class SpecialtySerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     slug = serpy.Field()
@@ -123,6 +133,7 @@ class SpecialtySerializer(serpy.Serializer):
 
 class BadgeSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     name = serpy.Field()
@@ -130,6 +141,7 @@ class BadgeSmallSerializer(serpy.Serializer):
 
 class BadgeSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     slug = serpy.Field()
@@ -139,6 +151,7 @@ class BadgeSerializer(serpy.Serializer):
 
 class UserSpecialtySerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     signed_by = serpy.Field()

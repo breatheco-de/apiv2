@@ -9,24 +9,28 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('feedback', '0004_auto_20201006_0058'),
+        ("feedback", "0004_auto_20201006_0058"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='SurveyLog',
+            name="SurveyLog",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('answered_at', models.DateTimeField(blank=True, default=None, null=True)),
-                ('token', models.CharField(max_length=255)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('user',
-                 models.ForeignKey(blank=True,
-                                   default=None,
-                                   null=True,
-                                   on_delete=django.db.models.deletion.CASCADE,
-                                   to=settings.AUTH_USER_MODEL)),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("answered_at", models.DateTimeField(blank=True, default=None, null=True)),
+                ("token", models.CharField(max_length=255)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        blank=True,
+                        default=None,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
     ]

@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0029_event_currency'),
+        ("events", "0029_event_currency"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='event',
-            name='host',
+            model_name="event",
+            name="host",
             field=models.CharField(blank=True, default=None, max_length=100, null=True),
         ),
     ]

@@ -2,4 +2,4 @@ import os
 
 
 def test_environment():
-    os.environ['ENV'] = 'test'
+    os.environ["ENV"] = "test"

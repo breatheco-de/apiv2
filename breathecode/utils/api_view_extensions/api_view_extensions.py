@@ -6,11 +6,11 @@ import breathecode.utils.api_view_extensions.extensions as extensions
 
 from .api_view_extension_handlers import APIViewExtensionHandlers
 
-__all__ = ['APIViewExtensions']
+__all__ = ["APIViewExtensions"]
 
 EXTENSIONS = [getattr(extensions, x) for x in dir(extensions) if inspect.isclass(getattr(extensions, x))]
-LIMIT_QUERY_PARAM = 'limit'
-OFFSET_QUERY_PARAM = 'offset'
+LIMIT_QUERY_PARAM = "limit"
+OFFSET_QUERY_PARAM = "offset"
 
 
 class APIViewExtensions:
@@ -46,6 +46,7 @@ class APIViewExtensions:
         """Get requirements of the extension."""
 
         return [
-            x for x in dict(inspect.signature(extension.__init__).parameters)
-            if x != 'self' and x != 'args' and x != 'kwargs' and x != 'request'
+            x
+            for x in dict(inspect.signature(extension.__init__).parameters)
+            if x != "self" and x != "args" and x != "kwargs" and x != "request"
         ]

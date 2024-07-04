@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('monitoring', '0003_auto_20201021_2100'),
+        ("monitoring", "0003_auto_20201021_2100"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='application',
-            name='status_text',
+            model_name="application",
+            name="status_text",
             field=models.CharField(blank=True, default=None, max_length=255, null=True),
         ),
         migrations.AddField(
-            model_name='endpoint',
-            name='status_text',
+            model_name="endpoint",
+            name="status_text",
             field=models.CharField(blank=True, default=None, max_length=255, null=True),
         ),
     ]

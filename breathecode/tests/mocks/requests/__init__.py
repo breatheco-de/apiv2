@@ -1,6 +1,7 @@
 """
 Mocks for `requests` module
 """
+
 from .requests_mock import request_mock
 
 # __all__ = [
@@ -10,27 +11,27 @@ from .requests_mock import request_mock
 # ]
 
 REQUESTS_PATH = {
-    'get': 'requests.get',
-    'post': 'requests.post',
-    'put': 'requests.put',
-    'patch': 'requests.patch',
-    'delete': 'requests.delete',
-    'head': 'requests.head',
-    'request': 'requests.request',
+    "get": "requests.get",
+    "post": "requests.post",
+    "put": "requests.put",
+    "patch": "requests.patch",
+    "delete": "requests.delete",
+    "head": "requests.head",
+    "request": "requests.request",
 }
 
 REQUESTS_INSTANCES = {
-    'get': None,
-    'post': None,
-    'put': None,
-    'patch': None,
-    'delete': None,
-    'head': None,
-    'request': None,
+    "get": None,
+    "post": None,
+    "put": None,
+    "patch": None,
+    "delete": None,
+    "head": None,
+    "request": None,
 }
 
 
-def apply_requests_mock(method='get', endpoints=None):
+def apply_requests_mock(method="get", endpoints=None):
     """Apply Storage Blob Mock"""
 
     if endpoints is None:
@@ -72,7 +73,7 @@ def apply_requests_get_mock(endpoints=None):
     if endpoints is None:
         endpoints = []
 
-    return apply_requests_mock('GET', endpoints)
+    return apply_requests_mock("GET", endpoints)
 
 
 def apply_requests_post_mock(endpoints=None):
@@ -106,7 +107,7 @@ def apply_requests_post_mock(endpoints=None):
     if endpoints is None:
         endpoints = []
 
-    return apply_requests_mock('POST', endpoints)
+    return apply_requests_mock("POST", endpoints)
 
 
 def apply_requests_put_mock(endpoints=None):
@@ -140,7 +141,7 @@ def apply_requests_put_mock(endpoints=None):
     if endpoints is None:
         endpoints = []
 
-    return apply_requests_mock('PUT', endpoints)
+    return apply_requests_mock("PUT", endpoints)
 
 
 def apply_requests_patch_mock(endpoints=None):
@@ -174,7 +175,7 @@ def apply_requests_patch_mock(endpoints=None):
     if endpoints is None:
         endpoints = []
 
-    return apply_requests_mock('PATCH', endpoints)
+    return apply_requests_mock("PATCH", endpoints)
 
 
 def apply_requests_delete_mock(endpoints=None):
@@ -208,7 +209,7 @@ def apply_requests_delete_mock(endpoints=None):
     if endpoints is None:
         endpoints = []
 
-    return apply_requests_mock('DELETE', endpoints)
+    return apply_requests_mock("DELETE", endpoints)
 
 
 def apply_requests_head_mock(endpoints=None):
@@ -242,7 +243,7 @@ def apply_requests_head_mock(endpoints=None):
     if endpoints is None:
         endpoints = []
 
-    return apply_requests_mock('HEAD', endpoints)
+    return apply_requests_mock("HEAD", endpoints)
 
 
 def apply_requests_request_mock(endpoints=None):
@@ -277,4 +278,4 @@ def apply_requests_request_mock(endpoints=None):
     if endpoints is None:
         endpoints = []
 
-    return apply_requests_mock('REQUEST', endpoints)
+    return apply_requests_mock("REQUEST", endpoints)

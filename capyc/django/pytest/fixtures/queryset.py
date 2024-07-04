@@ -7,7 +7,7 @@ from typing import Any, Generator, final
 import pytest
 from django.db.models.query import QuerySet
 
-__all__ = ['QuerySet', 'queryset']
+__all__ = ["QuerySet", "queryset"]
 
 
 @final
@@ -36,7 +36,7 @@ class QuerySet:
         ```
         """
 
-        assert isinstance(query, QuerySet), 'The first argument is not a QuerySet'
+        assert isinstance(query, QuerySet), "The first argument is not a QuerySet"
 
         assert [x.pk for x in query] == pks
 
@@ -59,7 +59,7 @@ class QuerySet:
         return [x.pk for x in queryset]
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def queryset() -> Generator[QuerySet, None, None]:
     """
     QuerySet utils.

@@ -6,11 +6,12 @@ from circuitbreaker import circuit
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['Storage']
+__all__ = ["Storage"]
 
 
 class Storage:
     """Google Cloud Storage"""
+
     client: storage.Client
 
     def __init__(self) -> None:

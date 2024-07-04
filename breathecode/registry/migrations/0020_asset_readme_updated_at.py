@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0019_auto_20221109_0246'),
+        ("registry", "0019_auto_20221109_0246"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='asset',
-            name='readme_updated_at',
+            model_name="asset",
+            name="readme_updated_at",
             field=models.DateTimeField(blank=True, default=None, null=True),
         ),
     ]

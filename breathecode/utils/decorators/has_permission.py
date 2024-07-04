@@ -16,7 +16,7 @@ from capyc.rest_framework.exceptions import PaymentException, ValidationExceptio
 
 from ..exceptions import ProgrammingError
 
-__all__ = ['has_permission', 'validate_permission']
+__all__ = ["has_permission", "validate_permission"]
 
 logger = logging.getLogger(__name__)
 
@@ -35,84 +35,88 @@ def avalidate_permission(user: User, permission: str) -> bool:
 
 
 # that must be remove from here
-def render_message(r,
-                   msg,
-                   btn_label=None,
-                   btn_url=None,
-                   btn_target='_blank',
-                   data=None,
-                   status=None,
-                   go_back=None,
-                   url_back=None,
-                   academy=None):
+def render_message(
+    r,
+    msg,
+    btn_label=None,
+    btn_url=None,
+    btn_target="_blank",
+    data=None,
+    status=None,
+    go_back=None,
+    url_back=None,
+    academy=None,
+):
     if data is None:
         data = {}
 
     _data = {
-        'MESSAGE': msg,
-        'BUTTON': btn_label,
-        'BUTTON_TARGET': btn_target,
-        'LINK': btn_url,
-        'GO_BACK': go_back,
-        'URL_BACK': url_back
+        "MESSAGE": msg,
+        "BUTTON": btn_label,
+        "BUTTON_TARGET": btn_target,
+        "LINK": btn_url,
+        "GO_BACK": go_back,
+        "URL_BACK": url_back,
     }
 
     if academy:
-        _data['COMPANY_INFO_EMAIL'] = academy.feedback_email
-        _data['COMPANY_LEGAL_NAME'] = academy.legal_name or academy.name
-        _data['COMPANY_LOGO'] = academy.logo_url
-        _data['COMPANY_NAME'] = academy.name
+        _data["COMPANY_INFO_EMAIL"] = academy.feedback_email
+        _data["COMPANY_LEGAL_NAME"] = academy.legal_name or academy.name
+        _data["COMPANY_LOGO"] = academy.logo_url
+        _data["COMPANY_NAME"] = academy.name
 
-        if 'heading' not in _data:
-            _data['heading'] = academy.name
+        if "heading" not in _data:
+            _data["heading"] = academy.name
 
-    return render(r, 'message.html', {**_data, **data}, status=status)
+    return render(r, "message.html", {**_data, **data}, status=status)
 
 
-def handle_exc(format: str,
-               request: HttpRequest,
-               e: Exception,
-               message: Optional[str] = None,
-               status: Optional[int] = None,
-               use_json_response: bool = False) -> Response | HttpResponse | JsonResponse:
-    if format == 'websocket':
+def handle_exc(
+    format: str,
+    request: HttpRequest,
+    e: Exception,
+    message: Optional[str] = None,
+    status: Optional[int] = None,
+    use_json_response: bool = False,
+) -> Response | HttpResponse | JsonResponse:
+    if format == "websocket":
         raise e
 
     if message is None:
         message = str(e)
 
     if status is None:
-        status = e.status_code if hasattr(e, 'status_code') else 400
+        status = e.status_code if hasattr(e, "status_code") else 400
 
-    if format == 'html':
+    if format == "html":
         return render_message(request, message, status=status)
 
     http_cls = JsonResponse if use_json_response else HttpResponse
 
-    return http_cls({'detail': message, 'status_code': status}, status)
+    return http_cls({"detail": message, "status_code": status}, status)
 
 
-def has_permission(permission: str, format='json') -> callable:
+def has_permission(permission: str, format="json") -> callable:
     """Check if the current user can access to the resource through of permissions."""
 
     def decorator(function: callable) -> callable:
 
         def validate_and_get_request(permission: str, args: Any) -> HttpRequest | AsyncRequest:
             if isinstance(permission, str) == False:
-                raise ProgrammingError('Permission must be a string')
+                raise ProgrammingError("Permission must be a string")
 
             try:
-                if hasattr(args[0], '__class__') and isinstance(args[0], APIView):
+                if hasattr(args[0], "__class__") and isinstance(args[0], APIView):
                     request = args[1]
 
-                elif hasattr(args[0], 'user') and hasattr(args[0].user, 'has_perm'):
+                elif hasattr(args[0], "user") and hasattr(args[0].user, "has_perm"):
                     request = args[0]
 
                 else:
                     raise IndexError()
 
             except IndexError:
-                raise ProgrammingError('Missing request information, use this decorator with DRF View')
+                raise ProgrammingError("Missing request information, use this decorator with DRF View")
 
             return request
 
@@ -124,50 +128,55 @@ def has_permission(permission: str, format='json') -> callable:
                     return function(*args, **kwargs)
 
                 elif isinstance(request.user, AnonymousUser):
-                    raise ValidationException(f'Anonymous user don\'t have this permission: {permission}',
-                                              code=403,
-                                              slug='anonymous-user-without-permission')
+                    raise ValidationException(
+                        f"Anonymous user don't have this permission: {permission}",
+                        code=403,
+                        slug="anonymous-user-without-permission",
+                    )
 
                 else:
-                    raise ValidationException((f'You (user: {request.user.id}) don\'t have this permission: '
-                                               f'{permission}'),
-                                              code=403,
-                                              slug='without-permission')
+                    raise ValidationException(
+                        (f"You (user: {request.user.id}) don't have this permission: " f"{permission}"),
+                        code=403,
+                        slug="without-permission",
+                    )
 
             except PaymentException as e:
-                if format == 'websocket':
+                if format == "websocket":
                     raise e
 
-                if format == 'html':
-                    return render_message(request,
-                                          str(e),
-                                          status=402,
-                                          go_back='Go back to Dashboard',
-                                          url_back='https://4geeks.com/choose-program')
+                if format == "html":
+                    return render_message(
+                        request,
+                        str(e),
+                        status=402,
+                        go_back="Go back to Dashboard",
+                        url_back="https://4geeks.com/choose-program",
+                    )
 
-                return Response({'detail': str(e), 'status_code': 402}, 402)
+                return Response({"detail": str(e), "status_code": 402}, 402)
 
             # handle html views errors
             except ValidationException as e:
-                if format == 'websocket':
+                if format == "websocket":
                     raise e
 
-                status = e.status_code if hasattr(e, 'status_code') else 400
+                status = e.status_code if hasattr(e, "status_code") else 400
 
-                if format == 'html':
+                if format == "html":
                     return render_message(request, str(e), status=status)
 
-                return Response({'detail': str(e), 'status_code': status}, status)
+                return Response({"detail": str(e), "status_code": status}, status)
 
             # handle html views errors
             except Exception as e:
                 # show stacktrace for unexpected exceptions
                 traceback.print_exc()
 
-                if format == 'html':
-                    return render_message(request, 'unexpected error, contact admin if you are affected', status=500)
+                if format == "html":
+                    return render_message(request, "unexpected error, contact admin if you are affected", status=500)
 
-                response = JsonResponse({'detail': str(e), 'status_code': 500})
+                response = JsonResponse({"detail": str(e), "status_code": 500})
                 response.status_code = 500
                 return response
 
@@ -184,50 +193,55 @@ def has_permission(permission: str, format='json') -> callable:
                     return await function(*args, **kwargs)
 
                 elif isinstance(user, AnonymousUser):
-                    raise ValidationException(f'Anonymous user don\'t have this permission: {permission}',
-                                              code=403,
-                                              slug='anonymous-user-without-permission')
+                    raise ValidationException(
+                        f"Anonymous user don't have this permission: {permission}",
+                        code=403,
+                        slug="anonymous-user-without-permission",
+                    )
 
                 else:
-                    raise ValidationException((f'You (user: {user.id}) don\'t have this permission: '
-                                               f'{permission}'),
-                                              code=403,
-                                              slug='without-permission')
+                    raise ValidationException(
+                        (f"You (user: {user.id}) don't have this permission: " f"{permission}"),
+                        code=403,
+                        slug="without-permission",
+                    )
 
             except PaymentException as e:
-                if format == 'websocket':
+                if format == "websocket":
                     raise e
 
-                if format == 'html':
-                    return render_message(request,
-                                          str(e),
-                                          status=402,
-                                          go_back='Go back to Dashboard',
-                                          url_back='https://4geeks.com/choose-program')
+                if format == "html":
+                    return render_message(
+                        request,
+                        str(e),
+                        status=402,
+                        go_back="Go back to Dashboard",
+                        url_back="https://4geeks.com/choose-program",
+                    )
 
-                return Response({'detail': str(e), 'status_code': 402}, 402)
+                return Response({"detail": str(e), "status_code": 402}, 402)
 
             # handle html views errors
             except ValidationException as e:
-                if format == 'websocket':
+                if format == "websocket":
                     raise e
 
-                status = e.status_code if hasattr(e, 'status_code') else 400
+                status = e.status_code if hasattr(e, "status_code") else 400
 
-                if format == 'html':
+                if format == "html":
                     return render_message(request, str(e), status=status)
 
-                return Response({'detail': str(e), 'status_code': status}, status)
+                return Response({"detail": str(e), "status_code": status}, status)
 
             # handle html views errors
             except Exception as e:
                 # show stacktrace for unexpected exceptions
                 traceback.print_exc()
 
-                if format == 'html':
-                    return render_message(request, 'unexpected error, contact admin if you are affected', status=500)
+                if format == "html":
+                    return render_message(request, "unexpected error, contact admin if you are affected", status=500)
 
-                response = JsonResponse({'detail': str(e), 'status_code': 500})
+                response = JsonResponse({"detail": str(e), "status_code": 500})
                 response.status_code = 500
                 return response
 

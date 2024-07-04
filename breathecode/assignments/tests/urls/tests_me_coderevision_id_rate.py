@@ -1,6 +1,7 @@
 """
 Test /answer
 """
+
 import json
 import random
 from unittest.mock import AsyncMock, MagicMock, call, patch
@@ -57,7 +58,7 @@ def patch_post(monkeypatch):
     def handler(expected, code, headers):
 
         reader = StreamReaderMock(json.dumps(expected).encode())
-        monkeypatch.setattr('aiohttp.ClientSession.post', MagicMock(return_value=ResponseMock(reader, code, headers)))
+        monkeypatch.setattr("aiohttp.ClientSession.post", MagicMock(return_value=ResponseMock(reader, code, headers)))
 
     yield handler
 
@@ -65,16 +66,31 @@ def patch_post(monkeypatch):
 @pytest.fixture
 def get_jwt(bc: Breathecode, monkeypatch):
     token = bc.random.string(lower=True, upper=True, symbol=True, number=True, size=20)
-    monkeypatch.setattr('linked_services.django.actions.get_jwt', MagicMock(return_value=token))
+    monkeypatch.setattr("linked_services.django.actions.get_jwt", MagicMock(return_value=token))
     yield token
 
 
-@pytest.fixture(params=[
-    ('linked_services.core.service.Service.__aenter__', Exception, 'App rigobot not found', 'app-not-found', 404, True),
-    ('linked_services.core.service.Service.__aenter__', SynchronousOnlyOperation,
-     'Async is not supported by the worker', 'no-async-support', 500, True),
-    ('aiohttp.ClientSession.post', Exception, 'random exc', 'unexpected-error', 500, False),
-])
+@pytest.fixture(
+    params=[
+        (
+            "linked_services.core.service.Service.__aenter__",
+            Exception,
+            "App rigobot not found",
+            "app-not-found",
+            404,
+            True,
+        ),
+        (
+            "linked_services.core.service.Service.__aenter__",
+            SynchronousOnlyOperation,
+            "Async is not supported by the worker",
+            "no-async-support",
+            500,
+            True,
+        ),
+        ("aiohttp.ClientSession.post", Exception, "random exc", "unexpected-error", 500, False),
+    ]
+)
 def post_exc(request, monkeypatch):
     path, exc, message, slug, code, is_async = request.param
     if is_async:
@@ -109,53 +125,53 @@ def post_exc(request, monkeypatch):
         monkeypatch.setattr(path, ContextMock)
 
     yield {
-        'slug': slug,
-        'code': code,
+        "slug": slug,
+        "code": code,
     }
 
 
 # When: no auth
 # Then: response 401
 def test_no_auth(bc: Breathecode, client: APIClient):
-    url = reverse_lazy('assignments:me_coderevision_id_rate', kwargs={'coderevision_id': 1})
+    url = reverse_lazy("assignments:me_coderevision_id_rate", kwargs={"coderevision_id": 1})
     response = client.post(url)
 
     json = response.json()
-    expected = {'detail': 'Authentication credentials were not provided.', 'status_code': 401}
+    expected = {"detail": "Authentication credentials were not provided.", "status_code": 401}
 
     assert json == expected
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert bc.database.list_of('assignments.Task') == []
+    assert bc.database.list_of("assignments.Task") == []
 
 
 # When: raise an exception
 # Then: response 200
 def test_raise_an_exception(bc: Breathecode, client: APIClient, post_exc):
-    expected = {'detail': post_exc['slug'], 'status_code': post_exc['code']}
+    expected = {"detail": post_exc["slug"], "status_code": post_exc["code"]}
     query = {
         bc.fake.slug(): bc.fake.slug(),
         bc.fake.slug(): bc.fake.slug(),
         bc.fake.slug(): bc.fake.slug(),
     }
 
-    task = {'github_url': bc.fake.url()}
-    model = bc.database.create(profile_academy=1, task=task, app={'slug': 'rigobot', 'app_url': bc.fake.url()})
+    task = {"github_url": bc.fake.url()}
+    model = bc.database.create(profile_academy=1, task=task, app={"slug": "rigobot", "app_url": bc.fake.url()})
     client.force_authenticate(model.user)
 
-    url = reverse_lazy('assignments:me_coderevision_id_rate', kwargs={'coderevision_id': 1})
+    url = reverse_lazy("assignments:me_coderevision_id_rate", kwargs={"coderevision_id": 1})
 
-    response = client.post(url, query, format='json')
+    response = client.post(url, query, format="json")
     json = response.json()
 
     assert json == expected
-    assert response.status_code == post_exc['code']
-    assert bc.database.list_of('assignments.Task') == [bc.format.to_dict(model.task)]
+    assert response.status_code == post_exc["code"]
+    assert bc.database.list_of("assignments.Task") == [bc.format.to_dict(model.task)]
 
 
 # When: auth
 # Then: response 200
 def test_auth(bc: Breathecode, client: APIClient, patch_post, get_jwt):
-    expected = {'data': {'getTask': {'id': random.randint(1, 100)}}}
+    expected = {"data": {"getTask": {"id": random.randint(1, 100)}}}
     query = {
         bc.fake.slug(): bc.fake.slug(),
         bc.fake.slug(): bc.fake.slug(),
@@ -163,25 +179,27 @@ def test_auth(bc: Breathecode, client: APIClient, patch_post, get_jwt):
     }
 
     code = random.randint(200, 299)
-    headers = {'Content-Type': 'application/json'}
+    headers = {"Content-Type": "application/json"}
 
     patch_post(expected, code, headers)
 
-    task = {'github_url': bc.fake.url()}
-    model = bc.database.create(profile_academy=1, task=task, app={'slug': 'rigobot', 'app_url': bc.fake.url()})
+    task = {"github_url": bc.fake.url()}
+    model = bc.database.create(profile_academy=1, task=task, app={"slug": "rigobot", "app_url": bc.fake.url()})
     client.force_authenticate(model.user)
 
-    url = reverse_lazy('assignments:me_coderevision_id_rate', kwargs={'coderevision_id': 1})
+    url = reverse_lazy("assignments:me_coderevision_id_rate", kwargs={"coderevision_id": 1})
 
-    response = client.post(url, query, format='json')
+    response = client.post(url, query, format="json")
 
     assert aiohttp.ClientSession.post.call_args_list == [
-        call(f'{model.app.app_url}/v1/finetuning/rate/coderevision/1',
-             json=None,
-             data=query,
-             headers={'Authorization': f'Link App=breathecode,Token={get_jwt}'})
+        call(
+            f"{model.app.app_url}/v1/finetuning/rate/coderevision/1",
+            json=None,
+            data=query,
+            headers={"Authorization": f"Link App=breathecode,Token={get_jwt}"},
+        )
     ]
 
-    assert response.getvalue().decode('utf-8') == json.dumps(expected)
+    assert response.getvalue().decode("utf-8") == json.dumps(expected)
     assert response.status_code == code
-    assert bc.database.list_of('assignments.Task') == [bc.format.to_dict(model.task)]
+    assert bc.database.list_of("assignments.Task") == [bc.format.to_dict(model.task)]

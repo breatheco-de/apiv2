@@ -6,29 +6,29 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0045_auto_20220103_2200'),
+        ("marketing", "0045_auto_20220103_2200"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='formentry',
-            name='automations',
-            field=models.CharField(blank=True,
-                                   default='',
-                                   help_text='Comma separated list of automations',
-                                   max_length=100),
+            model_name="formentry",
+            name="automations",
+            field=models.CharField(
+                blank=True, default="", help_text="Comma separated list of automations", max_length=100
+            ),
         ),
         migrations.AlterField(
-            model_name='formentry',
-            name='tags',
-            field=models.CharField(blank=True, default='', help_text='Comma separated list of tags', max_length=100),
+            model_name="formentry",
+            name="tags",
+            field=models.CharField(blank=True, default="", help_text="Comma separated list of tags", max_length=100),
         ),
         migrations.AlterField(
-            model_name='leadgenerationapp',
-            name='default_automations',
+            model_name="leadgenerationapp",
+            name="default_automations",
             field=models.ManyToManyField(
                 blank=True,
-                help_text='Automations with are slug will be excluded, make sure to set slug to them',
-                to='marketing.Automation'),
+                help_text="Automations with are slug will be excluded, make sure to set slug to them",
+                to="marketing.Automation",
+            ),
         ),
     ]

@@ -6,39 +6,57 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0004_auto_20200618_2308'),
+        ("marketing", "0004_auto_20200618_2308"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Tag',
+            name="Tag",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('slug', models.CharField(max_length=150, unique=True)),
-                ('tag_type',
-                 models.CharField(choices=[('STRONG', 'Strong'), ('SOFT', 'Soft'), ('DISCOVERY', 'Discovery'),
-                                           ('OTHER', 'Other')],
-                                  default=None,
-                                  max_length=15,
-                                  null=True)),
-                ('acp_id', models.IntegerField()),
-                ('subscribers', models.IntegerField()),
-                ('priority',
-                 models.CharField(choices=[('STRONG', 'Strong'), ('SOFT', 'Soft'), ('DISCOVERY', 'Discovery'),
-                                           ('OTHER', 'Other')],
-                                  default=None,
-                                  max_length=15,
-                                  null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("slug", models.CharField(max_length=150, unique=True)),
+                (
+                    "tag_type",
+                    models.CharField(
+                        choices=[
+                            ("STRONG", "Strong"),
+                            ("SOFT", "Soft"),
+                            ("DISCOVERY", "Discovery"),
+                            ("OTHER", "Other"),
+                        ],
+                        default=None,
+                        max_length=15,
+                        null=True,
+                    ),
+                ),
+                ("acp_id", models.IntegerField()),
+                ("subscribers", models.IntegerField()),
+                (
+                    "priority",
+                    models.CharField(
+                        choices=[
+                            ("STRONG", "Strong"),
+                            ("SOFT", "Soft"),
+                            ("DISCOVERY", "Discovery"),
+                            ("OTHER", "Other"),
+                        ],
+                        default=None,
+                        max_length=15,
+                        null=True,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
         ),
         migrations.AddField(
-            model_name='formentry',
-            name='lead_type',
-            field=models.CharField(choices=[('STRONG', 'Strong'), ('SOFT', 'Soft'), ('DISCOVERY', 'Discovery')],
-                                   default=None,
-                                   max_length=15,
-                                   null=True),
+            model_name="formentry",
+            name="lead_type",
+            field=models.CharField(
+                choices=[("STRONG", "Strong"), ("SOFT", "Soft"), ("DISCOVERY", "Discovery")],
+                default=None,
+                max_length=15,
+                null=True,
+            ),
         ),
     ]

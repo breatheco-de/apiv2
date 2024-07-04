@@ -7,34 +7,36 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0048_alter_formentry_utm_url'),
+        ("marketing", "0048_alter_formentry_utm_url"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='formentry',
-            name='utm_content',
+            model_name="formentry",
+            name="utm_content",
             field=models.CharField(blank=True, default=None, max_length=70, null=True),
         ),
         migrations.AlterField(
-            model_name='tag',
-            name='automation',
-            field=models.ForeignKey(blank=True,
-                                    default=None,
-                                    help_text='Leads that contain this tag will be asociated to this automation',
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='marketing.automation'),
+            model_name="tag",
+            name="automation",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                help_text="Leads that contain this tag will be asociated to this automation",
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to="marketing.automation",
+            ),
         ),
         migrations.AlterField(
-            model_name='tag',
-            name='tag_type',
+            model_name="tag",
+            name="tag_type",
             field=models.CharField(
-                choices=[('STRONG', 'Strong'), ('SOFT', 'Soft'), ('DISCOVERY', 'Discovery'), ('OTHER', 'Other')],
-                default='OTHER',
-                help_text=
-                "The STRONG tags in a lead will determine to witch automation it does unless there is an 'automation' property on the lead JSON",
+                choices=[("STRONG", "Strong"), ("SOFT", "Soft"), ("DISCOVERY", "Discovery"), ("OTHER", "Other")],
+                default="OTHER",
+                help_text="The STRONG tags in a lead will determine to witch automation it does unless there is an 'automation' property on the lead JSON",
                 max_length=15,
-                null=True),
+                null=True,
+            ),
         ),
     ]

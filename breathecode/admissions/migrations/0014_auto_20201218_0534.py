@@ -7,38 +7,38 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0013_auto_20201209_0216'),
+        ("admissions", "0013_auto_20201209_0216"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='academy',
-            name='facebook_handle',
+            model_name="academy",
+            name="facebook_handle",
             field=models.CharField(blank=True, default=None, max_length=30, null=True),
         ),
         migrations.AddField(
-            model_name='academy',
-            name='github_handle',
+            model_name="academy",
+            name="github_handle",
             field=models.CharField(blank=True, default=None, max_length=20, null=True),
         ),
         migrations.AddField(
-            model_name='academy',
-            name='instagram_handle',
+            model_name="academy",
+            name="instagram_handle",
             field=models.CharField(blank=True, default=None, max_length=30, null=True),
         ),
         migrations.AddField(
-            model_name='academy',
-            name='linkedin_url',
+            model_name="academy",
+            name="linkedin_url",
             field=models.URLField(blank=True, default=None, null=True),
         ),
         migrations.AddField(
-            model_name='academy',
-            name='marketing_email',
+            model_name="academy",
+            name="marketing_email",
             field=models.EmailField(blank=True, default=None, max_length=254, null=True),
         ),
         migrations.AddField(
-            model_name='academy',
-            name='marketing_phone',
+            model_name="academy",
+            name="marketing_phone",
             field=models.CharField(
                 blank=True,
                 default=None,
@@ -47,17 +47,19 @@ class Migration(migrations.Migration):
                 validators=[
                     django.core.validators.RegexValidator(
                         message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
-                        regex='^\\+?1?\\d{9,15}$')
-                ]),
+                        regex="^\\+?1?\\d{9,15}$",
+                    )
+                ],
+            ),
         ),
         migrations.AddField(
-            model_name='academy',
-            name='twitter_handle',
+            model_name="academy",
+            name="twitter_handle",
             field=models.CharField(blank=True, default=None, max_length=15, null=True),
         ),
         migrations.AddField(
-            model_name='academy',
-            name='youtube_url',
+            model_name="academy",
+            name="youtube_url",
             field=models.URLField(blank=True, default=None, null=True),
         ),
     ]

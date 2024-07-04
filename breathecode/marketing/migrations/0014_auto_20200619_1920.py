@@ -6,19 +6,19 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0013_auto_20200619_1903'),
+        ("marketing", "0013_auto_20200619_1903"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='tag',
-            name='tag_type',
+            model_name="tag",
+            name="tag_type",
             field=models.CharField(
-                choices=[('STRONG', 'Strong'), ('SOFT', 'Soft'), ('DISCOVERY', 'Discovery'), ('OTHER', 'Other')],
+                choices=[("STRONG", "Strong"), ("SOFT", "Soft"), ("DISCOVERY", "Discovery"), ("OTHER", "Other")],
                 default=None,
-                help_text=
-                "The STRONG tags in a lead will determine to witch automation it does unless there is an 'automation' property on the lead JSON",
+                help_text="The STRONG tags in a lead will determine to witch automation it does unless there is an 'automation' property on the lead JSON",
                 max_length=15,
-                null=True),
+                null=True,
+            ),
         ),
     ]

@@ -7,28 +7,30 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('auth', '0012_alter_user_first_name_max_length'),
-        ('certificate', '0004_auto_20200929_1812'),
+        ("auth", "0012_alter_user_first_name_max_length"),
+        ("certificate", "0004_auto_20200929_1812"),
     ]
 
     operations = [
-        migrations.DeleteModel(name='UserCertificate', ),
+        migrations.DeleteModel(
+            name="UserCertificate",
+        ),
         migrations.CreateModel(
-            name='UserProxy',
+            name="UserProxy",
             fields=[],
             options={
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
+                "proxy": True,
+                "indexes": [],
+                "constraints": [],
             },
-            bases=('auth.user', ),
+            bases=("auth.user",),
             managers=[
-                ('objects', django.contrib.auth.models.UserManager()),
+                ("objects", django.contrib.auth.models.UserManager()),
             ],
         ),
         migrations.AlterField(
-            model_name='specialty',
-            name='description',
+            model_name="specialty",
+            name="description",
             field=models.TextField(blank=True, default=None, max_length=500, null=True),
         ),
     ]

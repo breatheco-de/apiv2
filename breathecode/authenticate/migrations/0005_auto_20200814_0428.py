@@ -7,13 +7,13 @@ from django.utils import timezone  # noqa: F401
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authenticate', '0004_token'),
+        ("authenticate", "0004_token"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='token',
-            name='expires_at',
+            model_name="token",
+            name="expires_at",
             field=models.DateTimeField(),
         ),
     ]

@@ -12,14 +12,14 @@ from .constants import (
 )
 
 
-class ResponseMock():
+class ResponseMock:
     """Simutate Response to be used by mocks."""
 
     status_code = None
     data = None
     content = None
 
-    def __init__(self, status_code=200, data=''):
+    def __init__(self, status_code=200, data=""):
         self.status_code = status_code
 
         if isinstance(data, str):
@@ -48,4 +48,4 @@ def request_mock(url: str, auth=None, data=None, method=None, headers=None, para
     if url == EVENTBRITE_TICKET_CLASS_URL:
         return ResponseMock(data=EVENTBRITE_TICKET_CLASS, status_code=200)
 
-    return ResponseMock(data={'ok': False, 'status': 'not found'}, status_code=404)
+    return ResponseMock(data={"ok": False, "status": "not found"}, status_code=404)

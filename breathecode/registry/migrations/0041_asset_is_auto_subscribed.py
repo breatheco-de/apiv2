@@ -6,17 +6,16 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0040_alter_asset_all_translations_and_more'),
+        ("registry", "0040_alter_asset_all_translations_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='asset',
-            name='is_auto_subscribed',
+            model_name="asset",
+            name="is_auto_subscribed",
             field=models.BooleanField(
                 default=True,
-                help_text=
-                'If auto subscribed, the system will attempt to listen to push event and update the asset meta based on github'
+                help_text="If auto subscribed, the system will attempt to listen to push event and update the asset meta based on github",
             ),
         ),
     ]

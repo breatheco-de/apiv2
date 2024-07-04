@@ -5,7 +5,7 @@ from typing import Any, Dict, Generator, Optional, Tuple, final
 import pytest
 from faker import Faker
 
-__all__ = ['random', 'Random']
+__all__ = ["random", "Random"]
 
 
 @final
@@ -88,7 +88,7 @@ class Random:
         - str: A random string of the specified size and character types.
         """
 
-        chars = ''
+        chars = ""
 
         if lower:
             chars += string.ascii_lowercase
@@ -102,7 +102,7 @@ class Random:
         if number:
             chars += string.digits
 
-        return ''.join(r.choices(chars, k=size))
+        return "".join(r.choices(chars, k=size))
 
 
 @pytest.fixture(autouse=True)

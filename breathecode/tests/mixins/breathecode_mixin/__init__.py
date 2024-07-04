@@ -1,12 +1,13 @@
 """
 Global mixins
 """
+
 from .breathecode import Breathecode, fake
 
-__all__ = ['BreathecodeMixin', 'fake']
+__all__ = ["BreathecodeMixin", "fake"]
 
 
-class BreathecodeMixin():
+class BreathecodeMixin:
     bc: Breathecode
 
     def set_test_instance(self, parent) -> None:

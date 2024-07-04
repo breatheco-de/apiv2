@@ -7,15 +7,15 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0021_alter_asset_category'),
+        ("registry", "0021_alter_asset_category"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='asset',
-            name='category',
-            field=models.ForeignKey(null=True,
-                                    on_delete=django.db.models.deletion.SET_NULL,
-                                    to='registry.assetcategory'),
+            model_name="asset",
+            name="category",
+            field=models.ForeignKey(
+                null=True, on_delete=django.db.models.deletion.SET_NULL, to="registry.assetcategory"
+            ),
         ),
     ]

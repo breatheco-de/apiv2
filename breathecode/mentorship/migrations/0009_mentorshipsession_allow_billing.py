@@ -6,14 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('mentorship', '0008_auto_20220311_0423'),
+        ("mentorship", "0008_auto_20220311_0423"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='mentorshipsession',
-            name='allow_billing',
-            field=models.BooleanField(default=True,
-                                      help_text='If false it will not be included when generating mentorship bills'),
+            model_name="mentorshipsession",
+            name="allow_billing",
+            field=models.BooleanField(
+                default=True, help_text="If false it will not be included when generating mentorship bills"
+            ),
         ),
     ]
