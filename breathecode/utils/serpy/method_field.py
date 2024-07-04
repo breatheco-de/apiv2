@@ -1,7 +1,6 @@
 import serpy
 
-__all__ = ['MethodField']
+__all__ = ["MethodField"]
 
 
-class MethodField(serpy.MethodField):
-    ...
+class MethodField(serpy.MethodField): ...

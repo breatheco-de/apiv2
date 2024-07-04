@@ -11,20 +11,21 @@ logger = logging.getLogger(__name__)
 
 @receiver(monitoring_signals.stripe_webhook, sender=StripeEvent)
 def bill_was_paid(sender: Type[StripeEvent], instance: StripeEvent, **kwargs):
-    if instance.type == 'checkout.session.completed':
+    if instance.type == "checkout.session.completed":
         try:
-            if instance.data['payment_link']:
-                ProvisioningBill.objects.filter(stripe_id=instance.data['payment_link']).update(
-                    status='PAID', paid_at=instance.created_at)
+            if instance.data["payment_link"]:
+                ProvisioningBill.objects.filter(stripe_id=instance.data["payment_link"]).update(
+                    status="PAID", paid_at=instance.created_at
+                )
 
         except Exception:
-            instance.status_texts['provisioning.bill_was_paid'] = 'Invalid context'
-            instance.status = 'ERROR'
+            instance.status_texts["provisioning.bill_was_paid"] = "Invalid context"
+            instance.status = "ERROR"
             instance.save()
             return
 
-        if 'provisioning.bill_was_paid' in instance.status_texts:
-            instance.status_texts.pop('provisioning.bill_was_paid')
+        if "provisioning.bill_was_paid" in instance.status_texts:
+            instance.status_texts.pop("provisioning.bill_was_paid")
 
-        instance.status = 'DONE' if len(instance.status_texts) == 0 else 'ERROR'
+        instance.status = "DONE" if len(instance.status_texts) == 0 else "ERROR"
         instance.save()

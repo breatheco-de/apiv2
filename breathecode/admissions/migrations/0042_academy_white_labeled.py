@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0041_cohortuser_watching'),
+        ("admissions", "0041_cohortuser_watching"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='academy',
-            name='white_labeled',
+            model_name="academy",
+            name="white_labeled",
             field=models.BooleanField(default=False),
         ),
     ]

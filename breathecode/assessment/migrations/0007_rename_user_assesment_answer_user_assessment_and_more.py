@@ -10,115 +10,131 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0064_academy_legal_name'),
-        ('assessment', '0006_question_is_deleted'),
+        ("admissions", "0064_academy_legal_name"),
+        ("assessment", "0006_question_is_deleted"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='answer',
-            old_name='user_assesment',
-            new_name='user_assessment',
+            model_name="answer",
+            old_name="user_assesment",
+            new_name="user_assessment",
         ),
         migrations.AddField(
-            model_name='assessment',
-            name='is_archived',
+            model_name="assessment",
+            name="is_archived",
             field=models.BooleanField(
                 default=False,
-                help_text='If assessments have answers, they cannot be deleted but will be archived instead'),
+                help_text="If assessments have answers, they cannot be deleted but will be archived instead",
+            ),
         ),
         migrations.AddField(
-            model_name='assessment',
-            name='max_session_duration',
-            field=models.DurationField(default=datetime.timedelta(seconds=1800),
-                                       help_text='No more answers will be accepted after X amount of minutes'),
+            model_name="assessment",
+            name="max_session_duration",
+            field=models.DurationField(
+                default=datetime.timedelta(seconds=1800),
+                help_text="No more answers will be accepted after X amount of minutes",
+            ),
         ),
         migrations.AddField(
-            model_name='userassessment',
-            name='conversion_info',
-            field=models.JSONField(blank=True,
-                                   default=None,
-                                   help_text='UTMs and other conversion information.',
-                                   null=True),
+            model_name="userassessment",
+            name="conversion_info",
+            field=models.JSONField(
+                blank=True, default=None, help_text="UTMs and other conversion information.", null=True
+            ),
         ),
         migrations.AddField(
-            model_name='userassessment',
-            name='has_marketing_consent',
+            model_name="userassessment",
+            name="has_marketing_consent",
             field=models.BooleanField(default=False),
         ),
         migrations.AddField(
-            model_name='userassessment',
-            name='owner_email',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   help_text='If there is not registered owner we can use the email as reference',
-                                   max_length=150,
-                                   null=True),
-        ),
-        migrations.AddField(
-            model_name='userassessment',
-            name='owner_phone',
+            model_name="userassessment",
+            name="owner_email",
             field=models.CharField(
                 blank=True,
-                default='',
+                default=None,
+                help_text="If there is not registered owner we can use the email as reference",
+                max_length=150,
+                null=True,
+            ),
+        ),
+        migrations.AddField(
+            model_name="userassessment",
+            name="owner_phone",
+            field=models.CharField(
+                blank=True,
+                default="",
                 max_length=17,
                 validators=[
                     django.core.validators.RegexValidator(
                         message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
-                        regex='^\\+?1?\\d{9,15}$')
-                ]),
+                        regex="^\\+?1?\\d{9,15}$",
+                    )
+                ],
+            ),
         ),
         migrations.AddField(
-            model_name='userassessment',
-            name='status_text',
+            model_name="userassessment",
+            name="status_text",
             field=models.TextField(blank=True, default=None, null=True),
         ),
         migrations.AddField(
-            model_name='userassessment',
-            name='token',
-            field=models.CharField(default=None,
-                                   help_text='Auto-generated when a user assignment is created',
-                                   max_length=255,
-                                   unique=True),
+            model_name="userassessment",
+            name="token",
+            field=models.CharField(
+                default=None, help_text="Auto-generated when a user assignment is created", max_length=255, unique=True
+            ),
             preserve_default=False,
         ),
         migrations.AlterField(
-            model_name='userassessment',
-            name='owner',
-            field=models.ForeignKey(blank=True,
-                                    default=None,
-                                    help_text='How is answering the assessment',
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to=settings.AUTH_USER_MODEL),
+            model_name="userassessment",
+            name="owner",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                help_text="How is answering the assessment",
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AlterField(
-            model_name='userassessment',
-            name='status',
-            field=models.CharField(choices=[('DRAFT', 'Draft'), ('SENT', 'Sent'), ('ERROR', 'Error'),
-                                            ('EXPIRED', 'Expired')],
-                                   default='DRAFT',
-                                   max_length=15),
+            model_name="userassessment",
+            name="status",
+            field=models.CharField(
+                choices=[("DRAFT", "Draft"), ("SENT", "Sent"), ("ERROR", "Error"), ("EXPIRED", "Expired")],
+                default="DRAFT",
+                max_length=15,
+            ),
         ),
         migrations.CreateModel(
-            name='AssessmentLayout',
+            name="AssessmentLayout",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('slug', models.SlugField(max_length=200, unique=True)),
-                ('additional_styles',
-                 models.TextField(blank=True,
-                                  default=None,
-                                  help_text='This stylesheet will be included in the assessment if specified',
-                                  null=True)),
-                ('variables',
-                 models.JSONField(blank=True,
-                                  default=None,
-                                  help_text='Additional params to be passed into the assessment content',
-                                  null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('academy', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("slug", models.SlugField(max_length=200, unique=True)),
+                (
+                    "additional_styles",
+                    models.TextField(
+                        blank=True,
+                        default=None,
+                        help_text="This stylesheet will be included in the assessment if specified",
+                        null=True,
+                    ),
+                ),
+                (
+                    "variables",
+                    models.JSONField(
+                        blank=True,
+                        default=None,
+                        help_text="Additional params to be passed into the assessment content",
+                        null=True,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("academy", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="admissions.academy")),
             ],
         ),
     ]

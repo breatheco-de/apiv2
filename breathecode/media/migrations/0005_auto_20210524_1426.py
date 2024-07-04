@@ -6,25 +6,25 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('media', '0004_auto_20210401_0249'),
+        ("media", "0004_auto_20210401_0249"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='MediaResolution',
+            name="MediaResolution",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('hash', models.CharField(max_length=64)),
-                ('width', models.IntegerField()),
-                ('height', models.IntegerField()),
-                ('hits', models.IntegerField(default=0)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("hash", models.CharField(max_length=64)),
+                ("width", models.IntegerField()),
+                ("height", models.IntegerField()),
+                ("hits", models.IntegerField(default=0)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
         ),
         migrations.AddField(
-            model_name='media',
-            name='thumbnail',
+            model_name="media",
+            name="thumbnail",
             field=models.URLField(blank=True, max_length=255, null=True),
         ),
     ]

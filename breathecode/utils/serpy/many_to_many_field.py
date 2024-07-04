@@ -1,6 +1,6 @@
 from serpy.fields import Field
 
-__all__ = ['ManyToManyField']
+__all__ = ["ManyToManyField"]
 
 
 class ManyToManyField(Field):

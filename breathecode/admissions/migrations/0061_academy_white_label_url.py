@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0060_alter_cohortuser_educational_status'),
+        ("admissions", "0060_alter_cohortuser_educational_status"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='academy',
-            name='white_label_url',
+            model_name="academy",
+            name="white_label_url",
             field=models.CharField(blank=True, default=None, max_length=255, null=True),
         ),
     ]

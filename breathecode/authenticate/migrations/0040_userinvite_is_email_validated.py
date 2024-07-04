@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authenticate', '0039_auto_20230611_0534'),
+        ("authenticate", "0039_auto_20230611_0534"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='userinvite',
-            name='is_email_validated',
+            model_name="userinvite",
+            name="is_email_validated",
             field=models.BooleanField(default=False),
         ),
     ]

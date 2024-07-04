@@ -6,17 +6,19 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0081_coursetranslation_video_url'),
+        ("marketing", "0081_coursetranslation_video_url"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='course',
-            name='color',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   help_text='Add the color with hexadecimal format, i.e.: #FFFFFF',
-                                   max_length=50,
-                                   null=True),
+            model_name="course",
+            name="color",
+            field=models.CharField(
+                blank=True,
+                default=None,
+                help_text="Add the color with hexadecimal format, i.e.: #FFFFFF",
+                max_length=50,
+                null=True,
+            ),
         ),
     ]

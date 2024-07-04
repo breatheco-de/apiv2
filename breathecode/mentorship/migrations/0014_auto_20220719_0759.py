@@ -7,34 +7,32 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0041_cohortuser_watching'),
-        ('mentorship', '0013_auto_20220408_2052'),
+        ("admissions", "0041_cohortuser_watching"),
+        ("mentorship", "0013_auto_20220408_2052"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='mentorprofile',
-            name='service',
+            model_name="mentorprofile",
+            name="service",
         ),
         migrations.AddField(
-            model_name='mentorprofile',
-            name='academy',
-            field=models.ForeignKey(default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='admissions.academy'),
+            model_name="mentorprofile",
+            name="academy",
+            field=models.ForeignKey(
+                default=None, null=True, on_delete=django.db.models.deletion.CASCADE, to="admissions.academy"
+            ),
         ),
         migrations.AddField(
-            model_name='mentorprofile',
-            name='services',
-            field=models.ManyToManyField(to='mentorship.MentorshipService'),
+            model_name="mentorprofile",
+            name="services",
+            field=models.ManyToManyField(to="mentorship.MentorshipService"),
         ),
         migrations.AddField(
-            model_name='mentorshipsession',
-            name='service',
-            field=models.ForeignKey(blank=True,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='mentorship.mentorshipservice'),
+            model_name="mentorshipsession",
+            name="service",
+            field=models.ForeignKey(
+                blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="mentorship.mentorshipservice"
+            ),
         ),
     ]

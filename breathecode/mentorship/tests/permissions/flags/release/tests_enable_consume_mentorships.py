@@ -28,21 +28,26 @@ def assert_context_was_call(self, fn, model):
 
 class AcademyEventTestSuite(MentorshipTestCase):
 
-    @patch('ldclient.get', MagicMock())
-    @patch('breathecode.services.launch_darkly.client.LaunchDarkly.get', MagicMock(return_value=value))
-    @patch('breathecode.services.launch_darkly.client.LaunchDarkly.join_contexts',
-           MagicMock(return_value=join_contexts_value))
-    @patch('breathecode.authenticate.permissions.contexts.user', MagicMock(return_value=context1))
-    @patch('breathecode.mentorship.permissions.contexts.mentorship_service', MagicMock(return_value=context2))
-    @patch('breathecode.admissions.permissions.contexts.academy', MagicMock(return_value=context3))
+    @patch("ldclient.get", MagicMock())
+    @patch("breathecode.services.launch_darkly.client.LaunchDarkly.get", MagicMock(return_value=value))
+    @patch(
+        "breathecode.services.launch_darkly.client.LaunchDarkly.join_contexts",
+        MagicMock(return_value=join_contexts_value),
+    )
+    @patch("breathecode.authenticate.permissions.contexts.user", MagicMock(return_value=context1))
+    @patch("breathecode.mentorship.permissions.contexts.mentorship_service", MagicMock(return_value=context2))
+    @patch("breathecode.admissions.permissions.contexts.academy", MagicMock(return_value=context3))
     def test_make_right_calls(self):
         model = self.bc.database.create(user=1, mentorship_service=1)
 
         result = api.release.enable_consume_mentorships(model.user, model.mentorship_service)
 
-        self.assertEqual(self.bc.database.list_of('auth.User'), [
-            self.bc.format.to_dict(model.user),
-        ])
+        self.assertEqual(
+            self.bc.database.list_of("auth.User"),
+            [
+                self.bc.format.to_dict(model.user),
+            ],
+        )
 
         assert_context_was_call(self, authenticate_contexts.user, model.user)
         assert_context_was_call(self, admissions_contexts.academy, model.academy)
@@ -50,10 +55,16 @@ class AcademyEventTestSuite(MentorshipTestCase):
 
         self.assertEqual(result, value)
 
-        self.assertEqual(LaunchDarkly.join_contexts.call_args_list, [
-            call(context1, context2, context3),
-        ])
+        self.assertEqual(
+            LaunchDarkly.join_contexts.call_args_list,
+            [
+                call(context1, context2, context3),
+            ],
+        )
 
-        self.assertEqual(LaunchDarkly.get.call_args_list, [
-            call('api.release.enable_consume_mentorships', join_contexts_value, False),
-        ])
+        self.assertEqual(
+            LaunchDarkly.get.call_args_list,
+            [
+                call("api.release.enable_consume_mentorships", join_contexts_value, False),
+            ],
+        )

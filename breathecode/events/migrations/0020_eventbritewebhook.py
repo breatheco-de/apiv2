@@ -6,23 +6,27 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0019_auto_20201230_2201'),
+        ("events", "0019_auto_20201230_2201"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='EventbriteWebhook',
+            name="EventbriteWebhook",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('api_url', models.CharField(blank=True, default=None, max_length=255, null=True)),
-                ('user_id', models.CharField(blank=True, default=None, max_length=20, null=True)),
-                ('action', models.CharField(blank=True, default=None, max_length=15, null=True)),
-                ('webhook_id', models.CharField(blank=True, default=None, max_length=20, null=True)),
-                ('endpoint_url', models.CharField(blank=True, default=None, max_length=255, null=True)),
-                ('status',
-                 models.CharField(choices=[('PENDING', 'Pending'), ('DONE', 'Done')], default='PENDING', max_length=9)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("api_url", models.CharField(blank=True, default=None, max_length=255, null=True)),
+                ("user_id", models.CharField(blank=True, default=None, max_length=20, null=True)),
+                ("action", models.CharField(blank=True, default=None, max_length=15, null=True)),
+                ("webhook_id", models.CharField(blank=True, default=None, max_length=20, null=True)),
+                ("endpoint_url", models.CharField(blank=True, default=None, max_length=255, null=True)),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[("PENDING", "Pending"), ("DONE", "Done")], default="PENDING", max_length=9
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
         ),
     ]

@@ -3,7 +3,7 @@
 import os
 import sys
 
-exit_code = os.system('pipenv run pre-commit install')
+exit_code = os.system("pipenv run pre-commit install")
 
 # python don't return 256
 if exit_code:

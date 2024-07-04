@@ -7,26 +7,28 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0051_auto_20230117_2219'),
-        ('events', '0038_event_live_stream_url'),
+        ("admissions", "0051_auto_20230117_2219"),
+        ("events", "0038_event_live_stream_url"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='LiveClass',
+            name="LiveClass",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('log', models.JSONField(default=dict)),
-                ('remote_meeting_url', models.URLField()),
-                ('hash', models.CharField(max_length=40, unique=True)),
-                ('started_at', models.DateTimeField(blank=True, default=None, null=True)),
-                ('ended_at', models.DateTimeField(blank=True, default=None, null=True)),
-                ('starting_at', models.DateTimeField()),
-                ('ending_at', models.DateTimeField()),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('cohort_time_slot',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.cohorttimeslot')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("log", models.JSONField(default=dict)),
+                ("remote_meeting_url", models.URLField()),
+                ("hash", models.CharField(max_length=40, unique=True)),
+                ("started_at", models.DateTimeField(blank=True, default=None, null=True)),
+                ("ended_at", models.DateTimeField(blank=True, default=None, null=True)),
+                ("starting_at", models.DateTimeField()),
+                ("ending_at", models.DateTimeField()),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "cohort_time_slot",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="admissions.cohorttimeslot"),
+                ),
             ],
         ),
     ]

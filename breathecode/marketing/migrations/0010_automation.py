@@ -6,26 +6,30 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0009_auto_20200619_0234'),
+        ("marketing", "0009_auto_20200619_0234"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Automation',
+            name="Automation",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('slug',
-                 models.CharField(blank=True,
-                                  default='',
-                                  help_text='unique string id that is used to connect incoming leads to automations',
-                                  max_length=150)),
-                ('name', models.CharField(max_length=100)),
-                ('acp_id', models.PositiveSmallIntegerField(help_text='ID asigned in active campaign')),
-                ('status', models.PositiveSmallIntegerField(help_text='2 = inactive, 1=active')),
-                ('entered', models.PositiveSmallIntegerField(help_text='How many contacts have entered')),
-                ('exited', models.PositiveSmallIntegerField(help_text='How many contacts have exited')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "slug",
+                    models.CharField(
+                        blank=True,
+                        default="",
+                        help_text="unique string id that is used to connect incoming leads to automations",
+                        max_length=150,
+                    ),
+                ),
+                ("name", models.CharField(max_length=100)),
+                ("acp_id", models.PositiveSmallIntegerField(help_text="ID asigned in active campaign")),
+                ("status", models.PositiveSmallIntegerField(help_text="2 = inactive, 1=active")),
+                ("entered", models.PositiveSmallIntegerField(help_text="How many contacts have entered")),
+                ("exited", models.PositiveSmallIntegerField(help_text="How many contacts have exited")),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
         ),
     ]

@@ -6,38 +6,38 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0007_auto_20201011_0014'),
+        ("events", "0007_auto_20201011_0014"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='venue',
-            name='city',
+            model_name="venue",
+            name="city",
             field=models.CharField(blank=True, default=None, max_length=30, null=True),
         ),
         migrations.AlterField(
-            model_name='venue',
-            name='country',
+            model_name="venue",
+            name="country",
             field=models.CharField(blank=True, default=None, max_length=30, null=True),
         ),
         migrations.AlterField(
-            model_name='venue',
-            name='latitude',
+            model_name="venue",
+            name="latitude",
             field=models.DecimalField(decimal_places=15, default=0, max_digits=20),
         ),
         migrations.AlterField(
-            model_name='venue',
-            name='longitude',
+            model_name="venue",
+            name="longitude",
             field=models.DecimalField(decimal_places=15, default=0, max_digits=20),
         ),
         migrations.AlterField(
-            model_name='venue',
-            name='state',
+            model_name="venue",
+            name="state",
             field=models.CharField(blank=True, default=None, max_length=30, null=True),
         ),
         migrations.AlterField(
-            model_name='venue',
-            name='zip_code',
+            model_name="venue",
+            name="zip_code",
             field=models.IntegerField(blank=True, default=None, null=True),
         ),
     ]

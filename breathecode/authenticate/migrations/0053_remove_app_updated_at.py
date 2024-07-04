@@ -6,12 +6,12 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authenticate', '0052_delete_scope_remove_app_agreement_version_and_more'),
+        ("authenticate", "0052_delete_scope_remove_app_agreement_version_and_more"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='app',
-            name='updated_at',
+            model_name="app",
+            name="updated_at",
         ),
     ]

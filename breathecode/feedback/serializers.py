@@ -25,6 +25,7 @@ class GetCohortSerializer(serpy.Serializer):
 
 class GetProfileSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     avatar_url = serpy.Field()
 
@@ -36,7 +37,7 @@ class UserSerializer(serpy.Serializer):
     profile = serpy.MethodField()
 
     def get_profile(self, obj):
-        if not hasattr(obj, 'profile'):
+        if not hasattr(obj, "profile"):
             return None
 
         return GetProfileSmallSerializer(obj.profile).data
@@ -44,6 +45,7 @@ class UserSerializer(serpy.Serializer):
 
 class GithubSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     avatar_url = serpy.Field()
     name = serpy.Field()
@@ -52,6 +54,7 @@ class GithubSmallSerializer(serpy.Serializer):
 
 class UserSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     email = serpy.Field()
@@ -60,7 +63,7 @@ class UserSmallSerializer(serpy.Serializer):
     github = serpy.MethodField()
 
     def get_github(self, obj):
-        if not hasattr(obj, 'credentialsgithub'):
+        if not hasattr(obj, "credentialsgithub"):
             return None
 
         return GithubSmallSerializer(obj.credentialsgithub).data
@@ -106,7 +109,7 @@ class SurveySmallSerializer(serpy.Serializer):
     public_url = serpy.MethodField()
 
     def get_public_url(self, obj):
-        return 'https://nps.4geeks.com/survey/' + str(obj.id)
+        return "https://nps.4geeks.com/survey/" + str(obj.id)
 
 
 class BigAnswerSerializer(serpy.Serializer):
@@ -155,30 +158,30 @@ class AnswerPUTSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Answer
-        exclude = ('token', )
+        exclude = ("token",)
 
     def validate(self, data):
 
         # the user cannot vote to the same entity within 5 minutes
-        answer = Answer.objects.filter(user=self.context['request'].user, id=self.context['answer']).first()
+        answer = Answer.objects.filter(user=self.context["request"].user, id=self.context["answer"]).first()
         if answer is None:
-            raise ValidationError('This survey does not exist for this user')
+            raise ValidationError("This survey does not exist for this user")
 
-        if not 'score' in data or int(data['score']) > 10 or int(data['score']) < 1:
-            raise ValidationError('Score must be between 1 and 10')
+        if not "score" in data or int(data["score"]) > 10 or int(data["score"]) < 1:
+            raise ValidationError("Score must be between 1 and 10")
 
-        if answer.status == 'ANSWERED' and data['score'] != answer.score:
-            raise ValidationError(f'You have already answered {answer.score}, you must keep the same score')
+        if answer.status == "ANSWERED" and data["score"] != answer.score:
+            raise ValidationError(f"You have already answered {answer.score}, you must keep the same score")
 
         return data
 
     def update(self, instance, validated_data):
-        instance.score = validated_data['score']
-        instance.status = 'ANSWERED'
+        instance.score = validated_data["score"]
+        instance.status = "ANSWERED"
         # instance.token = None
 
-        if 'comment' in validated_data:
-            instance.comment = validated_data['comment']
+        if "comment" in validated_data:
+            instance.comment = validated_data["comment"]
 
         instance.save()
 
@@ -191,44 +194,48 @@ class SurveySerializer(serializers.ModelSerializer):
     public_url = serializers.SerializerMethodField()
 
     def get_public_url(self, obj):
-        return 'https://nps.4geeks.com/survey/' + str(obj.id)
+        return "https://nps.4geeks.com/survey/" + str(obj.id)
 
     class Meta:
         model = Survey
-        exclude = ('scores', 'status_json', 'response_rate')
+        exclude = ("scores", "status_json", "response_rate")
 
     def validate(self, data):
 
-        if data['cohort'].academy.id != int(self.context['academy_id']):
-            raise ValidationException(f'You don\'t have rights for this cohort academy {self.context["academy_id"]}.',
-                                      code=400,
-                                      slug='cohort-academy-needs-rights')
+        if data["cohort"].academy.id != int(self.context["academy_id"]):
+            raise ValidationException(
+                f'You don\'t have rights for this cohort academy {self.context["academy_id"]}.',
+                code=400,
+                slug="cohort-academy-needs-rights",
+            )
 
-        if 'duration' in data and data['duration'] < timezone.timedelta(hours=1):
-            raise ValidationException('Minimum duration for surveys is one hour.',
-                                      code=400,
-                                      slug='minimum-survey-duration-1h')
+        if "duration" in data and data["duration"] < timezone.timedelta(hours=1):
+            raise ValidationException(
+                "Minimum duration for surveys is one hour.", code=400, slug="minimum-survey-duration-1h"
+            )
 
-        cohort_teacher = CohortUser.objects.filter(cohort=data['cohort'], role='TEACHER')
+        cohort_teacher = CohortUser.objects.filter(cohort=data["cohort"], role="TEACHER")
         if cohort_teacher.count() == 0:
-            raise ValidationException('This cohort must have a teacher assigned to be able to survey it',
-                                      code=400,
-                                      slug='cohort-needs-teacher-assigned')
+            raise ValidationException(
+                "This cohort must have a teacher assigned to be able to survey it",
+                code=400,
+                slug="cohort-needs-teacher-assigned",
+            )
 
         return data
 
     def create(self, validated_data):
 
         send_now = False
-        if 'send_now' in validated_data:
-            if validated_data['send_now']:
+        if "send_now" in validated_data:
+            if validated_data["send_now"]:
                 send_now = True
-            del validated_data['send_now']
+            del validated_data["send_now"]
 
-        cohort = validated_data['cohort']
+        cohort = validated_data["cohort"]
 
-        if 'lang' not in validated_data:
-            validated_data['lang'] = cohort.language.lower()
+        if "lang" not in validated_data:
+            validated_data["lang"] = cohort.language.lower()
 
         result = super().create(validated_data)
 
@@ -244,28 +251,28 @@ class SurveyPUTSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Survey
-        exclude = ('scores', 'status_json', 'status', 'response_rate')
+        exclude = ("scores", "status_json", "status", "response_rate")
 
     def validate(self, data):
 
-        if self.instance.status != 'PENDING':
-            raise ValidationException('This survey was already send, therefore it cannot be updated')
+        if self.instance.status != "PENDING":
+            raise ValidationException("This survey was already send, therefore it cannot be updated")
 
-        if 'cohort' in data:
-            raise ValidationException('The cohort cannot be updated in a survey, please create a new survey instead.')
+        if "cohort" in data:
+            raise ValidationException("The cohort cannot be updated in a survey, please create a new survey instead.")
 
-        if self.instance.cohort.academy.id != int(self.context['academy_id']):
-            raise ValidationException('You don\'t have rights for this cohort academy')
+        if self.instance.cohort.academy.id != int(self.context["academy_id"]):
+            raise ValidationException("You don't have rights for this cohort academy")
 
         return data
 
     def update(self, instance, validated_data):
 
         send_now = False
-        if 'send_now' in validated_data:
-            if validated_data['send_now']:
+        if "send_now" in validated_data:
+            if validated_data["send_now"]:
                 send_now = True
-            del validated_data['send_now']
+            del validated_data["send_now"]
 
         result = super().update(instance, validated_data)
 
@@ -279,21 +286,21 @@ class ReviewPUTSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Review
-        exclude = ('created_at', 'updated_at', 'author', 'platform', 'nps_previous_rating')
+        exclude = ("created_at", "updated_at", "author", "platform", "nps_previous_rating")
 
     def validate(self, data):
 
-        if 'cohort' in data:
-            raise ValidationException('The cohort cannot be updated in a review, please create a new review instead.')
+        if "cohort" in data:
+            raise ValidationException("The cohort cannot be updated in a review, please create a new review instead.")
 
-        if 'author' in data:
-            raise ValidationException('The author cannot be updated in a review, please create a new review instead.')
+        if "author" in data:
+            raise ValidationException("The author cannot be updated in a review, please create a new review instead.")
 
-        if 'platform' in data:
-            raise ValidationException('The platform cannot be updated in a review, please create a new review instead.')
+        if "platform" in data:
+            raise ValidationException("The platform cannot be updated in a review, please create a new review instead.")
 
-        if self.instance.cohort.academy.id != int(self.context['academy_id']):
-            raise ValidationException('You don\'t have rights for this cohort academy')
+        if self.instance.cohort.academy.id != int(self.context["academy_id"]):
+            raise ValidationException("You don't have rights for this cohort academy")
 
         return data
 

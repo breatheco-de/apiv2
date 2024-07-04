@@ -6,16 +6,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0017_cohort_never_ends'),
+        ("admissions", "0017_cohort_never_ends"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='cohortuser',
-            name='role',
-            field=models.CharField(choices=[('TEACHER', 'Teacher'), ('ASSISTANT', 'Assistant'),
-                                            ('REVIEWER', 'Reviewer'), ('STUDENT', 'Student')],
-                                   default='STUDENT',
-                                   max_length=9),
+            model_name="cohortuser",
+            name="role",
+            field=models.CharField(
+                choices=[
+                    ("TEACHER", "Teacher"),
+                    ("ASSISTANT", "Assistant"),
+                    ("REVIEWER", "Reviewer"),
+                    ("STUDENT", "Student"),
+                ],
+                default="STUDENT",
+                max_length=9,
+            ),
         ),
     ]

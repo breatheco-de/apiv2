@@ -6,17 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0069_alter_activecampaignwebhook_run_at'),
+        ("marketing", "0069_alter_activecampaignwebhook_run_at"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='leadgenerationapp',
-            name='last_call_log',
-            field=models.TextField(blank=True,
-                                   default=None,
-                                   help_text='Incomig payload from the last request',
-                                   max_length=450,
-                                   null=True),
+            model_name="leadgenerationapp",
+            name="last_call_log",
+            field=models.TextField(
+                blank=True, default=None, help_text="Incomig payload from the last request", max_length=450, null=True
+            ),
         ),
     ]

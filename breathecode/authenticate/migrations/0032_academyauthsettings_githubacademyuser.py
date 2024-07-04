@@ -8,61 +8,89 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0054_cohortuser_history_log'),
+        ("admissions", "0054_cohortuser_history_log"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('authenticate', '0031_userinvite_syllabus'),
+        ("authenticate", "0031_userinvite_syllabus"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='GithubAcademyUser',
+            name="GithubAcademyUser",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('username',
-                 models.SlugField(default=None,
-                                  help_text='Only used when the username has not been found on 4Geeks',
-                                  max_length=40,
-                                  null=True)),
-                ('storage_status',
-                 models.CharField(choices=[('PENDING', 'Pending'), ('SYNCHED', 'Synched'), ('ERROR', 'Error'),
-                                           ('UNKNOWN', 'Unknown')],
-                                  default='PENDING',
-                                  max_length=20)),
-                ('storage_action',
-                 models.CharField(choices=[('ADD', 'Add'), ('DELETE', 'Delete'), ('INVITE', 'Invite'),
-                                           ('IGNORE', 'Ignore')],
-                                  default='ADD',
-                                  max_length=20)),
-                ('storage_log', models.JSONField(blank=True, default=None, null=True)),
-                ('storage_synch_at', models.DateTimeField()),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('academy', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
-                ('user',
-                 models.ForeignKey(default=None,
-                                   null=True,
-                                   on_delete=django.db.models.deletion.SET_NULL,
-                                   to=settings.AUTH_USER_MODEL)),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "username",
+                    models.SlugField(
+                        default=None,
+                        help_text="Only used when the username has not been found on 4Geeks",
+                        max_length=40,
+                        null=True,
+                    ),
+                ),
+                (
+                    "storage_status",
+                    models.CharField(
+                        choices=[
+                            ("PENDING", "Pending"),
+                            ("SYNCHED", "Synched"),
+                            ("ERROR", "Error"),
+                            ("UNKNOWN", "Unknown"),
+                        ],
+                        default="PENDING",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "storage_action",
+                    models.CharField(
+                        choices=[("ADD", "Add"), ("DELETE", "Delete"), ("INVITE", "Invite"), ("IGNORE", "Ignore")],
+                        default="ADD",
+                        max_length=20,
+                    ),
+                ),
+                ("storage_log", models.JSONField(blank=True, default=None, null=True)),
+                ("storage_synch_at", models.DateTimeField()),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("academy", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="admissions.academy")),
+                (
+                    "user",
+                    models.ForeignKey(
+                        default=None,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='AcademyAuthSettings',
+            name="AcademyAuthSettings",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('github_username', models.SlugField(max_length=40, unique=True)),
-                ('github_default_team_ids',
-                 models.SlugField(
-                     default='',
-                     help_text='User will be invited to this github team ID when joining the github organization',
-                     max_length=40)),
-                ('github_is_sync',
-                 models.BooleanField(default=False, help_text='If true, will try synching every few hours')),
-                ('academy', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
-                ('github_owner',
-                 models.ForeignKey(default=None,
-                                   null=True,
-                                   on_delete=django.db.models.deletion.SET_NULL,
-                                   to=settings.AUTH_USER_MODEL)),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("github_username", models.SlugField(max_length=40, unique=True)),
+                (
+                    "github_default_team_ids",
+                    models.SlugField(
+                        default="",
+                        help_text="User will be invited to this github team ID when joining the github organization",
+                        max_length=40,
+                    ),
+                ),
+                (
+                    "github_is_sync",
+                    models.BooleanField(default=False, help_text="If true, will try synching every few hours"),
+                ),
+                ("academy", models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to="admissions.academy")),
+                (
+                    "github_owner",
+                    models.ForeignKey(
+                        default=None,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
     ]

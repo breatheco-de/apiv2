@@ -1,6 +1,7 @@
 """
 Test /answer
 """
+
 import random
 from unittest.mock import MagicMock, call, patch
 from uuid import uuid4
@@ -18,22 +19,25 @@ UTC_NOW = timezone.now()
 
 
 def bigquery_client_mock(self, n=1, user_id=1, kind=None, date_start=None, date_end=None):
-    rows_to_insert = [{
-        'id': uuid4().hex,
-        'user_id': user_id,
-        'kind': kind if kind else self.bc.fake.slug(),
-        'related': {
-            'type': f'{self.bc.fake.slug()}.{self.bc.fake.slug()}',
-            'id': random.randint(1, 100),
-            'slug': self.bc.fake.slug(),
-        },
-        'meta': {
-            self.bc.fake.slug().replace('-', '_'): self.bc.fake.slug(),
-            self.bc.fake.slug().replace('-', '_'): self.bc.fake.slug(),
-            self.bc.fake.slug().replace('-', '_'): self.bc.fake.slug(),
-        },
-        'timestamp': timezone.now().isoformat(),
-    } for _ in range(n)]
+    rows_to_insert = [
+        {
+            "id": uuid4().hex,
+            "user_id": user_id,
+            "kind": kind if kind else self.bc.fake.slug(),
+            "related": {
+                "type": f"{self.bc.fake.slug()}.{self.bc.fake.slug()}",
+                "id": random.randint(1, 100),
+                "slug": self.bc.fake.slug(),
+            },
+            "meta": {
+                self.bc.fake.slug().replace("-", "_"): self.bc.fake.slug(),
+                self.bc.fake.slug().replace("-", "_"): self.bc.fake.slug(),
+                self.bc.fake.slug().replace("-", "_"): self.bc.fake.slug(),
+            },
+            "timestamp": timezone.now().isoformat(),
+        }
+        for _ in range(n)
+    ]
 
     result_mock = MagicMock()
     result_mock.result.return_value = [AttrDict(**kwargs) for kwargs in rows_to_insert]
@@ -41,8 +45,8 @@ def bigquery_client_mock(self, n=1, user_id=1, kind=None, date_start=None, date_
     client_mock = MagicMock()
     client_mock.query.return_value = result_mock
 
-    project_id = 'test'
-    dataset = '4geeks'
+    project_id = "test"
+    dataset = "4geeks"
 
     query = f"""
             SELECT *
@@ -63,58 +67,58 @@ def bigquery_client_mock(self, n=1, user_id=1, kind=None, date_start=None, date_
 class MediaTestSuite(MediaTestCase):
 
     def test_no_auth(self):
-        url = reverse_lazy('v2:activity:academy_activity')
+        url = reverse_lazy("v2:activity:academy_activity")
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test_get_two(self):
-        model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability='read_activity', role=1)
+        model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability="read_activity", role=1)
 
         self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
-        url = reverse_lazy('v2:activity:academy_activity')
+        url = reverse_lazy("v2:activity:academy_activity")
 
         val = bigquery_client_mock(self, n=2, user_id=1)
         (client_mock, result_mock, query, project_id, dataset, expected) = val
 
-        with patch('breathecode.services.google_cloud.big_query.BigQuery.client') as mock:
+        with patch("breathecode.services.google_cloud.big_query.BigQuery.client") as mock:
             mock.return_value = (client_mock, project_id, dataset)
             response = self.client.get(url)
             json = response.json()
 
             self.bc.check.calls(BigQuery.client.call_args_list, [call()])
             assert client_mock.query.call_args[0][0] == query
-            assert 'AND meta.kind = @kind' not in query
+            assert "AND meta.kind = @kind" not in query
             self.bc.check.calls(result_mock.result.call_args_list, [call()])
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @patch('django.utils.timezone.now', MagicMock(return_value=UTC_NOW))
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test_filter_by_kind(self):
-        model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability='read_activity', role=1)
+        model = self.bc.database.create(user=1, academy=1, profile_academy=1, capability="read_activity", role=1)
 
         self.client.force_authenticate(model.user)
         self.bc.request.set_headers(academy=1)
 
         kind = self.bc.fake.slug()
 
-        url = reverse_lazy('v2:activity:academy_activity') + f'?kind={kind}'
+        url = reverse_lazy("v2:activity:academy_activity") + f"?kind={kind}"
 
         val = bigquery_client_mock(self, n=2, user_id=1, kind=kind)
         (client_mock, result_mock, query, project_id, dataset, expected) = val
 
-        with patch('breathecode.services.google_cloud.big_query.BigQuery.client') as mock:
+        with patch("breathecode.services.google_cloud.big_query.BigQuery.client") as mock:
             mock.return_value = (client_mock, project_id, dataset)
             response = self.client.get(url)
             json = response.json()
 
             self.bc.check.calls(BigQuery.client.call_args_list, [call()])
             assert client_mock.query.call_args[0][0] == query
-            assert 'AND kind = @kind' in query
+            assert "AND kind = @kind" in query
             self.bc.check.calls(result_mock.result.call_args_list, [call()])
 
         self.assertEqual(json, expected)

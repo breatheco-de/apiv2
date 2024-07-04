@@ -3,7 +3,7 @@ from datetime import timedelta
 
 from task_manager.core.settings import set_settings
 
-__all__ = ['TaskPriority']
+__all__ = ["TaskPriority"]
 
 logger = logging.getLogger(__name__)
 RETRIES_LIMIT = 10
@@ -38,11 +38,11 @@ class TaskPriority(Enum):
 
 
 settings = {
-    'RETRIES_LIMIT': 10,
-    'RETRY_AFTER': timedelta(seconds=5),
-    'DEFAULT': TaskPriority.DEFAULT.value,
-    'SCHEDULER': TaskPriority.SCHEDULER.value,
-    'TASK_MANAGER': TaskPriority.TASK_MANAGER.value,
+    "RETRIES_LIMIT": 10,
+    "RETRY_AFTER": timedelta(seconds=5),
+    "DEFAULT": TaskPriority.DEFAULT.value,
+    "SCHEDULER": TaskPriority.SCHEDULER.value,
+    "TASK_MANAGER": TaskPriority.TASK_MANAGER.value,
 }
 
 set_settings(**settings)

@@ -7,7 +7,7 @@ from . import contexts
 
 from breathecode.services import LaunchDarkly
 
-__all__ = ['api']
+__all__ = ["api"]
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ class Release:
     def enable_consume_live_classes(user: User) -> bool:
         ld = LaunchDarkly()
         user_context = authenticate_contexts.user(ld, user)
-        return ld.get('api.release.enable_consume_live_classes', user_context, False)
+        return ld.get("api.release.enable_consume_live_classes", user_context, False)
 
     @staticmethod
     def enable_consume_live_events(user: User, event: Event) -> bool:
@@ -37,7 +37,7 @@ class Release:
 
         context = ld.join_contexts(*collected_contexts)
 
-        return ld.get('api.release.enable_consume_live_events', context, False)
+        return ld.get("api.release.enable_consume_live_events", context, False)
 
 
 class API:

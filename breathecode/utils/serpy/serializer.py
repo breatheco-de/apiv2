@@ -8,7 +8,7 @@ from .field import Field
 from .many_to_many_field import ManyToManyField
 from .method_field import MethodField
 
-__all__ = ['Serializer']
+__all__ = ["Serializer"]
 
 SERPY_FIELDS = [
     Field,
@@ -42,13 +42,13 @@ class Serializer(serpy.Serializer):
         return super().__new__(cls)
 
     def __init__(self, *args, **kwargs):
-        kwargs.pop('select', '')
+        kwargs.pop("select", "")
         # select = kwargs.pop('select', '')
         # if select:
         #     self._custom_select(select)
 
-        if 'context' in kwargs:
-            self.context = kwargs['context']
+        if "context" in kwargs:
+            self.context = kwargs["context"]
 
         # fix it
         # self.__class__._select_related = set()
@@ -58,24 +58,24 @@ class Serializer(serpy.Serializer):
         super().__init__(*args, **kwargs)
 
     def _custom_select(self, include):
-        include = [x for x in include.split(',') if x]
+        include = [x for x in include.split(",") if x]
 
         for include_field in include:
             if not hasattr(self, include_field):
-                raise ValidationException(f'The field {include_field} is not defined in the serializer')
+                raise ValidationException(f"The field {include_field} is not defined in the serializer")
 
             attr = getattr(self, include_field)
             if isinstance(attr, Field):
                 setattr(self, include_field, serpy.Field())
                 continue
 
-            method_field = f'get_{include_field}'
+            method_field = f"get_{include_field}"
 
             if isinstance(attr, MethodField) and hasattr(self, method_field) and callable(getattr(self, method_field)):
                 setattr(self, include_field, serpy.MethodField())
                 continue
 
-            raise ValidationException(f'The field {include_field} is not a allowed field or is bad configured')
+            raise ValidationException(f"The field {include_field} is not a allowed field or is bad configured")
 
     def _load_ref(self):
         if self._loaded:
@@ -99,8 +99,10 @@ class Serializer(serpy.Serializer):
                 if self._field_map[key].__class__ == ManyToManyField:
                     serializer = self._field_map[key].serializer
 
-                    if not (hasattr(self._field_map[key].serializer.__class__, '_select_related')
-                            ^ hasattr(self._field_map[key].serializer.__class__, '_prefetch_related')):
+                    if not (
+                        hasattr(self._field_map[key].serializer.__class__, "_select_related")
+                        ^ hasattr(self._field_map[key].serializer.__class__, "_prefetch_related")
+                    ):
                         select_related, prefetch_related = serializer._load_ref()
                     else:
                         select_related = self._field_map[key].serializer.__class__._select_related
@@ -109,18 +111,20 @@ class Serializer(serpy.Serializer):
                     select_related, prefetch_related = serializer._load_ref()
 
                 else:
-                    if not (hasattr(self._field_map[key].__class__, '_select_related')
-                            ^ hasattr(self._field_map[key].__class__, '_prefetch_related')):
+                    if not (
+                        hasattr(self._field_map[key].__class__, "_select_related")
+                        ^ hasattr(self._field_map[key].__class__, "_prefetch_related")
+                    ):
                         select_related, prefetch_related = self._field_map[key]._load_ref()
                     else:
                         select_related = self._field_map[key].__class__._select_related
                         prefetch_related = self._field_map[key].__class__._prefetch_related
 
                 for x in select_related:
-                    self.__class__._select_related.add(f'{key}__{x}')
+                    self.__class__._select_related.add(f"{key}__{x}")
 
                 for x in prefetch_related:
-                    self.__class__._prefetch_related.add(f'{key}__{x}')
+                    self.__class__._prefetch_related.add(f"{key}__{x}")
 
         self._loaded = True
 
@@ -132,9 +136,10 @@ class Serializer(serpy.Serializer):
         if not self.__class__._loaded:
             self._load_ref()
 
-        if self.many and isinstance(self.instance, QuerySet) and not hasattr(self, 'child'):
+        if self.many and isinstance(self.instance, QuerySet) and not hasattr(self, "child"):
             self.instance = self.instance.select_related(*self.__class__._select_related).prefetch_related(
-                *self.__class__._prefetch_related)
+                *self.__class__._prefetch_related
+            )
 
         data = super().data
         return data

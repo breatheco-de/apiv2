@@ -3,7 +3,7 @@ import breathecode.certificate.actions as actions
 
 
 class Command(BaseCommand):
-    help = 'sets default issued_at for new certificates'
+    help = "sets default issued_at for new certificates"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

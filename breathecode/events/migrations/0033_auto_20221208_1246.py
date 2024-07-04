@@ -7,61 +7,63 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0048_academy_main_currency'),
-        ('events', '0032_alter_event_url'),
+        ("admissions", "0048_academy_main_currency"),
+        ("events", "0032_alter_event_url"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='eventtype',
-            name='allow_shared_creation',
+            model_name="eventtype",
+            name="allow_shared_creation",
             field=models.BooleanField(default=True),
         ),
         migrations.AddField(
-            model_name='eventtype',
-            name='description',
-            field=models.CharField(default='', max_length=255),
+            model_name="eventtype",
+            name="description",
+            field=models.CharField(default="", max_length=255),
         ),
         migrations.CreateModel(
-            name='EventTypeSyllabus',
+            name="EventTypeSyllabus",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('event_type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='events.eventtype')),
-                ('syllabus', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.syllabus')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("event_type", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="events.eventtype")),
+                ("syllabus", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="admissions.syllabus")),
             ],
         ),
         migrations.CreateModel(
-            name='EventTypeCohort',
+            name="EventTypeCohort",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('cohort', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.cohort')),
-                ('event_type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='events.eventtype')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("cohort", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="admissions.cohort")),
+                ("event_type", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="events.eventtype")),
             ],
         ),
         migrations.CreateModel(
-            name='EventTypeAcademy',
+            name="EventTypeAcademy",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('academy', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
-                ('event_type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='events.eventtype')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("academy", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="admissions.academy")),
+                ("event_type", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="events.eventtype")),
             ],
         ),
         migrations.AddField(
-            model_name='eventtype',
-            name='shared_with_academies',
-            field=models.ManyToManyField(blank=True,
-                                         related_name='shared_event_types',
-                                         through='events.EventTypeAcademy',
-                                         to='admissions.Academy'),
+            model_name="eventtype",
+            name="shared_with_academies",
+            field=models.ManyToManyField(
+                blank=True,
+                related_name="shared_event_types",
+                through="events.EventTypeAcademy",
+                to="admissions.Academy",
+            ),
         ),
         migrations.AddField(
-            model_name='eventtype',
-            name='shared_with_cohorts',
-            field=models.ManyToManyField(blank=True, through='events.EventTypeCohort', to='admissions.Cohort'),
+            model_name="eventtype",
+            name="shared_with_cohorts",
+            field=models.ManyToManyField(blank=True, through="events.EventTypeCohort", to="admissions.Cohort"),
         ),
         migrations.AddField(
-            model_name='eventtype',
-            name='shared_with_syllabus',
-            field=models.ManyToManyField(blank=True, through='events.EventTypeSyllabus', to='admissions.Syllabus'),
+            model_name="eventtype",
+            name="shared_with_syllabus",
+            field=models.ManyToManyField(blank=True, through="events.EventTypeSyllabus", to="admissions.Syllabus"),
         ),
     ]

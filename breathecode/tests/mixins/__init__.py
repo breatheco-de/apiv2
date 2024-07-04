@@ -1,6 +1,7 @@
 """
 Global mixins
 """
+
 from .models_mixin import *
 from .development_environment import *
 from .date_formatter_mixin import *

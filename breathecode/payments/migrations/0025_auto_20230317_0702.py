@@ -6,30 +6,46 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('payments', '0024_merge_20230315_2252'),
+        ("payments", "0024_merge_20230315_2252"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='planfinancing',
-            name='status',
-            field=models.CharField(choices=[('FREE_TRIAL', 'Free trial'), ('ACTIVE', 'Active'),
-                                            ('CANCELLED', 'Cancelled'), ('DEPRECATED', 'Deprecated'),
-                                            ('PAYMENT_ISSUE', 'Payment issue'), ('ERROR', 'Error'),
-                                            ('FULLY_PAID', 'Fully Paid'), ('EXPIRED', 'Expired')],
-                                   default='ACTIVE',
-                                   help_text='Status',
-                                   max_length=13),
+            model_name="planfinancing",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("FREE_TRIAL", "Free trial"),
+                    ("ACTIVE", "Active"),
+                    ("CANCELLED", "Cancelled"),
+                    ("DEPRECATED", "Deprecated"),
+                    ("PAYMENT_ISSUE", "Payment issue"),
+                    ("ERROR", "Error"),
+                    ("FULLY_PAID", "Fully Paid"),
+                    ("EXPIRED", "Expired"),
+                ],
+                default="ACTIVE",
+                help_text="Status",
+                max_length=13,
+            ),
         ),
         migrations.AlterField(
-            model_name='subscription',
-            name='status',
-            field=models.CharField(choices=[('FREE_TRIAL', 'Free trial'), ('ACTIVE', 'Active'),
-                                            ('CANCELLED', 'Cancelled'), ('DEPRECATED', 'Deprecated'),
-                                            ('PAYMENT_ISSUE', 'Payment issue'), ('ERROR', 'Error'),
-                                            ('FULLY_PAID', 'Fully Paid'), ('EXPIRED', 'Expired')],
-                                   default='ACTIVE',
-                                   help_text='Status',
-                                   max_length=13),
+            model_name="subscription",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("FREE_TRIAL", "Free trial"),
+                    ("ACTIVE", "Active"),
+                    ("CANCELLED", "Cancelled"),
+                    ("DEPRECATED", "Deprecated"),
+                    ("PAYMENT_ISSUE", "Payment issue"),
+                    ("ERROR", "Error"),
+                    ("FULLY_PAID", "Fully Paid"),
+                    ("EXPIRED", "Expired"),
+                ],
+                default="ACTIVE",
+                help_text="Status",
+                max_length=13,
+            ),
         ),
     ]

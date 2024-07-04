@@ -6,13 +6,13 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('payments', '0012_auto_20230115_0509'),
+        ("payments", "0012_auto_20230115_0509"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='subscription',
-            old_name='valid_until',
-            new_name='next_payment_at',
+            model_name="subscription",
+            old_name="valid_until",
+            new_name="next_payment_at",
         ),
     ]

@@ -6,8 +6,8 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('payments', '0033_serviceitemfeature_title'),
-        ('payments', '0034_cohortset_cohorts'),
+        ("payments", "0033_serviceitemfeature_title"),
+        ("payments", "0034_cohortset_cohorts"),
     ]
 
     operations = []

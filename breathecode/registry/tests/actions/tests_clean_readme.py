@@ -1,6 +1,7 @@
 """
 Test /answer
 """
+
 from random import randint
 from unittest.mock import MagicMock, call, patch
 from breathecode.registry import tasks
@@ -32,19 +33,21 @@ class RegistryTestSuite(RegistryTestCase):
 
         model = self.bc.database.create(
             asset={
-                'readme_url':
-                'https://github.com/breatheco-de/content/blob/master/src/content/lesson/how-to-networkt-yourself-into-a-software-development-job.es.md',
-                'readme_raw': Asset.encode(original_content),
-                'readme': Asset.encode(original_content)
-            })
+                "readme_url": "https://github.com/breatheco-de/content/blob/master/src/content/lesson/how-to-networkt-yourself-into-a-software-development-job.es.md",
+                "readme_raw": Asset.encode(original_content),
+                "readme": Asset.encode(original_content),
+            }
+        )
 
-        asset = clean_readme_hide_comments(model['asset'])
+        asset = clean_readme_hide_comments(model["asset"])
         readme = asset.get_readme()
         self.assertEqual(asset.readme_raw, Asset.encode(original_content))
         self.assertEqual(
-            readme['decoded'], """For example, we need the following application URLs to match the following components:
+            readme["decoded"],
+            """For example, we need the following application URLs to match the following components:
 
-## Defining your Application Routes""")
+## Defining your Application Routes""",
+        )
 
     def test__relative_paths(self):
 
@@ -53,26 +56,29 @@ class RegistryTestSuite(RegistryTestCase):
 
 ![react router](../../assets/images/6fd2b44b-598b-4ddb-85ba-9c32b086127f.png)
 
-## Defining your Application Routes""")
+## Defining your Application Routes"""
+        )
 
         model = self.bc.database.create(
             asset={
-                'readme_url':
-                'https://github.com/breatheco-de/content/blob/master/src/content/lesson/how-to-networkt-yourself-into-a-software-development-job.es.md',
-                'readme_raw': original_content,
-                'readme': original_content,
-            })
+                "readme_url": "https://github.com/breatheco-de/content/blob/master/src/content/lesson/how-to-networkt-yourself-into-a-software-development-job.es.md",
+                "readme_raw": original_content,
+                "readme": original_content,
+            }
+        )
 
-        asset = clean_readme_relative_paths(model['asset'])
+        asset = clean_readme_relative_paths(model["asset"])
         readme = asset.get_readme()
 
         self.assertEqual(asset.readme_raw, original_content)
         self.assertEqual(
-            readme['decoded'], """For example, we need the following application URLs to match the following components:
+            readme["decoded"],
+            """For example, we need the following application URLs to match the following components:
 
 ![react router](https://github.com/breatheco-de/content/blob/master/src/content/lesson/../../assets/images/6fd2b44b-598b-4ddb-85ba-9c32b086127f.png?raw=true)
 
-## Defining your Application Routes""")
+## Defining your Application Routes""",
+        )
 
     def test__clean_asset(self):
 
@@ -83,33 +89,37 @@ i should hide
 <!-- endhide -->
 ![react router](../../assets/images/6fd2b44b-598b-4ddb-85ba-9c32b086127f.png)
 
-## Defining your Application Routes""")
+## Defining your Application Routes"""
+        )
 
         model = self.bc.database.create(
             asset={
-                'readme_url':
-                'https://github.com/breatheco-de/content/blob/master/src/content/lesson/how-to-networkt-yourself-into-a-software-development-job.es.md',
-                'readme_raw': original_content,
-                'readme': original_content,
-            })
+                "readme_url": "https://github.com/breatheco-de/content/blob/master/src/content/lesson/how-to-networkt-yourself-into-a-software-development-job.es.md",
+                "readme_raw": original_content,
+                "readme": original_content,
+            }
+        )
 
-        asset = clean_asset_readme(model['asset'])
+        asset = clean_asset_readme(model["asset"])
 
         self.assertEqual(asset.readme_raw, original_content)
         self.assertEqual(
             asset.readme,
-            Asset.encode("""For example, we need the following application URLs to match the following components:
+            Asset.encode(
+                """For example, we need the following application URLs to match the following components:
 
 ![react router](https://github.com/breatheco-de/content/blob/master/src/content/lesson/../../assets/images/6fd2b44b-598b-4ddb-85ba-9c32b086127f.png?raw=true)
 
-## Defining your Application Routes"""))
+## Defining your Application Routes"""
+            ),
+        )
 
     def test__clean_asset_without_readme_raw(self):
         model = self.bc.database.create(
             asset={
-                'readme_url':
-                'https://github.com/breatheco-de/content/blob/master/src/content/lesson/how-to-networkt-yourself-into-a-software-development-job.es.md',
-            })
+                "readme_url": "https://github.com/breatheco-de/content/blob/master/src/content/lesson/how-to-networkt-yourself-into-a-software-development-job.es.md",
+            }
+        )
 
-        asset = clean_asset_readme(model['asset'])
-        self.assertEqual(asset, model['asset'])
+        asset = clean_asset_readme(model["asset"])
+        self.assertEqual(asset, model["asset"])

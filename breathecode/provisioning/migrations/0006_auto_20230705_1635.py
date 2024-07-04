@@ -7,32 +7,34 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('provisioning', '0005_provisioningbill_stripe_url'),
+        ("provisioning", "0005_provisioningbill_stripe_url"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='provisioningbill',
-            name='fee',
+            model_name="provisioningbill",
+            name="fee",
             field=models.FloatField(default=0),
         ),
         migrations.AddField(
-            model_name='provisioningbill',
-            name='stripe_id',
-            field=models.CharField(blank=True, default=None, help_text='Stripe id', max_length=32, null=True),
+            model_name="provisioningbill",
+            name="stripe_id",
+            field=models.CharField(blank=True, default=None, help_text="Stripe id", max_length=32, null=True),
         ),
         migrations.AddField(
-            model_name='provisioningbill',
-            name='vendor',
-            field=models.ForeignKey(blank=True,
-                                    default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.SET_NULL,
-                                    to='provisioning.provisioningvendor'),
+            model_name="provisioningbill",
+            name="vendor",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="provisioning.provisioningvendor",
+            ),
         ),
         migrations.AlterField(
-            model_name='provisioningactivity',
-            name='multiplier',
-            field=models.FloatField(blank=True, default=1, help_text='To increase price in a certain percentage'),
+            model_name="provisioningactivity",
+            name="multiplier",
+            field=models.FloatField(blank=True, default=1, help_text="To increase price in a certain percentage"),
         ),
     ]

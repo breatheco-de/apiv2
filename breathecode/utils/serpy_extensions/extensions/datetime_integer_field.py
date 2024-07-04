@@ -2,7 +2,7 @@ from serpy.fields import Field
 
 from ...datetime_integer import DatetimeInteger
 
-__all__ = ['DatetimeIntegerField']
+__all__ = ["DatetimeIntegerField"]
 
 
 class DatetimeIntegerField(Field):
@@ -16,7 +16,7 @@ class DatetimeIntegerField(Field):
         method_name = self.method
 
         if method_name is None:
-            method_name = 'get_{0}'.format(serializer_field_name)
+            method_name = "get_{0}".format(serializer_field_name)
 
         wrapper = self.__datetime_integer__
         handler = lambda self, obj: wrapper(serializer_field_name, obj)

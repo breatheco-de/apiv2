@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('payments', '0013_rename_valid_until_subscription_next_payment_at'),
+        ("payments", "0013_rename_valid_until_subscription_next_payment_at"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='subscription',
-            name='valid_until',
+            model_name="subscription",
+            name="valid_until",
             field=models.DateTimeField(blank=True, default=None, null=True),
         ),
     ]

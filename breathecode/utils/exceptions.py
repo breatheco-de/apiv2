@@ -1,4 +1,4 @@
-__all__ = ['ProgrammingError', 'MalformedLanguageCode']
+__all__ = ["ProgrammingError", "MalformedLanguageCode"]
 
 from capyc.rest_framework.exceptions import ValidationException
 

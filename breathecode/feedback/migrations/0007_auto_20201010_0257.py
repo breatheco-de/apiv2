@@ -6,16 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('feedback', '0006_auto_20201009_2018'),
+        ("feedback", "0006_auto_20201009_2018"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='answer',
-            name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('SENT', 'Sent'), ('ANSWERED', 'Answered'),
-                                            ('EXPIRED', 'Expired')],
-                                   default='PENDING',
-                                   max_length=15),
+            model_name="answer",
+            name="status",
+            field=models.CharField(
+                choices=[("PENDING", "Pending"), ("SENT", "Sent"), ("ANSWERED", "Answered"), ("EXPIRED", "Expired")],
+                default="PENDING",
+                max_length=15,
+            ),
         ),
     ]

@@ -7,22 +7,20 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('freelance', '0007_bill_academy'),
+        ("freelance", "0007_bill_academy"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='bill',
-            name='paid_at',
+            model_name="bill",
+            name="paid_at",
             field=models.DateTimeField(blank=True, default=None, null=True),
         ),
         migrations.AlterField(
-            model_name='issue',
-            name='bill',
-            field=models.ForeignKey(blank=True,
-                                    default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='freelance.bill'),
+            model_name="issue",
+            name="bill",
+            field=models.ForeignKey(
+                blank=True, default=None, null=True, on_delete=django.db.models.deletion.CASCADE, to="freelance.bill"
+            ),
         ),
     ]

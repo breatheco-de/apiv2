@@ -7,18 +7,19 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('freelance', '0020_auto_20220920_0038'),
+        ("freelance", "0020_auto_20220920_0038"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='projectinvoice',
-            name='freelancer',
+            model_name="projectinvoice",
+            name="freelancer",
         ),
         migrations.AlterField(
-            model_name='projectinvoice',
-            name='project',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
-                                    to='freelance.academyfreelanceproject'),
+            model_name="projectinvoice",
+            name="project",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to="freelance.academyfreelanceproject"
+            ),
         ),
     ]

@@ -6,20 +6,21 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('assignments', '0002_auto_20200703_1722'),
+        ("assignments", "0002_auto_20200703_1722"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='task',
-            name='associated_slug',
+            model_name="task",
+            name="associated_slug",
             field=models.CharField(max_length=150),
         ),
         migrations.AlterField(
-            model_name='task',
-            name='task_type',
-            field=models.CharField(choices=[('PROJECT', 'project'), ('QUIZ', 'quiz'), ('LESSON', 'lesson'),
-                                            ('EXERCISE', 'Exercise')],
-                                   max_length=15),
+            model_name="task",
+            name="task_type",
+            field=models.CharField(
+                choices=[("PROJECT", "project"), ("QUIZ", "quiz"), ("LESSON", "lesson"), ("EXERCISE", "Exercise")],
+                max_length=15,
+            ),
         ),
     ]

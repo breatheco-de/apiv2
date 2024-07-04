@@ -9,27 +9,27 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('assignments', '0009_task_subtasks'),
+        ("assignments", "0009_task_subtasks"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='UserAttachment',
+            name="UserAttachment",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('slug', models.SlugField(max_length=150, unique=True)),
-                ('name', models.CharField(max_length=150)),
-                ('mime', models.CharField(max_length=60)),
-                ('url', models.URLField(max_length=255)),
-                ('hash', models.CharField(max_length=64)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("slug", models.SlugField(max_length=150, unique=True)),
+                ("name", models.CharField(max_length=150)),
+                ("mime", models.CharField(max_length=60)),
+                ("url", models.URLField(max_length=255)),
+                ("hash", models.CharField(max_length=64)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("user", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],
         ),
         migrations.AddField(
-            model_name='task',
-            name='attachments',
-            field=models.ManyToManyField(to='assignments.UserAttachment'),
+            model_name="task",
+            name="attachments",
+            field=models.ManyToManyField(to="assignments.UserAttachment"),
         ),
     ]

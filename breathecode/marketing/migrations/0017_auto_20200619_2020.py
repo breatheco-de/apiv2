@@ -6,40 +6,40 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0016_auto_20200619_1941'),
+        ("marketing", "0016_auto_20200619_1941"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='formentry',
-            name='raw_tags',
+            model_name="formentry",
+            name="raw_tags",
         ),
         migrations.AddField(
-            model_name='formentry',
-            name='automation_objects',
-            field=models.ManyToManyField(blank=True, to='marketing.Automation'),
+            model_name="formentry",
+            name="automation_objects",
+            field=models.ManyToManyField(blank=True, to="marketing.Automation"),
         ),
         migrations.AddField(
-            model_name='formentry',
-            name='tag_objects',
-            field=models.ManyToManyField(blank=True, to='marketing.Tag'),
+            model_name="formentry",
+            name="tag_objects",
+            field=models.ManyToManyField(blank=True, to="marketing.Tag"),
         ),
         migrations.RemoveField(
-            model_name='formentry',
-            name='automations',
+            model_name="formentry",
+            name="automations",
         ),
         migrations.AddField(
-            model_name='formentry',
-            name='automations',
-            field=models.CharField(blank=True, default='', max_length=100),
+            model_name="formentry",
+            name="automations",
+            field=models.CharField(blank=True, default="", max_length=100),
         ),
         migrations.RemoveField(
-            model_name='formentry',
-            name='tags',
+            model_name="formentry",
+            name="tags",
         ),
         migrations.AddField(
-            model_name='formentry',
-            name='tags',
-            field=models.CharField(blank=True, default='', max_length=100),
+            model_name="formentry",
+            name="tags",
+            field=models.CharField(blank=True, default="", max_length=100),
         ),
     ]

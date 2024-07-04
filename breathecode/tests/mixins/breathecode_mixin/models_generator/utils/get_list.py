@@ -1,6 +1,6 @@
 from typing import Any
 
-__all__ = ['get_list']
+__all__ = ["get_list"]
 
 
 def get_list(attr: Any) -> bool:

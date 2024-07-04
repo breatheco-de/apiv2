@@ -6,22 +6,25 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0057_event_free_for_all'),
+        ("events", "0057_event_free_for_all"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='event',
-            name='ended_at',
-            field=models.DateTimeField(blank=True,
-                                       default=None,
-                                       help_text='This field contains the value of when the event actually finished.',
-                                       null=True),
+            model_name="event",
+            name="ended_at",
+            field=models.DateTimeField(
+                blank=True,
+                default=None,
+                help_text="This field contains the value of when the event actually finished.",
+                null=True,
+            ),
         ),
         migrations.AlterField(
-            model_name='event',
-            name='ending_at',
+            model_name="event",
+            name="ending_at",
             field=models.DateTimeField(
-                help_text='This field contains the value of when the event is supposed to be finished.'),
+                help_text="This field contains the value of when the event is supposed to be finished."
+            ),
         ),
     ]

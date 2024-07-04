@@ -6,23 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('feedback', '0008_cohortproxy'),
+        ("feedback", "0008_cohortproxy"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='answer',
-            name='highest',
-            field=models.CharField(default='very likely', max_length=50),
+            model_name="answer",
+            name="highest",
+            field=models.CharField(default="very likely", max_length=50),
         ),
         migrations.AddField(
-            model_name='answer',
-            name='lang',
-            field=models.CharField(blank=True, default='en', max_length=3),
+            model_name="answer",
+            name="lang",
+            field=models.CharField(blank=True, default="en", max_length=3),
         ),
         migrations.AddField(
-            model_name='answer',
-            name='lowest',
-            field=models.CharField(default='not likely', max_length=50),
+            model_name="answer",
+            name="lowest",
+            field=models.CharField(default="not likely", max_length=50),
         ),
     ]

@@ -6,24 +6,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('payments', '0049_paymentmethod_is_credit_card'),
+        ("payments", "0049_paymentmethod_is_credit_card"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='planfinancing',
-            name='conversion_info',
-            field=models.JSONField(blank=True,
-                                   default=None,
-                                   help_text='UTMs and other conversion information.',
-                                   null=True),
+            model_name="planfinancing",
+            name="conversion_info",
+            field=models.JSONField(
+                blank=True, default=None, help_text="UTMs and other conversion information.", null=True
+            ),
         ),
         migrations.AddField(
-            model_name='subscription',
-            name='conversion_info',
-            field=models.JSONField(blank=True,
-                                   default=None,
-                                   help_text='UTMs and other conversion information.',
-                                   null=True),
+            model_name="subscription",
+            name="conversion_info",
+            field=models.JSONField(
+                blank=True, default=None, help_text="UTMs and other conversion information.", null=True
+            ),
         ),
     ]

@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('feedback', '0023_answer_sent_at'),
+        ("feedback", "0023_answer_sent_at"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='survey',
-            name='response_rate',
+            model_name="survey",
+            name="response_rate",
             field=models.FloatField(blank=True, default=None, null=True),
         ),
     ]

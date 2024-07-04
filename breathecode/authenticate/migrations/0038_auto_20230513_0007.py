@@ -6,22 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authenticate', '0037_auto_20230509_0801'),
+        ("authenticate", "0037_auto_20230509_0801"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='profile',
-            name='bio',
+            model_name="profile",
+            name="bio",
             field=models.CharField(
                 blank=True,
                 help_text="User biography in user's language. Will be used if there are no ProfileTranslations.",
                 max_length=255,
-                null=True),
+                null=True,
+            ),
         ),
         migrations.AlterField(
-            model_name='profiletranslation',
-            name='bio',
+            model_name="profiletranslation",
+            name="bio",
             field=models.CharField(max_length=255),
         ),
     ]

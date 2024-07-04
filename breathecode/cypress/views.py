@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_cypress_env():
-    return os.getenv('ALLOW_UNSAFE_CYPRESS_APP')
+    return os.getenv("ALLOW_UNSAFE_CYPRESS_APP")
 
 
 class LoadRolesView(APIView):
@@ -21,7 +21,7 @@ class LoadRolesView(APIView):
 
     def get(self, request):
         if not get_cypress_env():
-            raise ValidationException('Nothing to load', slug='is-not-allowed')
+            raise ValidationException("Nothing to load", slug="is-not-allowed")
 
         load_roles()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -32,22 +32,22 @@ class CleanView(APIView):
 
     def delete(self, request, model_name=None):
         if not get_cypress_env():
-            raise ValidationException('Nothing to clean', slug='is-not-allowed')
+            raise ValidationException("Nothing to clean", slug="is-not-allowed")
 
         if model_name:
             try:
                 clean_model(model_name)
             except Exception as e:
                 error = str(e)
-                slug = 'model-not-exits'
+                slug = "model-not-exits"
 
                 logger.error(error)
 
-                if error.startswith('Exist many app with the same model name'):
-                    slug = 'many-models-with-the-same-name'
+                if error.startswith("Exist many app with the same model name"):
+                    slug = "many-models-with-the-same-name"
 
-                elif error == 'Bad model name format':
-                    slug = 'bad-model-name-format'
+                elif error == "Bad model name format":
+                    slug = "bad-model-name-format"
 
                 raise ValidationException(error, code=404, slug=slug)
 
@@ -62,10 +62,10 @@ class MixerView(APIView):
 
     def post(self, request):
         if not get_cypress_env():
-            raise ValidationException('Nothing to load', slug='is-not-allowed')
+            raise ValidationException("Nothing to load", slug="is-not-allowed")
 
         if not request.data:
-            raise ValidationException('Empty request', slug='is-empty')
+            raise ValidationException("Empty request", slug="is-empty")
 
         data = request.data
 

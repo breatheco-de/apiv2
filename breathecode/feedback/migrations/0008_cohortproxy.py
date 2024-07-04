@@ -6,19 +6,19 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0011_auto_20201006_0058'),
-        ('feedback', '0007_auto_20201010_0257'),
+        ("admissions", "0011_auto_20201006_0058"),
+        ("feedback", "0007_auto_20201010_0257"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='CohortProxy',
+            name="CohortProxy",
             fields=[],
             options={
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
+                "proxy": True,
+                "indexes": [],
+                "constraints": [],
             },
-            bases=('admissions.cohort', ),
+            bases=("admissions.cohort",),
         ),
     ]

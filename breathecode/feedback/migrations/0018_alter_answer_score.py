@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('feedback', '0017_survey_sent_at'),
+        ("feedback", "0017_survey_sent_at"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='answer',
-            name='score',
+            model_name="answer",
+            name="score",
             field=models.IntegerField(blank=True, default=None, null=True),
         ),
     ]

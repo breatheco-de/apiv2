@@ -8,62 +8,80 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0064_academy_legal_name'),
-        ('payments', '0042_auto_20231219_0504'),
+        ("admissions", "0064_academy_legal_name"),
+        ("payments", "0042_auto_20231219_0504"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='consumable',
-            name='app_service',
+            model_name="consumable",
+            name="app_service",
         ),
         migrations.CreateModel(
-            name='ServiceSet',
+            name="ServiceSet",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('slug',
-                 models.SlugField(
-                     help_text=
-                     'A human-readable identifier, it must be unique and it can only contain letters, numbers and hyphens',
-                     max_length=100,
-                     unique=True)),
-                ('academy',
-                 models.ForeignKey(blank=True,
-                                   default=None,
-                                   help_text='Academy',
-                                   null=True,
-                                   on_delete=django.db.models.deletion.CASCADE,
-                                   to='admissions.academy')),
-                ('services', models.ManyToManyField(blank=True, help_text='Services', to='payments.service')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "slug",
+                    models.SlugField(
+                        help_text="A human-readable identifier, it must be unique and it can only contain letters, numbers and hyphens",
+                        max_length=100,
+                        unique=True,
+                    ),
+                ),
+                (
+                    "academy",
+                    models.ForeignKey(
+                        blank=True,
+                        default=None,
+                        help_text="Academy",
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="admissions.academy",
+                    ),
+                ),
+                ("services", models.ManyToManyField(blank=True, help_text="Services", to="payments.service")),
             ],
         ),
         migrations.AddField(
-            model_name='consumable',
-            name='service_set',
-            field=models.ForeignKey(blank=True,
-                                    default=None,
-                                    help_text='Service set which the consumable belongs to',
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='payments.serviceset'),
+            model_name="consumable",
+            name="service_set",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                help_text="Service set which the consumable belongs to",
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to="payments.serviceset",
+            ),
         ),
         migrations.CreateModel(
-            name='ServiceSetTranslation',
+            name="ServiceSetTranslation",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('lang',
-                 models.CharField(help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US',
-                                  max_length=5,
-                                  validators=[breathecode.utils.validators.language.validate_language_code])),
-                ('title', models.CharField(help_text='Title of the cohort set', max_length=60)),
-                ('description', models.CharField(help_text='Description of the cohort set', max_length=255)),
-                ('short_description', models.CharField(help_text='Short description of the cohort set',
-                                                       max_length=255)),
-                ('service_set',
-                 models.ForeignKey(help_text='Service set',
-                                   on_delete=django.db.models.deletion.CASCADE,
-                                   to='payments.serviceset')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "lang",
+                    models.CharField(
+                        help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
+                        max_length=5,
+                        validators=[breathecode.utils.validators.language.validate_language_code],
+                    ),
+                ),
+                ("title", models.CharField(help_text="Title of the cohort set", max_length=60)),
+                ("description", models.CharField(help_text="Description of the cohort set", max_length=255)),
+                (
+                    "short_description",
+                    models.CharField(help_text="Short description of the cohort set", max_length=255),
+                ),
+                (
+                    "service_set",
+                    models.ForeignKey(
+                        help_text="Service set", on_delete=django.db.models.deletion.CASCADE, to="payments.serviceset"
+                    ),
+                ),
             ],
         ),
-        migrations.DeleteModel(name='AppService', ),
+        migrations.DeleteModel(
+            name="AppService",
+        ),
     ]

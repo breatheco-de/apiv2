@@ -1,6 +1,6 @@
 from typing import Any
 
-__all__ = ['is_valid']
+__all__ = ["is_valid"]
 
 
 def is_valid(attr: Any) -> bool:

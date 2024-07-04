@@ -1,4 +1,4 @@
-BS = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-'
+BS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-"
 
 
 def to_base(n, b=None):
@@ -6,8 +6,8 @@ def to_base(n, b=None):
     if b is None:
         b = len(BS)
 
-    res = ''
+    res = ""
     while n:
         res += BS[n % b]
         n //= b
-    return res[::-1] or '0'
+    return res[::-1] or "0"

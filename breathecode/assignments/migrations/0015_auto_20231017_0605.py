@@ -6,48 +6,54 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('assignments', '0014_task_rigobot_repository_id'),
+        ("assignments", "0014_task_rigobot_repository_id"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='task',
-            name='opened_at',
+            model_name="task",
+            name="opened_at",
             field=models.DateTimeField(blank=True, db_index=True, default=None, null=True),
         ),
         migrations.AlterField(
-            model_name='task',
-            name='revision_status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('APPROVED', 'Approved'), ('REJECTED', 'Rejected'),
-                                            ('IGNORED', 'Ignored')],
-                                   db_index=True,
-                                   default='PENDING',
-                                   max_length=15),
+            model_name="task",
+            name="revision_status",
+            field=models.CharField(
+                choices=[
+                    ("PENDING", "Pending"),
+                    ("APPROVED", "Approved"),
+                    ("REJECTED", "Rejected"),
+                    ("IGNORED", "Ignored"),
+                ],
+                db_index=True,
+                default="PENDING",
+                max_length=15,
+            ),
         ),
         migrations.AlterField(
-            model_name='task',
-            name='rigobot_repository_id',
+            model_name="task",
+            name="rigobot_repository_id",
             field=models.IntegerField(blank=True, db_index=True, default=None, null=True),
         ),
         migrations.AlterField(
-            model_name='task',
-            name='task_status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('DONE', 'Done')],
-                                   db_index=True,
-                                   default='PENDING',
-                                   max_length=15),
+            model_name="task",
+            name="task_status",
+            field=models.CharField(
+                choices=[("PENDING", "Pending"), ("DONE", "Done")], db_index=True, default="PENDING", max_length=15
+            ),
         ),
         migrations.AlterField(
-            model_name='task',
-            name='task_type',
-            field=models.CharField(choices=[('PROJECT', 'project'), ('QUIZ', 'quiz'), ('LESSON', 'lesson'),
-                                            ('EXERCISE', 'Exercise')],
-                                   db_index=True,
-                                   max_length=15),
+            model_name="task",
+            name="task_type",
+            field=models.CharField(
+                choices=[("PROJECT", "project"), ("QUIZ", "quiz"), ("LESSON", "lesson"), ("EXERCISE", "Exercise")],
+                db_index=True,
+                max_length=15,
+            ),
         ),
         migrations.AlterField(
-            model_name='task',
-            name='title',
+            model_name="task",
+            name="title",
             field=models.CharField(db_index=True, max_length=150),
         ),
     ]

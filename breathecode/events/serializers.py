@@ -355,78 +355,90 @@ class EventSerializer(serializers.ModelSerializer):
         exclude = ()
 
     def validate(self, data: dict[str, Any]):
-        lang = data.get('lang', 'en')
+        lang = data.get("lang", "en")
 
-        academy = self.context.get('academy_id')
+        academy = self.context.get("academy_id")
 
-        if ('tags' not in data and self.instance.tags == '') or ('tags' in data and data['tags'] == ''):
+        if ("tags" not in data and self.instance.tags == "") or ("tags" in data and data["tags"] == ""):
             raise ValidationException(
-                translation(lang,
-                            en='Event must have at least one tag',
-                            es='El evento debe tener al menos un tag',
-                            slug='empty-tags'))
+                translation(
+                    lang,
+                    en="Event must have at least one tag",
+                    es="El evento debe tener al menos un tag",
+                    slug="empty-tags",
+                )
+            )
 
-        validate_marketing_tags(data['tags'], academy, types=['DISCOVERY'], lang=lang)
+        validate_marketing_tags(data["tags"], academy, types=["DISCOVERY"], lang=lang)
 
-        title = data.get('title')
-        slug = data.get('slug')
+        title = data.get("title")
+        slug = data.get("slug")
 
         if slug and self.instance:
             raise ValidationException(
-                translation(lang,
-                            en='The slug field is readonly',
-                            es='El campo slug es de solo lectura',
-                            slug='try-update-slug'))
+                translation(
+                    lang, en="The slug field is readonly", es="El campo slug es de solo lectura", slug="try-update-slug"
+                )
+            )
 
         if title and not slug:
-            slug = slugify(data['title']).lower()
+            slug = slugify(data["title"]).lower()
 
         elif slug:
             slug = f'{data["slug"].lower()}'
 
-        online_event = data.get('online_event')
-        live_stream_url = data.get('live_stream_url')
-        if online_event == True and (live_stream_url is None or live_stream_url == ''):
+        online_event = data.get("online_event")
+        live_stream_url = data.get("live_stream_url")
+        if online_event == True and (live_stream_url is None or live_stream_url == ""):
             raise ValidationException(
-                translation(lang,
-                            en='live_stream_url cannot be empty if the event is online.',
-                            es='Si el evento es online, entonces live_stream_url no puede estar vacío.',
-                            slug='live-stream-url-empty'))
+                translation(
+                    lang,
+                    en="live_stream_url cannot be empty if the event is online.",
+                    es="Si el evento es online, entonces live_stream_url no puede estar vacío.",
+                    slug="live-stream-url-empty",
+                )
+            )
 
         existing_events = Event.objects.filter(slug=slug)
         if slug and not self.instance and existing_events.exists():
             raise ValidationException(
-                translation(lang,
-                            en=f'Event slug {slug} already taken, try a different slug',
-                            es=f'El slug {slug} ya está en uso, prueba con otro slug',
-                            slug='slug-taken'))
+                translation(
+                    lang,
+                    en=f"Event slug {slug} already taken, try a different slug",
+                    es=f"El slug {slug} ya está en uso, prueba con otro slug",
+                    slug="slug-taken",
+                )
+            )
 
-        if 'event_type' not in data or data['event_type'] is None:
+        if "event_type" not in data or data["event_type"] is None:
             raise ValidationException(
-                translation(lang,
-                            en='Missing event type',
-                            es='Debes especificar un tipo de evento',
-                            slug='no-event-type'))
+                translation(
+                    lang, en="Missing event type", es="Debes especificar un tipo de evento", slug="no-event-type"
+                )
+            )
 
-        if 'lang' in data and data['event_type'].lang != data.get('lang', 'en'):
+        if "lang" in data and data["event_type"].lang != data.get("lang", "en"):
             raise ValidationException(
-                translation(lang,
-                            en='Event type and event language must match',
-                            es='El tipo de evento y el idioma del evento deben coincidir',
-                            slug='event-type-lang-mismatch'))
+                translation(
+                    lang,
+                    en="Event type and event language must match",
+                    es="El tipo de evento y el idioma del evento deben coincidir",
+                    slug="event-type-lang-mismatch",
+                )
+            )
 
-        if 'event_type' in data:
-            data['lang'] = data['event_type'].lang
+        if "event_type" in data:
+            data["lang"] = data["event_type"].lang
 
         if not self.instance:
-            data['slug'] = slug
+            data["slug"] = slug
 
         return data
 
     def create(self, validated_data):
         # hard-code the organizer to the academy organizer
         try:
-            validated_data['organizer'] = validated_data['academy'].organizer
+            validated_data["organizer"] = validated_data["academy"].organizer
         except Exception:
             pass
 
@@ -447,74 +459,88 @@ class EventPUTSerializer(serializers.ModelSerializer):
         exclude = ()
 
     def validate(self, data: dict[str, Any]):
-        lang = data.get('lang', 'en')
+        lang = data.get("lang", "en")
 
-        academy = self.context.get('academy_id')
+        academy = self.context.get("academy_id")
 
-        if 'tags' in data:
-            if data['tags'] == '':
+        if "tags" in data:
+            if data["tags"] == "":
                 raise ValidationException(
-                    translation(lang,
-                                en='Event must have at least one tag',
-                                es='El evento debe tener al menos un tag',
-                                slug='empty-tags'))
+                    translation(
+                        lang,
+                        en="Event must have at least one tag",
+                        es="El evento debe tener al menos un tag",
+                        slug="empty-tags",
+                    )
+                )
 
-            validate_marketing_tags(data['tags'], academy, types=['DISCOVERY'], lang=lang)
+            validate_marketing_tags(data["tags"], academy, types=["DISCOVERY"], lang=lang)
 
-        title = data.get('title')
-        slug = data.get('slug')
+        title = data.get("title")
+        slug = data.get("slug")
 
         if slug and self.instance:
             raise ValidationException(
-                translation(lang,
-                            en='The slug field is readonly',
-                            es='El campo slug es de solo lectura',
-                            slug='try-update-slug'))
+                translation(
+                    lang, en="The slug field is readonly", es="El campo slug es de solo lectura", slug="try-update-slug"
+                )
+            )
 
         if title and not slug:
-            slug = slugify(data['title']).lower()
+            slug = slugify(data["title"]).lower()
 
         elif slug:
             slug = f'{data["slug"].lower()}'
 
-        online_event = data.get('online_event')
-        live_stream_url = data.get('live_stream_url')
-        if online_event == True and (live_stream_url is None
-                                     or live_stream_url == '') and (self.instance.live_stream_url is None
-                                                                    or self.instance.live_stream_url == ''):
+        online_event = data.get("online_event")
+        live_stream_url = data.get("live_stream_url")
+        if (
+            online_event == True
+            and (live_stream_url is None or live_stream_url == "")
+            and (self.instance.live_stream_url is None or self.instance.live_stream_url == "")
+        ):
             raise ValidationException(
-                translation(lang,
-                            en='live_stream_url cannot be empty if the event is online.',
-                            es='Si el evento es online, entonces live_stream_url no puede estar vacío.',
-                            slug='live-stream-url-empty'))
+                translation(
+                    lang,
+                    en="live_stream_url cannot be empty if the event is online.",
+                    es="Si el evento es online, entonces live_stream_url no puede estar vacío.",
+                    slug="live-stream-url-empty",
+                )
+            )
 
         existing_events = Event.objects.filter(slug=slug)
         if slug and not self.instance and existing_events.exists():
             raise ValidationException(
-                translation(lang,
-                            en=f'Event slug {slug} already taken, try a different slug',
-                            es=f'El slug {slug} ya está en uso, prueba con otro slug',
-                            slug='slug-taken'))
+                translation(
+                    lang,
+                    en=f"Event slug {slug} already taken, try a different slug",
+                    es=f"El slug {slug} ya está en uso, prueba con otro slug",
+                    slug="slug-taken",
+                )
+            )
 
-        event_type = data['event_type'] if 'event_type' in data else self.instance.event_type
+        event_type = data["event_type"] if "event_type" in data else self.instance.event_type
         if not event_type:
             raise ValidationException(
-                translation(lang,
-                            en='Missing event type',
-                            es='Debes especificar un tipo de evento',
-                            slug='no-event-type'))
+                translation(
+                    lang, en="Missing event type", es="Debes especificar un tipo de evento", slug="no-event-type"
+                )
+            )
 
-        if 'lang' in data and event_type.lang != data['lang']:
+        if "lang" in data and event_type.lang != data["lang"]:
             raise ValidationException(
-                translation(lang,
-                            en='Event type and event language must match',
-                            es='El tipo de evento y el idioma del evento deben coincidir',
-                            slug='event-type-lang-mismatch'))
+                translation(
+                    lang,
+                    en="Event type and event language must match",
+                    es="El tipo de evento y el idioma del evento deben coincidir",
+                    slug="event-type-lang-mismatch",
+                )
+            )
 
-        data['lang'] = event_type.lang
+        data["lang"] = event_type.lang
 
         if not self.instance:
-            data['slug'] = slug
+            data["slug"] = slug
 
         return data
 
@@ -522,7 +548,7 @@ class EventPUTSerializer(serializers.ModelSerializer):
 
         # hard-code the organizer to the academy organizer
         try:
-            validated_data['organizer'] = validated_data['academy'].organizer
+            validated_data["organizer"] = validated_data["academy"].organizer
         except Exception:
             pass
 
@@ -547,14 +573,14 @@ class EventTypeSerializerMixin(serializers.ModelSerializer):
 
     class Meta:
         model = EventType
-        exclude = ('visibility_settings', )
+        exclude = ("visibility_settings",)
 
     def validate(self, data: dict[str, Any]):
-        academy_id = self.context.get('academy_id')
-        data['academy'] = Academy.objects.filter(id=academy_id).get()
+        academy_id = self.context.get("academy_id")
+        data["academy"] = Academy.objects.filter(id=academy_id).get()
 
-        if ('visibility_settings' in data):
-            del data['visibility_settings']
+        if "visibility_settings" in data:
+            del data["visibility_settings"]
 
         return data
 
@@ -575,7 +601,7 @@ class PUTEventCheckinSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EventCheckin
-        exclude = ('event', 'created_at', 'updated_at')
+        exclude = ("event", "created_at", "updated_at")
 
     def validate(self, data: dict[str, Any]):
         return data
@@ -586,11 +612,13 @@ class PUTEventCheckinSerializer(serializers.ModelSerializer):
         # if "attended_at" not in data and self.instance.attended_at is None:
         #     new_data['attended_at'] = timezone.now()
 
-        if 'attended_at' in validated_data and self.instance.attended_at is None:
-            tasks_activity.add_activity.delay(self.instance.attendee,
-                                              'event_checkin_assisted',
-                                              related_type='events.EventCheckin',
-                                              related_id=self.instance.id)
+        if "attended_at" in validated_data and self.instance.attended_at is None:
+            tasks_activity.add_activity.delay(
+                self.instance.attendee,
+                "event_checkin_assisted",
+                related_type="events.EventCheckin",
+                related_id=self.instance.id,
+            )
 
         event_checkin = super().update(instance, {**validated_data, **new_data})
         return event_checkin
@@ -600,33 +628,39 @@ class POSTEventCheckinSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EventCheckin
-        exclude = ('created_at', 'updated_at', 'attended_at', 'status')
+        exclude = ("created_at", "updated_at", "attended_at", "status")
 
     def validate(self, data):
 
-        event_checkin = EventCheckin.objects.filter(Q(attendee=data['attendee'])
-                                                    | Q(email=data['email']),
-                                                    event=data['event']).first()
+        event_checkin = EventCheckin.objects.filter(
+            Q(attendee=data["attendee"]) | Q(email=data["email"]), event=data["event"]
+        ).first()
         if event_checkin is not None:
             if event_checkin.attendee is None:
-                event_checkin.attendee = self.context['user']
+                event_checkin.attendee = self.context["user"]
                 event_checkin.save()
 
-            raise ValidationException(translation(self.context['lang'],
-                                                  en='This user already has an event checkin associated to this event',
-                                                  es='Este usuario ya esta registrado en este evento',
-                                                  slug='user-registered-in-event'),
-                                      code=400)
+            raise ValidationException(
+                translation(
+                    self.context["lang"],
+                    en="This user already has an event checkin associated to this event",
+                    es="Este usuario ya esta registrado en este evento",
+                    slug="user-registered-in-event",
+                ),
+                code=400,
+            )
 
         return data
 
     def create(self, validated_data):
         event_checkin = super().create(validated_data)
 
-        tasks_activity.add_activity.delay(event_checkin.attendee.id,
-                                          'event_checkin_created',
-                                          related_type='events.EventCheckin',
-                                          related_id=event_checkin.id)
+        tasks_activity.add_activity.delay(
+            event_checkin.attendee.id,
+            "event_checkin_created",
+            related_type="events.EventCheckin",
+            related_id=event_checkin.id,
+        )
 
         return event_checkin
 
@@ -667,88 +701,130 @@ class LiveClassSerializer(serializers.ModelSerializer):
     def _validate_started_at(self, data: dict[str, Any]):
         utc_now = timezone.now()
 
-        if not self.instance and 'started_at' in data:
+        if not self.instance and "started_at" in data:
             raise ValidationException(
-                translation(self.context['lang'],
-                            en='You cannot start a live class before it has been created.',
-                            es='No puedes iniciar una clase en vivo antes de que se haya creado.',
-                            slug='started-at-on-creation'))
+                translation(
+                    self.context["lang"],
+                    en="You cannot start a live class before it has been created.",
+                    es="No puedes iniciar una clase en vivo antes de que se haya creado.",
+                    slug="started-at-on-creation",
+                )
+            )
 
-        if self.instance and 'started_at' in data and len(data) > 1:
+        if self.instance and "started_at" in data and len(data) > 1:
             raise ValidationException(
-                translation(self.context['lang'],
-                            en='Start the class before you can update any other of its attributes.',
-                            es='Inicia la clase antes de poder actualizar cualquiera de sus atributos.',
-                            slug='only-started-at'))
+                translation(
+                    self.context["lang"],
+                    en="Start the class before you can update any other of its attributes.",
+                    es="Inicia la clase antes de poder actualizar cualquiera de sus atributos.",
+                    slug="only-started-at",
+                )
+            )
 
-        if self.instance and 'started_at' in data and self.instance.started_at:
+        if self.instance and "started_at" in data and self.instance.started_at:
             raise ValidationException(
-                translation(self.context['lang'],
-                            en='This class has already been started.',
-                            es='Esta clase ya ha sido iniciada.',
-                            slug='started-at-already-set'))
+                translation(
+                    self.context["lang"],
+                    en="This class has already been started.",
+                    es="Esta clase ya ha sido iniciada.",
+                    slug="started-at-already-set",
+                )
+            )
 
-        if self.instance and 'started_at' in data and (data['started_at'] < utc_now - timedelta(minutes=2)
-                                                       or data['started_at'] > utc_now + timedelta(minutes=2)):
+        if (
+            self.instance
+            and "started_at" in data
+            and (
+                data["started_at"] < utc_now - timedelta(minutes=2)
+                or data["started_at"] > utc_now + timedelta(minutes=2)
+            )
+        ):
             raise ValidationException(
-                translation(self.context['lang'],
-                            en='Started at cannot be so different from the current time.',
-                            es='La fecha de inicio no puede ser tan diferente de la hora actual.',
-                            slug='started-at-too-different'))
+                translation(
+                    self.context["lang"],
+                    en="Started at cannot be so different from the current time.",
+                    es="La fecha de inicio no puede ser tan diferente de la hora actual.",
+                    slug="started-at-too-different",
+                )
+            )
 
     def _validate_ended_at(self, data: dict[str, Any]):
         utc_now = timezone.now()
 
-        if not self.instance and 'ended_at' in data:
+        if not self.instance and "ended_at" in data:
             raise ValidationException(
-                translation(self.context['lang'],
-                            en='Ended at cannot be set on creation',
-                            es='La fecha de finalización no se puede establecer en la creación',
-                            slug='ended-at-on-creation'))
+                translation(
+                    self.context["lang"],
+                    en="Ended at cannot be set on creation",
+                    es="La fecha de finalización no se puede establecer en la creación",
+                    slug="ended-at-on-creation",
+                )
+            )
 
-        if self.instance and 'ended_at' in data and len(data) > 1:
+        if self.instance and "ended_at" in data and len(data) > 1:
             raise ValidationException(
-                translation(self.context['lang'],
-                            en='Only ended at can be updated',
-                            es='Solo se puede actualizar la fecha de finalización',
-                            slug='only-ended-at'))
+                translation(
+                    self.context["lang"],
+                    en="Only ended at can be updated",
+                    es="Solo se puede actualizar la fecha de finalización",
+                    slug="only-ended-at",
+                )
+            )
 
-        if self.instance and 'ended_at' in data and self.instance.ended_at:
+        if self.instance and "ended_at" in data and self.instance.ended_at:
             raise ValidationException(
-                translation(self.context['lang'],
-                            en='Ended at already set',
-                            es='La fecha de finalización ya está establecida',
-                            slug='ended-at-already-set'))
+                translation(
+                    self.context["lang"],
+                    en="Ended at already set",
+                    es="La fecha de finalización ya está establecida",
+                    slug="ended-at-already-set",
+                )
+            )
 
-        if self.instance and 'ended_at' in data and not self.instance.started_at:
+        if self.instance and "ended_at" in data and not self.instance.started_at:
             raise ValidationException(
-                translation(self.context['lang'],
-                            en='You cannot end a live class if it has not yet been started.',
-                            es='No puede finalizar una clase en vivo si aún no se ha iniciado.',
-                            slug='schedule-must-have-started-at-before-ended-at'))
+                translation(
+                    self.context["lang"],
+                    en="You cannot end a live class if it has not yet been started.",
+                    es="No puede finalizar una clase en vivo si aún no se ha iniciado.",
+                    slug="schedule-must-have-started-at-before-ended-at",
+                )
+            )
 
-        if self.instance and 'ended_at' in data and self.instance.started_at >= data['ended_at']:
+        if self.instance and "ended_at" in data and self.instance.started_at >= data["ended_at"]:
             raise ValidationException(
-                translation(self.context['lang'],
-                            en='The live class cannot have ended before starting.',
-                            es='La clase en vivo no puede haber finalizado antes de comenzar.',
-                            slug='ended-at-cannot-be-less-than-started-at'))
+                translation(
+                    self.context["lang"],
+                    en="The live class cannot have ended before starting.",
+                    es="La clase en vivo no puede haber finalizado antes de comenzar.",
+                    slug="ended-at-cannot-be-less-than-started-at",
+                )
+            )
 
-        if self.instance and 'ended_at' in data and (data['ended_at'] < utc_now - timedelta(minutes=2)
-                                                     or data['ended_at'] > utc_now + timedelta(minutes=2)):
+        if (
+            self.instance
+            and "ended_at" in data
+            and (data["ended_at"] < utc_now - timedelta(minutes=2) or data["ended_at"] > utc_now + timedelta(minutes=2))
+        ):
             raise ValidationException(
-                translation(self.context['lang'],
-                            en='Ended at at cannot be so different from the current time.',
-                            es='La fecha de finalización no puede ser tan diferente de la hora actual.',
-                            slug='ended-at-too-different'))
+                translation(
+                    self.context["lang"],
+                    en="Ended at at cannot be so different from the current time.",
+                    es="La fecha de finalización no puede ser tan diferente de la hora actual.",
+                    slug="ended-at-too-different",
+                )
+            )
 
     def _validate_cohort(self, data: dict[str, Any]):
-        if 'cohort' in data and data['cohort'].academy.id != int(self.context['academy_id']):
+        if "cohort" in data and data["cohort"].academy.id != int(self.context["academy_id"]):
             raise ValidationException(
-                translation(self.context['lang'],
-                            en='This cohort does not belong to any of your academies.',
-                            es='Este cohort no pertenece a ninguna de tus academias.',
-                            slug='cohort-not-belong-to-academy'))
+                translation(
+                    self.context["lang"],
+                    en="This cohort does not belong to any of your academies.",
+                    es="Este cohort no pertenece a ninguna de tus academias.",
+                    slug="cohort-not-belong-to-academy",
+                )
+            )
 
     def validate(self, data: dict[str, Any]):
         self._validate_started_at(data)

@@ -6,25 +6,26 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('certificate', '0010_auto_20210701_1613'),
+        ("certificate", "0010_auto_20210701_1613"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='layoutdesign',
-            name='css_content',
+            model_name="layoutdesign",
+            name="css_content",
             field=models.TextField(blank=True, default=None, null=True),
         ),
         migrations.AddField(
-            model_name='layoutdesign',
-            name='html_content',
+            model_name="layoutdesign",
+            name="html_content",
             field=models.TextField(blank=True, default=None, null=True),
         ),
         migrations.AddField(
-            model_name='layoutdesign',
-            name='is_default',
+            model_name="layoutdesign",
+            name="is_default",
             field=models.BooleanField(
                 default=False,
-                help_text='Will be used as default for all future certificates. Only one default layout per academy.'),
+                help_text="Will be used as default for all future certificates. Only one default layout per academy.",
+            ),
         ),
     ]

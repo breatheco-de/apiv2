@@ -14,20 +14,24 @@ MIN_CANCELLED_SESSIONS = 10
 @supervisor(delta=timedelta(days=1))
 def supervise_mentorship_survey():
     utc_now = timezone.now()
-    sessions = MentorshipSession.objects.filter(status='COMPLETED',
-                                                started_at__isnull=False,
-                                                ended_at__isnull=False,
-                                                mentor__isnull=False,
-                                                mentee__isnull=False,
-                                                created_at__lte=utc_now,
-                                                created_at__gte=utc_now - timedelta(days=5))
+    sessions = MentorshipSession.objects.filter(
+        status="COMPLETED",
+        started_at__isnull=False,
+        ended_at__isnull=False,
+        mentor__isnull=False,
+        mentee__isnull=False,
+        created_at__lte=utc_now,
+        created_at__gte=utc_now - timedelta(days=5),
+    )
 
     for session in sessions:
         duration = session.ended_at - session.started_at
 
-        if duration > timedelta(minutes=5) and Answer.objects.filter(
-                mentorship_session__id=session.id).exists() is False:
-            yield f'Session {session.id} hasn\'t a survey', 'no-survey-for-session', {'session_id': session.id}
+        if (
+            duration > timedelta(minutes=5)
+            and Answer.objects.filter(mentorship_session__id=session.id).exists() is False
+        ):
+            yield f"Session {session.id} hasn't a survey", "no-survey-for-session", {"session_id": session.id}
 
 
 @issue(supervise_mentorship_survey, delta=timedelta(minutes=10))

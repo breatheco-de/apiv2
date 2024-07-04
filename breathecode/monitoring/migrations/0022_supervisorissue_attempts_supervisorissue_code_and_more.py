@@ -6,28 +6,28 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('monitoring', '0021_supervisor_supervisorissue'),
+        ("monitoring", "0021_supervisor_supervisorissue"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='supervisorissue',
-            name='attempts',
+            model_name="supervisorissue",
+            name="attempts",
             field=models.PositiveIntegerField(blank=True, default=0),
         ),
         migrations.AddField(
-            model_name='supervisorissue',
-            name='code',
+            model_name="supervisorissue",
+            name="code",
             field=models.SlugField(blank=True, default=None, null=True),
         ),
         migrations.AddField(
-            model_name='supervisorissue',
-            name='fixed',
+            model_name="supervisorissue",
+            name="fixed",
             field=models.BooleanField(blank=True, default=None, null=True),
         ),
         migrations.AddField(
-            model_name='supervisorissue',
-            name='params',
+            model_name="supervisorissue",
+            name="params",
             field=models.JSONField(blank=True, default=None, null=True),
         ),
     ]

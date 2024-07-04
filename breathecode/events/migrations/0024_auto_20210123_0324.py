@@ -6,22 +6,24 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0023_eventbritewebhook_organization_id'),
+        ("events", "0023_eventbritewebhook_organization_id"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='event',
-            old_name='exerpt',
-            new_name='excerpt',
+            model_name="event",
+            old_name="exerpt",
+            new_name="excerpt",
         ),
         migrations.AlterField(
-            model_name='event',
-            name='eventbrite_status',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   help_text='One of: draft, live, started, ended, completed and canceled',
-                                   max_length=9,
-                                   null=True),
+            model_name="event",
+            name="eventbrite_status",
+            field=models.CharField(
+                blank=True,
+                default=None,
+                help_text="One of: draft, live, started, ended, completed and canceled",
+                max_length=9,
+                null=True,
+            ),
         ),
     ]

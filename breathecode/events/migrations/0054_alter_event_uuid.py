@@ -7,13 +7,13 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0053_alter_event_uuid'),
+        ("events", "0053_alter_event_uuid"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='event',
-            name='uuid',
+            model_name="event",
+            name="uuid",
             field=models.UUIDField(default=uuid.uuid4, editable=False, unique=True),
         ),
     ]

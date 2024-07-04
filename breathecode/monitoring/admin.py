@@ -25,7 +25,7 @@ from .signals import github_webhook
 from .tasks import async_unsubscribe_repo
 
 
-@admin.display(description='Run Applications Diagnostic')
+@admin.display(description="Run Applications Diagnostic")
 def test_app(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
     from .tasks import monitor_app
@@ -38,30 +38,31 @@ class CustomAppModelForm(forms.ModelForm):
 
     class Meta:
         model = Application
-        fields = '__all__'
+        fields = "__all__"
 
     def __init__(self, *args, **kwargs):
         super(CustomAppModelForm, self).__init__(*args, **kwargs)
-        if hasattr(self.instance, 'academy') and self.instance.academy is not None:
-            self.fields['notify_slack_channel'].queryset = SlackChannel.objects.filter(
-                team__academy__id=self.instance.academy.id)  # or something else
+        if hasattr(self.instance, "academy") and self.instance.academy is not None:
+            self.fields["notify_slack_channel"].queryset = SlackChannel.objects.filter(
+                team__academy__id=self.instance.academy.id
+            )  # or something else
 
 
 # Register your models here.
 @admin.register(Application)
 class ApplicationAdmin(admin.ModelAdmin):
     form = CustomAppModelForm
-    list_display = ('title', 'current_status', 'academy', 'paused_until', 'status_text')
+    list_display = ("title", "current_status", "academy", "paused_until", "status_text")
     actions = [test_app]
-    list_filter = ['status', 'academy__slug']
-    raw_id_fields = ['notify_slack_channel']
+    list_filter = ["status", "academy__slug"]
+    raw_id_fields = ["notify_slack_channel"]
 
     def current_status(self, obj):
         colors = {
-            'OPERATIONAL': 'bg-success',
-            'CRITICAL': 'bg-error',
-            'MINOR': 'bg-warning',
-            'LOADING': 'bg-warning',
+            "OPERATIONAL": "bg-success",
+            "CRITICAL": "bg-error",
+            "MINOR": "bg-warning",
+            "LOADING": "bg-warning",
         }
         now = timezone.now()
         if obj.paused_until is not None and obj.paused_until > now:
@@ -70,7 +71,7 @@ class ApplicationAdmin(admin.ModelAdmin):
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 
 
-@admin.display(description='Test Endpoint')
+@admin.display(description="Test Endpoint")
 def test_endpoint(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
     from .tasks import test_endpoint
@@ -79,7 +80,7 @@ def test_endpoint(modeladmin, request, queryset):
         test_endpoint.delay(end.id)
 
 
-@admin.display(description='PAUSE for 1 day')
+@admin.display(description="PAUSE for 1 day")
 def pause_for_one_day(modeladmin, request, queryset):
     for end in queryset.all():
         end.paused_until = timezone.now() + timezone.timedelta(days=1)
@@ -89,18 +90,18 @@ def pause_for_one_day(modeladmin, request, queryset):
 # Register your models here.
 @admin.register(Endpoint)
 class EndpointAdmin(admin.ModelAdmin):
-    list_display = ('url', 'current_status', 'test_pattern', 'status_code', 'paused_until', 'last_check')
+    list_display = ("url", "current_status", "test_pattern", "status_code", "paused_until", "last_check")
     actions = [test_endpoint, pause_for_one_day]
-    list_filter = ['status', 'application__title']
+    list_filter = ["status", "application__title"]
 
     def get_readonly_fields(self, request, obj=None):
-        return ['status_text']
+        return ["status_text"]
 
     def current_status(self, obj):
         colors = {
-            'OPERATIONAL': 'bg-success',
-            'CRITICAL': 'bg-error',
-            'MINOR': 'bg-warning',
+            "OPERATIONAL": "bg-success",
+            "CRITICAL": "bg-error",
+            "MINOR": "bg-warning",
         }
         now = timezone.now()
         if obj.paused_until is not None and obj.paused_until > now:
@@ -109,7 +110,7 @@ class EndpointAdmin(admin.ModelAdmin):
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 
 
-@admin.display(description='Run Script')
+@admin.display(description="Run Script")
 def run_single_script(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
     from .tasks import execute_scripts
@@ -125,34 +126,41 @@ class CustomForm(forms.ModelForm):
 
         options = []
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        files = os.listdir(dir_path + '/scripts')
+        files = os.listdir(dir_path + "/scripts")
         for file_name in files:
-            if '.py' not in file_name:
+            if ".py" not in file_name:
                 continue
             doc = file_name
-            with open(dir_path + '/scripts/' + file_name) as f:
+            with open(dir_path + "/scripts/" + file_name) as f:
                 doc = ast.get_docstring(ast.parse(f.read()))
             options.append((file_name[0:-3], doc))
-        options.append(('other', 'other'))
+        options.append(("other", "other"))
 
         # timezones = [(x, x) for x in pytz.common_timezones]
-        self.fields['script_slug'] = forms.ChoiceField(choices=options)
+        self.fields["script_slug"] = forms.ChoiceField(choices=options)
 
 
 @admin.register(MonitorScript)
 class MonitorScriptAdmin(admin.ModelAdmin):
     form = CustomForm
-    list_display = ('script_slug', 'application', 'current_status', 'frequency_delta', 'status_code', 'paused_until',
-                    'last_run')
+    list_display = (
+        "script_slug",
+        "application",
+        "current_status",
+        "frequency_delta",
+        "status_code",
+        "paused_until",
+        "last_run",
+    )
     actions = [run_single_script]
-    list_filter = ['status', 'application__title']
+    list_filter = ["status", "application__title"]
 
     def current_status(self, obj):
         colors = {
-            'OPERATIONAL': 'bg-success',
-            'CRITICAL': 'bg-error',
-            'FATAL': 'bg-error',  # important: this status was deprecated and deleted!
-            'MINOR': 'bg-warning',
+            "OPERATIONAL": "bg-success",
+            "CRITICAL": "bg-error",
+            "FATAL": "bg-error",  # important: this status was deprecated and deleted!
+            "MINOR": "bg-warning",
         }
         now = timezone.now()
         if obj.paused_until is not None and obj.paused_until > now:
@@ -163,28 +171,28 @@ class MonitorScriptAdmin(admin.ModelAdmin):
 
 @admin.register(CSVDownload)
 class CSVDownloadAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'current_status', 'created_at', 'finished_at', 'download')
-    list_filter = ['academy', 'status']
+    list_display = ("id", "name", "current_status", "created_at", "finished_at", "download")
+    list_filter = ["academy", "status"]
 
     def current_status(self, obj):
         colors = {
-            'DONE': 'bg-success',
-            'ERROR': 'bg-error',
-            'LOADING': 'bg-warning',
+            "DONE": "bg-success",
+            "ERROR": "bg-error",
+            "LOADING": "bg-warning",
         }
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 
     def download(self, obj):
-        if obj.status == 'DONE':
+        if obj.status == "DONE":
             return format_html(f"<a href='/v1/monitoring/download/{obj.id}?raw=true' target='_blank'>download</span>")
-        return format_html('nothing to download')
+        return format_html("nothing to download")
 
 
 @admin.register(CSVUpload)
 class CSVUploadAdmin(admin.ModelAdmin):
-    list_display = ('name', 'url', 'status', 'academy', 'hash')
-    list_filter = ['academy', 'status']
-    search_fields = ['name', 'url', 'hash']
+    list_display = ("name", "url", "status", "academy", "hash")
+    list_filter = ["academy", "status"]
+    search_fields = ["name", "url", "hash"]
 
 
 def delete_subscription(modeladmin, request, queryset):
@@ -197,10 +205,10 @@ def delete_subscription(modeladmin, request, queryset):
 def disable_subscription(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
     for subs in queryset.all():
-        if subs.hook_id is not None and subs.hook_id != '':
+        if subs.hook_id is not None and subs.hook_id != "":
             unsubscribe_repository(subs.id, force_delete=False)
         else:
-            subs.status = 'DISABLED'
+            subs.status = "DISABLED"
             subs.save()
 
 
@@ -209,7 +217,7 @@ def activate_subscription(modeladmin, request, queryset):
     for subs in queryset.all():
         try:
             subscription = subscribe_repository(subs.id)
-            if subscription.status != 'OPERATIONAL':
+            if subscription.status != "OPERATIONAL":
                 raise Exception(subscription.status_message)
         except Exception as e:
             messages.error(request, str(e))
@@ -218,41 +226,43 @@ def activate_subscription(modeladmin, request, queryset):
 
 @admin.register(RepositorySubscription)
 class RepositorySubscriptionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'current_status', 'hook_id', 'repo', 'owner', 'shared')
-    list_filter = ['status', 'owner']
-    search_fields = ['repository', 'token', 'hook_id']
-    readonly_fields = ['token']
+    list_display = ("id", "current_status", "hook_id", "repo", "owner", "shared")
+    list_filter = ["status", "owner"]
+    search_fields = ["repository", "token", "hook_id"]
+    readonly_fields = ["token"]
     actions = [delete_subscription, disable_subscription, activate_subscription]
 
     def get_actions(self, request):
         actions = super(RepositorySubscriptionAdmin, self).get_actions(request)
-        if 'delete_selected' in actions:
-            del actions['delete_selected']
+        if "delete_selected" in actions:
+            del actions["delete_selected"]
         return actions
 
     def has_delete_permission(self, request, obj=None):
         # Return False to remove the "Delete" button from the update form.
         # You can add additional logic here if you want to conditionally
         # enable the delete button for certain cases.
-        if obj and obj.status == 'DISABLED':
+        if obj and obj.status == "DISABLED":
             return True
 
         return False
 
     def repo(self, obj):
-        return format_html(f"""
+        return format_html(
+            f"""
             <a rel='noopener noreferrer' target='_blank' href='{obj.repository}/settings/hooks'>{obj.repository}</a>
-        """)
+        """
+        )
 
     def shared(self, obj):
-        return format_html(''.join([o.name for o in obj.shared_with.all()]))
+        return format_html("".join([o.name for o in obj.shared_with.all()]))
 
     def current_status(self, obj):
         colors = {
-            'OPERATIONAL': 'bg-success',
-            'CRITICAL': 'bg-error',
-            'DISABLED': 'bg-warning',
-            None: 'bg-warning',
+            "OPERATIONAL": "bg-success",
+            "CRITICAL": "bg-error",
+            "DISABLED": "bg-warning",
+            None: "bg-warning",
         }
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 
@@ -265,27 +275,27 @@ def process_webhook(modeladmin, request, queryset):
 
 @admin.register(RepositoryWebhook)
 class RepositoryWebhookAdmin(admin.ModelAdmin):
-    list_display = ('id', 'webhook_action', 'scope', 'current_status', 'run_at', 'academy_slug', 'diff')
-    list_filter = ['status', 'webhook_action', 'scope', 'academy_slug']
+    list_display = ("id", "webhook_action", "scope", "current_status", "run_at", "academy_slug", "diff")
+    list_filter = ["status", "webhook_action", "scope", "academy_slug"]
     actions = [process_webhook]
 
     def current_status(self, obj):
         colors = {
-            'DONE': 'bg-success',
-            'ERROR': 'bg-error',
-            'PENDING': 'bg-warning',
+            "DONE": "bg-success",
+            "ERROR": "bg-error",
+            "PENDING": "bg-warning",
         }
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 
     def diff(self, obj):
-        label = 'nothing to compare'
+        label = "nothing to compare"
         if obj.payload:
             _payload = json.loads(obj.payload)
-            if 'compare' in _payload:
-                label = 'compare'
-                if 'head_commit' in _payload:
-                    _l = len(_payload['head_commit']['id'])
-                    label = _payload['head_commit']['id'][_l - 8:]
+            if "compare" in _payload:
+                label = "compare"
+                if "head_commit" in _payload:
+                    _l = len(_payload["head_commit"]["id"])
+                    label = _payload["head_commit"]["id"][_l - 8 :]
 
                 return format_html(f"<a target='_blank' href='{_payload['compare']}'>{label}</a>")
         return label
@@ -293,15 +303,15 @@ class RepositoryWebhookAdmin(admin.ModelAdmin):
 
 @admin.register(Supervisor)
 class SupervisorAdmin(admin.ModelAdmin):
-    list_display = ('task_module', 'task_name', 'delta', 'ran_at')
+    list_display = ("task_module", "task_name", "delta", "ran_at")
     list_filter = []
-    search_fields = ['task_module', 'task_name']
+    search_fields = ["task_module", "task_name"]
     actions = []
 
 
 @admin.register(SupervisorIssue)
 class SupervisorIssueAdmin(admin.ModelAdmin):
-    list_display = ('supervisor', 'occurrences', 'error', 'ran_at')
-    list_filter = ['supervisor']
-    search_fields = ['supervisor__task_module', 'supervisor__task_name']
+    list_display = ("supervisor", "occurrences", "error", "ran_at")
+    list_filter = ["supervisor"]
+    search_fields = ["supervisor__task_module", "supervisor__task_name"]
     actions = []

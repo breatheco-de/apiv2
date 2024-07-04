@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('assignments', '0013_task_opened_at'),
+        ("assignments", "0013_task_opened_at"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='task',
-            name='rigobot_repository_id',
+            model_name="task",
+            name="rigobot_repository_id",
             field=models.IntegerField(blank=True, default=None, null=True),
         ),
     ]

@@ -1,4 +1,4 @@
-class BlobMock():
+class BlobMock:
     public_url = None
     name = None
     content = None
@@ -13,7 +13,7 @@ class BlobMock():
         return None
 
     def make_public(self):
-        self.public_url = f'https://storage.cloud.google.com/{self.bucket.name}/{self.name}'
+        self.public_url = f"https://storage.cloud.google.com/{self.bucket.name}/{self.name}"
 
     def delete(self):
         return None

@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('monitoring', '0004_auto_20201021_2126'),
+        ("monitoring", "0004_auto_20201021_2126"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='application',
-            name='notify_email',
+            model_name="application",
+            name="notify_email",
             field=models.CharField(default=None, max_length=255, null=True),
         ),
         migrations.AddField(
-            model_name='endpoint',
-            name='severity_level',
+            model_name="endpoint",
+            name="severity_level",
             field=models.IntegerField(default=0),
         ),
     ]

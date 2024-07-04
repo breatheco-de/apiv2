@@ -6,14 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0045_alter_syllabusversion_integrity_status'),
+        ("admissions", "0045_alter_syllabusversion_integrity_status"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='academy',
-            name='available_as_saas',
-            field=models.BooleanField(default=False,
-                                      help_text='Academies available as SAAS will be sold thru 4Geeks.com'),
+            model_name="academy",
+            name="available_as_saas",
+            field=models.BooleanField(
+                default=False, help_text="Academies available as SAAS will be sold thru 4Geeks.com"
+            ),
         ),
     ]

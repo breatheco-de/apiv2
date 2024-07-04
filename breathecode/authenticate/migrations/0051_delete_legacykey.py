@@ -6,9 +6,11 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authenticate', '0050_remove_app_optional_scopes_and_more'),
+        ("authenticate", "0050_remove_app_optional_scopes_and_more"),
     ]
 
     operations = [
-        migrations.DeleteModel(name='LegacyKey', ),
+        migrations.DeleteModel(
+            name="LegacyKey",
+        ),
     ]

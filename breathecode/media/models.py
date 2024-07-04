@@ -1,7 +1,7 @@
 from breathecode.admissions.models import Academy
 from django.db import models
 
-__all__ = ['Category', 'Media', 'MediaResolution']
+__all__ = ["Category", "Media", "MediaResolution"]
 
 
 class Category(models.Model):
@@ -12,7 +12,7 @@ class Category(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.name} ({self.id})'
+        return f"{self.name} ({self.id})"
 
 
 class Media(models.Model):
@@ -31,7 +31,7 @@ class Media(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.name} ({self.id} - {self.slug})'
+        return f"{self.name} ({self.id} - {self.slug})"
 
 
 class MediaResolution(models.Model):
@@ -44,4 +44,4 @@ class MediaResolution(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.hash} ({self.width}x{self.height})'
+        return f"{self.hash} ({self.width}x{self.height})"

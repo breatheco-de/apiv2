@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0047_alter_leadgenerationapp_utm_url'),
+        ("marketing", "0047_alter_leadgenerationapp_utm_url"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='formentry',
-            name='utm_url',
+            model_name="formentry",
+            name="utm_url",
             field=models.CharField(blank=True, default=None, max_length=2000, null=True),
         ),
     ]

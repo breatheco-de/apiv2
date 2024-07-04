@@ -6,8 +6,8 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('payments', '0023_auto_20230308_0703'),
-        ('payments', '0023_plan_has_waiting_list'),
+        ("payments", "0023_auto_20230308_0703"),
+        ("payments", "0023_plan_has_waiting_list"),
     ]
 
     operations = []

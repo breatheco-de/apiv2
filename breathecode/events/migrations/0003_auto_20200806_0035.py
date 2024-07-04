@@ -7,33 +7,30 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0008_auto_20200708_0049'),
-        ('events', '0002_auto_20200806_0005'),
+        ("admissions", "0008_auto_20200708_0049"),
+        ("events", "0002_auto_20200806_0005"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='event',
-            name='academy',
-            field=models.ForeignKey(blank=True,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='admissions.Academy'),
+            model_name="event",
+            name="academy",
+            field=models.ForeignKey(
+                blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="admissions.Academy"
+            ),
         ),
         migrations.AddField(
-            model_name='eventtype',
-            name='academy',
-            field=models.ForeignKey(blank=True,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='admissions.Academy'),
+            model_name="eventtype",
+            name="academy",
+            field=models.ForeignKey(
+                blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="admissions.Academy"
+            ),
         ),
         migrations.AddField(
-            model_name='venue',
-            name='academy',
-            field=models.ForeignKey(blank=True,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='admissions.Academy'),
+            model_name="venue",
+            name="academy",
+            field=models.ForeignKey(
+                blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="admissions.Academy"
+            ),
         ),
     ]

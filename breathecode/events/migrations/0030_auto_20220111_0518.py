@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0029_event_currency'),
+        ("events", "0029_event_currency"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='event',
-            name='slug',
+            model_name="event",
+            name="slug",
             field=models.SlugField(blank=True, default=None, max_length=150, null=True),
         ),
         migrations.AddField(
-            model_name='event',
-            name='tags',
-            field=models.CharField(blank=True, default='', max_length=100),
+            model_name="event",
+            name="tags",
+            field=models.CharField(blank=True, default="", max_length=100),
         ),
     ]

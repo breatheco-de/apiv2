@@ -7,55 +7,75 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0052_alter_cohort_kickoff_date'),
-        ('monitoring', '0016_csvupload'),
+        ("admissions", "0052_alter_cohort_kickoff_date"),
+        ("monitoring", "0016_csvupload"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='RepositoryWebhook',
+            name="RepositoryWebhook",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('webhook_action',
-                 models.CharField(blank=True,
-                                  default=None,
-                                  help_text='The specific action that was triggered on github for this webhook',
-                                  max_length=100,
-                                  null=True)),
-                ('scope',
-                 models.CharField(
-                     blank=True,
-                     default=None,
-                     help_text=
-                     'The specific entity that triggered this webhook, for example: issues, issues_comment, etc.',
-                     max_length=100,
-                     null=True)),
-                ('run_at',
-                 models.DateTimeField(blank=True, default=None, help_text='Date/time that the webhook ran', null=True)),
-                ('repository', models.URLField(help_text='Github repo where the event occured', max_length=255)),
-                ('payload',
-                 models.JSONField(help_text='Info that came on the request, it varies depending on the webhook type')),
-                ('academy_slug', models.SlugField()),
-                ('status',
-                 models.CharField(choices=[('PENDING', 'Pending'), ('DONE', 'Done'), ('ERROR', 'Error')],
-                                  default='PENDING',
-                                  max_length=9)),
-                ('status_text', models.CharField(blank=True, default=None, max_length=255, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "webhook_action",
+                    models.CharField(
+                        blank=True,
+                        default=None,
+                        help_text="The specific action that was triggered on github for this webhook",
+                        max_length=100,
+                        null=True,
+                    ),
+                ),
+                (
+                    "scope",
+                    models.CharField(
+                        blank=True,
+                        default=None,
+                        help_text="The specific entity that triggered this webhook, for example: issues, issues_comment, etc.",
+                        max_length=100,
+                        null=True,
+                    ),
+                ),
+                (
+                    "run_at",
+                    models.DateTimeField(
+                        blank=True, default=None, help_text="Date/time that the webhook ran", null=True
+                    ),
+                ),
+                ("repository", models.URLField(help_text="Github repo where the event occured", max_length=255)),
+                (
+                    "payload",
+                    models.JSONField(
+                        help_text="Info that came on the request, it varies depending on the webhook type"
+                    ),
+                ),
+                ("academy_slug", models.SlugField()),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[("PENDING", "Pending"), ("DONE", "Done"), ("ERROR", "Error")],
+                        default="PENDING",
+                        max_length=9,
+                    ),
+                ),
+                ("status_text", models.CharField(blank=True, default=None, max_length=255, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
         ),
         migrations.CreateModel(
-            name='RepositorySubscription',
+            name="RepositorySubscription",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('repository', models.URLField(help_text='Github repo where the event occured', max_length=255)),
-                ('token', models.CharField(max_length=255, unique=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('owner', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
-                ('shared_with',
-                 models.ManyToManyField(blank=True, related_name='repo_subscription', to='admissions.Academy')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("repository", models.URLField(help_text="Github repo where the event occured", max_length=255)),
+                ("token", models.CharField(max_length=255, unique=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("owner", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="admissions.academy")),
+                (
+                    "shared_with",
+                    models.ManyToManyField(blank=True, related_name="repo_subscription", to="admissions.Academy"),
+                ),
             ],
         ),
     ]

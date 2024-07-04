@@ -6,30 +6,34 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0035_auto_20231017_0605'),
+        ("registry", "0035_auto_20231017_0605"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='assettechnology',
-            name='is_deprecated',
-            field=models.BooleanField(default=True,
-                                      help_text='If False, the frontend will generate a landing for this technology.'),
+            model_name="assettechnology",
+            name="is_deprecated",
+            field=models.BooleanField(
+                default=True, help_text="If False, the frontend will generate a landing for this technology."
+            ),
         ),
         migrations.AlterField(
-            model_name='assettechnology',
-            name='sort_priority',
+            model_name="assettechnology",
+            name="sort_priority",
             field=models.IntegerField(
                 choices=[(1, 1), (2, 2), (3, 3)],
                 default=3,
-                help_text='Priority to sort technology (1, 2, or 3): One is more important and goes first than three.'),
+                help_text="Priority to sort technology (1, 2, or 3): One is more important and goes first than three.",
+            ),
         ),
         migrations.AlterField(
-            model_name='assettechnology',
-            name='visibility',
-            field=models.CharField(choices=[('PUBLIC', 'Public'), ('UNLISTED', 'Unlisted'), ('PRIVATE', 'Private')],
-                                   default='PUBLIC',
-                                   help_text='Only public techs will be returned by default',
-                                   max_length=20),
+            model_name="assettechnology",
+            name="visibility",
+            field=models.CharField(
+                choices=[("PUBLIC", "Public"), ("UNLISTED", "Unlisted"), ("PRIVATE", "Private")],
+                default="PUBLIC",
+                help_text="Only public techs will be returned by default",
+                max_length=20,
+            ),
         ),
     ]

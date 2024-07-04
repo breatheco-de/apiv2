@@ -7,19 +7,19 @@ import django.utils.timezone
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('certificate', '0001_initial'),
+        ("certificate", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='userspecialty',
-            name='created_at',
+            model_name="userspecialty",
+            name="created_at",
             field=models.DateTimeField(auto_now_add=True, default=django.utils.timezone.now),
             preserve_default=False,
         ),
         migrations.AddField(
-            model_name='userspecialty',
-            name='updated_at',
+            model_name="userspecialty",
+            name="updated_at",
             field=models.DateTimeField(auto_now=True),
         ),
     ]

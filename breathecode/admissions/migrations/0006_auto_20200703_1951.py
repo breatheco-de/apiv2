@@ -6,17 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0005_auto_20200703_1752'),
+        ("admissions", "0005_auto_20200703_1752"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='cohort',
-            name='online_room_url',
+            model_name="cohort",
+            name="online_room_url",
         ),
         migrations.AlterField(
-            model_name='cohort',
-            name='ending_date',
+            model_name="cohort",
+            name="ending_date",
             field=models.DateTimeField(blank=True, null=True),
         ),
     ]

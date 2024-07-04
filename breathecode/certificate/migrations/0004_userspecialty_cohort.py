@@ -7,17 +7,16 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0008_auto_20200708_0049'),
-        ('certificate', '0003_userspecialty_signed_by'),
+        ("admissions", "0008_auto_20200708_0049"),
+        ("certificate", "0003_userspecialty_signed_by"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='userspecialty',
-            name='cohort',
-            field=models.ForeignKey(blank=True,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='admissions.cohort'),
+            model_name="userspecialty",
+            name="cohort",
+            field=models.ForeignKey(
+                blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="admissions.cohort"
+            ),
         ),
     ]

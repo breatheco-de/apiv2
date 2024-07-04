@@ -6,25 +6,28 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0038_alter_cohort_syllabus_version'),
-        ('mentorship', '0010_auto_20220314_1542'),
+        ("admissions", "0038_alter_cohort_syllabus_version"),
+        ("mentorship", "0010_auto_20220314_1542"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='mentorprofile',
-            name='syllabus',
-            field=models.ManyToManyField(blank=True,
-                                         default=None,
-                                         help_text='What syllabis is this mentor going to be menting to?',
-                                         to='admissions.Syllabus'),
+            model_name="mentorprofile",
+            name="syllabus",
+            field=models.ManyToManyField(
+                blank=True,
+                default=None,
+                help_text="What syllabis is this mentor going to be menting to?",
+                to="admissions.Syllabus",
+            ),
         ),
         migrations.AlterField(
-            model_name='mentorshipbill',
-            name='status',
-            field=models.CharField(choices=[('DUE', 'Due'), ('APPROVED', 'Approved'), ('PAID', 'Paid'),
-                                            ('IGNORED', 'Ignored')],
-                                   default='DUE',
-                                   max_length=20),
+            model_name="mentorshipbill",
+            name="status",
+            field=models.CharField(
+                choices=[("DUE", "Due"), ("APPROVED", "Approved"), ("PAID", "Paid"), ("IGNORED", "Ignored")],
+                default="DUE",
+                max_length=20,
+            ),
         ),
     ]

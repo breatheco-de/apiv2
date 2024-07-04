@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0061_academy_white_label_url'),
+        ("admissions", "0061_academy_white_label_url"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='syllabus',
-            name='is_documentation',
+            model_name="syllabus",
+            name="is_documentation",
             field=models.BooleanField(default=False),
         ),
     ]

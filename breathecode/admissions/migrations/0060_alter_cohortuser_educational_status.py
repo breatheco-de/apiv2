@@ -6,19 +6,25 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0059_alter_cohortuser_history_log'),
+        ("admissions", "0059_alter_cohortuser_history_log"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='cohortuser',
-            name='educational_status',
-            field=models.CharField(blank=True,
-                                   choices=[('ACTIVE', 'Active'), ('POSTPONED', 'Postponed'),
-                                            ('GRADUATED', 'Graduated'), ('SUSPENDED', 'Suspended'),
-                                            ('DROPPED', 'Dropped')],
-                                   default='ACTIVE',
-                                   max_length=15,
-                                   null=True),
+            model_name="cohortuser",
+            name="educational_status",
+            field=models.CharField(
+                blank=True,
+                choices=[
+                    ("ACTIVE", "Active"),
+                    ("POSTPONED", "Postponed"),
+                    ("GRADUATED", "Graduated"),
+                    ("SUSPENDED", "Suspended"),
+                    ("DROPPED", "Dropped"),
+                ],
+                default="ACTIVE",
+                max_length=15,
+                null=True,
+            ),
         ),
     ]

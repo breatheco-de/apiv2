@@ -7,18 +7,20 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0048_academy_main_currency'),
-        ('authenticate', '0030_auto_20221129_2354'),
+        ("admissions", "0048_academy_main_currency"),
+        ("authenticate", "0030_auto_20221129_2354"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='userinvite',
-            name='syllabus',
-            field=models.ForeignKey(blank=True,
-                                    default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='admissions.syllabus'),
+            model_name="userinvite",
+            name="syllabus",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to="admissions.syllabus",
+            ),
         ),
     ]
