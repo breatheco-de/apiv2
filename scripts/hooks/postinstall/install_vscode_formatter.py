@@ -1,13 +1,13 @@
 #!/bin/env python
 
-import os
 import json
+import os
 from pathlib import Path
 
 api_path = os.getcwd()
 
-vscode_folder_path = Path(f'{api_path}/.vscode').resolve()
-vscode_setting_path = Path(f'{api_path}/.vscode/settings.json').resolve()
+vscode_folder_path = Path(f"{api_path}/.vscode").resolve()
+vscode_setting_path = Path(f"{api_path}/.vscode/settings.json").resolve()
 
 if not os.path.isdir(vscode_folder_path):
     os.mkdir(vscode_folder_path)
@@ -16,17 +16,30 @@ vscode_setting_json = {}
 
 if os.path.isfile(vscode_setting_path):
     # import yaml
-    os.system(f'pipenv run python -m scripts.utils.fix_json {vscode_setting_path}')
+    os.system(f"pipenv run python -m scripts.utils.fix_json {vscode_setting_path}")
 
-    with open(vscode_setting_path, 'r') as vscode_setting_file:
+    with open(vscode_setting_path, "r") as vscode_setting_file:
         vscode_setting_json = json.load(vscode_setting_file)
 
-vscode_setting_json['editor.formatOnSave'] = True
-vscode_setting_json['python.formatting.provider'] = 'yapf'
 
-bad_keys = [key for key in vscode_setting_json if key.startswith('//')]
+if "python.formatting.provider" in vscode_setting_json:
+    del vscode_setting_json["python.formatting.provider"]
+
+vscode_setting_json["[python]"] = {}
+vscode_setting_json["[python]"]["editor.formatOnSaveMode"] = "file"
+vscode_setting_json["[python]"]["editor.formatOnSave"] = True
+vscode_setting_json["[python]"]["editor.defaultFormatter"] = "ms-python.black-formatter"
+vscode_setting_json["[python]"]["editor.codeActionsOnSave"] = {}
+vscode_setting_json["[python]"]["editor.codeActionsOnSave"]["source.organizeImports"] = "explicit"
+vscode_setting_json["isort.args"] = [
+    "--profile",
+    "black",
+]
+
+
+bad_keys = [key for key in vscode_setting_json if key.startswith("//")]
 for key in bad_keys:
     del vscode_setting_json[key]
 
-with open(vscode_setting_path, 'w') as vscode_setting_file:
+with open(vscode_setting_path, "w") as vscode_setting_file:
     json.dump(vscode_setting_json, vscode_setting_file, indent=2)
