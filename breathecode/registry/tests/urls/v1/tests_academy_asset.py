@@ -136,6 +136,8 @@ def put_serializer(academy, category, asset, data={}):
         "assessment": asset.assessment,
         "asset_type": asset.asset_type,
         "author": asset.author,
+        "enable_table_of_content": asset.enable_table_of_content,
+        "interactive": asset.interactive,
         "authors_username": None,
         "category": {"id": category.id, "slug": category.slug, "title": category.title},
         "cleaning_status": asset.cleaning_status,

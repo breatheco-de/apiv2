@@ -23,6 +23,8 @@ def get_serializer(bc: Breathecode, asset, asset_category=None, data={}):
     return {
         "assessment": asset.assessment,
         "asset_type": asset.asset_type,
+        "enable_table_of_content": asset.enable_table_of_content,
+        "interactive": asset.interactive,
         "author": asset.author,
         "authors_username": None,
         "category": get_asset_category(asset_category) if asset_category else None,
