@@ -2,7 +2,10 @@ import os
 from datetime import timedelta
 
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.utils import timezone
+from django_redis import get_redis_connection
+from redis.exceptions import LockError
 from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
 
@@ -11,6 +14,7 @@ from breathecode.authenticate.models import Token
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.notify import actions as notify_actions
 from breathecode.utils import TaskPriority, getLogger
+from breathecode.utils.redis import Lock
 from capyc.rest_framework.exceptions import ValidationException
 
 from . import actions
@@ -23,6 +27,7 @@ logger = getLogger(__name__)
 ADMIN_URL = os.getenv("ADMIN_URL", "")
 API_URL = os.getenv("API_URL", "")
 ENV = os.getenv("ENV", "")
+IS_DJANGO_REDIS = hasattr(cache, "delete_pattern")
 
 
 def build_question(answer):
@@ -291,19 +296,30 @@ def send_mentorship_session_survey(session_id, **_):
     if not session.service:
         raise AbortTask("Mentorship session doesn't have a service associated with it")
 
-    answer = Answer.objects.filter(mentorship_session__id=session.id).first()
-    if answer is None:
-        answer = Answer(mentorship_session=session, academy=session.mentor.academy, lang=session.service.language)
-        question = build_question(answer)
-        answer.title = question["title"]
-        answer.lowest = question["lowest"]
-        answer.highest = question["highest"]
-        answer.user = session.mentee
-        answer.status = "SENT"
-        answer.save()
+    client = None
+    if IS_DJANGO_REDIS:
+        client = get_redis_connection("default")
 
-    elif answer.status == "ANSWERED":
-        raise AbortTask(f"This survey about MentorshipSession {session.id} was answered")
+    try:
+        with Lock(client, f"lock:session:{session.id}:answer", timeout=30, blocking_timeout=30):
+            answer = Answer.objects.filter(mentorship_session__id=session.id).first()
+            if answer is None:
+                answer = Answer(
+                    mentorship_session=session, academy=session.mentor.academy, lang=session.service.language
+                )
+                question = build_question(answer)
+                answer.title = question["title"]
+                answer.lowest = question["lowest"]
+                answer.highest = question["highest"]
+                answer.user = session.mentee
+                answer.status = "SENT"
+                answer.save()
+
+            elif answer.status == "ANSWERED":
+                raise AbortTask(f"This survey about MentorshipSession {session.id} was answered")
+
+    except LockError:
+        raise RetryTask("Could not acquire lock for activity, operation timed out.")
 
     if not session.mentee.email:
         message = f"Author not have email, this survey cannot be send by {session.mentee.id}"

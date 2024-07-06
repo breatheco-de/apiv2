@@ -7,7 +7,7 @@ from django.dispatch import receiver
 from breathecode.admissions.models import CohortUser
 from breathecode.admissions.signals import student_edu_status_updated
 from breathecode.mentorship.models import MentorshipSession
-from breathecode.mentorship.signals import mentorship_session_status
+from breathecode.mentorship.signals import mentorship_session_saved
 
 from .models import Answer
 from .signals import survey_answered
@@ -33,9 +33,9 @@ def post_save_cohort_user(sender, instance, **kwargs):
         process_student_graduation.delay(instance.cohort.id, instance.user.id)
 
 
-@receiver(mentorship_session_status, sender=MentorshipSession)
+@receiver(mentorship_session_saved, sender=MentorshipSession)
 def post_mentorin_session_ended(sender: Type[MentorshipSession], instance: MentorshipSession, **kwargs):
-    if instance.status == "COMPLETED":
+    if instance.status == "COMPLETED" and Answer.objects.filter(mentorship_session__id=instance.id).exists() is False:
         duration = timedelta(seconds=0)
         if instance.started_at is not None and instance.ended_at is not None:
             duration = instance.ended_at - instance.started_at
