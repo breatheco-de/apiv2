@@ -117,7 +117,7 @@ def get_events(request):
 
     if "academy" in request.GET:
         value = request.GET.get("academy")
-        lookup["academy__slug__in"] = value.split(",")
+        lookup["academy__id__in"] = value.split(",")
 
     if "status" in request.GET:
         value = request.GET.get("status")
