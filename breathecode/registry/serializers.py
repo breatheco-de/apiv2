@@ -589,7 +589,7 @@ class PostKeywordClusterSerializer(serializers.ModelSerializer):
 
         validated_data = super().validate(data)
 
-        if "landing_page_url" in validated_data:
+        if "landing_page_url" in validated_data and validated_data["landing_page_url"] is not None:
             if "http" not in validated_data["landing_page_url"]:
                 raise ValidationException(
                     "Please make your topic cluster landing page url is an absolute url that points to your page, this is how we know your page domain"
