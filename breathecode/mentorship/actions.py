@@ -11,6 +11,7 @@ from django.utils import timezone
 from google.apps.meet_v2.types import Space, SpaceConfig
 
 import breathecode.activity.tasks as tasks_activity
+from breathecode.authenticate.models import User
 from breathecode.mentorship.exceptions import ExtendSessionException
 from breathecode.services.daily.client import DailyClient
 from breathecode.services.google_meet.google_meet import GoogleMeet
@@ -96,7 +97,7 @@ def get_pending_sessions_or_create(token, mentor, service, mentee=None):
     )
 
     if session.service.video_provider == MentorshipService.VideoProvider.GOOGLE_MEET:
-        create_room_on_google_meet(session)
+        create_room_on_google_meet(session, mentee)
 
     elif session.service.video_provider == MentorshipService.VideoProvider.DAILY:
         daily = DailyClient()
@@ -425,7 +426,7 @@ def mentor_is_ready(mentor: MentorProfile):
     return True
 
 
-def create_room_on_google_meet(session: MentorshipSession) -> None:
+def create_room_on_google_meet(session: MentorshipSession, mentee: User) -> None:
     """Create a room on google meet for a mentorship session."""
 
     if isinstance(session, MentorshipSession) is False:
@@ -437,20 +438,21 @@ def create_room_on_google_meet(session: MentorshipSession) -> None:
     if not session.service:
         raise Exception("Mentorship session doesn't have a service associated with it")
 
-    mentor = session.mentor
+    # mentor = session.mentor
 
     meet = GoogleMeet()
     if session.id is None:
         session.save()
 
-    title = f"{session.service.name} {session.id} | " f"{mentor.user.first_name} {mentor.user.last_name}"
+    # title = f"{session.service.name} {session.id} | " f"{mentor.user.first_name} {mentor.user.last_name}"
     s = Space(
-        name=title,
+        # name=title,
         config=SpaceConfig(access_type=SpaceConfig.AccessType.OPEN),
     )
     space = meet.create_space(space=s)
     session.online_meeting_url = space.meeting_uri
-    session.name = title
+    session.name = s.name
+    session.mentee = mentee
     session.save()
 
 
