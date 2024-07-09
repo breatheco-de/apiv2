@@ -30,16 +30,20 @@ timezones = [(x, x) for x in pytz.common_timezones]
 logger = logging.getLogger(__name__)
 
 
+def use_google_meet(modeladmin, request, queryset):
+    queryset.update(video_provider="GOOGLE_MEET")
+
+
+def use_daily(modeladmin, request, queryset):
+    queryset.update(video_provider="DAILY")
+
+
 @admin.register(MentorshipService)
 class ServiceAdmin(admin.ModelAdmin):
     list_display = ["slug", "name", "status", "academy"]
     search_fields = ["slug", "name"]
     list_filter = ["academy__slug", "status"]
-    # raw_id_fields = ['academy', 'github_user']
-    # actions = [sync_issues, generate_bill]
-
-    # def full_name(self, obj):
-    #     return obj.user.first_name + ' ' + obj.user.last_name
+    actions = [use_google_meet, use_daily]
 
 
 class MentorForm(forms.ModelForm):
@@ -361,3 +365,4 @@ class AcademyMentorshipSettingsAdmin(admin.ModelAdmin):
         "video_provider",
     )
     list_filter = ["academy", "language", "allow_mentee_to_extend", "allow_mentors_to_extend", "video_provider"]
+    actions = [use_google_meet, use_daily]
