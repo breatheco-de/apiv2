@@ -47,7 +47,7 @@ urlpatterns = [
     path("academy/alias", AcademyAliasView.as_view(), name="academy_alias"),
     path("academy/<int:academy_id>/tag/sync", sync_tags_with_active_campaign, name="academy_id_tag_sync"),
     path(
-        "academy/<int:academt_id>/automation/sync",
+        "academy/<int:academy_id>/automation/sync",
         sync_automations_with_active_campaign,
         name="academy_id_automation_sync",
     ),
