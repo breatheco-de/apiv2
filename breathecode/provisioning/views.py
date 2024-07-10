@@ -106,13 +106,18 @@ def redirect_new_container_public(request):
         return render_message(request, "Please specify a repository in the URL")
 
     urls = {"gitpod": "https://gitpod.io/#", "codespaces": "https://codespaces.new/?repo="}
+    get_urls = { "codespaces": lambda x: x.replace("https://github.com/", "") }
     vendors = request.GET.get("vendor", "codespaces,gitpod").split(",")
     buttons = []
     for v in vendors:
         if v not in urls:
             return render_message(request, f"Invalid provisioning vendor: {v}")
 
-        buttons.append({"label": f"Open in {v.capitalize()}", "url": (urls[v] + repo), "icon": f"/static/img/{v}.svg"})
+        buttons.append({
+            "label": f"Open in {v.capitalize()}", 
+            "url": (get_urls[v](urls[v]) if v in get_urls else urls[v] + repo), 
+            "icon": f"/static/img/{v}.svg"
+        })
 
     data = {
         # 'title': item.academy.name,
