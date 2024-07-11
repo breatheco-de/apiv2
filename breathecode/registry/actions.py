@@ -789,7 +789,6 @@ def process_asset_config(asset, config):
                     asset.solution_url = config["solution"]["en"]
             elif asset.lang in config["solution"]:
                     asset.solution_url = config["solution"][asset.lang]
-        ):
 
     if "grading" not in config and ("projectType" not in config or config["projectType"] != "tutorial"):
         asset.interactive = False
