@@ -1,5 +1,5 @@
 from datetime import datetime
-
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -440,14 +440,18 @@ class GetThresholdView(APIView):
         else:
             lookup["academy__isnull"] = True
 
+        items = items.filter(**lookup)
+        
         if "tag" in self.request.GET:
             param = self.request.GET.get("tag")
             if param != "all":
-                lookup["tags__icontains"] = param
+                items = items.filter(tags__icontains=param)
         else:
-            lookup["tags__in"] = ["", None]
+            items = items.filter(
+                Q(tags__isnull=True) | Q(tags="")
+            )
 
-        items = items.filter(**lookup).order_by("-created_at")
+        items = items.order_by("-created_at")
 
         serializer = GetAssessmentThresholdSerializer(items, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
