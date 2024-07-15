@@ -152,8 +152,6 @@ class FormEntrySerializer(serpy.Serializer):
     academy = AcademySmallSerializer(required=False)
     client_comments = serpy.Field(required=False)
     created_at = serpy.Field()
-    custom_fields = serpy.Field()
-
 
 class FormEntryHookSerializer(serpy.Serializer):
     id = serpy.Field()
@@ -230,7 +228,13 @@ class FormEntryHookSerializer(serpy.Serializer):
 
     def get_custom_fields(self, obj):
         if isinstance(obj.custom_fields, dict):
-            return obj.custom_fields
+            processed_fields = {}
+            for key, value in obj.custom_fields.items():
+                if isinstance(value, list):
+                    processed_fields[key] = ','.join(map(str, value))
+                else:
+                    processed_fields[key] = value
+            return processed_fields
         return {}
 
 
