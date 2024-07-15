@@ -6,16 +6,12 @@ from django.core import serializers
 from django.db import models
 from rest_framework.exceptions import ValidationError
 
-import logging
-
 from breathecode.admissions.models import Academy, Cohort
 
 __all__ = ["UserProxy", "CohortProxy", "Device", "SlackTeam", "SlackUser", "SlackUserTeam", "SlackChannel", "Hook"]
 AUTH_USER_MODEL = getattr(settings, "AUTH_USER_MODEL", "auth.User")
 if getattr(settings, "HOOK_CUSTOM_MODEL", None) is None:
     settings.HOOK_CUSTOM_MODEL = "notify.Hook"
-
-logger = logging.getLogger(__name__)
 
 
 class UserProxy(User):
@@ -182,30 +178,20 @@ class AbstractHook(models.Model):
         """
         from .utils.hook_manager import HookManager
 
-        logger.debug("Testing serializer_hook 1")
-
         if getattr(instance, "serialize_hook", None) and callable(instance.serialize_hook):
-            logger.debug("Testing serializer_hook 2")
             return instance.serialize_hook(hook=self)
         if getattr(settings, "HOOK_SERIALIZER", None):
-            logger.debug("Testing serializer_hook 3")
             serializer = HookManager.get_module(settings.HOOK_SERIALIZER)
             return serializer(instance, hook=self)
         # if no user defined serializers, fallback to the django builtin!
-        logger.debug("Testing serializer_hook 4")
         data = serializers.serialize("python", [instance])[0]
         for k, v in data.items():
-            logger.debug("Testing serializer_hook 5")
             if isinstance(v, OrderedDict):
-                logger.debug("Testing serializer_hook 6")
                 data[k] = dict(v)
 
-        logger.debug("Testing serializer_hook 7")
         if isinstance(data, OrderedDict):
-            logger.debug("Testing serializer_hook 8")
             data = dict(data)
 
-        logger.debug("Testing serializer_hook 9")
         return {
             "hook": self.dict(),
             "data": data,
