@@ -184,7 +184,6 @@ class FormEntryHookSerializer(serpy.Serializer):
     utm_placement = serpy.Field()
     utm_term = serpy.Field()
     utm_plan = serpy.Field()
-    custom_fields = serpy.Field()
     referral_key = serpy.Field()
     tags = serpy.Field()
     automations = serpy.Field()
@@ -217,6 +216,7 @@ class FormEntryHookSerializer(serpy.Serializer):
 
     cohort = serpy.MethodField(required=False)
     is_won = serpy.MethodField(required=False)
+    custom_fields = serpy.MethodField(required=False)
 
     def get_cohort(self, obj):
         _cohort = Cohort.objects.filter(slug=obj.ac_expected_cohort).first()
@@ -227,6 +227,11 @@ class FormEntryHookSerializer(serpy.Serializer):
 
     def get_is_won(self, obj):
         return obj.deal_status == "WON"
+
+    def get_custom_fields(self, obj):
+        if isinstance(obj.custom_fields, dict):
+            return obj.custom_fields
+        return {}
 
 
 class FormEntrySmallSerializer(serpy.Serializer):
