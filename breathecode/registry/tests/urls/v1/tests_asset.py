@@ -78,6 +78,16 @@ def get_serializer(asset, data={}):
     }
 
 
+def get_mid_serializer(asset, data={}):
+    return {
+        **get_serializer(asset),
+        "with_solutions": asset.with_solutions,
+        "with_video": asset.with_solutions,
+        "updated_at": asset.updated_at,
+        **data,
+    }
+
+
 def get_serializer_technology(technology, data={}):
     return {
         "slug": technology.slug,
@@ -147,7 +157,13 @@ def test_assets_technologies_expand(bc: Breathecode, client):
     json = response.json()
 
     expected = [
-        get_serializer(asset, data={"technologies": [get_serializer_technology(model.asset_technology)]})
+        get_mid_serializer(
+            asset,
+            data={
+                "updated_at": bc.datetime.to_iso_string(asset.updated_at),
+                "technologies": [get_serializer_technology(model.asset_technology)],
+            },
+        )
         for asset in model.asset
     ]
 

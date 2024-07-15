@@ -416,7 +416,7 @@ class AssetBigAndTechnologyPublishedSerializer(AssetBigSerializer):
         return ParentAssetTechnologySerializer(techs, many=True).data
 
 
-class AssetAndTechnologySerializer(AssetSerializer):
+class AssetAndTechnologySerializer(AssetMidSerializer):
 
     technologies = serpy.MethodField()
 
