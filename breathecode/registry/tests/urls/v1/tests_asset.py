@@ -72,6 +72,8 @@ def get_serializer(asset, data={}):
         "technologies": [tech.slug for tech in asset.technologies.all()] if asset.technologies else [],
         "seo_keywords": [seo_keyword.slug for seo_keyword in asset.seo_keywords.all()] if asset.seo_keywords else [],
         "visibility": asset.visibility,
+        "enable_table_of_content": asset.enable_table_of_content,
+        "interactive": asset.interactive,
         **data,
     }
 
@@ -84,6 +86,16 @@ def get_serializer_technology(technology, data={}):
         "icon_url": technology.icon_url,
         "is_deprecated": technology.is_deprecated,
         "visibility": technology.visibility,
+        **data,
+    }
+
+
+def get_mid_serializer(asset, data={}):
+    return {
+        **get_serializer(asset),
+        "with_solutions": asset.with_solutions,
+        "with_video": asset.with_solutions,
+        "updated_at": asset.updated_at,
         **data,
     }
 
@@ -145,7 +157,13 @@ def test_assets_technologies_expand(bc: Breathecode, client):
     json = response.json()
 
     expected = [
-        get_serializer(asset, data={"technologies": [get_serializer_technology(model.asset_technology)]})
+        get_mid_serializer(
+            asset,
+            data={
+                "updated_at": bc.datetime.to_iso_string(asset.updated_at),
+                "technologies": [get_serializer_technology(model.asset_technology)],
+            },
+        )
         for asset in model.asset
     ]
 
