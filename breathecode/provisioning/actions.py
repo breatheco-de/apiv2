@@ -247,6 +247,9 @@ def handle_pending_github_user(
     if is_valid_string(username):
         credentials = CredentialsGithub.objects.filter(username__isnull=False, username__iexact=username).first()
 
+    else:
+        logger.error(f"Username is invalid, cannot find github credentials for username {username}")
+
     if credentials:
         user = credentials.user
 
