@@ -217,7 +217,13 @@ class ActivityContext(TypedDict):
     profile_academies: dict[str, QuerySet[ProfileAcademy]]
 
 
-def handle_pending_github_user(organization: str, username: str, starts: Optional[datetime] = None) -> list[Academy]:
+def is_valid_string(value):
+    return isinstance(value, str) and value.strip() != ""
+
+
+def handle_pending_github_user(
+    organization: Optional[str], username: str, starts: Optional[datetime] = None
+) -> list[Academy]:
     orgs = AcademyAuthSettings.objects.filter(github_username__iexact=organization)
     orgs = [
         x
@@ -238,8 +244,11 @@ def handle_pending_github_user(organization: str, username: str, starts: Optiona
     user = None
 
     credentials = None
-    if username:
-        credentials = CredentialsGithub.objects.filter(username__iexact=username).first()
+    if is_valid_string(username):
+        credentials = CredentialsGithub.objects.filter(username__isnull=False, username__iexact=username).first()
+
+    else:
+        logger.error(f"Username is invalid, cannot find github credentials for username {username}")
 
     if credentials:
         user = credentials.user
@@ -610,8 +619,8 @@ def add_rigobot_activity(context: ActivityContext, field: dict, position: int) -
         logger.error(f'User {field["user_id"]} not found')
         return
 
-    if field["billing_status"] != "OPEN":
-        return
+    # if field["billing_status"] != "OPEN":
+    #     return
 
     github_academy_user_log = context["github_academy_user_logs"].get(user.id, None)
     date = datetime.fromisoformat(field["consumption_period_start"])

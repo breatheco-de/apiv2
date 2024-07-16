@@ -481,7 +481,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
 
     def test_without_mentor_profile(self):
-        service = {"slug": "join_mentorship"}
+        service = {"consumer": "JOIN_MENTORSHIP"}
         model = self.bc.database.create(user=1, token=1, service=service)
 
         querystring = self.bc.format.to_querystring({"token": model.token.key})
@@ -516,7 +516,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
 
     def test_no_mentorship_service(self):
         slug = self.bc.fake.slug()
-        service = {"slug": "join_mentorship"}
+        service = {"consumer": "JOIN_MENTORSHIP"}
         model = self.bc.database.create(user=1, token=1, mentor_profile=1, service=service)
 
         querystring = self.bc.format.to_querystring({"token": model.token.key})
@@ -559,7 +559,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
     """
 
     def test_with_mentor_profile(self):
-        service = {"slug": "join_mentorship"}
+        service = {"consumer": "JOIN_MENTORSHIP"}
         model = self.bc.database.create(
             user=1,
             token=1,
@@ -614,7 +614,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
         cases = [{"status": x} for x in ["INVITED", "INNACTIVE"]]
 
         for mentor_profile in cases:
-            service = {"slug": "join_mentorship"}
+            service = {"consumer": "JOIN_MENTORSHIP"}
             model = self.bc.database.create(
                 user=1,
                 token=1,
@@ -675,7 +675,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
         cases = [{"status": x} for x in ["ACTIVE", "UNLISTED"]]
 
         for mentor_profile in cases:
-            service = {"slug": "join_mentorship"}
+            service = {"consumer": "JOIN_MENTORSHIP"}
             model = self.bc.database.create(
                 user=1,
                 token=1,
@@ -769,7 +769,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
         ]
 
         for mentor_profile in cases:
-            service = {"slug": "join_mentorship"}
+            service = {"consumer": "JOIN_MENTORSHIP"}
             model = self.bc.database.create(
                 user=1,
                 token=1,
@@ -865,7 +865,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             id += 1
 
             mentor_profile = {**args, "user_id": 1}
-            service = {"slug": "join_mentorship"}
+            service = {"consumer": "JOIN_MENTORSHIP"}
             model = self.bc.database.create(
                 user=1,
                 token=1,
@@ -961,7 +961,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             for x in ["ACTIVE", "UNLISTED"]
         ]
 
-        service = {"slug": "join_mentorship"}
+        service = {"consumer": "JOIN_MENTORSHIP"}
         base = self.bc.database.create(user=1, token=1, service=service)
 
         id = 0
@@ -1062,7 +1062,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             for x in ["ACTIVE", "UNLISTED"]
         ]
 
-        service = {"slug": "join_mentorship"}
+        service = {"consumer": "JOIN_MENTORSHIP"}
         base = self.bc.database.create(user=1, token=1, service=service)
 
         id = 0
@@ -1188,7 +1188,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             ]
 
             for mentorship_session in session_cases:
-                service = {"slug": "join_mentorship"}
+                service = {"consumer": "JOIN_MENTORSHIP"}
                 base = self.bc.database.create(user=1, token=1, service=service)
 
                 model = self.bc.database.create(
@@ -1301,7 +1301,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
         for mentor_profile in cases:
             id += 1
 
-            service = {"slug": "join_mentorship"}
+            service = {"consumer": "JOIN_MENTORSHIP"}
             base = self.bc.database.create(user=1, token=1, service=service)
 
             mentorship_session = {"mentee_id": None}
@@ -1405,7 +1405,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             }
             for x in ["ACTIVE", "UNLISTED"]
         ]
-        service = {"slug": "join_mentorship"}
+        service = {"consumer": "JOIN_MENTORSHIP"}
 
         id = 0
         for mentor_profile in cases:
@@ -1706,7 +1706,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             }
             for x in ["ACTIVE", "UNLISTED"]
         ]
-        service = {"slug": "join_mentorship"}
+        service = {"consumer": "JOIN_MENTORSHIP"}
 
         id = 0
         for mentor_profile in cases:
@@ -1815,7 +1815,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             }
             for x in ["ACTIVE", "UNLISTED"]
         ]
-        service = {"slug": "join_mentorship"}
+        service = {"consumer": "JOIN_MENTORSHIP"}
 
         id = 0
         for mentor_profile in cases:
@@ -1931,7 +1931,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             }
             for x in ["ACTIVE", "UNLISTED"]
         ]
-        service = {"slug": "join_mentorship"}
+        service = {"consumer": "JOIN_MENTORSHIP"}
 
         id = 0
         for mentor_profile in cases:
@@ -2090,7 +2090,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             }
             for x in ["ACTIVE", "UNLISTED"]
         ]
-        service = {"slug": "join_mentorship"}
+        service = {"consumer": "JOIN_MENTORSHIP"}
 
         id = 0
         for mentor_profile in cases:
@@ -2208,7 +2208,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             id += 1
 
             user = {"first_name": "", "last_name": ""}
-            service = {"slug": "join_mentorship"}
+            service = {"consumer": "JOIN_MENTORSHIP"}
             base = self.bc.database.create(user=user, token=1, service=service)
 
             ends_at = UTC_NOW - timedelta(seconds=10)
@@ -2323,7 +2323,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             id += 1
 
             user = {"first_name": "", "last_name": ""}
-            service = {"slug": "join_mentorship"}
+            service = {"consumer": "JOIN_MENTORSHIP"}
             base = self.bc.database.create(user=user, token=1, service=service)
 
             ends_at = UTC_NOW - timedelta(seconds=10)
@@ -2474,7 +2474,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             id += 1
 
             user = {"first_name": "", "last_name": ""}
-            service = {"slug": "join_mentorship"}
+            service = {"consumer": "JOIN_MENTORSHIP"}
             base = self.bc.database.create(user=user, token=1, service=service)
 
             ends_at = UTC_NOW - timedelta(seconds=10)
@@ -2623,7 +2623,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             id += 1
 
             user = {"first_name": "", "last_name": ""}
-            service = {"slug": "join_mentorship"}
+            service = {"consumer": "JOIN_MENTORSHIP"}
             base = self.bc.database.create(user=user, token=1, service=service)
 
             ends_at = UTC_NOW - timedelta(seconds=10)
@@ -2772,7 +2772,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             id += 1
 
             user = {"first_name": "", "last_name": ""}
-            service = {"slug": "join_mentorship"}
+            service = {"consumer": "JOIN_MENTORSHIP"}
             base = self.bc.database.create(user=user, token=1, service=service)
 
             ends_at = UTC_NOW - timedelta(seconds=3600 / 2 + 1)
@@ -2921,7 +2921,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             id += 1
 
             user = {"first_name": "", "last_name": ""}
-            service = {"slug": "join_mentorship"}
+            service = {"consumer": "JOIN_MENTORSHIP"}
             base = self.bc.database.create(user=user, token=1, service=service)
 
             ends_at = UTC_NOW - timedelta(seconds=3600 / 2 + 1)
@@ -3053,7 +3053,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             id += 1
 
             user = {"first_name": "", "last_name": ""}
-            service = {"slug": "join_mentorship"}
+            service = {"consumer": "JOIN_MENTORSHIP"}
             base = self.bc.database.create(user=user, token=1, service=service)
 
             ends_at = UTC_NOW - timedelta(seconds=3600 / 2 + 1)
@@ -3170,7 +3170,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             id += 1
 
             user = {"first_name": "", "last_name": ""}
-            service = {"slug": "join_mentorship"}
+            service = {"consumer": "JOIN_MENTORSHIP"}
             academy = {"available_as_saas": True}
             how_many = random.randint(1, 100)
             consumable = {"how_many": how_many}
@@ -3358,7 +3358,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             ]
 
             for user, name in cases:
-                service = {"slug": "join_mentorship"}
+                service = {"consumer": "JOIN_MENTORSHIP"}
                 base = self.bc.database.create(user=user, token=1, service=service)
 
                 ends_at = UTC_NOW - timedelta(seconds=10)
@@ -3513,7 +3513,7 @@ def test__post__auth__no_saas__finantial_status_no_late(
         id += 1
 
         user = {"first_name": "", "last_name": ""}
-        service = {"slug": "join_mentorship"}
+        service = {"consumer": "JOIN_MENTORSHIP"}
         base = bc.database.create(
             user=user, token=1, service=service, academy=academy, cohort=cohort, cohort_user=cohort_user
         )
@@ -3659,7 +3659,7 @@ def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: fx
         id += 1
 
         user = {"first_name": "", "last_name": ""}
-        service = {"slug": "join_mentorship"}
+        service = {"consumer": "JOIN_MENTORSHIP"}
         cohort_user = {"finantial_status": "LATE", "educational_status": "ACTIVE"}
         base = bc.database.create(
             user=user, token=1, service=service, academy=academy, cohort=cohort, cohort_user=cohort_user

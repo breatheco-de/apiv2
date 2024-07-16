@@ -80,6 +80,29 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
             "Owner",
         ]
 
+    elif bills[0].vendor.name == "Rigobot":
+        fields = [
+            "organization",
+            "consumption_period_id",
+            "consumption_period_start",
+            "consumption_period_end",
+            "billing_status",
+            "total_spent_period",
+            "consumption_item_id",
+            "user_id",
+            "email",
+            "consumption_type",
+            "pricing_type",
+            "total_spent",
+            "total_tokens",
+            "model",
+            "purpose_id",
+            "purpose_slug",
+            "purpose",
+            "created_at",
+            "github_username",
+        ]
+
     storage = Storage()
     cloud_file = storage.file(os.getenv("PROVISIONING_BUCKET", None), hash)
     if not cloud_file.exists():
@@ -106,6 +129,10 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
     elif bills[0].vendor.name == "Codespaces":
         first = df1["Date"][0].split("-")
         last = df2["Date"][0].split("-")
+
+    elif bills[0].vendor.name == "Rigobot":
+        first = df1["consumption_period_start"][0].split("-")
+        last = df2["consumption_period_start"][0].split("-")
 
     first[2] = first[2].split("T")[0]
     last[2] = last[2].split("T")[0]
