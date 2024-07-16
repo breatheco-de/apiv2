@@ -610,8 +610,8 @@ def add_rigobot_activity(context: ActivityContext, field: dict, position: int) -
         logger.error(f'User {field["user_id"]} not found')
         return
 
-    if field["billing_status"] != "OPEN":
-        return
+    # if field["billing_status"] != "OPEN":
+    #     return
 
     github_academy_user_log = context["github_academy_user_logs"].get(user.id, None)
     date = datetime.fromisoformat(field["consumption_period_start"])
