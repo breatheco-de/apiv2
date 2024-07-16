@@ -217,7 +217,9 @@ class ActivityContext(TypedDict):
     profile_academies: dict[str, QuerySet[ProfileAcademy]]
 
 
-def handle_pending_github_user(organization: str, username: str, starts: Optional[datetime] = None) -> list[Academy]:
+def handle_pending_github_user(
+    organization: Optional[str], username: str, starts: Optional[datetime] = None
+) -> list[Academy]:
     orgs = AcademyAuthSettings.objects.filter(github_username__iexact=organization)
     orgs = [
         x
@@ -239,7 +241,7 @@ def handle_pending_github_user(organization: str, username: str, starts: Optiona
 
     credentials = None
     if username:
-        credentials = CredentialsGithub.objects.filter(username__iexact=username).first()
+        credentials = CredentialsGithub.objects.filter(username__isnull=False, username__iexact=username).first()
 
     if credentials:
         user = credentials.user
