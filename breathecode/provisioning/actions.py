@@ -217,6 +217,10 @@ class ActivityContext(TypedDict):
     profile_academies: dict[str, QuerySet[ProfileAcademy]]
 
 
+def is_valid_string(value):
+    return isinstance(value, str) and value.strip() != ""
+
+
 def handle_pending_github_user(
     organization: Optional[str], username: str, starts: Optional[datetime] = None
 ) -> list[Academy]:
@@ -240,7 +244,7 @@ def handle_pending_github_user(
     user = None
 
     credentials = None
-    if username:
+    if is_valid_string(username):
         credentials = CredentialsGithub.objects.filter(username__isnull=False, username__iexact=username).first()
 
     if credentials:
