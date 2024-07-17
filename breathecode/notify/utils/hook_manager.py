@@ -211,16 +211,17 @@ class HookManagerClass(object):
 
             return payload
 
-        for key in payload:
-            if isinstance(payload[key], dict):
-                self.serialize(payload[key])
+        if isinstance(payload, dict):
+            for key in payload:
+                if isinstance(payload[key], dict):
+                    self.serialize(payload[key])
 
-            elif isinstance(payload[key], (list, tuple)):
-                for item in payload[key]:
-                    self.serialize(item)
+                elif isinstance(payload[key], (list, tuple)):
+                    for item in payload[key]:
+                        self.serialize(item)
 
-            elif isinstance(payload[key], timedelta):
-                payload[key] = payload[key].total_seconds()
+                elif isinstance(payload[key], timedelta):
+                    payload[key] = payload[key].total_seconds()
 
         return payload
 
