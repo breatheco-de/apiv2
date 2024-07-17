@@ -1,5 +1,5 @@
-import logging
 import ast
+import logging
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
@@ -160,8 +160,8 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
 
     scheduler.save()
 
-    if not selected_lookup:
-        logger.error("The Plan not have a resource linked to it " f"for the ServiceStockScheduler {scheduler.id}")
+    if not selected_lookup and service_item.service.type != "VOID":
+        logger.error(f"The Plan not have a resource linked to it for the ServiceStockScheduler {scheduler.id}")
         return
 
     consumable = Consumable(
@@ -177,11 +177,16 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
 
     scheduler.consumables.add(consumable)
 
-    key = list(selected_lookup.keys())[0]
-    id = selected_lookup[key].id
-    name = key.replace("selected_", "").replace("_", " ")
+    if selected_lookup:
 
-    logger.info(f"The consumable {consumable.id} for {name} {id} was built")
+        key = list(selected_lookup.keys())[0]
+        id = selected_lookup[key].id
+        name = key.replace("selected_", "").replace("_", " ")
+        logger.info(f"The consumable {consumable.id} for {name} {id} was built")
+
+    else:
+        logger.info(f"The consumable {consumable.id} was built")
+
     logger.info(f"The scheduler {scheduler.id} was renewed")
 
 
