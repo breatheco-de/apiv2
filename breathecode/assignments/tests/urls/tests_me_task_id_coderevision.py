@@ -252,7 +252,7 @@ def test__post__no_consumables(bc: Breathecode, client: APIClient, patch_post):
         },
         service={
             "type": "VOID",
-            "slug": "add_code_review",
+            "consumer": "ADD_CODE_REVIEW",
         },
     )
     client.force_authenticate(model.user)
@@ -290,7 +290,7 @@ def test__post__no_tasks(bc: Breathecode, client: APIClient, patch_post):
         app={"slug": "rigobot", "app_url": bc.fake.url()},
         service={
             "type": "VOID",
-            "slug": "add_code_review",
+            "consumer": "ADD_CODE_REVIEW",
         },
     )
     client.force_authenticate(model.user)
@@ -333,7 +333,7 @@ def test__post__no_github_accounts(bc: Breathecode, client: APIClient, patch_pos
         },
         service={
             "type": "VOID",
-            "slug": "add_code_review",
+            "consumer": "ADD_CODE_REVIEW",
         },
     )
     client.force_authenticate(model.user)
@@ -378,7 +378,7 @@ def test__post__auth(bc: Breathecode, client: APIClient, patch_post):
         consumable=1,
         service={
             "type": "VOID",
-            "slug": "add_code_review",
+            "consumer": "ADD_CODE_REVIEW",
         },
     )
     client.force_authenticate(model.user)
@@ -474,7 +474,7 @@ def test__post__auth__no_saas__finantial_status_no_late(
         consumable=1,
         service={
             "type": "VOID",
-            "slug": "add_code_review",
+            "consumer": "ADD_CODE_REVIEW",
         },
         academy=academy,
         cohort=cohort,
@@ -548,7 +548,7 @@ def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: AP
         consumable=1,
         service={
             "type": "VOID",
-            "slug": "add_code_review",
+            "slug": "ADD_CODE_REVIEW",
         },
         cohort_user=cohort_user,
         cohort=cohort,

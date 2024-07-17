@@ -198,7 +198,7 @@ class ProvisioningConsumptionEvent(models.Model):
     )
 
     def __str__(self):
-        return str(self.quantity) + " - " + self.task_associated_slug
+        return f"{self.quantity} - {self.task_associated_slug}"
 
 
 class ProvisioningUserConsumption(models.Model):
