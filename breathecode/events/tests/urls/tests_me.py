@@ -1,11 +1,10 @@
-import re
-from datetime import datetime
-from unittest.mock import MagicMock, call, patch
+from datetime import datetime, timedelta
+from unittest.mock import MagicMock, patch
 
 from django.urls.base import reverse_lazy
+from django.utils import timezone
 
 from breathecode.events.caches import EventCache
-from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 
 from ..mixins.new_events_tests_case import EventTestCase
 
@@ -148,7 +147,7 @@ def get_serializer(
 
 
 def extract_starting_at(d):
-    return datetime.strptime(str(d.starting_at), "%Y-%m-%d %H:%M:%S%z")
+    return d.starting_at.isoformat()
 
 
 class AcademyEventTestSuite(EventTestCase):
@@ -296,6 +295,292 @@ class AcademyEventTestSuite(EventTestCase):
                 get_serializer(self, event, model.event_type, model.user, model.academy[0], model.city)
                 for event in reversed(model.event)
             ]
+            expected = sorted(expected, key=lambda d: d["starting_at"])
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, 200)
+
+    """
+    🥆🥆🥆 Upcoming=true
+    """
+
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+    def test_upcoming_true__two_events__ends_in_the_past(self):
+        cases = [
+            (
+                {
+                    "academy_id": 1,
+                    "cohort_id": None,
+                    "syllabus_id": None,
+                },
+                {
+                    "academy_id": 1,
+                    "allow_shared_creation": False,
+                    "icon_url": "https://www.google.com",
+                },
+                {
+                    "academy_id": 1,
+                },
+            ),
+            (
+                {
+                    "academy_id": 4,
+                    "cohort_id": None,
+                    "syllabus_id": None,
+                },
+                {
+                    "academy_id": 3,
+                    "allow_shared_creation": True,
+                    "icon_url": "https://www.google.com",
+                },
+                {
+                    "academy_id": 4,
+                },
+            ),
+        ]
+        self.headers(academy=1)
+        url = reverse_lazy("events:me") + f"?upcoming=true"
+        for event_type_visibility_setting, event_type, cohort in cases:
+            model = self.bc.database.create(
+                user=1,
+                event=[
+                    {
+                        "starting_at": timezone.now() - timedelta(hours=2),
+                        "ending_at": timezone.now() - timedelta(hours=1),
+                    },
+                    {
+                        "starting_at": timezone.now() - timedelta(hours=3),
+                        "ending_at": timezone.now() - timedelta(hours=2),
+                    },
+                ],
+                event_kwargs={"status": "ACTIVE"},
+                event_type=event_type,
+                academy=2,
+                cohort=cohort,
+                cohort_user=1,
+                event_type_visibility_setting=event_type_visibility_setting,
+            )
+            self.client.force_authenticate(model.user)
+
+            response = self.client.get(url)
+            json = response.json()
+            ordered_events = sorted(model.event, key=extract_starting_at)
+            expected = []
+            expected = sorted(expected, key=lambda d: d["starting_at"])
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, 200)
+
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+    def test_upcoming_true__two_events__ends_in_the_future(self):
+        cases = [
+            (
+                {
+                    "academy_id": 1,
+                    "cohort_id": None,
+                    "syllabus_id": None,
+                },
+                {
+                    "academy_id": 1,
+                    "allow_shared_creation": False,
+                    "icon_url": "https://www.google.com",
+                },
+                {
+                    "academy_id": 1,
+                },
+            ),
+            (
+                {
+                    "academy_id": 4,
+                    "cohort_id": None,
+                    "syllabus_id": None,
+                },
+                {
+                    "academy_id": 3,
+                    "allow_shared_creation": True,
+                    "icon_url": "https://www.google.com",
+                },
+                {
+                    "academy_id": 4,
+                },
+            ),
+        ]
+        self.headers(academy=1)
+        url = reverse_lazy("events:me") + f"?upcoming=true"
+        for event_type_visibility_setting, event_type, cohort in cases:
+            model = self.bc.database.create(
+                user=1,
+                event=[
+                    {
+                        "starting_at": timezone.now() + timedelta(hours=1),
+                        "ending_at": timezone.now() + timedelta(hours=2),
+                    },
+                    {
+                        "starting_at": timezone.now() + timedelta(hours=2),
+                        "ending_at": timezone.now() + timedelta(hours=3),
+                    },
+                ],
+                event_kwargs={"status": "ACTIVE"},
+                event_type=event_type,
+                academy=2,
+                cohort=cohort,
+                cohort_user=1,
+                event_type_visibility_setting=event_type_visibility_setting,
+            )
+            self.client.force_authenticate(model.user)
+
+            response = self.client.get(url)
+            json = response.json()
+            ordered_events = sorted(model.event, key=extract_starting_at)
+            expected = [
+                get_serializer(self, event, model.event_type, model.user, model.academy[0], model.city)
+                for event in reversed(model.event)
+            ]
+            expected = sorted(expected, key=lambda d: d["starting_at"])
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, 200)
+
+    """
+    🥆🥆🥆 Past=true
+    """
+
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+    def test_past_true__two_events__ends_in_the_past(self):
+        cases = [
+            (
+                {
+                    "academy_id": 1,
+                    "cohort_id": None,
+                    "syllabus_id": None,
+                },
+                {
+                    "academy_id": 1,
+                    "allow_shared_creation": False,
+                    "icon_url": "https://www.google.com",
+                },
+                {
+                    "academy_id": 1,
+                },
+            ),
+            (
+                {
+                    "academy_id": 4,
+                    "cohort_id": None,
+                    "syllabus_id": None,
+                },
+                {
+                    "academy_id": 3,
+                    "allow_shared_creation": True,
+                    "icon_url": "https://www.google.com",
+                },
+                {
+                    "academy_id": 4,
+                },
+            ),
+        ]
+        self.headers(academy=1)
+        url = reverse_lazy("events:me") + f"?past=true"
+        for event_type_visibility_setting, event_type, cohort in cases:
+            model = self.bc.database.create(
+                user=1,
+                event=[
+                    {
+                        "starting_at": timezone.now() - timedelta(hours=2),
+                        "ending_at": timezone.now() - timedelta(hours=1),
+                    },
+                    {
+                        "starting_at": timezone.now() - timedelta(hours=3),
+                        "ending_at": timezone.now() - timedelta(hours=2),
+                    },
+                ],
+                event_kwargs={"status": "ACTIVE"},
+                event_type=event_type,
+                academy=2,
+                cohort=cohort,
+                cohort_user=1,
+                event_type_visibility_setting=event_type_visibility_setting,
+            )
+            self.client.force_authenticate(model.user)
+
+            response = self.client.get(url)
+            json = response.json()
+            ordered_events = sorted(model.event, key=extract_starting_at)
+            expected = [
+                get_serializer(self, event, model.event_type, model.user, model.academy[0], model.city)
+                for event in reversed(model.event)
+            ]
+            expected = sorted(expected, key=lambda d: d["starting_at"])
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, 200)
+
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+    def test_past_true__two_events__ends_in_the_future(self):
+        cases = [
+            (
+                {
+                    "academy_id": 1,
+                    "cohort_id": None,
+                    "syllabus_id": None,
+                },
+                {
+                    "academy_id": 1,
+                    "allow_shared_creation": False,
+                    "icon_url": "https://www.google.com",
+                },
+                {
+                    "academy_id": 1,
+                },
+            ),
+            (
+                {
+                    "academy_id": 4,
+                    "cohort_id": None,
+                    "syllabus_id": None,
+                },
+                {
+                    "academy_id": 3,
+                    "allow_shared_creation": True,
+                    "icon_url": "https://www.google.com",
+                },
+                {
+                    "academy_id": 4,
+                },
+            ),
+        ]
+        self.headers(academy=1)
+        url = reverse_lazy("events:me") + f"?past=true"
+        for event_type_visibility_setting, event_type, cohort in cases:
+            model = self.bc.database.create(
+                user=1,
+                event=[
+                    {
+                        "starting_at": timezone.now() + timedelta(hours=1),
+                        "ending_at": timezone.now() + timedelta(hours=2),
+                    },
+                    {
+                        "starting_at": timezone.now() + timedelta(hours=2),
+                        "ending_at": timezone.now() + timedelta(hours=3),
+                    },
+                ],
+                event_kwargs={"status": "ACTIVE"},
+                event_type=event_type,
+                academy=2,
+                cohort=cohort,
+                cohort_user=1,
+                event_type_visibility_setting=event_type_visibility_setting,
+            )
+            self.client.force_authenticate(model.user)
+
+            response = self.client.get(url)
+            json = response.json()
+            ordered_events = sorted(model.event, key=extract_starting_at)
+            expected = []
             expected = sorted(expected, key=lambda d: d["starting_at"])
 
             self.assertEqual(json, expected)

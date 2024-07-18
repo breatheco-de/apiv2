@@ -249,7 +249,7 @@ class EventMeView(APIView):
             serializer = EventBigSerializer(single_event, many=False)
             return Response(serializer.data)
 
-        items = Event.objects.filter(event_type__in=items, status="ACTIVE").order_by("starting_at")
+        items = Event.objects.filter(event_type__in=items, status="ACTIVE")
         lookup = {}
 
         online_event = self.request.GET.get("online_event", "")
@@ -258,6 +258,13 @@ class EventMeView(APIView):
         elif online_event == "false":
             lookup["online_event"] = False
 
+        if self.request.GET.get("upcoming", "") == "true":
+            lookup["ending_at__gte"] = timezone.now()
+
+        elif self.request.GET.get("past", "") == "true":
+            lookup["starting_at__lte"] = timezone.now()
+
+        items = items.order_by("starting_at")
         items = items.filter(**lookup)
         items = handler.queryset(items)
         serializer = EventBigSerializer(items, many=True)
