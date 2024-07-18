@@ -88,7 +88,7 @@ def redirect_new_container(request, token):
         return redirect(f"https://gitpod.io/#{url}")
     if vendor.name.lower() == "codespaces":
         url = url.replace("https://github.com/", "")
-        return redirect(f"https://codespaces.new/?repo={url}")
+        return redirect(f"https://github.com/codespaces/new/?repo={url}")
 
     return render_message(
         request,
@@ -105,14 +105,19 @@ def redirect_new_container_public(request):
     if repo is None:
         return render_message(request, "Please specify a repository in the URL")
 
-    urls = {"gitpod": "https://gitpod.io/#", "codespaces": "https://codespaces.new/?repo="}
+    urls = {"gitpod": "https://gitpod.io/#", "codespaces": "https://github.com/codespaces/new/?repo="}
+    get_urls = { "codespaces": lambda x: x.replace("https://github.com/", "") }
     vendors = request.GET.get("vendor", "codespaces,gitpod").split(",")
     buttons = []
     for v in vendors:
         if v not in urls:
             return render_message(request, f"Invalid provisioning vendor: {v}")
 
-        buttons.append({"label": f"Open in {v.capitalize()}", "url": (urls[v] + repo), "icon": f"/static/img/{v}.svg"})
+        buttons.append({
+            "label": f"Open in {v.capitalize()}", 
+            "url": (get_urls[v](urls[v]) if v in get_urls else urls[v] + repo), 
+            "icon": f"/static/img/{v}.svg"
+        })
 
     data = {
         # 'title': item.academy.name,

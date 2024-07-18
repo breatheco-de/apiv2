@@ -235,6 +235,7 @@ class HookManagerClass(object):
                 arguments: `hook` and `instance`.
         """
         try:
+            logger.debug("Testing hookmanager")
             if payload_override is None:
                 payload = hook.serialize_hook(instance)
             else:
