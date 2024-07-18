@@ -778,7 +778,7 @@ def process_asset_config(asset, config):
     if "videoSolutions" in config:
         asset.with_solutions = True
         asset.with_video = True
-        
+
     if "solution" in config:
         asset.with_solutions = True
         if isinstance(config["solution"], str):
@@ -790,7 +790,7 @@ def process_asset_config(asset, config):
                 if "en" in config["solution"]:
                     asset.solution_url = config["solution"]["en"]
             elif asset.lang in config["solution"]:
-                    asset.solution_url = config["solution"][asset.lang]
+                asset.solution_url = config["solution"][asset.lang]
 
     if "grading" not in config and ("projectType" not in config or config["projectType"] != "tutorial"):
         asset.interactive = False
@@ -814,8 +814,6 @@ def process_asset_config(asset, config):
                 elif technology.lang != asset.lang:
                     continue
             asset.technologies.add(technology)
-
-    
 
     if "delivery" in config:
         if "instructions" in config["delivery"]:

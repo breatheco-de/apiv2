@@ -159,12 +159,12 @@ class FormEntrySerializer(serpy.Serializer):
             processed_fields = {}
             for key, value in obj.custom_fields.items():
                 if isinstance(value, list):
-                    processed_fields[key] = ','.join(map(str, value))
+                    processed_fields[key] = ",".join(map(str, value))
                 else:
                     processed_fields[key] = value
             return processed_fields
         return {}
-    
+
 
 class FormEntryHookSerializer(serpy.Serializer):
     id = serpy.Field()
@@ -244,7 +244,7 @@ class FormEntryHookSerializer(serpy.Serializer):
             processed_fields = {}
             for key, value in obj.custom_fields.items():
                 if isinstance(value, list):
-                    processed_fields[key] = ','.join(map(str, value))
+                    processed_fields[key] = ",".join(map(str, value))
                 else:
                     processed_fields[key] = value
             return processed_fields
