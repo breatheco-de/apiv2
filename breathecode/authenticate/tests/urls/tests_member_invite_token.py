@@ -184,10 +184,12 @@ created_at = None
 
 
 @pytest.fixture(autouse=True)
-def setup(monkeypatch, utc_now):
+def setup(monkeypatch: pytest.MonkeyPatch, utc_now):
     global created_at
+
     created_at = utc_now
     monkeypatch.setattr("django.utils.timezone.now", MagicMock(return_value=utc_now))
+    monkeypatch.setattr("breathecode.authenticate.tasks.verify_user_invite_email.delay", MagicMock())
     yield
 
 

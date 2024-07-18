@@ -10,9 +10,10 @@ from breathecode.authenticate.models import UserInvite
 from breathecode.marketing.actions import validate_email
 from breathecode.notify import actions as notify_actions
 from breathecode.utils.decorators import TaskPriority
+from breathecode.utils.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 
-from .actions import add_to_organization, remove_from_organization, set_gitpod_user_expiration
+from .actions import add_to_organization, get_user_settings, remove_from_organization, set_gitpod_user_expiration
 
 API_URL = os.getenv("API_URL", "")
 
@@ -154,3 +155,37 @@ def create_user_from_invite(user_invite_id: int, **_):
             },
             academy=user_invite.academy,
         )
+
+
+@task(priority=TaskPriority.STUDENT.value)
+def verify_user_invite_email(user_invite_id: int, **_):
+    logger.info("Running create_user_from_invite task")
+
+    if not (user_invite := UserInvite.objects.filter(id=user_invite_id).first()):
+        raise AbortTask(f"User invite {user_invite_id} not found")
+
+    if user_invite.user is None:
+        raise AbortTask(f"User not found for user invite {user_invite_id}")
+
+    user = user_invite.user
+
+    if UserInvite.objects.filter(user=user_invite.user, is_email_validated=True).exists():
+        raise AbortTask(f"Email already validated for user {user.id}")
+
+    settings = get_user_settings(user.id)
+    subject = translation(
+        settings.lang,
+        en="4Geeks - Validate account",
+        es="4Geeks - Valida tu cuenta",
+    )
+
+    notify_actions.send_email_message(
+        "verify_email",
+        user.email,
+        {
+            "SUBJECT": subject,
+            "LANG": settings.lang,
+            "LINK": os.getenv("API_URL", "") + f"/v1/auth/password/{user_invite.token}",
+        },
+        academy=user_invite.academy,
+    )

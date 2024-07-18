@@ -9,10 +9,12 @@ from django.db import IntegrityError
 from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from task_manager.django.actions import schedule_task
 
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_app_url, get_user_settings
+from breathecode.authenticate.tasks import verify_user_invite_email
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
 from breathecode.utils import serpy, validate_conversion_info
@@ -1585,22 +1587,11 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
             settings.lang = lang
             settings.save()
 
-            subject = translation(
-                lang,
-                en="4Geeks - Validate account",
-                es="4Geeks - Valida tu cuenta",
-            )
+            args = (obj.id,)
 
-            notify_actions.send_email_message(
-                "verify_email",
-                self.user.email,
-                {
-                    "SUBJECT": subject,
-                    "LANG": lang,
-                    "LINK": os.getenv("API_URL", "") + f"/v1/auth/password/{obj.token}",
-                },
-                academy=obj.academy,
-            )
+            manager = schedule_task(verify_user_invite_email, "1d")
+            if not manager.exists(*args):
+                manager.call(*args)
 
         self.instance.user = self.user
         self.instance.save()
