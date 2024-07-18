@@ -152,8 +152,19 @@ class FormEntrySerializer(serpy.Serializer):
     academy = AcademySmallSerializer(required=False)
     client_comments = serpy.Field(required=False)
     created_at = serpy.Field()
-    custom_fields = serpy.Field()
+    custom_fields = serpy.MethodField(required=False)
 
+    def get_custom_fields(self, obj):
+        if isinstance(obj.custom_fields, dict):
+            processed_fields = {}
+            for key, value in obj.custom_fields.items():
+                if isinstance(value, list):
+                    processed_fields[key] = ','.join(map(str, value))
+                else:
+                    processed_fields[key] = value
+            return processed_fields
+        return {}
+    
 
 class FormEntryHookSerializer(serpy.Serializer):
     id = serpy.Field()
@@ -184,7 +195,6 @@ class FormEntryHookSerializer(serpy.Serializer):
     utm_placement = serpy.Field()
     utm_term = serpy.Field()
     utm_plan = serpy.Field()
-    custom_fields = serpy.Field()
     referral_key = serpy.Field()
     tags = serpy.Field()
     automations = serpy.Field()
@@ -217,6 +227,7 @@ class FormEntryHookSerializer(serpy.Serializer):
 
     cohort = serpy.MethodField(required=False)
     is_won = serpy.MethodField(required=False)
+    custom_fields = serpy.MethodField(required=False)
 
     def get_cohort(self, obj):
         _cohort = Cohort.objects.filter(slug=obj.ac_expected_cohort).first()
@@ -227,6 +238,17 @@ class FormEntryHookSerializer(serpy.Serializer):
 
     def get_is_won(self, obj):
         return obj.deal_status == "WON"
+
+    def get_custom_fields(self, obj):
+        if isinstance(obj.custom_fields, dict):
+            processed_fields = {}
+            for key, value in obj.custom_fields.items():
+                if isinstance(value, list):
+                    processed_fields[key] = ','.join(map(str, value))
+                else:
+                    processed_fields[key] = value
+            return processed_fields
+        return {}
 
 
 class FormEntrySmallSerializer(serpy.Serializer):

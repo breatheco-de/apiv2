@@ -925,7 +925,9 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
             email = user.email
             token, created = Token.get_or_create(user, token_type="temporal")
-            querystr = urllib.parse.urlencode({"callback": get_app_url(), "token": token})
+            querystr = urllib.parse.urlencode(
+                {"callback": get_app_url() + f"?utm_medium=academy&utm_source={academy.slug}", "token": token}
+            )
             url = os.getenv("API_URL") + "/v1/auth/academy/html/invite?" + querystr
 
             if "invite" in validated_data:

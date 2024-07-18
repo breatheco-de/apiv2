@@ -110,9 +110,7 @@ def validate_email(email, lang):
             )
         )
 
-    if ("is_mx_found" in data and data["is_mx_found"]["value"] == False) or (
-        "is_smtp_valid" in data and data["is_smtp_valid"]["value"] == False
-    ):
+    if ("is_mx_found" in data and data["is_mx_found"]["value"] == False):
         raise ValidationException(
             translation(
                 lang,
