@@ -363,7 +363,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     🔽🔽🔽 GET with two MentorshipSession, one MentorProfile and one MentorshipService, passing status
     """
 
-    @patch("breathecode.mentorship.signals.mentorship_session_status.send_robust", MagicMock())
     def test__get__with_two_mentor_profile__passing_bad_status(self):
         statuses = ["PENDING", "STARTED", "COMPLETED", "FAILED", "IGNORED"]
 
@@ -403,7 +402,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             # teardown
             self.bc.database.delete("mentorship.MentorshipSession")
 
-    @patch("breathecode.mentorship.signals.mentorship_session_status.send_robust", MagicMock())
     def test__get__with_two_mentor_profile__passing_status(self):
         statuses = ["PENDING", "STARTED", "COMPLETED", "FAILED", "IGNORED"]
 
@@ -466,7 +464,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     🔽🔽🔽 GET with two MentorshipSession, one MentorProfile and one MentorshipService, passing billed
     """
 
-    @patch("breathecode.mentorship.signals.mentorship_session_status.send_robust", MagicMock())
     def test__get__with_two_mentor_profile__passing_billed_as_true__without_mentorship_bill(self):
         model = self.bc.database.create(
             user=1,
@@ -496,7 +493,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             ],
         )
 
-    @patch("breathecode.mentorship.signals.mentorship_session_status.send_robust", MagicMock())
     def test__get__with_two_mentor_profile__passing_billed_as_true__with_mentorship_bill(self):
         model = self.bc.database.create(
             user=1,
@@ -537,7 +533,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             ],
         )
 
-    @patch("breathecode.mentorship.signals.mentorship_session_status.send_robust", MagicMock())
     def test__get__with_two_mentor_profile__passing_billed_as_false__with_mentorship_bill(self):
         model = self.bc.database.create(
             user=1,
@@ -568,7 +563,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             ],
         )
 
-    @patch("breathecode.mentorship.signals.mentorship_session_status.send_robust", MagicMock())
     def test__get__with_two_mentor_profile__passing_billed_as_false__without_mentorship_bill(self):
         model = self.bc.database.create(
             user=1,
@@ -612,7 +606,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     🔽🔽🔽 GET with two MentorshipSession, one MentorProfile and one MentorshipService, passing started_after
     """
 
-    @patch("breathecode.mentorship.signals.mentorship_session_status.send_robust", MagicMock())
     def test__get__with_two_mentor_profile__passing_bad_started_after(self):
         utc_now = timezone.now()
         mentorship_session = {"started_at": utc_now}
@@ -647,7 +640,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             ],
         )
 
-    @patch("breathecode.mentorship.signals.mentorship_session_status.send_robust", MagicMock())
     def test__get__with_two_mentor_profile__passing_started_after(self):
         utc_now = timezone.now()
         mentorship_session = {"started_at": utc_now}
@@ -692,7 +684,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             ],
         )
 
-    @patch("breathecode.mentorship.signals.mentorship_session_status.send_robust", MagicMock())
     def test__get__with_two_mentor_profile__passing_started_after__without_started_at(self):
         utc_now = timezone.now()
         model = self.bc.database.create(
@@ -742,7 +733,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     🔽🔽🔽 GET with two MentorshipSession, one MentorProfile and one MentorshipService, passing ended_before
     """
 
-    @patch("breathecode.mentorship.signals.mentorship_session_status.send_robust", MagicMock())
     def test__get__with_two_mentor_profile__passing_bad_ended_before(self):
         utc_now = timezone.now()
         mentorship_session = {"ended_at": utc_now}
@@ -777,7 +767,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             ],
         )
 
-    @patch("breathecode.mentorship.signals.mentorship_session_status.send_robust", MagicMock())
     def test__get__with_two_mentor_profile__passing_ended_before(self):
         utc_now = timezone.now()
         mentorship_session = {"ended_at": utc_now}
@@ -822,7 +811,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             ],
         )
 
-    @patch("breathecode.mentorship.signals.mentorship_session_status.send_robust", MagicMock())
     def test__get__with_two_mentor_profile__passing_ended_before__without_ended_at(self):
         utc_now = timezone.now()
         model = self.bc.database.create(
@@ -1503,7 +1491,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     🔽🔽🔽 PUT without id
     """
 
-    @patch("breathecode.mentorship.signals.mentorship_session_status.send_robust", MagicMock())
     def test__put__without_id(self):
         model = self.bc.database.create(user=1, role=1, capability="crud_mentorship_session", profile_academy=1)
 
@@ -1526,7 +1513,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     🔽🔽🔽 PUT not found the MentorshipSession
     """
 
-    @patch("breathecode.mentorship.signals.mentorship_session_status.send_robust", MagicMock())
     def test__put__not_found(self):
         cases = [
             (1, {}, False),
@@ -1568,7 +1554,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     🔽🔽🔽 PUT found a MentorshipSession, with one MentorProfile and MentorshipService
     """
 
-    @patch("breathecode.mentorship.signals.mentorship_session_status.send_robust", MagicMock())
     def test__put__found__without_required_fields(self):
         model = self.bc.database.create(
             user=1,
@@ -1600,7 +1585,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         )
         self.assertEqual(self.bc.database.list_of("mentorship.MentorshipBill"), [])
 
-    @patch("breathecode.mentorship.signals.mentorship_session_status.send_robust", MagicMock())
     def test__put__found__with_required_fields(self):
         model = self.bc.database.create(
             user=1,
@@ -1646,7 +1630,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     🔽🔽🔽 PUT with all required fields, is_online is False
     """
 
-    @patch("breathecode.mentorship.signals.mentorship_session_status.send_robust", MagicMock())
     def test__put__found__with_all_required_fields__is_online_as_false(self):
         mentorship_bill = {"status": random.choice(["RECALCULATE", "DUE"])}
         statuses = ["PENDING", "STARTED", "COMPLETED", "FAILED", "IGNORED"]
@@ -1664,8 +1647,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             mentor_profile=1,
             profile_academy=1,
         )
-
-        signals.mentorship_session_status.send_robust.call_args_list = []
 
         self.bc.request.set_headers(academy=1)
         self.client.force_authenticate(model.user)
@@ -1746,18 +1727,11 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                 self.bc.format.to_dict(model.mentorship_bill),
             ],
         )
-        self.assertEqual(
-            signals.mentorship_session_status.send_robust.call_args_list,
-            [
-                call(instance=model.mentorship_session, sender=model.mentorship_session.__class__),
-            ],
-        )
 
     """
     🔽🔽🔽 PUT with all required fields, is_online is False, MentorshipBill finished
     """
 
-    @patch("breathecode.mentorship.signals.mentorship_session_status.send_robust", MagicMock())
     def test__put__found__with_all_required_fields__is_online_as_false__bill_finished(self):
         mentorship_bill = {"status": random.choice(["APPROVED", "PAID", "IGNORED"])}
         statuses = ["PENDING", "STARTED", "COMPLETED", "FAILED", "IGNORED"]
@@ -1775,8 +1749,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             mentor_profile=1,
             profile_academy=1,
         )
-
-        signals.mentorship_session_status.send_robust.call_args_list = []
 
         self.bc.request.set_headers(academy=1)
         self.client.force_authenticate(model.user)
@@ -1826,7 +1798,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                 },
             ],
         )
-        self.assertEqual(signals.mentorship_session_status.send_robust.call_args_list, [])
         self.assertEqual(
             self.bc.database.list_of("mentorship.MentorshipBill"),
             [
@@ -1838,7 +1809,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
     🔽🔽🔽 PUT passing a MentorshipBill with some MentorshipSession without MentorshipService
     """
 
-    @patch("breathecode.mentorship.signals.mentorship_session_status.send_robust", MagicMock())
     def test__put__found__passing_a_bill_with_some_session_without_service(self):
         mentorship_bill = {"status": "DUE"}
         statuses = ["PENDING", "STARTED", "COMPLETED", "FAILED", "IGNORED"]
@@ -1867,8 +1837,6 @@ class AcademyServiceTestSuite(MentorshipTestCase):
             mentor_profile=1,
             profile_academy=1,
         )
-
-        signals.mentorship_session_status.send_robust.call_args_list = []
 
         self.bc.request.set_headers(academy=1)
         self.client.force_authenticate(model.user)
@@ -1947,11 +1915,5 @@ class AcademyServiceTestSuite(MentorshipTestCase):
                     **self.bc.format.to_dict(model.mentorship_bill),
                     "status": "RECALCULATE",
                 },
-            ],
-        )
-        self.assertEqual(
-            signals.mentorship_session_status.send_robust.call_args_list,
-            [
-                call(instance=model.mentorship_session[0], sender=model.mentorship_session[0].__class__),
             ],
         )

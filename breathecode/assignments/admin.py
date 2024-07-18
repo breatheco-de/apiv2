@@ -10,7 +10,17 @@ from breathecode.authenticate.models import Token
 from breathecode.services.learnpack import LearnPack
 
 from .actions import sync_student_tasks
-from .models import AssignmentTelemetry, CohortProxy, FinalProject, LearnPackWebhook, Task, UserAttachment, UserProxy
+from .models import (
+    AssignmentTelemetry,
+    CohortProxy,
+    FinalProject,
+    LearnPackWebhook,
+    RepositoryDeletionOrder,
+    RepositoryWhiteList,
+    Task,
+    UserAttachment,
+    UserProxy,
+)
 
 # Register your models here.
 logger = logging.getLogger(__name__)
@@ -125,7 +135,6 @@ def async_process_hook(modeladmin, request, queryset):
 def process_hook(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
     for hook in queryset.all().order_by("created_at"):
-        print(f"Procesing hook: {hook.id}")
         client = LearnPack()
         try:
             client.execute_action(hook.id)
@@ -166,3 +175,17 @@ class LearnPackWebhookAdmin(admin.ModelAdmin):
             return ""
 
         return format_html(f"<div><span class='badge'>{obj.status}</span></div><small>{obj.status_text}</small>")
+
+
+@admin.register(RepositoryDeletionOrder)
+class RepositoryDeletionOrderAdmin(admin.ModelAdmin):
+    list_display = ("provider", "status", "repository_user", "repository_name")
+    search_fields = ["repository_user", "repository_name"]
+    list_filter = ["provider", "status"]
+
+
+@admin.register(RepositoryWhiteList)
+class RepositoryWhiteListAdmin(admin.ModelAdmin):
+    list_display = ("provider", "repository_user", "repository_name")
+    search_fields = ["repository_user", "repository_name"]
+    list_filter = ["provider"]

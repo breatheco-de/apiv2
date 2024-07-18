@@ -154,7 +154,7 @@ class AcademyEventTestSuite(EventTestCase):
     @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     @patch("breathecode.payments.tasks.end_the_consumption_session.apply_async", MagicMock(return_value=None))
     def test_no_consumables__bypass_with_feature_flag__live_class_not_found(self):
-        service = {"slug": "live_class_join"}
+        service = {"consumer": "LIVE_CLASS_JOIN"}
         model = self.bc.database.create(user=1, group=1, service=service, token=1)
         querystring = self.bc.format.to_querystring({"token": model.token.key})
 
@@ -190,7 +190,7 @@ class AcademyEventTestSuite(EventTestCase):
     @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     @patch("breathecode.payments.tasks.end_the_consumption_session.apply_async", MagicMock(return_value=None))
     def test_no_consumables__bypass_with_feature_flag__with_live_class__cohort_without_url(self):
-        service = {"slug": "live_class_join"}
+        service = {"consumer": "LIVE_CLASS_JOIN"}
         delta = timedelta(seconds=random.randint(1, 1000))
         live_class = {"starting_at": UTC_NOW - delta, "ending_at": UTC_NOW + delta}
         model = self.bc.database.create(user=1, group=1, service=service, live_class=live_class, cohort_user=1, token=1)
@@ -236,7 +236,7 @@ class AcademyEventTestSuite(EventTestCase):
     @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     @patch("breathecode.payments.tasks.end_the_consumption_session.apply_async", MagicMock(return_value=None))
     def test_no_consumables__bypass_with_feature_flag__with_live_class__cohort_with_url(self):
-        service = {"slug": "live_class_join"}
+        service = {"consumer": "LIVE_CLASS_JOIN"}
         online_meeting_url = self.bc.fake.url()
         cohort = {"online_meeting_url": online_meeting_url}
         delta = timedelta(seconds=random.randint(1, 1000))
@@ -287,7 +287,7 @@ class AcademyEventTestSuite(EventTestCase):
     @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     @patch("breathecode.payments.tasks.end_the_consumption_session.apply_async", MagicMock(return_value=None))
     def test_no_consumables__it_try_to_consume__live_class_not_found(self):
-        service = {"slug": "live_class_join"}
+        service = {"consumer": "LIVE_CLASS_JOIN"}
         model = self.bc.database.create(user=1, group=1, service=service, token=1)
         querystring = self.bc.format.to_querystring({"token": model.token.key})
 
@@ -323,7 +323,7 @@ class AcademyEventTestSuite(EventTestCase):
     @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     @patch("breathecode.payments.tasks.end_the_consumption_session.apply_async", MagicMock(return_value=None))
     def test_no_consumables__it_try_to_consume__with_live_class__cohort_without_url(self):
-        service = {"slug": "live_class_join"}
+        service = {"consumer": "LIVE_CLASS_JOIN"}
         delta = timedelta(seconds=random.randint(1, 1000))
         live_class = {"starting_at": UTC_NOW - delta, "ending_at": UTC_NOW + delta}
         model = self.bc.database.create(
@@ -371,7 +371,7 @@ class AcademyEventTestSuite(EventTestCase):
     @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     @patch("breathecode.payments.tasks.end_the_consumption_session.apply_async", MagicMock(return_value=None))
     def test_no_consumables__it_try_to_consume__with_live_class__cohort_with_url(self):
-        service = {"slug": "live_class_join"}
+        service = {"consumer": "LIVE_CLASS_JOIN"}
         online_meeting_url = self.bc.fake.url()
         cohort = {"online_meeting_url": online_meeting_url, "available_as_saas": True}
         delta = timedelta(seconds=random.randint(1, 1000))
@@ -425,7 +425,7 @@ class AcademyEventTestSuite(EventTestCase):
     @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     @patch("breathecode.payments.tasks.end_the_consumption_session.apply_async", MagicMock(return_value=None))
     def test_with_consumable__it_try_to_consume__with_live_class__in_the_past(self):
-        service = {"slug": "live_class_join"}
+        service = {"consumer": "LIVE_CLASS_JOIN"}
         online_meeting_url = self.bc.fake.url()
         cohort = {"online_meeting_url": online_meeting_url}
         delta = timedelta(seconds=random.randint(1, 1000))
@@ -481,7 +481,7 @@ class AcademyEventTestSuite(EventTestCase):
     @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     @patch("breathecode.payments.tasks.end_the_consumption_session.apply_async", MagicMock(return_value=None))
     def test_with_consumable__it_try_to_consume__with_live_class__in_the_future(self):
-        service = {"slug": "live_class_join"}
+        service = {"consumer": "LIVE_CLASS_JOIN"}
         online_meeting_url = self.bc.fake.url()
         cohort = {"online_meeting_url": online_meeting_url, "available_as_saas": True}
         delta = timedelta(seconds=random.randint(1, 1000))
@@ -571,7 +571,7 @@ class AcademyEventTestSuite(EventTestCase):
     @patch("breathecode.payments.tasks.end_the_consumption_session.apply_async", MagicMock(return_value=None))
     def test_with_consumable__it_try_to_consume__with_live_class__in_the_future__show_countdown(self):
 
-        service = {"slug": "live_class_join"}
+        service = {"consumer": "LIVE_CLASS_JOIN"}
         online_meeting_url = self.bc.fake.url()
         cohort = {"online_meeting_url": online_meeting_url, "available_as_saas": True}
         delta = timedelta(seconds=random.randint(1, 1000))
@@ -661,7 +661,7 @@ class AcademyEventTestSuite(EventTestCase):
     @patch("breathecode.events.tasks.mark_live_class_as_started.delay", MagicMock(return_value=None))
     def test_with_consumable__it_try_to_consume__with_live_class__on_starting_time(self):
 
-        service = {"slug": "live_class_join"}
+        service = {"consumer": "LIVE_CLASS_JOIN"}
         online_meeting_url = self.bc.fake.url()
         cohort = {"online_meeting_url": online_meeting_url, "available_as_saas": True}
         delta = timedelta(seconds=random.randint(1, 1000))
@@ -741,7 +741,7 @@ class AcademyEventTestSuite(EventTestCase):
     @patch("breathecode.events.tasks.mark_live_class_as_started.delay", MagicMock(return_value=None))
     def test_with_consumable__it_try_to_consume__with_live_class__on_starting_time_is_teacher(self):
 
-        service = {"slug": "live_class_join"}
+        service = {"consumer": "LIVE_CLASS_JOIN"}
         online_meeting_url = self.bc.fake.url()
         cohort = {"online_meeting_url": online_meeting_url, "available_as_saas": True}
         delta = timedelta(seconds=random.randint(1, 1000))

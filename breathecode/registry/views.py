@@ -1192,7 +1192,7 @@ class V2AcademyAssetView(APIView):
     extensions = APIViewExtensions(cache=AssetCache, sort="-published_at", paginate=True)
 
     @capable_of("read_asset")
-    @consume("read-lesson", consumer=asset_by_slug)
+    @consume("read_lesson", consumer=asset_by_slug)
     def get(self, request, asset: Asset, academy: Academy):
         serializer = AcademyAssetSerializer(asset)
         return Response(serializer.data)
