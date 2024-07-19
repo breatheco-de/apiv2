@@ -679,6 +679,57 @@ def filter_consumables(
     return queryset
 
 
+def filter_void_consumable_balance(request: WSGIRequest, items: QuerySet[Consumable]):
+    consumables = items.filter(service_item__service__type="VOID")
+
+    if ids := request.GET.get("service"):
+        try:
+            ids = [int(x) for x in ids.split(",")]
+        except Exception:
+            raise ValidationException("service param must be integer")
+
+        consumables = consumables.filter(service_item__service__id__in=ids)
+
+    if slugs := request.GET.get("service_slug"):
+        slugs = slugs.split(",")
+
+        consumables = consumables.filter(service_item__service__slug__in=slugs)
+
+    if not consumables:
+        return []
+
+    result = {}
+
+    for consumable in consumables:
+        service = consumable.service_item.service
+        if service.id not in result:
+            result[service.id] = {
+                "balance": {
+                    "unit": 0,
+                },
+                "id": service.id,
+                "slug": service.slug,
+                "items": [],
+            }
+
+        if consumable.how_many <= 0:
+            result[service.id]["balance"]["unit"] = -1
+
+        elif result[service.id]["balance"]["unit"] != -1:
+            result[service.id]["balance"]["unit"] += consumable.how_many
+
+        result[service.id]["items"].append(
+            {
+                "id": consumable.id,
+                "how_many": consumable.how_many,
+                "unit_type": consumable.unit_type,
+                "valid_until": consumable.valid_until,
+            }
+        )
+
+    return result.values()
+
+
 def get_balance_by_resource(queryset: QuerySet, key: str):
     result = []
 

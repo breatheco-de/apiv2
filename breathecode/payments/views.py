@@ -21,6 +21,7 @@ from breathecode.payments.actions import (
     PlanFinder,
     add_items_to_bag,
     filter_consumables,
+    filter_void_consumable_balance,
     get_amount,
     get_amount_by_chosen_period,
     get_available_coupons,
@@ -41,13 +42,13 @@ from breathecode.payments.models import (
     FinancialReputation,
     Invoice,
     MentorshipServiceSet,
+    PaymentMethod,
     Plan,
     PlanFinancing,
     PlanOffer,
     Service,
     ServiceItem,
     Subscription,
-    PaymentMethod,
 )
 from breathecode.payments.serializers import (
     GetAcademyServiceSmallSerializer,
@@ -59,6 +60,7 @@ from breathecode.payments.serializers import (
     GetInvoiceSmallSerializer,
     GetMentorshipServiceSetSerializer,
     GetMentorshipServiceSetSmallSerializer,
+    GetPaymentMethod,
     GetPlanFinancingSerializer,
     GetPlanOfferSerializer,
     GetPlanSerializer,
@@ -69,7 +71,6 @@ from breathecode.payments.serializers import (
     POSTAcademyServiceSerializer,
     PUTAcademyServiceSerializer,
     ServiceSerializer,
-    GetPaymentMethod,
 )
 from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import reimburse_service_units
@@ -597,6 +598,7 @@ class MeConsumableView(APIView):
             "mentorship_service_sets": get_balance_by_resource(mentorship_services, "mentorship_service_set"),
             "cohort_sets": get_balance_by_resource(cohorts, "cohort_set"),
             "event_type_sets": get_balance_by_resource(event_types, "event_type_set"),
+            "voids": filter_void_consumable_balance(request, items),
         }
 
         return Response(balance)
