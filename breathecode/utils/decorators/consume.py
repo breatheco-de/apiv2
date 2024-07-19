@@ -152,12 +152,10 @@ def render_html_error(request, kwargs, service, e):
         renovate_consumables["btn_label"] = "Get more consumables"
         if service == "join_mentorship":
             renovate_consumables["btn_url"] = (
-                f"https://4geeks.com/checkout?mentorship_service_set={mentorship_service_set}&token={token}"
+                f"https://4geeks.com/checkout/mentorship/{mentorship_service_set}?token={token}"
             )
         elif service == "event_join":
-            renovate_consumables["btn_url"] = (
-                f"https://4geeks.com/checkout?event_type_set={event_type_set}&token={token}"
-            )
+            renovate_consumables["btn_url"] = f"https://4geeks.com/checkout/event/{event_type_set}?token={token}"
     else:
         if service == "join_mentorship" or service == "event_join":
             e = "You must get a plan in order to access this service"
