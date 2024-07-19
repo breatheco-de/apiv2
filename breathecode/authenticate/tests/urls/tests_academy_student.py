@@ -1084,7 +1084,18 @@ class StudentPostTestSuite(AuthTestCase):
         )
 
         token = self.bc.database.get("authenticate.Token", 1, dict=False)
-        querystr = urllib.parse.urlencode({"callback": os.getenv("APP_URL", "")[:-1], "token": token})
+        querystr = urllib.parse.urlencode(
+            {
+                "callback": os.getenv("APP_URL", "")[:-1]
+                + f'?{urllib.parse.urlencode(
+            {
+                "utm_medium": "academy",
+                "utm_source": model.academy.slug,
+            }
+        )}',
+                "token": token,
+            }
+        )
         url = os.getenv("API_URL") + "/v1/auth/academy/html/invite?" + querystr
 
         self.assertEqual(self.bc.database.list_of("authenticate.UserInvite"), [])
@@ -1181,7 +1192,18 @@ class StudentPostTestSuite(AuthTestCase):
         )
 
         token = self.bc.database.get("authenticate.Token", 1, dict=False)
-        querystr = urllib.parse.urlencode({"callback": os.getenv("APP_URL", "")[:-1], "token": token})
+        querystr = urllib.parse.urlencode(
+            {
+                "callback": os.getenv("APP_URL", "")[:-1]
+                + f'?{urllib.parse.urlencode(
+            {
+                "utm_medium": "academy",
+                "utm_source": model.academy.slug,
+            }
+        )}',
+                "token": token,
+            }
+        )
         url = os.getenv("API_URL") + "/v1/auth/academy/html/invite?" + querystr
 
         self.assertEqual(self.bc.database.list_of("authenticate.UserInvite"), [])

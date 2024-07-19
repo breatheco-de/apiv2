@@ -3,10 +3,6 @@
 
 name: Check
 
-on:
-  push: {}
-  pull_request: {}
-
 env:
   PYTHON_VERSION: 3.12.3
   PYTHONUNBUFFERED: 1
@@ -104,6 +100,8 @@ jobs:
   dependencies:
     needs: cache
     runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'push' || github.event_name == 'pull_request'
 
     steps:
       - uses: actions/checkout@v3
@@ -150,6 +148,8 @@ jobs:
     needs: cache
     runs-on: ubuntu-latest
     continue-on-error: true
+    if: >-
+      github.event_name == 'push' || github.event_name == 'pull_request'
 
     steps:
       - uses: actions/checkout@v3
@@ -252,6 +252,8 @@ jobs:
     needs: cache
     runs-on: ubuntu-latest
     continue-on-error: true
+    if: >-
+      github.event_name == 'push' || github.event_name == 'pull_request'
 
     steps:
       - uses: actions/checkout@v3
@@ -286,6 +288,8 @@ jobs:
     needs: cache
     runs-on: ubuntu-latest
     continue-on-error: true
+    if: >-
+      github.event_name == 'push' || github.event_name == 'pull_request'
 
     steps:
       - uses: actions/checkout@v3
@@ -319,6 +323,8 @@ jobs:
   tests:
     needs: [migrations]
     runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'push' || github.event_name == 'pull_request'
 
     steps:
       - name: Checkout code
@@ -373,6 +379,8 @@ jobs:
     needs: [migrations]
     runs-on: ubuntu-latest
     continue-on-error: true
+    if: >-
+      github.event_name == 'push' || github.event_name == 'pull_request'
 
     steps:
       - name: Checkout code
