@@ -23,6 +23,8 @@ def get_serializer(bc: Breathecode, asset, asset_category=None, data={}):
     return {
         "assessment": asset.assessment,
         "asset_type": asset.asset_type,
+        "enable_table_of_content": asset.enable_table_of_content,
+        "interactive": asset.interactive,
         "author": asset.author,
         "authors_username": None,
         "category": get_asset_category(asset_category) if asset_category else None,
@@ -131,7 +133,7 @@ def test_no_consumables(bc: Breathecode, client: APIClient):
 def test_no_asset(bc: Breathecode, client: APIClient):
     """Test /certificate without auth"""
     model = bc.database.create(
-        user=1, profile_academy=1, role=1, capability="read_asset", service={"slug": "read-lesson"}, consumable=1
+        user=1, profile_academy=1, role=1, capability="read_asset", service={"consumer": "READ_LESSON"}, consumable=1
     )
     client.force_authenticate(user=model.user)
     url = reverse_lazy("v2:registry:academy_asset_slug", kwargs={"asset_slug": "model_slug"})
@@ -155,7 +157,7 @@ def test_with_asset(bc: Breathecode, client: APIClient):
         profile_academy=1,
         role=1,
         capability="read_asset",
-        service={"slug": "read-lesson"},
+        service={"consumer": "READ_LESSON"},
         consumable=1,
         asset=1,
         asset_category=1,
@@ -219,7 +221,7 @@ def test_with_asset__no_saas__finantial_status_no_late(
         profile_academy=1,
         role=1,
         capability="read_asset",
-        service={"slug": "read-lesson"},
+        service={"consumer": "READ_LESSON"},
         consumable=1,
         asset=1,
         asset_category=1,
@@ -264,7 +266,7 @@ def test_with_asset__no_saas__finantial_status_late(bc: Breathecode, client: API
         profile_academy=1,
         role=1,
         capability="read_asset",
-        service={"slug": "read-lesson"},
+        service={"consumer": "READ_LESSON"},
         consumable=1,
         asset={"slug": slug},
         syllabus_version={

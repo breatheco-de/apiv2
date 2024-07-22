@@ -5,7 +5,6 @@ name: Check
 
 on:
   push: {}
-  pull_request: {}
 
 env:
   PYTHON_VERSION: 3.12.3
@@ -351,15 +350,16 @@ jobs:
         run: |
           pipenv run pcov_ci
 
-      - uses: codecov/codecov-action@v3
-        if: ${{ github.event_name == 'pull_request' || github.repository == 'breatheco-de/apiv2' }}
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-          files: ./coverage.xml # optional
-          flags: unittests # optional
-          name: codecov-umbrella # optional
-          fail_ci_if_error: true # optional (default = false)
-          verbose: true # optional (default = false)
+      # codecov stop working
+      # - uses: codecov/codecov-action@v3
+      #   if: ${{ github.event_name == 'pull_request' || github.repository == 'breatheco-de/apiv2' }}
+      #   with:
+      #     token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+      #     files: ./coverage.xml # optional
+      #     flags: unittests # optional
+      #     name: codecov-umbrella # optional
+      #     fail_ci_if_error: true # optional (default = false)
+      #     verbose: true # optional (default = false)
 
       - name: Upload coverage data to coveralls.io
         if: ${{ github.event_name == 'pull_request' || github.repository == 'breatheco-de/apiv2' }}

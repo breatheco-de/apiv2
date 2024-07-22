@@ -161,6 +161,14 @@ class Service(AbstractAsset):
         EVENT_TYPE_SET = ("EVENT_TYPE_SET", "Event type set")
         VOID = ("VOID", "Void")
 
+    class Consumer(models.TextChoices):
+        ADD_CODE_REVIEW = ("ADD_CODE_REVIEW", "Add code review")
+        LIVE_CLASS_JOIN = ("LIVE_CLASS_JOIN", "Live class join")
+        EVENT_JOIN = ("EVENT_JOIN", "Event join")
+        JOIN_MENTORSHIP = ("JOIN_MENTORSHIP", "Join mentorship")
+        READ_LESSON = ("READ_LESSON", "Read lesson")
+        NO_SET = ("NO_SET", "No set")
+
     groups = models.ManyToManyField(
         Group, blank=True, help_text="Groups that can access the customer that bought this service"
     )
@@ -169,6 +177,7 @@ class Service(AbstractAsset):
         default=None, null=True, blank=True, help_text="Session duration, used in consumption sessions"
     )
     type = models.CharField(max_length=22, choices=Type, default=Type.COHORT_SET, help_text="Service type")
+    consumer = models.CharField(max_length=15, choices=Consumer, default=Consumer.NO_SET, help_text="Service type")
 
     def __str__(self):
         return self.slug
@@ -1301,7 +1310,10 @@ class Consumable(AbstractServiceItem):
 
         # Service
         if service and isinstance(service, str) and not service.isdigit():
-            param["service_item__service__slug"] = service
+            if "_" in service:
+                param["service_item__service__consumer"] = service.upper()
+            else:
+                param["service_item__service__slug"] = service
 
         elif service and isinstance(service, str) and service.isdigit():
             param["service_item__service__id"] = int(service)

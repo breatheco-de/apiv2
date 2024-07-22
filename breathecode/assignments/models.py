@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models import Q
 
 from breathecode.admissions.models import Cohort
 
@@ -228,3 +229,56 @@ class LearnPackWebhook(models.Model):
 
     # def __str__(self):
     #     return f'Learnpack event {self.event} {self.status} => Student: {self.student.id}'
+
+
+class Provider(models.TextChoices):
+    GITHUB = "GITHUB", "GitHub"
+
+
+class RepositoryDeletionOrder(models.Model):
+    Provider = Provider
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        ERROR = "ERROR", "Error"
+        DELETED = "DELETED", "Deleted"
+        CANCELLED = "CANCELLED", "Cancelled"
+
+    provider = models.CharField(max_length=15, choices=Provider, default=Provider.GITHUB)
+    status = models.CharField(max_length=15, choices=Status, default=Status.PENDING)
+    status_text = models.TextField(default=None, null=True, blank=True)
+
+    repository_user = models.CharField(max_length=100)
+    repository_name = models.CharField(max_length=100)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    # def __str__(self):
+    #     return f'Learnpack event {self.event} {self.status} => Student: {self.student.id}'
+
+
+class RepositoryWhiteList(models.Model):
+    Provider = Provider
+
+    provider = models.CharField(max_length=15, choices=Provider, default=Provider.GITHUB)
+    repository_user = models.CharField(max_length=100)
+    repository_name = models.CharField(max_length=100)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+        RepositoryDeletionOrder.objects.filter(
+            provider=self.provider,
+            repository_user__iexact=self.repository_user,
+            repository_name__iexact=self.repository_name,
+        ).exclude(
+            Q(status=RepositoryDeletionOrder.Status.DELETED) | Q(status=RepositoryDeletionOrder.Status.CANCELLED)
+        ).delete()

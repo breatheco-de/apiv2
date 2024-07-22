@@ -441,15 +441,13 @@ class GetThresholdView(APIView):
             lookup["academy__isnull"] = True
 
         items = items.filter(**lookup)
-        
+
         if "tag" in self.request.GET:
             param = self.request.GET.get("tag")
             if param != "all":
                 items = items.filter(tags__icontains=param)
         else:
-            items = items.filter(
-                Q(tags__isnull=True) | Q(tags="")
-            )
+            items = items.filter(Q(tags__isnull=True) | Q(tags=""))
 
         items = items.order_by("-created_at")
 

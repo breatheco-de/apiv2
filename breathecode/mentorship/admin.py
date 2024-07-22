@@ -1,26 +1,41 @@
-import pytz, logging, requests, re
-from django.contrib import admin, messages
+import logging
+import re
+
+import pytz
+import requests
 from django import forms
+from django.contrib import admin, messages
+from django.contrib.admin import SimpleListFilter
+from django.utils.html import format_html
+
+import breathecode.mentorship.actions as actions
+import breathecode.mentorship.tasks as tasks
+from breathecode.services.calendly import Calendly
+from breathecode.utils.admin import change_field
+
 from .models import (
-    MentorProfile,
-    MentorshipService,
-    MentorshipSession,
-    MentorshipBill,
-    SupportAgent,
-    SupportChannel,
-    ChatBot,
+    AcademyMentorshipSettings,
     CalendlyOrganization,
     CalendlyWebhook,
+    ChatBot,
+    MentorProfile,
+    MentorshipBill,
+    MentorshipService,
+    MentorshipSession,
+    SupportAgent,
+    SupportChannel,
 )
-from breathecode.services.calendly import Calendly
-from django.utils.html import format_html
-import breathecode.mentorship.tasks as tasks
-from breathecode.utils.admin import change_field
-from django.contrib.admin import SimpleListFilter
-import breathecode.mentorship.actions as actions
 
 timezones = [(x, x) for x in pytz.common_timezones]
 logger = logging.getLogger(__name__)
+
+
+def use_google_meet(modeladmin, request, queryset):
+    queryset.update(video_provider="GOOGLE_MEET")
+
+
+def use_daily(modeladmin, request, queryset):
+    queryset.update(video_provider="DAILY")
 
 
 @admin.register(MentorshipService)
@@ -28,11 +43,7 @@ class ServiceAdmin(admin.ModelAdmin):
     list_display = ["slug", "name", "status", "academy"]
     search_fields = ["slug", "name"]
     list_filter = ["academy__slug", "status"]
-    # raw_id_fields = ['academy', 'github_user']
-    # actions = [sync_issues, generate_bill]
-
-    # def full_name(self, obj):
-    #     return obj.user.first_name + ' ' + obj.user.last_name
+    actions = [use_google_meet, use_daily]
 
 
 class MentorForm(forms.ModelForm):
@@ -339,3 +350,19 @@ class CalendlyWebhookAdmin(admin.ModelAdmin):
     list_filter = ["organization", "status", "event"]
     search_fields = ["organization__username"]
     actions = [reattempt_calendly_webhook]
+
+
+@admin.register(AcademyMentorshipSettings)
+class AcademyMentorshipSettingsAdmin(admin.ModelAdmin):
+    list_display = (
+        "academy",
+        "duration",
+        "max_duration",
+        "missed_meeting_duration",
+        "language",
+        "allow_mentee_to_extend",
+        "allow_mentors_to_extend",
+        "video_provider",
+    )
+    list_filter = ["academy", "language", "allow_mentee_to_extend", "allow_mentors_to_extend", "video_provider"]
+    actions = [use_google_meet, use_daily]

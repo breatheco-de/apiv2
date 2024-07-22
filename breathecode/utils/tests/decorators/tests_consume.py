@@ -22,8 +22,7 @@ from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 from breathecode.utils.decorators import ServiceContext
 from capyc.rest_framework import pytest as capy
 
-SERVICE = "can_kill_kenny"
-PERMISSION = "can_kill_kenny"
+SERVICE = random.choice([value for value, _ in models.Service.Consumer.choices])
 UTC_NOW = timezone.now()
 
 
@@ -43,10 +42,10 @@ def setup(db, monkeypatch: pytest.MonkeyPatch) -> None:
 def consumer(context: ServiceContext, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
     # remember the objects are passed by reference, so you need to clone them to avoid modify the object
     # receive by the mock causing side effects
-    args = (*args, PERMISSION)
+    args = (*args, SERVICE)
     kwargs = {
         **kwargs,
-        "permission": PERMISSION,
+        "permission": SERVICE,
     }
     context = {
         **context,
@@ -64,10 +63,10 @@ time_of_life = timedelta(days=random.randint(1, 100))
 def consumer_with_time_of_life(context: ServiceContext, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
     # remember the objects are passed by reference, so you need to clone them to avoid modify the object
     # receive by the mock causing side effects
-    args = (*args, PERMISSION)
+    args = (*args, SERVICE)
     kwargs = {
         **kwargs,
-        "permission": PERMISSION,
+        "permission": SERVICE,
     }
     context = {
         **context,
@@ -346,7 +345,7 @@ class TestNoConsumer:
         self, bc: Breathecode, make_view_all_cases
     ):
         user = {"user_permissions": []}
-        services = [{}, {"slug": PERMISSION}]
+        services = [{}, {"consumer": SERVICE.upper()}]
 
         model = await bc.database.acreate(user=user, service=services, service_item={"service_id": 2})
         view, _, _, _ = await make_view_all_cases(user=model.user, decorator_params={}, url_params={})
@@ -372,7 +371,7 @@ class TestNoConsumer:
         self, bc: Breathecode, make_view_all_cases
     ):
         user = {"user_permissions": []}
-        services = [{}, {"slug": PERMISSION}]
+        services = [{}, {"consumer": SERVICE.upper()}]
 
         consumable = {"how_many": -1}
         model = await bc.database.acreate(
@@ -403,7 +402,7 @@ class TestNoConsumer:
         self, bc: Breathecode, make_view_all_cases
     ):
         user = {"user_permissions": []}
-        services = [{}, {"slug": PERMISSION}]
+        services = [{}, {"consumer": SERVICE.upper()}]
 
         consumable = {"how_many": 0}
         model = await bc.database.acreate(
@@ -433,7 +432,7 @@ class TestNoConsumer:
         self, bc: Breathecode, make_view_all_cases
     ):
         user = {"user_permissions": []}
-        services = [{}, {"slug": PERMISSION}]
+        services = [{}, {"consumer": SERVICE.upper()}]
 
         consumable = {"how_many": random.randint(1, 100)}
         model = await bc.database.acreate(
@@ -464,7 +463,7 @@ class TestNoConsumer:
         self, bc: Breathecode, make_view_all_cases
     ):
         user = {"user_permissions": []}
-        services = [{}, {"slug": PERMISSION}]
+        services = [{}, {"consumer": SERVICE.upper()}]
         group = {"permission_id": 2, "name": "secret"}
         consumable = {"how_many": 1}
         model = await bc.database.acreate(
@@ -562,7 +561,7 @@ class TestConsumer:
         self, bc: Breathecode, make_view_consumer_cases, partial_equality
     ):
         user = {"user_permissions": []}
-        services = [{}, {"slug": PERMISSION}]
+        services = [{}, {"consumer": SERVICE.upper()}]
 
         model = await bc.database.acreate(user=user, service=services, service_item={"service_id": 2})
         view, _, based_class, _ = await make_view_consumer_cases(user=model.user, decorator_params={}, url_params={})
@@ -586,7 +585,7 @@ class TestConsumer:
             {
                 "utc_now": UTC_NOW,
                 "consumer": CONSUMER_MOCK,
-                "permission": PERMISSION,
+                "permission": SERVICE,
                 "consumables": consumables,
             },
         )
@@ -616,7 +615,7 @@ class TestConsumer:
         self, bc: Breathecode, make_view_consumer_cases, partial_equality
     ):
         user = {"user_permissions": []}
-        services = [{}, {"slug": PERMISSION}]
+        services = [{}, {"consumer": SERVICE.upper()}]
 
         consumable = {"how_many": -1}
         model = await bc.database.acreate(
@@ -645,7 +644,7 @@ class TestConsumer:
             {
                 "utc_now": UTC_NOW,
                 "consumer": CONSUMER_MOCK,
-                "permission": PERMISSION,
+                "permission": SERVICE,
                 "consumables": consumables,
             },
         )
@@ -677,7 +676,7 @@ class TestConsumer:
         self, bc: Breathecode, make_view_consumer_cases, partial_equality
     ):
         user = {"user_permissions": []}
-        services = [{}, {"slug": PERMISSION}]
+        services = [{}, {"consumer": SERVICE.upper()}]
 
         consumable = {"how_many": 0}
         model = await bc.database.acreate(
@@ -707,7 +706,7 @@ class TestConsumer:
             {
                 "utc_now": UTC_NOW,
                 "consumer": CONSUMER_MOCK,
-                "permission": PERMISSION,
+                "permission": SERVICE,
                 "consumables": consumables,
             },
         )
@@ -737,7 +736,7 @@ class TestConsumer:
         self, bc: Breathecode, make_view_consumer_cases, partial_equality
     ):
         user = {"user_permissions": []}
-        services = [{}, {"slug": PERMISSION}]
+        services = [{}, {"consumer": SERVICE.upper()}]
 
         consumable = {"how_many": random.randint(1, 100)}
         model = await bc.database.acreate(
@@ -766,7 +765,7 @@ class TestConsumer:
             {
                 "utc_now": UTC_NOW,
                 "consumer": CONSUMER_MOCK,
-                "permission": PERMISSION,
+                "permission": SERVICE,
                 "consumables": consumables,
             },
         )
@@ -798,7 +797,7 @@ class TestConsumer:
         self, bc: Breathecode, make_view_consumer_cases, partial_equality
     ):
         user = {"user_permissions": []}
-        services = [{}, {"slug": PERMISSION}]
+        services = [{}, {"consumer": SERVICE.upper()}]
         group = {"permission_id": 2, "name": "secret"}
         consumable = {"how_many": 1}
         model = await bc.database.acreate(
@@ -828,7 +827,7 @@ class TestConsumer:
             {
                 "utc_now": UTC_NOW,
                 "consumer": CONSUMER_MOCK,
-                "permission": PERMISSION,
+                "permission": SERVICE,
                 "consumables": consumables,
             },
         )
@@ -859,7 +858,7 @@ class TestConsumer:
     ):
 
         user = {"user_permissions": []}
-        services = [{}, {"slug": PERMISSION}]
+        services = [{}, {"consumer": SERVICE.upper()}]
 
         consumable = {"how_many": 1}
         model = await bc.database.acreate(
@@ -888,7 +887,7 @@ class TestConsumer:
             {
                 "utc_now": UTC_NOW,
                 "consumer": CONSUMER_WITH_TIME_OF_LIFE_MOCK,
-                "permission": PERMISSION,
+                "permission": SERVICE,
                 "consumables": consumables,
             },
         )
@@ -924,7 +923,7 @@ class TestConsumptionSession:
     ):
 
         user = {"user_permissions": []}
-        services = [{}, {"slug": PERMISSION}]
+        services = [{}, {"consumer": SERVICE.upper()}]
 
         consumable = {"how_many": 1}
         model = await bc.database.acreate(
@@ -953,7 +952,7 @@ class TestConsumptionSession:
             {
                 "utc_now": UTC_NOW,
                 "consumer": CONSUMER_WITH_TIME_OF_LIFE_MOCK,
-                "permission": PERMISSION,
+                "permission": SERVICE,
                 "consumables": consumables,
             },
         )
@@ -988,7 +987,7 @@ class TestConsumptionSession:
     ):
 
         user = {"user_permissions": []}
-        services = [{}, {"slug": PERMISSION}]
+        services = [{}, {"consumer": SERVICE.upper()}]
 
         n = random.randint(1, 4)
         consumable = {"how_many": n}
@@ -1037,7 +1036,7 @@ class TestConsumptionSession:
         CONSUMER_WITH_TIME_OF_LIFE_MOCK.call_args_list = []
 
         user = {"user_permissions": []}
-        services = [{}, {"slug": PERMISSION}]
+        services = [{}, {"consumer": SERVICE.upper()}]
 
         consumable = {"how_many": 1}
         consumption_session = {

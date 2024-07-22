@@ -2,20 +2,24 @@
 Test /academy/lead
 """
 
-from django.utils import timezone
+import re
+import string
 from datetime import timedelta
-import re, string
 from random import choice, choices, randint
-from mixer.main import Mixer
 from unittest.mock import patch
+
 from django.urls.base import reverse_lazy
+from django.utils import timezone
+from mixer.main import Mixer
 from rest_framework import status
+
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
+    apply_google_cloud_bucket_mock,
+    apply_google_cloud_client_mock,
 )
+
 from ..mixins import MarketingTestCase
 
 
@@ -177,7 +181,7 @@ class CohortUserTestSuite(MarketingTestCase):
                 "utm_term": model.form_entry.utm_term,
                 "utm_plan": model.form_entry.utm_plan,
                 "sex": model.form_entry.sex,
-                "custom_fields": model.form_entry.custom_fields,
+                "custom_fields": {},
             }
         ]
 
@@ -259,7 +263,7 @@ class CohortUserTestSuite(MarketingTestCase):
                 "utm_term": model.form_entry.utm_term,
                 "utm_plan": model.form_entry.utm_plan,
                 "sex": model.form_entry.sex,
-                "custom_fields": model.form_entry.custom_fields,
+                "custom_fields": {},
             }
         ]
 
@@ -327,7 +331,7 @@ class CohortUserTestSuite(MarketingTestCase):
                 "utm_term": model.form_entry.utm_term,
                 "utm_plan": model.form_entry.utm_plan,
                 "sex": model.form_entry.sex,
-                "custom_fields": model.form_entry.custom_fields,
+                "custom_fields": {},
             }
             for model in models
         ]
@@ -405,7 +409,7 @@ class CohortUserTestSuite(MarketingTestCase):
                 "utm_term": model.form_entry.utm_term,
                 "utm_plan": model.form_entry.utm_plan,
                 "sex": model.form_entry.sex,
-                "custom_fields": model.form_entry.custom_fields,
+                "custom_fields": {},
             }
         ]
 
@@ -482,7 +486,7 @@ class CohortUserTestSuite(MarketingTestCase):
                 "utm_term": model.form_entry.utm_term,
                 "utm_plan": model.form_entry.utm_plan,
                 "sex": model.form_entry.sex,
-                "custom_fields": model.form_entry.custom_fields,
+                "custom_fields": {},
             }
         ]
 

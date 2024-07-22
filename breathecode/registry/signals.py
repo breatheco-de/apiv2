@@ -1,11 +1,10 @@
-"""
-For each signal you want other apps to be able to receive, you have to
-declare a new variable here like this:
-"""
+"""For each signal you want other apps to be able to receive, you have to declare a new variable here like this:"""
 
-from django import dispatch
+from task_manager.django.dispatch import Emisor
 
-asset_slug_modified = dispatch.Signal()
-asset_readme_modified = dispatch.Signal()
-asset_title_modified = dispatch.Signal()
-asset_status_updated = dispatch.Signal()
+emisor = Emisor("breathecode.registry")
+
+asset_slug_modified = emisor.signal("asset_slug_modified")
+asset_readme_modified = emisor.signal("asset_readme_modified")
+asset_title_modified = emisor.signal("asset_title_modified")
+asset_status_updated = emisor.signal("asset_status_updated")

@@ -1,4 +1,8 @@
-import requests, logging, os
+import logging
+import os
+from typing import Generator
+
+import requests
 
 logger = logging.getLogger(__name__)
 API_URL = os.getenv("API_URL", "")
@@ -140,3 +144,38 @@ class Github:
 
     def delete_org_member(self, username):
         return self.delete(f"/orgs/{self.org}/members/{username}")
+
+    def get_org_repos(
+        self, organization: str, type: str = "all", per_page: int = 30, sort: str = "created", direction: str = "asc"
+    ) -> Generator[list[dict], None, None]:
+        if per_page > 100:
+            raise Exception("per_page cannot be greater than 100")
+
+        if type not in ["all", "public", "private", "forks", "sources", "member"]:
+            raise Exception("Invalid type")
+
+        if sort not in ["created", "updated", "pushed", "full_name"]:
+            raise Exception("Invalid sort")
+
+        if direction not in ["asc", "desc"]:
+            raise Exception("Invalid direction")
+
+        page = 0
+        while True:
+            page += 1
+
+            if page == 2:
+                break
+
+            res = self.get(
+                f"/orgs/{organization}/repos?page={page}&type={type}&per_page={per_page}&sort={sort}&direction={direction}"
+            )
+
+            if len(res) == 0:
+                break
+
+            yield res
+
+    def delete_org_repo(self, owner: str, repo: str):
+        res = self.delete(f"/repos/{owner}/{repo}")
+        return res

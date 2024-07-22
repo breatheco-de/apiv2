@@ -1,8 +1,11 @@
 import re
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from ..mixins.new_auth_test_case import AuthTestCase
+
 from breathecode.services import datetime_to_iso_format
+
+from ..mixins.new_auth_test_case import AuthTestCase
 
 
 class AuthenticateTestSuite(AuthTestCase):
@@ -291,7 +294,7 @@ class AuthenticateTestSuite(AuthTestCase):
                 "utm_source": model.form_entry.utm_source,
                 "utm_url": model.form_entry.utm_url,
                 "sex": model.form_entry.sex,
-                "custom_fields": model.form_entry.custom_fields,
+                "custom_fields": {},
                 "utm_placement": model.form_entry.utm_placement,
                 "utm_plan": model.form_entry.utm_plan,
                 "utm_term": model.form_entry.utm_term,

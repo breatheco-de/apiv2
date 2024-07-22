@@ -1,43 +1,47 @@
-import logging, re, html
-from django.contrib import admin, messages
-from django.utils.html import format_html
-from django.db.models import Q
-from django import forms
-from breathecode.utils.admin import change_field
-from breathecode.services.seo import SEOAnalyzer
+import html
+import logging
+import re
 
-from .models import (
-    Asset,
-    AssetTechnology,
-    AssetAlias,
-    AssetErrorLog,
-    KeywordCluster,
-    AssetCategory,
-    AssetKeyword,
-    AssetComment,
-    SEOReport,
-    AssetImage,
-    OriginalityScan,
-    CredentialsOriginality,
-    SyllabusVersionProxy,
-    ContentVariable,
-)
-from .tasks import (
-    async_pull_from_github,
-    async_test_asset,
-    async_download_readme_images,
-    async_remove_img_from_cloud,
-    async_upload_image_to_bucket,
-    async_update_frontend_asset_cache,
-)
+from django import forms
+from django.contrib import admin, messages
+from django.db.models import Q
+from django.utils.html import format_html
+
+from breathecode.services.seo import SEOAnalyzer
+from breathecode.utils.admin import change_field
+
 from .actions import (
-    get_user_from_github_username,
     AssetThumbnailGenerator,
-    scan_asset_originality,
     add_syllabus_translations,
     clean_asset_readme,
+    get_user_from_github_username,
     process_asset_config,
     push_to_github,
+    scan_asset_originality,
+)
+from .models import (
+    Asset,
+    AssetAlias,
+    AssetCategory,
+    AssetComment,
+    AssetErrorLog,
+    AssetImage,
+    AssetKeyword,
+    AssetTechnology,
+    ContentVariable,
+    CredentialsOriginality,
+    KeywordCluster,
+    OriginalityScan,
+    SEOReport,
+    SyllabusVersionProxy,
+)
+from .tasks import (
+    async_download_readme_images,
+    async_pull_from_github,
+    async_remove_img_from_cloud,
+    async_test_asset,
+    async_update_frontend_asset_cache,
+    async_upload_image_to_bucket,
 )
 
 logger = logging.getLogger(__name__)
