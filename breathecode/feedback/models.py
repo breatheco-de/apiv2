@@ -99,6 +99,7 @@ class Answer(models.Model):
     highest = models.CharField(max_length=50, default="very likely")
     lang = models.CharField(max_length=3, blank=True, default="en")
 
+    platform_and_content = models.BooleanField(default=False)
     event = models.ForeignKey(Event, on_delete=models.SET_NULL, default=None, blank=True, null=True)
     mentorship_session = models.ForeignKey(
         MentorshipSession, on_delete=models.SET_NULL, default=None, blank=True, null=True

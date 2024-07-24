@@ -278,6 +278,7 @@ class ActionCertificateScreenshotTestCase(FeedbackTestCase):
                         "mentorship_session_id": 1,
                         "sent_at": UTC_NOW,
                         "status": "SENT",
+                        "platform_and_content": False,
                         "user_id": 1,
                     }
                 ),
