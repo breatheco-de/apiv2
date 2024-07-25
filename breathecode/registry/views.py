@@ -2,7 +2,7 @@ import logging
 import os
 import re
 from pathlib import Path
-
+from slugify import slugify
 import requests
 from circuitbreaker import CircuitBreakerError
 from django.core.validators import URLValidator
@@ -26,6 +26,7 @@ from breathecode.utils import GenerateLookupsMixin, capable_of, consume
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.i18n import translation
 from breathecode.utils.views import render_message
+from .utils import is_url
 from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import (
@@ -263,7 +264,7 @@ class AcademyTechnologyView(APIView, GenerateLookupsMixin):
 
         like = request.GET.get("like", None)
         if like is not None and like != "undefined" and like != "":
-            items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
+            items = items.filter(Q(slug__icontains=slugify(like)) | Q(title__icontains=like))
 
         if slug := request.GET.get("slug"):
             lookup["slug__in"] = slug.split(",")
@@ -632,9 +633,14 @@ class AssetView(APIView, GenerateLookupsMixin):
 
         like = request.GET.get("like", None)
         if like is not None:
-            items = items.filter(
-                Q(slug__icontains=like) | Q(title__icontains=like) | Q(assetalias__slug__icontains=like)
-            )
+            if is_url(like):
+                items = items.filter(Q(readme_url__icontains=like) | Q(url__icontains=like))
+            else:
+                items = items.filter(
+                    Q(slug__icontains=slugify(like))
+                    | Q(title__icontains=like)
+                    | Q(assetalias__slug__icontains=slugify(like))
+                )
 
         if "slug" in self.request.GET:
             asset_type = self.request.GET.get("asset_type", None)
@@ -940,9 +946,14 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
         like = request.GET.get("like", None)
         if like is not None:
-            items = items.filter(
-                Q(slug__icontains=like) | Q(title__icontains=like) | Q(assetalias__slug__icontains=like)
-            )
+            if is_url(like):
+                items = items.filter(Q(readme_url__icontains=like) | Q(url__icontains=like))
+            else:
+                items = items.filter(
+                    Q(slug__icontains=slugify(like))
+                    | Q(title__icontains=like)
+                    | Q(assetalias__slug__icontains=slugify(like))
+                )
 
         if "asset_type" in self.request.GET:
             param = self.request.GET.get("asset_type")
@@ -1433,7 +1444,7 @@ class AcademyCategoryView(APIView, GenerateLookupsMixin):
 
         like = request.GET.get("like", None)
         if like is not None and like != "undefined" and like != "":
-            items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
+            items = items.filter(Q(slug__icontains=slugify(like)) | Q(title__icontains=like))
 
         lang = request.GET.get("lang", None)
         if lang is not None:
@@ -1520,7 +1531,7 @@ class AcademyKeywordView(APIView, GenerateLookupsMixin):
 
         like = request.GET.get("like", None)
         if like is not None and like != "undefined" and like != "":
-            items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
+            items = items.filter(Q(slug__icontains=slugify(like)) | Q(title__icontains=like))
 
         lang = request.GET.get("lang", None)
         if lang is not None and lang != "undefined" and lang != "":
@@ -1612,7 +1623,7 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
 
         like = request.GET.get("like", None)
         if like is not None and like != "undefined" and like != "":
-            items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
+            items = items.filter(Q(slug__icontains=slugify(like)) | Q(title__icontains=like))
 
         items = items.filter(**lookup)
         items = handler.queryset(items)
