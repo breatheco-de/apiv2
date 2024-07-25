@@ -135,7 +135,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
                     "status": "PENDING",
                     "user_id": n + 1,
                     "opened_at": None,
-                    "platform_and_content": False,
+                    "aditional_question": None,
                 }
             ]
 
@@ -197,7 +197,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
                     "survey_id": None,
                     "status": "PENDING",
                     "user_id": n + 1,
-                    "platform_and_content": False,
+                    "aditional_question": None,
                     "opened_at": None,
                 }
             ]
@@ -262,7 +262,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
                     "survey_id": None,
                     "title": f"How has been your experience studying {certificate} so far?",
                     "token_id": n + 1,
-                    "platform_and_content": False,
+                    "aditional_question": None,
                     "user_id": n + 1,
                 }
             ]
@@ -331,7 +331,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
                     "title": f"How has been your experience studying {certificate} so far?",
                     "token_id": n + 1,
                     "user_id": n + 1,
-                    "platform_and_content": False,
+                    "aditional_question": None,
                 }
             ]
 
@@ -405,7 +405,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
                     "status": "SENT",
                     "user_id": n + 1,
                     "opened_at": None,
-                    "platform_and_content": False,
+                    "aditional_question": None,
                 }
             ]
 
@@ -480,7 +480,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
                     "user_id": n + 1,
                     "survey_id": None,
                     "opened_at": None,
-                    "platform_and_content": False,
+                    "aditional_question": None,
                 }
             ]
 
@@ -555,7 +555,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
                     "title": f"¿Cómo ha sido tu experiencia estudiando {certificate}?",
                     "token_id": n + 1,
                     "user_id": n + 1,
-                    "platform_and_content": False,
+                    "aditional_question": None,
                 }
             ]
 

@@ -63,10 +63,11 @@ def build_question(answer):
         question["title"] = strings[lang]["academy"]["title"].format(answer.academy.name)
         question["lowest"] = strings[lang]["academy"]["lowest"]
         question["highest"] = strings[lang]["academy"]["highest"]
-    elif answer.platform_and_content:
-        question["title"] = strings[lang]["platform"]["title"]
-        question["lowest"] = strings[lang]["platform"]["lowest"]
-        question["highest"] = strings[lang]["platform"]["highest"]
+    elif answer.aditional_question is not None and answer.aditional_question != "":
+        slug = answer.aditional_question.lower()
+        question["title"] = strings[lang][slug]["title"]
+        question["lowest"] = strings[lang][slug]["lowest"]
+        question["highest"] = strings[lang][slug]["highest"]
 
     return question
 
@@ -141,7 +142,7 @@ def generate_user_cohort_survey_answers(user, survey, status="OPENED"):
         _answers.append(new_answer(answer))
 
         # ask for the platform and the content
-        answer = Answer(platform_and_content=True, lang=survey.lang)
+        answer = Answer(aditional_question="PLATFORM", lang=survey.lang)
         _answers.append(new_answer(answer))
 
     return _answers
