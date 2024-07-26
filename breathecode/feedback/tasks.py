@@ -141,7 +141,6 @@ def generate_user_cohort_survey_answers(user, survey, status="OPENED"):
         answer = Answer(academy=survey.cohort.academy, lang=survey.lang)
         _answers.append(new_answer(answer))
 
-        #
         # ask for the platform and the content
         answer = Answer(question_by_slug="PLATFORM", lang=survey.lang)
         _answers.append(new_answer(answer))
