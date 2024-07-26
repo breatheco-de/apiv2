@@ -26,13 +26,32 @@ def setup(db):
     yield
 
 
-def test_xyz(bc: Breathecode):
+@pytest.mark.django_db(reset_sequences=True)
+def test_xyz1(bc: Breathecode):
     model = bc.database.create(cohort=2)
 
     qs = Cohort.objects.all()
     serializer = CohortSerializer(data=qs, many=True)
 
     assert serializer.data == [
+        {
+            "id": x.id,
+            "slug": x.slug,
+            "name": x.name,
+        }
+        for x in model.cohort
+    ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.django_db(reset_sequences=True)
+async def test_xyz2(bc: Breathecode):
+    model = await bc.database.acreate(cohort=2)
+
+    qs = Cohort.objects.all()
+    serializer = CohortSerializer(data=qs, many=True)
+
+    assert await serializer.adata == [
         {
             "id": x.id,
             "slug": x.slug,

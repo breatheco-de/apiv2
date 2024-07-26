@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from typing import Any, Optional, overload
 
 from adrf.requests import AsyncRequest
+from asgiref.sync import sync_to_async
 from django.db import models
 from django.db.models import QuerySet
 from django.db.models.fields import BinaryField, CommaSeparatedIntegerField, DateTimeField, DurationField, TimeField
@@ -164,35 +165,8 @@ def get_cache(key: Optional[str] = None) -> dict[str, ModelCached] | ModelCached
     return cache
 
 
-class Serializer:
-    model: Optional[models.Model] = None
+class ModelFieldMixin:
     depth = 1
-    fields = ()
-    exclude = ()
-
-    def _serialize(self, instance: models.Model) -> dict:
-        data = {}
-        self.fields
-
-        for field in self.fields:
-            data[field] = getattr(instance, field, None)
-
-            serializer = self._serializers.get(field, None)
-            if serializer:
-                data[field] = serializer(data[field])
-
-        return data
-
-    @property
-    def data(self) -> dict | list:
-
-        if isinstance(self._data, QuerySet):
-            self._data.only(*self.fields)
-
-        if issubclass(type(self._data), models.Model) or isinstance(self._data, Mapping):
-            return self._serialize(self._data)
-
-        return [self._serialize(x) for x in self._data]
 
     @classmethod
     def _get_related_fields(cls, key: str):
@@ -302,6 +276,40 @@ class Serializer:
     def _prepare_fields(cls, key: str):
         cls._get_related_fields(key)
         cls._check_settings()
+
+
+class Serializer(ModelFieldMixin):
+    model: Optional[models.Model] = None
+    fields = ()
+    exclude = ()
+
+    def _serialize(self, instance: models.Model) -> dict:
+        data = {}
+        self.fields
+
+        for field in self.fields:
+            data[field] = getattr(instance, field, None)
+
+            serializer = self._serializers.get(field, None)
+            if serializer:
+                data[field] = serializer(data[field])
+
+        return data
+
+    @property
+    def data(self) -> dict | list:
+        if isinstance(self._data, QuerySet):
+            self._data.only(*self.fields)
+
+        if issubclass(type(self._data), models.Model) or isinstance(self._data, Mapping):
+            return self._serialize(self._data)
+
+        return [self._serialize(x) for x in self._data]
+
+    @property
+    @sync_to_async
+    def adata(self) -> dict | list:
+        return self.data
 
     def __init_subclass__(cls):
         key = cls.__module__ + "." + cls.__name__
