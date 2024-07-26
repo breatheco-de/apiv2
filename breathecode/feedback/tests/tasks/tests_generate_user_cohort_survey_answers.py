@@ -34,7 +34,7 @@ def answer(data={}):
         "title": "",
         "token_id": None,
         "user_id": 0,
-        "aditional_question": None,
+        "question_by_slug": None,
         **data,
     }
 
@@ -113,7 +113,7 @@ class SendCohortSurvey(FeedbackTestCase):
                     "highest": "very good",
                     "cohort_id": None,
                     "academy_id": None,
-                    "aditional_question": "PLATFORM",
+                    "question_by_slug": "PLATFORM",
                 },
             ]
 
@@ -183,7 +183,7 @@ class SendCohortSurvey(FeedbackTestCase):
                     "highest": "very good",
                     "cohort_id": None,
                     "academy_id": None,
-                    "aditional_question": "PLATFORM",
+                    "question_by_slug": "PLATFORM",
                 },
             ]
             self.assertEqual(
@@ -241,7 +241,7 @@ class SendCohortSurvey(FeedbackTestCase):
                     "highest": "very good",
                     "cohort_id": None,
                     "academy_id": None,
-                    "aditional_question": "PLATFORM",
+                    "question_by_slug": "PLATFORM",
                 },
             ]
             self.assertEqual(
@@ -322,7 +322,7 @@ class SendCohortSurvey(FeedbackTestCase):
                     "highest": "very good",
                     "cohort_id": None,
                     "academy_id": None,
-                    "aditional_question": "PLATFORM",
+                    "question_by_slug": "PLATFORM",
                 },
             ]
 
