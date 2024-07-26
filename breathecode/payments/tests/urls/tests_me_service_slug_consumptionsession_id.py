@@ -17,6 +17,13 @@ def setup(db, monkeypatch: pytest.MonkeyPatch):
     yield
 
 
+def random_duration():
+    hours = random.randint(0, 23)
+    minutes = random.randint(0, 59)
+    seconds = random.randint(0, 59)
+    return timedelta(hours=hours, minutes=minutes, seconds=seconds)
+
+
 def db_item(service, data={}):
     return {
         "consumable_id": 1,
@@ -46,16 +53,10 @@ def db_item(service, data={}):
     }
 
 
-def random_duration():
-    hours = random.randint(0, 23)
-    minutes = random.randint(0, 59)
-    seconds = random.randint(0, 59)
-    return timedelta(hours=hours, minutes=minutes, seconds=seconds)
-
-
 def test_no_auth(bc: Breathecode, client: rfx.Client):
     url = reverse_lazy(
-        "payments:me_service_slug_consume_hash", kwargs={"service_slug": "my-service", "hash": "1234567890123456"}
+        "payments:me_service_slug_consumptionsession_id",
+        kwargs={"service_slug": "my-service", "consumptionsession_id": 1},
     )
 
     response = client.put(url)
@@ -68,52 +69,66 @@ def test_no_auth(bc: Breathecode, client: rfx.Client):
     assert bc.database.list_of("payments.ConsumptionSession") == []
 
 
-def test_no_consumables(bc: Breathecode, client: rfx.Client):
-    url = reverse_lazy(
-        "payments:me_service_slug_consume_hash", kwargs={"service_slug": "my-service", "hash": "1234567890123456"}
-    )
-
-    model = bc.database.create(user=1)
-    client.force_authenticate(user=model.user)
-
-    response = client.put(url)
-
-    json = response.json()
-    expected = {"detail": "insufficient-credits", "status_code": 402}
-
-    assert json == expected
-    assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
-    assert bc.database.list_of("payments.ConsumptionSession") == []
-
-
-def test_created(bc: Breathecode, client: rfx.Client, utc_now):
+@pytest.mark.parametrize("with_session", [False, True])
+def test_no_sessions(bc: Breathecode, client: rfx.Client, with_session, fake, utc_now):
+    slug = fake.slug()
     duration = random_duration()
-    model = bc.database.create(user=1, consumable=1, service={"session_duration": duration})
     url = reverse_lazy(
-        "payments:me_service_slug_consume_hash", kwargs={"service_slug": model.service.slug, "hash": "1234567890123456"}
+        "payments:me_service_slug_consumptionsession_id",
+        kwargs={"service_slug": "my-service", "consumptionsession_id": 1},
     )
+    extra = {}
 
+    if with_session:
+        extra.update(
+            {
+                "consumable": 1,
+                "service": {
+                    "session_duration": duration,
+                    "slug": slug,
+                },
+                "consumption_session": {
+                    "how_many": 1,
+                    "eta": utc_now + duration,
+                    "duration": duration,
+                    "was_discounted": False,
+                    "operation_code": "unsafe-consume-service-set",
+                    "related_id": 0,
+                    "related_slug": "",
+                    "status": "CANCELLED",
+                    "path": "",
+                    "request": {
+                        "args": [],
+                        "headers": {
+                            "academy": None,
+                        },
+                        "kwargs": {
+                            "hash": "1234567890123456",
+                            "service_slug": slug,
+                        },
+                        "user": 1,
+                    },
+                },
+            }
+        )
+
+    model = bc.database.create(user=1, **extra)
     client.force_authenticate(user=model.user)
 
     response = client.put(url)
 
     json = response.json()
-    expected = {"status": "ok"}
+    expected = {"detail": "session-not-found", "status_code": 404}
 
     assert json == expected
-    assert response.status_code == status.HTTP_201_CREATED
-    assert bc.database.list_of("payments.ConsumptionSession") == [
-        db_item(
-            model.service,
-            data={
-                "duration": duration,
-                "eta": utc_now + duration,
-            },
-        )
-    ]
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    if with_session:
+        assert bc.database.list_of("payments.ConsumptionSession") == [bc.format.to_dict(model.consumption_session)]
+    else:
+        assert bc.database.list_of("payments.ConsumptionSession") == []
 
 
-def test_cached(bc: Breathecode, client: rfx.Client, utc_now, fake):
+def test_cancelled(bc: Breathecode, client: rfx.Client, utc_now, fake):
     slug = fake.slug()
     duration = random_duration()
     model = bc.database.create(
@@ -122,6 +137,7 @@ def test_cached(bc: Breathecode, client: rfx.Client, utc_now, fake):
         service={
             "session_duration": duration,
             "slug": slug,
+            "type": "VOID",
         },
         consumption_session={
             "how_many": 1,
@@ -147,7 +163,8 @@ def test_cached(bc: Breathecode, client: rfx.Client, utc_now, fake):
         },
     )
     url = reverse_lazy(
-        "payments:me_service_slug_consume_hash", kwargs={"service_slug": model.service.slug, "hash": "1234567890123456"}
+        "payments:me_service_slug_consumptionsession_id",
+        kwargs={"service_slug": model.service.slug, "consumptionsession_id": 1},
     )
 
     client.force_authenticate(user=model.user)
@@ -155,7 +172,7 @@ def test_cached(bc: Breathecode, client: rfx.Client, utc_now, fake):
     response = client.put(url)
 
     json = response.json()
-    expected = {"status": "ok"}
+    expected = {"id": 1, "status": "reversed"}
 
     assert json == expected
     assert response.status_code == status.HTTP_200_OK
