@@ -1,10 +1,10 @@
-"""
-For each signal you want other apps to be able to receive, you have to
-declare a new variable here like this:
-"""
-from django.dispatch import Signal
+"""For each signal you want other apps to be able to receive, you have to declare a new variable here like this."""
 
-event_saved = Signal()
-event_status_updated = Signal()
-new_event_attendee = Signal()
-new_event_order = Signal()
+from task_manager.django.dispatch import Emisor
+
+emisor = Emisor("breathecode.events")
+
+event_saved = emisor.signal("event_saved")
+event_status_updated = emisor.signal("event_status_updated")
+new_event_attendee = emisor.signal("new_event_attendee")
+new_event_order = emisor.signal("new_event_order")

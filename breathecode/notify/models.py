@@ -8,10 +8,10 @@ from rest_framework.exceptions import ValidationError
 
 from breathecode.admissions.models import Academy, Cohort
 
-__all__ = ['UserProxy', 'CohortProxy', 'Device', 'SlackTeam', 'SlackUser', 'SlackUserTeam', 'SlackChannel', 'Hook']
-AUTH_USER_MODEL = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
-if getattr(settings, 'HOOK_CUSTOM_MODEL', None) is None:
-    settings.HOOK_CUSTOM_MODEL = 'notify.Hook'
+__all__ = ["UserProxy", "CohortProxy", "Device", "SlackTeam", "SlackUser", "SlackUserTeam", "SlackChannel", "Hook"]
+AUTH_USER_MODEL = getattr(settings, "AUTH_USER_MODEL", "auth.User")
+if getattr(settings, "HOOK_CUSTOM_MODEL", None) is None:
+    settings.HOOK_CUSTOM_MODEL = "notify.Hook"
 
 
 class UserProxy(User):
@@ -36,11 +36,11 @@ class Device(models.Model):
         return self.user.registration_id
 
 
-INCOMPLETED = 'INCOMPLETED'
-COMPLETED = 'COMPLETED'
+INCOMPLETED = "INCOMPLETED"
+COMPLETED = "COMPLETED"
 SYNC_STATUS = (
-    (INCOMPLETED, 'Incompleted'),
-    (COMPLETED, 'Completed'),
+    (INCOMPLETED, "Incompleted"),
+    (COMPLETED, "Completed"),
 )
 
 
@@ -55,22 +55,23 @@ class SlackTeam(models.Model):
 
     academy = models.OneToOneField(Academy, on_delete=models.CASCADE, blank=True)
 
-    sync_status = models.CharField(max_length=15,
-                                   choices=SYNC_STATUS,
-                                   default=INCOMPLETED,
-                                   help_text='Automatically set when synqued from slack')
-    sync_message = models.CharField(max_length=100,
-                                    blank=True,
-                                    null=True,
-                                    default=None,
-                                    help_text='Contains any success or error messages depending on the status')
+    sync_status = models.CharField(
+        max_length=15, choices=SYNC_STATUS, default=INCOMPLETED, help_text="Automatically set when synqued from slack"
+    )
+    sync_message = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Contains any success or error messages depending on the status",
+    )
     synqued_at = models.DateTimeField(default=None, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.name} ({self.slack_id})'
+        return f"{self.name} ({self.slack_id})"
 
 
 class SlackUser(models.Model):
@@ -95,11 +96,13 @@ class SlackUserTeam(models.Model):
     slack_team = models.ForeignKey(SlackTeam, on_delete=models.CASCADE)
 
     sync_status = models.CharField(max_length=15, choices=SYNC_STATUS, default=INCOMPLETED)
-    sync_message = models.CharField(max_length=100,
-                                    blank=True,
-                                    null=True,
-                                    default=None,
-                                    help_text='Contains any success or error messages depending on the status')
+    sync_message = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Contains any success or error messages depending on the status",
+    )
     synqued_at = models.DateTimeField(default=None, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -118,36 +121,38 @@ class SlackChannel(models.Model):
     purpose = models.CharField(max_length=500, blank=True, null=True)
 
     sync_status = models.CharField(max_length=15, choices=SYNC_STATUS, default=INCOMPLETED)
-    sync_message = models.CharField(max_length=100,
-                                    blank=True,
-                                    null=True,
-                                    default=None,
-                                    help_text='Contains any success or error messages depending on the status')
+    sync_message = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Contains any success or error messages depending on the status",
+    )
     synqued_at = models.DateTimeField(default=None, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        name = self.name if self.name else 'Unknown'
-        return f'{name}({self.slack_id})'
+        name = self.name if self.name else "Unknown"
+        return f"{name}({self.slack_id})"
 
 
 class AbstractHook(models.Model):
     """
     Stores a representation of a Hook.
     """
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    user = models.ForeignKey(AUTH_USER_MODEL, related_name='%(class)ss', on_delete=models.CASCADE)
-    event = models.CharField('Event', max_length=64, db_index=True)
-    target = models.URLField('Target URL', max_length=255)
-    service_id = models.CharField('Service ID', max_length=64, null=True, default=None, blank=True)
-    sample_data = models.JSONField(null=True,
-                                   default=None,
-                                   blank=True,
-                                   help_text='Use this as an example on what you will be receiving')
+    user = models.ForeignKey(AUTH_USER_MODEL, related_name="%(class)ss", on_delete=models.CASCADE)
+    event = models.CharField("Event", max_length=64, db_index=True)
+    target = models.URLField("Target URL", max_length=255)
+    service_id = models.CharField("Service ID", max_length=64, null=True, default=None, blank=True)
+    sample_data = models.JSONField(
+        null=True, default=None, blank=True, help_text="Use this as an example on what you will be receiving"
+    )
 
     total_calls = models.IntegerField(default=0)
     last_call_at = models.DateTimeField(null=True, blank=True, default=None)
@@ -158,12 +163,13 @@ class AbstractHook(models.Model):
 
     def clean(self):
         from .utils.hook_manager import HookManager
+
         """ Validation for events. """
         if self.event not in HookManager.HOOK_EVENTS.keys():
-            raise ValidationError('Invalid hook event {evt}.'.format(evt=self.event))
+            raise ValidationError("Invalid hook event {evt}.".format(evt=self.event))
 
     def dict(self):
-        return {'id': self.id, 'event': self.event, 'target': self.target}
+        return {"id": self.id, "event": self.event, "target": self.target}
 
     def serialize_hook(self, instance):
         """
@@ -172,13 +178,13 @@ class AbstractHook(models.Model):
         """
         from .utils.hook_manager import HookManager
 
-        if getattr(instance, 'serialize_hook', None) and callable(instance.serialize_hook):
+        if getattr(instance, "serialize_hook", None) and callable(instance.serialize_hook):
             return instance.serialize_hook(hook=self)
-        if getattr(settings, 'HOOK_SERIALIZER', None):
+        if getattr(settings, "HOOK_SERIALIZER", None):
             serializer = HookManager.get_module(settings.HOOK_SERIALIZER)
             return serializer(instance, hook=self)
         # if no user defined serializers, fallback to the django builtin!
-        data = serializers.serialize('python', [instance])[0]
+        data = serializers.serialize("python", [instance])[0]
         for k, v in data.items():
             if isinstance(v, OrderedDict):
                 data[k] = dict(v)
@@ -187,25 +193,25 @@ class AbstractHook(models.Model):
             data = dict(data)
 
         return {
-            'hook': self.dict(),
-            'data': data,
+            "hook": self.dict(),
+            "data": data,
         }
 
     def __unicode__(self):
-        return u'{} => {}'.format(self.event, self.target)
+        return "{} => {}".format(self.event, self.target)
 
 
 class Hook(AbstractHook):
 
     class Meta(AbstractHook.Meta):
-        swappable = 'HOOK_CUSTOM_MODEL'
+        swappable = "HOOK_CUSTOM_MODEL"
 
 
 class HookError(models.Model):
     """Hook Error."""
 
     message = models.CharField(max_length=255)
-    event = models.CharField('Event', max_length=64, db_index=True)
-    hooks = models.ManyToManyField(Hook, related_name='errors', blank=True)
+    event = models.CharField("Event", max_length=64, db_index=True)
+    hooks = models.ManyToManyField(Hook, related_name="errors", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -6,27 +6,27 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0014_auto_20200619_1920'),
+        ("marketing", "0014_auto_20200619_1920"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='formentry',
-            name='automations',
-            field=models.ManyToManyField(to='marketing.Automation'),
+            model_name="formentry",
+            name="automations",
+            field=models.ManyToManyField(to="marketing.Automation"),
         ),
         migrations.AddField(
-            model_name='formentry',
-            name='raw_tags',
-            field=models.CharField(blank=True, default='', max_length=100),
+            model_name="formentry",
+            name="raw_tags",
+            field=models.CharField(blank=True, default="", max_length=100),
         ),
         migrations.RemoveField(
-            model_name='formentry',
-            name='tags',
+            model_name="formentry",
+            name="tags",
         ),
         migrations.AddField(
-            model_name='formentry',
-            name='tags',
-            field=models.ManyToManyField(to='marketing.Tag'),
+            model_name="formentry",
+            name="tags",
+            field=models.ManyToManyField(to="marketing.Tag"),
         ),
     ]

@@ -6,16 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0038_auto_20231123_1611'),
+        ("registry", "0038_auto_20231123_1611"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='asset',
-            name='assets_related',
+            model_name="asset",
+            name="assets_related",
             field=models.ManyToManyField(
                 blank=True,
-                help_text='Related assets used to get prepared before going through this asset.',
-                to='registry.Asset'),
+                help_text="Related assets used to get prepared before going through this asset.",
+                to="registry.Asset",
+            ),
         ),
     ]

@@ -18,9 +18,9 @@ from django.db.models import Q
 
 from django.utils import timezone
 
-__all__ = ['Format']
+__all__ = ["Format"]
 
-ENCODE = 'utf-8'
+ENCODE = "utf-8"
 
 fake = Faker()
 
@@ -29,41 +29,41 @@ class Field:
 
     @staticmethod
     def id(mode: str) -> Q:
-        return f'{random.randint(0, 100000000000000000)}'
+        return f"{random.randint(0, 100000000000000000)}"
 
     @staticmethod
     def integer(mode: str) -> Callable[[str, str, str], Q]:
-        if mode == 'in':
-            v = ''
+        if mode == "in":
+            v = ""
             now_many = random.randint(2, 4)
             for _ in range(now_many):
-                v += f'{random.randint(0, 100000000000000000)},'
+                v += f"{random.randint(0, 100000000000000000)},"
             return v[:-1]
 
-        if mode == 'isnull':
-            return 'true' if bool(random.randbytes(1)) else 'false'
+        if mode == "isnull":
+            return "true" if bool(random.randbytes(1)) else "false"
 
-        return f'{random.randint(0, 100000000000000000)}'
+        return f"{random.randint(0, 100000000000000000)}"
 
     @staticmethod
     def slug(mode: str) -> Q:
         is_int = bool(random.randbytes(1))
         if is_int:
-            return f'{random.randint(0, 100000000000000000)}'
+            return f"{random.randint(0, 100000000000000000)}"
 
         return fake.slug()
 
     @staticmethod
     def string(mode: str) -> Callable[[str, str, str], Q]:
-        if mode == 'in':
-            v = ''
+        if mode == "in":
+            v = ""
             now_many = random.randint(2, 4)
             for _ in range(now_many):
                 v += f"'{fake.slug()}',"
             return v[:-1]
 
-        if mode == 'isnull':
-            return 'true' if bool(random.randbytes(1)) else 'false'
+        if mode == "isnull":
+            return "true" if bool(random.randbytes(1)) else "false"
 
         return fake.slug()
 
@@ -83,18 +83,18 @@ class Field:
 
             return date.isoformat()
 
-        if mode == 'in':
-            v = ''
+        if mode == "in":
+            v = ""
             now_many = random.randint(2, 4)
             for _ in range(now_many):
-                v += value() + ','
+                v += value() + ","
             return v[:-1]
 
         return value()
 
     @staticmethod
     def bool(mode: str) -> Callable[[str, str, str], Q]:
-        return 'true' if bool(random.randbytes(1)) else 'false'
+        return "true" if bool(random.randbytes(1)) else "false"
 
 
 class Format:
@@ -185,17 +185,17 @@ class Format:
         result = {}
 
         # foreign
-        ids = kwargs.get('ids', tuple())
-        slugs = kwargs.get('slugs', tuple())
+        ids = kwargs.get("ids", tuple())
+        slugs = kwargs.get("slugs", tuple())
 
         # fields
-        ints = kwargs.get('ints', dict())
-        strings = kwargs.get('strings', dict())
-        datetimes = kwargs.get('datetimes', dict())
-        bools = kwargs.get('bools', dict())
+        ints = kwargs.get("ints", dict())
+        strings = kwargs.get("strings", dict())
+        datetimes = kwargs.get("datetimes", dict())
+        bools = kwargs.get("bools", dict())
 
         # opts
-        custom_fields = kwargs.get('custom_fields', dict())
+        custom_fields = kwargs.get("custom_fields", dict())
 
         # serialize foreign
         ids = tuple(ids)
@@ -206,21 +206,21 @@ class Format:
         # foreign
 
         for field in ids:
-            if field == '':
-                result['id'] = field.integer('exact')
+            if field == "":
+                result["id"] = field.integer("exact")
                 continue
 
             name = overwrite.get(field, field)
-            result[name] = Field.id('')
+            result[name] = Field.id("")
 
         for field in slugs:
-            if field == '':
-                result['id'] = Field.integer('exact')
-                result['slug'] = Field.string('exact')
+            if field == "":
+                result["id"] = Field.integer("exact")
+                result["slug"] = Field.string("exact")
                 continue
 
             name = overwrite.get(field, field)
-            result[name] = Field.slug('')
+            result[name] = Field.slug("")
 
         # fields
 
@@ -302,7 +302,7 @@ class Format:
         self.bc.format.to_decimal(1)  # returns '1.000000000000000'
         ```
         """
-        return '%.15f' % round(decimal, 15)
+        return "%.15f" % round(decimal, 15)
 
     def _one_to_dict(self, arg) -> dict[str, Any]:
         """Parse the object to a `dict`"""
@@ -313,7 +313,7 @@ class Format:
         if isinstance(arg, dict):
             return arg.copy()
 
-        raise NotImplementedError(f'{arg.__name__} is not implemented yet')
+        raise NotImplementedError(f"{arg.__name__} is not implemented yet")
 
     def describe_models(self, models: dict[str, Model]) -> str:
         """
@@ -330,8 +330,8 @@ class Format:
         ```
         """
 
-        title_spaces = ' ' * 8
-        model_spaces = ' ' * 10
+        title_spaces = " " * 8
+        model_spaces = " " * 10
         result = {}
 
         for key in models:
@@ -346,10 +346,10 @@ class Format:
                 name, obj = self._describe_model(model)
                 result[name] = obj
 
-        print(title_spaces + 'Descriptions of models are being generated:')
+        print(title_spaces + "Descriptions of models are being generated:")
 
-        for line in yaml.dump(result).split('\n'):
-            if not line.startswith(' '):
+        for line in yaml.dump(result).split("\n"):
+            if not line.startswith(" "):
                 print()
 
             print(model_spaces + line)
@@ -357,29 +357,29 @@ class Format:
         # This make sure the element are being printed and prevent `describe_models` are pushed to dev branch
         assert False
 
-    #TODO: this method is buggy in the line `if not hasattr(model, key)`
+    # TODO: this method is buggy in the line `if not hasattr(model, key)`
     def _describe_model(self, model: Model):
         pk_name = self._get_pk_name(model)
         attrs = dir(model)
         result = {}
 
         for key in attrs:
-            if key.startswith('_'):
+            if key.startswith("_"):
                 continue
 
-            if key == 'DoesNotExist':
+            if key == "DoesNotExist":
                 continue
 
-            if key == 'MultipleObjectsReturned':
+            if key == "MultipleObjectsReturned":
                 continue
 
-            if key.startswith('get_next_'):
+            if key.startswith("get_next_"):
                 continue
 
-            if key.startswith('get_previous_'):
+            if key.startswith("get_previous_"):
                 continue
 
-            if key.endswith('_set'):
+            if key.endswith("_set"):
                 continue
 
             if not hasattr(model, key):
@@ -387,19 +387,19 @@ class Format:
 
             attr = getattr(model, key)
 
-            if attr.__class__.__name__ == 'method':
+            if attr.__class__.__name__ == "method":
                 continue
 
             if isinstance(attr, Model):
-                result[key] = f'{attr.__class__.__name__}({self._get_pk_name(attr)}={self._repr_pk(attr.pk)})'
+                result[key] = f"{attr.__class__.__name__}({self._get_pk_name(attr)}={self._repr_pk(attr.pk)})"
 
-            elif attr.__class__.__name__ == 'ManyRelatedManager':
+            elif attr.__class__.__name__ == "ManyRelatedManager":
                 instances = [
-                    f'{attr.model.__name__}({self._get_pk_name(x)}={self._repr_pk(x.pk)})' for x in attr.get_queryset()
+                    f"{attr.model.__name__}({self._get_pk_name(x)}={self._repr_pk(x.pk)})" for x in attr.get_queryset()
                 ]
                 result[key] = instances
 
-        return (f'{model.__class__.__name__}({pk_name}={self._repr_pk(model.pk)})', result)
+        return (f"{model.__class__.__name__}({pk_name}={self._repr_pk(model.pk)})", result)
 
     def _repr_pk(self, pk: str | int) -> int | str:
         if isinstance(pk, int):
@@ -411,17 +411,24 @@ class Format:
         from django.db.models.fields import Field, SlugField
 
         attrs = [
-            x for x in dir(model)
-            if hasattr(model.__class__, x) and (isinstance(getattr(model.__class__, x), SlugField) or isinstance(
-                getattr(model.__class__, x), SlugField)) and getattr(model.__class__, x).primary_key
+            x
+            for x in dir(model)
+            if hasattr(model.__class__, x)
+            and (
+                isinstance(getattr(model.__class__, x), SlugField) or isinstance(getattr(model.__class__, x), SlugField)
+            )
+            and getattr(model.__class__, x).primary_key
         ]
 
         for key in dir(model):
-            if (hasattr(model.__class__, key) and hasattr(getattr(model.__class__, key), 'field')
-                    and getattr(model.__class__, key).field.primary_key):
+            if (
+                hasattr(model.__class__, key)
+                and hasattr(getattr(model.__class__, key), "field")
+                and getattr(model.__class__, key).field.primary_key
+            ):
                 return key
 
-        return 'pk'
+        return "pk"
 
     def from_base64(self, hash: str | bytes) -> str:
         """

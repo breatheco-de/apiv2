@@ -9,24 +9,24 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('authenticate', '0023_academyproxy'),
+        ("authenticate", "0023_academyproxy"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='userinvite',
-            name='author',
-            field=models.ForeignKey(default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to=settings.AUTH_USER_MODEL),
+            model_name="userinvite",
+            name="author",
+            field=models.ForeignKey(
+                default=None, null=True, on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL
+            ),
         ),
         migrations.AlterField(
-            model_name='userinvite',
-            name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('ACCEPTED', 'Accepted'),
-                                            ('WAITING_LIST', 'Waiting list')],
-                                   default='PENDING',
-                                   max_length=15),
+            model_name="userinvite",
+            name="status",
+            field=models.CharField(
+                choices=[("PENDING", "Pending"), ("ACCEPTED", "Accepted"), ("WAITING_LIST", "Waiting list")],
+                default="PENDING",
+                max_length=15,
+            ),
         ),
     ]

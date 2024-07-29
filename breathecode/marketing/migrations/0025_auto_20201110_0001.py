@@ -6,33 +6,33 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0024_auto_20201109_2353'),
+        ("marketing", "0024_auto_20201109_2353"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='formentry',
-            name='fb_ad_id',
+            model_name="formentry",
+            name="fb_ad_id",
             field=models.BigIntegerField(blank=True, default=None, null=True),
         ),
         migrations.AlterField(
-            model_name='formentry',
-            name='fb_adgroup_id',
+            model_name="formentry",
+            name="fb_adgroup_id",
             field=models.BigIntegerField(blank=True, default=None, null=True),
         ),
         migrations.AlterField(
-            model_name='formentry',
-            name='fb_form_id',
+            model_name="formentry",
+            name="fb_form_id",
             field=models.BigIntegerField(blank=True, default=None, null=True),
         ),
         migrations.AlterField(
-            model_name='formentry',
-            name='fb_leadgen_id',
+            model_name="formentry",
+            name="fb_leadgen_id",
             field=models.BigIntegerField(blank=True, default=None, null=True),
         ),
         migrations.AlterField(
-            model_name='formentry',
-            name='fb_page_id',
+            model_name="formentry",
+            name="fb_page_id",
             field=models.BigIntegerField(blank=True, default=None, null=True),
         ),
     ]

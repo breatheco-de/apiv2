@@ -25,24 +25,24 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             application: Application(id=1)
         """
 
-        monitor_script = {'script_slug': 'event_marked_as_draft'}
+        monitor_script = {"script_slug": "event_marked_as_draft"}
         model = self.bc.database.create(monitor_script=monitor_script)
 
         script = run_script(model.monitor_script)
 
-        del script['slack_payload']
-        del script['text']
+        del script["slack_payload"]
+        del script["text"]
 
         expected = {
-            'severity_level': 5,
-            'status': 'OPERATIONAL',
-            'title': 'OK',
+            "severity_level": 5,
+            "status": "OPERATIONAL",
+            "title": "OK",
         }
 
         self.assertEqual(script, expected)
-        self.assertEqual(self.bc.database.list_of('monitoring.MonitorScript'), [{
-            **self.bc.format.to_dict(model.monitor_script)
-        }])
+        self.assertEqual(
+            self.bc.database.list_of("monitoring.MonitorScript"), [{**self.bc.format.to_dict(model.monitor_script)}]
+        )
 
     """
     🔽🔽🔽 With one Event with status ACTIVE
@@ -66,25 +66,25 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             application: Application(id=1)
         """
 
-        monitor_script = {'script_slug': 'event_marked_as_draft'}
-        event = {'status': 'ACTIVE'}
+        monitor_script = {"script_slug": "event_marked_as_draft"}
+        event = {"status": "ACTIVE"}
         model = self.bc.database.create(monitor_script=monitor_script, event=event)
 
         script = run_script(model.monitor_script)
 
-        del script['slack_payload']
-        del script['text']
+        del script["slack_payload"]
+        del script["text"]
 
         expected = {
-            'severity_level': 5,
-            'status': 'OPERATIONAL',
-            'title': 'OK',
+            "severity_level": 5,
+            "status": "OPERATIONAL",
+            "title": "OK",
         }
 
         self.assertEqual(script, expected)
-        self.assertEqual(self.bc.database.list_of('monitoring.MonitorScript'), [{
-            **self.bc.format.to_dict(model.monitor_script)
-        }])
+        self.assertEqual(
+            self.bc.database.list_of("monitoring.MonitorScript"), [{**self.bc.format.to_dict(model.monitor_script)}]
+        )
 
     """
     🔽🔽🔽 With one Event with status DELETED
@@ -108,25 +108,25 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             application: Application(id=1)
         """
 
-        monitor_script = {'script_slug': 'event_marked_as_draft'}
-        event = {'status': 'DELETED'}
+        monitor_script = {"script_slug": "event_marked_as_draft"}
+        event = {"status": "DELETED"}
         model = self.bc.database.create(monitor_script=monitor_script, event=event)
 
         script = run_script(model.monitor_script)
 
-        del script['slack_payload']
-        del script['text']
+        del script["slack_payload"]
+        del script["text"]
 
         expected = {
-            'severity_level': 5,
-            'status': 'OPERATIONAL',
-            'title': 'OK',
+            "severity_level": 5,
+            "status": "OPERATIONAL",
+            "title": "OK",
         }
 
         self.assertEqual(script, expected)
-        self.assertEqual(self.bc.database.list_of('monitoring.MonitorScript'), [{
-            **self.bc.format.to_dict(model.monitor_script)
-        }])
+        self.assertEqual(
+            self.bc.database.list_of("monitoring.MonitorScript"), [{**self.bc.format.to_dict(model.monitor_script)}]
+        )
 
     """
     🔽🔽🔽 With one Event with status DRAFT
@@ -150,34 +150,34 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             application: Application(id=1)
         """
 
-        monitor_script = {'script_slug': 'event_marked_as_draft'}
-        event = {'status': 'DRAFT'}
+        monitor_script = {"script_slug": "event_marked_as_draft"}
+        event = {"status": "DRAFT"}
         model = self.bc.database.create(monitor_script=monitor_script, event=event)
 
         script = run_script(model.monitor_script)
 
-        del script['slack_payload']
-        del script['text']
+        del script["slack_payload"]
+        del script["text"]
 
         expected = {
-            'btn': {
-                'label': 'More details',
-                'url': f'/events/list?location={model.academy.slug}'
-            },
-            'severity_level': 100,
-            'status': 'CRITICAL',
-            'error_slug': 'draft-events',
-            'title': f'There are 1 draft events to published or deleted in {model.academy.name}',
+            "btn": {"label": "More details", "url": f"/events/list?location={model.academy.slug}"},
+            "severity_level": 100,
+            "status": "CRITICAL",
+            "error_slug": "draft-events",
+            "title": f"There are 1 draft events to published or deleted in {model.academy.name}",
         }
 
         self.assertEqual(script, expected)
-        self.assertEqual(self.bc.database.list_of('monitoring.MonitorScript'), [
-            {
-                **self.bc.format.to_dict(model.monitor_script),
-                'status': 'CRITICAL',
-                'status_text': None,
-            },
-        ])
+        self.assertEqual(
+            self.bc.database.list_of("monitoring.MonitorScript"),
+            [
+                {
+                    **self.bc.format.to_dict(model.monitor_script),
+                    "status": "CRITICAL",
+                    "status_text": None,
+                },
+            ],
+        )
 
     """
     🔽🔽🔽 With two Event with status DRAFT
@@ -204,31 +204,31 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             application: Application(id=1)
         """
 
-        monitor_script = {'script_slug': 'event_marked_as_draft'}
-        event = {'status': 'DRAFT'}
+        monitor_script = {"script_slug": "event_marked_as_draft"}
+        event = {"status": "DRAFT"}
         model = self.bc.database.create(monitor_script=monitor_script, event=(2, event))
 
         script = run_script(model.monitor_script)
 
-        del script['slack_payload']
-        del script['text']
+        del script["slack_payload"]
+        del script["text"]
 
         expected = {
-            'btn': {
-                'label': 'More details',
-                'url': f'/events/list?location={model.academy.slug}'
-            },
-            'severity_level': 100,
-            'status': 'CRITICAL',
-            'error_slug': 'draft-events',
-            'title': f'There are 2 draft events to published or deleted in {model.academy.name}',
+            "btn": {"label": "More details", "url": f"/events/list?location={model.academy.slug}"},
+            "severity_level": 100,
+            "status": "CRITICAL",
+            "error_slug": "draft-events",
+            "title": f"There are 2 draft events to published or deleted in {model.academy.name}",
         }
 
         self.assertEqual(script, expected)
-        self.assertEqual(self.bc.database.list_of('monitoring.MonitorScript'), [
-            {
-                **self.bc.format.to_dict(model.monitor_script),
-                'status': 'CRITICAL',
-                'status_text': None,
-            },
-        ])
+        self.assertEqual(
+            self.bc.database.list_of("monitoring.MonitorScript"),
+            [
+                {
+                    **self.bc.format.to_dict(model.monitor_script),
+                    "status": "CRITICAL",
+                    "status_text": None,
+                },
+            ],
+        )

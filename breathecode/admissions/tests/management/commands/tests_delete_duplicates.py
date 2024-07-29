@@ -1,37 +1,39 @@
 """
 Test /academy/cohort
 """
+
 from unittest.mock import MagicMock, patch
+
 from mixer.backend.django import mixer
 
-from ...mixins import AdmissionsTestCase
 from ....management.commands.delete_duplicates import Command
+from ...mixins import AdmissionsTestCase
 
 
 class AcademyCohortTestSuite(AdmissionsTestCase):
     """Test /academy/cohort"""
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_delete_duplicates(self):
         """Test /academy/cohort without auth"""
         model = self.generate_models(cohort=True, user=True)
         models = [
-            mixer.blend('admissions.CohortUser', user=model['user'], cohort=model['cohort']) for _ in range(0, 10)
+            mixer.blend("admissions.CohortUser", user=model["user"], cohort=model["cohort"]) for _ in range(0, 10)
         ]
         model_dict = self.remove_dinamics_fields(models[0].__dict__)
         command = Command()
 
         self.assertEqual(command.handle(), None)
         self.assertEqual(self.count_cohort_user(), 1)
-        self.assertEqual(self.bc.database.list_of('admissions.CohortUser'), [model_dict])
+        self.assertEqual(self.bc.database.list_of("admissions.CohortUser"), [model_dict])
 
     # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
 
-    # @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    # @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    # @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    # @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     # def test_delete_duplicates_with_one_student_graduated(self):
     #     """Test /academy/cohort without auth"""
     #     model = self.generate_models(cohort=True, user=True)
@@ -57,8 +59,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    # @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    # @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    # @patch('django.db.models.signals.pre_delete.send_robust', MagicMock(return_value=None))
+    # @patch('breathecode.admissions.signals.student_edu_status_updated.send_robust', MagicMock(return_value=None))
     # def test_delete_duplicates_with_one_student_with_finantial_status(self):
     #     """Test /academy/cohort without auth"""
     #     model = self.generate_models(cohort=True, user=True)

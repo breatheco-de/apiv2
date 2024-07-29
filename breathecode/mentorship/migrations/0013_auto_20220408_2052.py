@@ -6,25 +6,37 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('mentorship', '0012_alter_mentorshipsession_is_online'),
+        ("mentorship", "0012_alter_mentorshipsession_is_online"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='mentorprofile',
-            name='status',
-            field=models.CharField(choices=[('INVITED', 'Invited'), ('ACTIVE', 'Active'), ('UNLISTED', 'Unlisted'),
-                                            ('INNACTIVE', 'Innactive')],
-                                   default='INVITED',
-                                   help_text='Options are: INVITEDACTIVEUNLISTEDINNACTIVE',
-                                   max_length=15),
+            model_name="mentorprofile",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("INVITED", "Invited"),
+                    ("ACTIVE", "Active"),
+                    ("UNLISTED", "Unlisted"),
+                    ("INNACTIVE", "Innactive"),
+                ],
+                default="INVITED",
+                help_text="Options are: INVITEDACTIVEUNLISTEDINNACTIVE",
+                max_length=15,
+            ),
         ),
         migrations.AlterField(
-            model_name='mentorshipservice',
-            name='status',
-            field=models.CharField(choices=[('DRAFT', 'Draft'), ('ACTIVE', 'Active'), ('UNLISTED', 'Unlisted'),
-                                            ('INNACTIVE', 'Innactive')],
-                                   default='DRAFT',
-                                   max_length=15),
+            model_name="mentorshipservice",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("DRAFT", "Draft"),
+                    ("ACTIVE", "Active"),
+                    ("UNLISTED", "Unlisted"),
+                    ("INNACTIVE", "Innactive"),
+                ],
+                default="DRAFT",
+                max_length=15,
+            ),
         ),
     ]

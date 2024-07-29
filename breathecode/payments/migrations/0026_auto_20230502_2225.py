@@ -6,51 +6,51 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0056_auto_20230317_1657'),
-        ('payments', '0025_auto_20230317_0702'),
+        ("admissions", "0056_auto_20230317_1657"),
+        ("payments", "0025_auto_20230317_0702"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='academyservice',
-            name='available_cohorts',
+            model_name="academyservice",
+            name="available_cohorts",
         ),
         migrations.RemoveField(
-            model_name='academyservice',
-            name='cohort_patterns',
+            model_name="academyservice",
+            name="cohort_patterns",
         ),
         migrations.AddField(
-            model_name='academyservice',
-            name='bundle_size',
+            model_name="academyservice",
+            name="bundle_size",
             field=models.FloatField(
                 default=1,
-                help_text=
-                'Minimum unit size allowed to be bought, example: bundle_size=5, then you are allowed to buy a minimum of 5 units. Related to the discount ratio'
+                help_text="Minimum unit size allowed to be bought, example: bundle_size=5, then you are allowed to buy a minimum of 5 units. Related to the discount ratio",
             ),
         ),
         migrations.AddField(
-            model_name='academyservice',
-            name='discount_ratio',
-            field=models.FloatField(default=1, help_text='Will be used when calculated by the final price'),
+            model_name="academyservice",
+            name="discount_ratio",
+            field=models.FloatField(default=1, help_text="Will be used when calculated by the final price"),
         ),
         migrations.AddField(
-            model_name='academyservice',
-            name='max_amount',
+            model_name="academyservice",
+            name="max_amount",
             field=models.FloatField(default=1, help_text="Limit total amount, it doesn't matter the bundle size"),
         ),
         migrations.AddField(
-            model_name='academyservice',
-            name='max_items',
+            model_name="academyservice",
+            name="max_items",
             field=models.FloatField(
-                default=1, help_text="How many items can be bought in total, it doens't matter the bundle size"),
+                default=1, help_text="How many items can be bought in total, it doens't matter the bundle size"
+            ),
         ),
         migrations.AlterField(
-            model_name='plan',
-            name='available_cohorts',
+            model_name="plan",
+            name="available_cohorts",
             field=models.ManyToManyField(
                 blank=True,
-                help_text=
-                'Minimum unit size allowed to be bought, example: bundle_size=5, then you are allowed to buy a minimum of 5 units. Related to the discount ratio',
-                to='admissions.Cohort'),
+                help_text="Minimum unit size allowed to be bought, example: bundle_size=5, then you are allowed to buy a minimum of 5 units. Related to the discount ratio",
+                to="admissions.Cohort",
+            ),
         ),
     ]

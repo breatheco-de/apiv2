@@ -7,7 +7,7 @@ from django.db.models import Q
 
 from breathecode.monitoring.models import SupervisorIssue
 
-__all__ = ['issue', 'paths']
+__all__ = ["issue", "paths"]
 
 paths = {}
 
@@ -19,10 +19,10 @@ def issue(supervisor: callable, delta: Optional[timedelta] = None, attempts: int
         delta = timedelta(minutes=10)
 
     def create_handler(fn: callable):
-        code = fn.__name__.replace('_', '-')
-        issue_by_supervisor = Q(code=code,
-                                supervisor__task_module=supervisor.__module__,
-                                supervisor__task_name=supervisor.__name__)
+        code = fn.__name__.replace("_", "-")
+        issue_by_supervisor = Q(
+            code=code, supervisor__task_module=supervisor.__module__, supervisor__task_name=supervisor.__name__
+        )
 
         def wrapper(supervisor_issue_id: int):
             issue = SupervisorIssue.objects.filter(issue_by_supervisor, fixed=None, id=supervisor_issue_id).first()
@@ -39,8 +39,9 @@ def issue(supervisor: callable, delta: Optional[timedelta] = None, attempts: int
             return fixed
 
         async def async_wrapper(supervisor_issue_id: int):
-            issue = await SupervisorIssue.objects.filter(issue_by_supervisor, fixed=None,
-                                                         id=supervisor_issue_id).afirst()
+            issue = await SupervisorIssue.objects.filter(
+                issue_by_supervisor, fixed=None, id=supervisor_issue_id
+            ).afirst()
             if not issue:
                 return
 
@@ -56,12 +57,12 @@ def issue(supervisor: callable, delta: Optional[timedelta] = None, attempts: int
         # handler
         fn_module = fn.__module__
         fn_name = fn.__name__
-        fn_path = fn_module + '.' + fn_name
+        fn_path = fn_module + "." + fn_name
 
         # supervisor
         supervisor_module = supervisor.__module__
         supervisor_name = supervisor.__name__
-        supervisor_path = supervisor_module + '.' + supervisor_name
+        supervisor_path = supervisor_module + "." + supervisor_name
 
         if supervisor_path not in paths:
             paths[supervisor_path] = {}

@@ -6,4 +6,4 @@ logger = logging.getLogger(__name__)
 
 
 def test(self, webhook: LearnPackWebhook):
-    logger.info('performing test request')
+    logger.info("performing test request")

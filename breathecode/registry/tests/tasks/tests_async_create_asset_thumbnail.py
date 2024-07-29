@@ -1,6 +1,7 @@
 """
 Test /answer
 """
+
 from logging import Logger
 from unittest.mock import MagicMock, PropertyMock, call, patch
 import pytest
@@ -13,6 +14,7 @@ from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 @pytest.fixture(autouse=True)
 def setup(db):
     from linked_services.django.actions import reset_app_cache
+
     reset_app_cache()
     yield
 
@@ -64,213 +66,239 @@ def patch_get(monkeypatch):
     def handler(expected, code, headers):
 
         reader = StreamReaderMock(expected)
-        monkeypatch.setattr('requests.request', MagicMock(return_value=ResponseMock(expected, code, headers)))
+        monkeypatch.setattr("requests.request", MagicMock(return_value=ResponseMock(expected, code, headers)))
 
     yield handler
 
 
-@patch('logging.Logger.warning', MagicMock())
-@patch('logging.Logger.error', MagicMock())
+@patch("logging.Logger.warning", MagicMock())
+@patch("logging.Logger.error", MagicMock())
 def test__without_asset(bc: Breathecode, client: APIClient):
-    async_create_asset_thumbnail.delay('slug')
+    async_create_asset_thumbnail.delay("slug")
 
-    assert bc.database.list_of('media.Media') == []
-    assert Logger.warning.call_args_list == [call('Asset with slug slug not found')]
-    assert Logger.error.call_args_list == [call('Asset with slug slug not found', exc_info=True)]
+    assert bc.database.list_of("media.Media") == []
+    assert Logger.warning.call_args_list == [call("Asset with slug slug not found")]
+    assert Logger.error.call_args_list == [call("Asset with slug slug not found", exc_info=True)]
 
 
-@patch('logging.Logger.warning', MagicMock())
-@patch('logging.Logger.error', MagicMock())
+@patch("logging.Logger.warning", MagicMock())
+@patch("logging.Logger.error", MagicMock())
 @patch(
-    'os.getenv',
-    MagicMock(side_effect=apply_get_env({
-        'GOOGLE_PROJECT_ID': 'labor-day-story',
-        'SCREENSHOT_MACHINE_KEY': '000000'
-    })))
+    "os.getenv",
+    MagicMock(side_effect=apply_get_env({"GOOGLE_PROJECT_ID": "labor-day-story", "SCREENSHOT_MACHINE_KEY": "000000"})),
+)
 def test__with_asset__bad_function_response(bc: Breathecode, client: APIClient, patch_get):
-    asset_category = {'preview_generation_url': bc.fake.url()}
+    asset_category = {"preview_generation_url": bc.fake.url()}
 
     model = bc.database.create_v2(asset=1, asset_category=asset_category, academy=1)
 
-    headers = {'Accept': '*/*', 'content-type': 'image/jpeg'}
+    headers = {"Accept": "*/*", "content-type": "image/jpeg"}
     patch_get(fake_file_data, 400, headers)
 
     async_create_asset_thumbnail.delay(model.asset.slug)
 
-    assert bc.database.list_of('media.Media') == []
+    assert bc.database.list_of("media.Media") == []
     assert Logger.warning.call_args_list == []
 
     assert Logger.error.call_args_list == [
         call(
-            'Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` '
-            'returns status code 400',
-            exc_info=True),
+            "Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` "
+            "returns status code 400",
+            exc_info=True,
+        ),
     ]
 
 
-@patch('logging.Logger.warning', MagicMock())
-@patch('logging.Logger.error', MagicMock())
-@patch.multiple('breathecode.services.google_cloud.Storage',
-                __init__=MagicMock(return_value=None),
-                client=PropertyMock(),
-                create=True)
-@patch.multiple('breathecode.services.google_cloud.File',
-                __init__=MagicMock(return_value=None),
-                bucket=PropertyMock(),
-                file_name=PropertyMock(),
-                delete=MagicMock(),
-                download=MagicMock(return_value=bytes('qwerty', 'utf-8')),
-                url=MagicMock(return_value='https://uio.io/path'),
-                create=True)
+@patch("logging.Logger.warning", MagicMock())
+@patch("logging.Logger.error", MagicMock())
+@patch.multiple(
+    "breathecode.services.google_cloud.Storage",
+    __init__=MagicMock(return_value=None),
+    client=PropertyMock(),
+    create=True,
+)
+@patch.multiple(
+    "breathecode.services.google_cloud.File",
+    __init__=MagicMock(return_value=None),
+    bucket=PropertyMock(),
+    file_name=PropertyMock(),
+    delete=MagicMock(),
+    download=MagicMock(return_value=bytes("qwerty", "utf-8")),
+    url=MagicMock(return_value="https://uio.io/path"),
+    create=True,
+)
 @patch(
-    'os.getenv',
-    MagicMock(side_effect=apply_get_env({
-        'GOOGLE_PROJECT_ID': 'labor-day-story',
-        'SCREENSHOTS_BUCKET': 'random-bucket',
-        'SCREENSHOT_MACHINE_KEY': '000000'
-    })))
+    "os.getenv",
+    MagicMock(
+        side_effect=apply_get_env(
+            {
+                "GOOGLE_PROJECT_ID": "labor-day-story",
+                "SCREENSHOTS_BUCKET": "random-bucket",
+                "SCREENSHOT_MACHINE_KEY": "000000",
+            }
+        )
+    ),
+)
 def test__with_asset__good_function_response(bc: Breathecode, client: APIClient, patch_get):
 
-    hash = '3d78522863c7781e5800cd3c7dfe6450856db9eb9166f43ecfe82ccdbe95173a'
+    hash = "3d78522863c7781e5800cd3c7dfe6450856db9eb9166f43ecfe82ccdbe95173a"
     fake_url = bc.fake.url()
 
-    asset_category = {'preview_generation_url': fake_url}
+    asset_category = {"preview_generation_url": fake_url}
     model = bc.database.create_v2(asset=1, asset_category=asset_category, academy=1)
 
-    headers = {'Accept': '*/*', 'content-type': 'image/jpeg'}
+    headers = {"Accept": "*/*", "content-type": "image/jpeg"}
     patch_get(fake_file_data, 200, headers)
     async_create_asset_thumbnail.delay(model.asset.slug)
 
-    assert bc.database.list_of('media.Media') == [{
-        'academy_id': model.asset.academy.id,
-        'hash': hash,
-        'hits': 0,
-        'id': 1,
-        'mime': 'image/png',
-        'name': f'{model.asset.academy.slug}-{model.asset.category.slug}-{model.asset.slug}.png',
-        'slug': f'{model.asset.academy.slug}-{model.asset.category.slug}-{model.asset.slug}',
-        'thumbnail': f'https://storage.googleapis.com/random-bucket/{hash}-thumbnail',
-        'url': f'https://storage.googleapis.com/random-bucket/{hash}',
-    }]
+    assert bc.database.list_of("media.Media") == [
+        {
+            "academy_id": model.asset.academy.id,
+            "hash": hash,
+            "hits": 0,
+            "id": 1,
+            "mime": "image/png",
+            "name": f"{model.asset.academy.slug}-{model.asset.category.slug}-{model.asset.slug}.png",
+            "slug": f"{model.asset.academy.slug}-{model.asset.category.slug}-{model.asset.slug}",
+            "thumbnail": f"https://storage.googleapis.com/random-bucket/{hash}-thumbnail",
+            "url": f"https://storage.googleapis.com/random-bucket/{hash}",
+        }
+    ]
     assert Logger.warning.call_args_list == [
-        call(f'Media was save with {hash} for academy {model.asset.academy}'),
+        call(f"Media was save with {hash} for academy {model.asset.academy}"),
     ]
     assert Logger.error.call_args_list == []
 
 
-@patch('logging.Logger.warning', MagicMock())
-@patch('logging.Logger.error', MagicMock())
-@patch.multiple('breathecode.services.google_cloud.Storage',
-                __init__=MagicMock(return_value=None),
-                client=PropertyMock(),
-                create=True)
-@patch.multiple('breathecode.services.google_cloud.File',
-                __init__=MagicMock(return_value=None),
-                delete=MagicMock(),
-                download=MagicMock(return_value=bytes('qwerty', 'utf-8')),
-                create=True)
+@patch("logging.Logger.warning", MagicMock())
+@patch("logging.Logger.error", MagicMock())
+@patch.multiple(
+    "breathecode.services.google_cloud.Storage",
+    __init__=MagicMock(return_value=None),
+    client=PropertyMock(),
+    create=True,
+)
+@patch.multiple(
+    "breathecode.services.google_cloud.File",
+    __init__=MagicMock(return_value=None),
+    delete=MagicMock(),
+    download=MagicMock(return_value=bytes("qwerty", "utf-8")),
+    create=True,
+)
 @patch(
-    'os.getenv',
-    MagicMock(side_effect=apply_get_env({
-        'GOOGLE_PROJECT_ID': 'labor-day-story',
-        'SCREENSHOT_MACHINE_KEY': '000000'
-    })))
+    "os.getenv",
+    MagicMock(side_effect=apply_get_env({"GOOGLE_PROJECT_ID": "labor-day-story", "SCREENSHOT_MACHINE_KEY": "000000"})),
+)
 def test__with_asset__with_media__without_asset_category_with_url(bc: Breathecode, client: APIClient, patch_get):
-    hash = '3d78522863c7781e5800cd3c7dfe6450856db9eb9166f43ecfe82ccdbe95173a'
-    media = {'hash': hash}
+    hash = "3d78522863c7781e5800cd3c7dfe6450856db9eb9166f43ecfe82ccdbe95173a"
+    media = {"hash": hash}
     model = bc.database.create_v2(asset=1, media=media)
 
-    headers = {'Accept': '*/*', 'content-type': 'image/jpeg'}
+    headers = {"Accept": "*/*", "content-type": "image/jpeg"}
     patch_get(fake_file_data, 200, headers)
 
     async_create_asset_thumbnail.delay(model.asset.slug)
 
-    assert bc.database.list_of('media.Media') == [
+    assert bc.database.list_of("media.Media") == [
         bc.format.to_dict(model.media),
     ]
     assert Logger.warning.call_args_list == []
     assert Logger.error.call_args_list == [
-        call('Not able to retrieve a preview generation', exc_info=True),
+        call("Not able to retrieve a preview generation", exc_info=True),
     ]
 
 
-@patch('logging.Logger.warning', MagicMock())
-@patch('logging.Logger.error', MagicMock())
-@patch.multiple('breathecode.services.google_cloud.Storage',
-                __init__=MagicMock(return_value=None),
-                client=PropertyMock(),
-                create=True)
-@patch.multiple('breathecode.services.google_cloud.File',
-                __init__=MagicMock(return_value=None),
-                bucket=PropertyMock(),
-                file_name=PropertyMock(),
-                delete=MagicMock(),
-                rename=MagicMock(),
-                download=MagicMock(return_value=bytes('qwerty', 'utf-8')),
-                create=True)
+@patch("logging.Logger.warning", MagicMock())
+@patch("logging.Logger.error", MagicMock())
+@patch.multiple(
+    "breathecode.services.google_cloud.Storage",
+    __init__=MagicMock(return_value=None),
+    client=PropertyMock(),
+    create=True,
+)
+@patch.multiple(
+    "breathecode.services.google_cloud.File",
+    __init__=MagicMock(return_value=None),
+    bucket=PropertyMock(),
+    file_name=PropertyMock(),
+    delete=MagicMock(),
+    rename=MagicMock(),
+    download=MagicMock(return_value=bytes("qwerty", "utf-8")),
+    create=True,
+)
 @patch(
-    'os.getenv',
-    MagicMock(side_effect=apply_get_env({
-        'GOOGLE_PROJECT_ID': 'labor-day-story',
-        'SCREENSHOT_MACHINE_KEY': '000000',
-        'SCREENSHOTS_BUCKET': 'random-bucket',
-    })))
+    "os.getenv",
+    MagicMock(
+        side_effect=apply_get_env(
+            {
+                "GOOGLE_PROJECT_ID": "labor-day-story",
+                "SCREENSHOT_MACHINE_KEY": "000000",
+                "SCREENSHOTS_BUCKET": "random-bucket",
+            }
+        )
+    ),
+)
 def test__with_asset__with_media__with_asset_category_with_url(bc: Breathecode, client: APIClient, patch_get):
-    hash = '3d78522863c7781e5800cd3c7dfe6450856db9eb9166f43ecfe82ccdbe95173a'
-    media = {'hash': hash}
-    asset_category = {'preview_generation_url': bc.fake.url()}
+    hash = "3d78522863c7781e5800cd3c7dfe6450856db9eb9166f43ecfe82ccdbe95173a"
+    media = {"hash": hash}
+    asset_category = {"preview_generation_url": bc.fake.url()}
     model = bc.database.create_v2(asset=1, media=media, asset_category=asset_category, academy=1)
 
-    headers = {'Accept': '*/*', 'content-type': 'image/jpeg'}
+    headers = {"Accept": "*/*", "content-type": "image/jpeg"}
     patch_get(fake_file_data, 200, headers)
 
     async_create_asset_thumbnail.delay(model.asset.slug)
 
-    assert bc.database.list_of('media.Media') == [
+    assert bc.database.list_of("media.Media") == [
         bc.format.to_dict(model.media),
     ]
 
     assert Logger.warning.call_args_list == []
     assert Logger.error.call_args_list == [
-        call(f'Media with hash {hash} already exists, skipping', exc_info=True),
+        call(f"Media with hash {hash} already exists, skipping", exc_info=True),
     ]
 
 
-@patch('logging.Logger.warning', MagicMock())
-@patch('logging.Logger.error', MagicMock())
-@patch.multiple('breathecode.services.google_cloud.Storage',
-                __init__=MagicMock(return_value=None),
-                client=PropertyMock(),
-                create=True)
-@patch.multiple('breathecode.services.google_cloud.File',
-                __init__=MagicMock(return_value=None),
-                bucket=PropertyMock(),
-                file_name=PropertyMock(),
-                delete=MagicMock(),
-                download=MagicMock(return_value=bytes('qwerty', 'utf-8')),
-                create=True)
-@patch('os.getenv', MagicMock(side_effect=apply_get_env({'GOOGLE_PROJECT_ID': 'labor-day-story'})))
+@patch("logging.Logger.warning", MagicMock())
+@patch("logging.Logger.error", MagicMock())
+@patch.multiple(
+    "breathecode.services.google_cloud.Storage",
+    __init__=MagicMock(return_value=None),
+    client=PropertyMock(),
+    create=True,
+)
+@patch.multiple(
+    "breathecode.services.google_cloud.File",
+    __init__=MagicMock(return_value=None),
+    bucket=PropertyMock(),
+    file_name=PropertyMock(),
+    delete=MagicMock(),
+    download=MagicMock(return_value=bytes("qwerty", "utf-8")),
+    create=True,
+)
+@patch("os.getenv", MagicMock(side_effect=apply_get_env({"GOOGLE_PROJECT_ID": "labor-day-story"})))
 def test__with_asset__with_media__media_for_another_academy(bc: Breathecode, client: APIClient, patch_get):
-    hash = '3d78522863c7781e5800cd3c7dfe6450856db9eb9166f43ecfe82ccdbe95173a'
-    asset = {'academy_id': 1}
-    media = {'hash': hash, 'academy_id': 2}
-    asset_category = {'preview_generation_url': bc.fake.url()}
+    hash = "3d78522863c7781e5800cd3c7dfe6450856db9eb9166f43ecfe82ccdbe95173a"
+    asset = {"academy_id": 1}
+    media = {"hash": hash, "academy_id": 2}
+    asset_category = {"preview_generation_url": bc.fake.url()}
     model = bc.database.create(asset=asset, media=media, academy=2, asset_category=asset_category)
 
-    headers = {'Accept': '*/*', 'content-type': 'image/jpeg'}
+    headers = {"Accept": "*/*", "content-type": "image/jpeg"}
     patch_get(fake_file_data, 200, headers)
 
     async_create_asset_thumbnail.delay(model.asset.slug)
 
-    assert bc.database.list_of('media.Media') == [
-        bc.format.to_dict(model.media), {
+    assert bc.database.list_of("media.Media") == [
+        bc.format.to_dict(model.media),
+        {
             **bc.format.to_dict(model.media),
-            'id': 2,
-            'academy_id': 1,
-            'slug': f'{model.asset.academy.slug}-{model.asset.category.slug}-{model.asset.slug}',
-        }
+            "id": 2,
+            "academy_id": 1,
+            "slug": f"{model.asset.academy.slug}-{model.asset.category.slug}-{model.asset.slug}",
+        },
     ]
     assert Logger.warning.call_args_list == []
     assert Logger.error.call_args_list == [
-        call(f'Media was save with {hash} for academy {model.academy[0]}', exc_info=True),
+        call(f"Media was save with {hash} for academy {model.academy[0]}", exc_info=True),
     ]

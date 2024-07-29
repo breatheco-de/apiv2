@@ -12,23 +12,23 @@ from capyc.core.pytest.fixtures import Random
 from capyc.django.pytest.fixtures.signals import Signals
 
 # set ENV as test before run django
-os.environ['ENV'] = 'test'
-os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+os.environ["ENV"] = "test"
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
 pytest_plugins = (
-    'capyc.core.pytest',
-    'capyc.newrelic.pytest',
-    'capyc.django.pytest',
-    'capyc.rest_framework.pytest',
-    'capyc.circuitbreaker.pytest',
+    "capyc.core.pytest",
+    "capyc.newrelic.pytest",
+    "capyc.django.pytest",
+    "capyc.rest_framework.pytest",
+    "capyc.circuitbreaker.pytest",
 )
 
 from breathecode.tests.mixins.breathecode_mixin import Breathecode
 
 
 def pytest_configure():
-    os.environ['ENV'] = 'test'
-    os.environ['SQLALCHEMY_SILENCE_UBER_WARNING'] = '1'
+    os.environ["ENV"] = "test"
+    os.environ["SQLALCHEMY_SILENCE_UBER_WARNING"] = "1"
 
 
 @pytest.fixture
@@ -55,7 +55,7 @@ def bc(seed):
 def set_datetime(monkeypatch):
 
     def patch(new_datetime):
-        monkeypatch.setattr(timezone, 'now', lambda: new_datetime)
+        monkeypatch.setattr(timezone, "now", lambda: new_datetime)
 
     yield patch
 
@@ -78,10 +78,10 @@ def enable_cache_logging(monkeypatch):
     You can re-enable them within a test by calling the provided wrapper.
     """
 
-    monkeypatch.setattr('breathecode.commons.actions.is_output_enable', lambda: False)
+    monkeypatch.setattr("breathecode.commons.actions.is_output_enable", lambda: False)
 
     def wrapper(*args, **kwargs):
-        monkeypatch.setattr('breathecode.commons.actions.is_output_enable', lambda: True)
+        monkeypatch.setattr("breathecode.commons.actions.is_output_enable", lambda: True)
 
     yield wrapper
 
@@ -102,10 +102,10 @@ def enable_hook_manager(monkeypatch):
 
     original_process_model_event = HookManagerClass.process_model_event
 
-    monkeypatch.setattr(HookManagerClass, 'process_model_event', lambda *args, **kwargs: None)
+    monkeypatch.setattr(HookManagerClass, "process_model_event", lambda *args, **kwargs: None)
 
     def enable():
-        monkeypatch.setattr(HookManagerClass, 'process_model_event', original_process_model_event)
+        monkeypatch.setattr(HookManagerClass, "process_model_event", original_process_model_event)
 
     yield enable
 
@@ -122,8 +122,8 @@ def dont_wait_for_rescheduling_tasks():
 
     set_settings(RETRIES_LIMIT=2)
 
-    with patch('task_manager.core.decorators.Task.reattempt_settings', lambda *args, **kwargs: dict()):
-        with patch('task_manager.core.decorators.Task.circuit_breaker_settings', lambda *args, **kwargs: dict()):
+    with patch("task_manager.core.decorators.Task.reattempt_settings", lambda *args, **kwargs: dict()):
+        with patch("task_manager.core.decorators.Task.circuit_breaker_settings", lambda *args, **kwargs: dict()):
             yield
 
 
@@ -154,7 +154,7 @@ def patch_request(monkeypatch):
                     break
 
             if raises:
-                raise TestError(f'Avoiding to make a real request to {args} {kwargs}')
+                raise TestError(f"Avoiding to make a real request to {args} {kwargs}")
 
             mock = MagicMock()
 
@@ -171,7 +171,7 @@ def patch_request(monkeypatch):
             return mock
 
         mock = MagicMock()
-        monkeypatch.setattr('requests.api.request', wrapper)
+        monkeypatch.setattr("requests.api.request", wrapper)
 
         return mock
 
@@ -180,8 +180,67 @@ def patch_request(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def default_environment(clean_environment, fake, monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
-    monkeypatch.setenv('APP_URL', fake.url().replace('http://', 'https://'))
-    monkeypatch.setenv('LOGIN_URL', fake.url().replace('http://', 'https://'))
-    monkeypatch.setenv('ENV', 'test')
+    monkeypatch.setenv("APP_URL", fake.url().replace("http://", "https://"))
+    monkeypatch.setenv("LOGIN_URL", fake.url().replace("http://", "https://"))
+    monkeypatch.setenv("ENV", "test")
 
     yield
+
+
+@pytest.fixture
+def partial_equality():
+    """
+    Fail if the two objects are partially unequal as determined by the '==' operator.
+
+    Usage:
+
+    ```py
+    obj1 = {'key1': 1, 'key2': 2}
+    obj2 = {'key2': 2, 'key3': 1}
+    obj3 = {'key2': 2}
+
+    # it's fail because the key3 is not in the obj1
+    self.bc.check.partial_equality(obj1, obj2)  # 🔴
+
+    # it's fail because the key1 is not in the obj2
+    self.bc.check.partial_equality(obj2, obj1)  # 🔴
+
+    # it's pass because the key2 exists in the obj1
+    self.bc.check.partial_equality(obj1, obj3)  # 🟢
+
+    # it's pass because the key2 exists in the obj2
+    self.bc.check.partial_equality(obj2, obj3)  # 🟢
+
+    # it's fail because the key1 is not in the obj3
+    self.bc.check.partial_equality(obj3, obj1)  # 🔴
+
+    # it's fail because the key3 is not in the obj3
+    self.bc.check.partial_equality(obj3, obj2)  # 🔴
+    ```
+    """
+
+    def _fill_partial_equality(first: dict, second: dict) -> dict:
+        original = {}
+
+        for key in second.keys():
+            original[key] = second[key]
+
+        return original
+
+    def wrapper(first: dict | list[dict], second: dict | list[dict]) -> None:
+        assert type(first) == type(second)
+
+        if isinstance(first, list):
+            assert len(first) == len(second)
+
+            original = []
+
+            for i in range(0, len(first)):
+                original.append(_fill_partial_equality(first[i], second[i]))
+
+        else:
+            original = _fill_partial_equality(first, second)
+
+        assert original == second
+
+    yield wrapper

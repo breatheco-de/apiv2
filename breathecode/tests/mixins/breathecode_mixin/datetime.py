@@ -7,7 +7,7 @@ from . import interfaces
 
 from ..datetime_mixin import DatetimeMixin
 
-__all__ = ['Datetime']
+__all__ = ["Datetime"]
 
 
 class Datetime:

@@ -8,7 +8,7 @@ from breathecode.utils.api_view_extensions.extension_base import ExtensionBase
 from breathecode.utils.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 
-__all__ = ['LookupExtension']
+__all__ = ["LookupExtension"]
 
 
 class Field:
@@ -17,13 +17,16 @@ class Field:
     def id(lang: str, key: str, value: str, alias=None) -> Q:
         if not value.isnumeric():
             raise ValidationException(
-                translation(lang,
-                            en='ID must be numeric',
-                            es='El ID debe ser numérico',
-                            pt='O ID deve ser numérico',
-                            slug='id-must-be-numeric'))
+                translation(
+                    lang,
+                    en="ID must be numeric",
+                    es="El ID debe ser numérico",
+                    pt="O ID deve ser numérico",
+                    slug="id-must-be-numeric",
+                )
+            )
 
-        return Q(**{f'{key}__pk': int(value)})
+        return Q(**{f"{key}__pk": int(value)})
 
     @staticmethod
     def integer(mode: str) -> Callable[[str, str, str], Q]:
@@ -32,31 +35,34 @@ class Field:
             if not value.isnumeric():
                 el = alias or key
                 raise ValidationException(
-                    translation(lang,
-                                en=f'{el} must be numeric',
-                                es=f'El {el} debe ser numérico',
-                                pt=f'O {el} deve ser numérico',
-                                slug=f'{el.replace("_", "-")}-must-be-numeric'))
+                    translation(
+                        lang,
+                        en=f"{el} must be numeric",
+                        es=f"El {el} debe ser numérico",
+                        pt=f"O {el} deve ser numérico",
+                        slug=f'{el.replace("_", "-")}-must-be-numeric',
+                    )
+                )
 
-            return Q(**{f'{key}__{mode}': int(value)})
+            return Q(**{f"{key}__{mode}": int(value)})
 
         return handler
 
     @staticmethod
     def slug(lang: str, key: str, value: str, alias=None) -> Q:
         if value.isnumeric():
-            return Q(**{f'{key}__pk': int(value)})
+            return Q(**{f"{key}__pk": int(value)})
 
-        return Q(**{f'{key}__slug': value})
+        return Q(**{f"{key}__slug": value})
 
     @staticmethod
     def string(mode: str) -> Callable[[str, str, str], Q]:
 
         def handler(lang: str, key: str, value: str, alias=None) -> str:
             param = value
-            if (mode == 'in'):
-                param = param.split(',') if param is not None else []
-            return Q(**{f'{key}__{mode}': param})
+            if mode == "in":
+                param = param.split(",") if param is not None else []
+            return Q(**{f"{key}__{mode}": param})
 
         return handler
 
@@ -64,32 +70,38 @@ class Field:
     def datetime(mode: str) -> Callable[[str, str, str], Q]:
 
         def handler(lang: str, key: str, value: str, alias=None) -> Q:
-            if mode == 'year' or mode == 'month' or mode == 'day' or mode == 'hour' or mode == 'minute':
+            if mode == "year" or mode == "month" or mode == "day" or mode == "hour" or mode == "minute":
 
                 if not value.isnumeric():
-                    el = (alias or key).replace('_', '-')
+                    el = (alias or key).replace("_", "-")
 
                     raise ValidationException(
-                        translation(lang,
-                                    en=f'{el} must be numeric',
-                                    es=f'El {el} debe ser numérico',
-                                    pt=f'O {el} deve ser numérico',
-                                    slug=f'{el.replace("_", "-")}-must-be-numeric'))
+                        translation(
+                            lang,
+                            en=f"{el} must be numeric",
+                            es=f"El {el} debe ser numérico",
+                            pt=f"O {el} deve ser numérico",
+                            slug=f'{el.replace("_", "-")}-must-be-numeric',
+                        )
+                    )
 
-                return Q(**{f'{key}__{mode}': int(value)})
+                return Q(**{f"{key}__{mode}": int(value)})
 
-            if mode == 'isnull':
-                return Q(**{f'{key}__{mode}': value == 'true'})
+            if mode == "isnull":
+                return Q(**{f"{key}__{mode}": value == "true"})
 
             if not value or not (d := dateparse.parse_datetime(value)):
                 el = alias or key
                 raise ValidationException(
-                    translation(lang,
-                                en=f'{el} must be a datetime',
-                                es=f'{el} debe ser un datetime',
-                                slug=f'{el.replace("_", "-")}-must-be-a-datetime'))
+                    translation(
+                        lang,
+                        en=f"{el} must be a datetime",
+                        es=f"{el} debe ser un datetime",
+                        slug=f'{el.replace("_", "-")}-must-be-a-datetime',
+                    )
+                )
 
-            return Q(**{f'{key}__{mode}': d})
+            return Q(**{f"{key}__{mode}": d})
 
         return handler
 
@@ -97,7 +109,7 @@ class Field:
     def bool(mode: str) -> Callable[[str, str, str], Q]:
 
         def handler(lang: str, key: str, value: str, alias=None) -> Q:
-            return Q(**{f'{key}__{mode}': value == 'true'})
+            return Q(**{f"{key}__{mode}": value == "true"})
 
         return handler
 
@@ -108,26 +120,26 @@ class CompileLookupField:
     def string(strings: str) -> dict[str, Callable[[str, str, str, Optional[str]], Q]]:
         lookup = {}
 
-        for key in strings.get('exact', tuple()):
-            lookup[key] = Field.string('exact')
+        for key in strings.get("exact", tuple()):
+            lookup[key] = Field.string("exact")
 
-        for key in strings.get('in', tuple()):
-            lookup[key] = Field.string('in')
+        for key in strings.get("in", tuple()):
+            lookup[key] = Field.string("in")
 
-        for key in strings.get('contains', tuple()):
-            lookup[key] = Field.string('contains')
+        for key in strings.get("contains", tuple()):
+            lookup[key] = Field.string("contains")
 
-        for key in strings.get('icontains', tuple()):
-            lookup[key] = Field.string('icontains')
+        for key in strings.get("icontains", tuple()):
+            lookup[key] = Field.string("icontains")
 
-        for key in strings.get('iexact', tuple()):
-            lookup[key] = Field.string('iexact')
+        for key in strings.get("iexact", tuple()):
+            lookup[key] = Field.string("iexact")
 
-        for key in strings.get('startswith', tuple()):
-            lookup[key] = Field.string('startswith')
+        for key in strings.get("startswith", tuple()):
+            lookup[key] = Field.string("startswith")
 
-        for key in strings.get('endswith', tuple()):
-            lookup[key] = Field.string('endswith')
+        for key in strings.get("endswith", tuple()):
+            lookup[key] = Field.string("endswith")
 
         return lookup
 
@@ -135,20 +147,20 @@ class CompileLookupField:
     def integer(strings: str) -> dict[str, Callable[[str, str, str, Optional[str]], Q]]:
         lookup = {}
 
-        for key in strings.get('exact', tuple()):
-            lookup[key] = Field.integer('exact')
+        for key in strings.get("exact", tuple()):
+            lookup[key] = Field.integer("exact")
 
-        for key in strings.get('in', tuple()):
-            lookup[key] = Field.integer('in')
+        for key in strings.get("in", tuple()):
+            lookup[key] = Field.integer("in")
 
-        for key in strings.get('gt', tuple()):
-            lookup[key] = Field.integer('gt')
+        for key in strings.get("gt", tuple()):
+            lookup[key] = Field.integer("gt")
 
-        for key in strings.get('gte', tuple()):
-            lookup[key] = Field.integer('gte')
+        for key in strings.get("gte", tuple()):
+            lookup[key] = Field.integer("gte")
 
-        for key in strings.get('lt', tuple()):
-            lookup[key] = Field.integer('lte')
+        for key in strings.get("lt", tuple()):
+            lookup[key] = Field.integer("lte")
 
         return lookup
 
@@ -156,38 +168,38 @@ class CompileLookupField:
     def datetime(strings: str) -> dict[str, Callable[[str, str, str, Optional[str]], Q]]:
         lookup = {}
 
-        for key in strings.get('exact', tuple()):
-            lookup[key] = Field.datetime('exact')
+        for key in strings.get("exact", tuple()):
+            lookup[key] = Field.datetime("exact")
 
-        for key in strings.get('in', tuple()):
-            lookup[key] = Field.datetime('in')
+        for key in strings.get("in", tuple()):
+            lookup[key] = Field.datetime("in")
 
-        for key in strings.get('gt', tuple()):
-            lookup[key] = Field.datetime('gt')
+        for key in strings.get("gt", tuple()):
+            lookup[key] = Field.datetime("gt")
 
-        for key in strings.get('gte', tuple()):
-            lookup[key] = Field.datetime('gte')
+        for key in strings.get("gte", tuple()):
+            lookup[key] = Field.datetime("gte")
 
-        for key in strings.get('lt', tuple()):
-            lookup[key] = Field.datetime('lte')
+        for key in strings.get("lt", tuple()):
+            lookup[key] = Field.datetime("lte")
 
-        for key in strings.get('year', tuple()):
-            lookup[key] = Field.datetime('year')
+        for key in strings.get("year", tuple()):
+            lookup[key] = Field.datetime("year")
 
-        for key in strings.get('month', tuple()):
-            lookup[key] = Field.datetime('month')
+        for key in strings.get("month", tuple()):
+            lookup[key] = Field.datetime("month")
 
-        for key in strings.get('day', tuple()):
-            lookup[key] = Field.datetime('day')
+        for key in strings.get("day", tuple()):
+            lookup[key] = Field.datetime("day")
 
-        for key in strings.get('hour', tuple()):
-            lookup[key] = Field.datetime('hour')
+        for key in strings.get("hour", tuple()):
+            lookup[key] = Field.datetime("hour")
 
-        for key in strings.get('minute', tuple()):
-            lookup[key] = Field.datetime('minute')
+        for key in strings.get("minute", tuple()):
+            lookup[key] = Field.datetime("minute")
 
-        for key in strings.get('isnull', tuple()):
-            lookup[key] = Field.datetime('isnull')
+        for key in strings.get("isnull", tuple()):
+            lookup[key] = Field.datetime("isnull")
 
         return lookup
 
@@ -195,32 +207,33 @@ class CompileLookupField:
     def bool(strings: str) -> dict[str, Callable[[str, str, str, Optional[str]], Q]]:
         lookup = {}
 
-        for key in strings.get('exact', tuple()):
-            lookup[key] = Field.bool('exact')
+        for key in strings.get("exact", tuple()):
+            lookup[key] = Field.bool("exact")
 
         return lookup
 
 
 # keeps it here to spy the arguments passed
 @cache
-def compile_lookup(ids: tuple, slugs: tuple, ints: frozenset, strings: frozenset, datetimes: frozenset,
-                   bools: frozenset) -> tuple[tuple, dict]:
+def compile_lookup(
+    ids: tuple, slugs: tuple, ints: frozenset, strings: frozenset, datetimes: frozenset, bools: frozenset
+) -> tuple[tuple, dict]:
     """Compile the available lookup fields once."""
 
     strings = dict(strings)
     lookup = {}
 
     for key in ids:
-        if key == '':
-            lookup.update(CompileLookupField.integer({'exact': ('id', )}))
+        if key == "":
+            lookup.update(CompileLookupField.integer({"exact": ("id",)}))
             continue
 
         lookup[key] = Field.id
 
     for key in slugs:
-        if key == '':
-            lookup.update(CompileLookupField.integer({'exact': ('id', )}))
-            lookup.update(CompileLookupField.string({'exact': ('slug', )}))
+        if key == "":
+            lookup.update(CompileLookupField.integer({"exact": ("id",)}))
+            lookup.update(CompileLookupField.string({"exact": ("slug",)}))
             continue
 
         lookup[key] = Field.slug
@@ -235,15 +248,16 @@ def compile_lookup(ids: tuple, slugs: tuple, ints: frozenset, strings: frozenset
 
 class LookupExtension(ExtensionBase):
 
-    def __init__(self, **kwargs) -> None:
-        ...
+    def __init__(self, **kwargs) -> None: ...
 
-    def _build_lookup(self,
-                      lang: str,
-                      lookup: dict[str, Callable[[str, str, str, Optional[str]], Q]],
-                      querystring: dict[str, Any],
-                      custom_fields: Optional[dict] = None,
-                      overwrite: Optional[dict] = None) -> tuple[tuple, dict]:
+    def _build_lookup(
+        self,
+        lang: str,
+        lookup: dict[str, Callable[[str, str, str, Optional[str]], Q]],
+        querystring: dict[str, Any],
+        custom_fields: Optional[dict] = None,
+        overwrite: Optional[dict] = None,
+    ) -> tuple[tuple, dict]:
         if custom_fields is None:
             custom_fields = {}
 
@@ -273,7 +287,7 @@ class LookupExtension(ExtensionBase):
             return frozenset()
 
         if not isinstance(value, dict):
-            raise ValidationException('value must be a dict', code=500)
+            raise ValidationException("value must be a dict", code=500)
 
         for key in value:
             if not isinstance(value[key], tuple):
@@ -292,18 +306,18 @@ class LookupExtension(ExtensionBase):
             overwrite = {}
 
         # foreign
-        ids = kwargs.get('ids', tuple())
-        slugs = kwargs.get('slugs', tuple())
+        ids = kwargs.get("ids", tuple())
+        slugs = kwargs.get("slugs", tuple())
 
         # fields
-        ints = kwargs.get('ints', dict())
-        strings = kwargs.get('strings', dict())
-        datetimes = kwargs.get('datetimes', dict())
-        bools = kwargs.get('bools', dict())
+        ints = kwargs.get("ints", dict())
+        strings = kwargs.get("strings", dict())
+        datetimes = kwargs.get("datetimes", dict())
+        bools = kwargs.get("bools", dict())
 
         # opts
-        custom_fields = kwargs.get('custom_fields', dict())
-        fix = kwargs.get('custom_fields', dict())
+        custom_fields = kwargs.get("custom_fields", dict())
+        fix = kwargs.get("custom_fields", dict())
 
         # serialize foreign
         ids = tuple(ids)
@@ -332,4 +346,4 @@ class LookupExtension(ExtensionBase):
         return False
 
     def _instance_name(self) -> Optional[str]:
-        return 'lookup'
+        return "lookup"

@@ -26,12 +26,26 @@ from breathecode.utils.validators import validate_language_code
 from .signals import academy_invite_accepted
 
 __all__ = [
-    'User', 'Group', 'ContentType', 'Permission', 'UserProxy', 'Profile', 'Capability', 'Role', 'UserInvite',
-    'ProfileAcademy', 'CredentialsGithub', 'CredentialsSlack', 'CredentialsFacebook', 'CredentialsQuickBooks',
-    'CredentialsGoogle', 'DeviceId', 'Token'
+    "User",
+    "Group",
+    "ContentType",
+    "Permission",
+    "UserProxy",
+    "Profile",
+    "Capability",
+    "Role",
+    "UserInvite",
+    "ProfileAcademy",
+    "CredentialsGithub",
+    "CredentialsSlack",
+    "CredentialsFacebook",
+    "CredentialsQuickBooks",
+    "CredentialsGoogle",
+    "DeviceId",
+    "Token",
 ]
 
-TOKEN_TYPE = ['login', 'one_time', 'temporal', 'permanent']
+TOKEN_TYPE = ["login", "one_time", "temporal", "permanent"]
 LOGIN_TOKEN_LIFETIME = timezone.timedelta(days=1)
 TEMPORAL_TOKEN_LIFETIME = timezone.timedelta(minutes=10)
 
@@ -55,17 +69,20 @@ class Profile(models.Model):
         max_length=255,
         blank=True,
         null=True,
-        help_text='User biography in user\'s language. Will be used if there are no ProfileTranslations.')
+        help_text="User biography in user's language. Will be used if there are no ProfileTranslations.",
+    )
 
     phone_regex = RegexValidator(
-        regex=r'^\+?1?\d{9,15}$',
-        message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
-    phone = models.CharField(validators=[phone_regex], max_length=17, blank=True,
-                             default='')  # validators should be a list
+        regex=r"^\+?1?\d{9,15}$",
+        message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
+    )
+    phone = models.CharField(
+        validators=[phone_regex], max_length=17, blank=True, default=""
+    )  # validators should be a list
 
-    show_tutorial = models.BooleanField(default=True,
-                                        help_text='Set true if you want to show the tutorial on the user UI/UX',
-                                        db_index=True)
+    show_tutorial = models.BooleanField(
+        default=True, help_text="Set true if you want to show the tutorial on the user UI/UX", db_index=True
+    )
 
     twitter_username = models.CharField(max_length=50, blank=True, null=True)
     github_username = models.CharField(max_length=50, blank=True, null=True)
@@ -76,22 +93,24 @@ class Profile(models.Model):
 
 
 class ProfileTranslation(models.Model):
-    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, help_text='Profile')
-    lang = models.CharField(max_length=5,
-                            validators=[validate_language_code],
-                            unique=True,
-                            help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US')
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, help_text="Profile")
+    lang = models.CharField(
+        max_length=5,
+        validators=[validate_language_code],
+        unique=True,
+        help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
+    )
 
     bio = models.CharField(max_length=255)
 
     def __str__(self) -> str:
-        return f'{self.lang}: {self.profile.user.email}'
+        return f"{self.lang}: {self.profile.user.email}"
 
 
 class UserSetting(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='settings')
-    lang = models.CharField(max_length=5, default='en', validators=[validate_language_code])
-    main_currency = models.ForeignKey('payments.Currency', on_delete=models.SET_NULL, null=True, blank=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="settings")
+    lang = models.CharField(max_length=5, default="en", validators=[validate_language_code])
+    main_currency = models.ForeignKey("payments.Currency", on_delete=models.SET_NULL, null=True, blank=True)
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -103,7 +122,7 @@ class Capability(models.Model):
     description = models.CharField(max_length=255, blank=True, null=True, default=None)
 
     def __str__(self):
-        return f'{self.slug}'
+        return f"{self.slug}"
 
 
 class Role(models.Model):
@@ -115,27 +134,27 @@ class Role(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.name} ({self.slug})'
+        return f"{self.name} ({self.slug})"
 
 
-PENDING = 'PENDING'
-ACCEPTED = 'ACCEPTED'
-REJECTED = 'REJECTED'
-WAITING_LIST = 'WAITING_LIST'
+PENDING = "PENDING"
+ACCEPTED = "ACCEPTED"
+REJECTED = "REJECTED"
+WAITING_LIST = "WAITING_LIST"
 INVITE_STATUS = (
-    (PENDING, 'Pending'),
-    (REJECTED, 'Rejected'),
-    (ACCEPTED, 'Accepted'),
-    (WAITING_LIST, 'Waiting list'),
+    (PENDING, "Pending"),
+    (REJECTED, "Rejected"),
+    (ACCEPTED, "Accepted"),
+    (WAITING_LIST, "Waiting list"),
 )
 
-PENDING = 'PENDING'
-DONE = 'DONE'
-ERROR = 'ERROR'
+PENDING = "PENDING"
+DONE = "DONE"
+ERROR = "ERROR"
 PROCESS_STATUS = (
-    (PENDING, 'Pending'),
-    (DONE, 'Done'),
-    (ERROR, 'Error'),
+    (PENDING, "Pending"),
+    (DONE, "Done"),
+    (ERROR, "Error"),
 )
 
 
@@ -153,46 +172,41 @@ class UserInvite(models.Model):
     is_email_validated = models.BooleanField(default=False)
     has_marketing_consent = models.BooleanField(default=False)
 
-    user = models.ForeignKey(User,
-                             on_delete=models.CASCADE,
-                             null=True,
-                             default=None,
-                             blank=True,
-                             related_name='invites')
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, null=True, default=None, blank=True, related_name="invites"
+    )
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None, blank=True)
-    syllabus = models.ForeignKey('admissions.Syllabus', on_delete=models.CASCADE, null=True, default=None, blank=True)
+    syllabus = models.ForeignKey("admissions.Syllabus", on_delete=models.CASCADE, null=True, default=None, blank=True)
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, null=True, default=None, blank=True)
     role = models.ForeignKey(Role, on_delete=models.CASCADE, null=True, default=None, blank=True)
-    event_slug = models.SlugField(max_length=120,
-                                  blank=True,
-                                  null=True,
-                                  help_text='If set, the user signed up because of an Event')
-    asset_slug = models.SlugField(max_length=60,
-                                  blank=True,
-                                  null=True,
-                                  help_text='If set, the user signed up because of an Asset')
+    event_slug = models.SlugField(
+        max_length=120, blank=True, null=True, help_text="If set, the user signed up because of an Event"
+    )
+    asset_slug = models.SlugField(
+        max_length=60, blank=True, null=True, help_text="If set, the user signed up because of an Asset"
+    )
 
     first_name = models.CharField(max_length=100, default=None, null=True)
     last_name = models.CharField(max_length=100, default=None, null=True)
 
     token = models.CharField(max_length=255, unique=True)
 
-    author = models.ForeignKey(User,
-                               on_delete=models.CASCADE,
-                               null=True,
-                               default=None,
-                               related_name='invites_by_author')
+    author = models.ForeignKey(
+        User, on_delete=models.CASCADE, null=True, default=None, related_name="invites_by_author"
+    )
 
     status = models.CharField(max_length=15, choices=INVITE_STATUS, default=PENDING)
 
     process_status = models.CharField(max_length=7, choices=PROCESS_STATUS, default=PENDING)
-    process_message = models.CharField(max_length=150, default='')
+    process_message = models.CharField(max_length=150, default="")
 
     phone_regex = RegexValidator(
-        regex=r'^\+?1?\d{9,15}$',
-        message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
-    phone = models.CharField(validators=[phone_regex], max_length=17, blank=True,
-                             default='')  # validators should be a list
+        regex=r"^\+?1?\d{9,15}$",
+        message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
+    )
+    phone = models.CharField(
+        validators=[phone_regex], max_length=17, blank=True, default=""
+    )  # validators should be a list
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -203,16 +217,15 @@ class UserInvite(models.Model):
     latitude = models.DecimalField(max_digits=30, decimal_places=15, null=True, default=None, blank=True)
     longitude = models.DecimalField(max_digits=30, decimal_places=15, null=True, default=None, blank=True)
 
-    conversion_info = models.JSONField(default=None,
-                                       blank=True,
-                                       null=True,
-                                       help_text='UTMs and other conversion information.')
+    conversion_info = models.JSONField(
+        default=None, blank=True, null=True, help_text="UTMs and other conversion information."
+    )
 
     email_quality = models.FloatField(default=None, blank=True, null=True)
     email_status = models.JSONField(default=None, blank=True, null=True)
 
     def __str__(self):
-        return f'Invite for {self.email}'
+        return f"Invite for {self.email}"
 
     def save(self, *args, **kwargs):
         import breathecode.authenticate.tasks as tasks_authenticate
@@ -224,7 +237,7 @@ class UserInvite(models.Model):
             status_updated = True
 
         if self.pk and self._email and self.email != self._email:
-            raise forms.ValidationError('Email is readonly')
+            raise forms.ValidationError("Email is readonly")
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
@@ -233,17 +246,17 @@ class UserInvite(models.Model):
             tasks_authenticate.async_validate_email_invite.delay(self.id)
 
         if status_updated:
-            signals.invite_status_updated.send(instance=self, sender=UserInvite)
+            signals.invite_status_updated.send_robust(instance=self, sender=UserInvite)
 
         self._email = self.email
         self._old_status = self.status
 
 
-INVITED = 'INVITED'
-ACTIVE = 'ACTIVE'
+INVITED = "INVITED"
+ACTIVE = "ACTIVE"
 PROFILE_ACADEMY_STATUS = (
-    (INVITED, 'Invited'),
-    (ACTIVE, 'Active'),
+    (INVITED, "Invited"),
+    (ACTIVE, "Active"),
 )
 
 
@@ -264,10 +277,12 @@ class ProfileAcademy(models.Model):
     address = models.CharField(max_length=255, blank=True, default=None, null=True)
 
     phone_regex = RegexValidator(
-        regex=r'^\+?1?\d{9,15}$',
-        message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
-    phone = models.CharField(validators=[phone_regex], max_length=17, blank=True,
-                             default='')  # validators should be a list
+        regex=r"^\+?1?\d{9,15}$",
+        message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
+    )
+    phone = models.CharField(
+        validators=[phone_regex], max_length=17, blank=True, default=""
+    )  # validators should be a list
 
     status = models.CharField(max_length=15, choices=PROFILE_ACADEMY_STATUS, default=INVITED, db_index=True)
 
@@ -275,12 +290,12 @@ class ProfileAcademy(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.email} for academy ({self.academy.name})'
+        return f"{self.email} for academy ({self.academy.name})"
 
     def save(self, *args, **kwargs):
 
-        if self.__old_status != self.status and self.status == 'ACTIVE':
-            academy_invite_accepted.send(instance=self, sender=ProfileAcademy)
+        if self.__old_status != self.status and self.status == "ACTIVE":
+            academy_invite_accepted.send_robust(instance=self, sender=ProfileAcademy)
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
@@ -303,7 +318,7 @@ class CredentialsGithub(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.email} ({self.user.id})'
+        return f"{self.email} ({self.user.id})"
 
     def save(self, *args, **kwargs):
         if self.email:
@@ -319,17 +334,18 @@ class AcademyAuthSettings(models.Model):
     github_default_team_ids = models.CharField(
         max_length=40,
         blank=True,
-        default='',
-        help_text='User will be invited to this github team ID when joining the github organization')
-    github_is_sync = models.BooleanField(default=False,
-                                         blank=False,
-                                         help_text='If true, will try synching users every few hours')
-    github_error_log = models.JSONField(default=None,
-                                        blank=True,
-                                        null=True,
-                                        help_text='Error trace log for github API communication')
+        default="",
+        help_text="User will be invited to this github team ID when joining the github organization",
+    )
+    github_is_sync = models.BooleanField(
+        default=False, blank=False, help_text="If true, will try synching users every few hours"
+    )
+    github_error_log = models.JSONField(
+        default=None, blank=True, null=True, help_text="Error trace log for github API communication"
+    )
     auto_sync_content = models.BooleanField(
-        default=False, help_text='If true, will attempt to create WebhookSubscription on each asset repo')
+        default=False, help_text="If true, will attempt to create WebhookSubscription on each asset repo"
+    )
 
     def add_error(self, msg):
         if self.github_error_log is None:
@@ -340,9 +356,9 @@ class AcademyAuthSettings(models.Model):
         def to_datetime(date_str):
             return datetime.fromisoformat(date_str)
 
-        self.github_error_log = [e for e in self.github_error_log if thirty_days_old < to_datetime(e['at'])]
+        self.github_error_log = [e for e in self.github_error_log if thirty_days_old < to_datetime(e["at"])]
 
-        self.github_error_log.append({'msg': msg, 'at': str(timezone.now())})
+        self.github_error_log.append({"msg": msg, "at": str(timezone.now())})
         self.save()
         return self.github_error_log
 
@@ -352,27 +368,27 @@ class AcademyAuthSettings(models.Model):
         return self.github_error_log
 
 
-PENDING = 'PENDING'
-SYNCHED = 'SYNCHED'
-UNKNOWN = 'UNKNOWN'
-PAYMENT_CONFLICT = 'PAYMENT_CONFLICT'
+PENDING = "PENDING"
+SYNCHED = "SYNCHED"
+UNKNOWN = "UNKNOWN"
+PAYMENT_CONFLICT = "PAYMENT_CONFLICT"
 STORAGE_STATUS = (
-    (PENDING, 'Pending'),
-    (SYNCHED, 'Synched'),
-    (ERROR, 'Error'),
-    (UNKNOWN, 'Unknown'),
-    (PAYMENT_CONFLICT, 'Payment conflict'),
+    (PENDING, "Pending"),
+    (SYNCHED, "Synched"),
+    (ERROR, "Error"),
+    (UNKNOWN, "Unknown"),
+    (PAYMENT_CONFLICT, "Payment conflict"),
 )
 
-ADD = 'ADD'
-INVITE = 'INVITE'
-DELETE = 'DELETE'
-IGNORE = 'IGNORE'
+ADD = "ADD"
+INVITE = "INVITE"
+DELETE = "DELETE"
+IGNORE = "IGNORE"
 STORAGE_ACTION = (
-    (ADD, 'Add'),
-    (DELETE, 'Delete'),
-    (INVITE, 'Invite'),
-    (IGNORE, 'Ignore'),
+    (ADD, "Add"),
+    (DELETE, "Delete"),
+    (INVITE, "Invite"),
+    (IGNORE, "Ignore"),
 )
 
 
@@ -385,11 +401,13 @@ class GithubAcademyUser(models.Model):
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True)
-    username = models.SlugField(max_length=40,
-                                default=None,
-                                null=True,
-                                blank=True,
-                                help_text='Only used when the username has not been found on 4Geeks')
+    username = models.SlugField(
+        max_length=40,
+        default=None,
+        null=True,
+        blank=True,
+        help_text="Only used when the username has not been found on 4Geeks",
+    )
     storage_status = models.CharField(max_length=20, choices=STORAGE_STATUS, default=PENDING)
     storage_action = models.CharField(max_length=20, choices=STORAGE_ACTION, default=ADD)
     storage_log = models.JSONField(default=None, null=True, blank=True)
@@ -401,13 +419,13 @@ class GithubAcademyUser(models.Model):
 
     def __str__(self):
         if self.user is None:
-            return str(self.id) + ' ' + str(self.username)
+            return str(self.id) + " " + str(self.username)
         else:
-            return str(self.user.email) + ' ' + str(self.username)
+            return str(self.user.email) + " " + str(self.username)
 
     @staticmethod
     def create_log(msg):
-        return {'msg': msg, 'at': str(timezone.now())}
+        return {"msg": msg, "at": str(timezone.now())}
 
     def log(self, msg, reset=True):
 
@@ -429,8 +447,8 @@ class GithubAcademyUser(models.Model):
 
         exit_op = super().save(*args, **kwargs)
 
-        if has_mutated and self.storage_status == 'SYNCHED':
-            prev = GithubAcademyUserLog.objects.filter(academy_user=self).order_by('-created_at').first()
+        if has_mutated and self.storage_status == "SYNCHED":
+            prev = GithubAcademyUserLog.objects.filter(academy_user=self).order_by("-created_at").first()
 
             user_log = GithubAcademyUserLog(
                 academy_user=self,
@@ -472,7 +490,7 @@ class CredentialsSlack(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.user.email} ({self.authed_user})'
+        return f"{self.user.email} ({self.authed_user})"
 
 
 class CredentialsFacebook(models.Model):
@@ -489,7 +507,7 @@ class CredentialsFacebook(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'Team {str(self.user)}'
+        return f"Team {str(self.user)}"
 
 
 class CredentialsQuickBooks(models.Model):
@@ -516,25 +534,24 @@ class Token(rest_framework.authtoken.models.Token):
     """Bearer Token that support different types like `'login'`, `'temporal'` or `'permanent'`."""
 
     key = models.CharField(max_length=40, db_index=True, unique=True)
-    #Foreign key relationship to user for many-to-one relationship
-    user = models.ForeignKey(settings.AUTH_USER_MODEL,
-                             related_name='auth_token',
-                             on_delete=models.CASCADE,
-                             verbose_name=_('User'))
-    token_type = models.CharField(max_length=64, default='temporal', db_index=True)
+    # Foreign key relationship to user for many-to-one relationship
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, related_name="auth_token", on_delete=models.CASCADE, verbose_name=_("User")
+    )
+    token_type = models.CharField(max_length=64, default="temporal", db_index=True)
     expires_at = models.DateTimeField(default=None, blank=True, null=True, db_index=True)
 
     def save(self, *args, **kwargs):
         without_expire_at = not self.expires_at
-        if without_expire_at and self.token_type == 'login':
+        if without_expire_at and self.token_type == "login":
             utc_now = timezone.now()
             self.expires_at = utc_now + LOGIN_TOKEN_LIFETIME
 
-        if without_expire_at and self.token_type == 'temporal':
+        if without_expire_at and self.token_type == "temporal":
             utc_now = timezone.now()
             self.expires_at = utc_now + TEMPORAL_TOKEN_LIFETIME
 
-        if self.token_type == 'one_time' or self.token_type == 'permanent':
+        if self.token_type == "one_time" or self.token_type == "permanent":
             self.expires_at = None
 
         super().save(*args, **kwargs)
@@ -548,32 +565,33 @@ class Token(rest_framework.authtoken.models.Token):
     @classmethod
     def get_or_create(cls, user, token_type: str, **kwargs: Any):
         utc_now = timezone.now()
-        kwargs['token_type'] = token_type
+        kwargs["token_type"] = token_type
 
         cls.delete_expired_tokens()
 
         if token_type not in TOKEN_TYPE:
             raise InvalidTokenType(f'Invalid token_type, correct values are {", ".join(TOKEN_TYPE)}')
 
-        has_hours_length = 'hours_length' in kwargs
-        has_expires_at = 'expires_at' in kwargs
+        has_hours_length = "hours_length" in kwargs
+        has_expires_at = "expires_at" in kwargs
 
-        if (token_type == 'one_time' or token_type == 'permanent') and (has_hours_length or has_expires_at):
-            raise BadArguments(f'You can\'t provide token_type=\'{token_type}\' and '
-                               'has_hours_length or has_expires_at together')
+        if (token_type == "one_time" or token_type == "permanent") and (has_hours_length or has_expires_at):
+            raise BadArguments(
+                f"You can't provide token_type='{token_type}' and " "has_hours_length or has_expires_at together"
+            )
 
         if has_hours_length and has_expires_at:
-            raise BadArguments('You can\'t provide hours_length and expires_at argument together')
+            raise BadArguments("You can't provide hours_length and expires_at argument together")
 
         if has_hours_length:
-            kwargs['expires_at'] = utc_now + timezone.timedelta(hours=kwargs['hours_length'])
-            del kwargs['hours_length']
+            kwargs["expires_at"] = utc_now + timezone.timedelta(hours=kwargs["hours_length"])
+            del kwargs["hours_length"]
 
         token = None
         created = False
 
         try:
-            if token_type == 'one_time':
+            if token_type == "one_time":
                 raise TryToGetOrCreateAOneTimeToken()
 
             token, created = Token.objects.get_or_create(user=user, **kwargs)
@@ -597,7 +615,7 @@ class Token(rest_framework.authtoken.models.Token):
 
     @classmethod
     def validate_and_destroy(cls, hash: str) -> User:
-        token = Token.objects.filter(key=hash, token_type='one_time').first()
+        token = Token.objects.filter(key=hash, token_type="one_time").first()
         if not token:
             raise TokenNotFound()
 
@@ -608,7 +626,7 @@ class Token(rest_framework.authtoken.models.Token):
 
     class Meta:
         # ensure user and name are unique
-        unique_together = (('user', 'key'), )
+        unique_together = (("user", "key"),)
 
 
 class DeviceId(models.Model):
@@ -632,7 +650,7 @@ class GitpodUser(models.Model):
         default=None,
         null=True,
         blank=True,
-        help_text='If a gitpod user is not connected to a real user and academy in the database, it will be deleted ASAP'
+        help_text="If a gitpod user is not connected to a real user and academy in the database, it will be deleted ASAP",
     )
 
 
@@ -644,6 +662,6 @@ class App(models.Model):
     """
 
     def __init__(self, *args, **kwargs):
-        raise DeprecationWarning('authenticate.App was deprecated, use linked_services.App instead')
+        raise DeprecationWarning("authenticate.App was deprecated, use linked_services.App instead")
 
-    name = models.CharField(max_length=25, unique=True, help_text='Descriptive and unique name of the app')
+    name = models.CharField(max_length=25, unique=True, help_text="Descriptive and unique name of the app")

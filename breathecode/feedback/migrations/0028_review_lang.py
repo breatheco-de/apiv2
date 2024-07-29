@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('feedback', '0027_review_is_public'),
+        ("feedback", "0027_review_is_public"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='review',
-            name='lang',
+            model_name="review",
+            name="lang",
             field=models.CharField(blank=True, max_length=3, null=True),
         ),
     ]

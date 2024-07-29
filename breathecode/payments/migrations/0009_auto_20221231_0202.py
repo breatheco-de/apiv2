@@ -7,43 +7,44 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0048_academy_main_currency'),
-        ('mentorship', '0017_auto_20221130_0504'),
-        ('payments', '0008_auto_20221230_1044'),
+        ("admissions", "0048_academy_main_currency"),
+        ("mentorship", "0017_auto_20221130_0504"),
+        ("payments", "0008_auto_20221230_1044"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='MentorshipServiceSet',
+            name="MentorshipServiceSet",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('slug', models.SlugField(max_length=100, unique=True)),
-                ('name', models.CharField(max_length=150)),
-                ('academy', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
-                ('mentorship_services', models.ManyToManyField(blank=True, to='mentorship.MentorshipService')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("slug", models.SlugField(max_length=100, unique=True)),
+                ("name", models.CharField(max_length=150)),
+                ("academy", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="admissions.academy")),
+                ("mentorship_services", models.ManyToManyField(blank=True, to="mentorship.MentorshipService")),
             ],
         ),
         migrations.RemoveField(
-            model_name='plan',
-            name='schedulers',
+            model_name="plan",
+            name="schedulers",
         ),
         migrations.AddField(
-            model_name='planserviceitem',
-            name='cohort_pattern',
+            model_name="planserviceitem",
+            name="cohort_pattern",
             field=models.CharField(blank=True, default=None, max_length=80, null=True),
         ),
         migrations.AddField(
-            model_name='planserviceitem',
-            name='cohorts',
-            field=models.ManyToManyField(blank=True, to='admissions.Cohort'),
+            model_name="planserviceitem",
+            name="cohorts",
+            field=models.ManyToManyField(blank=True, to="admissions.Cohort"),
         ),
-        migrations.DeleteModel(name='PaymentServiceScheduler', ),
+        migrations.DeleteModel(
+            name="PaymentServiceScheduler",
+        ),
         migrations.AddField(
-            model_name='planserviceitem',
-            name='mentorship_service_set',
-            field=models.ForeignKey(blank=True,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='payments.mentorshipserviceset'),
+            model_name="planserviceitem",
+            name="mentorship_service_set",
+            field=models.ForeignKey(
+                blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="payments.mentorshipserviceset"
+            ),
         ),
     ]

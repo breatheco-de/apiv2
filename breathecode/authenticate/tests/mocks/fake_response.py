@@ -1,5 +1,6 @@
-class FakeResponse():
+class FakeResponse:
     """Simutate Response to be used by mocks"""
+
     status_code = 200
     data = {}
 

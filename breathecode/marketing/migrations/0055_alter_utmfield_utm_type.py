@@ -6,16 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0054_alter_tag_tag_type'),
+        ("marketing", "0054_alter_tag_tag_type"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='utmfield',
-            name='utm_type',
-            field=models.CharField(choices=[('CONTENT', 'Content'), ('SOURCE', 'Source'), ('MEDIUM', 'Medium'),
-                                            ('CAMPAIGN', 'Campaign')],
-                                   default=None,
-                                   max_length=15),
+            model_name="utmfield",
+            name="utm_type",
+            field=models.CharField(
+                choices=[("CONTENT", "Content"), ("SOURCE", "Source"), ("MEDIUM", "Medium"), ("CAMPAIGN", "Campaign")],
+                default=None,
+                max_length=15,
+            ),
         ),
     ]

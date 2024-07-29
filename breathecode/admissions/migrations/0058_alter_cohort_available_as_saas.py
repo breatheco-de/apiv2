@@ -6,16 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0057_cohort_intro_video'),
+        ("admissions", "0057_cohort_intro_video"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='cohort',
-            name='available_as_saas',
-            field=models.BooleanField(blank=True,
-                                      default=False,
-                                      help_text='Cohorts available as SAAS will be sold through plans at 4Geeks.com',
-                                      null=True),
+            model_name="cohort",
+            name="available_as_saas",
+            field=models.BooleanField(
+                blank=True,
+                default=False,
+                help_text="Cohorts available as SAAS will be sold through plans at 4Geeks.com",
+                null=True,
+            ),
         ),
     ]

@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0022_auto_20201009_1817'),
+        ("marketing", "0022_auto_20201009_1817"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='formentry',
-            name='latitude',
+            model_name="formentry",
+            name="latitude",
             field=models.DecimalField(blank=True, decimal_places=15, default=None, max_digits=30, null=True),
         ),
         migrations.AlterField(
-            model_name='formentry',
-            name='longitude',
+            model_name="formentry",
+            name="longitude",
             field=models.DecimalField(blank=True, decimal_places=15, default=None, max_digits=30, null=True),
         ),
     ]

@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authenticate', '0019_auto_20210121_2142'),
+        ("authenticate", "0019_auto_20210121_2142"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='userinvite',
-            name='sent_at',
+            model_name="userinvite",
+            name="sent_at",
             field=models.DateTimeField(blank=True, default=None, null=True),
         ),
     ]

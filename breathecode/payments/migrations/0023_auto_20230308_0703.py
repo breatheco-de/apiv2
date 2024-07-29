@@ -7,42 +7,44 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('payments', '0022_auto_20230302_0633'),
+        ("payments", "0022_auto_20230302_0633"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='planoffer',
-            name='from_syllabus',
+            model_name="planoffer",
+            name="from_syllabus",
         ),
         migrations.RemoveField(
-            model_name='planoffer',
-            name='suggested_plans',
+            model_name="planoffer",
+            name="suggested_plans",
         ),
         migrations.AddField(
-            model_name='planoffer',
-            name='expires_at',
+            model_name="planoffer",
+            name="expires_at",
             field=models.DateTimeField(blank=True, default=None, null=True),
         ),
         migrations.AddField(
-            model_name='planoffer',
-            name='show_modal',
+            model_name="planoffer",
+            name="show_modal",
             field=models.BooleanField(default=False),
         ),
         migrations.AddField(
-            model_name='planoffer',
-            name='suggested_plan',
-            field=models.ForeignKey(help_text='Suggested plans',
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    related_name='plan_offer_to',
-                                    to='payments.plan'),
+            model_name="planoffer",
+            name="suggested_plan",
+            field=models.ForeignKey(
+                help_text="Suggested plans",
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="plan_offer_to",
+                to="payments.plan",
+            ),
         ),
         migrations.AlterField(
-            model_name='planoffer',
-            name='original_plan',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
-                                    related_name='plan_offer_from',
-                                    to='payments.plan'),
+            model_name="planoffer",
+            name="original_plan",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, related_name="plan_offer_from", to="payments.plan"
+            ),
         ),
     ]

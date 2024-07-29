@@ -6,16 +6,16 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('payments', '0039_auto_20231128_0239'),
+        ("payments", "0039_auto_20231128_0239"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='serviceitem',
-            name='is_renewable',
+            model_name="serviceitem",
+            name="is_renewable",
             field=models.BooleanField(
                 default=False,
-                help_text=
-                "If it's marked, the consumables will be renewed according to the renew_at and renew_at_unit values."),
+                help_text="If it's marked, the consumables will be renewed according to the renew_at and renew_at_unit values.",
+            ),
         ),
     ]

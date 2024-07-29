@@ -6,14 +6,16 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('provisioning', '0010_provisioninguserconsumption_quantity'),
+        ("provisioning", "0010_provisioninguserconsumption_quantity"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='provisioninguserconsumption',
-            name='events',
-            field=models.ManyToManyField(blank=True, editable=False, to='provisioning.ProvisioningConsumptionEvent'),
+            model_name="provisioninguserconsumption",
+            name="events",
+            field=models.ManyToManyField(blank=True, editable=False, to="provisioning.ProvisioningConsumptionEvent"),
         ),
-        migrations.DeleteModel(name='ProvisioningActivity', ),
+        migrations.DeleteModel(
+            name="ProvisioningActivity",
+        ),
     ]

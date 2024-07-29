@@ -6,30 +6,32 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('assignments', '0001_initial'),
+        ("assignments", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='task',
-            name='description',
+            model_name="task",
+            name="description",
             field=models.TextField(blank=True, max_length=450),
         ),
         migrations.AlterField(
-            model_name='task',
-            name='github_url',
+            model_name="task",
+            name="github_url",
             field=models.CharField(blank=True, default=None, max_length=150, null=True),
         ),
         migrations.AlterField(
-            model_name='task',
-            name='live_url',
+            model_name="task",
+            name="live_url",
             field=models.CharField(blank=True, default=None, max_length=150, null=True),
         ),
         migrations.AlterField(
-            model_name='task',
-            name='revision_status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('APPROVED', 'Approved'), ('REJECTED', 'Rejected')],
-                                   default='PENDING',
-                                   max_length=15),
+            model_name="task",
+            name="revision_status",
+            field=models.CharField(
+                choices=[("PENDING", "Pending"), ("APPROVED", "Approved"), ("REJECTED", "Rejected")],
+                default="PENDING",
+                max_length=15,
+            ),
         ),
     ]

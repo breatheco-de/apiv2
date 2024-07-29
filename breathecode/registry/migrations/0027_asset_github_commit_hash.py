@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0026_assetcategory_all_translations'),
+        ("registry", "0026_assetcategory_all_translations"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='asset',
-            name='github_commit_hash',
+            model_name="asset",
+            name="github_commit_hash",
             field=models.CharField(blank=True, default=None, max_length=100, null=True),
         ),
     ]

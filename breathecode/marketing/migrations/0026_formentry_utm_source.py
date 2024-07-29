@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0025_auto_20201110_0001'),
+        ("marketing", "0025_auto_20201110_0001"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='formentry',
-            name='utm_source',
+            model_name="formentry",
+            name="utm_source",
             field=models.CharField(blank=True, default=None, max_length=50, null=True),
         ),
     ]

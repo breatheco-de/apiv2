@@ -7,18 +7,20 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('payments', '0001_initial'),
-        ('admissions', '0047_merge_20220924_0611'),
+        ("payments", "0001_initial"),
+        ("admissions", "0047_merge_20220924_0611"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='academy',
-            name='main_currency',
-            field=models.ForeignKey(blank=True,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    related_name='+',
-                                    to='payments.currency'),
+            model_name="academy",
+            name="main_currency",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="+",
+                to="payments.currency",
+            ),
         ),
     ]

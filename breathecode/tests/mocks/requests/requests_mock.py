@@ -12,8 +12,15 @@ def request_mock(endpoints=None):
     def base(url: str, *args, **kwargs):
         """Requests get mock."""
 
-        if (url == 'GET' or url == 'POST' or url == 'PUT' or url == 'PATCH' or url == 'DELETE' or url == 'HEAD'
-                or url == 'REQUEST'):
+        if (
+            url == "GET"
+            or url == "POST"
+            or url == "PUT"
+            or url == "PATCH"
+            or url == "DELETE"
+            or url == "HEAD"
+            or url == "REQUEST"
+        ):
             url = args[0]
 
         if len(endpoints[0]) == 4:
@@ -29,6 +36,6 @@ def request_mock(endpoints=None):
                 (status, data) = match[0]
             return ResponseMock(data=data, status_code=status, url=url, request_headers=headers)
 
-        return ResponseMock(data='not fount', status_code=404)
+        return ResponseMock(data="not fount", status_code=404)
 
     return Mock(side_effect=base)

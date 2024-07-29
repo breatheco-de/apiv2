@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0048_merge_0047_alter_event_status_0047_auto_20230606_2328'),
+        ("events", "0048_merge_0047_alter_event_status_0047_auto_20230606_2328"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='event',
-            name='free_for_bootcamps',
+            model_name="event",
+            name="free_for_bootcamps",
             field=models.BooleanField(
                 blank=True,
                 default=None,
-                help_text=
-                'Determines if users that belong to an academy not available as saas can join the event for free.',
-                null=True),
+                help_text="Determines if users that belong to an academy not available as saas can join the event for free.",
+                null=True,
+            ),
         ),
     ]

@@ -6,16 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('freelance', '0013_issue_status_message'),
+        ("freelance", "0013_issue_status_message"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='bill',
-            name='status',
-            field=models.CharField(choices=[('DUE', 'Due'), ('APPROVED', 'Approved'), ('IGNORED', 'Ignored'),
-                                            ('PAID', 'Paid')],
-                                   default='DUE',
-                                   max_length=20),
+            model_name="bill",
+            name="status",
+            field=models.CharField(
+                choices=[("DUE", "Due"), ("APPROVED", "Approved"), ("IGNORED", "Ignored"), ("PAID", "Paid")],
+                default="DUE",
+                max_length=20,
+            ),
         ),
     ]

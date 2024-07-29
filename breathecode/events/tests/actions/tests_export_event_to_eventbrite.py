@@ -1,23 +1,24 @@
 import logging
-import breathecode.events.actions as actions
 from unittest.mock import MagicMock, call, patch
-from breathecode.events.utils import Eventbrite
 
+import breathecode.events.actions as actions
+from breathecode.events.utils import Eventbrite
 from breathecode.tests.mocks.requests import REQUESTS_PATH, apply_requests_request_mock
+
 from ..mixins import EventTestCase
 
 export_event_to_eventbrite = actions.export_event_to_eventbrite
-sync_desc = '2021-11-23 09:10:58.295264+00:00'
-eventbrite_post_url = 'https://www.eventbriteapi.com/v3/organizations/1/events/'
-eventbrite_put_url = 'https://www.eventbriteapi.com/v3/events/1/'
-eventbrite_event = {'id': 1}
+sync_desc = "2021-11-23 09:10:58.295264+00:00"
+eventbrite_post_url = "https://www.eventbriteapi.com/v3/organizations/1/events/"
+eventbrite_put_url = "https://www.eventbriteapi.com/v3/events/1/"
+eventbrite_event = {"id": 1}
 status_map = {
-    'draft': 'DRAFT',
-    'live': 'ACTIVE',
-    'completed': 'COMPLETED',
-    'started': 'ACTIVE',
-    'ended': 'ACTIVE',
-    'canceled': 'DELETED',
+    "draft": "DRAFT",
+    "live": "ACTIVE",
+    "completed": "COMPLETED",
+    "started": "ACTIVE",
+    "ended": "ACTIVE",
+    "canceled": "DELETED",
 }
 
 
@@ -42,57 +43,66 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     🔽🔽🔽 Without academy
     """
 
-    @patch.object(logging.Logger, 'warning', log_mock())
-    @patch.object(logging.Logger, 'error', log_mock())
-    @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
-    @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
+    @patch.object(logging.Logger, "warning", log_mock())
+    @patch.object(logging.Logger, "error", log_mock())
+    @patch.object(actions, "get_current_iso_string", get_current_iso_string_mock())
+    @patch.object(actions, "export_event_description_to_eventbrite", MagicMock())
     @patch(
-        REQUESTS_PATH['request'],
-        apply_requests_request_mock([
-            (201, eventbrite_post_url, eventbrite_event),
-            (200, eventbrite_put_url, eventbrite_event),
-        ]))
+        REQUESTS_PATH["request"],
+        apply_requests_request_mock(
+            [
+                (201, eventbrite_post_url, eventbrite_event),
+                (200, eventbrite_put_url, eventbrite_event),
+            ]
+        ),
+    )
     def test_export_event_to_eventbrite__without_academy(self):
         import logging
 
-        organization_kwargs = {'eventbrite_id': '1'}
+        organization_kwargs = {"eventbrite_id": "1"}
         model = self.generate_models(organization=True, organization_kwargs=organization_kwargs)
 
         export_event_to_eventbrite(None, model.organization)
 
         self.assertEqual(logging.Logger.warning.call_args_list, [])
-        self.assertEqual(logging.Logger.error.call_args_list,
-                         [call('The organization Nameless not have a academy assigned')])
+        self.assertEqual(
+            logging.Logger.error.call_args_list, [call("The organization Nameless not have a academy assigned")]
+        )
         self.assertEqual(actions.export_event_description_to_eventbrite.call_args_list, [])
 
-        self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.bc.database.list_of('events.Event'), [])
+        self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, "organization")])
+        self.assertEqual(self.bc.database.list_of("events.Event"), [])
 
     """
     🔽🔽🔽 With academy and event with title
     """
 
-    @patch.object(logging.Logger, 'warning', log_mock())
-    @patch.object(logging.Logger, 'error', log_mock())
-    @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
-    @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
-    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch.object(logging.Logger, "warning", log_mock())
+    @patch.object(logging.Logger, "error", log_mock())
+    @patch.object(actions, "get_current_iso_string", get_current_iso_string_mock())
+    @patch.object(actions, "export_event_description_to_eventbrite", MagicMock())
+    @patch("breathecode.events.signals.event_saved.send_robust", MagicMock())
     @patch(
-        REQUESTS_PATH['request'],
-        apply_requests_request_mock([
-            (201, eventbrite_post_url, eventbrite_event),
-            (200, eventbrite_put_url, eventbrite_event),
-        ]))
+        REQUESTS_PATH["request"],
+        apply_requests_request_mock(
+            [
+                (201, eventbrite_post_url, eventbrite_event),
+                (200, eventbrite_put_url, eventbrite_event),
+            ]
+        ),
+    )
     def test_export_event_to_eventbrite__with_event(self):
         import logging
 
-        organization_kwargs = {'eventbrite_id': '1'}
-        event_kwargs = {'title': 'They killed kenny'}
-        model = self.generate_models(academy=True,
-                                     event=True,
-                                     organization=True,
-                                     event_kwargs=event_kwargs,
-                                     organization_kwargs=organization_kwargs)
+        organization_kwargs = {"eventbrite_id": "1"}
+        event_kwargs = {"title": "They killed kenny"}
+        model = self.generate_models(
+            academy=True,
+            event=True,
+            organization=True,
+            event_kwargs=event_kwargs,
+            organization_kwargs=organization_kwargs,
+        )
 
         export_event_to_eventbrite(model.event, model.organization)
 
@@ -100,41 +110,51 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(logging.Logger.error.call_args_list, [])
         self.assertEqual(actions.export_event_description_to_eventbrite.call_args_list, [call(model.event)])
 
-        self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.bc.database.list_of('events.Event'),
-                         [{
-                             **self.model_to_dict(model, 'event'),
-                             'eventbrite_sync_status': 'SYNCHED',
-                             'eventbrite_sync_description': '2021-11-23 09:10:58.295264+00:00',
-                         }])
+        self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, "organization")])
+        self.assertEqual(
+            self.bc.database.list_of("events.Event"),
+            [
+                {
+                    **self.model_to_dict(model, "event"),
+                    "eventbrite_sync_status": "SYNCHED",
+                    "eventbrite_sync_description": "2021-11-23 09:10:58.295264+00:00",
+                }
+            ],
+        )
 
     """
     🔽🔽🔽 Check the payload without eventbrite_id
     """
 
-    @patch.object(logging.Logger, 'warning', log_mock())
-    @patch.object(logging.Logger, 'error', log_mock())
-    @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
-    @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
-    @patch.object(Eventbrite, 'request', MagicMock())
-    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch.object(logging.Logger, "warning", log_mock())
+    @patch.object(logging.Logger, "error", log_mock())
+    @patch.object(actions, "get_current_iso_string", get_current_iso_string_mock())
+    @patch.object(actions, "export_event_description_to_eventbrite", MagicMock())
+    @patch.object(Eventbrite, "request", MagicMock())
+    @patch("breathecode.events.signals.event_saved.send_robust", MagicMock())
     @patch(
-        REQUESTS_PATH['request'],
-        apply_requests_request_mock([
-            (201, eventbrite_post_url, eventbrite_event),
-            (200, eventbrite_put_url, eventbrite_event),
-        ]))
+        REQUESTS_PATH["request"],
+        apply_requests_request_mock(
+            [
+                (201, eventbrite_post_url, eventbrite_event),
+                (200, eventbrite_put_url, eventbrite_event),
+            ]
+        ),
+    )
     def test_export_event_to_eventbrite__check_the_payload__without_eventbrite_id(self):
         import logging
+
         from breathecode.events.utils import Eventbrite
 
-        organization_kwargs = {'eventbrite_id': '1'}
-        event_kwargs = {'title': 'They killed kenny'}
-        model = self.generate_models(academy=True,
-                                     event=True,
-                                     organization=True,
-                                     event_kwargs=event_kwargs,
-                                     organization_kwargs=organization_kwargs)
+        organization_kwargs = {"eventbrite_id": "1"}
+        event_kwargs = {"title": "They killed kenny"}
+        model = self.generate_models(
+            academy=True,
+            event=True,
+            organization=True,
+            event_kwargs=event_kwargs,
+            organization_kwargs=organization_kwargs,
+        )
 
         export_event_to_eventbrite(model.event, model.organization)
 
@@ -145,57 +165,68 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             Eventbrite.request.call_args_list,
             [
                 call(
-                    'POST',
-                    '/organizations/1/events/',
+                    "POST",
+                    "/organizations/1/events/",
                     data={
-                        'event.name.html': 'They killed kenny',
-                        'event.description.html': model.event.description,
-                        'event.start.utc': self.datetime_to_iso(model.event.starting_at),
-                        'event.end.utc': self.datetime_to_iso(model.event.ending_at),
+                        "event.name.html": "They killed kenny",
+                        "event.description.html": model.event.description,
+                        "event.start.utc": self.datetime_to_iso(model.event.starting_at),
+                        "event.end.utc": self.datetime_to_iso(model.event.ending_at),
                         # 'event.summary': model.event.excerpt,
-                        'event.capacity': model.event.capacity,
-                        'event.online_event': model.event.online_event,
-                        'event.url': model.event.eventbrite_url,
-                        'event.currency': model.event.currency,
+                        "event.capacity": model.event.capacity,
+                        "event.online_event": model.event.online_event,
+                        "event.url": model.event.eventbrite_url,
+                        "event.currency": model.event.currency,
                     },
                 ),
-            ])
+            ],
+        )
 
-        self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.bc.database.list_of('events.Event'),
-                         [{
-                             **self.model_to_dict(model, 'event'),
-                             'eventbrite_sync_status': 'SYNCHED',
-                             'eventbrite_sync_description': '2021-11-23 09:10:58.295264+00:00',
-                         }])
+        self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, "organization")])
+        self.assertEqual(
+            self.bc.database.list_of("events.Event"),
+            [
+                {
+                    **self.model_to_dict(model, "event"),
+                    "eventbrite_sync_status": "SYNCHED",
+                    "eventbrite_sync_description": "2021-11-23 09:10:58.295264+00:00",
+                }
+            ],
+        )
 
     """
     🔽🔽🔽 Check the payload with eventbrite_id
     """
 
-    @patch.object(logging.Logger, 'warning', log_mock())
-    @patch.object(logging.Logger, 'error', log_mock())
-    @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
-    @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
-    @patch.object(Eventbrite, 'request', MagicMock())
-    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch.object(logging.Logger, "warning", log_mock())
+    @patch.object(logging.Logger, "error", log_mock())
+    @patch.object(actions, "get_current_iso_string", get_current_iso_string_mock())
+    @patch.object(actions, "export_event_description_to_eventbrite", MagicMock())
+    @patch.object(Eventbrite, "request", MagicMock())
+    @patch("breathecode.events.signals.event_saved.send_robust", MagicMock())
     @patch(
-        REQUESTS_PATH['request'],
-        apply_requests_request_mock([
-            (201, eventbrite_post_url, eventbrite_event),
-            (200, eventbrite_put_url, eventbrite_event),
-        ]))
+        REQUESTS_PATH["request"],
+        apply_requests_request_mock(
+            [
+                (201, eventbrite_post_url, eventbrite_event),
+                (200, eventbrite_put_url, eventbrite_event),
+            ]
+        ),
+    )
     def test_export_event_to_eventbrite__check_the_payload__with_eventbrite_id(self):
         import logging
+
         from breathecode.events.utils import Eventbrite
 
-        organization_kwargs = {'eventbrite_id': '1'}
-        event_kwargs = {'title': 'They killed kenny', 'eventbrite_id': '1'}
-        model = self.generate_models(academy=True,
-                                     event=True,
-                                     organization=True,
-                                     event_kwargs=event_kwargs,
-                                     organization_kwargs=organization_kwargs)
+        organization_kwargs = {"eventbrite_id": "1"}
+        event_kwargs = {"title": "They killed kenny", "eventbrite_id": "1"}
+        model = self.generate_models(
+            academy=True,
+            event=True,
+            organization=True,
+            event_kwargs=event_kwargs,
+            organization_kwargs=organization_kwargs,
+        )
 
         export_event_to_eventbrite(model.event, model.organization)
 
@@ -206,58 +237,69 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             Eventbrite.request.call_args_list,
             [
                 call(
-                    'PUT',
-                    '/events/1/',
+                    "PUT",
+                    "/events/1/",
                     data={
-                        'event.name.html': 'They killed kenny',
-                        'event.description.html': model.event.description,
-                        'event.start.utc': self.datetime_to_iso(model.event.starting_at),
-                        'event.end.utc': self.datetime_to_iso(model.event.ending_at),
+                        "event.name.html": "They killed kenny",
+                        "event.description.html": model.event.description,
+                        "event.start.utc": self.datetime_to_iso(model.event.starting_at),
+                        "event.end.utc": self.datetime_to_iso(model.event.ending_at),
                         # 'event.summary': model.event.excerpt,
-                        'event.capacity': model.event.capacity,
-                        'event.online_event': model.event.online_event,
-                        'event.url': model.event.eventbrite_url,
-                        'event.currency': model.event.currency,
+                        "event.capacity": model.event.capacity,
+                        "event.online_event": model.event.online_event,
+                        "event.url": model.event.eventbrite_url,
+                        "event.currency": model.event.currency,
                     },
                 ),
-            ])
+            ],
+        )
 
-        self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.bc.database.list_of('events.Event'),
-                         [{
-                             **self.model_to_dict(model, 'event'),
-                             'eventbrite_sync_status': 'SYNCHED',
-                             'eventbrite_sync_description': '2021-11-23 09:10:58.295264+00:00',
-                         }])
+        self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, "organization")])
+        self.assertEqual(
+            self.bc.database.list_of("events.Event"),
+            [
+                {
+                    **self.model_to_dict(model, "event"),
+                    "eventbrite_sync_status": "SYNCHED",
+                    "eventbrite_sync_description": "2021-11-23 09:10:58.295264+00:00",
+                }
+            ],
+        )
 
     """
     🔽🔽🔽 Check the payload with organizer_id
     """
 
-    @patch.object(logging.Logger, 'warning', log_mock())
-    @patch.object(logging.Logger, 'error', log_mock())
-    @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
-    @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
-    @patch.object(Eventbrite, 'request', MagicMock())
-    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch.object(logging.Logger, "warning", log_mock())
+    @patch.object(logging.Logger, "error", log_mock())
+    @patch.object(actions, "get_current_iso_string", get_current_iso_string_mock())
+    @patch.object(actions, "export_event_description_to_eventbrite", MagicMock())
+    @patch.object(Eventbrite, "request", MagicMock())
+    @patch("breathecode.events.signals.event_saved.send_robust", MagicMock())
     @patch(
-        REQUESTS_PATH['request'],
-        apply_requests_request_mock([
-            (201, eventbrite_post_url, eventbrite_event),
-            (200, eventbrite_put_url, eventbrite_event),
-        ]))
+        REQUESTS_PATH["request"],
+        apply_requests_request_mock(
+            [
+                (201, eventbrite_post_url, eventbrite_event),
+                (200, eventbrite_put_url, eventbrite_event),
+            ]
+        ),
+    )
     def test_export_event_to_eventbrite__check_the_payload__with_organizer_id(self):
         import logging
+
         from breathecode.events.utils import Eventbrite
 
-        organization_kwargs = {'eventbrite_id': '1'}
-        event_kwargs = {'title': 'They killed kenny', 'eventbrite_id': '1', 'eventbrite_organizer_id': '1'}
-        model = self.generate_models(academy=True,
-                                     event=True,
-                                     organizer=True,
-                                     organization=True,
-                                     event_kwargs=event_kwargs,
-                                     organization_kwargs=organization_kwargs)
+        organization_kwargs = {"eventbrite_id": "1"}
+        event_kwargs = {"title": "They killed kenny", "eventbrite_id": "1", "eventbrite_organizer_id": "1"}
+        model = self.generate_models(
+            academy=True,
+            event=True,
+            organizer=True,
+            organization=True,
+            event_kwargs=event_kwargs,
+            organization_kwargs=organization_kwargs,
+        )
 
         export_event_to_eventbrite(model.event, model.organization)
 
@@ -268,27 +310,32 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             Eventbrite.request.call_args_list,
             [
                 call(
-                    'PUT',
-                    '/events/1/',
+                    "PUT",
+                    "/events/1/",
                     data={
-                        'event.name.html': 'They killed kenny',
-                        'event.description.html': model.event.description,
-                        'event.start.utc': self.datetime_to_iso(model.event.starting_at),
-                        'event.end.utc': self.datetime_to_iso(model.event.ending_at),
+                        "event.name.html": "They killed kenny",
+                        "event.description.html": model.event.description,
+                        "event.start.utc": self.datetime_to_iso(model.event.starting_at),
+                        "event.end.utc": self.datetime_to_iso(model.event.ending_at),
                         # 'event.summary': model.event.excerpt,
-                        'event.capacity': model.event.capacity,
-                        'event.online_event': model.event.online_event,
-                        'event.url': model.event.eventbrite_url,
-                        'event.currency': model.event.currency,
-                        'event.organizer_id': '1',
+                        "event.capacity": model.event.capacity,
+                        "event.online_event": model.event.online_event,
+                        "event.url": model.event.eventbrite_url,
+                        "event.currency": model.event.currency,
+                        "event.organizer_id": "1",
                     },
                 ),
-            ])
+            ],
+        )
 
-        self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.bc.database.list_of('events.Event'),
-                         [{
-                             **self.model_to_dict(model, 'event'),
-                             'eventbrite_sync_status': 'SYNCHED',
-                             'eventbrite_sync_description': '2021-11-23 09:10:58.295264+00:00',
-                         }])
+        self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, "organization")])
+        self.assertEqual(
+            self.bc.database.list_of("events.Event"),
+            [
+                {
+                    **self.model_to_dict(model, "event"),
+                    "eventbrite_sync_status": "SYNCHED",
+                    "eventbrite_sync_description": "2021-11-23 09:10:58.295264+00:00",
+                }
+            ],
+        )

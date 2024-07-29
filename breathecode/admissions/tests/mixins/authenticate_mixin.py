@@ -1,6 +1,7 @@
 """
 Collections of mixins used to login in authorize microservice
 """
+
 from breathecode.authenticate.models import Capability, ProfileAcademy, Role
 from rest_framework.test import APITestCase
 from mixer.backend.django import mixer
@@ -14,13 +15,13 @@ class AuthenticateMixin(APITestCase, DevelopmentEnvironment, DateFormatterMixin)
         result = None
         if dict:
             result = dict.copy()
-            del result['_state']
+            del result["_state"]
 
             # remove any field starting with __ (double underscore) because it is considered private
             without_private_keys = result.copy()
             for key in result:
-                print('key', key)
-                if '__' in key:
+                print("key", key)
+                if "__" in key:
                     del without_private_keys[key]
 
             return without_private_keys
@@ -31,8 +32,8 @@ class AuthenticateMixin(APITestCase, DevelopmentEnvironment, DateFormatterMixin)
         result = None
         if dict:
             result = dict.copy()
-            if 'updated_at' in result:
-                del result['updated_at']
+            if "updated_at" in result:
+                del result["updated_at"]
         return result
 
     def remove_dinamics_fields(self, dict):
@@ -68,7 +69,7 @@ class AuthenticateMixin(APITestCase, DevelopmentEnvironment, DateFormatterMixin)
     def all_profile_academy_dict(self):
         return [self.remove_dinamics_fields(data.__dict__.copy()) for data in ProfileAcademy.objects.filter()]
 
-    def generate_credentials(self, profile_academy=False, capability='', role='', models=None, external_models=None):
+    def generate_credentials(self, profile_academy=False, capability="", role="", models=None, external_models=None):
 
         if models is None:
             models = {}
@@ -84,42 +85,42 @@ class AuthenticateMixin(APITestCase, DevelopmentEnvironment, DateFormatterMixin)
         # if not 'capability' in models and capability:
         if capability:
             kargs = {
-                'slug': capability,
-                'description': capability,
+                "slug": capability,
+                "description": capability,
             }
 
-            models['capability'] = mixer.blend('authenticate.Capability', **kargs)
+            models["capability"] = mixer.blend("authenticate.Capability", **kargs)
 
         if role:
             kargs = {
-                'slug': role,
-                'name': role,
+                "slug": role,
+                "name": role,
             }
 
-            if not 'role' in models:
+            if not "role" in models:
                 if capability:
-                    kargs['capabilities'] = [models['capability']]
+                    kargs["capabilities"] = [models["capability"]]
 
-                models['role'] = mixer.blend('authenticate.Role', **kargs)
+                models["role"] = mixer.blend("authenticate.Role", **kargs)
             else:
                 role = Role.objects.filter(**kargs).first()
-                role.capabilities.add(models['capability '])
+                role.capabilities.add(models["capability "])
                 role.save()
                 # models['role'].capabilities.add(models['capability '])
                 # models['role'].save()
 
-        if not 'profile_academy' in models and profile_academy:
+        if not "profile_academy" in models and profile_academy:
             kargs = {}
 
-            if 'user' in models:
-                kargs['user'] = external_models['user']
+            if "user" in models:
+                kargs["user"] = external_models["user"]
 
-            if 'certificate' in models:
-                kargs['certificate'] = external_models['certificate']
+            if "certificate" in models:
+                kargs["certificate"] = external_models["certificate"]
 
-            if 'academy' in models:
-                kargs['academy'] = external_models['academy']
+            if "academy" in models:
+                kargs["academy"] = external_models["academy"]
 
-            models['profile_academy'] = mixer.blend('authenticate.ProfileAcademy', **kargs)
+            models["profile_academy"] = mixer.blend("authenticate.ProfileAcademy", **kargs)
 
         return models

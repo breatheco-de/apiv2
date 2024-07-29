@@ -7,11 +7,12 @@ from google.cloud.storage import Blob, Bucket
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['File']
+__all__ = ["File"]
 
 
 class File:
     """Google Cloud Storage"""
+
     bucket: Bucket
     blob: Blob
     file_name: str
@@ -33,14 +34,14 @@ class File:
             self.blob.delete()
 
     @circuit
-    def upload(self, content, public: bool = False, content_type: str = 'text/plain') -> None:
+    def upload(self, content, public: bool = False, content_type: str = "text/plain") -> None:
         """Upload Blob from Bucket"""
         self.blob = self.bucket.blob(self.file_name)
 
         if content_type is None:
-            content_type = 'application/octet-stream'
+            content_type = "application/octet-stream"
 
-        if (isinstance(content, str) or isinstance(content, bytes)):
+        if isinstance(content, str) or isinstance(content, bytes):
             self.blob.upload_from_string(content, content_type=content_type)
         else:
             content.seek(0)
@@ -62,20 +63,16 @@ class File:
         return self.blob.public_url
 
     @overload
-    def download(self, file: StringIO | TextIOWrapper) -> None:
-        ...
+    def download(self, file: StringIO | TextIOWrapper) -> None: ...
 
     @overload
-    def download(self, file: BytesIO | BufferedReader) -> None:
-        ...
+    def download(self, file: BytesIO | BufferedReader) -> None: ...
 
     @overload
-    def download(self, file: None) -> bytes:
-        ...
+    def download(self, file: None) -> bytes: ...
 
     @overload
-    def download(self) -> bytes:
-        ...
+    def download(self) -> bytes: ...
 
     @circuit
     def download(self, file: Optional[BytesIO | StringIO]) -> bytes | None:
@@ -100,7 +97,7 @@ class File:
 
             def write(self, value):
                 """Write the value by returning it, instead of storing in a buffer."""
-                self.pieces.append(value.decode('latin1'))
+                self.pieces.append(value.decode("latin1"))
 
             def all(self):
                 return self.pieces

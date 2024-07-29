@@ -7,36 +7,36 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0007_auto_20220623_2057'),
+        ("registry", "0007_auto_20220623_2057"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='assettechnology',
-            name='description',
+            model_name="assettechnology",
+            name="description",
             field=models.TextField(blank=True, default=None, null=True),
         ),
         migrations.AddField(
-            model_name='assettechnology',
-            name='featured_asset',
-            field=models.ForeignKey(blank=True,
-                                    default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.SET_NULL,
-                                    to='registry.asset'),
+            model_name="assettechnology",
+            name="featured_asset",
+            field=models.ForeignKey(
+                blank=True, default=None, null=True, on_delete=django.db.models.deletion.SET_NULL, to="registry.asset"
+            ),
         ),
         migrations.AddField(
-            model_name='assettechnology',
-            name='icon_url',
-            field=models.URLField(blank=True, default=None, help_text='Image icon to show on website', null=True),
+            model_name="assettechnology",
+            name="icon_url",
+            field=models.URLField(blank=True, default=None, help_text="Image icon to show on website", null=True),
         ),
         migrations.AddField(
-            model_name='assettechnology',
-            name='parent',
-            field=models.ForeignKey(blank=True,
-                                    default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.SET_NULL,
-                                    to='registry.assettechnology'),
+            model_name="assettechnology",
+            name="parent",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="registry.assettechnology",
+            ),
         ),
     ]

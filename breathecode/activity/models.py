@@ -8,7 +8,7 @@ from breathecode.utils.sqlalchemy import BigQueryBase
 
 
 def is_test_env():
-    return os.getenv('ENV') == 'test' or True
+    return os.getenv("ENV") == "test" or True
 
 
 class StudentActivity(ndb.Model):
@@ -25,11 +25,11 @@ class StudentActivity(ndb.Model):
 
     @classmethod
     def _get_kind(cls):
-        return 'student_activity'
+        return "student_activity"
 
 
 class ActivityMeta(BigQueryBase):
-    __tablename__ = '4geeks.activity_nested'
+    __tablename__ = "4geeks.activity_nested"
 
     email = Column(String(36), primary_key=True)
     related = Column(Integer, nullable=False)
@@ -37,21 +37,21 @@ class ActivityMeta(BigQueryBase):
     # related
     resource = Column(String(30), nullable=True)
     resource_id = Column(String(30), nullable=True)
-    meta = Column(String, default='{}')
-    meta = Column(JSON, default='{}')
+    meta = Column(String, default="{}")
+    meta = Column(JSON, default="{}")
     timestamp = Column(TIMESTAMP, nullable=False)
 
 
 # this model is a example, it's useless because google can't support JSON on they own SQLAlchemy dialect
 class Activity(BigQueryBase):
-    __tablename__ = '4geeks.activity'
+    __tablename__ = "4geeks.activity"
 
     id = Column(String(36), primary_key=True)
     user_id = Column(Integer, nullable=False)
     kind = Column(String(25), nullable=False)
     related = Column(String(30), nullable=True)
     related_id = Column(String(30), nullable=True)
-    meta = Column(String, default='{}')
+    meta = Column(String, default="{}")
     timestamp = Column(TIMESTAMP, nullable=False)
 
     @property
@@ -67,23 +67,27 @@ class Activity(BigQueryBase):
 # test_support(__name__)
 
 ACTIVITY = [
-    bigquery.SchemaField('id', 'STRING', mode='REQUIRED'),
-    bigquery.SchemaField('user_id', 'INTEGER', mode='REQUIRED'),
-    bigquery.SchemaField('kind', 'STRING', mode='REQUIRED'),
-    bigquery.SchemaField('related',
-                         'RECORD',
-                         mode='NULLABLE',
-                         fields=[
-                             bigquery.SchemaField('type', 'STRING', mode='NULLABLE'),
-                             bigquery.SchemaField('id', 'INT64', mode='NULLABLE'),
-                             bigquery.SchemaField('slug', 'STRING', mode='NULLABLE'),
-                         ]),
-    bigquery.SchemaField('meta',
-                         'RECORD',
-                         mode='REQUIRED',
-                         fields=[
-                             bigquery.SchemaField('email', 'STRING', mode='NULLABLE'),
-                             bigquery.SchemaField('username', 'STRING', mode='NULLABLE'),
-                         ]),
-    bigquery.SchemaField('timestamp', 'TIMESTAMP', mode='REQUIRED'),
+    bigquery.SchemaField("id", "STRING", mode="REQUIRED"),
+    bigquery.SchemaField("user_id", "INTEGER", mode="REQUIRED"),
+    bigquery.SchemaField("kind", "STRING", mode="REQUIRED"),
+    bigquery.SchemaField(
+        "related",
+        "RECORD",
+        mode="NULLABLE",
+        fields=[
+            bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("id", "INT64", mode="NULLABLE"),
+            bigquery.SchemaField("slug", "STRING", mode="NULLABLE"),
+        ],
+    ),
+    bigquery.SchemaField(
+        "meta",
+        "RECORD",
+        mode="REQUIRED",
+        fields=[
+            bigquery.SchemaField("email", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("username", "STRING", mode="NULLABLE"),
+        ],
+    ),
+    bigquery.SchemaField("timestamp", "TIMESTAMP", mode="REQUIRED"),
 ]

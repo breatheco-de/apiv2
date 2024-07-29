@@ -6,17 +6,19 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0038_auto_20210703_0359'),
+        ("marketing", "0038_auto_20210703_0359"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='formentry',
-            name='ac_expected_cohort',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   help_text='Which cohort is this student expecting to join',
-                                   max_length=100,
-                                   null=True),
+            model_name="formentry",
+            name="ac_expected_cohort",
+            field=models.CharField(
+                blank=True,
+                default=None,
+                help_text="Which cohort is this student expecting to join",
+                max_length=100,
+                null=True,
+            ),
         ),
     ]

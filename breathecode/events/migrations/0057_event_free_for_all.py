@@ -6,14 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0056_auto_20231017_0605'),
+        ("events", "0056_auto_20231017_0605"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='event',
-            name='free_for_all',
+            model_name="event",
+            name="free_for_all",
             field=models.BooleanField(
-                default=False, help_text='Determines if any user (From bootcamp or not) can join the event for free.'),
+                default=False, help_text="Determines if any user (From bootcamp or not) can join the event for free."
+            ),
         ),
     ]

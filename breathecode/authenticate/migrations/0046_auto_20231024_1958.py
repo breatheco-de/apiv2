@@ -6,28 +6,28 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authenticate', '0045_merge_0044_auto_20230908_1941_0044_auto_20231017_0605'),
+        ("authenticate", "0045_merge_0044_auto_20230908_1941_0044_auto_20231017_0605"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='userinvite',
-            name='city',
+            model_name="userinvite",
+            name="city",
             field=models.CharField(blank=True, default=None, max_length=30, null=True),
         ),
         migrations.AddField(
-            model_name='userinvite',
-            name='country',
+            model_name="userinvite",
+            name="country",
             field=models.CharField(blank=True, default=None, max_length=30, null=True),
         ),
         migrations.AddField(
-            model_name='userinvite',
-            name='latitude',
+            model_name="userinvite",
+            name="latitude",
             field=models.DecimalField(blank=True, decimal_places=15, default=None, max_digits=30, null=True),
         ),
         migrations.AddField(
-            model_name='userinvite',
-            name='longitude',
+            model_name="userinvite",
+            name="longitude",
             field=models.DecimalField(blank=True, decimal_places=15, default=None, max_digits=30, null=True),
         ),
     ]

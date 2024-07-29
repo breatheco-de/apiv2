@@ -6,18 +6,25 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0030_alter_asset_visibility'),
+        ("registry", "0030_alter_asset_visibility"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='asset',
-            name='status',
-            field=models.CharField(choices=[('NOT_STARTED', 'Not Started'), ('PLANNING', 'Planning'),
-                                            ('WRITING', 'Writing'), ('DRAFT', 'Draft'), ('OPTIMIZED', 'Optimized'),
-                                            ('PUBLISHED', 'Published')],
-                                   default='NOT_STARTED',
-                                   help_text='Related to the publishing of the asset',
-                                   max_length=20),
+            model_name="asset",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("NOT_STARTED", "Not Started"),
+                    ("PLANNING", "Planning"),
+                    ("WRITING", "Writing"),
+                    ("DRAFT", "Draft"),
+                    ("OPTIMIZED", "Optimized"),
+                    ("PUBLISHED", "Published"),
+                ],
+                default="NOT_STARTED",
+                help_text="Related to the publishing of the asset",
+                max_length=20,
+            ),
         ),
     ]

@@ -37,8 +37,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_app_url():
-    url = os.getenv('APP_URL', 'https://4geeks.com')
-    if url and url[-1] == '/':
+    url = os.getenv("APP_URL", "https://4geeks.com")
+    if url and url[-1] == "/":
         url = url[:-1]
 
     return url
@@ -46,17 +46,17 @@ def get_app_url():
 
 def get_github_scopes(user):
 
-    scopes = ['user']
+    scopes = ["user"]
 
     belongs_to_academy = ProfileAcademy.objects.filter(user=user).exists()
     if belongs_to_academy:
-        scopes.append('repo')
+        scopes.append("repo")
 
     owns_github_organization = AcademyAuthSettings.objects.filter(github_owner=user).exists()
     if owns_github_organization:
-        scopes.append('admin:org')
+        scopes.append("admin:org")
 
-    return ' '.join(scopes)
+    return " ".join(scopes)
 
 
 def get_user(github_id=None, email=None):
@@ -73,13 +73,13 @@ def create_user(github_id=None, email=None):
     return user
 
 
-def delete_tokens(users=None, status='expired'):
+def delete_tokens(users=None, status="expired"):
     now = timezone.now()
 
     tokens = Token.objects.all()
     if users is not None:
         tokens = tokens.filter(user__id__in=[users])
-    if status == 'expired':
+    if status == "expired":
         tokens = Token.objects.filter(expires_at__lt=now)
 
     count = len(tokens)
@@ -94,19 +94,22 @@ def reset_password(users=None, extra=None, academy=None):
         extra = {}
 
     if users is None or len(users) == 0:
-        raise Exception('Missing users')
+        raise Exception("Missing users")
 
     for user in users:
-        token, created = Token.get_or_create(user, token_type='temporal')
+        token, created = Token.get_or_create(user, token_type="temporal")
 
         # returns true or false if the email was send
-        return send_email_message('pick_password',
-                                  user.email, {
-                                      'SUBJECT': 'You asked to reset your password at 4Geeks',
-                                      'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}',
-                                      **extra,
-                                  },
-                                  academy=academy)
+        return send_email_message(
+            "pick_password",
+            user.email,
+            {
+                "SUBJECT": "You asked to reset your password at 4Geeks",
+                "LINK": os.getenv("API_URL", "") + f"/v1/auth/password/{token}",
+                **extra,
+            },
+            academy=academy,
+        )
 
     return True
 
@@ -115,22 +118,25 @@ def resend_invite(token=None, email=None, first_name=None, extra=None, academy=N
     if extra is None:
         extra = {}
 
-    params = {'callback': 'https://admin.4geeks.com'}
+    params = {"callback": "https://admin.4geeks.com"}
     querystr = urllib.parse.urlencode(params)
-    url = os.getenv('API_URL', '') + '/v1/auth/member/invite/' + str(token) + '?' + querystr
-    notify_actions.send_email_message('welcome_academy',
-                                      email, {
-                                          'email': email,
-                                          'subject': 'Invitation to join 4Geeks',
-                                          'LINK': url,
-                                          'FIST_NAME': first_name,
-                                          **extra,
-                                      },
-                                      academy=academy)
+    url = os.getenv("API_URL", "") + "/v1/auth/member/invite/" + str(token) + "?" + querystr
+    notify_actions.send_email_message(
+        "welcome_academy",
+        email,
+        {
+            "email": email,
+            "subject": "Invitation to join 4Geeks",
+            "LINK": url,
+            "FIST_NAME": first_name,
+            **extra,
+        },
+        academy=academy,
+    )
 
 
 def server_id():
-    key = DeviceId.objects.filter(name='server').values_list('key', flat=True).first()
+    key = DeviceId.objects.filter(name="server").values_list("key", flat=True).first()
 
     if key:
         return key
@@ -140,13 +146,13 @@ def server_id():
     n3 = str(randint(0, 100))
 
     letters = string.ascii_lowercase
-    s1 = ''.join(random.choice(letters) for i in range(2))
-    s2 = ''.join(random.choice(letters) for i in range(2))
-    s3 = ''.join(random.choice(letters) for i in range(2))
+    s1 = "".join(random.choice(letters) for i in range(2))
+    s2 = "".join(random.choice(letters) for i in range(2))
+    s3 = "".join(random.choice(letters) for i in range(2))
 
-    key = f'{n1}{s1}.{n2}{s2}.{n3}{s3}'
+    key = f"{n1}{s1}.{n2}{s2}.{n3}{s3}"
 
-    device = DeviceId(name='server', key=key)
+    device = DeviceId(name="server", key=key)
     device.save()
 
     return key
@@ -157,13 +163,13 @@ def generate_academy_token(academy_id, force=False):
     academy = Academy.objects.get(id=academy_id)
     academy_user = User.objects.filter(username=academy.slug).first()
     if academy_user is None:
-        academy_user = User(username=academy.slug, email=f'{academy.slug}@token.com')
+        academy_user = User(username=academy.slug, email=f"{academy.slug}@token.com")
         academy_user.save()
 
-        role = Role.objects.get(slug='academy_token')
+        role = Role.objects.get(slug="academy_token")
         # this profile is for tokens, that is why we need no  email validation status=ACTIVE, role must be academy_token
         # and the email is empty
-        profile_academy = ProfileAcademy(user=academy_user, academy=academy, role=role, status='ACTIVE')
+        profile_academy = ProfileAcademy(user=academy_user, academy=academy, role=role, status="ACTIVE")
         profile_academy.save()
 
     if force:
@@ -171,7 +177,7 @@ def generate_academy_token(academy_id, force=False):
 
     token = Token.objects.filter(user=academy_user).first()
     if token is None:
-        token = Token.objects.create(user=academy_user, token_type='permanent')
+        token = Token.objects.create(user=academy_user, token_type="permanent")
         token.save()
 
     return token
@@ -181,13 +187,13 @@ def set_gitpod_user_expiration(gitpoduser_id):
 
     gitpod_user = GitpodUser.objects.filter(id=gitpoduser_id).first()
     if gitpod_user is None:
-        raise Exception(f'Invalid gitpod user id: {gitpoduser_id}')
+        raise Exception(f"Invalid gitpod user id: {gitpoduser_id}")
 
     # reset status, i don't want to override this value if already set in this function
-    gitpod_user.delete_status = ''
+    gitpod_user.delete_status = ""
     gitpod_user.target_cohort = None
 
-    logger.debug(f'Gitpod user: {gitpod_user.id}')
+    logger.debug(f"Gitpod user: {gitpod_user.id}")
     # If no user is connected, find the user on breathecode by searching the github credentials
     if gitpod_user.user is None:
         github_user = CredentialsGithub.objects.filter(username=gitpod_user.github_username).first()
@@ -196,28 +202,42 @@ def set_gitpod_user_expiration(gitpoduser_id):
 
     if gitpod_user.user is not None:
         # find last cohort
-        cu = gitpod_user.user.cohortuser_set.filter(educational_status__in=['ACTIVE'],
-                                                    cohort__never_ends=False,
-                                                    cohort__stage__in=['PREWORK', 'STARTED', 'FINAL_PROJECT'
-                                                                       ]).order_by('-cohort__ending_date').first()
+        cu = (
+            gitpod_user.user.cohortuser_set.filter(
+                educational_status__in=["ACTIVE"],
+                cohort__never_ends=False,
+                cohort__stage__in=["PREWORK", "STARTED", "FINAL_PROJECT"],
+            )
+            .order_by("-cohort__ending_date")
+            .first()
+        )
         if cu is not None:
-            gitpod_user.expires_at = cu.cohort.ending_date + datetime.timedelta(
-                days=14) if cu.cohort.ending_date is not None else None
+            gitpod_user.expires_at = (
+                cu.cohort.ending_date + datetime.timedelta(days=14) if cu.cohort.ending_date is not None else None
+            )
             gitpod_user.academy = cu.cohort.academy
             gitpod_user.target_cohort = cu.cohort
-            gitpod_user.delete_status = f'User will be deleted 14 days after cohort {cu.cohort.name} finishes on {cu.cohort.ending_date}'
+            gitpod_user.delete_status = (
+                f"User will be deleted 14 days after cohort {cu.cohort.name} finishes on {cu.cohort.ending_date}"
+            )
         else:
             # if no active academy was found, at least we can retreive the latest one to asociate the user to an academy
-            last_cohort = gitpod_user.user.cohortuser_set.filter(
-                cohort__never_ends=False).order_by('-cohort__ending_date').first()
+            last_cohort = (
+                gitpod_user.user.cohortuser_set.filter(cohort__never_ends=False)
+                .order_by("-cohort__ending_date")
+                .first()
+            )
             if last_cohort is not None:
                 gitpod_user.academy = last_cohort.cohort.academy
                 gitpod_user.target_cohort = last_cohort.cohort
-                gitpod_user.delete_status = 'It will be deleted soon because no active cohort was found, the last one it had active was ' + last_cohort.cohort.name
+                gitpod_user.delete_status = (
+                    "It will be deleted soon because no active cohort was found, the last one it had active was "
+                    + last_cohort.cohort.name
+                )
 
-    if (gitpod_user.user is None or gitpod_user.expires_at is None) and gitpod_user.delete_status == '':
+    if (gitpod_user.user is None or gitpod_user.expires_at is None) and gitpod_user.delete_status == "":
         gitpod_user.expires_at = timezone.now() + datetime.timedelta(days=3)
-        gitpod_user.delete_status = 'User will be deleted because no active cohort could be associated to it, please set a cohort if you want to avoid deletion'
+        gitpod_user.delete_status = "User will be deleted because no active cohort could be associated to it, please set a cohort if you want to avoid deletion"
 
     if gitpod_user.user is not None:
         conflict = GitpodUser.objects.filter(user=gitpod_user.user).first()
@@ -244,11 +264,11 @@ def update_gitpod_users(html):
     position = 0
     while len(findings) > 0:
         position += 1
-        user = {'position': position}
+        user = {"position": position}
         match = findings.pop(0)
-        input_html = html[match.start():match.end()]
+        input_html = html[match.start() : match.end()]
 
-        matches = list(re.finditer(r'>Reactivate<', input_html))
+        matches = list(re.finditer(r">Reactivate<", input_html))
         if len(matches) > 0:
             all_inactive_users.append(user)
             continue
@@ -256,35 +276,36 @@ def update_gitpod_users(html):
         matches = list(re.finditer(r'"assignee-([\w\-]+)"', input_html))
         if len(matches) > 0:
             match = matches.pop(0)
-            user['assignee'] = match.group(1)
+            user["assignee"] = match.group(1)
 
         matches = list(re.finditer(r'github\.com\/([\w\-]+)"', input_html))
         if len(matches) > 0:
             match = matches.pop(0)
-            user['github'] = match.group(1)
+            user["github"] = match.group(1)
 
-            logger.debug('Found active user ' + user['github'])
+            logger.debug("Found active user " + user["github"])
 
-            if user['github'] == 'username' or user['github'] == '':
+            if user["github"] == "username" or user["github"] == "":
                 continue
 
-            if user['github'] in all_usernames:
+            if user["github"] in all_usernames:
                 raise ValidationException(
                     f"Error: user '{user['github']}' seems to be duplicated on the incoming list from Gitpod",
-                    slug='duplicated-user')
+                    slug="duplicated-user",
+                )
 
-            all_usernames.append(user['github'])
+            all_usernames.append(user["github"])
             all_active_users.append(user)
 
     GitpodUser.objects.exclude(github_username__in=all_usernames).delete()
     for user in all_active_users:
 
         # create if not exists
-        gitpod_user = GitpodUser.objects.filter(github_username=user['github']).first()
+        gitpod_user = GitpodUser.objects.filter(github_username=user["github"]).first()
         if gitpod_user is None:
-            gitpod_user = GitpodUser(github_username=user['github'],
-                                     position_in_gitpod_team=user['position'],
-                                     assignee_id=user['assignee'])
+            gitpod_user = GitpodUser(
+                github_username=user["github"], position_in_gitpod_team=user["position"], assignee_id=user["assignee"]
+            )
             gitpod_user.save()
 
         if set_gitpod_user_expiration(gitpod_user.id) is None:
@@ -292,7 +313,7 @@ def update_gitpod_users(html):
                 f'Gitpod user {user["github"]} could not be processed, maybe its duplicated or another user is incorrectly assigned to the Gitpod account'
             )
 
-    return {'active': all_active_users, 'inactive': all_inactive_users}
+    return {"active": all_active_users, "inactive": all_inactive_users}
 
 
 def get_user_settings(user_id: int) -> UserSetting:
@@ -308,13 +329,14 @@ def get_user_settings(user_id: int) -> UserSetting:
         # race condition
         settings, created = UserSetting.objects.get_or_create(user_id=user_id)
 
-    if created and (cohort_user := CohortUser.objects.filter(user__id=user_id).exclude(cohort__language='').first()):
+    if created and (cohort_user := CohortUser.objects.filter(user__id=user_id).exclude(cohort__language="").first()):
         created = False
         settings.lang = cohort_user.cohort.language
         settings.save()
 
-    if created and (lead := FormEntry.objects.filter(email=user_id,
-                                                     browser_lang__isnull=False).exclude(browser_lang='').first()):
+    if created and (
+        lead := FormEntry.objects.filter(email=user_id, browser_lang__isnull=False).exclude(browser_lang="").first()
+    ):
         try:
             settings.lang = lead.browser_lang
             settings.save()
@@ -328,30 +350,33 @@ def get_user_settings(user_id: int) -> UserSetting:
     #     settings.lang = contact.language
     #     settings.save()
 
-    if created and (assessment := Assessment.objects.filter(author__id=user_id,
-                                                            lang__isnull=False).exclude(lang='').first()):
+    if created and (
+        assessment := Assessment.objects.filter(author__id=user_id, lang__isnull=False).exclude(lang="").first()
+    ):
         created = False
         settings.lang = assessment.lang
         settings.save()
 
-    if created and (answer := Answer.objects.filter(user__id=user_id, lang__isnull=False).exclude(lang='').first()):
+    if created and (answer := Answer.objects.filter(user__id=user_id, lang__isnull=False).exclude(lang="").first()):
         created = False
         settings.lang = answer.lang
         settings.save()
 
-    if created and (event := Event.objects.filter(author__id=user_id, lang__isnull=False).exclude(lang='').first()):
+    if created and (event := Event.objects.filter(author__id=user_id, lang__isnull=False).exclude(lang="").first()):
         created = False
         settings.lang = event.lang
         settings.save()
 
-    if created and (user_assessment := UserAssessment.objects.filter(owner__id=user_id,
-                                                                     lang__isnull=False).exclude(lang='').first()):
+    if created and (
+        user_assessment := UserAssessment.objects.filter(owner__id=user_id, lang__isnull=False).exclude(lang="").first()
+    ):
         created = False
         settings.lang = user_assessment.lang
         settings.save()
 
-    if created and (question := Question.objects.filter(author__id=user_id,
-                                                        lang__isnull=False).exclude(lang='').first()):
+    if created and (
+        question := Question.objects.filter(author__id=user_id, lang__isnull=False).exclude(lang="").first()
+    ):
         created = False
         settings.lang = question.lang
         settings.save()
@@ -359,15 +384,20 @@ def get_user_settings(user_id: int) -> UserSetting:
     return settings
 
 
+@sync_to_async
+def aget_user_settings(user_id: int) -> UserSetting:
+    return get_user_settings(user_id)
+
+
 def get_user_language(request: WSGIRequest | AsyncRequest) -> str:
-    lang = request.META.get('HTTP_ACCEPT_LANGUAGE')
+    lang = request.META.get("HTTP_ACCEPT_LANGUAGE")
 
     if not lang and request.user.id:
         settings = get_user_settings(request.user.id)
         lang = settings.lang
 
     if not lang:
-        lang = 'en'
+        lang = "en"
 
     return lang
 
@@ -381,9 +411,13 @@ def add_to_organization(cohort_id, user_id):
 
     cohort_user = CohortUser.objects.filter(cohort__id=cohort_id, user__id=user_id).first()
     if cohort_user is None:
-        raise ValidationException(translation(en=f'User {user_id} does not belong to cohort {cohort_id}',
-                                              es=f'El usuario {user_id} no pertenece a esta cohort {cohort_id}'),
-                                  slug='invalid-cohort-user')
+        raise ValidationException(
+            translation(
+                en=f"User {user_id} does not belong to cohort {cohort_id}",
+                es=f"El usuario {user_id} no pertenece a esta cohort {cohort_id}",
+            ),
+            slug="invalid-cohort-user",
+        )
 
     academy = cohort_user.cohort.academy
     user = cohort_user.user
@@ -391,21 +425,23 @@ def add_to_organization(cohort_id, user_id):
     try:
         github_user = GithubAcademyUser.objects.filter(user=user, academy=academy).first()
         if github_user is None:
-            github_user = GithubAcademyUser(academy=academy,
-                                            user=user,
-                                            storage_status='PENDING',
-                                            storage_action='ADD',
-                                            storage_synch_at=timezone.now())
+            github_user = GithubAcademyUser(
+                academy=academy,
+                user=user,
+                storage_status="PENDING",
+                storage_action="ADD",
+                storage_synch_at=timezone.now(),
+            )
             github_user.save()
 
-        if github_user.storage_status == 'SYNCHED' and github_user.storage_action == 'ADD':
+        if github_user.storage_status == "SYNCHED" and github_user.storage_action == "ADD":
             # user already added
-            github_user.log('User was already added')
+            github_user.log("User was already added")
             return True
 
-        github_user.storage_status = 'PENDING'
-        github_user.storage_action = 'ADD'
-        github_user.log(f'Scheduled to add to organization because in cohort={cohort_user.cohort.slug}')
+        github_user.storage_status = "PENDING"
+        github_user.storage_action = "ADD"
+        github_user.log(f"Scheduled to add to organization because in cohort={cohort_user.cohort.slug}")
         github_user.save()
         return True
     except Exception as e:
@@ -416,43 +452,46 @@ def add_to_organization(cohort_id, user_id):
 
 def remove_from_organization(cohort_id, user_id, force=False):
 
-    logger.debug(f'Removing user {user_id} from organization')
+    logger.debug(f"Removing user {user_id} from organization")
     cohort_user = CohortUser.objects.filter(cohort__id=cohort_id, user__id=user_id).first()
     if cohort_user is None:
-        raise ValidationException(translation(en=f'User {user_id} does not belong to cohort {cohort_id}',
-                                              es=f'El usuario {user_id} no pertenece a esta cohort {cohort_id}'),
-                                  slug='invalid-cohort-user')
+        raise ValidationException(
+            translation(
+                en=f"User {user_id} does not belong to cohort {cohort_id}",
+                es=f"El usuario {user_id} no pertenece a esta cohort {cohort_id}",
+            ),
+            slug="invalid-cohort-user",
+        )
     academy = cohort_user.cohort.academy
     user = cohort_user.user
     github_user = GithubAcademyUser.objects.filter(user=user, academy=academy).first()
     try:
 
-        active_cohorts_in_academy = CohortUser.objects.filter(user=user,
-                                                              cohort__academy=academy,
-                                                              cohort__never_ends=False,
-                                                              educational_status='ACTIVE').first()
+        active_cohorts_in_academy = CohortUser.objects.filter(
+            user=user, cohort__academy=academy, cohort__never_ends=False, educational_status="ACTIVE"
+        ).first()
         if active_cohorts_in_academy is not None and not force:
-            raise ValidationException(translation(
-                en=
-                f'Cannot remove user={user.id} from organization because edu_status is ACTIVE in {active_cohorts_in_academy.cohort.slug}',
-                es=
-                f'No se pudo remover usuario id={user.id} de la organization su edu_status=ACTIVE en cohort={active_cohorts_in_academy.cohort.slug}'
-            ),
-                                      slug='still-active')
+            raise ValidationException(
+                translation(
+                    en=f"Cannot remove user={user.id} from organization because edu_status is ACTIVE in {active_cohorts_in_academy.cohort.slug}",
+                    es=f"No se pudo remover usuario id={user.id} de la organization su edu_status=ACTIVE en cohort={active_cohorts_in_academy.cohort.slug}",
+                ),
+                slug="still-active",
+            )
 
         if github_user is None:
-            raise ValidationException(translation(
-                en=
-                f'Cannot remove user id={user.id} from organization because it was not found on its list of current members',
-                es=
-                f'No se pudo remover usuario id={user.id} de la organization porque no se encontro en su lista de miembros'
-            ),
-                                      slug='user-not-found-in-org')
+            raise ValidationException(
+                translation(
+                    en=f"Cannot remove user id={user.id} from organization because it was not found on its list of current members",
+                    es=f"No se pudo remover usuario id={user.id} de la organization porque no se encontro en su lista de miembros",
+                ),
+                slug="user-not-found-in-org",
+            )
 
-        github_user.storage_status = 'PENDING'
-        github_user.storage_action = 'DELETE'
+        github_user.storage_status = "PENDING"
+        github_user.storage_action = "DELETE"
         github_user.log(
-            f'Scheduled to remove from organization because edu_status={cohort_user.educational_status} in cohort={cohort_user.cohort.slug}'
+            f"Scheduled to remove from organization because edu_status={cohort_user.educational_status} in cohort={cohort_user.cohort.slug}"
         )
         github_user.save()
         return True
@@ -471,10 +510,10 @@ def delete_from_github(github_user: GithubAcademyUser):
         gb = Github(org=settings.github_username, token=settings.github_owner.credentialsgithub.token)
 
         gb.delete_org_member(github_user.username)
-        github_user.log('Successfully deleted in github organization')
+        github_user.log("Successfully deleted in github organization")
         return True
     except Exception as e:
-        github_user.log('Error calling github API while deleting member from org: ' + str(e))
+        github_user.log("Error calling github API while deleting member from org: " + str(e))
         return False
 
 
@@ -490,44 +529,49 @@ def sync_organization_members(academy_id, only_status=None):
         return False
 
     siblings = AcademyAuthSettings.objects.filter(github_username=settings.github_username)
-    without_sync_active = list(siblings.filter(github_is_sync=False).values_list('academy__slug', flat=True))
-    academy_slugs = list(siblings.values_list('academy__slug', flat=True))
+    without_sync_active = list(siblings.filter(github_is_sync=False).values_list("academy__slug", flat=True))
+    academy_slugs = list(siblings.values_list("academy__slug", flat=True))
     if len(without_sync_active) > 0:
-        raise ValidationException(translation(
-            en=
-            f"All organizations with the same username '{settings.github_username}' must activate with github synch before starting to sync members: {', '.join(without_sync_active)}",
-            es=
-            f"Todas las organizaciones con el mismo username '{settings.github_username}' deben tener github_synch activo para poder empezar la sincronizacion: {','.join(without_sync_active)}"
-        ),
-                                  slug='not-everyone-in-synch')
+        raise ValidationException(
+            translation(
+                en=f"All organizations with the same username '{settings.github_username}' must activate with github synch before starting to sync members: {', '.join(without_sync_active)}",
+                es=f"Todas las organizaciones con el mismo username '{settings.github_username}' deben tener github_synch activo para poder empezar la sincronizacion: {','.join(without_sync_active)}",
+            ),
+            slug="not-everyone-in-synch",
+        )
 
     credentials = CredentialsGithub.objects.filter(user=settings.github_owner).first()
     if settings.github_owner is None or credentials is None:
-        raise ValidationException(translation(
-            en='Organization has no owner or it has no github credentials',
-            es='La organizacion no tiene dueño o no este tiene credenciales para github'),
-                                  slug='invalid-owner')
+        raise ValidationException(
+            translation(
+                en="Organization has no owner or it has no github credentials",
+                es="La organizacion no tiene dueño o no este tiene credenciales para github",
+            ),
+            slug="invalid-owner",
+        )
 
     # retry errored users only from this academy being synched
-    GithubAcademyUser.objects.filter(academy=settings.academy,
-                                     storage_status='ERROR')\
-                        .update(storage_status='PENDING', storage_synch_at=None)
+    GithubAcademyUser.objects.filter(academy=settings.academy, storage_status="ERROR").update(
+        storage_status="PENDING", storage_synch_at=None
+    )
 
     # users without github credentials are marked as error
-    no_github_credentials = GithubAcademyUser.objects.filter(academy=settings.academy,
-                                                             user__credentialsgithub__isnull=True)
-    no_github_credentials.update(storage_status='ERROR',
-                                 storage_log=[GithubAcademyUser.create_log('This user needs connect to github')])
+    no_github_credentials = GithubAcademyUser.objects.filter(
+        academy=settings.academy, user__credentialsgithub__isnull=True
+    )
+    no_github_credentials.update(
+        storage_status="ERROR", storage_log=[GithubAcademyUser.create_log("This user needs connect to github")]
+    )
 
     gb = Github(org=settings.github_username, token=settings.github_owner.credentialsgithub.token)
 
     try:
         members = gb.get_org_members()
     except Exception as e:
-        settings.add_error('Error fetching members from org: ' + str(e))
+        settings.add_error("Error fetching members from org: " + str(e))
         raise e
 
-    remaining_usernames = set([m['login'] for m in members])
+    remaining_usernames = set([m["login"] for m in members])
 
     # only from this academy because we want to duplicate the users on the other academies
     org_users = GithubAcademyUser.objects.filter(academy=settings.academy)
@@ -538,43 +582,46 @@ def sync_organization_members(academy_id, only_status=None):
 
     for _member in org_users:
         github = CredentialsGithub.objects.filter(user=_member.user).first()
-        if _member.storage_status in ['PENDING'] and _member.storage_action in ['ADD', 'INVITE']:
+        if _member.storage_status in ["PENDING"] and _member.storage_action in ["ADD", "INVITE"]:
             if github.username in remaining_usernames:
-                _member.log('User was already added to github')
-                _member.storage_status = 'SYNCHED'
+                _member.log("User was already added to github")
+                _member.storage_status = "SYNCHED"
                 # change action to ADD just in case it was INVITE (its a confirmation)
-                _member.storage_action = 'ADD'
+                _member.storage_action = "ADD"
                 _member.storage_synch_at = now
                 _member.save()
 
             else:
                 teams = []
-                if settings.github_default_team_ids != '':
-                    teams = [int(id) for id in settings.github_default_team_ids.split(',')]
+                if settings.github_default_team_ids != "":
+                    teams = [int(id) for id in settings.github_default_team_ids.split(",")]
 
                 try:
                     gb.invite_org_member(github.email, team_ids=teams)
                 except Exception as e:
-                    settings.add_error('Error inviting member ' + str(github.email) + ' to org: ' + str(e))
+                    settings.add_error("Error inviting member " + str(github.email) + " to org: " + str(e))
                     raise e
-                _member.storage_status = 'SYNCHED'
-                _member.log(f'Sent invitation to {github.email}')
-                _member.storage_action = 'INVITE'
+                _member.storage_status = "SYNCHED"
+                _member.log(f"Sent invitation to {github.email}")
+                _member.storage_action = "INVITE"
                 _member.storage_synch_at = now
                 _member.save()
 
-        if _member.storage_status in ['PENDING'] and _member.storage_action == 'DELETE':
+        if _member.storage_status in ["PENDING"] and _member.storage_action == "DELETE":
             if github.username not in remaining_usernames:
-                _member.log('User was already deleted from github')
-                _member.storage_status = 'SYNCHED'
+                _member.log("User was already deleted from github")
+                _member.storage_status = "SYNCHED"
                 _member.storage_synch_at = now
                 _member.save()
             else:
                 # we should not delete if another academy from the same org wants to keep it
-                added_elsewhere = GithubAcademyUser.objects.filter(
-                    Q(user=_member.user)
-                    | Q(username=github.username)).filter(academy__slug__in=academy_slugs).exclude(
-                        storage_action__in=['DELETE', 'IGNORE']).exclude(id=_member.id).first()
+                added_elsewhere = (
+                    GithubAcademyUser.objects.filter(Q(user=_member.user) | Q(username=github.username))
+                    .filter(academy__slug__in=academy_slugs)
+                    .exclude(storage_action__in=["DELETE", "IGNORE"])
+                    .exclude(id=_member.id)
+                    .first()
+                )
                 if added_elsewhere is None:
                     try:
                         logger.debug(
@@ -582,18 +629,18 @@ def sync_organization_members(academy_id, only_status=None):
                         )
                         gb.delete_org_member(github.username)
                     except Exception as e:
-                        settings.add_error('Error deleting member from org: ' + str(e))
+                        settings.add_error("Error deleting member from org: " + str(e))
                         raise e
-                    _member.log('Successfully deleted in github organization')
+                    _member.log("Successfully deleted in github organization")
                 else:
                     _member.log(
                         f"User belongs to another academy '{added_elsewhere.academy.slug}', it will have to be marked as deleted there before it can be deleted from github organization"
                     )
-                _member.storage_status = 'SYNCHED'
+                _member.storage_status = "SYNCHED"
                 _member.storage_synch_at = now
                 _member.save()
 
-        github_username = github.username if github is not None else ''
+        github_username = github.username if github is not None else ""
         remaining_usernames = set([username for username in remaining_usernames if username != github_username])
 
     # there are some users from github we could not find in THIS academy cohorts
@@ -612,20 +659,23 @@ def sync_organization_members(academy_id, only_status=None):
         unknown_user = _query.first()
 
         if unknown_user is None:
-            unknown_user = GithubAcademyUser(academy=settings.academy,
-                                             user=_user,
-                                             username=u,
-                                             storage_status='UNKNOWN',
-                                             storage_action='IGNORE',
-                                             storage_synch_at=now)
+            unknown_user = GithubAcademyUser(
+                academy=settings.academy,
+                user=_user,
+                username=u,
+                storage_status="UNKNOWN",
+                storage_action="IGNORE",
+                storage_synch_at=now,
+            )
             unknown_user.save()
 
-        unknown_user.storage_status = 'UNKNOWN'
-        unknown_user.storage_action = 'IGNORE'
+        unknown_user.storage_status = "UNKNOWN"
+        unknown_user.storage_action = "IGNORE"
         unknown_user.storage_synch_at = now
         unknown_user.log(
             "This user is coming from github, we don't know if its a student from your academy or if it should be added or deleted, keep it as IGNORED to avoid deletion",
-            reset=True)
+            reset=True,
+        )
         unknown_user.save()
 
     return True
@@ -633,9 +683,9 @@ def sync_organization_members(academy_id, only_status=None):
 
 def accept_invite(accepting_ids=None, user=None):
     if accepting_ids is not None:
-        invites = UserInvite.objects.filter(id__in=accepting_ids.split(','), email=user.email, status='PENDING')
+        invites = UserInvite.objects.filter(id__in=accepting_ids.split(","), email=user.email, status="PENDING")
     else:
-        invites = UserInvite.objects.filter(email=user.email, status='PENDING')
+        invites = UserInvite.objects.filter(email=user.email, status="PENDING")
 
     for invite in invites:
         if invite.academy is not None:
@@ -644,40 +694,42 @@ def accept_invite(accepting_ids=None, user=None):
             if profile is None:
                 role = invite.role
                 if not role:
-                    role = Role.objects.filter(slug='student').first()
+                    role = Role.objects.filter(slug="student").first()
 
                 # is better generate a role without capability that have a exception in this case
                 if not role:
-                    role = Role(slug='student', name='Student')
+                    role = Role(slug="student", name="Student")
                     role.save()
 
-                profile = ProfileAcademy(email=invite.email,
-                                         academy=invite.academy,
-                                         role=role,
-                                         first_name=user.first_name,
-                                         last_name=user.last_name)
+                profile = ProfileAcademy(
+                    email=invite.email,
+                    academy=invite.academy,
+                    role=role,
+                    first_name=user.first_name,
+                    last_name=user.last_name,
+                )
 
             profile.user = user
-            profile.status = 'ACTIVE'
+            profile.status = "ACTIVE"
             profile.save()
 
         if invite.cohort is not None:
-            role = 'student'
-            if invite.role is not None and invite.role.slug != 'student':
+            role = "student"
+            if invite.role is not None and invite.role.slug != "student":
                 role = invite.role.slug.upper()
 
             cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
-            if cu is None and (role := role.upper()) in ['TEACHER', 'ASSISTANT', 'REVIEWER', 'STUDENT']:
-                cu = CohortUser(user=user, cohort=invite.cohort, role=role, educational_status='ACTIVE')
+            if cu is None and (role := role.upper()) in ["TEACHER", "ASSISTANT", "REVIEWER", "STUDENT"]:
+                cu = CohortUser(user=user, cohort=invite.cohort, role=role, educational_status="ACTIVE")
                 cu.save()
             elif cu is None:
-                cu = CohortUser(user=user, cohort=invite.cohort, role='STUDENT', educational_status='ACTIVE')
+                cu = CohortUser(user=user, cohort=invite.cohort, role="STUDENT", educational_status="ACTIVE")
                 cu.save()
 
         if user is not None and invite.user is None:
             invite.user = user
 
-        invite.status = 'ACCEPTED'
+        invite.status = "ACCEPTED"
         invite.save()
 
 
@@ -725,33 +777,36 @@ def accept_invite(accepting_ids=None, user=None):
 JWT_LIFETIME = 10
 
 
-def accept_invite_action(data=None, token=None, lang='en'):
+def accept_invite_action(data=None, token=None, lang="en"):
     from breathecode.payments import tasks as payments_tasks
     from breathecode.payments.models import Bag, Invoice, Plan
 
     if data is None:
         data = {}
 
-    password1 = data.get('password', None)
-    password2 = data.get('repeat_password', None)
+    password1 = data.get("password", None)
+    password2 = data.get("repeat_password", None)
 
-    invite = UserInvite.objects.filter(token=str(token), status='PENDING', email__isnull=False).first()
+    invite = UserInvite.objects.filter(token=str(token), status="PENDING", email__isnull=False).first()
     if invite is None:
         raise Exception(
-            translation(lang,
-                        en='Invalid or expired invitation ' + str(token),
-                        es='Invitación inválida o expirada ' + str(token)))
+            translation(
+                lang,
+                en="Invalid or expired invitation " + str(token),
+                es="Invitación inválida o expirada " + str(token),
+            )
+        )
 
-    first_name = data.get('first_name', None)
-    last_name = data.get('last_name', None)
-    if first_name is None or first_name == '' or last_name is None or last_name == '':
-        raise Exception(translation(lang, en='Invalid first or last name', es='Nombre o apellido inválido'))
+    first_name = data.get("first_name", None)
+    last_name = data.get("last_name", None)
+    if first_name is None or first_name == "" or last_name is None or last_name == "":
+        raise Exception(translation(lang, en="Invalid first or last name", es="Nombre o apellido inválido"))
 
     if password1 != password2:
-        raise Exception(translation(lang, en='Passwords don\'t match', es='Las contraseñas no coinciden'))
+        raise Exception(translation(lang, en="Passwords don't match", es="Las contraseñas no coinciden"))
 
     if not password1:
-        raise Exception(translation(lang, en='Password is empty', es='La contraseña está vacía'))
+        raise Exception(translation(lang, en="Password is empty", es="La contraseña está vacía"))
 
     user = User.objects.filter(email=invite.email).first()
     if user is None:
@@ -765,34 +820,33 @@ def accept_invite_action(data=None, token=None, lang='en'):
         if profile is None:
             role = invite.role
             if not role:
-                role = Role.objects.filter(slug='student').first()
+                role = Role.objects.filter(slug="student").first()
 
             if not role:
                 raise Exception(
-                    translation(lang,
-                                en='Unexpected error occurred with invite, please contact the '
-                                'staff of 4geeks',
-                                es='Ocurrió un error inesperado con la invitación, por favor '
-                                'contacta al staff de 4geeks'))
+                    translation(
+                        lang,
+                        en="Unexpected error occurred with invite, please contact the " "staff of 4geeks",
+                        es="Ocurrió un error inesperado con la invitación, por favor " "contacta al staff de 4geeks",
+                    )
+                )
 
-            profile = ProfileAcademy(email=invite.email,
-                                     academy=invite.academy,
-                                     role=role,
-                                     first_name=first_name,
-                                     last_name=last_name)
+            profile = ProfileAcademy(
+                email=invite.email, academy=invite.academy, role=role, first_name=first_name, last_name=last_name
+            )
 
-            if invite.first_name is not None and invite.first_name != '':
+            if invite.first_name is not None and invite.first_name != "":
                 profile.first_name = invite.first_name
-            if invite.last_name is not None and invite.last_name != '':
+            if invite.last_name is not None and invite.last_name != "":
                 profile.last_name = invite.last_name
 
         profile.user = user
-        profile.status = 'ACTIVE'
+        profile.status = "ACTIVE"
         profile.save()
 
     if invite.cohort is not None:
-        role = 'student'
-        if invite.role is not None and invite.role.slug != 'student':
+        role = "student"
+        if invite.role is not None and invite.role.slug != "student":
             role = invite.role.slug.upper()
 
         cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
@@ -802,15 +856,21 @@ def accept_invite_action(data=None, token=None, lang='en'):
 
         plan = Plan.objects.filter(cohort_set__cohorts=invite.cohort, invites=invite).first()
 
-        if plan and invite.user and invite.cohort.academy.main_currency and (
-                invite.cohort.available_as_saas == True or
-            (invite.cohort.available_as_saas == None and invite.cohort.academy.available_as_saas == True)):
+        if (
+            plan
+            and invite.user
+            and invite.cohort.academy.main_currency
+            and (
+                invite.cohort.available_as_saas == True
+                or (invite.cohort.available_as_saas == None and invite.cohort.academy.available_as_saas == True)
+            )
+        ):
             utc_now = timezone.now()
 
             bag = Bag()
-            bag.chosen_period = 'NO_SET'
-            bag.status = 'PAID'
-            bag.type = 'INVITED'
+            bag.chosen_period = "NO_SET"
+            bag.status = "PAID"
+            bag.type = "INVITED"
             bag.how_many_installments = 1
             bag.academy = invite.cohort.academy
             bag.user = user
@@ -825,18 +885,20 @@ def accept_invite_action(data=None, token=None, lang='en'):
             bag.plans.add(plan)
             bag.selected_cohorts.add(invite.cohort)
 
-            invoice = Invoice(amount=0,
-                              paid_at=utc_now,
-                              user=invite.user,
-                              bag=bag,
-                              academy=bag.academy,
-                              status='FULFILLED',
-                              currency=bag.academy.main_currency)
+            invoice = Invoice(
+                amount=0,
+                paid_at=utc_now,
+                user=invite.user,
+                bag=bag,
+                academy=bag.academy,
+                status="FULFILLED",
+                currency=bag.academy.main_currency,
+            )
             invoice.save()
 
             payments_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=True)
 
-    invite.status = 'ACCEPTED'
+    invite.status = "ACCEPTED"
     invite.is_email_validated = True
     invite.save()
 

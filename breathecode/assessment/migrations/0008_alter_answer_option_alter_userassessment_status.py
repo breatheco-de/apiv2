@@ -7,27 +7,35 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('assessment', '0007_rename_user_assesment_answer_user_assessment_and_more'),
+        ("assessment", "0007_rename_user_assesment_answer_user_assessment_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='answer',
-            name='option',
+            model_name="answer",
+            name="option",
             field=models.ForeignKey(
                 blank=True,
                 default=None,
-                help_text='Will be null if open question, no options to pick. Or if option was deleted historically',
+                help_text="Will be null if open question, no options to pick. Or if option was deleted historically",
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
-                to='assessment.option'),
+                to="assessment.option",
+            ),
         ),
         migrations.AlterField(
-            model_name='userassessment',
-            name='status',
-            field=models.CharField(choices=[('DRAFT', 'Draft'), ('SENT', 'Sent'), ('ANSWERED', 'Answered'),
-                                            ('ERROR', 'Error'), ('EXPIRED', 'Expired')],
-                                   default='DRAFT',
-                                   max_length=15),
+            model_name="userassessment",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("DRAFT", "Draft"),
+                    ("SENT", "Sent"),
+                    ("ANSWERED", "Answered"),
+                    ("ERROR", "Error"),
+                    ("EXPIRED", "Expired"),
+                ],
+                default="DRAFT",
+                max_length=15,
+            ),
         ),
     ]

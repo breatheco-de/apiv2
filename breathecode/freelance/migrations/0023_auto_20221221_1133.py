@@ -6,28 +6,30 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('freelance', '0022_alter_issue_github_number'),
+        ("freelance", "0022_alter_issue_github_number"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='issue',
-            name='node_id',
+            model_name="issue",
+            name="node_id",
             field=models.CharField(
                 blank=True,
                 default=None,
-                help_text=
-                'This is the only unique identifier we get from github, the issue number is not unique among repos',
+                help_text="This is the only unique identifier we get from github, the issue number is not unique among repos",
                 max_length=50,
-                null=True),
+                null=True,
+            ),
         ),
         migrations.AlterField(
-            model_name='issue',
-            name='status_message',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   help_text='Important message like reason why not included on bill, etc.',
-                                   max_length=255,
-                                   null=True),
+            model_name="issue",
+            name="status_message",
+            field=models.CharField(
+                blank=True,
+                default=None,
+                help_text="Important message like reason why not included on bill, etc.",
+                max_length=255,
+                null=True,
+            ),
         ),
     ]

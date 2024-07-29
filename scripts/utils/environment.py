@@ -2,16 +2,16 @@ import yaml
 import os
 from yaml.loader import FullLoader
 
-CONFIGURATION_FILE = os.path.join(os.getcwd(), '.breathecode.yml')
+CONFIGURATION_FILE = os.path.join(os.getcwd(), ".breathecode.yml")
 NEW_ENVS = []
 
 
 def reset_environment():
     system_environment = set(os.environ)
 
-    with open(CONFIGURATION_FILE, 'r') as file:
+    with open(CONFIGURATION_FILE, "r") as file:
         configuration = yaml.load(file, Loader=FullLoader)
-        whitelist_environment = set(configuration['tests']['environments']['whitelist'])
+        whitelist_environment = set(configuration["tests"]["environments"]["whitelist"])
 
     blacklist_environment = system_environment.difference(whitelist_environment)
 
@@ -21,8 +21,8 @@ def reset_environment():
 
 
 def test_environment():
-    os.environ['ENV'] = 'test'
+    os.environ["ENV"] = "test"
 
 
 def celery_worker_environment():
-    os.environ['CELERY_WORKER_RUNNING'] = 'True'
+    os.environ["CELERY_WORKER_RUNNING"] = "True"

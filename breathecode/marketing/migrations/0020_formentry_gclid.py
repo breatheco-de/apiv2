@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0019_auto_20200921_2008'),
+        ("marketing", "0019_auto_20200921_2008"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='formentry',
-            name='gclid',
+            model_name="formentry",
+            name="gclid",
             field=models.CharField(blank=True, default=None, max_length=255, null=True),
         ),
     ]

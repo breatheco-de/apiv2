@@ -1,4 +1,4 @@
-__all__ = ['ScriptNotification']
+__all__ = ["ScriptNotification"]
 
 
 class ScriptNotification(Exception):

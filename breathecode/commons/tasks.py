@@ -26,15 +26,17 @@ def clean_task(self, key: str, task_manager_id: int):
     from breathecode.registry import caches as _  # noqa: F811, F401
 
     task_cls = self.task_manager.__class__
-    task_cls.objects.filter(status='SCHEDULED',
-                            task_module=self.task_manager.task_module,
-                            task_name=self.task_manager.task_name,
-                            arguments__args__exact=[key],
-                            arguments__args__len=1).exclude(id=task_manager_id).delete()
+    task_cls.objects.filter(
+        status="SCHEDULED",
+        task_module=self.task_manager.task_module,
+        task_name=self.task_manager.task_name,
+        arguments__args__exact=[key],
+        arguments__args__len=1,
+    ).exclude(id=task_manager_id).delete()
 
-    unpack = key.split('.')
+    unpack = key.split(".")
     model = unpack[-1]
-    module = '.'.join(unpack[:-1])
+    module = ".".join(unpack[:-1])
 
     if module not in MODULES:
         MODULES[module] = importlib.import_module(module)
@@ -43,14 +45,14 @@ def clean_task(self, key: str, task_manager_id: int):
     model_cls = getattr(module, model)
 
     if model_cls not in CACHE_DESCRIPTORS:
-        raise AbortTask(f'Cache not implemented for {model_cls.__name__}, skipping', log=actions.is_output_enable())
+        raise AbortTask(f"Cache not implemented for {model_cls.__name__}, skipping", log=actions.is_output_enable())
 
     cache = CACHE_DESCRIPTORS[model_cls]
 
     try:
         cache.clear()
         if actions.is_output_enable():
-            logger.debug(f'Cache cleaned for {key}')
+            logger.debug(f"Cache cleaned for {key}")
 
     except Exception:
-        raise RetryTask(f'Could not clean the cache {key}', log=actions.is_output_enable())
+        raise RetryTask(f"Could not clean the cache {key}", log=actions.is_output_enable())

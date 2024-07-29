@@ -5,19 +5,19 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0023_auto_20210812_2153'),
-        ('authenticate', '0022_credentialsgoogle'),
+        ("admissions", "0023_auto_20210812_2153"),
+        ("authenticate", "0022_credentialsgoogle"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='AcademyProxy',
+            name="AcademyProxy",
             fields=[],
             options={
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
+                "proxy": True,
+                "indexes": [],
+                "constraints": [],
             },
-            bases=('admissions.academy', ),
+            bases=("admissions.academy",),
         ),
     ]

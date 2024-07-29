@@ -9,45 +9,50 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('authenticate', '0032_academyauthsettings_githubacademyuser'),
+        ("authenticate", "0032_academyauthsettings_githubacademyuser"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='academyauthsettings',
-            name='github_default_team_ids',
+            model_name="academyauthsettings",
+            name="github_default_team_ids",
             field=models.SlugField(
                 blank=True,
-                default='',
-                help_text='User will be invited to this github team ID when joining the github organization',
-                max_length=40),
+                default="",
+                help_text="User will be invited to this github team ID when joining the github organization",
+                max_length=40,
+            ),
         ),
         migrations.AlterField(
-            model_name='academyauthsettings',
-            name='github_owner',
-            field=models.ForeignKey(blank=True,
-                                    default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.SET_NULL,
-                                    to=settings.AUTH_USER_MODEL),
+            model_name="academyauthsettings",
+            name="github_owner",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AlterField(
-            model_name='academyauthsettings',
-            name='github_username',
+            model_name="academyauthsettings",
+            name="github_username",
             field=models.SlugField(blank=True, max_length=40),
         ),
         migrations.AlterField(
-            model_name='githubacademyuser',
-            name='storage_synch_at',
+            model_name="githubacademyuser",
+            name="storage_synch_at",
             field=models.DateTimeField(blank=True, default=None, null=True),
         ),
         migrations.AlterField(
-            model_name='githubacademyuser',
-            name='username',
-            field=models.SlugField(blank=True,
-                                   default=None,
-                                   help_text='Only used when the username has not been found on 4Geeks',
-                                   max_length=40,
-                                   null=True),
+            model_name="githubacademyuser",
+            name="username",
+            field=models.SlugField(
+                blank=True,
+                default=None,
+                help_text="Only used when the username has not been found on 4Geeks",
+                max_length=40,
+                null=True,
+            ),
         ),
     ]

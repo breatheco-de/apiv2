@@ -7,14 +7,14 @@ from breathecode.utils.api_view_extensions.priorities.response_order import Resp
 from django.db.models import QuerySet
 from rest_framework.utils.urls import replace_query_param, remove_query_param
 
-__all__ = ['PaginationExtension']
+__all__ = ["PaginationExtension"]
 
-REQUIREMENTS = ['cache']
-OFFSET_QUERY_PARAM = 'offset'
-LIMIT_QUERY_PARAM = 'limit'
+REQUIREMENTS = ["cache"]
+OFFSET_QUERY_PARAM = "offset"
+LIMIT_QUERY_PARAM = "limit"
 MAX_LIMIT = None
 
-if os.getenv('ENABLE_DEFAULT_PAGINATION', 'y') in ['t', 'true', 'True', 'TRUE', '1', 'yes', 'y']:
+if os.getenv("ENABLE_DEFAULT_PAGINATION", "y") in ["t", "true", "True", "TRUE", "1", "yes", "y"]:
     DEFAULT_LIMIT = 20
 
 else:
@@ -65,17 +65,23 @@ class PaginationExtension(ExtensionBase):
         self._offset = self._get_offset()
         self._limit = self._get_limit()
 
-        if self._is_paginate() and self._request.GET.get('envelope',
-                                                         '').lower() in ['false', 'f', '0', 'no', 'n', 'off', '']:
+        if self._is_paginate() and self._request.GET.get("envelope", "").lower() in [
+            "false",
+            "f",
+            "0",
+            "no",
+            "n",
+            "off",
+            "",
+        ]:
             self._use_envelope = True
 
-        self._queryset = queryset[self._offset:self._offset + self._limit]
+        self._queryset = queryset[self._offset : self._offset + self._limit]
         return self._queryset
 
-    def _apply_response_mutation(self,
-                                 data: list[dict] | dict,
-                                 headers: Optional[dict] = None,
-                                 format='application/json'):
+    def _apply_response_mutation(
+        self, data: list[dict] | dict, headers: Optional[dict] = None, format="application/json"
+    ):
         if headers is None:
             headers = {}
 
@@ -89,22 +95,30 @@ class PaginationExtension(ExtensionBase):
 
         links = []
         for label, url in (
-            ('first', first_url),
-            ('next', next_url),
-            ('previous', previous_url),
-            ('last', last_url),
+            ("first", first_url),
+            ("next", next_url),
+            ("previous", previous_url),
+            ("last", last_url),
         ):
             if url is not None:
                 links.append('<{}>; rel="{}"'.format(url, label))
 
-        headers = {**headers, 'Link': ', '.join(links)} if links else {**headers}
-        headers['X-Total-Count'] = self._count
-        headers['X-Per-Page'] = self._limit
-        headers['X-Page'] = int(self._offset / self._limit) + 1
+        headers = {**headers, "Link": ", ".join(links)} if links else {**headers}
+        headers["X-Total-Count"] = self._count
+        headers["X-Per-Page"] = self._limit
+        headers["X-Page"] = int(self._offset / self._limit) + 1
 
         if self._use_envelope:
-            data = OrderedDict([('count', self._count), ('first', first_url), ('next', next_url),
-                                ('previous', previous_url), ('last', last_url), ('results', data)])
+            data = OrderedDict(
+                [
+                    ("count", self._count),
+                    ("first", first_url),
+                    ("next", next_url),
+                    ("previous", previous_url),
+                    ("last", last_url),
+                    ("results", data),
+                ]
+            )
             return (data, headers)
 
         return (data, headers)
@@ -113,7 +127,7 @@ class PaginationExtension(ExtensionBase):
         if not string:
             return None
 
-        return string.replace('%2C', ',')
+        return string.replace("%2C", ",")
 
     def _get_count(self, queryset: QuerySet[Any] | list):
         """Determine an object count, supporting either querysets or regular lists."""

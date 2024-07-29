@@ -2,8 +2,8 @@ import logging
 from django.contrib.auth.models import User
 
 logger = logging.getLogger(__name__)
-SOURCE = 'eventbrite'
-CAMPAIGN = 'eventbrite order placed'
+SOURCE = "eventbrite"
+CAMPAIGN = "eventbrite order placed"
 
 
 def order_placed(self, webhook, payload: dict):
@@ -22,11 +22,11 @@ def order_placed(self, webhook, payload: dict):
         raise Exception(message)
 
     if not org.academy:
-        raise Exception('Organization not have one Academy')
+        raise Exception("Organization not have one Academy")
 
     academy_id = org.academy.id
-    event_id = payload['event_id']
-    email = payload['email']
+    event_id = payload["event_id"]
+    email = payload["email"]
 
     local_event = Event.objects.filter(eventbrite_id=event_id).first()
 
@@ -45,8 +45,9 @@ def order_placed(self, webhook, payload: dict):
     webhook.save()
 
     if not EventCheckin.objects.filter(email=email, event=local_event).count():
-        EventCheckin(email=email, status='PENDING', event=local_event, attendee=local_attendee,
-                     utm_source='eventbrite').save()
+        EventCheckin(
+            email=email, status="PENDING", event=local_event, attendee=local_attendee, utm_source="eventbrite"
+        ).save()
 
     elif not EventCheckin.objects.filter(email=email, event=local_event, attendee=local_attendee).count():
         event_checkin = EventCheckin.objects.filter(email=email, event=local_event).first()
@@ -54,26 +55,26 @@ def order_placed(self, webhook, payload: dict):
         event_checkin.save()
 
     contact = {
-        'email': email,
-        'first_name': payload['first_name'],
-        'last_name': payload['last_name'],
+        "email": email,
+        "first_name": payload["first_name"],
+        "last_name": payload["last_name"],
     }
 
     custom = {
-        'academy': local_event.academy.slug,
-        'source': SOURCE,
-        'campaign': CAMPAIGN,
-        'language': local_event.lang,
+        "academy": local_event.academy.slug,
+        "source": SOURCE,
+        "campaign": CAMPAIGN,
+        "language": local_event.lang,
     }
 
     # utm_language ?
 
-    contact = set_optional(contact, 'utm_location', custom, 'academy')
-    contact = set_optional(contact, 'utm_source', custom, 'source')
-    contact = set_optional(contact, 'utm_campaign', custom, 'campaign')
+    contact = set_optional(contact, "utm_location", custom, "academy")
+    contact = set_optional(contact, "utm_source", custom, "source")
+    contact = set_optional(contact, "utm_campaign", custom, "campaign")
 
     if local_event.lang:
-        contact = set_optional(contact, 'utm_language', custom, 'language')
+        contact = set_optional(contact, "utm_language", custom, "language")
 
     academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
     if academy is None:
@@ -81,8 +82,11 @@ def order_placed(self, webhook, payload: dict):
         logger.debug(message)
         raise Exception(message)
 
-    automation_id = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).values_list(
-        'event_attendancy_automation__id', flat=True).first()
+    automation_id = (
+        ActiveCampaignAcademy.objects.filter(academy__id=academy_id)
+        .values_list("event_attendancy_automation__id", flat=True)
+        .first()
+    )
 
     if automation_id:
         add_to_active_campaign(contact, academy_id, automation_id)

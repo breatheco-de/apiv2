@@ -8,52 +8,62 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0023_auto_20210812_2153'),
+        ("admissions", "0023_auto_20210812_2153"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('feedback', '0018_alter_answer_score'),
+        ("feedback", "0018_alter_answer_score"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ReviewPlatform',
+            name="ReviewPlatform",
             fields=[
-                ('slug', models.SlugField(primary_key=True, serialize=False)),
-                ('name', models.CharField(max_length=100)),
-                ('website', models.URLField()),
-                ('review_signup',
-                 models.URLField(blank=True, default=None, help_text='Give URL to create a new review', null=True)),
-                ('contact_email', models.EmailField(max_length=254)),
-                ('contact_name', models.EmailField(blank=True, default=None, max_length=254, null=True)),
-                ('contact_phone', models.CharField(blank=True, default=None, max_length=17, null=True)),
+                ("slug", models.SlugField(primary_key=True, serialize=False)),
+                ("name", models.CharField(max_length=100)),
+                ("website", models.URLField()),
+                (
+                    "review_signup",
+                    models.URLField(blank=True, default=None, help_text="Give URL to create a new review", null=True),
+                ),
+                ("contact_email", models.EmailField(max_length=254)),
+                ("contact_name", models.EmailField(blank=True, default=None, max_length=254, null=True)),
+                ("contact_phone", models.CharField(blank=True, default=None, max_length=17, null=True)),
             ],
         ),
         migrations.CreateModel(
-            name='Review',
+            name="Review",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('total_rating', models.FloatField(blank=True, default=None, null=True)),
-                ('public_url', models.URLField(blank=True, default=None, null=True)),
-                ('status',
-                 models.CharField(choices=[('PENDING', 'Pending'), ('DONE', 'Done'), ('IGNORE', 'Ignore')],
-                                  default='PENDING',
-                                  help_text='Deleted reviews hav status=Ignore',
-                                  max_length=9)),
-                ('status_text', models.CharField(blank=True, default=None, max_length=255, null=True)),
-                ('comments',
-                 models.TextField(blank=True,
-                                  default=None,
-                                  help_text='Student comments when leaving the review',
-                                  null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('author', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
-                ('cohort',
-                 models.ForeignKey(blank=True,
-                                   null=True,
-                                   on_delete=django.db.models.deletion.CASCADE,
-                                   to='admissions.cohort')),
-                ('platform', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
-                                               to='feedback.reviewplatform')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("total_rating", models.FloatField(blank=True, default=None, null=True)),
+                ("public_url", models.URLField(blank=True, default=None, null=True)),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[("PENDING", "Pending"), ("DONE", "Done"), ("IGNORE", "Ignore")],
+                        default="PENDING",
+                        help_text="Deleted reviews hav status=Ignore",
+                        max_length=9,
+                    ),
+                ),
+                ("status_text", models.CharField(blank=True, default=None, max_length=255, null=True)),
+                (
+                    "comments",
+                    models.TextField(
+                        blank=True, default=None, help_text="Student comments when leaving the review", null=True
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("author", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    "cohort",
+                    models.ForeignKey(
+                        blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="admissions.cohort"
+                    ),
+                ),
+                (
+                    "platform",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="feedback.reviewplatform"),
+                ),
             ],
         ),
     ]

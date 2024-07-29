@@ -9,11 +9,11 @@ from ...models import Bag, Invoice
 
 # renew the credits every 1 hours
 class Command(BaseCommand):
-    help = 'Renew credits'
+    help = "Renew credits"
 
     def handle(self, *args, **options):
         now = timezone.now()
-        bags = Bag.objects.filter(was_delivered=False, created_at__lte=now - timedelta(minutes=10), status='PAID')
+        bags = Bag.objects.filter(was_delivered=False, created_at__lte=now - timedelta(minutes=10), status="PAID")
         hm_processed = 0
         hm_failed = 0
 
@@ -34,4 +34,6 @@ class Command(BaseCommand):
         total = hm_processed + hm_failed
         self.stdout.write(
             self.style.SUCCESS(
-                f'Rescheduled {total} bags where {hm_processed} were processed and {hm_failed} were failed.'))
+                f"Rescheduled {total} bags where {hm_processed} were processed and {hm_failed} were failed."
+            )
+        )

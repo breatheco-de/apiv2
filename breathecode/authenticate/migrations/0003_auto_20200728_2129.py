@@ -6,33 +6,33 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authenticate', '0002_credentialsquickbooks'),
+        ("authenticate", "0002_credentialsquickbooks"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='credentialsgithub',
-            name='avatar_url',
+            model_name="credentialsgithub",
+            name="avatar_url",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='credentialsgithub',
-            name='bio',
+            model_name="credentialsgithub",
+            name="bio",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='credentialsgithub',
-            name='blog',
+            model_name="credentialsgithub",
+            name="blog",
             field=models.CharField(blank=True, max_length=150, null=True),
         ),
         migrations.AlterField(
-            model_name='credentialsgithub',
-            name='company',
+            model_name="credentialsgithub",
+            name="company",
             field=models.CharField(blank=True, max_length=150, null=True),
         ),
         migrations.AlterField(
-            model_name='credentialsgithub',
-            name='name',
+            model_name="credentialsgithub",
+            name="name",
             field=models.CharField(blank=True, max_length=150, null=True),
         ),
     ]

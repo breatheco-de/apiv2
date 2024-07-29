@@ -5,9 +5,8 @@ from asgiref.sync import async_to_sync
 from google.apps import meet_v2
 from google.apps.meet_v2.types import Space
 from google.protobuf.field_mask_pb2 import FieldMask
-from google.protobuf.timestamp_pb2 import Timestamp
 
-__all__ = ['GoogleMeet']
+__all__ = ["GoogleMeet"]
 
 
 class CreateSpaceRequest(TypedDict):
@@ -192,7 +191,8 @@ class GoogleMeet:
         return await self.aget_participant(**kwargs)
 
     async def alist_participant_sessions(
-            self, **kwargs: Unpack[ListParticipantSessionsRequest]) -> pagers.ListParticipantSessionsAsyncPager:
+        self, **kwargs: Unpack[ListParticipantSessionsRequest]
+    ) -> pagers.ListParticipantSessionsAsyncPager:
         # Create a client
         client = await self.conference_records_service_client()
 
@@ -202,8 +202,9 @@ class GoogleMeet:
         # Make the request
         return await client.list_participant_sessions(request=request)
 
-    async def aget_participant_session(self,
-                                       **kwargs: Unpack[GetParticipantSessionRequest]) -> meet_v2.ParticipantSession:
+    async def aget_participant_session(
+        self, **kwargs: Unpack[GetParticipantSessionRequest]
+    ) -> meet_v2.ParticipantSession:
         # Create a client
         client = await self.conference_records_service_client()
 
@@ -214,8 +215,9 @@ class GoogleMeet:
         return await client.get_participant_session(request=request)
 
     @async_to_sync
-    async def get_participant_session(self,
-                                      **kwargs: Unpack[GetParticipantSessionRequest]) -> meet_v2.ParticipantSession:
+    async def get_participant_session(
+        self, **kwargs: Unpack[GetParticipantSessionRequest]
+    ) -> meet_v2.ParticipantSession:
         return await self.aget_participant_session(**kwargs)
 
     async def alist_recordings(self, **kwargs: Unpack[ListRecordingsRequest]) -> pagers.ListRecordingsAsyncPager:
@@ -273,7 +275,8 @@ class GoogleMeet:
         return await self.aget_transcript(**kwargs)
 
     async def alist_conference_records(
-            self, **kwargs: Unpack[ListConferenceRecordsRequest]) -> pagers.ListConferenceRecordsAsyncPager:
+        self, **kwargs: Unpack[ListConferenceRecordsRequest]
+    ) -> pagers.ListConferenceRecordsAsyncPager:
         # Create a client
         client = await self.conference_records_service_client()
 

@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 @receiver(consume_service, sender=Consumable)
 def consume_service_receiver(sender: Type[Consumable], instance: Consumable, how_many: float, **kwargs):
     if instance.how_many == 0:
-        lose_service_permissions.send(instance=instance, sender=sender)
+        lose_service_permissions.send_robust(instance=instance, sender=sender)
         return
 
     if instance.how_many == -1:
@@ -35,7 +35,7 @@ def consume_service_receiver(sender: Type[Consumable], instance: Consumable, how
     instance.save()
 
     if instance.how_many == 0:
-        lose_service_permissions.send(instance=instance, sender=sender)
+        lose_service_permissions.send_robust(instance=instance, sender=sender)
 
 
 @receiver(reimburse_service_units, sender=Consumable)
@@ -49,7 +49,7 @@ def reimburse_service_units_receiver(sender: Type[Consumable], instance: Consuma
     instance.save()
 
     if grant_permissions:
-        grant_service_permissions.send(instance=instance, sender=sender)
+        grant_service_permissions.send_robust(instance=instance, sender=sender)
 
 
 @receiver(lose_service_permissions, sender=Consumable)
@@ -59,8 +59,9 @@ def lose_service_permissions_receiver(sender: Type[Consumable], instance: Consum
     if instance.how_many != 0:
         return
 
-    consumables = Consumable.objects.filter(Q(valid_until__lte=now) | Q(valid_until=None),
-                                            user=instance.user).exclude(how_many=0)
+    consumables = Consumable.objects.filter(Q(valid_until__lte=now) | Q(valid_until=None), user=instance.user).exclude(
+        how_many=0
+    )
 
     # for group in instance.user.groups.all():
     for group in instance.service_item.service.groups.all():
@@ -81,16 +82,16 @@ def grant_service_permissions_receiver(sender: Type[Consumable], instance: Consu
 
 @receiver(mentorship_session_status, sender=MentorshipSession)
 def post_mentoring_session_ended(sender: Type[MentorshipSession], instance: MentorshipSession, **kwargs):
-    if instance.mentee and instance.service and instance.status in ['FAILED', 'IGNORED']:
+    if instance.mentee and instance.service and instance.status in ["FAILED", "IGNORED"]:
         tasks.refund_mentoring_session.delay(instance.id)
 
 
 @receiver(m2m_changed, sender=Plan.service_items.through)
 def plan_m2m_wrapper(sender: Type[Plan.service_items.through], instance: Plan, **kwargs):
-    if kwargs['action'] != 'post_add':
+    if kwargs["action"] != "post_add":
         return
 
-    update_plan_m2m_service_items.send(sender=sender, instance=instance)
+    update_plan_m2m_service_items.send_robust(sender=sender, instance=instance)
 
 
 @receiver(update_plan_m2m_service_items, sender=Plan.service_items.through)

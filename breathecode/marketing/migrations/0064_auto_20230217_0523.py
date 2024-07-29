@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('marketing', '0063_auto_20230215_2219'),
+        ("marketing", "0063_auto_20230215_2219"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='formentry',
-            name='ac_deal_amount',
+            model_name="formentry",
+            name="ac_deal_amount",
             field=models.FloatField(blank=True, default=None, null=True),
         ),
         migrations.AddField(
-            model_name='formentry',
-            name='ac_deal_currency_code',
+            model_name="formentry",
+            name="ac_deal_currency_code",
             field=models.CharField(blank=True, default=None, max_length=3, null=True),
         ),
     ]

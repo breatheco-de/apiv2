@@ -6,28 +6,26 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('monitoring', '0012_auto_20210312_0618'),
+        ("monitoring", "0012_auto_20210312_0618"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='monitorscript',
-            name='notify_email',
+            model_name="monitorscript",
+            name="notify_email",
             field=models.CharField(
                 blank=True,
                 default=None,
-                help_text=
-                'Only specify if need to override the application.notify_email, you can add many comma separated.',
+                help_text="Only specify if need to override the application.notify_email, you can add many comma separated.",
                 max_length=255,
-                null=True),
+                null=True,
+            ),
         ),
         migrations.AlterField(
-            model_name='application',
-            name='notify_email',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   help_text='Comma separated list of emails',
-                                   max_length=255,
-                                   null=True),
+            model_name="application",
+            name="notify_email",
+            field=models.CharField(
+                blank=True, default=None, help_text="Comma separated list of emails", max_length=255, null=True
+            ),
         ),
     ]

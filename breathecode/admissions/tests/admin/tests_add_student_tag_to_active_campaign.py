@@ -1,10 +1,14 @@
 """
 Test /cohort/user
 """
+
 from unittest.mock import MagicMock, call, patch
-from breathecode.admissions.models import CohortUser
-from breathecode.admissions.admin import add_student_tag_to_active_campaign
+
 from django.http.request import HttpRequest
+
+from breathecode.admissions.admin import add_student_tag_to_active_campaign
+from breathecode.admissions.models import CohortUser
+
 from ..mixins import AdmissionsTestCase
 
 
@@ -13,9 +17,9 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 With zero CohortUser
     """
 
-    @patch('breathecode.marketing.tasks.add_cohort_task_to_student.delay', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("breathecode.marketing.tasks.add_cohort_task_to_student.delay", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_add_student_tag_to_active_campaign__zero_cohort_users(self):
         from breathecode.marketing.tasks import add_cohort_task_to_student
 
@@ -30,9 +34,9 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 With one CohortUser
     """
 
-    @patch('breathecode.marketing.tasks.add_cohort_task_to_student.delay', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("breathecode.marketing.tasks.add_cohort_task_to_student.delay", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_add_student_tag_to_active_campaign__one_cohort_user(self):
         from breathecode.marketing.tasks import add_cohort_task_to_student
 
@@ -43,17 +47,20 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         add_student_tag_to_active_campaign(None, request, queryset)
 
-        self.assertEqual(add_cohort_task_to_student.delay.call_args_list, [
-            call(model.user.id, model.cohort.id, model.cohort.academy.id),
-        ])
+        self.assertEqual(
+            add_cohort_task_to_student.delay.call_args_list,
+            [
+                call(model.user.id, model.cohort.id, model.cohort.academy.id),
+            ],
+        )
 
     """
     🔽🔽🔽 With two CohortUser
     """
 
-    @patch('breathecode.marketing.tasks.add_cohort_task_to_student.delay', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("breathecode.marketing.tasks.add_cohort_task_to_student.delay", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_add_student_tag_to_active_campaign__two_cohort_users(self):
         from breathecode.marketing.tasks import add_cohort_task_to_student
 
@@ -65,7 +72,10 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         add_student_tag_to_active_campaign(None, request, queryset)
 
-        self.assertEqual(add_cohort_task_to_student.delay.call_args_list, [
-            call(model1.user.id, model1.cohort.id, model1.cohort.academy.id),
-            call(model2.user.id, model2.cohort.id, model2.cohort.academy.id),
-        ])
+        self.assertEqual(
+            add_cohort_task_to_student.delay.call_args_list,
+            [
+                call(model1.user.id, model1.cohort.id, model1.cohort.academy.id),
+                call(model2.user.id, model2.cohort.id, model2.cohort.academy.id),
+            ],
+        )

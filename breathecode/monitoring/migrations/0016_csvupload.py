@@ -7,32 +7,40 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0041_cohortuser_watching'),
-        ('monitoring', '0015_alter_csvdownload_academy'),
+        ("admissions", "0041_cohortuser_watching"),
+        ("monitoring", "0015_alter_csvdownload_academy"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='CSVUpload',
+            name="CSVUpload",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
-                ('url', models.URLField()),
-                ('status',
-                 models.CharField(choices=[('PENDING', 'Pending'), ('ERROR', 'Error'), ('DONE', 'Done')],
-                                  default='PENDING',
-                                  max_length=20)),
-                ('status_message', models.TextField(blank=True, default=None, null=True)),
-                ('log', models.CharField(max_length=50)),
-                ('hash', models.CharField(max_length=64)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('finished_at', models.DateTimeField(auto_now=True)),
-                ('academy',
-                 models.ForeignKey(blank=True,
-                                   default=None,
-                                   null=True,
-                                   on_delete=django.db.models.deletion.CASCADE,
-                                   to='admissions.academy')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(max_length=255)),
+                ("url", models.URLField()),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[("PENDING", "Pending"), ("ERROR", "Error"), ("DONE", "Done")],
+                        default="PENDING",
+                        max_length=20,
+                    ),
+                ),
+                ("status_message", models.TextField(blank=True, default=None, null=True)),
+                ("log", models.CharField(max_length=50)),
+                ("hash", models.CharField(max_length=64)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("finished_at", models.DateTimeField(auto_now=True)),
+                (
+                    "academy",
+                    models.ForeignKey(
+                        blank=True,
+                        default=None,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="admissions.academy",
+                    ),
+                ),
             ],
         ),
     ]

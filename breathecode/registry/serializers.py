@@ -1,4 +1,5 @@
 from django.utils import timezone
+from urllib.parse import urlparse
 from rest_framework import serializers, status
 from slugify import slugify
 
@@ -21,6 +22,7 @@ from .models import (
 
 class ProfileSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     avatar_url = serpy.Field()
     github_username = serpy.Field()
@@ -28,6 +30,7 @@ class ProfileSerializer(serpy.Serializer):
 
 class SEOReportSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     report_type = serpy.Field()
     status = serpy.Field()
@@ -39,6 +42,7 @@ class SEOReportSerializer(serpy.Serializer):
 
 class OriginalityScanSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     success = serpy.Field()
     score_original = serpy.Field()
@@ -53,6 +57,7 @@ class OriginalityScanSerializer(serpy.Serializer):
 
 class VariableSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     key = serpy.Field()
@@ -63,6 +68,7 @@ class VariableSmallSerializer(serpy.Serializer):
 
 class KeywordSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     slug = serpy.Field()
@@ -90,6 +96,7 @@ class SmallAsset(serpy.Serializer):
 
 class AssetAliasSerializer(serpy.Serializer):
     """The serializer schema definition."""
+
     # Use a Field subclass like IntField if you need more validation.
     slug = serpy.Field()
     asset = SmallAsset()
@@ -204,6 +211,8 @@ class AssetHookSerializer(serpy.Serializer):
     status = serpy.Field()
     graded = serpy.Field()
     gitpod = serpy.Field()
+    interactive = serpy.Field()
+    enable_table_of_content = serpy.Field()
     preview = serpy.Field()
     external = serpy.Field()
     solution_video_url = serpy.Field()
@@ -214,12 +223,12 @@ class AssetHookSerializer(serpy.Serializer):
     seo_keywords = serpy.MethodField()
 
     def get_technologies(self, obj):
-        _s = list(map(lambda t: t.slug, obj.technologies.filter(parent__isnull=True).order_by('sort_priority')))
-        return ','.join(_s)
+        _s = list(map(lambda t: t.slug, obj.technologies.filter(parent__isnull=True).order_by("sort_priority")))
+        return ",".join(_s)
 
     def get_seo_keywords(self, obj):
         _s = list(map(lambda t: t.slug, obj.seo_keywords.all()))
-        return ','.join(_s)
+        return ",".join(_s)
 
 
 class AssetSerializer(serpy.Serializer):
@@ -238,6 +247,8 @@ class AssetSerializer(serpy.Serializer):
     status = serpy.Field()
     graded = serpy.Field()
     gitpod = serpy.Field()
+    enable_table_of_content = serpy.Field()
+    interactive = serpy.Field()
     preview = serpy.Field()
     external = serpy.Field()
     solution_video_url = serpy.Field()
@@ -262,7 +273,7 @@ class AssetSerializer(serpy.Serializer):
         return result
 
     def get_technologies(self, obj):
-        _s = list(map(lambda t: t.slug, obj.technologies.filter(parent__isnull=True).order_by('sort_priority')))
+        _s = list(map(lambda t: t.slug, obj.technologies.filter(parent__isnull=True).order_by("sort_priority")))
         return _s
 
     def get_seo_keywords(self, obj):
@@ -317,7 +328,7 @@ class AcademyAssetSerializer(AssetSerializer):
             while _aux.previous_version is not None:
                 prev_versions.append(_aux.previous_version)
                 _aux = _aux.previous_version
-        except:
+        except Exception:
             pass
 
         serializer = AssetTinySerializer(prev_versions, many=True)
@@ -346,7 +357,7 @@ class AssetBigSerializer(AssetMidSerializer):
     last_synch_at = serpy.Field()
     status_text = serpy.Field()
     published_at = serpy.Field()
-    
+
     enable_table_of_content = serpy.Field()
 
     delivery_instructions = serpy.Field()
@@ -388,29 +399,31 @@ class AssetBigAndTechnologySerializer(AssetBigSerializer):
 class AssetBigAndTechnologyPublishedSerializer(AssetBigSerializer):
 
     assessment = AssessmentSmallSerializer(required=False)
-    
+
     technologies = serpy.MethodField()
     translations = serpy.MethodField()
 
     def get_translations(self, obj):
         result = {}
-        for t in obj.all_translations.filter(status='PUBLISHED'):
+        for t in obj.all_translations.filter(status="PUBLISHED"):
             result[t.lang] = t.slug
         return result
 
     def get_technologies(self, obj):
         techs = AssetTechnology.objects.filter(
-            id__in=obj.technologies.filter(visibility__in=['PUBLIC', 'UNLISTED'], is_deprecated=False))
+            id__in=obj.technologies.filter(visibility__in=["PUBLIC", "UNLISTED"], is_deprecated=False)
+        )
         return ParentAssetTechnologySerializer(techs, many=True).data
 
 
-class AssetAndTechnologySerializer(AssetSerializer):
+class AssetAndTechnologySerializer(AssetMidSerializer):
 
     technologies = serpy.MethodField()
 
     def get_technologies(self, obj):
         techs = AssetTechnology.objects.filter(
-            id__in=obj.technologies.filter(visibility__in=['PUBLIC', 'UNLISTED'], is_deprecated=False))
+            id__in=obj.technologies.filter(visibility__in=["PUBLIC", "UNLISTED"], is_deprecated=False)
+        )
         return ParentAssetTechnologySerializer(techs, many=True).data
 
 
@@ -506,59 +519,61 @@ class PostAssetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Asset
-        exclude = ('academy', )
+        exclude = ("academy",)
 
     def validate(self, data):
 
         validated_data = super().validate(data)
 
-        if 'lang' not in validated_data or validated_data['lang'] is None:
-            raise ValidationException('Asset is missing a language', slug='no-language')
+        if "lang" not in validated_data or validated_data["lang"] is None:
+            raise ValidationException("Asset is missing a language", slug="no-language")
 
-        if 'category' not in data or data['category'] is None:
-            if 'all_translations' not in validated_data or len(validated_data['all_translations']) == 0:
-                raise ValidationException('No category was specified and we could not retrieve it from any translation',
-                                          slug='no-category')
+        if "category" not in data or data["category"] is None:
+            if "all_translations" not in validated_data or len(validated_data["all_translations"]) == 0:
+                raise ValidationException(
+                    "No category was specified and we could not retrieve it from any translation", slug="no-category"
+                )
 
-            asset_translation = Asset.objects.filter(slug=validated_data['all_translations'][0]).first()
+            asset_translation = Asset.objects.filter(slug=validated_data["all_translations"][0]).first()
             if asset_translation is None or asset_translation.category is None:
-                raise ValidationException('No category was specified and we could not retrieve it from any translation',
-                                          slug='no-category')
+                raise ValidationException(
+                    "No category was specified and we could not retrieve it from any translation", slug="no-category"
+                )
 
             category_translation = asset_translation.category.all_translations.filter(
-                lang=validated_data['lang']).first()
+                lang=validated_data["lang"]
+            ).first()
             if category_translation is None:
                 raise ValidationException(
                     f"No category was specified and translation's categories don't have language: {validated_data['lang']}"
                 )
 
-            validated_data['category'] = category_translation
+            validated_data["category"] = category_translation
 
-        academy_id = self.context['academy']
-        validated_data['academy'] = Academy.objects.filter(id=academy_id).first()
+        academy_id = self.context["academy"]
+        validated_data["academy"] = Academy.objects.filter(id=academy_id).first()
 
-        alias = AssetAlias.objects.filter(slug=validated_data['slug']).first()
+        alias = AssetAlias.objects.filter(slug=validated_data["slug"]).first()
         if alias is not None:
-            raise ValidationException('Asset alias already exists with this slug')
+            raise ValidationException("Asset alias already exists with this slug")
 
-        if 'readme' in validated_data:
-            raise ValidationException('Property readme is read only, please update property readme_raw instead')
+        if "readme" in validated_data:
+            raise ValidationException("Property readme is read only, please update property readme_raw instead")
 
         return validated_data
 
     def create(self, validated_data):
-        academy_id = self.context['academy']
+        academy_id = self.context["academy"]
         academy = Academy.objects.filter(id=academy_id).first()
 
         readme_raw = None
-        if 'readme_raw' in validated_data:
-            readme_raw = validated_data['readme_raw']
+        if "readme_raw" in validated_data:
+            readme_raw = validated_data["readme_raw"]
 
         try:
-            return super(PostAssetSerializer, self).create({
-                **validated_data, 'academy': academy,
-                'readme_raw': readme_raw
-            })
+            return super(PostAssetSerializer, self).create(
+                {**validated_data, "academy": academy, "readme_raw": readme_raw}
+            )
         except Exception as e:
 
             raise ValidationException(e.message_dict, 400)
@@ -568,28 +583,30 @@ class PostKeywordClusterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = KeywordCluster
-        exclude = ('academy', )
+        exclude = ("academy",)
 
     def validate(self, data):
 
         validated_data = super().validate(data)
 
-        if 'landing_page_url' in validated_data:
-            if 'http' not in validated_data['landing_page_url']:
+        if "landing_page_url" in validated_data and validated_data["landing_page_url"] is not None:
+            if "http" not in validated_data["landing_page_url"]:
                 raise ValidationException(
-                    'Please make your topic cluster landing page url is an absolute url that points to your page, this is how we know your page domain'
+                    "Please make your topic cluster landing page url is an absolute url that points to your page, this is how we know your page domain"
                 )
 
         return validated_data
 
     def create(self, validated_data):
-        academy_id = self.context['academy']
+        academy_id = self.context["academy"]
         academy = Academy.objects.filter(id=academy_id).first()
 
-        return super(PostKeywordClusterSerializer, self).create({
-            **validated_data,
-            'academy': academy,
-        })
+        return super(PostKeywordClusterSerializer, self).create(
+            {
+                **validated_data,
+                "academy": academy,
+            }
+        )
 
     def update(self, instance, validated_data):
         return super().update(instance, validated_data)
@@ -599,16 +616,18 @@ class PostKeywordSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AssetKeyword
-        exclude = ('academy', )
+        exclude = ("academy",)
 
     def create(self, validated_data):
-        academy_id = self.context['academy']
+        academy_id = self.context["academy"]
         academy = Academy.objects.filter(id=academy_id).first()
 
-        return super(PostKeywordSerializer, self).create({
-            **validated_data,
-            'academy': academy,
-        })
+        return super(PostKeywordSerializer, self).create(
+            {
+                **validated_data,
+                "academy": academy,
+            }
+        )
 
 
 class PUTKeywordSerializer(serializers.ModelSerializer):
@@ -618,7 +637,7 @@ class PUTKeywordSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AssetKeyword
-        exclude = ('academy', )
+        exclude = ("academy",)
 
     def update(self, instance, validated_data):
         return super().update(instance, validated_data)
@@ -631,7 +650,7 @@ class PUTCategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AssetCategory
-        exclude = ('academy', )
+        exclude = ("academy",)
 
     def update(self, instance, validated_data):
         return super().update(instance, validated_data)
@@ -641,16 +660,18 @@ class POSTCategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AssetCategory
-        exclude = ('academy', )
+        exclude = ("academy",)
 
     def create(self, validated_data):
-        academy_id = self.context['academy']
+        academy_id = self.context["academy"]
         academy = Academy.objects.filter(id=academy_id).first()
 
-        return super().create({
-            **validated_data,
-            'academy': academy,
-        })
+        return super().create(
+            {
+                **validated_data,
+                "academy": academy,
+            }
+        )
 
 
 class TechnologyPUTSerializer(serializers.ModelSerializer):
@@ -658,21 +679,21 @@ class TechnologyPUTSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AssetTechnology
-        exclude = ('slug', )
+        exclude = ("slug",)
 
     def validate(self, data):
         validated_data = {**data}
 
-        if 'parent' in data and data['parent'] is not None:
+        if "parent" in data and data["parent"] is not None:
             parent = None
-            if isinstance(data['parent'], int) or data['parent'].isnumeric():
-                parent = AssetTechnology.objects.filter(id=data['parent']).first()
+            if isinstance(data["parent"], int) or data["parent"].isnumeric():
+                parent = AssetTechnology.objects.filter(id=data["parent"]).first()
             else:
-                parent = AssetTechnology.objects.filter(slug=data['parent']).first()
+                parent = AssetTechnology.objects.filter(slug=data["parent"]).first()
 
             if parent.parent is not None:
                 raise ValidationException(
-                    f'The technology parent you are trying to set {parent.slug}, its a child of another technology, only technologies without parent can be set as parent'
+                    f"The technology parent you are trying to set {parent.slug}, its a child of another technology, only technologies without parent can be set as parent"
                 )
 
             if parent is None:
@@ -681,13 +702,13 @@ class TechnologyPUTSerializer(serializers.ModelSerializer):
             # if parent.id == self.instance.id:
             #     raise ValidationException(f'Technology cannot be a parent of itself')
 
-            validated_data['parent'] = parent
+            validated_data["parent"] = parent
 
         return validated_data
 
     def update(self, instance, validated_data):
-        if 'parent' in validated_data and validated_data['parent'] is None:
-            instance.parent = validated_data.pop('parent')
+        if "parent" in validated_data and validated_data["parent"] is None:
+            instance.parent = validated_data.pop("parent")
             instance.save()
 
         return super().update(instance, validated_data)
@@ -702,34 +723,34 @@ class PostAssetCommentSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
 
-        academy_id = self.context.get('academy')
+        academy_id = self.context.get("academy")
         asset = None
-        if 'asset' in data:
-            if data['asset'].isnumeric():
-                asset = Asset.objects.filter(id=data['asset'], academy__id=academy_id).first()
-            elif data['asset'] != '':
-                asset = Asset.objects.filter(slug=data['asset'], academy__id=academy_id).first()
+        if "asset" in data:
+            if data["asset"].isnumeric():
+                asset = Asset.objects.filter(id=data["asset"], academy__id=academy_id).first()
+            elif data["asset"] != "":
+                asset = Asset.objects.filter(slug=data["asset"], academy__id=academy_id).first()
 
         if asset is None:
             raise ValidationException(f'Asset {data["asset"]} not found for academy {academy_id}')
 
-        return super().validate({**data, 'asset': asset})
+        return super().validate({**data, "asset": asset})
 
 
 class PutAssetCommentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AssetComment
-        exclude = ('text', 'asset', 'author')
+        exclude = ("text", "asset", "author")
 
     def validate(self, data):
 
         validated_data = super().validate(data)
-        session_user = self.context.get('request').user
+        session_user = self.context.get("request").user
 
         if self.instance.owner is not None and self.instance.owner.id == session_user.id:
-            if 'resolved' in data and data['resolved'] != self.instance.resolved:
-                raise ValidationException('You cannot update the resolved property if you are the Asset Comment owner')
+            if "resolved" in data and data["resolved"] != self.instance.resolved:
+                raise ValidationException("You cannot update the resolved property if you are the Asset Comment owner")
 
         return validated_data
 
@@ -749,7 +770,7 @@ class VariableSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ContentVariable
-        exclude = ('academy', )
+        exclude = ("academy",)
 
 
 class AssetPUTSerializer(serializers.ModelSerializer):
@@ -762,83 +783,92 @@ class AssetPUTSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Asset
-        exclude = ('academy', )
+        exclude = ("academy",)
         list_serializer_class = AssetListSerializer
 
     def validate(self, data):
 
-        academy_id = self.context.get('academy_id')
-        session_user = self.context.get('request').user
+        academy_id = self.context.get("academy_id")
+        session_user = self.context.get("request").user
         member = ProfileAcademy.objects.filter(user=session_user, academy__id=academy_id).first()
         if member is None:
-            raise ValidationException(f"You don't belong to the academy {academy_id} owner of this asset",
-                                      status.HTTP_400_BAD_REQUEST)
+            raise ValidationException(
+                f"You don't belong to the academy {academy_id} owner of this asset", status.HTTP_400_BAD_REQUEST
+            )
 
-        if member.role.slug == 'content_writer':
+        if member.role.slug == "content_writer":
             for key in data:
-                if key != 'status' and data[key] != getattr(self.instance, key):
-                    raise ValidationException('You are only allowed to change the status of this asset',
-                                              status.HTTP_400_BAD_REQUEST)
-            if 'status' in data and data['status'] not in ['DRAFT', 'WRITING', 'NOT_STARTED', 'OPTIMIZED', 'PLANNING']:
+                if key != "status" and data[key] != getattr(self.instance, key):
+                    raise ValidationException(
+                        "You are only allowed to change the status of this asset", status.HTTP_400_BAD_REQUEST
+                    )
+            if "status" in data and data["status"] not in ["DRAFT", "WRITING", "NOT_STARTED", "OPTIMIZED", "PLANNING"]:
                 raise ValidationException(
-                    'You can only set the status to not started, draft, writing, optimized, or planning',
-                    status.HTTP_400_BAD_REQUEST)
+                    "You can only set the status to not started, draft, writing, optimized, or planning",
+                    status.HTTP_400_BAD_REQUEST,
+                )
 
-            if self.instance.author is None and data['status'] != 'NOT_STARTED':
-                data['author'] = session_user
+            if self.instance.author is None and data["status"] != "NOT_STARTED":
+                data["author"] = session_user
             elif self.instance.author.id != session_user.id:
-                raise ValidationException('You can only update card assigned to yourself', status.HTTP_400_BAD_REQUEST)
+                raise ValidationException("You can only update card assigned to yourself", status.HTTP_400_BAD_REQUEST)
 
-        if 'status' in data and data['status'] == 'PUBLISHED':
-            if self.instance.test_status not in ['OK', 'WARNING']:
-                raise ValidationException('This asset has to pass tests successfully before publishing',
-                                          status.HTTP_400_BAD_REQUEST)
+        if "status" in data and data["status"] == "PUBLISHED":
+            if self.instance.test_status not in ["OK", "WARNING"]:
+                raise ValidationException(
+                    "This asset has to pass tests successfully before publishing", status.HTTP_400_BAD_REQUEST
+                )
 
-        if 'visibility' in data and data['visibility'] in ['PUBLIC', 'UNLISTED'
-                                                           ] and self.instance.test_status not in ['OK', 'WARNING']:
-            raise ValidationException('This asset has to pass tests successfully before publishing', code=400)
+        if (
+            "visibility" in data
+            and data["visibility"] in ["PUBLIC", "UNLISTED"]
+            and self.instance.test_status not in ["OK", "WARNING"]
+        ):
+            raise ValidationException("This asset has to pass tests successfully before publishing", code=400)
 
-        if 'slug' in data:
-            data['slug'] = slugify(data['slug']).lower()
+        if "slug" in data:
+            data["slug"] = slugify(data["slug"]).lower()
 
         lang = self.instance.lang
-        if 'lang' in data:
-            lang = data['lang']
+        if "lang" in data:
+            lang = data["lang"]
 
         category = self.instance.category
-        if 'category' in data:
-            category = data['category']
+        if "category" in data:
+            category = data["category"]
 
-        if 'superseded_by' in data and data['superseded_by']:
-            if data['superseded_by'].id == self.instance.id:
-                raise ValidationException('One asset cannot supersed itself', code=400)
+        if "superseded_by" in data and data["superseded_by"]:
+            if data["superseded_by"].id == self.instance.id:
+                raise ValidationException("One asset cannot supersed itself", code=400)
 
             try:
-                _prev = data['superseded_by'].previous_version
+                _prev = data["superseded_by"].previous_version
                 if _prev and (not self.instance.superseded_by or _prev.id != self.instance.superseded_by.id):
                     raise ValidationException(
                         f'Asset {data["superseded_by"].id} is already superseding {_prev.asset_type}: {_prev.slug}',
-                        code=400)
-            except:
+                        code=400,
+                    )
+            except Exception:
                 pass
 
             try:
                 previous_version = self.instance.previous_version
-                if previous_version and data['superseded_by'].id == previous_version.id:
-                    raise ValidationException('One asset cannot have its previous version also superseding', code=400)
-            except:
+                if previous_version and data["superseded_by"].id == previous_version.id:
+                    raise ValidationException("One asset cannot have its previous version also superseding", code=400)
+            except Exception:
                 pass
 
         if category is None:
-            raise ValidationException('Asset category cannot be null', status.HTTP_400_BAD_REQUEST)
+            raise ValidationException("Asset category cannot be null", status.HTTP_400_BAD_REQUEST)
 
         if lang != category.lang:
             translated_category = category.all_translations.filter(lang=lang).first()
             if translated_category is None:
                 raise ValidationException(
-                    'Asset category is in a different language than the asset itself and we could not find a category translation that matches the same language',
-                    status.HTTP_400_BAD_REQUEST)
-            data['category'] = translated_category
+                    "Asset category is in a different language than the asset itself and we could not find a category translation that matches the same language",
+                    status.HTTP_400_BAD_REQUEST,
+                )
+            data["category"] = translated_category
 
         validated_data = super().validate(data)
         return validated_data
@@ -847,19 +877,34 @@ class AssetPUTSerializer(serializers.ModelSerializer):
 
         data = {}
 
-        if 'status' in validated_data:
-            if validated_data['status'] == 'PUBLISHED' and instance.status != 'PUBLISHED':
+        if "status" in validated_data:
+            if validated_data["status"] == "PUBLISHED" and instance.status != "PUBLISHED":
                 now = timezone.now()
-                data['published_at'] = now
-            elif validated_data['status'] != 'PUBLISHED':
-                data['published_at'] = None
+                data["published_at"] = now
+            elif validated_data["status"] != "PUBLISHED":
+                data["published_at"] = None
+
+        if "readme_url" in validated_data:
+
+            def get_repo_url(url):
+                parsed_url = urlparse(url)
+                # Extract the scheme, netloc, and the first two parts of the path (organization/repository)
+                repo_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+                path_parts = parsed_url.path.strip("/").split("/")
+                if len(path_parts) >= 2:
+                    repo_url += f"/{path_parts[0]}/{path_parts[1]}"
+                return repo_url
+
+            repo = get_repo_url(validated_data["readme_url"])
+            data["url"] = repo
 
         # Check if preview img is being deleted
-        if 'preview' in validated_data:
-            if validated_data['preview'] == None and instance.preview != None:
-                hash = instance.preview.split('/')[-1]
+        if "preview" in validated_data:
+            if validated_data["preview"] == None and instance.preview != None:
+                hash = instance.preview.split("/")[-1]
                 if hash is not None:
                     from .tasks import async_remove_asset_preview_from_cloud
+
                     async_remove_asset_preview_from_cloud.delay(hash)
 
         return super().update(instance, {**validated_data, **data})

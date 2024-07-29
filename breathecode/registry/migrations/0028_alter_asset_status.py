@@ -6,17 +6,24 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0027_asset_github_commit_hash'),
+        ("registry", "0027_asset_github_commit_hash"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='asset',
-            name='status',
-            field=models.CharField(choices=[('UNASSIGNED', 'Unassigned'), ('WRITING', 'Writing'), ('DRAFT', 'Draft'),
-                                            ('OPTIMIZED', 'Optimized'), ('PUBLISHED', 'Published')],
-                                   default='UNASSIGNED',
-                                   help_text='Related to the publishing of the asset',
-                                   max_length=20),
+            model_name="asset",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("UNASSIGNED", "Unassigned"),
+                    ("WRITING", "Writing"),
+                    ("DRAFT", "Draft"),
+                    ("OPTIMIZED", "Optimized"),
+                    ("PUBLISHED", "Published"),
+                ],
+                default="UNASSIGNED",
+                help_text="Related to the publishing of the asset",
+                max_length=20,
+            ),
         ),
     ]

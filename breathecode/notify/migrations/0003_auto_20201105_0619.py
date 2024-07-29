@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('notify', '0002_auto_20201105_0612'),
+        ("notify", "0002_auto_20201105_0612"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='slackchannel',
-            name='purpose',
+            model_name="slackchannel",
+            name="purpose",
             field=models.CharField(blank=True, max_length=500, null=True),
         ),
         migrations.AlterField(
-            model_name='slackchannel',
-            name='topic',
+            model_name="slackchannel",
+            name="topic",
             field=models.CharField(blank=True, max_length=500, null=True),
         ),
     ]

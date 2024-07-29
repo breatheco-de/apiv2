@@ -6,16 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authenticate', '0033_auto_20230303_0306'),
+        ("authenticate", "0033_auto_20230303_0306"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='academyauthsettings',
-            name='github_error_log',
-            field=models.JSONField(blank=True,
-                                   default=None,
-                                   help_text='Error trace log for github API communication',
-                                   null=True),
+            model_name="academyauthsettings",
+            name="github_error_log",
+            field=models.JSONField(
+                blank=True, default=None, help_text="Error trace log for github API communication", null=True
+            ),
         ),
     ]

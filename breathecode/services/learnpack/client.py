@@ -33,53 +33,53 @@ class LearnPack:
 
         webhook = LearnPackWebhook.objects.filter(id=webhook_id).first()
         if not webhook:
-            raise Exception('Invalid webhook')
+            raise Exception("Invalid webhook")
 
         try:
 
             if not webhook.event:
-                raise Exception('Impossible to determine learnpack event')
+                raise Exception("Impossible to determine learnpack event")
 
             if not webhook.payload:
-                raise Exception('Impossible to retrive webhook payload')
+                raise Exception("Impossible to retrive webhook payload")
 
-            if 'slug' not in webhook.payload:
-                raise Exception('Impossible to retrive learnpack exercise slug')
+            if "slug" not in webhook.payload:
+                raise Exception("Impossible to retrive learnpack exercise slug")
 
-            if 'user_id' not in webhook.payload:
-                raise Exception('Impossible to retrive learnpack user id')
+            if "user_id" not in webhook.payload:
+                raise Exception("Impossible to retrive learnpack user id")
             else:
-                user_id = webhook.payload['user_id']
+                user_id = webhook.payload["user_id"]
                 user = User.objects.filter(id=user_id).first()
                 if user is None:
-                    raise Exception(f'Learnpack student with user id {user_id} not found')
+                    raise Exception(f"Learnpack student with user id {user_id} not found")
                 else:
                     webhook.student = user
 
-            logger.debug(f'Executing => {webhook.event}')
+            logger.debug(f"Executing => {webhook.event}")
             if not hasattr(actions, webhook.event):
-                raise Exception(f'Learnpack telemetry event `{webhook.event}` is not implemented')
+                raise Exception(f"Learnpack telemetry event `{webhook.event}` is not implemented")
 
-            logger.debug('Action found')
+            logger.debug("Action found")
             fn = getattr(actions, webhook.event)
 
             try:
                 fn(self, webhook)
-                logger.debug('Mark action as done')
-                webhook.status = 'DONE'
-                webhook.status_text = 'OK'
+                logger.debug("Mark action as done")
+                webhook.status = "DONE"
+                webhook.status_text = "OK"
                 webhook.save()
 
             except Exception as e:
-                logger.error('Mark action with error')
+                logger.error("Mark action with error")
 
-                webhook.status = 'ERROR'
-                webhook.status_text = str(e)+'\n'.join(traceback.format_exception(None, e, e.__traceback__))
+                webhook.status = "ERROR"
+                webhook.status_text = str(e) + "\n".join(traceback.format_exception(None, e, e.__traceback__))
                 webhook.save()
 
         except Exception as e:
-            webhook.status = 'ERROR'
-            webhook.status_text = str(e)+'\n'.join(traceback.format_exception(None, e, e.__traceback__))
+            webhook.status = "ERROR"
+            webhook.status_text = str(e) + "\n".join(traceback.format_exception(None, e, e.__traceback__))
             webhook.save()
 
             raise e
@@ -93,16 +93,16 @@ class LearnPack:
             return None
 
         webhook = LearnPackWebhook()
-        is_streaming = 'event' in payload
+        is_streaming = "event" in payload
 
         if is_streaming:
-            webhook.event = payload['event']
+            webhook.event = payload["event"]
         else:
-            webhook.event = 'batch'
+            webhook.event = "batch"
 
         webhook.is_streaming = is_streaming
         webhook.payload = payload
-        webhook.status = 'PENDING'
+        webhook.status = "PENDING"
         webhook.save()
 
         return webhook

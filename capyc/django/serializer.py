@@ -5,8 +5,7 @@ class InitializeMeta(type):
         cls.initialize()
 
 
-class Serializer:
-    ...
+class Serializer: ...
 
 
 from breathecode.admissions.models import Cohort

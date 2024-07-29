@@ -6,8 +6,8 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('registry', '0020_asset_readme_updated_at'),
-        ('registry', '0022_alter_asset_category'),
+        ("registry", "0020_asset_readme_updated_at"),
+        ("registry", "0022_alter_asset_category"),
     ]
 
     operations = []

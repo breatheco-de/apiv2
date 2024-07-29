@@ -14,15 +14,15 @@ logger = logging.getLogger(__name__)
 def async_run_spider(self, args):
     from .actions import run_spider
 
-    logger.error('Starting async_run_spider')
+    logger.error("Starting async_run_spider")
     now = timezone.now()
-    spider = Spider.objects.filter(id=args['spi_id']).first()
+    spider = Spider.objects.filter(id=args["spi_id"]).first()
     result = run_spider(spider)
 
     if result:
-        logger.error(f'Starting async_run_spider in spider name {spider.name}')
-        spider.spider_last_run_status = 'SYNCHED'
-        spider.spider_last_run_desc = 'The run of the spider ended successfully command at ' + str(now)
+        logger.error(f"Starting async_run_spider in spider name {spider.name}")
+        spider.spider_last_run_status = "SYNCHED"
+        spider.spider_last_run_desc = "The run of the spider ended successfully command at " + str(now)
         spider.save()
 
 
@@ -30,14 +30,14 @@ def async_run_spider(self, args):
 def async_fetch_sync_all_data(self, args):
     from .actions import fetch_sync_all_data
 
-    logger.error('Starting async_fetch_sync_all_data')
+    logger.error("Starting async_fetch_sync_all_data")
     now = timezone.now()
-    spider = Spider.objects.filter(id=args['spi_id']).first()
+    spider = Spider.objects.filter(id=args["spi_id"]).first()
     result = fetch_sync_all_data(spider)
 
     if result:
-        message = f'Starting async_fetch_sync_all_data in spider name {spider.name}'
+        message = f"Starting async_fetch_sync_all_data in spider name {spider.name}"
         logger.error(message)
-        spider.sync_status = 'SYNCHED'
+        spider.sync_status = "SYNCHED"
         spider.sync_desc = message + str(now)
         spider.save()

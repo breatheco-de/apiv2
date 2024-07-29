@@ -6,17 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('events', '0028_rename_sync_desc_event_eventbrite_sync_description'),
+        ("events", "0028_rename_sync_desc_event_eventbrite_sync_description"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='event',
-            name='currency',
-            field=models.CharField(blank=True,
-                                   choices=[('USD', 'USD'), ('CRC', 'CRC'), ('CLP', 'CLP'), ('EUR', 'EUR'),
-                                            ('UYU', 'UYU')],
-                                   default='USD',
-                                   max_length=3),
+            model_name="event",
+            name="currency",
+            field=models.CharField(
+                blank=True,
+                choices=[("USD", "USD"), ("CRC", "CRC"), ("CLP", "CLP"), ("EUR", "EUR"), ("UYU", "UYU")],
+                default="USD",
+                max_length=3,
+            ),
         ),
     ]

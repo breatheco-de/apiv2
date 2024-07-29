@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('commons', '0006_auto_20231209_0707'),
+        ("commons", "0006_auto_20231209_0707"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='taskmanager',
-            name='exception_module',
+            model_name="taskmanager",
+            name="exception_module",
             field=models.CharField(blank=True, max_length=200, null=True),
         ),
         migrations.AddField(
-            model_name='taskmanager',
-            name='exception_name',
+            model_name="taskmanager",
+            name="exception_name",
             field=models.CharField(blank=True, max_length=200, null=True),
         ),
     ]

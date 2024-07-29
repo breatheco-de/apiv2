@@ -7,18 +7,16 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0061_academy_white_label_url'),
-        ('marketing', '0076_merge_20230831_2059'),
+        ("admissions", "0061_academy_white_label_url"),
+        ("marketing", "0076_merge_20230831_2059"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='course',
-            name='cohort',
-            field=models.ForeignKey(blank=True,
-                                    default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='admissions.cohort'),
+            model_name="course",
+            name="cohort",
+            field=models.ForeignKey(
+                blank=True, default=None, null=True, on_delete=django.db.models.deletion.CASCADE, to="admissions.cohort"
+            ),
         ),
     ]

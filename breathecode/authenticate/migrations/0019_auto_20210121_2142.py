@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authenticate', '0018_credentialsgithub_username'),
+        ("authenticate", "0018_credentialsgithub_username"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='capability',
-            name='slug',
+            model_name="capability",
+            name="slug",
             field=models.SlugField(max_length=40, primary_key=True, serialize=False),
         ),
     ]

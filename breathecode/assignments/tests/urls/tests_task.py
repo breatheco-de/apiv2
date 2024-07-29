@@ -1,6 +1,7 @@
 """
 Test /answer
 """
+
 from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
@@ -15,81 +16,78 @@ from ..mixins import AssignmentsTestCase
 
 def get_serializer(self, task, user):
     return {
-        'associated_slug': task.associated_slug,
-        'created_at': self.bc.datetime.to_iso_string(task.created_at),
-        'updated_at': self.bc.datetime.to_iso_string(task.updated_at),
-        'github_url': task.github_url,
-        'id': task.id,
-        'live_url': task.live_url,
-        'revision_status': task.revision_status,
-        'task_status': task.task_status,
-        'task_type': task.task_type,
-        'title': task.title,
-        'description': task.description,
-        'assignment_telemetry': task.telemetry.telemetry if task.telemetry else None,
-        'opened_at': self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
-        'delivered_at': self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
-        'user': {
-            'first_name': user.first_name,
-            'id': user.id,
-            'last_name': user.last_name
-        }
+        "associated_slug": task.associated_slug,
+        "created_at": self.bc.datetime.to_iso_string(task.created_at),
+        "updated_at": self.bc.datetime.to_iso_string(task.updated_at),
+        "github_url": task.github_url,
+        "id": task.id,
+        "live_url": task.live_url,
+        "revision_status": task.revision_status,
+        "task_status": task.task_status,
+        "task_type": task.task_type,
+        "title": task.title,
+        "description": task.description,
+        "assignment_telemetry": task.telemetry.telemetry if task.telemetry else None,
+        "opened_at": self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
+        "delivered_at": self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
+        "user": {"first_name": user.first_name, "id": user.id, "last_name": user.last_name},
     }
 
 
 class MediaTestSuite(AssignmentsTestCase):
     """Test /answer"""
+
     """
     🔽🔽🔽 Auth
     """
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__without_auth(self):
-        url = reverse_lazy('assignments:task')
+        url = reverse_lazy("assignments:task")
         response = self.client.get(url)
 
         json = response.json()
-        expected = {'detail': 'Authentication credentials were not provided.', 'status_code': 401}
+        expected = {"detail": "Authentication credentials were not provided.", "status_code": 401}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [])
 
     """
     🔽🔽🔽 Get without ProfileAcademy
     """
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__without_profile_academy(self):
         model = self.bc.database.create(user=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task')
+        url = reverse_lazy("assignments:task")
         response = self.client.get(url)
 
         json = response.json()
         expected = {
-            'detail': 'without-profile-academy',
-            'status_code': 400,
+            "detail": "without-profile-academy",
+            "status_code": 400,
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [])
 
     """
     🔽🔽🔽 Get without Task
     """
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__without_data(self):
         model = self.bc.database.create(user=1, profile_academy=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task')
+        url = reverse_lazy("assignments:task")
         response = self.client.get(url)
 
         json = response.json()
@@ -97,19 +95,19 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [])
 
     """
     🔽🔽🔽 Get with Task
     """
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__one_task__cohort_null(self):
         model = self.bc.database.create(profile_academy=1, task=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task')
+        url = reverse_lazy("assignments:task")
         response = self.client.get(url)
 
         json = response.json()
@@ -117,19 +115,19 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
     """
     🔽🔽🔽 Get with two Task
     """
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__two_tasks(self):
         model = self.bc.database.create(profile_academy=1, task=2)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task')
+        url = reverse_lazy("assignments:task")
         response = self.client.get(url)
 
         json = response.json()
@@ -137,19 +135,19 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
 
     """
     🔽🔽🔽 Query academy
     """
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_academy__found_zero__academy_not_exists(self):
         model = self.bc.database.create(profile_academy=1, task=1, cohort=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?academy=they-killed-kenny'
+        url = reverse_lazy("assignments:task") + "?academy=they-killed-kenny"
         response = self.client.get(url)
 
         json = response.json()
@@ -157,15 +155,15 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_academy__found_one(self):
         model = self.bc.database.create(profile_academy=1, task=1, cohort=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + f'?academy={model.academy.slug}'
+        url = reverse_lazy("assignments:task") + f"?academy={model.academy.slug}"
         response = self.client.get(url)
 
         json = response.json()
@@ -173,15 +171,15 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_academy__found_two(self):
         model = self.bc.database.create(profile_academy=1, task=2, cohort=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + f'?academy={model.academy.slug}'
+        url = reverse_lazy("assignments:task") + f"?academy={model.academy.slug}"
         response = self.client.get(url)
 
         json = response.json()
@@ -189,19 +187,19 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
 
     """
     🔽🔽🔽 Query user
     """
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_user__found_zero__user_not_exists(self):
         model = self.bc.database.create(profile_academy=1, task=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?user=2'
+        url = reverse_lazy("assignments:task") + "?user=2"
         response = self.client.get(url)
 
         json = response.json()
@@ -209,15 +207,15 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_user__found_one(self):
         model = self.bc.database.create(profile_academy=1, task=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?user=1'
+        url = reverse_lazy("assignments:task") + "?user=1"
         response = self.client.get(url)
 
         json = response.json()
@@ -225,15 +223,15 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_user__found_two(self):
         model = self.bc.database.create(profile_academy=1, task=2, cohort=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?user=1'
+        url = reverse_lazy("assignments:task") + "?user=1"
         response = self.client.get(url)
 
         json = response.json()
@@ -241,16 +239,16 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_user__found_two__related_to_two_users(self):
-        tasks = [{'user_id': 1}, {'user_id': 2}]
+        tasks = [{"user_id": 1}, {"user_id": 2}]
         model = self.bc.database.create(profile_academy=1, user=2, task=tasks, cohort=1)
         self.bc.request.authenticate(model.user[0])
 
-        url = reverse_lazy('assignments:task') + '?user=1,2'
+        url = reverse_lazy("assignments:task") + "?user=1,2"
         response = self.client.get(url)
 
         json = response.json()
@@ -258,19 +256,19 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
 
     """
     🔽🔽🔽 Query cohort
     """
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_cohort__id__found_zero__cohort_not_exists(self):
         model = self.bc.database.create(profile_academy=1, task=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?cohort=2'
+        url = reverse_lazy("assignments:task") + "?cohort=2"
         response = self.client.get(url)
 
         json = response.json()
@@ -278,15 +276,15 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_cohort__slug__found_zero__cohort_not_exists(self):
         model = self.bc.database.create(profile_academy=1, task=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?cohort=they-killed-kenny'
+        url = reverse_lazy("assignments:task") + "?cohort=they-killed-kenny"
         response = self.client.get(url)
 
         json = response.json()
@@ -294,15 +292,15 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_cohort__id__found_one(self):
         model = self.bc.database.create(profile_academy=1, task=1, cohort=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?cohort=1'
+        url = reverse_lazy("assignments:task") + "?cohort=1"
         response = self.client.get(url)
 
         json = response.json()
@@ -310,15 +308,15 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_cohort__slug__found_one(self):
         model = self.bc.database.create(profile_academy=1, task=1, cohort=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + f'?cohort={model.cohort.slug}'
+        url = reverse_lazy("assignments:task") + f"?cohort={model.cohort.slug}"
         response = self.client.get(url)
 
         json = response.json()
@@ -326,15 +324,15 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_cohort__id__found_two(self):
         model = self.bc.database.create(profile_academy=1, task=2, cohort=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?cohort=1'
+        url = reverse_lazy("assignments:task") + "?cohort=1"
         response = self.client.get(url)
 
         json = response.json()
@@ -342,15 +340,15 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_cohort__slug__found_two(self):
         model = self.bc.database.create(profile_academy=1, task=2, cohort=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + f'?cohort={model.cohort.slug}'
+        url = reverse_lazy("assignments:task") + f"?cohort={model.cohort.slug}"
         response = self.client.get(url)
 
         json = response.json()
@@ -358,16 +356,16 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_cohort__id__found_two__related_to_two_users(self):
-        tasks = [{'cohort_id': 1}, {'cohort_id': 2}]
+        tasks = [{"cohort_id": 1}, {"cohort_id": 2}]
         model = self.bc.database.create(profile_academy=1, user=1, task=tasks, cohort=2)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?cohort=1,2'
+        url = reverse_lazy("assignments:task") + "?cohort=1,2"
         response = self.client.get(url)
 
         json = response.json()
@@ -375,16 +373,16 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_cohort__slug__found_two__related_to_two_users(self):
-        tasks = [{'cohort_id': 1}, {'cohort_id': 2}]
+        tasks = [{"cohort_id": 1}, {"cohort_id": 2}]
         model = self.bc.database.create(profile_academy=1, user=1, task=tasks, cohort=2)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + f'?cohort={model.cohort[0].slug},{model.cohort[1].slug}'
+        url = reverse_lazy("assignments:task") + f"?cohort={model.cohort[0].slug},{model.cohort[1].slug}"
         response = self.client.get(url)
 
         json = response.json()
@@ -392,19 +390,19 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
 
     """
     🔽🔽🔽 Query stu_cohort
     """
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_stu_cohort__id__found_zero__cohort_not_exists(self):
         model = self.bc.database.create(profile_academy=1, task=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?stu_cohort=2'
+        url = reverse_lazy("assignments:task") + "?stu_cohort=2"
         response = self.client.get(url)
 
         json = response.json()
@@ -412,15 +410,15 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_stu_cohort__slug__found_zero__cohort_not_exists(self):
         model = self.bc.database.create(profile_academy=1, task=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?stu_cohort=they-killed-kenny'
+        url = reverse_lazy("assignments:task") + "?stu_cohort=they-killed-kenny"
         response = self.client.get(url)
 
         json = response.json()
@@ -428,16 +426,16 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_stu_cohort__id__found_one(self):
         model = self.bc.database.create(profile_academy=1, task=1, cohort=1, cohort_user=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?stu_cohort=1'
+        url = reverse_lazy("assignments:task") + "?stu_cohort=1"
         response = self.client.get(url)
 
         json = response.json()
@@ -445,16 +443,16 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_stu_cohort__slug__found_one(self):
         model = self.bc.database.create(profile_academy=1, task=1, cohort=1, cohort_user=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + f'?stu_cohort={model.cohort.slug}'
+        url = reverse_lazy("assignments:task") + f"?stu_cohort={model.cohort.slug}"
         response = self.client.get(url)
 
         json = response.json()
@@ -462,16 +460,16 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_stu_cohort__id__found_two(self):
         model = self.bc.database.create(profile_academy=1, task=2, cohort=1, cohort_user=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?stu_cohort=1'
+        url = reverse_lazy("assignments:task") + "?stu_cohort=1"
         response = self.client.get(url)
 
         json = response.json()
@@ -479,16 +477,16 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_stu_cohort__slug__found_two(self):
         model = self.bc.database.create(profile_academy=1, task=2, cohort=1, cohort_user=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + f'?stu_cohort={model.cohort.slug}'
+        url = reverse_lazy("assignments:task") + f"?stu_cohort={model.cohort.slug}"
         response = self.client.get(url)
 
         json = response.json()
@@ -496,18 +494,18 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_stu_cohort__id__found_two__related_to_two_users(self):
-        tasks = [{'cohort_id': 1, 'user_id': 1}, {'cohort_id': 2, 'user_id': 2}]
-        cohort_users = [{'cohort_id': 1, 'user_id': 1}, {'cohort_id': 2, 'user_id': 2}]
+        tasks = [{"cohort_id": 1, "user_id": 1}, {"cohort_id": 2, "user_id": 2}]
+        cohort_users = [{"cohort_id": 1, "user_id": 1}, {"cohort_id": 2, "user_id": 2}]
         model = self.bc.database.create(profile_academy=1, user=2, task=tasks, cohort=2, cohort_user=cohort_users)
         self.bc.request.authenticate(model.user[0])
 
-        url = reverse_lazy('assignments:task') + '?stu_cohort=1,2'
+        url = reverse_lazy("assignments:task") + "?stu_cohort=1,2"
         response = self.client.get(url)
 
         json = response.json()
@@ -515,18 +513,18 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_stu_cohort__slug__found_two__related_to_two_users(self):
-        tasks = [{'cohort_id': 1, 'user_id': 1}, {'cohort_id': 2, 'user_id': 2}]
-        cohort_users = [{'cohort_id': 1, 'user_id': 1}, {'cohort_id': 2, 'user_id': 2}]
+        tasks = [{"cohort_id": 1, "user_id": 1}, {"cohort_id": 2, "user_id": 2}]
+        cohort_users = [{"cohort_id": 1, "user_id": 1}, {"cohort_id": 2, "user_id": 2}]
         model = self.bc.database.create(profile_academy=1, user=2, task=tasks, cohort=2, cohort_user=cohort_users)
         self.bc.request.authenticate(model.user[0])
 
-        url = reverse_lazy('assignments:task') + f'?stu_cohort={model.cohort[0].slug},{model.cohort[1].slug}'
+        url = reverse_lazy("assignments:task") + f"?stu_cohort={model.cohort[0].slug},{model.cohort[1].slug}"
         response = self.client.get(url)
 
         json = response.json()
@@ -534,19 +532,19 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
 
     """
     🔽🔽🔽 Query edu_status
     """
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_edu_status__found_zero__edu_status_not_exists(self):
         model = self.bc.database.create(profile_academy=1, task=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?edu_status=ACTIVE'
+        url = reverse_lazy("assignments:task") + "?edu_status=ACTIVE"
         response = self.client.get(url)
 
         json = response.json()
@@ -554,17 +552,17 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_edu_status__found_one(self):
-        cohort_user = {'user_id': 1, 'educational_status': 'ACTIVE'}
+        cohort_user = {"user_id": 1, "educational_status": "ACTIVE"}
         model = self.bc.database.create(profile_academy=1, task=1, cohort=1, cohort_user=cohort_user)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + f'?edu_status={model.cohort_user.educational_status}'
+        url = reverse_lazy("assignments:task") + f"?edu_status={model.cohort_user.educational_status}"
         response = self.client.get(url)
 
         json = response.json()
@@ -572,17 +570,17 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_edu_status__found_two(self):
-        cohort_user = {'user_id': 1, 'educational_status': 'ACTIVE'}
+        cohort_user = {"user_id": 1, "educational_status": "ACTIVE"}
         model = self.bc.database.create(profile_academy=1, task=2, cohort=1, cohort_user=cohort_user)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + f'?edu_status={model.cohort_user.educational_status}'
+        url = reverse_lazy("assignments:task") + f"?edu_status={model.cohort_user.educational_status}"
         response = self.client.get(url)
 
         json = response.json()
@@ -590,27 +588,27 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
 
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_edu_status__found_two__related_to_two_edu_status(self):
-        tasks = [{'user_id': 1, 'cohort_id': 1}, {'user_id': 2, 'cohort_id': 2}]
+        tasks = [{"user_id": 1, "cohort_id": 1}, {"user_id": 2, "cohort_id": 2}]
         cohort_users = [
             {
-                'user_id': 1,
-                'educational_status': 'ACTIVE',
+                "user_id": 1,
+                "educational_status": "ACTIVE",
             },
             {
-                'user_id': 2,
-                'educational_status': 'DROPPED',
+                "user_id": 2,
+                "educational_status": "DROPPED",
             },
         ]
         model = self.bc.database.create(profile_academy=1, user=2, task=tasks, cohort=2, cohort_user=cohort_users)
         self.bc.request.authenticate(model.user[0])
 
-        url = reverse_lazy('assignments:task') + f'?edu_status=ACTIVE,DROPPED'
+        url = reverse_lazy("assignments:task") + f"?edu_status=ACTIVE,DROPPED"
         response = self.client.get(url)
 
         json = response.json()
@@ -618,19 +616,19 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
 
     """
     🔽🔽🔽 Query teacher
     """
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_teacher__found_zero__academy_not_exists(self):
         model = self.bc.database.create(profile_academy=1, task=1, cohort=1)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?teacher=1'
+        url = reverse_lazy("assignments:task") + "?teacher=1"
         response = self.client.get(url)
 
         json = response.json()
@@ -638,27 +636,27 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_teacher__found_one(self):
         cohort_users = [
             {
-                'role': 'STUDENT',
-                'user_id': 1,
-                'cohort_id': 1,
+                "role": "STUDENT",
+                "user_id": 1,
+                "cohort_id": 1,
             },
             {
-                'role': 'TEACHER',
-                'user_id': 1,
-                'cohort_id': 1,
+                "role": "TEACHER",
+                "user_id": 1,
+                "cohort_id": 1,
             },
         ]
         model = self.bc.database.create(profile_academy=1, task=1, cohort=1, cohort_user=cohort_users)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + f'?teacher=1'
+        url = reverse_lazy("assignments:task") + f"?teacher=1"
         response = self.client.get(url)
 
         json = response.json()
@@ -666,38 +664,38 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_teacher__found_two(self):
-        tasks = [{'user_id': 1, 'cohort_id': 1}, {'user_id': 1, 'cohort_id': 2}]
+        tasks = [{"user_id": 1, "cohort_id": 1}, {"user_id": 1, "cohort_id": 2}]
         cohort_users = [
             {
-                'role': 'STUDENT',
-                'user_id': 1,
-                'cohort_id': 1,
+                "role": "STUDENT",
+                "user_id": 1,
+                "cohort_id": 1,
             },
             {
-                'role': 'STUDENT',
-                'user_id': 1,
-                'cohort_id': 2,
+                "role": "STUDENT",
+                "user_id": 1,
+                "cohort_id": 2,
             },
             {
-                'role': 'TEACHER',
-                'user_id': 1,
-                'cohort_id': 1,
+                "role": "TEACHER",
+                "user_id": 1,
+                "cohort_id": 1,
             },
             {
-                'role': 'TEACHER',
-                'user_id': 1,
-                'cohort_id': 2,
+                "role": "TEACHER",
+                "user_id": 1,
+                "cohort_id": 2,
             },
         ]
         model = self.bc.database.create(profile_academy=1, task=tasks, user=1, cohort=2, cohort_user=cohort_users)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + f'?teacher=1'
+        url = reverse_lazy("assignments:task") + f"?teacher=1"
         response = self.client.get(url)
 
         json = response.json()
@@ -705,20 +703,20 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
 
     """
     🔽🔽🔽 Query task_status
     """
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_task_status__found_zero__task_status_not_exists(self):
-        task = {'task_status': 'PENDING'}
+        task = {"task_status": "PENDING"}
         model = self.bc.database.create(profile_academy=1, task=task)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?task_status=DONE'
+        url = reverse_lazy("assignments:task") + "?task_status=DONE"
         response = self.client.get(url)
 
         json = response.json()
@@ -726,16 +724,16 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_task_status__found_one(self):
-        task = {'user_id': 1, 'task_status': 'DONE'}
+        task = {"user_id": 1, "task_status": "DONE"}
         model = self.bc.database.create(profile_academy=1, task=task)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?task_status=DONE'
+        url = reverse_lazy("assignments:task") + "?task_status=DONE"
         response = self.client.get(url)
 
         json = response.json()
@@ -743,17 +741,17 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_task_status__found_two(self):
-        tasks = [{'user_id': 1, 'task_status': 'DONE'}, {'user_id': 1, 'task_status': 'DONE'}]
+        tasks = [{"user_id": 1, "task_status": "DONE"}, {"user_id": 1, "task_status": "DONE"}]
         model = self.bc.database.create(profile_academy=1, task=tasks)
 
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?task_status=DONE'
+        url = reverse_lazy("assignments:task") + "?task_status=DONE"
         response = self.client.get(url)
 
         json = response.json()
@@ -761,16 +759,16 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_task_status__found_two__related_to_two_task_status(self):
-        tasks = [{'task_status': 'DONE'}, {'task_status': 'PENDING'}]
+        tasks = [{"task_status": "DONE"}, {"task_status": "PENDING"}]
         model = self.bc.database.create(profile_academy=1, user=1, task=tasks)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + f'?task_status=DONE,PENDING'
+        url = reverse_lazy("assignments:task") + f"?task_status=DONE,PENDING"
         response = self.client.get(url)
 
         json = response.json()
@@ -778,20 +776,20 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
 
     """
     🔽🔽🔽 Query revision_status
     """
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_revision_status__found_zero__revision_status_not_exists(self):
-        task = {'revision_status': 'PENDING'}
+        task = {"revision_status": "PENDING"}
         model = self.bc.database.create(profile_academy=1, task=task)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?revision_status=APPROVED'
+        url = reverse_lazy("assignments:task") + "?revision_status=APPROVED"
         response = self.client.get(url)
 
         json = response.json()
@@ -799,16 +797,16 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_revision_status__found_one(self):
-        task = {'user_id': 1, 'revision_status': 'APPROVED'}
+        task = {"user_id": 1, "revision_status": "APPROVED"}
         model = self.bc.database.create(profile_academy=1, task=task)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?revision_status=APPROVED'
+        url = reverse_lazy("assignments:task") + "?revision_status=APPROVED"
         response = self.client.get(url)
 
         json = response.json()
@@ -816,16 +814,16 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_revision_status__found_two(self):
-        tasks = [{'user_id': 1, 'revision_status': 'APPROVED'}, {'user_id': 1, 'revision_status': 'APPROVED'}]
+        tasks = [{"user_id": 1, "revision_status": "APPROVED"}, {"user_id": 1, "revision_status": "APPROVED"}]
         model = self.bc.database.create(profile_academy=1, task=tasks)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?revision_status=APPROVED'
+        url = reverse_lazy("assignments:task") + "?revision_status=APPROVED"
         response = self.client.get(url)
 
         json = response.json()
@@ -833,16 +831,16 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_revision_status__found_two__related_to_two_revision_status(self):
-        tasks = [{'revision_status': 'APPROVED'}, {'revision_status': 'PENDING'}]
+        tasks = [{"revision_status": "APPROVED"}, {"revision_status": "PENDING"}]
         model = self.bc.database.create(profile_academy=1, user=1, task=tasks)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + f'?revision_status=APPROVED,PENDING'
+        url = reverse_lazy("assignments:task") + f"?revision_status=APPROVED,PENDING"
         response = self.client.get(url)
 
         json = response.json()
@@ -850,20 +848,20 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
 
     """
     🔽🔽🔽 Query task_type
     """
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_task_type__found_zero__task_type_not_exists(self):
-        task = {'task_type': 'QUIZ'}
+        task = {"task_type": "QUIZ"}
         model = self.bc.database.create(profile_academy=1, task=task)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?task_type=PROJECT'
+        url = reverse_lazy("assignments:task") + "?task_type=PROJECT"
         response = self.client.get(url)
 
         json = response.json()
@@ -871,16 +869,16 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_task_type__found_one(self):
-        task = {'user_id': 1, 'task_type': 'PROJECT'}
+        task = {"user_id": 1, "task_type": "PROJECT"}
         model = self.bc.database.create(profile_academy=1, task=task)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?task_type=PROJECT'
+        url = reverse_lazy("assignments:task") + "?task_type=PROJECT"
         response = self.client.get(url)
 
         json = response.json()
@@ -888,16 +886,16 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_task_type__found_two(self):
-        tasks = [{'user_id': 1, 'task_type': 'PROJECT'}, {'user_id': 1, 'task_type': 'PROJECT'}]
+        tasks = [{"user_id": 1, "task_type": "PROJECT"}, {"user_id": 1, "task_type": "PROJECT"}]
         model = self.bc.database.create(profile_academy=1, task=tasks)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + '?task_type=PROJECT'
+        url = reverse_lazy("assignments:task") + "?task_type=PROJECT"
         response = self.client.get(url)
 
         json = response.json()
@@ -905,16 +903,16 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))
 
-    @patch('django.db.models.signals.pre_delete.send', MagicMock(return_value=None))
-    @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock(return_value=None))
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_task__query_revision_status__found_two__related_to_two_revision_status(self):
-        tasks = [{'task_type': 'PROJECT'}, {'task_type': 'QUIZ'}]
+        tasks = [{"task_type": "PROJECT"}, {"task_type": "QUIZ"}]
         model = self.bc.database.create(profile_academy=1, user=1, task=tasks)
         self.client.force_authenticate(model.user)
 
-        url = reverse_lazy('assignments:task') + f'?task_type=PROJECT,QUIZ'
+        url = reverse_lazy("assignments:task") + f"?task_type=PROJECT,QUIZ"
         response = self.client.get(url)
 
         json = response.json()
@@ -922,4 +920,4 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), self.bc.format.to_dict(model.task))
+        self.assertEqual(self.bc.database.list_of("assignments.Task"), self.bc.format.to_dict(model.task))

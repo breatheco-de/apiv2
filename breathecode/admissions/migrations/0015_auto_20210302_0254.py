@@ -7,39 +7,41 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0014_auto_20201218_0534'),
+        ("admissions", "0014_auto_20201218_0534"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='cohort',
-            name='certificate',
+            model_name="cohort",
+            name="certificate",
         ),
         migrations.CreateModel(
-            name='Syllabus',
+            name="Syllabus",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('version', models.PositiveSmallIntegerField()),
-                ('json', models.JSONField()),
-                ('github_url', models.URLField(blank=True, default=None, max_length=255, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('private', models.BooleanField(default=False)),
-                ('academy_owner',
-                 models.ForeignKey(default=None,
-                                   null=True,
-                                   on_delete=django.db.models.deletion.CASCADE,
-                                   to='admissions.academy')),
-                ('certificate',
-                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.certificate')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("version", models.PositiveSmallIntegerField()),
+                ("json", models.JSONField()),
+                ("github_url", models.URLField(blank=True, default=None, max_length=255, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("private", models.BooleanField(default=False)),
+                (
+                    "academy_owner",
+                    models.ForeignKey(
+                        default=None, null=True, on_delete=django.db.models.deletion.CASCADE, to="admissions.academy"
+                    ),
+                ),
+                (
+                    "certificate",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="admissions.certificate"),
+                ),
             ],
         ),
         migrations.AddField(
-            model_name='cohort',
-            name='syllabus',
-            field=models.ForeignKey(default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.CASCADE,
-                                    to='admissions.syllabus'),
+            model_name="cohort",
+            name="syllabus",
+            field=models.ForeignKey(
+                default=None, null=True, on_delete=django.db.models.deletion.CASCADE, to="admissions.syllabus"
+            ),
         ),
     ]

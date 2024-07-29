@@ -5,8 +5,8 @@ logger = logging.getLogger(__name__)
 
 
 class RegistryConfig(AppConfig):
-    name = 'breathecode.provisioning'
+    name = "breathecode.provisioning"
 
     def ready(self):
-        logger.debug('Loading provisioning.receivers')
+        logger.debug("Loading provisioning.receivers")
         from . import receivers  # noqa: F401

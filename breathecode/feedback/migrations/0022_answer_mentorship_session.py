@@ -7,18 +7,20 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('mentorship', '__first__'),
-        ('feedback', '0021_review_nps_previous_rating'),
+        ("mentorship", "__first__"),
+        ("feedback", "0021_review_nps_previous_rating"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='answer',
-            name='mentorship_session',
-            field=models.ForeignKey(blank=True,
-                                    default=None,
-                                    null=True,
-                                    on_delete=django.db.models.deletion.SET_NULL,
-                                    to='mentorship.mentorshipsession'),
+            model_name="answer",
+            name="mentorship_session",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="mentorship.mentorshipsession",
+            ),
         ),
     ]

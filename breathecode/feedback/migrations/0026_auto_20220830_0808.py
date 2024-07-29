@@ -6,17 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('feedback', '0025_alter_review_nps_previous_rating'),
+        ("feedback", "0025_alter_review_nps_previous_rating"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='survey',
-            name='avg_score',
+            model_name="survey",
+            name="avg_score",
         ),
         migrations.AddField(
-            model_name='survey',
-            name='scores',
+            model_name="survey",
+            name="scores",
             field=models.JSONField(blank=True, default=None, null=True),
         ),
     ]

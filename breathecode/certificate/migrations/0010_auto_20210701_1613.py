@@ -7,23 +7,24 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('admissions', '0019_certificatetimeslot_cohorttimeslot'),
-        ('certificate', '0009_userspecialty_status'),
+        ("admissions", "0019_certificatetimeslot_cohorttimeslot"),
+        ("certificate", "0009_userspecialty_status"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='layoutdesign',
-            name='academy',
-            field=models.ForeignKey(default=4, on_delete=django.db.models.deletion.CASCADE, to='admissions.academy'),
+            model_name="layoutdesign",
+            name="academy",
+            field=models.ForeignKey(default=4, on_delete=django.db.models.deletion.CASCADE, to="admissions.academy"),
             preserve_default=False,
         ),
         migrations.AddField(
-            model_name='layoutdesign',
-            name='background_url',
+            model_name="layoutdesign",
+            name="background_url",
             field=models.CharField(
-                default='https://storage.cloud.google.com/certificates-breathecode/_template-default-4geeks.png',
-                max_length=250),
+                default="https://storage.cloud.google.com/certificates-breathecode/_template-default-4geeks.png",
+                max_length=250,
+            ),
             preserve_default=False,
         ),
     ]

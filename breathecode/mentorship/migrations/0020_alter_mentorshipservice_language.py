@@ -7,16 +7,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('mentorship', '0019_alter_supportchannel_slack_channel'),
+        ("mentorship", "0019_alter_supportchannel_slack_channel"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='mentorshipservice',
-            name='language',
-            field=models.CharField(default='en',
-                                   help_text='ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US',
-                                   max_length=5,
-                                   validators=[breathecode.utils.validators.language.validate_language_code]),
+            model_name="mentorshipservice",
+            name="language",
+            field=models.CharField(
+                default="en",
+                help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
+                max_length=5,
+                validators=[breathecode.utils.validators.language.validate_language_code],
+            ),
         ),
     ]

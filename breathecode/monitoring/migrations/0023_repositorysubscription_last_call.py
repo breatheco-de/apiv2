@@ -6,16 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('monitoring', '0022_supervisorissue_attempts_supervisorissue_code_and_more'),
+        ("monitoring", "0022_supervisorissue_attempts_supervisorissue_code_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='repositorysubscription',
-            name='last_call',
-            field=models.DateTimeField(blank=True,
-                                       default=None,
-                                       help_text='Last time github notified updates on this repo subscription',
-                                       null=True),
+            model_name="repositorysubscription",
+            name="last_call",
+            field=models.DateTimeField(
+                blank=True,
+                default=None,
+                help_text="Last time github notified updates on this repo subscription",
+                null=True,
+            ),
         ),
     ]
