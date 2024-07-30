@@ -115,7 +115,9 @@ def generate_user_cohort_survey_answers(user, survey, status="OPENED"):
         answer = Answer(cohort=survey.cohort, academy=survey.cohort.academy, lang=survey.lang)
         _answers.append(new_answer(answer))
 
-        if not survey.cohort.available_as_saas:
+        if survey.cohort.available_as_saas is False or (
+            survey.cohort.available_as_saas is None and survey.cohort.academy.available_as_saas is False
+        ):
             # ask for each teacher, with a max of 2 teachers
             count = 0
             for ct in cohort_teacher:
