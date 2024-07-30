@@ -7,6 +7,7 @@ from .views import (
     preview_slack_template,
     HooksView,
     get_sample_data,
+    SlackTeamsView,
 )
 
 app_name = "notify"
@@ -20,4 +21,5 @@ urlpatterns = [
     path("hook/sample", get_sample_data),
     path("hook/<int:hook_id>/sample", get_sample_data),
     path("slack/command", slack_command, name="slack_command"),
+    path("slack/team", SlackTeamsView.as_view(), name="slack_team"),
 ]

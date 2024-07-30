@@ -4,6 +4,7 @@ from rest_framework import serializers
 from breathecode.admissions.models import Academy
 from breathecode.utils import serpy
 from capyc.rest_framework.exceptions import ValidationException
+from breathecode.authenticate.serializers import GetSmallAcademySerializer
 
 from .models import Hook
 
@@ -42,3 +43,13 @@ class HookSerializer(serializers.ModelSerializer):
         data["user"] = self.context["request"].user
 
         return super().validate(data)
+
+
+class SlackTeamSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slack_id = serpy.Field()
+    name = serpy.Field()
+    academy = GetSmallAcademySerializer(required=False)
+    created_at = serpy.Field()
+    sync_status = serpy.Field()
+    sync_message = serpy.Field()

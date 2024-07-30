@@ -142,6 +142,7 @@ class TestSignal(LegacyAPITestCase):
             "mentorship_service_sets": [],
             "cohort_sets": [],
             "event_type_sets": [],
+            "voids": [],
         }
 
         assert json == expected
@@ -166,6 +167,7 @@ class TestSignal(LegacyAPITestCase):
             "mentorship_service_sets": [],
             "cohort_sets": [],
             "event_type_sets": [],
+            "voids": [],
         }
 
         assert json == expected
@@ -229,6 +231,7 @@ class TestSignal(LegacyAPITestCase):
                 },
             ],
             "event_type_sets": [],
+            "voids": [],
         }
 
         assert json == expected
@@ -256,6 +259,7 @@ class TestSignal(LegacyAPITestCase):
             "mentorship_service_sets": [],
             "cohort_sets": [],
             "event_type_sets": [],
+            "voids": [],
         }
 
         assert json == expected
@@ -313,6 +317,7 @@ class TestSignal(LegacyAPITestCase):
                 },
             ],
             "event_type_sets": [],
+            "voids": [],
         }
 
         assert json == expected
@@ -377,6 +382,7 @@ class TestSignal(LegacyAPITestCase):
             ],
             "cohort_sets": [],
             "event_type_sets": [],
+            "voids": [],
         }
 
         assert json == expected
@@ -404,6 +410,7 @@ class TestSignal(LegacyAPITestCase):
             "cohort_sets": [],
             "mentorship_service_sets": [],
             "event_type_sets": [],
+            "voids": [],
         }
 
         assert json == expected
@@ -463,6 +470,7 @@ class TestSignal(LegacyAPITestCase):
                 },
             ],
             "event_type_sets": [],
+            "voids": [],
         }
 
         assert json == expected
@@ -537,6 +545,7 @@ class TestSignal(LegacyAPITestCase):
                     "items": [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
             ],
+            "voids": [],
         }
 
         assert json == expected
@@ -574,6 +583,7 @@ class TestSignal(LegacyAPITestCase):
             "cohort_sets": [],
             "event_type_sets": [],
             "mentorship_service_sets": [],
+            "voids": [],
         }
 
         assert json == expected
@@ -643,6 +653,7 @@ class TestSignal(LegacyAPITestCase):
                 },
             ],
             "mentorship_service_sets": [],
+            "voids": [],
         }
 
         assert json == expected
@@ -707,6 +718,7 @@ class TestSignal(LegacyAPITestCase):
                 },
             ],
             "event_type_sets": [],
+            "voids": [],
         }
 
         assert json == expected
@@ -734,6 +746,7 @@ class TestSignal(LegacyAPITestCase):
             "mentorship_service_sets": [],
             "cohort_sets": [],
             "event_type_sets": [],
+            "voids": [],
         }
 
         assert json == expected
@@ -796,6 +809,7 @@ class TestSignal(LegacyAPITestCase):
                 },
             ],
             "event_type_sets": [],
+            "voids": [],
         }
 
         assert json == expected
@@ -859,6 +873,7 @@ class TestSignal(LegacyAPITestCase):
             ],
             "cohort_sets": [],
             "event_type_sets": [],
+            "voids": [],
         }
 
         assert json == expected
@@ -886,6 +901,7 @@ class TestSignal(LegacyAPITestCase):
             "cohort_sets": [],
             "mentorship_service_sets": [],
             "event_type_sets": [],
+            "voids": [],
         }
 
         assert json == expected
@@ -948,6 +964,7 @@ class TestSignal(LegacyAPITestCase):
                 },
             ],
             "event_type_sets": [],
+            "voids": [],
         }
 
         assert json == expected
@@ -1021,6 +1038,7 @@ class TestSignal(LegacyAPITestCase):
                     "items": [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
             ],
+            "voids": [],
         }
 
         assert json == expected
@@ -1058,6 +1076,7 @@ class TestSignal(LegacyAPITestCase):
             "cohort_sets": [],
             "event_type_sets": [],
             "mentorship_service_sets": [],
+            "voids": [],
         }
 
         assert json == expected
@@ -1130,6 +1149,7 @@ class TestSignal(LegacyAPITestCase):
                 },
             ],
             "mentorship_service_sets": [],
+            "voids": [],
         }
 
         assert json == expected
@@ -1138,3 +1158,164 @@ class TestSignal(LegacyAPITestCase):
             self.bc.database.list_of("payments.Consumable"),
             self.bc.format.to_dict(model.consumable),
         )
+
+    """
+    🔽🔽🔽 Get with nine Consumable and three Services, random how_many
+    """
+
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test__nine_consumables__related_to_three_services__without_cohort_slugs_in_querystring(self):
+        consumables = [{"how_many": random.randint(1, 30), "service_item_id": math.floor(n / 3) + 1} for n in range(9)]
+        service_items = [{"service_id": n + 1} for n in range(3)]
+
+        belong_to1 = consumables[:3]
+        belong_to2 = consumables[3:6]
+        belong_to3 = consumables[6:]
+
+        how_many_belong_to1 = sum([x["how_many"] for x in belong_to1])
+        how_many_belong_to2 = sum([x["how_many"] for x in belong_to2])
+        how_many_belong_to3 = sum([x["how_many"] for x in belong_to3])
+
+        model = self.bc.database.create(
+            user=1,
+            consumable=consumables,
+            service=(3, {"type": "VOID"}),
+            service_item=service_items,
+        )
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("payments:me_service_consumable")
+        response = self.client.get(url)
+        self.client.force_authenticate(model.user)
+
+        json = response.json()
+        serialized_consumables = [serialize_consumable(model.consumable[n]) for n in range(9)]
+        expected = {
+            "mentorship_service_sets": [],
+            "cohort_sets": [],
+            "event_type_sets": [],
+            "voids": [
+                {
+                    "balance": {
+                        "unit": how_many_belong_to1,
+                    },
+                    "id": model.service[0].id,
+                    "slug": model.service[0].slug,
+                    "items": serialized_consumables[:3],
+                },
+                {
+                    "balance": {
+                        "unit": how_many_belong_to2,
+                    },
+                    "id": model.service[1].id,
+                    "slug": model.service[1].slug,
+                    "items": serialized_consumables[3:6],
+                },
+                {
+                    "balance": {
+                        "unit": how_many_belong_to3,
+                    },
+                    "id": model.service[2].id,
+                    "slug": model.service[2].slug,
+                    "items": serialized_consumables[6:9],
+                },
+            ],
+        }
+
+        assert json == expected
+        assert response.status_code == status.HTTP_200_OK
+        assert self.bc.database.list_of("payments.Consumable") == self.bc.format.to_dict(model.consumable)
+
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test__nine_consumables__related_to_three_services__with_wrong_cohort_slugs_in_querystring(self):
+        consumables = [{"how_many": random.randint(1, 30), "service_item_id": math.floor(n / 3) + 1} for n in range(9)]
+        service_items = [{"service_id": n + 1} for n in range(3)]
+
+        model = self.bc.database.create(
+            user=1,
+            consumable=consumables,
+            service=(3, {"type": "VOID"}),
+            service_item=service_items,
+        )
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("payments:me_service_consumable") + f"?service_slug=blabla1,blabla2,blabla3"
+        response = self.client.get(url)
+        self.client.force_authenticate(model.user)
+
+        json = response.json()
+        expected = {
+            "cohort_sets": [],
+            "event_type_sets": [],
+            "mentorship_service_sets": [],
+            "voids": [],
+        }
+
+        assert json == expected
+        assert response.status_code == status.HTTP_200_OK
+        assert self.bc.database.list_of("payments.Consumable") == self.bc.format.to_dict(model.consumable)
+
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test__nine_consumables__related_to_three_services__with_cohort_slugs_in_querystring(self):
+        consumables = [{"how_many": random.randint(1, 30), "service_item_id": math.floor(n / 3) + 1} for n in range(9)]
+        service_items = [{"service_id": n + 1} for n in range(3)]
+        belong_to1 = consumables[:3]
+        belong_to2 = consumables[3:6]
+        belong_to3 = consumables[6:]
+
+        how_many_belong_to1 = sum([x["how_many"] for x in belong_to1])
+        how_many_belong_to2 = sum([x["how_many"] for x in belong_to2])
+        how_many_belong_to3 = sum([x["how_many"] for x in belong_to3])
+
+        model = self.bc.database.create(
+            user=1,
+            consumable=consumables,
+            service=(3, {"type": "VOID"}),
+            service_item=service_items,
+        )
+        self.client.force_authenticate(model.user)
+
+        url = (
+            reverse_lazy("payments:me_service_consumable")
+            + f'?service_slug={",".join([x.slug for x in model.service])}'
+        )
+        response = self.client.get(url)
+        self.client.force_authenticate(model.user)
+
+        json = response.json()
+        serialized_consumables = [serialize_consumable(model.consumable[n]) for n in range(9)]
+        expected = {
+            "cohort_sets": [],
+            "event_type_sets": [],
+            "mentorship_service_sets": [],
+            "voids": [
+                {
+                    "balance": {
+                        "unit": how_many_belong_to1,
+                    },
+                    "id": model.service[0].id,
+                    "slug": model.service[0].slug,
+                    "items": serialized_consumables[:3],
+                },
+                {
+                    "balance": {
+                        "unit": how_many_belong_to2,
+                    },
+                    "id": model.service[1].id,
+                    "slug": model.service[1].slug,
+                    "items": serialized_consumables[3:6],
+                },
+                {
+                    "balance": {
+                        "unit": how_many_belong_to3,
+                    },
+                    "id": model.service[2].id,
+                    "slug": model.service[2].slug,
+                    "items": serialized_consumables[6:9],
+                },
+            ],
+        }
+
+        assert json == expected
+        assert response.status_code == status.HTTP_200_OK
+        assert self.bc.database.list_of("payments.Consumable") == self.bc.format.to_dict(model.consumable)

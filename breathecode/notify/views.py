@@ -12,8 +12,8 @@ from breathecode.utils import APIViewExtensions, GenerateLookupsMixin
 from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import get_template_content
-from .models import Hook
-from .serializers import HookSerializer
+from .models import Hook, SlackTeam
+from .serializers import HookSerializer, SlackTeamSerializer
 from .tasks import async_slack_action, async_slack_command
 
 logger = logging.getLogger(__name__)
@@ -194,3 +194,25 @@ class HooksView(APIView, GenerateLookupsMixin):
             item.delete()
 
         return Response({"details": f"Unsubscribed from {total} hooks"}, status=status.HTTP_200_OK)
+
+
+class SlackTeamsView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    extensions = APIViewExtensions(sort="-created_at", paginate=True)
+
+    def get(self, request):
+        handler = self.extensions(request)
+
+        items = SlackTeam.objects.all()
+        academy = request.GET.get("academy", None)
+        if academy is not None:
+            academy = academy.split(",")
+            items = items.filter(academy__slug__in=academy)
+
+        items = handler.queryset(items)
+        serializer = SlackTeamSerializer(items, many=True)
+
+        return handler.response(serializer.data)
