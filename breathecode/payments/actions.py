@@ -3,20 +3,25 @@ import re
 from functools import lru_cache
 from typing import Optional, Type
 
+from adrf.requests import AsyncRequest
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.models import User
 from django.core.handlers.wsgi import WSGIRequest
 from django.db.models import QuerySet, Sum
 from django.db.models.query_utils import Q
+from django.http import HttpRequest
 from django.utils import timezone
 from pytz import UTC
 from rest_framework.request import Request
 
-from breathecode.admissions.models import Cohort, CohortUser, Syllabus
-from breathecode.authenticate.actions import get_user_settings
+from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
+from breathecode.authenticate.actions import get_user_language, get_user_settings
 from breathecode.authenticate.models import UserSetting
+from breathecode.payments import tasks
 from breathecode.utils import getLogger
 from breathecode.utils.i18n import translation
+from breathecode.utils.validate_conversion_info import validate_conversion_info
+from capyc.core.shorteners import C
 from capyc.rest_framework.exceptions import ValidationException
 
 from .models import (
@@ -25,6 +30,7 @@ from .models import (
     Consumable,
     Coupon,
     Currency,
+    Invoice,
     Plan,
     PlanFinancing,
     Service,
@@ -859,3 +865,329 @@ def get_discounted_price(price: float, coupons: list[Coupon]) -> float:
         price = 0
 
     return price
+
+
+def add_invoice_externally_managed(
+    request: dict | WSGIRequest | AsyncRequest | HttpRequest, staff_user: User, academy_id: int
+):
+    settings = get_user_settings(staff_user.id)
+    lang = settings.lang
+
+    if isinstance(request, (WSGIRequest, AsyncRequest, HttpRequest)):
+        data = request.data
+    else:
+        data = request
+
+    id = request.data.get("id")
+    type = request.data.get("type")
+    available_types = ["SUBSCRIPTION", "PLAN_FINANCING"]
+
+    if type not in available_types:
+        raise ValidationException(
+            translation(
+                lang,
+                en="type must be one of: {types}".format(types=", ".join(available_types)),
+                es="type debe ser uno de: {types}".format(types=", ".join(available_types)),
+                slug="invalid-type",
+            ),
+            code=400,
+        )
+
+    resource = None
+
+    if type == "SUBSCRIPTION":
+        resource = Subscription.objects.filter(id=id).first()
+        # bag, amount = get_bag_from_subs(subscription)
+
+    elif type == "PLAN_FINANCING":
+        resource = PlanFinancing.objects.filter(id=id).first()
+
+    if resource is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Subscription not found",
+                es="Suscripción no encontrada",
+                slug="subscription-not-found",
+            ),
+            code=404,
+        )
+
+    academy = Academy.objects.filter(id=academy_id).first()
+    if academy is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Academy not found",
+                es="Academia no encontrada",
+                slug="academy-not-found",
+            ),
+            code=404,
+        )
+
+    errors = []
+    users_found = []
+
+    users = data.get("users", [])
+    for user_data in users:
+        args = []
+        kwargs = {}
+        if isinstance(user_data, int):
+            kwargs["id"] = user_data
+        else:
+            args.append(Q(email=user_data) | Q(username=user_data))
+
+        user = User.objects.filter(*args, **kwargs).first()
+        if user is None:
+            errors.append(
+                C(
+                    translation(
+                        lang,
+                        en=f"User not found: {user_data}",
+                        es=f"Usuario no encontrado: {user_data}",
+                        slug="user-not-found",
+                    ),
+                    code=404,
+                )
+            )
+
+        users_found.append(user)
+
+    if errors:
+        raise ValidationException(errors, code=400)
+
+    for user in users_found:
+        if type == "SUBSCRIPTION":
+            handler = get_bag_from_subscription
+
+        elif type == "PLAN_FINANCING":
+            handler = get_bag_from_plan_financing
+
+        try:
+            bag = handler(resource, settings)
+        except Exception as e:
+            resource.status = "ERROR"
+            resource.status_message = str(e)
+            resource.save()
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Error getting bag from {type.lower().replace('_', ' ')} {resource.id}: {e}",
+                    es=f"Error al obtener el paquete de {type.lower().replace('_', ' ')} {resource.id}: {e}",
+                    slug="error-getting-bag",
+                ),
+                code=500,
+            )
+
+        if type == "SUBSCRIPTION":
+            amount = get_amount_by_chosen_period(bag, bag.chosen_period, settings.lang)
+
+        elif type == "PLAN_FINANCING":
+            amount = resource.monthly_price
+
+        utc_now = timezone.now()
+
+        invoice = Invoice(
+            amount=amount,
+            paid_at=utc_now,
+            user=user,
+            bag=bag,
+            academy=bag.academy,
+            status="FULFILLED",
+            currency=bag.academy.main_currency,
+            externally_managed=True,
+        )
+        invoice.save()
+
+
+def validate_and_create_subscriptions(
+    request: dict | WSGIRequest | AsyncRequest | HttpRequest, staff_user: User, academy_id: int
+):
+    if isinstance(request, (WSGIRequest, AsyncRequest, HttpRequest)):
+        data = request.data
+        lang = get_user_language(request)
+
+    else:
+        data = request
+        settings = get_user_settings(staff_user.id)
+        lang = settings.lang
+
+    how_many_installments = request.data.get("how_many_installments")
+    if how_many_installments is not None and (
+        isinstance(how_many_installments, int) is False or how_many_installments < 1
+    ):
+        raise ValidationException(
+            translation(
+                lang,
+                en="how_many_installments must be a positive integer",
+                es="how_many_installments debe ser un número entero positivo",
+                slug="invalid-how-many-installments",
+            ),
+            code=400,
+        )
+
+    chosen_period = data.get("chosen_period", "").upper()
+    chosen_periods = [x for x, y in Bag.ChosenPeriod.choices if x != "NO_SET"]
+
+    if chosen_period and chosen_period not in chosen_periods:
+        raise ValidationException(
+            translation(
+                lang,
+                en="chosen_period must be one of: {periods}".format(periods=", ".join(chosen_periods)),
+                es="chosen_period debe ser uno de: {periods}".format(periods=", ".join(chosen_periods)),
+                slug="invalid-chosen-period",
+            ),
+            code=400,
+        )
+
+    if not chosen_period and not how_many_installments:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Either chosen_period or how_many_installments must be provided",
+                es="Debe proporcionar chosen_period o how_many_installments",
+                slug="invalid-chosen-period-or-how-many-installments",
+            ),
+            code=400,
+        )
+
+    plans = data.get("plans", [])
+    plans = Plan.objects.filter(slug__in=plans)
+    if plans.count() != 1:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Exactly one plan must be provided",
+                es="Debe proporcionar exactamente un plan",
+                slug="exactly-one-plan-must-be-provided",
+            ),
+            code=400,
+        )
+
+    if "coupons" in data and not isinstance(data["coupons"], list):
+        raise ValidationException(
+            translation(
+                lang,
+                en="Coupons must be a list of strings",
+                es="Cupones debe ser una lista de cadenas",
+                slug="invalid-coupons",
+            ),
+            code=400,
+        )
+
+    if "coupons" in data and len(data["coupons"]) > (max := max_coupons_allowed()):
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Too many coupons (max {max})",
+                es=f"Demasiados cupones (max {max})",
+                slug="too-many-coupons",
+            ),
+            code=400,
+        )
+
+    plan = plans[0]
+    coupons = get_available_coupons(plan, data.get("coupons", []))
+
+    if (
+        how_many_installments
+        and (option := plan.financing_options.filter(how_many_months=how_many_installments).first()) is None
+    ):
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Financing option not found for {how_many_installments} installments",
+                es=f"Opción de financiamiento no encontrada para {how_many_installments} cuotas",
+                slug="financing-option-not-found",
+            ),
+            code=404,
+        )
+
+    conversion_info = data["conversion_info"] if "conversion_info" in data else None
+    validate_conversion_info(conversion_info, lang)
+
+    academy = Academy.objects.filter(id=academy_id).first()
+    if academy is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Academy not found",
+                es="Academia no encontrada",
+                slug="academy-not-found",
+            ),
+            code=404,
+        )
+
+    errors = []
+    users_found = []
+
+    users = data.get("users", [])
+    for user_data in users:
+        args = []
+        kwargs = {}
+        if isinstance(user_data, int):
+            kwargs["id"] = user_data
+        else:
+            args.append(Q(email=user_data) | Q(username=user_data))
+
+        user = User.objects.filter(*args, **kwargs).first()
+        if user is None:
+            errors.append(
+                C(
+                    translation(
+                        lang,
+                        en=f"User not found: {user_data}",
+                        es=f"Usuario no encontrado: {user_data}",
+                        slug="user-not-found",
+                    ),
+                    code=404,
+                )
+            )
+
+        users_found.append(user)
+
+    if errors:
+        raise ValidationException(errors, code=400)
+
+    for user in users_found:
+        bag = Bag()
+        bag.type = Bag.Type.BAG
+        bag.user = user
+        bag.currency = academy.main_currency
+        bag.status = Bag.Status.PAID
+        bag.academy = academy
+        bag.is_recurrent = True
+
+        if chosen_period:
+            bag.chosen_period = chosen_period
+
+            amount = get_amount_by_chosen_period(bag, chosen_period, lang)
+            amount = get_discounted_price(amount, coupons)
+
+        if how_many_installments:
+            bag.how_many_installments = how_many_installments
+            amount = get_discounted_price(option.monthly_price, coupons)
+            bag.monthly_price = option.monthly_price
+
+        bag.save()
+        bag.plans.set(plans)
+
+        utc_now = timezone.now()
+
+        invoice = Invoice(
+            amount=amount,
+            paid_at=utc_now,
+            user=user,
+            bag=bag,
+            academy=bag.academy,
+            status="FULFILLED",
+            currency=bag.academy.main_currency,
+            externally_managed=True,
+        )
+        invoice.save()
+
+        if bag.how_many_installments > 0:
+            tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info)
+
+        else:
+            tasks.build_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)

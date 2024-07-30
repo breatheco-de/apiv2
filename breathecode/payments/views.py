@@ -19,6 +19,7 @@ from breathecode.authenticate.actions import get_user_language
 from breathecode.payments import actions, tasks
 from breathecode.payments.actions import (
     PlanFinder,
+    add_invoice_externally_managed,
     add_items_to_bag,
     filter_consumables,
     filter_void_consumable_balance,
@@ -28,6 +29,7 @@ from breathecode.payments.actions import (
     get_balance_by_resource,
     get_discounted_price,
     max_coupons_allowed,
+    validate_and_create_subscriptions,
 )
 from breathecode.payments.caches import PlanOfferCache
 from breathecode.payments.models import (
@@ -78,7 +80,7 @@ from breathecode.utils import APIViewExtensions, getLogger, validate_conversion_
 from breathecode.utils.decorators.capable_of import capable_of
 from breathecode.utils.i18n import translation
 from breathecode.utils.redis import Lock
-from breathecode.utils.shorteners import C
+from capyc.core.shorteners import C
 from capyc.rest_framework.exceptions import PaymentException, ValidationException
 
 logger = getLogger(__name__)
@@ -1049,6 +1051,11 @@ class AcademyInvoiceView(APIView):
         serializer = GetInvoiceSmallSerializer(items, many=True)
 
         return handler.response(serializer.data)
+
+    @capable_of("crud_invoice")
+    def post(self, request, academy_id=None):
+        add_invoice_externally_managed(request, request.user, academy_id)
+        return Response({"status": "ok"})
 
 
 class CardView(APIView):
@@ -2055,6 +2062,16 @@ class PayView(APIView):
             except Exception as e:
                 transaction.savepoint_rollback(sid)
                 raise e
+
+
+class AcademyPlanSubscriptionView(APIView):
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("crud_subscription")
+    def post(self, request, plan_slug: str, academy_id: int):
+        validate_and_create_subscriptions(request, plan_slug, academy_id)
+        return Response({"status": "ok"})
 
 
 class PaymentMethodView(APIView):

@@ -868,48 +868,36 @@ def limit_coupon_choices():
     )
 
 
-RENEWAL = "RENEWAL"
-CHECKING = "CHECKING"
-PAID = "PAID"
-BAG_STATUS = [
-    (RENEWAL, "Renewal"),
-    (CHECKING, "Checking"),
-    (PAID, "Paid"),
-]
-
-BAG = "BAG"
-CHARGE = "CHARGE"
-PREVIEW = "PREVIEW"
-INVITED = "INVITED"
-BAG_TYPE = [
-    (BAG, "Bag"),
-    (CHARGE, "Charge"),
-    (PREVIEW, "Preview"),
-    (INVITED, "Invited"),
-]
-
-NO_SET = "NO_SET"
-QUARTER = "QUARTER"
-HALF = "HALF"
-YEAR = "YEAR"
-CHOSEN_PERIOD = [
-    (NO_SET, "No set"),
-    (MONTH, "Month"),
-    (QUARTER, "Quarter"),
-    (HALF, "Half"),
-    (YEAR, "Year"),
-]
-
-
 class Bag(AbstractAmountByTime):
     """Represents a credit that can be used by a user to use a service."""
 
-    status = models.CharField(max_length=8, choices=BAG_STATUS, default=CHECKING, help_text="Bag status", db_index=True)
-    type = models.CharField(max_length=7, choices=BAG_TYPE, default=BAG, help_text="Bag type")
+    class Status(models.TextChoices):
+        RENEWAL = ("RENEWAL", "Renewal")
+        CHECKING = ("CHECKING", "Checking")
+        PAID = ("PAID", "Paid")
+        # UNMANAGED = ("UNMANAGED", "Unmanaged")
+
+    class Type(models.TextChoices):
+        BAG = ("BAG", "Bag")
+        CHARGE = ("CHARGE", "Charge")
+        PREVIEW = ("PREVIEW", "Preview")
+        INVITED = ("INVITED", "Invited")
+
+    class ChosenPeriod(models.TextChoices):
+        NO_SET = ("NO_SET", "No set")
+        MONTH = ("MONTH", "Month")
+        QUARTER = ("QUARTER", "Quarter")
+        HALF = ("HALF", "Half")
+        YEAR = ("YEAR", "Year")
+
+    status = models.CharField(
+        max_length=8, choices=Status, default=Status.CHECKING, help_text="Bag status", db_index=True
+    )
+    type = models.CharField(max_length=7, choices=Type, default=Type.BAG, help_text="Bag type")
     chosen_period = models.CharField(
         max_length=7,
-        choices=CHOSEN_PERIOD,
-        default=NO_SET,
+        choices=ChosenPeriod,
+        default=ChosenPeriod.NO_SET,
         help_text="Chosen period used to calculate the amount and build the subscription",
     )
     how_many_installments = models.IntegerField(
@@ -984,12 +972,15 @@ class Invoice(models.Model):
         max_length=17, choices=INVOICE_STATUS, default=PENDING, db_index=True, help_text="Invoice status"
     )
 
-    bag = models.ForeignKey("Bag", on_delete=models.CASCADE, help_text="Bag")
+    bag = models.ForeignKey("Bag", on_delete=models.CASCADE, help_text="Bag", related_name="invoices")
+    externally_managed = models.BooleanField(
+        default=False, help_text="If the billing is managed externally outside of the system"
+    )
 
-    # actually return 27 characters
+    # it has 27 characters right now
     stripe_id = models.CharField(max_length=32, null=True, default=None, blank=True, help_text="Stripe id")
 
-    # actually return 27 characters
+    # it has 27 characters right now
     refund_stripe_id = models.CharField(
         max_length=32, null=True, default=None, blank=True, help_text="Stripe id for refunding"
     )
@@ -1043,6 +1034,10 @@ class AbstractIOweYou(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Customer")
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy owner")
+
+    externally_managed = models.BooleanField(
+        default=False, help_text="If the billing is managed externally outside of the system"
+    )
 
     selected_cohort_set = models.ForeignKey(
         CohortSet,
