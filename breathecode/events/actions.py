@@ -180,7 +180,7 @@ def get_my_event_types(_user):
                         "name": x["academy"].name,
                     },
                 }
-                for x in cohorts
+                for x in syllabus
             ],
         )
 
