@@ -53,9 +53,11 @@ def get_my_event_types(_user):
                     and i_owe_you.selected_cohort_set.cohorts.first().academy
                     and i_owe_you.selected_cohort_set.cohorts.first().academy not in academies
                 ):
+                    print(4, i_owe_you.selected_cohort_set.cohorts.first().academy)
                     academies.append(i_owe_you.selected_cohort_set.cohorts.first().academy)
 
                 if i_owe_you.selected_cohort_set and i_owe_you.selected_cohort_set.cohorts.first() not in cohorts:
+                    print(5, i_owe_you.selected_cohort_set.cohorts.first())
                     cohorts.append(i_owe_you.selected_cohort_set.cohorts.first())
 
                 if (
@@ -63,6 +65,11 @@ def get_my_event_types(_user):
                     and i_owe_you.selected_cohort_set.cohorts.first().syllabus_version
                     and i_owe_you.selected_cohort_set.cohorts.first().syllabus_version.syllabus not in syllabus
                 ):
+                    print(
+                        6,
+                        i_owe_you.selected_cohort_set.cohorts.first().syllabus_version.syllabus,
+                        i_owe_you.selected_cohort_set.cohorts.first().academy,
+                    )
                     syllabus.append(
                         {
                             "syllabus": i_owe_you.selected_cohort_set.cohorts.first().syllabus_version.syllabus,
@@ -71,17 +78,20 @@ def get_my_event_types(_user):
                     )
 
                 if i_owe_you.selected_event_type_set and i_owe_you.selected_event_type_set.academy not in academies:
+                    print(7, i_owe_you.selected_event_type_set.academy)
                     academies.append(i_owe_you.selected_event_type_set.academy)
 
                 if (
                     i_owe_you.selected_mentorship_service_set
                     and i_owe_you.selected_mentorship_service_set.academy not in academies
                 ):
+                    print(8, i_owe_you.selected_mentorship_service_set.academy)
                     academies.append(i_owe_you.selected_mentorship_service_set.academy)
 
                 if i_owe_you.selected_event_type_set:
                     for event_type in i_owe_you.selected_event_type_set.event_types.all():
                         if event_type.id not in ids:
+                            print(9, event_type.id)
                             ids.append(event_type.id)
 
         syllabus = []
@@ -110,6 +120,7 @@ def get_my_event_types(_user):
 
         for cohort_user in cohort_users_with_syllabus:
             if cohort_user.cohort.syllabus_version.syllabus not in cohorts:
+                print(1, cohort_user.cohort.syllabus_version.syllabus, cohort_user.cohort.academy)
                 syllabus.append(
                     {
                         "syllabus": cohort_user.cohort.syllabus_version.syllabus,
@@ -119,10 +130,12 @@ def get_my_event_types(_user):
 
         for cohort_user in cohort_users:
             if cohort_user.cohort.academy not in cohorts:
+                print(2, cohort_user.cohort.academy)
                 academies.append(cohort_user.cohort.academy)
 
         for cohort_user in cohort_users:
             if cohort_user.cohort not in cohorts:
+                print(3, cohort_user.cohort)
                 cohorts.append(cohort_user.cohort)
 
         process_i_owe_you(subscriptions)
