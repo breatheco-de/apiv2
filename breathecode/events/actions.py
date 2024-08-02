@@ -48,6 +48,7 @@ def get_my_event_types(_user):
 
         def process_i_owe_you(i_owe_them: QuerySet[AbstractIOweYou]):
             for i_owe_you in i_owe_them:
+                print("get in", i_owe_you)
                 if (
                     i_owe_you.selected_cohort_set
                     and i_owe_you.selected_cohort_set.cohorts.first().academy
@@ -183,6 +184,8 @@ def get_my_event_types(_user):
                 for x in syllabus
             ],
         )
+        print(-44, subscriptions)
+        print(-55, plan_financings)
 
         return academies, cohorts, syllabus, ids
 
