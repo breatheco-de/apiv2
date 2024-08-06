@@ -72,6 +72,7 @@ def invoice_item(data={}):
         "user_id": 0,
         "refund_stripe_id": None,
         "refunded_at": None,
+        "externally_managed": False,
         **data,
     }
 
@@ -333,6 +334,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                         "is_recurrent": True,
                         "status": "RENEWAL",
                         "user_id": 1,
+                        "was_delivered": True,
                     }
                 ),
             ],

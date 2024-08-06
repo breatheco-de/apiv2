@@ -1,5 +1,7 @@
-from breathecode.admissions.models import Academy
+from django.contrib.auth.models import User
 from django.db import models
+
+from breathecode.admissions.models import Academy
 
 __all__ = ["Category", "Media", "MediaResolution"]
 
@@ -45,3 +47,58 @@ class MediaResolution(models.Model):
 
     def __str__(self):
         return f"{self.hash} ({self.width}x{self.height})"
+
+
+class Chunk(models.Model):
+
+    # class Provider(models.TextChoices):
+    #     GITHUB = "GITHUB", "GitHub"
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="User who uploaded the file")
+    academy = models.ForeignKey(
+        Academy, on_delete=models.CASCADE, null=True, blank=True, help_text="Academy where the file was uploaded"
+    )
+    name = models.CharField(max_length=255)
+    mime = models.CharField(max_length=60)
+
+    chunk_index = models.PositiveIntegerField()
+    total_chunks = models.PositiveIntegerField()
+
+    # this section avoid errors when settings changed
+    chunk_size = models.PositiveIntegerField(help_text="Size of each chunk in bytes")
+    # max_chucks = models.PositiveIntegerField(help_text="Maximum number of chunks allowed per file")
+    bucket = models.PositiveIntegerField(max_length=255)
+    operation_type = models.CharField(max_length=60)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    @property
+    def file_name(self) -> str:
+        name = f"{self.user.username}-{self.name}-{self.mime.split('/')[1]}-{self.chunk_index}-{self.total_chunks}-{self.chunk_size}"
+        if self.academy:
+            name = f"{self.academy.slug}-{name}"
+
+        return name
+
+
+class File(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="User who uploaded the file")
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy where the file was uploaded")
+
+    name = models.CharField(max_length=255)
+    mime = models.CharField(max_length=60)
+
+    hash = models.CharField(max_length=64)
+    size = models.PositiveIntegerField(null=True, blank=True)
+
+    # this section avoid errors when settings changed
+    bucket = models.PositiveIntegerField(max_length=255)
+    operation_type = models.CharField(max_length=60)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    @property
+    def file_name(self) -> str:
+        return self.hash

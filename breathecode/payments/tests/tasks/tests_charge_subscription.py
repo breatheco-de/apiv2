@@ -238,6 +238,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                         "is_recurrent": True,
                         "status": "RENEWAL",
                         "user_id": 1,
+                        "was_delivered": True,
                     }
                 ),
             ],

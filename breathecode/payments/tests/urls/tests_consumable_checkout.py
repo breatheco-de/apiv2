@@ -76,6 +76,7 @@ def format_invoice_item(data={}):
         "user_id": 1,
         "refund_stripe_id": None,
         "refunded_at": None,
+        "externally_managed": False,
         **data,
     }
 

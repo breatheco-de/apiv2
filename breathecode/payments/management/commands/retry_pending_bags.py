@@ -18,7 +18,7 @@ class Command(BaseCommand):
         hm_failed = 0
 
         for bag in bags:
-            invoice: Invoice | None = bag.invoice_set.first()
+            invoice: Invoice | None = bag.invoices.first()
             if invoice is None:
                 continue
 

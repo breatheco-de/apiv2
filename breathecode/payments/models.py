@@ -943,22 +943,29 @@ class Bag(AbstractAmountByTime):
         return f"{self.type} {self.status} {self.chosen_period}"
 
 
-FULFILLED = "FULFILLED"
-REJECTED = "REJECTED"
-PENDING = "PENDING"
-REFUNDED = "REFUNDED"
-DISPUTED_AS_FRAUD = "DISPUTED_AS_FRAUD"
-INVOICE_STATUS = [
-    (FULFILLED, "Fulfilled"),
-    (REJECTED, "Rejected"),
-    (PENDING, "Pending"),
-    (REFUNDED, "Refunded"),
-    (DISPUTED_AS_FRAUD, "Disputed as fraud"),
-]
+class ProofOfPayment(models.Model):
+    """Represents a payment made by a user."""
+
+    provided_payment_details = models.TextField(
+        default="", help_text="These details are provided by the user as proof of payment"
+    )
+    confirmation_image_url = models.URLField(help_text="URL of the confirmation image for the payment")
 
 
 class Invoice(models.Model):
     """Represents a payment made by a user."""
+
+    class Status(models.TextChoices):
+        FULFILLED = "FULFILLED", "Fulfilled"
+        REJECTED = "REJECTED", "Rejected"
+        PENDING = "PENDING", "Pending"
+        REFUNDED = "REFUNDED", "Refunded"
+        DISPUTED_AS_FRAUD = "DISPUTED_AS_FRAUD", "Disputed as fraud"
+
+    class PaymentMethod(models.TextChoices):
+        STRIPE = "STRIPE", "Stripe"
+        CASH = "CASH", "Cash"
+        DATAPHONE = "DATAPHONE", "Dataphone"
 
     amount = models.FloatField(
         default=0, help_text="If amount is 0, transaction will not be sent to stripe or any other payment processor."
@@ -969,12 +976,19 @@ class Invoice(models.Model):
         null=True, blank=True, default=None, help_text="Date when the invoice was refunded"
     )
     status = models.CharField(
-        max_length=17, choices=INVOICE_STATUS, default=PENDING, db_index=True, help_text="Invoice status"
+        max_length=17, choices=Status, default=Status.PENDING, db_index=True, help_text="Invoice status"
     )
 
     bag = models.ForeignKey("Bag", on_delete=models.CASCADE, help_text="Bag", related_name="invoices")
     externally_managed = models.BooleanField(
         default=False, help_text="If the billing is managed externally outside of the system"
+    )
+
+    payment_method = models.CharField(
+        max_length=255, choices=PaymentMethod, default=PaymentMethod.STRIPE, help_text="Payment method used"
+    )
+    proof = models.OneToOneField(
+        ProofOfPayment, null=True, blank=True, on_delete=models.CASCADE, help="Proof of payment"
     )
 
     # it has 27 characters right now
@@ -990,6 +1004,16 @@ class Invoice(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def clean(self) -> None:
+        if (
+            self.payment_method != self.PaymentMethod.STRIPE
+            and self.status == self.Status.FULFILLED
+            and self.proof is None
+        ):
+            raise forms.ValidationError("Proof of payment is required for this payment method")
+
+        return super().clean()
 
     def save(self, *args, **kwargs):
         self.full_clean()

@@ -1012,44 +1012,7 @@ def validate_and_create_subscriptions(
         settings = get_user_settings(staff_user.id)
         lang = settings.lang
 
-    how_many_installments = request.data.get("how_many_installments")
-    if how_many_installments is not None and (
-        isinstance(how_many_installments, int) is False or how_many_installments < 1
-    ):
-        raise ValidationException(
-            translation(
-                lang,
-                en="how_many_installments must be a positive integer",
-                es="how_many_installments debe ser un número entero positivo",
-                slug="invalid-how-many-installments",
-            ),
-            code=400,
-        )
-
-    chosen_period = data.get("chosen_period", "").upper()
-    chosen_periods = [x for x, y in Bag.ChosenPeriod.choices if x != "NO_SET"]
-
-    if chosen_period and chosen_period not in chosen_periods:
-        raise ValidationException(
-            translation(
-                lang,
-                en="chosen_period must be one of: {periods}".format(periods=", ".join(chosen_periods)),
-                es="chosen_period debe ser uno de: {periods}".format(periods=", ".join(chosen_periods)),
-                slug="invalid-chosen-period",
-            ),
-            code=400,
-        )
-
-    if not chosen_period and not how_many_installments:
-        raise ValidationException(
-            translation(
-                lang,
-                en="Either chosen_period or how_many_installments must be provided",
-                es="Debe proporcionar chosen_period o how_many_installments",
-                slug="invalid-chosen-period-or-how-many-installments",
-            ),
-            code=400,
-        )
+    how_many_installments = 1
 
     plans = data.get("plans", [])
     plans = Plan.objects.filter(slug__in=plans)
@@ -1089,10 +1052,7 @@ def validate_and_create_subscriptions(
     plan = plans[0]
     coupons = get_available_coupons(plan, data.get("coupons", []))
 
-    if (
-        how_many_installments
-        and (option := plan.financing_options.filter(how_many_months=how_many_installments).first()) is None
-    ):
+    if (option := plan.financing_options.filter(how_many_months=how_many_installments).first()) is None:
         raise ValidationException(
             translation(
                 lang,
@@ -1130,8 +1090,10 @@ def validate_and_create_subscriptions(
         else:
             args.append(Q(email=user_data) | Q(username=user_data))
 
-        user = User.objects.filter(*args, **kwargs).first()
-        if user is None:
+        if user := User.objects.filter(*args, **kwargs).first():
+            users_found.append(user)
+
+        else:
             errors.append(
                 C(
                     translation(
@@ -1143,8 +1105,6 @@ def validate_and_create_subscriptions(
                     code=404,
                 )
             )
-
-        users_found.append(user)
 
     if errors:
         raise ValidationException(errors, code=400)
@@ -1158,16 +1118,9 @@ def validate_and_create_subscriptions(
         bag.academy = academy
         bag.is_recurrent = True
 
-        if chosen_period:
-            bag.chosen_period = chosen_period
-
-            amount = get_amount_by_chosen_period(bag, chosen_period, lang)
-            amount = get_discounted_price(amount, coupons)
-
-        if how_many_installments:
-            bag.how_many_installments = how_many_installments
-            amount = get_discounted_price(option.monthly_price, coupons)
-            bag.monthly_price = option.monthly_price
+        bag.how_many_installments = how_many_installments
+        amount = get_discounted_price(option.monthly_price, coupons)
+        bag.monthly_price = option.monthly_price
 
         bag.save()
         bag.plans.set(plans)
@@ -1186,8 +1139,4 @@ def validate_and_create_subscriptions(
         )
         invoice.save()
 
-        if bag.how_many_installments > 0:
-            tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info)
-
-        else:
-            tasks.build_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
+        tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info)

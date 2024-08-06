@@ -3,8 +3,10 @@ import datetime
 import hashlib
 import logging
 import os
+from io import BytesIO
 
 import requests
+from asgiref.sync import sync_to_async
 from circuitbreaker import CircuitBreakerError
 from django.db.models import Q
 from django.http import StreamingHttpResponse
@@ -17,8 +19,8 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
 from slugify import slugify
 
-from breathecode.authenticate.actions import get_user_language
-from breathecode.media.models import Category, Media, MediaResolution
+from breathecode.authenticate.actions import aget_user_language, get_user_language
+from breathecode.media.models import Category, File, Media, MediaResolution
 from breathecode.media.schemas import FileSchema, MediaSchema
 from breathecode.media.serializers import (
     CategorySerializer,
@@ -28,14 +30,18 @@ from breathecode.media.serializers import (
     MediaPUTSerializer,
     MediaSerializer,
 )
+from breathecode.media.signals import schedule_deletion
+from breathecode.media.utils import ChunkedUploadMixin, ChunkUploadMixin, media_settings
 from breathecode.services.google_cloud import FunctionV1
+from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils import GenerateLookupsMixin, capable_of, num_to_roman
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from breathecode.utils.decorators import has_permission
 from breathecode.utils.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 
 logger = logging.getLogger(__name__)
-MIME_ALLOW = [
+MIME_ALLOWED = [
     "image/png",
     "image/svg+xml",
     "image/jpeg",
@@ -427,6 +433,149 @@ class CategoryView(ViewSet):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
+class MeChunkView(ChunkedUploadMixin):
+
+    @has_permission("upload_media")
+    async def put(self, request):
+        return await self.upload()
+
+
+class AcademyChunkView(ChunkedUploadMixin):
+
+    @capable_of("crud_file")
+    async def put(self, request, academy_id=None):
+        return await self.upload(academy_id)
+
+
+class MeChunkUploadView(ChunkUploadMixin):
+
+    @has_permission("upload_media")
+    async def put(self, request):
+        return await self.upload()
+
+
+class AcademyChunkUploadView(ChunkUploadMixin):
+
+    @capable_of("crud_file")
+    async def put(self, request, academy_id=None):
+        return await self.upload(academy_id)
+
+
+class OperationTypeView(ChunkUploadMixin):
+    permission_classes = [AllowAny]
+
+    async def put(self, request, op_type=None):
+        if op_type:
+            settings = media_settings(op_type)
+            if settings is None:
+                raise ValidationException("Invalid operation type", code=404)
+
+            return Response(
+                {
+                    "chunk_size": settings["chunk_size"],
+                    "max_chunks": settings["max_chunks"],
+                }
+            )
+
+        op_types = media_settings()
+        return Response(op_types)
+
+
+# UploadView replacement
+class AcademyClaimMediaView(APIView):
+
+    @capable_of("crud_media")
+    async def post(self, request, academy_id=None, file_id=None):
+        lang = await aget_user_language(request)
+        file = await File.objects.filter(id=file_id, academy__id=academy_id, operation_type="media").afirst()
+
+        storage = Storage()
+        uploaded_file = storage.file(file.bucket, file.file_name)
+        if uploaded_file.exists() is False:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="File does not exists",
+                    es="El archivo no existe",
+                    slug="file-not-found",
+                ),
+                code=404,
+            )
+
+        name = request.data.get("name")
+        if not name:
+            name = file.name
+
+        hash = file.hash
+        slug = slugify(name)
+
+        slug_number = await Media.objects.filter(slug__startswith=slug).exclude(hash=hash).acount() + 1
+        if slug_number > 1:
+            while True:
+                roman_number = num_to_roman(slug_number, lower=True)
+                slug = f"{slug}-{roman_number}"
+
+                if await Media.objects.filter(slug=slug).exclude(hash=hash).aexists() is False:
+                    break
+
+                slug_number = slug_number + 1
+
+        data = {
+            "hash": hash,
+            "slug": slug,
+            "mime": file.content_type,
+            "name": name,
+            "categories": [],
+            "academy": academy_id,
+        }
+
+        # it is receive in url encoded
+        if "categories" in request.data:
+            data["categories"] = request.data["categories"].split(",")
+
+        media = await Media.objects.filter(hash=hash, academy__id=academy_id).afirst()
+        if media:
+            raise ValidationException(
+                translation(lang, en="Media already exists", es="Medio ya existe", slug="media-already-exists"),
+                code=409,
+            )
+
+        url = await Media.objects.filter(hash=hash).values_list("url", flat=True).afirst()
+        if not url:
+            try:
+                f = BytesIO()
+                uploaded_file.download(f)
+
+                new_file = storage.file(media_gallery_bucket(), hash)
+                new_file.upload(f, content_type=file.content_type, public=True)
+                url = new_file.url()
+
+            except CircuitBreakerError:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="The circuit breaker is open due to an error, please try again later",
+                        es="El circuit breaker está abierto debido a un error, por favor intente más tarde",
+                        slug="circuit-breaker-open",
+                    ),
+                    slug="circuit-breaker-open",
+                    data={"service": "Google Cloud Storage"},
+                    silent=True,
+                    code=503,
+                )
+
+        data["url"] = url
+        data["thumbnail"] = data["url"] + "-thumbnail"
+
+        serializer = MediaPUTSerializer(data=data, context=data, many=False)
+        if serializer.is_valid():
+            await schedule_deletion.adelay(instance=file, sender=file.__class__)
+            await sync_to_async(serializer.save)()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class UploadView(APIView):
     """
     put:
@@ -468,9 +617,9 @@ class UploadView(APIView):
         # files validation below
         for index in range(0, len(files)):
             file = files[index]
-            if file.content_type not in MIME_ALLOW:
+            if file.content_type not in MIME_ALLOWED:
                 raise ValidationException(
-                    f'You can upload only files on the following formats: {",".join(MIME_ALLOW)}, got {file.content_type}',
+                    f'You can upload only files on the following formats: {",".join(MIME_ALLOWED)}, got {file.content_type}',
                     code=400,
                 )
 
