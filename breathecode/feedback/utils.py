@@ -25,6 +25,11 @@ strings = {
             "highest": "muy útil",
             "lowest": "poco útil",
         },
+        "platform": {
+            "title": "¿Cómo ha sido tu experiencia con la plataforma y el contenido?",
+            "highest": "muy buena",
+            "lowest": "mala",
+        },
         "button_label": "Responder",
         "survey_subject": "Necesitamos tu feedback",
         "survey_message": "Por favor toma 5 minutos para enviarnos un feedback sobre tu experiencia en la academia hasta ahora",
@@ -52,8 +57,13 @@ strings = {
         },
         "session": {
             "title": "How was your experience in your mentoring with {}?",
-            "highest": "muy útil",
-            "lowest": "poco útil",
+            "highest": "very useful",
+            "lowest": "not useful",
+        },
+        "platform": {
+            "title": "How has been your experience with the platform and content?",
+            "highest": "very good",
+            "lowest": "not good",
         },
         "button_label": "Answer the question",
         "survey_subject": "We need your feedback",

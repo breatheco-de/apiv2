@@ -87,6 +87,9 @@ SURVEY_STATUS = (
     (EXPIRED, "Expired"),
 )
 
+PLATFORM = "PLATFORM"
+QUESTION_SLUGS = ((PLATFORM, "Platform"),)
+
 
 class Answer(models.Model):
 
@@ -99,6 +102,7 @@ class Answer(models.Model):
     highest = models.CharField(max_length=50, default="very likely")
     lang = models.CharField(max_length=3, blank=True, default="en")
 
+    question_by_slug = models.CharField(max_length=30, choices=QUESTION_SLUGS, default=None, blank=True, null=True)
     event = models.ForeignKey(Event, on_delete=models.SET_NULL, default=None, blank=True, null=True)
     mentorship_session = models.ForeignKey(
         MentorshipSession, on_delete=models.SET_NULL, default=None, blank=True, null=True

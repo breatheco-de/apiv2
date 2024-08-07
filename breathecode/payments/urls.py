@@ -22,12 +22,12 @@ from .views import (
     MeSubscriptionCancelView,
     MeSubscriptionChargeView,
     MeSubscriptionView,
+    PaymentMethodView,
     PayView,
     PlanOfferView,
     PlanView,
     ServiceItemView,
     ServiceView,
-    PaymentMethodView,
 )
 
 app_name = "payments"
@@ -73,12 +73,19 @@ urlpatterns = [
     path("academy/invoice/<int:invoice_id>", AcademyInvoiceView.as_view()),
     path("coupon", CouponView.as_view(), name="coupon"),
     path(
-        "me/service/<str:service_slug>/consume/<str:hash>", ConsumeView.as_view(), name="me_service_slug_consume_hash"
+        "me/service/<str:service_slug>/consumptionsession",
+        ConsumeView.as_view(),
+        name="me_service_slug_consumptionsession",
     ),
     path(
-        "me/service/<str:service_slug>/cancel/<str:hash>",
+        "me/service/<str:service_slug>/consumptionsession/<int:consumptionsession_id>",
         CancelConsumptionView.as_view(),
-        name="me_service_slug_cancel_hash",
+        name="me_service_slug_consumptionsession_id",
+    ),
+    path(
+        "me/service/<str:service_slug>/consumptionsession/<str:hash>",
+        ConsumeView.as_view(),
+        name="me_service_slug_consumptionsession_hash",
     ),
     path("card", CardView.as_view(), name="card"),
     path("bag", BagView.as_view()),
