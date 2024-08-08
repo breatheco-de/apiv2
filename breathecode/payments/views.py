@@ -21,6 +21,7 @@ from breathecode.payments.actions import (
     PlanFinder,
     add_items_to_bag,
     filter_consumables,
+    filter_void_consumable_balance,
     get_amount,
     get_amount_by_chosen_period,
     get_available_coupons,
@@ -41,13 +42,13 @@ from breathecode.payments.models import (
     FinancialReputation,
     Invoice,
     MentorshipServiceSet,
+    PaymentMethod,
     Plan,
     PlanFinancing,
     PlanOffer,
     Service,
     ServiceItem,
     Subscription,
-    PaymentMethod,
 )
 from breathecode.payments.serializers import (
     GetAcademyServiceSmallSerializer,
@@ -59,6 +60,7 @@ from breathecode.payments.serializers import (
     GetInvoiceSmallSerializer,
     GetMentorshipServiceSetSerializer,
     GetMentorshipServiceSetSmallSerializer,
+    GetPaymentMethod,
     GetPlanFinancingSerializer,
     GetPlanOfferSerializer,
     GetPlanSerializer,
@@ -69,7 +71,6 @@ from breathecode.payments.serializers import (
     POSTAcademyServiceSerializer,
     PUTAcademyServiceSerializer,
     ServiceSerializer,
-    GetPaymentMethod,
 )
 from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import reimburse_service_units
@@ -597,6 +598,7 @@ class MeConsumableView(APIView):
             "mentorship_service_sets": get_balance_by_resource(mentorship_services, "mentorship_service_set"),
             "cohort_sets": get_balance_by_resource(cohorts, "cohort_set"),
             "event_type_sets": get_balance_by_resource(event_types, "event_type_set"),
+            "voids": filter_void_consumable_balance(request, items),
         }
 
         return Response(balance)
@@ -1099,11 +1101,14 @@ class ConsumeView(APIView):
     def put(self, request, service_slug, hash=None):
         lang = get_user_language(request)
 
-        session = ConsumptionSession.get_session(request)
-        if session:
-            return Response({"status": "ok"}, status=status.HTTP_200_OK)
+        force_create = hash is None
 
-        consumable = Consumable.get(user=request.user, lang=lang, service=service_slug)
+        if force_create is False:
+            session = ConsumptionSession.get_session(request)
+            if session:
+                return Response({"id": session.id, "status": "ok"}, status=status.HTTP_200_OK)
+
+        consumable = Consumable.get(user=request.user, lang=lang, service=service_slug, service_type="VOID")
         if consumable is None:
             raise PaymentException(
                 translation(lang, en="Insuficient credits", es="Créditos insuficientes", slug="insufficient-credits")
@@ -1111,22 +1116,28 @@ class ConsumeView(APIView):
 
         session_duration = consumable.service_item.service.session_duration or timedelta(minutes=1)
         session = ConsumptionSession.build_session(
-            request, consumable, session_duration, operation_code="unsafe-consume-service-set"
+            request,
+            consumable,
+            session_duration,
+            operation_code="unsafe-consume-service-set",
+            force_create=force_create,
         )
 
         session.will_consume(1)
 
-        return Response({"status": "ok"}, status=status.HTTP_201_CREATED)
+        return Response({"id": session.id, "status": "ok"}, status=status.HTTP_201_CREATED)
 
 
 class CancelConsumptionView(APIView):
 
-    def put(self, request, service_slug, hash=None):
+    def put(self, request, service_slug, consumptionsession_id):
         lang = get_user_language(request)
 
         session = (
             ConsumptionSession.objects.filter(
-                consumable__user=request.user, consumable__service_item__service__type=Service.Type.VOID
+                id=consumptionsession_id,
+                consumable__user=request.user,
+                consumable__service_item__service__type=Service.Type.VOID,
             )
             .exclude(status="CANCELLED")
             .first()
@@ -1141,7 +1152,7 @@ class CancelConsumptionView(APIView):
         consumable = session.consumable
         reimburse_service_units.send_robust(instance=consumable, sender=consumable.__class__, how_many=how_many)
 
-        return Response({"status": "reversed"}, status=status.HTTP_200_OK)
+        return Response({"id": session.id, "status": "reversed"}, status=status.HTTP_200_OK)
 
 
 class PlanOfferView(APIView):

@@ -34,6 +34,7 @@ def answer(data={}):
         "title": "",
         "token_id": None,
         "user_id": 0,
+        "question_by_slug": None,
         **data,
     }
 
@@ -77,53 +78,57 @@ class SendCohortSurvey(FeedbackTestCase):
 
             generate_user_cohort_survey_answers(model.user, model.survey, status="OPENED")
 
+            answers = [
+                {
+                    "title": f"How has been your experience studying {model.cohort.name} so far?",
+                    "lowest": "not good",
+                    "highest": "very good",
+                    "cohort_id": n + 1,
+                    "academy_id": n + 1,
+                    "token_id": None,
+                },
+                {
+                    "title": f"How has been your experience with your mentor {model.user.first_name} {model.user.last_name} so far?",
+                    "lang": "en",
+                    "mentor_id": n + 1,
+                    "lowest": "not good",
+                    "mentorship_session_id": None,
+                    "score": None,
+                    "sent_at": None,
+                    "status": "OPENED",
+                    "highest": "very good",
+                    "cohort_id": n + 1,
+                    "academy_id": n + 1,
+                },
+                {
+                    "title": f"How likely are you to recommend {model.academy.name} to your friends " "and family?",
+                    "lowest": "not likely",
+                    "highest": "very likely",
+                    "cohort_id": None,
+                    "academy_id": n + 1,
+                },
+                {
+                    "title": f"How has been your experience with the platform and content?",
+                    "lowest": "not good",
+                    "highest": "very good",
+                    "cohort_id": None,
+                    "academy_id": None,
+                    "question_by_slug": "PLATFORM",
+                },
+            ]
+
             self.assertEqual(
                 self.bc.database.list_of("feedback.Answer"),
                 [
                     answer(
                         {
-                            "title": f"How has been your experience studying {model.cohort.name} so far?",
+                            "id": (n * len(answers)) + (index + 1),
                             "user_id": n + 1,
                             "survey_id": n + 1,
-                            "lowest": "not good",
-                            "id": (n * 3) + 1,
-                            "highest": "very good",
-                            "cohort_id": n + 1,
-                            "academy_id": n + 1,
-                            "token_id": None,
+                            **elem,
                         }
-                    ),
-                    answer(
-                        {
-                            "title": f"How has been your experience with your mentor {model.user.first_name} {model.user.last_name} so far?",
-                            "lang": "en",
-                            "user_id": n + 1,
-                            "survey_id": n + 1,
-                            "mentor_id": n + 1,
-                            "lowest": "not good",
-                            "mentorship_session_id": None,
-                            "score": None,
-                            "sent_at": None,
-                            "status": "OPENED",
-                            "id": (n * 3) + 2,
-                            "highest": "very good",
-                            "cohort_id": n + 1,
-                            "academy_id": n + 1,
-                        }
-                    ),
-                    answer(
-                        {
-                            "title": f"How likely are you to recommend {model.academy.name} to your friends "
-                            "and family?",
-                            "user_id": n + 1,
-                            "survey_id": n + 1,
-                            "lowest": "not likely",
-                            "id": (n * 3) + 3,
-                            "highest": "very likely",
-                            "cohort_id": None,
-                            "academy_id": n + 1,
-                        }
-                    ),
+                    )
+                    for index, elem in enumerate(answers)
                 ],
             )
 
@@ -143,53 +148,114 @@ class SendCohortSurvey(FeedbackTestCase):
 
             generate_user_cohort_survey_answers(model.user, model.survey, status="OPENED")
 
+            answers = [
+                {
+                    "title": f"How has been your experience studying {model.cohort.name} so far?",
+                    "lowest": "not good",
+                    "cohort_id": n + 1,
+                    "academy_id": n + 1,
+                    "highest": "very good",
+                    "token_id": None,
+                },
+                {
+                    "title": f"How has been your experience with your mentor {model.user.first_name} {model.user.last_name} so far?",
+                    "lang": "en",
+                    "mentor_id": n + 1,
+                    "cohort_id": n + 1,
+                    "academy_id": n + 1,
+                    "lowest": "not good",
+                    "mentorship_session_id": None,
+                    "score": None,
+                    "sent_at": None,
+                    "status": "OPENED",
+                    "highest": "very good",
+                },
+                {
+                    "title": f"How likely are you to recommend {model.academy.name} to your friends " "and family?",
+                    "academy_id": n + 1,
+                    "lowest": "not likely",
+                    "highest": "very likely",
+                    "cohort_id": None,
+                },
+                {
+                    "title": f"How has been your experience with the platform and content?",
+                    "lowest": "not good",
+                    "highest": "very good",
+                    "cohort_id": None,
+                    "academy_id": None,
+                    "question_by_slug": "PLATFORM",
+                },
+            ]
             self.assertEqual(
                 self.bc.database.list_of("feedback.Answer"),
                 [
                     answer(
                         {
-                            "title": f"How has been your experience studying {model.cohort.name} so far?",
+                            "id": (n * len(answers)) + (index + 1),
                             "user_id": n + 1,
                             "survey_id": n + 1,
-                            "lowest": "not good",
-                            "id": (n * 3) + 1,
-                            "highest": "very good",
-                            "cohort_id": n + 1,
-                            "academy_id": n + 1,
-                            "token_id": None,
+                            **elem,
                         }
-                    ),
+                    )
+                    for index, elem in enumerate(answers)
+                ],
+            )
+
+            # teardown
+            self.bc.database.delete("feedback.Answer")
+
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_when_cohort_is_available_as_saas(self):
+        statuses = ["ACTIVE", "GRADUATED"]
+
+        for n in range(0, 2):
+            c = statuses[n]
+            cohort_users = [{"educational_status": c}, {"role": "TEACHER", "educational_status": c}]
+
+            model = self.bc.database.create(
+                cohort={"available_as_saas": True}, user=1, survey=1, cohort_user=cohort_users, syllabus_version=1
+            )
+
+            generate_user_cohort_survey_answers(model.user, model.survey, status="OPENED")
+
+            answers = [
+                {
+                    "title": f"How has been your experience studying {model.cohort.name} so far?",
+                    "lowest": "not good",
+                    "cohort_id": n + 1,
+                    "academy_id": n + 1,
+                    "highest": "very good",
+                    "token_id": None,
+                },
+                {
+                    "title": f"How likely are you to recommend {model.academy.name} to your friends " "and family?",
+                    "academy_id": n + 1,
+                    "lowest": "not likely",
+                    "highest": "very likely",
+                    "cohort_id": None,
+                },
+                {
+                    "title": f"How has been your experience with the platform and content?",
+                    "lowest": "not good",
+                    "highest": "very good",
+                    "cohort_id": None,
+                    "academy_id": None,
+                    "question_by_slug": "PLATFORM",
+                },
+            ]
+            self.assertEqual(
+                self.bc.database.list_of("feedback.Answer"),
+                [
                     answer(
                         {
-                            "title": f"How has been your experience with your mentor {model.user.first_name} {model.user.last_name} so far?",
-                            "lang": "en",
+                            "id": (n * len(answers)) + (index + 1),
                             "user_id": n + 1,
                             "survey_id": n + 1,
-                            "mentor_id": n + 1,
-                            "lowest": "not good",
-                            "mentorship_session_id": None,
-                            "score": None,
-                            "sent_at": None,
-                            "status": "OPENED",
-                            "id": (n * 3) + 2,
-                            "highest": "very good",
-                            "cohort_id": n + 1,
-                            "academy_id": n + 1,
+                            **elem,
                         }
-                    ),
-                    answer(
-                        {
-                            "title": f"How likely are you to recommend {model.academy.name} to your friends "
-                            "and family?",
-                            "user_id": n + 1,
-                            "survey_id": n + 1,
-                            "lowest": "not likely",
-                            "id": (n * 3) + 3,
-                            "highest": "very likely",
-                            "cohort_id": None,
-                            "academy_id": n + 1,
-                        }
-                    ),
+                    )
+                    for index, elem in enumerate(answers)
                 ],
             )
 
@@ -213,66 +279,65 @@ class SendCohortSurvey(FeedbackTestCase):
 
             generate_user_cohort_survey_answers(model.user, model.survey, status="OPENED")
 
+            answers = [
+                {
+                    "title": f"How has been your experience studying {model.cohort.name} so far?",
+                    "lowest": "not good",
+                    "highest": "very good",
+                    "cohort_id": n + 1,
+                    "academy_id": n + 1,
+                    "token_id": None,
+                },
+                {
+                    "title": f"How has been your experience with your mentor {model.user.first_name} {model.user.last_name} so far?",
+                    "lang": "en",
+                    "mentor_id": n + 1,
+                    "lowest": "not good",
+                    "mentorship_session_id": None,
+                    "score": None,
+                    "sent_at": None,
+                    "status": "OPENED",
+                    "highest": "very good",
+                    "cohort_id": n + 1,
+                    "academy_id": n + 1,
+                },
+                {
+                    "title": f"How has been your experience with your mentor {model.user.first_name} {model.user.last_name} so far?",
+                    "lowest": "not good",
+                    "highest": "very good",
+                    "cohort_id": n + 1,
+                    "academy_id": n + 1,
+                    "mentor_id": n + 1,
+                },
+                {
+                    "title": f"How likely are you to recommend {model.academy.name} to your friends " "and family?",
+                    "lowest": "not likely",
+                    "highest": "very likely",
+                    "cohort_id": None,
+                    "academy_id": n + 1,
+                },
+                {
+                    "title": f"How has been your experience with the platform and content?",
+                    "lowest": "not good",
+                    "highest": "very good",
+                    "cohort_id": None,
+                    "academy_id": None,
+                    "question_by_slug": "PLATFORM",
+                },
+            ]
+
             self.assertEqual(
                 self.bc.database.list_of("feedback.Answer"),
                 [
                     answer(
                         {
-                            "title": f"How has been your experience studying {model.cohort.name} so far?",
+                            "id": (n * len(answers)) + (index + 1),
                             "user_id": n + 1,
                             "survey_id": n + 1,
-                            "lowest": "not good",
-                            "id": (n * 4) + 1,
-                            "highest": "very good",
-                            "cohort_id": n + 1,
-                            "academy_id": n + 1,
-                            "token_id": None,
+                            **elem,
                         }
-                    ),
-                    answer(
-                        {
-                            "title": f"How has been your experience with your mentor {model.user.first_name} {model.user.last_name} so far?",
-                            "lang": "en",
-                            "user_id": n + 1,
-                            "survey_id": n + 1,
-                            "mentor_id": n + 1,
-                            "lowest": "not good",
-                            "mentorship_session_id": None,
-                            "score": None,
-                            "sent_at": None,
-                            "status": "OPENED",
-                            "id": (n * 4) + 2,
-                            "highest": "very good",
-                            "cohort_id": n + 1,
-                            "academy_id": n + 1,
-                        }
-                    ),
-                    answer(
-                        {
-                            "title": f"How has been your experience with your mentor {model.user.first_name} {model.user.last_name} so far?",
-                            "user_id": n + 1,
-                            "survey_id": n + 1,
-                            "lowest": "not good",
-                            "id": (n * 4) + 3,
-                            "highest": "very good",
-                            "cohort_id": n + 1,
-                            "academy_id": n + 1,
-                            "mentor_id": n + 1,
-                        }
-                    ),
-                    answer(
-                        {
-                            "title": f"How likely are you to recommend {model.academy.name} to your friends "
-                            "and family?",
-                            "user_id": n + 1,
-                            "survey_id": n + 1,
-                            "lowest": "not likely",
-                            "id": (n * 4) + 4,
-                            "highest": "very likely",
-                            "cohort_id": None,
-                            "academy_id": n + 1,
-                        }
-                    ),
+                    )
+                    for index, elem in enumerate(answers)
                 ],
             )
 
