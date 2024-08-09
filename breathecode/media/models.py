@@ -67,7 +67,7 @@ class Chunk(models.Model):
     # this section avoid errors when settings changed
     chunk_size = models.PositiveIntegerField(help_text="Size of each chunk in bytes")
     # max_chucks = models.PositiveIntegerField(help_text="Maximum number of chunks allowed per file")
-    bucket = models.PositiveIntegerField(max_length=255)
+    bucket = models.CharField(max_length=255)
     operation_type = models.CharField(max_length=60)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -99,7 +99,7 @@ class File(models.Model):
     size = models.PositiveIntegerField(null=True, blank=True)
 
     # this section avoid errors when settings changed
-    bucket = models.PositiveIntegerField(max_length=255)
+    bucket = models.CharField(max_length=255)
     operation_type = models.CharField(max_length=60)
 
     meta = models.JSONField(
@@ -108,7 +108,7 @@ class File(models.Model):
         default=None,
         help_text="Metadata associated with the file, used for schedule the transfer",
     )
-    status = models.CharField(max_length=10, choices=Status.choices, default=Status.CREATED)
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.CREATED)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
