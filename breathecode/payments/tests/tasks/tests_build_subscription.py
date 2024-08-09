@@ -34,6 +34,7 @@ def subscription_item(data={}):
         "status_message": None,
         "user_id": 1,
         "valid_until": UTC_NOW,
+        "externally_managed": False,
         **data,
     }
 

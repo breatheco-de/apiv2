@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import random
 import re
+from collections.abc import Iterable
 from typing import Any, Generator, final
 
 import pytest
@@ -13,6 +14,8 @@ from django.db import models
 from django.db.models import Model
 
 # from django.db.models.query_utils import DeferredAttribute
+# ReverseOneToOneDescriptor
+# ReverseManyToOneDescriptor
 from django.db.models.fields.related_descriptors import (
     ForwardManyToOneDescriptor,
     ForwardOneToOneDescriptor,
@@ -499,34 +502,46 @@ class Database:
         for model_path in exec_order:
             model_descriptor, value = cache[model_path]
 
+            app_label, model_name = model_descriptor["path"].split(".")
+            model_alias = cls.to_snake_case(model_name)
+
             result = []
+            all_m2m = []
 
             for how_many, arguments in argument_parser(value):
+                m2m = {}
+                all_m2m.append(m2m)
                 for _related_field, field_type, field_attrs in model_descriptor["related_fields"]:
                     if field_attrs["path"] in generated:
 
-                        # no implemented yet
-                        if field_type is ManyToManyDescriptor:
-                            continue
-                            # arguments[field_attrs["name"]] = [generated[field_attrs["path"]]]
-
                         arguments[field_attrs["name"]] = generated[field_attrs["path"]]
+
+                        if field_type is ManyToManyDescriptor:
+                            m2m[field_attrs["name"]] = arguments[field_attrs["name"]]
+                            del arguments[field_attrs["name"]]
 
                         if field_attrs["cls"] in [ForwardOneToOneDescriptor, ForwardManyToOneDescriptor] and isinstance(
                             arguments[field_attrs["name"]], list
                         ):
                             arguments[field_attrs["name"]] = arguments[field_attrs["name"]][0]
 
-                result = result + [
-                    model_descriptor["cls"].objects.create(**{**model_descriptor["get_values"](), **arguments})
-                    for _ in range(how_many)
-                ]
+                for _ in range(how_many):
+                    instance = model_descriptor["cls"].objects.create(
+                        **{**model_descriptor["get_values"](), **arguments}
+                    )
+
+                    for m2m_key in m2m.keys():
+                        m2m_handler = getattr(instance, m2m_key)
+                        m2m_value = m2m[m2m_key]
+                        if isinstance(m2m_value, Iterable):
+                            m2m_handler.set(m2m_value)
+                        else:
+                            m2m_handler.add(m2m_value)
+
+                    result.append(instance)
 
             if len(result) == 1:
                 result = result[0]
-
-            app_label, model_name = model_descriptor["path"].split(".")
-            model_alias = cls.to_snake_case(model_name)
 
             if model_alias not in name_map:
                 model_alias = app_label + "__" + model_alias

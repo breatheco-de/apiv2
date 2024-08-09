@@ -78,7 +78,7 @@ from breathecode.utils import APIViewExtensions, getLogger, validate_conversion_
 from breathecode.utils.decorators.capable_of import capable_of
 from breathecode.utils.i18n import translation
 from breathecode.utils.redis import Lock
-from breathecode.utils.shorteners import C
+from capyc.core.shorteners import C
 from capyc.rest_framework.exceptions import PaymentException, ValidationException
 
 logger = getLogger(__name__)
@@ -1049,6 +1049,11 @@ class AcademyInvoiceView(APIView):
         serializer = GetInvoiceSmallSerializer(items, many=True)
 
         return handler.response(serializer.data)
+
+    # @capable_of("crud_invoice")
+    # def post(self, request, academy_id=None):
+    #     add_invoice_externally_managed(request, request.user, academy_id)
+    #     return Response({"status": "ok"})
 
 
 class CardView(APIView):
@@ -2066,6 +2071,30 @@ class PayView(APIView):
                 raise e
 
 
+class AcademyPlanSubscriptionView(APIView):
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("crud_subscription")
+    def post(self, request, plan_slug: str, academy_id: int):
+        lang = get_user_language(request)
+        proof = actions.validate_and_create_proof_of_payment(request, request.user, academy_id, lang)
+
+        request.data["plans"] = [plan_slug]
+
+        invoices, coupons = actions.validate_and_create_subscriptions(request, request.user, proof, academy_id, lang)
+
+        s1 = GetInvoiceSerializer(invoices, many=True)
+        s2 = GetCouponSerializer(coupons, many=True)
+
+        return Response(
+            {
+                "invoices": s1.data,
+                "coupons": s2.data,
+            }
+        )
+
+
 class PaymentMethodView(APIView):
 
     def get(self, request):
@@ -2086,3 +2115,60 @@ class PaymentMethodView(APIView):
 
         serializer = GetPaymentMethod(items, many=True)
         return Response(serializer.data, status=200)
+
+
+# # this fill be changed
+# class AcademyClaimProofOfPaymentView(APIView):
+
+#     @capable_of("crud_invoice")
+#     async def post(self, request, academy_id=None, file_id=None):
+#         lang = await aget_user_language(request)
+#         file = await File.objects.filter(id=file_id, academy__id=academy_id, operation_type="media").afirst()
+
+#         storage = Storage()
+#         uploaded_file = storage.file(file.bucket, file.file_name)
+#         if uploaded_file.exists() is False:
+#             raise ValidationException(
+#                 translation(
+#                     lang,
+#                     en="File does not exists",
+#                     es="El archivo no existe",
+#                     slug="file-not-found",
+#                 ),
+#                 code=404,
+#             )
+
+#         provided_payment_details = request.data.get("provided_payment_details", "")
+
+#         try:
+#             f = BytesIO()
+#             uploaded_file.download(f)
+
+#             # Proof of Payment
+#             new_file = storage.file(os.getenv("PROOF_OF_PAYMENT_BUCKET"), file.hash)
+#             new_file.upload(f, content_type=file.content_type, public=True)
+#             url = new_file.url()
+
+#         except CircuitBreakerError:
+#             raise ValidationException(
+#                 translation(
+#                     lang,
+#                     en="The circuit breaker is open due to an error, please try again later",
+#                     es="El circuit breaker está abierto debido a un error, por favor intente más tarde",
+#                     slug="circuit-breaker-open",
+#                 ),
+#                 slug="circuit-breaker-open",
+#                 data={"service": "Google Cloud Storage"},
+#                 silent=True,
+#                 code=503,
+#             )
+
+#         data = {
+#             "confirmation_image_url": url,
+#             "provided_payment_details": provided_payment_details,
+#         }
+
+#         await ProofOfPayment.objects.acreate(**data)
+#         # await schedule_deletion.adelay(instance=file, sender=file.__class__)
+
+#         return Response(data, status=status.HTTP_201_CREATED)
