@@ -2,7 +2,7 @@ import hashlib
 import os
 from copy import copy
 from io import BytesIO
-from typing import Awaitable, Callable, Optional, Tuple, TypedDict, overload
+from typing import Any, Awaitable, Callable, Optional, Tuple, TypedDict, overload
 
 from adrf.requests import AsyncRequest
 from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUploadedFile
@@ -27,6 +27,7 @@ class MediaSettings(TypedDict):
     is_quota_exceeded: Callable[[AsyncRequest, Optional[int]], Awaitable[bool]]
     is_authorized: Callable[[AsyncRequest, Optional[int]], Awaitable[bool]]
     is_mime_supported: Callable[[InMemoryUploadedFile | TemporaryUploadedFile, Optional[int]], Awaitable[bool]]
+    validate_meta = Callable[[Any], None]
 
 
 MEDIA_MIME_ALLOWED = [
@@ -57,6 +58,12 @@ async def media_is_mime_supported(
     return file.content_type in MEDIA_MIME_ALLOWED
 
 
+async def no_validate_meta(meta: Any) -> None: ...
+
+
+async def schedule_media(meta: Any) -> None: ...
+
+
 MB = 1024 * 1024
 CHUNK_SIZE = 1 * MB
 
@@ -68,6 +75,8 @@ MEDIA_SETTINGS: dict[str, MediaSettings] = {
         "is_quota_exceeded": no_quota_limit,
         "is_authorized": allow_any,
         "is_mime_supported": media_is_mime_supported,
+        "validate_meta": no_validate_meta,
+        "scheduler": schedule_media,
     },
     "proof-of-payment": {
         "chunk_size": CHUNK_SIZE,
@@ -75,6 +84,8 @@ MEDIA_SETTINGS: dict[str, MediaSettings] = {
         "is_quota_exceeded": no_quota_limit,
         "is_authorized": allow_any,
         "is_mime_supported": media_is_mime_supported,
+        "validate_meta": no_validate_meta,
+        "scheduler": schedule_media,
     },
     "profile-pictures": {
         "chunk_size": CHUNK_SIZE,
@@ -82,6 +93,8 @@ MEDIA_SETTINGS: dict[str, MediaSettings] = {
         "is_quota_exceeded": no_quota_limit,  # change it in a future
         "is_authorized": allow_any,
         "is_mime_supported": media_is_mime_supported,
+        "validate_meta": no_validate_meta,
+        "scheduler": schedule_media,
     },
 }
 MEDIA_OPERATION_TYPES = tuple(", ".join(MEDIA_SETTINGS.keys()))

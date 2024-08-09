@@ -1,8 +1,5 @@
-import os
 from datetime import timedelta
-from io import BytesIO
 
-from circuitbreaker import CircuitBreakerError
 from django.core.cache import cache
 from django.db import transaction
 from django.db.models import CharField, Q, Value
@@ -18,13 +15,10 @@ from rest_framework.views import APIView
 import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
-from breathecode.authenticate.actions import aget_user_language, get_user_language
-from breathecode.media.models import File
-from breathecode.media.signals import schedule_deletion
+from breathecode.authenticate.actions import get_user_language
 from breathecode.payments import actions, tasks
 from breathecode.payments.actions import (
     PlanFinder,
-    add_invoice_externally_managed,
     add_items_to_bag,
     filter_consumables,
     filter_void_consumable_balance,
@@ -34,7 +28,6 @@ from breathecode.payments.actions import (
     get_balance_by_resource,
     get_discounted_price,
     max_coupons_allowed,
-    validate_and_create_subscriptions,
 )
 from breathecode.payments.caches import PlanOfferCache
 from breathecode.payments.models import (
@@ -53,7 +46,6 @@ from breathecode.payments.models import (
     Plan,
     PlanFinancing,
     PlanOffer,
-    ProofOfPayment,
     Service,
     ServiceItem,
     Subscription,
@@ -82,7 +74,6 @@ from breathecode.payments.serializers import (
 )
 from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import reimburse_service_units
-from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils import APIViewExtensions, getLogger, validate_conversion_info
 from breathecode.utils.decorators.capable_of import capable_of
 from breathecode.utils.i18n import translation
@@ -1059,10 +1050,10 @@ class AcademyInvoiceView(APIView):
 
         return handler.response(serializer.data)
 
-    @capable_of("crud_invoice")
-    def post(self, request, academy_id=None):
-        add_invoice_externally_managed(request, request.user, academy_id)
-        return Response({"status": "ok"})
+    # @capable_of("crud_invoice")
+    # def post(self, request, academy_id=None):
+    #     add_invoice_externally_managed(request, request.user, academy_id)
+    #     return Response({"status": "ok"})
 
 
 class CardView(APIView):
@@ -2077,8 +2068,22 @@ class AcademyPlanSubscriptionView(APIView):
 
     @capable_of("crud_subscription")
     def post(self, request, plan_slug: str, academy_id: int):
-        validate_and_create_subscriptions(request, plan_slug, academy_id)
-        return Response({"status": "ok"})
+        lang = get_user_language(request)
+        proof = actions.validate_and_create_proof_of_payment(request, request.user, academy_id, lang)
+
+        request.data["plans"] = [plan_slug]
+
+        invoices, coupons = actions.validate_and_create_subscriptions(request, request.user, proof, academy_id, lang)
+
+        s1 = GetInvoiceSerializer(invoices, many=True)
+        s2 = GetCouponSerializer(coupons, many=True)
+
+        return Response(
+            {
+                "invoices": s1.data,
+                "coupons": s2.data,
+            }
+        )
 
 
 class PaymentMethodView(APIView):
@@ -2103,57 +2108,58 @@ class PaymentMethodView(APIView):
         return Response(serializer.data, status=200)
 
 
-class AcademyClaimProofOfPaymentView(APIView):
+# # this fill be changed
+# class AcademyClaimProofOfPaymentView(APIView):
 
-    @capable_of("crud_invoice")
-    async def post(self, request, academy_id=None, file_id=None):
-        lang = await aget_user_language(request)
-        file = await File.objects.filter(id=file_id, academy__id=academy_id, operation_type="media").afirst()
+#     @capable_of("crud_invoice")
+#     async def post(self, request, academy_id=None, file_id=None):
+#         lang = await aget_user_language(request)
+#         file = await File.objects.filter(id=file_id, academy__id=academy_id, operation_type="media").afirst()
 
-        storage = Storage()
-        uploaded_file = storage.file(file.bucket, file.file_name)
-        if uploaded_file.exists() is False:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="File does not exists",
-                    es="El archivo no existe",
-                    slug="file-not-found",
-                ),
-                code=404,
-            )
+#         storage = Storage()
+#         uploaded_file = storage.file(file.bucket, file.file_name)
+#         if uploaded_file.exists() is False:
+#             raise ValidationException(
+#                 translation(
+#                     lang,
+#                     en="File does not exists",
+#                     es="El archivo no existe",
+#                     slug="file-not-found",
+#                 ),
+#                 code=404,
+#             )
 
-        provided_payment_details = request.data.get("provided_payment_details", "")
+#         provided_payment_details = request.data.get("provided_payment_details", "")
 
-        try:
-            f = BytesIO()
-            uploaded_file.download(f)
+#         try:
+#             f = BytesIO()
+#             uploaded_file.download(f)
 
-            # Proof of Payment
-            new_file = storage.file(os.getenv("PROOF_OF_PAYMENT_BUCKET"), file.hash)
-            new_file.upload(f, content_type=file.content_type, public=True)
-            url = new_file.url()
+#             # Proof of Payment
+#             new_file = storage.file(os.getenv("PROOF_OF_PAYMENT_BUCKET"), file.hash)
+#             new_file.upload(f, content_type=file.content_type, public=True)
+#             url = new_file.url()
 
-        except CircuitBreakerError:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="The circuit breaker is open due to an error, please try again later",
-                    es="El circuit breaker está abierto debido a un error, por favor intente más tarde",
-                    slug="circuit-breaker-open",
-                ),
-                slug="circuit-breaker-open",
-                data={"service": "Google Cloud Storage"},
-                silent=True,
-                code=503,
-            )
+#         except CircuitBreakerError:
+#             raise ValidationException(
+#                 translation(
+#                     lang,
+#                     en="The circuit breaker is open due to an error, please try again later",
+#                     es="El circuit breaker está abierto debido a un error, por favor intente más tarde",
+#                     slug="circuit-breaker-open",
+#                 ),
+#                 slug="circuit-breaker-open",
+#                 data={"service": "Google Cloud Storage"},
+#                 silent=True,
+#                 code=503,
+#             )
 
-        data = {
-            "confirmation_image_url": url,
-            "provided_payment_details": provided_payment_details,
-        }
+#         data = {
+#             "confirmation_image_url": url,
+#             "provided_payment_details": provided_payment_details,
+#         }
 
-        await ProofOfPayment.objects.acreate(**data)
-        await schedule_deletion.adelay(instance=file, sender=file.__class__)
+#         await ProofOfPayment.objects.acreate(**data)
+#         # await schedule_deletion.adelay(instance=file, sender=file.__class__)
 
-        return Response(data, status=status.HTTP_201_CREATED)
+#         return Response(data, status=status.HTTP_201_CREATED)

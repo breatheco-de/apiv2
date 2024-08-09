@@ -83,6 +83,12 @@ class Chunk(models.Model):
 
 
 class File(models.Model):
+
+    class Status(models.TextChoices):
+        CREATED = "CREATED", "Created"
+        TRANSFERRING = "TRANSFERRING", "Transferring"
+        TRANSFERRED = "TRANSFERRED", "Transferred"
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="User who uploaded the file")
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy where the file was uploaded")
 
@@ -95,6 +101,14 @@ class File(models.Model):
     # this section avoid errors when settings changed
     bucket = models.PositiveIntegerField(max_length=255)
     operation_type = models.CharField(max_length=60)
+
+    meta = models.JSONField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Metadata associated with the file, used for schedule the transfer",
+    )
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.CREATED)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

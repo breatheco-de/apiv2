@@ -1,6 +1,8 @@
 import ast
 import logging
+import os
 from datetime import datetime, timedelta
+from io import BytesIO
 from typing import Any, Optional
 
 from dateutil.relativedelta import relativedelta
@@ -12,10 +14,12 @@ from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
 
 from breathecode.authenticate.actions import get_app_url, get_user_settings
+from breathecode.media.models import File
 from breathecode.notify import actions as notify_actions
 from breathecode.payments import actions
 from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import consume_service, reimburse_service_units
+from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils.decorators import TaskPriority
 from breathecode.utils.i18n import translation
 from breathecode.utils.redis import Lock
@@ -31,6 +35,7 @@ from .models import (
     PlanFinancing,
     PlanServiceItem,
     PlanServiceItemHandler,
+    ProofOfPayment,
     Service,
     ServiceStockScheduler,
     Subscription,
@@ -454,7 +459,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                 "SUBJECT": subject,
                 "MESSAGE": message,
                 "BUTTON": button,
-                "LINK": f"{get_app_url()}/subscription/{plan_financing.id}",
+                "LINK": f"{get_app_url()}/plan-financing/{plan_financing.id}",
             },
             academy=plan_financing.academy,
         )
@@ -489,6 +494,14 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
             invoices = plan_financing.invoices.order_by("created_at")
             first_invoice = invoices.first()
             last_invoice = invoices.last()
+
+            if first_invoice is None:
+                msg = f"No invoices found for PlanFinancing with id {plan_financing_id}"
+                plan_financing.status = "ERROR"
+                plan_financing.status_message = msg
+                plan_financing.save()
+
+                raise AbortTask(msg)
 
             installments = first_invoice.bag.how_many_installments
 
@@ -1156,3 +1169,31 @@ def update_service_stock_schedulers(plan_id: int, **_: Any):
 
     for plan_financing in PlanFinancing.objects.filter(plans__id=plan_id).only("id"):
         update_plan_financing_service_stock_schedulers.delay(plan_id, plan_financing.id)
+
+
+@task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
+def set_proof_of_payment_confirmation_url(file_id: int, proof_of_payment_id: int, **_: Any):
+    file = File.objects.filter(id=file_id, status=File.Status.TRANSFERRING).first()
+    if not file:
+        raise RetryTask(f"File with id {file_id} not found or is not transferring")
+
+    proof = ProofOfPayment.objects.filter(id=proof_of_payment_id).first()
+    if not proof:
+        raise RetryTask(f"Proof of Payment with id {proof_of_payment_id} not found")
+
+    storage = Storage()
+    uploaded_file = storage.file(file.bucket, file.file_name)
+    if uploaded_file.exists() is False:
+        raise RetryTask("File does not exists")
+
+    f = BytesIO()
+    uploaded_file.download(f)
+
+    # Proof of Payment
+    new_file = storage.file(os.getenv("PROOF_OF_PAYMENT_BUCKET"), file.hash)
+    new_file.upload(f, content_type=file.content_type, public=True)
+    url = new_file.url()
+
+    proof.confirmation_image_url = url
+    proof.status = ProofOfPayment.Status.DONE
+    proof.save()

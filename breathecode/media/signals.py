@@ -2,6 +2,6 @@
 
 from task_manager.django.dispatch import Emisor
 
-emisor = Emisor("breathecode.registry")
+emisor = Emisor("breathecode.media")
 
 schedule_deletion = emisor.signal("schedule_deletion")

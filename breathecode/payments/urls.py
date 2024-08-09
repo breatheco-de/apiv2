@@ -86,6 +86,10 @@ urlpatterns = [
     path("bag/<int:bag_id>/coupon", BagCouponView.as_view(), name="bag_id_coupon"),
     path("checking", CheckingView.as_view(), name="checking"),
     path("pay", PayView.as_view(), name="pay"),
-    path("academy/plan/<slug:plan_slug>/subscription", AcademyPlanSubscriptionView.as_view(), name="pay"),
+    path(
+        "academy/plan/<slug:plan_slug>/subscription",
+        AcademyPlanSubscriptionView.as_view(),
+        name="academy_plan_slug_subscription",
+    ),
     path("methods", PaymentMethodView.as_view(), name="methods"),
 ]

@@ -943,13 +943,64 @@ class Bag(AbstractAmountByTime):
         return f"{self.type} {self.status} {self.chosen_period}"
 
 
+class PaymentMethod(models.Model):
+    """
+    Different payment methods of each academy have.
+    """
+
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")
+    title = models.CharField(max_length=120, null=False, blank=False)
+    is_credit_card = models.BooleanField(default=False, null=False, blank=False)
+    description = models.CharField(max_length=255, help_text="Description of the payment method")
+    third_party_link = models.URLField(
+        blank=True, null=True, default=None, help_text="Link of a third party payment method"
+    )
+    lang = models.CharField(
+        max_length=5,
+        validators=[validate_language_code],
+        help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
+    )
+
+
 class ProofOfPayment(models.Model):
     """Represents a payment made by a user."""
 
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        DONE = "DONE", "Done"
+
     provided_payment_details = models.TextField(
-        default="", help_text="These details are provided by the user as proof of payment"
+        default="", blank=True, help_text="These details are provided by the user as proof of payment"
     )
-    confirmation_image_url = models.URLField(help_text="URL of the confirmation image for the payment")
+    confirmation_image_url = models.URLField(
+        null=True, blank=True, default=None, help_text="URL of the confirmation image for the payment"
+    )
+    reference = models.CharField(
+        max_length=32, null=True, default=None, blank=True, help_text="Reference for the payment"
+    )
+    status = models.CharField(
+        max_length=8, choices=Status, default=Status.PENDING, help_text="Bag status", db_index=True
+    )
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, help_text="User who provided these details")
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def clean(self) -> None:
+        if self.status == self.Status.PENDING and self.confirmation_image_url:
+            raise forms.ValidationError("Confirmation image URL mustn't be provided when status is PENDING")
+
+        if self.status == self.Status.DONE and (not self.confirmation_image_url and not self.reference):
+            raise forms.ValidationError("Either confirmation_image_url or reference must be provided")
+
+        if self.provided_payment_details is None:
+            self.provided_payment_details = ""
+
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 
 class Invoice(models.Model):
@@ -961,11 +1012,6 @@ class Invoice(models.Model):
         PENDING = "PENDING", "Pending"
         REFUNDED = "REFUNDED", "Refunded"
         DISPUTED_AS_FRAUD = "DISPUTED_AS_FRAUD", "Disputed as fraud"
-
-    class PaymentMethod(models.TextChoices):
-        STRIPE = "STRIPE", "Stripe"
-        CASH = "CASH", "Cash"
-        DATAPHONE = "DATAPHONE", "Dataphone"
 
     amount = models.FloatField(
         default=0, help_text="If amount is 0, transaction will not be sent to stripe or any other payment processor."
@@ -984,11 +1030,19 @@ class Invoice(models.Model):
         default=False, help_text="If the billing is managed externally outside of the system"
     )
 
-    payment_method = models.CharField(
-        max_length=255, choices=PaymentMethod, default=PaymentMethod.STRIPE, help_text="Payment method used"
-    )
     proof = models.OneToOneField(
-        ProofOfPayment, null=True, blank=True, on_delete=models.CASCADE, help="Proof of payment"
+        ProofOfPayment,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        help_text="Proof of payment",
+    )
+    payment_method = models.ForeignKey(
+        PaymentMethod,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        help_text="Payment method, null if it uses stripe",
     )
 
     # it has 27 characters right now
@@ -1006,12 +1060,16 @@ class Invoice(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def clean(self) -> None:
-        if (
-            self.payment_method != self.PaymentMethod.STRIPE
-            and self.status == self.Status.FULFILLED
-            and self.proof is None
-        ):
-            raise forms.ValidationError("Proof of payment is required for this payment method")
+        if self.payment_method and self.externally_managed is False:
+            raise forms.ValidationError("Payment method cannot be setted if the billing isn't managed externally")
+
+        if self.payment_method and self.proof is None and self.status == self.Status.FULFILLED:
+            raise forms.ValidationError(
+                "Proof of payment must be provided when payment method is setted and status is FULFILLED"
+            )
+
+        if self.externally_managed and self.payment_method is None:
+            raise forms.ValidationError("Payment method must be setted if the billing is managed externally")
 
         return super().clean()
 
@@ -1783,22 +1841,3 @@ class FinancialReputation(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user.email} -> {self.get_reputation()}"
-
-
-class PaymentMethod(models.Model):
-    """
-    Different payment methods of each academy have.
-    """
-
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")
-    title = models.CharField(max_length=120, null=False, blank=False)
-    is_credit_card = models.BooleanField(default=False, null=False, blank=False)
-    description = models.CharField(max_length=255, help_text="Description of the payment method")
-    third_party_link = models.URLField(
-        blank=True, null=True, default=None, help_text="Link of a third party payment method"
-    )
-    lang = models.CharField(
-        max_length=5,
-        validators=[validate_language_code],
-        help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
-    )
