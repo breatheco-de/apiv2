@@ -532,6 +532,12 @@ heroku_redis_ssl_host = {
 if IS_REDIS_WITH_SSL_ON_HEROKU:
     heroku_redis_ssl_host["address"] += "?ssl_cert_reqs=none"
 
+
+MB = 1024 * 1024
+
+# keeps compatibility with the actual media endpoint
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 200 * MB
+
 # keep last part of the file
 django_heroku.settings(locals(), databases=False)
 

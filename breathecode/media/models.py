@@ -51,9 +51,6 @@ class MediaResolution(models.Model):
 
 class Chunk(models.Model):
 
-    # class Provider(models.TextChoices):
-    #     GITHUB = "GITHUB", "GitHub"
-
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="User who uploaded the file")
     academy = models.ForeignKey(
         Academy, on_delete=models.CASCADE, null=True, blank=True, help_text="Academy where the file was uploaded"
@@ -66,7 +63,6 @@ class Chunk(models.Model):
 
     # this section avoid errors when settings changed
     chunk_size = models.PositiveIntegerField(help_text="Size of each chunk in bytes")
-    # max_chucks = models.PositiveIntegerField(help_text="Maximum number of chunks allowed per file")
     bucket = models.CharField(max_length=255)
     operation_type = models.CharField(max_length=60)
 

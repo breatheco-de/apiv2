@@ -12,7 +12,7 @@ from rest_framework import status
 
 from breathecode.media.views import MIME_ALLOWED
 
-from ..mixins import MediaTestCase
+from ...mixins import MediaTestCase
 
 
 class MediaTestSuite(MediaTestCase):
