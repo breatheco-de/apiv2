@@ -44,6 +44,9 @@ class FileAdmin(admin.ModelAdmin):
     list_filter = ["operation_type", "mime", "academy", "status"]
 
     def open_url(self, obj: File) -> str:
+        if obj.status == File.Status.TRANSFERRED:
+            return "File transferred"
+
         return format_html(
             f"<a target='blank' href='https://storage.cloud.google.com/{obj.bucket}/{obj.file_name}'>{obj.bucket}/{obj.file_name}</a>"
         )
