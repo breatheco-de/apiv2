@@ -2073,17 +2073,15 @@ class AcademyPlanSubscriptionView(APIView):
 
         request.data["plans"] = [plan_slug]
 
-        invoices, coupons = actions.validate_and_create_subscriptions(request, request.user, proof, academy_id, lang)
+        invoice, coupons = actions.validate_and_create_subscriptions(request, request.user, proof, academy_id, lang)
 
-        s1 = GetInvoiceSerializer(invoices, many=True)
+        s1 = GetInvoiceSerializer(invoice, many=False)
         s2 = GetCouponSerializer(coupons, many=True)
 
-        return Response(
-            {
-                "invoices": s1.data,
-                "coupons": s2.data,
-            }
-        )
+        data = s1.data
+        data["coupons"] = s2.data
+
+        return Response(data)
 
 
 class PaymentMethodView(APIView):

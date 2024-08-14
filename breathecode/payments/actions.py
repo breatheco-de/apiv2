@@ -22,7 +22,6 @@ from breathecode.payments import tasks
 from breathecode.utils import getLogger
 from breathecode.utils.i18n import translation
 from breathecode.utils.validate_conversion_info import validate_conversion_info
-from capyc.core.shorteners import C
 from capyc.rest_framework.exceptions import ValidationException
 
 from .models import (
@@ -870,139 +869,6 @@ def get_discounted_price(price: float, coupons: list[Coupon]) -> float:
     return price
 
 
-# def add_invoice_externally_managed(
-#     request: dict | WSGIRequest | AsyncRequest | HttpRequest, staff_user: User, academy_id: int
-# ):
-#     settings = get_user_settings(staff_user.id)
-#     lang = settings.lang
-
-#     if isinstance(request, (WSGIRequest, AsyncRequest, HttpRequest)):
-#         data = request.data
-#     else:
-#         data = request
-
-#     id = request.data.get("id")
-#     type = request.data.get("type")
-#     available_types = ["SUBSCRIPTION", "PLAN_FINANCING"]
-
-#     if type not in available_types:
-#         raise ValidationException(
-#             translation(
-#                 lang,
-#                 en="type must be one of: {types}".format(types=", ".join(available_types)),
-#                 es="type debe ser uno de: {types}".format(types=", ".join(available_types)),
-#                 slug="invalid-type",
-#             ),
-#             code=400,
-#         )
-
-#     resource = None
-
-#     if type == "SUBSCRIPTION":
-#         resource = Subscription.objects.filter(id=id).first()
-#         # bag, amount = get_bag_from_subs(subscription)
-
-#     elif type == "PLAN_FINANCING":
-#         resource = PlanFinancing.objects.filter(id=id).first()
-
-#     if resource is None:
-#         raise ValidationException(
-#             translation(
-#                 lang,
-#                 en="Subscription not found",
-#                 es="Suscripción no encontrada",
-#                 slug="subscription-not-found",
-#             ),
-#             code=404,
-#         )
-
-#     academy = Academy.objects.filter(id=academy_id).first()
-#     if academy is None:
-#         raise ValidationException(
-#             translation(
-#                 lang,
-#                 en="Academy not found",
-#                 es="Academia no encontrada",
-#                 slug="academy-not-found",
-#             ),
-#             code=404,
-#         )
-
-#     errors = []
-#     users_found = []
-
-#     users = data.get("users", [])
-#     for user_data in users:
-#         args = []
-#         kwargs = {}
-#         if isinstance(user_data, int):
-#             kwargs["id"] = user_data
-#         else:
-#             args.append(Q(email=user_data) | Q(username=user_data))
-
-#         user = User.objects.filter(*args, **kwargs).first()
-#         if user is None:
-#             errors.append(
-#                 C(
-#                     translation(
-#                         lang,
-#                         en=f"User not found: {user_data}",
-#                         es=f"Usuario no encontrado: {user_data}",
-#                         slug="user-not-found",
-#                     ),
-#                     code=404,
-#                 )
-#             )
-
-#         users_found.append(user)
-
-#     if errors:
-#         raise ValidationException(errors, code=400)
-
-#     for user in users_found:
-#         if type == "SUBSCRIPTION":
-#             handler = get_bag_from_subscription
-
-#         elif type == "PLAN_FINANCING":
-#             handler = get_bag_from_plan_financing
-
-#         try:
-#             bag = handler(resource, settings)
-#         except Exception as e:
-#             resource.status = "ERROR"
-#             resource.status_message = str(e)
-#             resource.save()
-#             raise ValidationException(
-#                 translation(
-#                     lang,
-#                     en=f"Error getting bag from {type.lower().replace('_', ' ')} {resource.id}: {e}",
-#                     es=f"Error al obtener el paquete de {type.lower().replace('_', ' ')} {resource.id}: {e}",
-#                     slug="error-getting-bag",
-#                 ),
-#                 code=500,
-#             )
-
-#         if type == "SUBSCRIPTION":
-#             amount = get_amount_by_chosen_period(bag, bag.chosen_period, settings.lang)
-
-#         elif type == "PLAN_FINANCING":
-#             amount = resource.monthly_price
-
-#         utc_now = timezone.now()
-
-#         invoice = Invoice(
-#             amount=amount,
-#             paid_at=utc_now,
-#             user=user,
-#             bag=bag,
-#             academy=bag.academy,
-#             status="FULFILLED",
-#             currency=bag.academy.main_currency,
-#             externally_managed=True,
-#         )
-#         invoice.save()
-
-
 def validate_and_create_proof_of_payment(
     request: dict | WSGIRequest | AsyncRequest | HttpRequest | Request,
     staff_user: User,
@@ -1042,7 +908,9 @@ def validate_and_create_proof_of_payment(
     x.created_by = staff_user
 
     if file_id and (
-        file := File.objects.filter(Q(id=file_id) | Q(academy__id=academy_id), status=File.Status.CREATED).first()
+        file := File.objects.filter(
+            Q(user__id=staff_user.id) | Q(academy__id=academy_id), id=file_id, status=File.Status.CREATED
+        ).first()
     ):
         file.status = File.Status.TRANSFERRING
         file.save()
@@ -1142,17 +1010,14 @@ def validate_and_create_subscriptions(
             code=404,
         )
 
-    errors = []
-    users_found = []
-
-    users = data.get("users", [])
-    if len(users) != 1:
+    user_pk = data.get("user", None)
+    if user_pk is None:
         raise ValidationException(
             translation(
                 lang,
-                en="Exactly one user must be provided",
-                es="Debe proporcionar exactamente un usuario",
-                slug="exactly-one-user-must-be-provided",
+                en="user must be provided",
+                es="user debe ser proporcionado",
+                slug="user-must-be-provided",
             ),
             code=400,
         )
@@ -1169,69 +1034,55 @@ def validate_and_create_subscriptions(
             code=400,
         )
 
-    for user_data in users:
-        args = []
-        kwargs = {}
-        if isinstance(user_data, int):
-            kwargs["id"] = user_data
-        else:
-            args.append(Q(email=user_data) | Q(username=user_data))
+    args = []
+    kwargs = {}
+    if isinstance(user_pk, int):
+        kwargs["id"] = user_pk
+    else:
+        args.append(Q(email=user_pk) | Q(username=user_pk))
 
-        if user := User.objects.filter(*args, **kwargs).first():
-            users_found.append(user)
-
-        else:
-            errors.append(
-                C(
-                    translation(
-                        lang,
-                        en=f"User not found: {user_data}",
-                        es=f"Usuario no encontrado: {user_data}",
-                        slug="user-not-found",
-                    ),
-                    code=404,
-                )
-            )
-
-    invoices = []
-
-    if errors:
-        raise ValidationException(errors, code=400)
-
-    for user in users_found:
-        bag = Bag()
-        bag.type = Bag.Type.BAG
-        bag.user = user
-        bag.currency = academy.main_currency
-        bag.status = Bag.Status.PAID
-        bag.academy = academy
-        bag.is_recurrent = True
-
-        bag.how_many_installments = how_many_installments
-        amount = get_discounted_price(option.monthly_price, coupons)
-        bag.monthly_price = option.monthly_price
-
-        bag.save()
-        bag.plans.set(plans)
-
-        utc_now = timezone.now()
-
-        invoice = Invoice(
-            amount=amount,
-            paid_at=utc_now,
-            user=user,
-            bag=bag,
-            academy=bag.academy,
-            status="FULFILLED",
-            currency=bag.academy.main_currency,
-            externally_managed=True,
-            proof=proof_of_payment,
-            payment_method=payment_method,
+    if (user := User.objects.filter(*args, **kwargs).first()) is None:
+        ValidationException(
+            translation(
+                lang,
+                en=f"User not found: {user_pk}",
+                es=f"Usuario no encontrado: {user_pk}",
+                slug="user-not-found",
+            ),
+            code=404,
         )
-        invoice.save()
 
-        invoices.append(invoice)
+    bag = Bag()
+    bag.type = Bag.Type.BAG
+    bag.user = user
+    bag.currency = academy.main_currency
+    bag.status = Bag.Status.PAID
+    bag.academy = academy
+    bag.is_recurrent = True
 
-        tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info)
+    bag.how_many_installments = how_many_installments
+    amount = get_discounted_price(option.monthly_price, coupons)
+    bag.monthly_price = option.monthly_price
 
-    return invoices, coupons
+    bag.save()
+    bag.plans.set(plans)
+
+    utc_now = timezone.now()
+
+    invoice = Invoice(
+        amount=amount,
+        paid_at=utc_now,
+        user=user,
+        bag=bag,
+        academy=bag.academy,
+        status="FULFILLED",
+        currency=bag.academy.main_currency,
+        externally_managed=True,
+        proof=proof_of_payment,
+        payment_method=payment_method,
+    )
+    invoice.save()
+
+    tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info)
+
+    return invoice, coupons

@@ -86,7 +86,7 @@ def test_proxy_all(bc: Breathecode, client: capy.Client, fake, patch):
     url = reverse_lazy("payments:academy_plan_slug_subscription", kwargs={"plan_slug": "my-service"})
 
     model = bc.database.create(
-        user=1, role=1, capability="crud_subscription", profile_academy=1, invoice=2, coupon=(2, {"discount_value": 10})
+        user=1, role=1, capability="crud_subscription", profile_academy=1, invoice=1, coupon=(2, {"discount_value": 10})
     )
     slug = fake.slug()
     patch(slug, model.invoice, model.coupon)
@@ -96,13 +96,10 @@ def test_proxy_all(bc: Breathecode, client: capy.Client, fake, patch):
 
     json = response.json()
     expected = {
+        **serialize_invoice(model.invoice, model.currency, model.user),
         "coupons": [
             serialize_coupon(model.coupon[0]),
             serialize_coupon(model.coupon[1]),
-        ],
-        "invoices": [
-            serialize_invoice(model.invoice[0], model.currency, model.user),
-            serialize_invoice(model.invoice[1], model.currency, model.user),
         ],
     }
 

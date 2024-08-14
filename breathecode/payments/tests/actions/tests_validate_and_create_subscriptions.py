@@ -178,7 +178,7 @@ def test_no_academy(database: capy.Database, format: capy.Format, is_request: bo
 
 
 @pytest.mark.parametrize("is_request", [True, False])
-def test_no_users(database: capy.Database, format: capy.Format, is_request: bool) -> None:
+def test_no_user(database: capy.Database, format: capy.Format, is_request: bool) -> None:
     model = database.create(
         user=1,
         proof_of_payment=1,
@@ -194,7 +194,7 @@ def test_no_users(database: capy.Database, format: capy.Format, is_request: bool
     if is_request:
         data = get_request(data, user=model.user)
 
-    with pytest.raises(ValidationException, match="exactly-one-user-must-be-provided"):
+    with pytest.raises(ValidationException, match="user-must-be-provided"):
         validate_and_create_subscriptions(data, model.user, model.proof_of_payment, academy, "en")
 
     assert database.list_of("payments.Bag") == []
@@ -224,7 +224,7 @@ def test_no_payment_method(database: capy.Database, format: capy.Format, is_requ
         country=1,
         payment_method=1,
     )
-    data = {"plans": [model.plan.slug], "users": [model.user.id]}
+    data = {"plans": [model.plan.slug], "user": model.user.id}
     academy = 1
 
     if is_request:
@@ -263,7 +263,7 @@ def test_schedule_plan_financing(
         country=1,
         payment_method=1,
     )
-    data = {"plans": [model.plan.slug], "users": [getattr(model.user, field)], "payment_method": 1}
+    data = {"plans": [model.plan.slug], "user": getattr(model.user, field), "payment_method": 1}
     academy = 1
 
     if is_request:
@@ -296,10 +296,9 @@ def test_schedule_plan_financing(
     assert build_plan_financing.delay.call_args_list == [call(1, 1, conversion_info=None)]
 
     assert len(result) == 2
-    assert len(result[0]) == 1
 
-    assert result[0][0].__module__ == "breathecode.payments.models"
-    assert result[0][0].__class__.__name__ == "Invoice"
-    assert result[0][0].id == 1
+    assert result[0].__module__ == "breathecode.payments.models"
+    assert result[0].__class__.__name__ == "Invoice"
+    assert result[0].id == 1
 
     assert result[1] == []

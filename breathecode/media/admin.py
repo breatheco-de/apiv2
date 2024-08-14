@@ -33,7 +33,7 @@ class ChunkAdmin(admin.ModelAdmin):
 
     def open_url(self, obj: Chunk) -> str:
         return format_html(
-            f"<a target='blank' href='https://storage.cloud.google.com/{obj.bucket}/{obj.file_name}'>{obj.bucket}/{obj.file_name}</a>"
+            f"<a target='blank' href='https://storage.googleapis.com/{obj.bucket}/{obj.file_name}'>{obj.bucket}/{obj.file_name}</a>"
         )
 
 
@@ -48,5 +48,5 @@ class FileAdmin(admin.ModelAdmin):
             return "File transferred"
 
         return format_html(
-            f"<a target='blank' href='https://storage.cloud.google.com/{obj.bucket}/{obj.file_name}'>{obj.bucket}/{obj.file_name}</a>"
+            f"<a target='blank' href='https://storage.googleapis.com/{obj.bucket}/{obj.file_name}'>{obj.bucket}/{obj.file_name}</a>"
         )
