@@ -696,6 +696,13 @@ class AssetView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get("exclude_category")
             items = items.exclude(category__slug__in=[p for p in param.split(",") if p])
 
+        if "authors_username" in self.request.GET:
+            au = self.request.GET.get("authors_username", "").split(",")
+            query = Q()
+            for username in au:
+                query |= Q(authors_username__icontains=username)
+            items = items.exclude(~query)
+
         items = items.filter(query, **lookup, visibility="PUBLIC").distinct()
         items = handler.queryset(items)
 
